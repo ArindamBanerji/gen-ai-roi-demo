@@ -33,6 +33,16 @@ class OptionEvaluated(BaseModel):
     action: str
     score: float = Field(ge=0.0, le=1.0)
     factors: List[str]
+    estimated_resolution_time: str = ""
+    estimated_analyst_cost: float = 0.0
+    risk_if_wrong: str = ""
+
+
+class DecisionEconomics(BaseModel):
+    """Economic impact summary of the decision"""
+    time_saved: str
+    cost_avoided: str
+    monthly_projection: str
 
 
 class SituationAnalysis(BaseModel):
@@ -43,6 +53,7 @@ class SituationAnalysis(BaseModel):
     options_evaluated: List[OptionEvaluated]
     selected_option: str
     selection_reasoning: str
+    decision_economics: DecisionEconomics
 
 
 # ============================================================================
@@ -163,17 +174,26 @@ def evaluate_options(alert_type: str, context: Dict[str, Any], situation_type: S
             OptionEvaluated(
                 action="false_positive_close",
                 score=0.92,
-                factors=["travel_match", "mfa_ok", "device_known"]
+                factors=["travel_match", "mfa_ok", "device_known"],
+                estimated_resolution_time="3 seconds",
+                estimated_analyst_cost=0.0,
+                risk_if_wrong="Low — auto-reopen if flagged"
             ),
             OptionEvaluated(
                 action="escalate_tier2",
                 score=0.06,
-                factors=["verify_travel_legitimacy"]
+                factors=["verify_travel_legitimacy"],
+                estimated_resolution_time="45 minutes",
+                estimated_analyst_cost=127.0,
+                risk_if_wrong="None — human reviews"
             ),
             OptionEvaluated(
                 action="enrich_and_wait",
                 score=0.02,
-                factors=["monitor_additional_activity"]
+                factors=["monitor_additional_activity"],
+                estimated_resolution_time="15 minutes",
+                estimated_analyst_cost=43.0,
+                risk_if_wrong="Low — delayed but monitored"
             )
         ]
 
@@ -185,17 +205,26 @@ def evaluate_options(alert_type: str, context: Dict[str, Any], situation_type: S
             OptionEvaluated(
                 action="auto_remediate",
                 score=0.94,
-                factors=["known_signature", "playbook_exists", "low_risk"]
+                factors=["known_signature", "playbook_exists", "low_risk"],
+                estimated_resolution_time="8 seconds",
+                estimated_analyst_cost=0.0,
+                risk_if_wrong="Low — quarantine reversible"
             ),
             OptionEvaluated(
                 action="escalate_tier2",
                 score=0.04,
-                factors=["verify_campaign_match"]
+                factors=["verify_campaign_match"],
+                estimated_resolution_time="30 minutes",
+                estimated_analyst_cost=95.0,
+                risk_if_wrong="None — human reviews"
             ),
             OptionEvaluated(
                 action="enrich_and_wait",
                 score=0.02,
-                factors=["gather_more_samples"]
+                factors=["gather_more_samples"],
+                estimated_resolution_time="20 minutes",
+                estimated_analyst_cost=62.0,
+                risk_if_wrong="Medium — exposure window"
             )
         ]
 
@@ -207,17 +236,26 @@ def evaluate_options(alert_type: str, context: Dict[str, Any], situation_type: S
             OptionEvaluated(
                 action="escalate_incident",
                 score=0.97,
-                factors=["critical_asset", "production_impact", "high_risk"]
+                factors=["critical_asset", "production_impact", "high_risk"],
+                estimated_resolution_time="2 hours",
+                estimated_analyst_cost=310.0,
+                risk_if_wrong="None — appropriate for criticality"
             ),
             OptionEvaluated(
                 action="auto_remediate",
                 score=0.02,
-                factors=["isolate_system"]
+                factors=["isolate_system"],
+                estimated_resolution_time="5 minutes",
+                estimated_analyst_cost=15.0,
+                risk_if_wrong="High — production downtime"
             ),
             OptionEvaluated(
                 action="enrich_and_wait",
                 score=0.01,
-                factors=["assess_blast_radius"]
+                factors=["assess_blast_radius"],
+                estimated_resolution_time="30 minutes",
+                estimated_analyst_cost=95.0,
+                risk_if_wrong="Critical — malware spreads"
             )
         ]
 
@@ -229,17 +267,26 @@ def evaluate_options(alert_type: str, context: Dict[str, Any], situation_type: S
             OptionEvaluated(
                 action="escalate_incident",
                 score=0.96,
-                factors=["data_loss_risk", "external_connection", "volume_anomaly"]
+                factors=["data_loss_risk", "external_connection", "volume_anomaly"],
+                estimated_resolution_time="3 hours",
+                estimated_analyst_cost=465.0,
+                risk_if_wrong="None — forensics required"
             ),
             OptionEvaluated(
                 action="enrich_and_wait",
                 score=0.03,
-                factors=["identify_data_type"]
+                factors=["identify_data_type"],
+                estimated_resolution_time="45 minutes",
+                estimated_analyst_cost=127.0,
+                risk_if_wrong="Critical — data already exfiltrated"
             ),
             OptionEvaluated(
                 action="auto_remediate",
                 score=0.01,
-                factors=["block_connection"]
+                factors=["block_connection"],
+                estimated_resolution_time="10 seconds",
+                estimated_analyst_cost=0.0,
+                risk_if_wrong="High — may block legitimate traffic"
             )
         ]
 
@@ -251,17 +298,26 @@ def evaluate_options(alert_type: str, context: Dict[str, Any], situation_type: S
             OptionEvaluated(
                 action="enrich_and_wait",
                 score=0.76,
-                factors=["vip_caution", "verify_legitimacy", "context_needed"]
+                factors=["vip_caution", "verify_legitimacy", "context_needed"],
+                estimated_resolution_time="20 minutes",
+                estimated_analyst_cost=62.0,
+                risk_if_wrong="Low — monitored closely"
             ),
             OptionEvaluated(
                 action="escalate_tier2",
                 score=0.18,
-                factors=["manual_review"]
+                factors=["manual_review"],
+                estimated_resolution_time="40 minutes",
+                estimated_analyst_cost=118.0,
+                risk_if_wrong="None — human judgment"
             ),
             OptionEvaluated(
                 action="false_positive_close",
                 score=0.06,
-                factors=["workaholic_pattern"]
+                factors=["workaholic_pattern"],
+                estimated_resolution_time="5 seconds",
+                estimated_analyst_cost=0.0,
+                risk_if_wrong="Medium — may miss real threat"
             )
         ]
 
@@ -272,19 +328,102 @@ def evaluate_options(alert_type: str, context: Dict[str, Any], situation_type: S
         OptionEvaluated(
             action="escalate_tier2",
             score=0.60,
-            factors=["insufficient_confidence", "manual_review_needed"]
+            factors=["insufficient_confidence", "manual_review_needed"],
+            estimated_resolution_time="50 minutes",
+            estimated_analyst_cost=143.0,
+            risk_if_wrong="None — human reviews"
         ),
         OptionEvaluated(
             action="enrich_and_wait",
             score=0.30,
-            factors=["gather_more_context"]
+            factors=["gather_more_context"],
+            estimated_resolution_time="25 minutes",
+            estimated_analyst_cost=71.0,
+            risk_if_wrong="Medium — delayed response"
         ),
         OptionEvaluated(
             action="escalate_incident",
             score=0.10,
-            factors=["err_on_caution"]
+            factors=["err_on_caution"],
+            estimated_resolution_time="2.5 hours",
+            estimated_analyst_cost=388.0,
+            risk_if_wrong="Low — over-escalation cost"
         )
     ]
+
+
+# ============================================================================
+# Decision Economics Calculation
+# ============================================================================
+
+def calculate_decision_economics(selected: OptionEvaluated, all_options: List[OptionEvaluated]) -> DecisionEconomics:
+    """
+    Calculate economic impact of the decision.
+    Compares selected option against the next-best human-involved option (usually escalate_tier2).
+
+    Args:
+        selected: The selected option
+        all_options: All evaluated options
+
+    Returns:
+        DecisionEconomics with savings calculations
+    """
+
+    # Find the most expensive human-involved option (usually escalate_tier2 or escalate_incident)
+    human_options = [opt for opt in all_options if opt.action in ["escalate_tier2", "escalate_incident"]]
+
+    if not human_options:
+        # No human option to compare against
+        return DecisionEconomics(
+            time_saved="N/A",
+            cost_avoided="N/A",
+            monthly_projection="N/A"
+        )
+
+    # Use the first human option (likely escalate_tier2) as baseline
+    baseline = human_options[0]
+
+    # Calculate savings
+    cost_saved = baseline.estimated_analyst_cost - selected.estimated_analyst_cost
+
+    # Parse time strings for comparison (rough conversion)
+    def parse_time_to_minutes(time_str: str) -> float:
+        """Convert time string to minutes"""
+        if "second" in time_str:
+            return float(time_str.split()[0]) / 60.0
+        elif "minute" in time_str:
+            return float(time_str.split()[0])
+        elif "hour" in time_str:
+            return float(time_str.split()[0]) * 60.0
+        return 0.0
+
+    selected_minutes = parse_time_to_minutes(selected.estimated_resolution_time)
+    baseline_minutes = parse_time_to_minutes(baseline.estimated_resolution_time)
+    time_saved_minutes = baseline_minutes - selected_minutes
+
+    # Format time saved
+    if time_saved_minutes > 60:
+        time_saved_str = f"{time_saved_minutes / 60:.1f} hours vs manual triage"
+    else:
+        time_saved_str = f"{int(time_saved_minutes)} minutes vs manual triage"
+
+    # Format cost avoided
+    cost_avoided_str = f"${int(cost_saved)} analyst cost avoided per alert" if cost_saved > 0 else "No cost savings"
+
+    # Monthly projection (assume ~200 similar alerts/month)
+    monthly_alerts = 200
+    monthly_cost_saved = int(cost_saved * monthly_alerts)
+    monthly_hours_saved = int((time_saved_minutes / 60.0) * monthly_alerts)
+
+    monthly_projection_str = (
+        f"At ~{monthly_alerts} similar alerts/month: {monthly_hours_saved} analyst-hours and ${monthly_cost_saved:,} saved"
+    )
+
+    return DecisionEconomics(
+        time_saved=time_saved_str,
+        cost_avoided=cost_avoided_str,
+        monthly_projection=monthly_projection_str
+    )
 
 
 # ============================================================================
@@ -316,13 +455,17 @@ def analyze_situation(alert_type: str, context: Dict[str, Any]) -> SituationAnal
     # Step 4: Generate selection reasoning
     reasoning = generate_selection_reasoning(situation_type, selected, factors)
 
+    # Step 5: Calculate decision economics
+    economics = calculate_decision_economics(selected, options)
+
     return SituationAnalysis(
         situation_type=situation_type.value,
         situation_confidence=confidence,
         factors_detected=factors,
         options_evaluated=options,
         selected_option=selected.action,
-        selection_reasoning=reasoning
+        selection_reasoning=reasoning,
+        decision_economics=economics
     )
 
 

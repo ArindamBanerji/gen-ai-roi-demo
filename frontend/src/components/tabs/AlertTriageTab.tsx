@@ -4,6 +4,8 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
+  DollarSign,
+  Shield,
   Network,
   Play,
   ChevronRight,
@@ -68,9 +70,17 @@ interface AnalysisResult {
       action: string
       score: number
       factors: string[]
+      estimated_resolution_time: string
+      estimated_analyst_cost: number
+      risk_if_wrong: string
     }>
     selected_option: string
     selection_reasoning: string
+    decision_economics: {
+      time_saved: string
+      cost_avoided: string
+      monthly_projection: string
+    }
   }
 }
 
@@ -506,11 +516,65 @@ export default function AlertTriageTab() {
                               style={{ width: `${widthPercentage}%` }}
                             />
                           </div>
+                          {/* Decision Economics Row */}
+                          <div className="flex items-center gap-4 text-xs mt-2">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-gray-500" />
+                              <span className={isSelected ? 'text-green-400 font-semibold' : 'text-gray-500'}>
+                                {option.estimated_resolution_time}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <DollarSign className="w-3 h-3 text-gray-500" />
+                              <span className={isSelected ? 'text-green-400 font-semibold' : 'text-gray-500'}>
+                                ${option.estimated_analyst_cost.toFixed(0)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Shield className="w-3 h-3 text-gray-500" />
+                              <span className="text-gray-500">
+                                {option.risk_if_wrong.split(' — ')[0]}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       )
                     })}
                   </div>
                 </div>
+
+                {/* Decision Economics Summary */}
+                {analysis.situation_analysis.decision_economics && (
+                  <div className="p-4 bg-gradient-to-r from-green-900/20 to-blue-900/20 rounded-lg border border-green-500/30">
+                    <h4 className="text-sm font-semibold text-green-400 mb-3 flex items-center gap-2">
+                      <DollarSign className="w-4 h-4" />
+                      Decision Economics
+                    </h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-start gap-2">
+                        <Clock className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                        <span className="text-gray-300">
+                          <span className="font-semibold text-white">Time saved:</span>{' '}
+                          {analysis.situation_analysis.decision_economics.time_saved}
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <DollarSign className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                        <span className="text-gray-300">
+                          <span className="font-semibold text-white">Cost avoided:</span>{' '}
+                          {analysis.situation_analysis.decision_economics.cost_avoided}
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <TrendingDown className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                        <span className="text-gray-300">
+                          <span className="font-semibold text-white">Monthly projection:</span>{' '}
+                          {analysis.situation_analysis.decision_economics.monthly_projection}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Selection Reasoning */}
                 <div className="p-3 bg-soc-bg/50 rounded border border-gray-800">
