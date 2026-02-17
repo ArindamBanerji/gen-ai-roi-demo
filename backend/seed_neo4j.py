@@ -7,21 +7,23 @@ Usage:
 """
 import asyncio
 from dotenv import load_dotenv
-from app.db.neo4j import neo4j_client
 
+# Load .env BEFORE importing neo4j_client (it reads os.getenv at import time)
 load_dotenv()
+
+from app.db.neo4j import neo4j_client
 
 
 async def seed_data():
     """Seed Neo4j with sample security graph data"""
 
-    print("🔗 Connecting to Neo4j...")
+    print("[OK] Connecting to Neo4j...")
     await neo4j_client.connect()
 
-    print("🗑️  Clearing existing data...")
+    print("[OK] Clearing existing data...")
     await neo4j_client.run_query("MATCH (n) DETACH DELETE n")
 
-    print("📊 Creating sample data...")
+    print("[OK] Creating sample data...")
 
     # Create Asset nodes
     await neo4j_client.run_query("""
@@ -48,7 +50,7 @@ async def seed_data():
         })
     """)
 
-    print("  ✓ Created user: John Smith (risk_score: 0.25)")
+    print("  [OK] Created user: John Smith (risk_score: 0.25)")
 
     # Create TravelContext
     await neo4j_client.run_query("""
@@ -159,7 +161,7 @@ async def seed_data():
     # Add more alerts for Tab 3 Alert Queue
     # ========================================================================
 
-    print("  ✓ Creating additional alerts for queue...")
+    print("  [OK] Creating additional alerts for queue...")
 
     # Create additional users and assets for variety
     await neo4j_client.run_query("""
@@ -200,6 +202,25 @@ async def seed_data():
             os: 'Ubuntu 22.04',
             owner_id: 'mchen@company.com'
         })
+
+        CREATE (:User {
+            id: 'marychen@company.com',
+            name: 'Mary Chen',
+            department: 'Engineering',
+            title: 'Engineering Lead',
+            risk_score: 0.45,
+            is_privileged: false
+        })
+
+        CREATE (:Asset {
+            id: 'LAPTOP-MARYCHEN',
+            hostname: 'LAPTOP-MARYCHEN',
+            type: 'endpoint',
+            criticality: 'medium',
+            business_unit: 'Engineering',
+            os: 'MacOS',
+            owner_id: 'marychen@company.com'
+        })
     """)
 
     # Create phishing alert type
@@ -211,6 +232,44 @@ async def seed_data():
             severity: 'high',
             mitre_technique: 'T1566'
         })
+    """)
+
+    # Create PAT-PHISH-KNOWN pattern (for ALERT-7824)
+    await neo4j_client.run_query("""
+        CREATE (:AttackPattern {
+            id: 'PAT-PHISH-KNOWN',
+            name: 'Known Phishing Campaign',
+            description: 'Recognized phishing campaign with known indicators',
+            fp_rate: 0.08,
+            occurrence_count: 31,
+            confidence: 0.94
+        })
+    """)
+
+    # Create PhishingCampaign node
+    await neo4j_client.run_query("""
+        CREATE (:PhishingCampaign {
+            id: 'CAMP-2024-0142',
+            name: 'Operation DarkHook',
+            first_seen: date('2024-11-15'),
+            indicators: ['suspicious_sender', 'malicious_url', 'spoofed_domain'],
+            threat_actor: 'APT-UNKNOWN',
+            target_industries: ['Technology', 'Finance']
+        })
+    """)
+
+    # Create PB-PHISH-AUTO playbook
+    await neo4j_client.run_query("""
+        MATCH (alertType:AlertType {id: 'phishing'})
+        CREATE (playbook:Playbook {
+            id: 'PB-PHISH-AUTO',
+            name: 'Phishing Auto-Remediate',
+            description: 'Automated response for known phishing campaigns',
+            steps: ['Quarantine email', 'Block sender', 'Update signatures', 'Notify user'],
+            auto_actions: ['quarantine', 'block_sender'],
+            sla_minutes: 10
+        })
+        CREATE (alertType)-[:HANDLED_BY]->(playbook)
     """)
 
     # ALERT-7822: Phishing (high severity)
@@ -329,24 +388,62 @@ async def seed_data():
         CREATE (alert)-[:CLASSIFIED_AS]->(alertType)
     """)
 
-    print("✅ Sample data created successfully!")
+    # ALERT-7824: Known phishing campaign (HIGH severity - for Prompt 5C)
+    await neo4j_client.run_query("""
+        MATCH (asset:Asset {id: 'LAPTOP-MARYCHEN'})
+        MATCH (user:User {id: 'marychen@company.com'})
+        MATCH (alertType:AlertType {id: 'phishing'})
+        MATCH (pattern:AttackPattern {id: 'PAT-PHISH-KNOWN'})
+        MATCH (campaign:PhishingCampaign {id: 'CAMP-2024-0142'})
+
+        CREATE (alert:Alert {
+            id: 'ALERT-7824',
+            alert_type: 'phishing',
+            severity: 'high',
+            source_ip: '192.168.1.150',
+            source_location: 'Email Gateway',
+            destination_ip: '45.33.32.156',
+            timestamp: datetime('2026-02-06T11:30:00Z'),
+            description: 'Suspicious email with malicious link targeting Mary Chen, Engineering Lead',
+            asset_id: 'LAPTOP-MARYCHEN',
+            user_id: 'marychen@company.com',
+            status: 'pending',
+            mfa_completed: true,
+            device_fingerprint_match: true,
+            email_subject: 'Urgent: Verify Your Account',
+            sender_domain: 'microsofft-support.com',
+            malicious_url: 'hxxp://evil-phishing-site[.]com/login'
+        })
+
+        CREATE (alert)-[:DETECTED_ON]->(asset)
+        CREATE (alert)-[:INVOLVES]->(user)
+        CREATE (alert)-[:CLASSIFIED_AS]->(alertType)
+        CREATE (alert)-[:MATCHES]->(pattern)
+        CREATE (alert)-[:PART_OF]->(campaign)
+    """)
+
+    print("[SUCCESS] Sample data created successfully!")
     print("\nCreated:")
-    print("  - 3 Users (John Smith, Alice Lee, Mike Chen)")
-    print("  - 3 Assets (2 laptops, 1 database server)")
-    print("  - 5 Alerts (ALERT-7823 through ALERT-7819):")
-    print("    • ALERT-7823: anomalous_login (medium) - Singapore travel")
-    print("    • ALERT-7822: phishing (high) - suspicious link")
-    print("    • ALERT-7821: malware_detection (critical) - prod server")
-    print("    • ALERT-7820: anomalous_login (low) - unusual time")
-    print("    • ALERT-7819: phishing (medium) - suspicious attachment")
+    print("  - 4 Users (John Smith, Alice Lee, Mike Chen, Mary Chen)")
+    print("  - 4 Assets (3 laptops, 1 database server)")
+    print("  - 6 Alerts (ALERT-7824 through ALERT-7819):")
+    print("    * ALERT-7824: phishing (HIGH) - Known campaign (DarkHook) [NEW]")
+    print("    * ALERT-7823: anomalous_login (medium) - Singapore travel")
+    print("    * ALERT-7822: phishing (high) - suspicious link")
+    print("    * ALERT-7821: malware_detection (critical) - prod server")
+    print("    * ALERT-7820: anomalous_login (low) - unusual time")
+    print("    * ALERT-7819: phishing (medium) - suspicious attachment")
     print("  - 1 TravelContext (Singapore, Feb 5-10)")
-    print("  - 1 AttackPattern (PAT-TRAVEL-001, 127 occurrences)")
-    print("  - 1 Playbook (PB-LOGIN-FP)")
+    print("  - 2 AttackPatterns (PAT-TRAVEL-001, PAT-PHISH-KNOWN)")
+    print("  - 1 PhishingCampaign (Operation DarkHook)")
+    print("  - 2 Playbooks (PB-LOGIN-FP, PB-PHISH-AUTO)")
     print("  - 3 AlertTypes (anomalous_login, phishing, malware_detection)")
     print("  - 1 SLA (Medium severity, 30 min)")
     print("\nReady for demo!")
     print("  - Tab 2: Try processing ALERT-7823")
-    print("  - Tab 3: View alert queue and graph visualization")
+    print("  - Tab 3: View alert queue - now has 6 alerts")
+    print("  - ALERT-7823 -> FALSE_POSITIVE_CLOSE (travel scenario)")
+    print("  - ALERT-7824 -> AUTO_REMEDIATE (known phishing campaign)")
 
     await neo4j_client.close()
 
