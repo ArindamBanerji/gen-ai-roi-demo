@@ -11,6 +11,7 @@ import time
 from app.services.agent import agent
 from app.services.reasoning import narrator
 from app.services.situation import analyze_situation
+from app.services import evolver
 from app.db.neo4j import neo4j_client
 from app.models.schemas import ProcessAlertRequest
 
@@ -194,6 +195,23 @@ async def process_alert(request: ProcessAlertRequest):
                 }
 
         # ====================================================================
+        # Step 8: Agent Evolver (Loop 2: Smarter ACROSS decisions)
+        # ====================================================================
+
+        # Get the prompt variant used for this decision
+        prompt_variant = evolver.get_prompt_variant(alert_type)
+
+        # Record the outcome (success = gates passed)
+        success = eval_result["overall_passed"]
+        evolver.record_decision_outcome(decision_id, prompt_variant, success)
+
+        # Check if a better variant should be promoted
+        promotion = evolver.check_for_promotion(alert_type)
+
+        # Get evolution summary for response
+        prompt_evolution = evolver.get_evolution_summary(alert_type)
+
+        # ====================================================================
         # Build Response
         # ====================================================================
 
@@ -229,7 +247,8 @@ async def process_alert(request: ProcessAlertRequest):
                 "travel_destination": context.get("travel_destination"),
                 "pattern_count": context.get("pattern_count", 0)
             },
-            "situation_analysis": situation_analysis.model_dump()
+            "situation_analysis": situation_analysis.model_dump(),
+            "prompt_evolution": prompt_evolution.model_dump()
         }
 
     except HTTPException:
