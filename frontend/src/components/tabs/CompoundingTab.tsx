@@ -9,6 +9,63 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { getCompoundingMetrics, resetAllDemoData } from '../../lib/api'
 import { TrendingUp, Database, Activity, RefreshCw } from 'lucide-react'
 
+// ============================================================================
+// Custom Hook: Counter Animation
+// ============================================================================
+
+/**
+ * Animates a number from start to end over duration using requestAnimationFrame
+ * with ease-out easing (fast start, slow finish)
+ */
+function useCountUp(
+  start: number,
+  end: number,
+  duration: number = 1500,
+  decimals: number = 0,
+  shouldAnimate: boolean = true
+): number {
+  const [count, setCount] = useState(start)
+
+  useEffect(() => {
+    if (!shouldAnimate) {
+      setCount(end)
+      return
+    }
+
+    // Reset to start value
+    setCount(start)
+
+    let startTime: number | null = null
+    let animationFrame: number
+
+    const animate = (currentTime: number) => {
+      if (!startTime) startTime = currentTime
+      const elapsed = currentTime - startTime
+      const progress = Math.min(elapsed / duration, 1)
+
+      // Ease-out cubic: fast start, slow finish
+      const easeOut = 1 - Math.pow(1 - progress, 3)
+
+      const currentValue = start + (end - start) * easeOut
+      setCount(currentValue)
+
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate)
+      }
+    }
+
+    animationFrame = requestAnimationFrame(animate)
+
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame)
+      }
+    }
+  }, [start, end, duration, shouldAnimate])
+
+  return decimals > 0 ? parseFloat(count.toFixed(decimals)) : Math.round(count)
+}
+
 interface WeeklyMetric {
   week: number
   auto_close_rate: number
@@ -48,6 +105,37 @@ export default function CompoundingTab() {
   const [data, setData] = useState<CompoundingData | null>(null)
   const [loading, setLoading] = useState(true)
   const [resetting, setResetting] = useState(false)
+
+  // ALL HOOKS MUST BE AT TOP LEVEL - Called unconditionally with safe defaults
+  // Uses optional chaining (??) to provide fallback values when data is null
+  const animatedNodesEnd = useCountUp(
+    data?.headline.nodes_start ?? 0,
+    data?.headline.nodes_end ?? 0,
+    3000,
+    0,
+    !!data && !loading
+  )
+  const animatedAutoCloseEnd = useCountUp(
+    data?.headline.auto_close_start ?? 0,
+    data?.headline.auto_close_end ?? 0,
+    3000,
+    0,
+    !!data && !loading
+  )
+  const animatedMttrEnd = useCountUp(
+    data?.headline.mttr_start ?? 0,
+    data?.headline.mttr_end ?? 0,
+    3000,
+    1,
+    !!data && !loading
+  )
+  const animatedFpEnd = useCountUp(
+    data?.headline.fp_investigations_start ?? 0,
+    data?.headline.fp_investigations_end ?? 0,
+    3000,
+    0,
+    !!data && !loading
+  )
 
   const loadData = async () => {
     setLoading(true)
@@ -92,10 +180,10 @@ export default function CompoundingTab() {
 
   const { headline, weekly_trend, evolution_events } = data
 
-  // Calculate percentage changes
-  const autoCloseChange = headline.auto_close_end - headline.auto_close_start
-  const mttrChangePercent = ((headline.mttr_start - headline.mttr_end) / headline.mttr_start * 100)
-  const fpInvestigationsChangePercent = ((headline.fp_investigations_start - headline.fp_investigations_end) / headline.fp_investigations_start * 100)
+  // Calculate percentage changes (using animated values for live updates)
+  const autoCloseChange = animatedAutoCloseEnd - headline.auto_close_start
+  const mttrChangePercent = ((headline.mttr_start - animatedMttrEnd) / headline.mttr_start * 100)
+  const fpInvestigationsChangePercent = ((headline.fp_investigations_start - animatedFpEnd) / headline.fp_investigations_start * 100)
 
   return (
     <div className="space-y-6">
@@ -105,7 +193,7 @@ export default function CompoundingTab() {
           SOC Compounding — "Watch the Moat Grow"
         </h2>
         <p className="text-gray-600">
-          Same model. Same rules. More intelligence. When competitors deploy, they start at zero. We start at {headline.nodes_end} patterns.
+          Same model. Same rules. More intelligence. When competitors deploy, they start at zero. We start at {animatedNodesEnd} patterns.
         </p>
       </div>
 
@@ -159,7 +247,7 @@ export default function CompoundingTab() {
                 </div>
               </div>
               <div className="text-3xl font-bold text-purple-700">
-                {headline.nodes_end} nodes
+                {animatedNodesEnd} nodes
               </div>
             </div>
           </div>
@@ -171,7 +259,7 @@ export default function CompoundingTab() {
             <span className="text-gray-700 font-medium">Auto-Close Rate:</span>
             <div className="flex items-center gap-2">
               <span className="text-2xl font-bold text-gray-900">
-                {headline.auto_close_start}% → {headline.auto_close_end}%
+                {headline.auto_close_start}% → {animatedAutoCloseEnd}%
               </span>
               <span className="text-green-600 font-semibold">
                 (+{autoCloseChange.toFixed(0)} pts)
@@ -183,7 +271,7 @@ export default function CompoundingTab() {
             <span className="text-gray-700 font-medium">MTTR:</span>
             <div className="flex items-center gap-2">
               <span className="text-2xl font-bold text-gray-900">
-                {headline.mttr_start} min → {headline.mttr_end} min
+                {headline.mttr_start} min → {animatedMttrEnd.toFixed(1)} min
               </span>
               <span className="text-green-600 font-semibold">
                 (-{mttrChangePercent.toFixed(0)}%)
@@ -195,7 +283,7 @@ export default function CompoundingTab() {
             <span className="text-gray-700 font-medium">FP Investigations:</span>
             <div className="flex items-center gap-2">
               <span className="text-2xl font-bold text-gray-900">
-                {headline.fp_investigations_start.toLocaleString()}/wk → {headline.fp_investigations_end.toLocaleString()}/wk
+                {headline.fp_investigations_start.toLocaleString()}/wk → {animatedFpEnd.toLocaleString()}/wk
               </span>
               <span className="text-green-600 font-semibold">
                 (-{fpInvestigationsChangePercent.toFixed(0)}%)
@@ -386,7 +474,7 @@ export default function CompoundingTab() {
         <p className="text-2xl font-bold text-white leading-relaxed">
           "When a competitor deploys at a new customer, they start at zero.
           <br />
-          We start at <span className="text-yellow-300">{headline.nodes_end} patterns</span>. That's the moat."
+          We start at <span className="text-yellow-300">{animatedNodesEnd} patterns</span>. That's the moat."
         </p>
       </div>
     </div>

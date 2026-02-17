@@ -329,6 +329,9 @@ export default function AlertTriageTab() {
                   <h3 className="font-semibold flex items-center gap-2">
                     <Network className="w-4 h-4" />
                     Security Context Graph
+                    <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide bg-blue-500 text-white">
+                      CONSUME
+                    </span>
                   </h3>
                   <div className="flex gap-3 text-xs text-gray-400">
                     <span>[{analysis.context.nodes_count} nodes]</span>
@@ -437,8 +440,11 @@ export default function AlertTriageTab() {
             <div className="bg-gradient-to-r from-soc-success/20 to-soc-primary/20 rounded-lg border-2 border-soc-success/50 overflow-hidden">
               <div className="px-4 py-3 border-b border-soc-success/50 flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-soc-success" />
-                <h3 className="font-semibold text-soc-success">
+                <h3 className="font-semibold text-soc-success flex items-center gap-2">
                   ✓ CLOSED LOOP (What SIEMs don't do)
+                  <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide bg-green-500 text-white">
+                    ACTIVATE
+                  </span>
                 </h3>
               </div>
 

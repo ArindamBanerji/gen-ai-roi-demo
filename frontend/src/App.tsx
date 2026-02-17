@@ -72,7 +72,7 @@ function App() {
               </div>
             </div>
             <div className="text-right text-sm text-gray-400">
-              <div>CISO Version v1</div>
+              <div>CISO Version v2.0</div>
               <div className="text-xs">Proving Compounding Intelligence</div>
             </div>
           </div>

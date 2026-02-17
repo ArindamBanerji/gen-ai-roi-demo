@@ -78,10 +78,26 @@ export default function RuntimeEvolutionTab() {
   const [processing, setProcessing] = useState(false)
   const [result, setResult] = useState<ProcessResult | null>(null)
   const [loading, setLoading] = useState(true)
+  const [visibleChecks, setVisibleChecks] = useState<number[]>([])
 
   useEffect(() => {
     loadDeployments()
   }, [])
+
+  // Sequential animation for eval gate checks
+  useEffect(() => {
+    if (result) {
+      // Reset visible checks
+      setVisibleChecks([])
+
+      // Sequentially reveal each check with 800ms delay (total ~3.2 seconds)
+      result.eval_gate.checks.forEach((_, index) => {
+        setTimeout(() => {
+          setVisibleChecks(prev => [...prev, index])
+        }, index * 800)
+      })
+    }
+  }, [result])
 
   const loadDeployments = async () => {
     try {
@@ -97,6 +113,7 @@ export default function RuntimeEvolutionTab() {
   const processAlert = async (alertId: string = 'ALERT-7823') => {
     setProcessing(true)
     setResult(null)
+    setVisibleChecks([])
 
     try {
       const data = await api.processAlert(alertId, false)
@@ -111,6 +128,7 @@ export default function RuntimeEvolutionTab() {
   const simulateFailedGate = async () => {
     setProcessing(true)
     setResult(null)
+    setVisibleChecks([])
 
     try {
       const data = await api.processAlert('ALERT-7823', true)
@@ -272,6 +290,9 @@ export default function RuntimeEvolutionTab() {
                 <h3 className="font-semibold flex items-center gap-2">
                   <Shield className="w-4 h-4" />
                   Eval Gate — {result.alert_id}
+                  <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide bg-blue-500 text-white">
+                    CONSUME ✓
+                  </span>
                 </h3>
                 <div className="flex items-center gap-2">
                   {result.eval_gate.overall_passed ? (
@@ -290,32 +311,52 @@ export default function RuntimeEvolutionTab() {
             </div>
 
             <div className="p-6 space-y-4">
-              {result.eval_gate.checks.map((check) => (
-                <div
-                  key={check.name}
-                  className="flex items-center justify-between p-4 bg-soc-bg rounded border border-gray-800"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold">{check.name}</span>
-                      {check.passed ? (
-                        <CheckCircle className="w-4 h-4 text-soc-success" />
-                      ) : (
-                        <XCircle className="w-4 h-4 text-soc-danger" />
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-400">{check.message}</p>
+              {result.eval_gate.checks.map((check, index) => {
+                const isVisible = visibleChecks.includes(index)
+
+                return (
+                  <div
+                    key={check.name}
+                    className={`flex items-center justify-between p-4 bg-soc-bg rounded border border-gray-800 transition-all duration-500 ${
+                      isVisible
+                        ? 'opacity-100 translate-y-0'
+                        : 'opacity-30 translate-y-2'
+                    }`}
+                  >
+                    {isVisible ? (
+                      <>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold">{check.name}</span>
+                            {check.passed ? (
+                              <CheckCircle className="w-4 h-4 text-soc-success" />
+                            ) : (
+                              <XCircle className="w-4 h-4 text-soc-danger" />
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-400">{check.message}</p>
+                        </div>
+                        <div className="text-right ml-4">
+                          <div className="font-mono text-lg font-bold">
+                            {check.score.toFixed(2)}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            &gt; {check.threshold.toFixed(2)}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 animate-spin text-gray-400" />
+                          <span className="font-semibold text-gray-400">{check.name}</span>
+                          <span className="text-sm text-gray-500">Checking...</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="text-right ml-4">
-                    <div className="font-mono text-lg font-bold">
-                      {check.score.toFixed(2)}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      &gt; {check.threshold.toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
 
               <div className="mt-4 p-4 bg-soc-bg/50 rounded border border-gray-700">
                 <div className="text-sm text-gray-400 mb-1">Overall Score</div>
@@ -396,6 +437,9 @@ export default function RuntimeEvolutionTab() {
                     <h3 className="text-lg font-bold text-soc-secondary">
                       🔗 TRIGGERED_EVOLUTION
                     </h3>
+                    <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide bg-purple-600 text-white">
+                      MUTATE ✓
+                    </span>
                     <span className="px-2 py-1 bg-soc-secondary/20 text-soc-secondary text-xs font-bold rounded">
                       What SIEMs don't have
                     </span>
