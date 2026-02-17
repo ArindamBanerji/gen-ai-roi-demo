@@ -730,6 +730,601 @@ export function RuntimeEvolutionTab() {
 
 ---
 
-*CLAUDE.md for SOC Copilot Demo (CISO Version) v1 | January 2026*
-*Key changes: Adapted for cybersecurity/SOC domain with security-specific terminology*
-*Core principle: The demo proves the ARCHITECTURE, not agent sophistication. Tab 2 is THE differentiator.*
+## ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## V2 ADDITIONS (February 2026)
+## ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**Version:** v2.0 (Wave 6 Complete)
+**Branch:** `feature/v2-enhancements`
+**Base:** v1.0 frozen on `main` (tag: v1.0)
+
+### Git Workflow
+
+```bash
+# v2 Development Branch
+git checkout feature/v2-enhancements
+
+# v2 Ports (different from v1)
+Backend:  8001 (v1 uses 8000)
+Frontend: 5174 (v1 uses 5173)
+
+# Start v2
+cd backend && uvicorn app.main:app --reload --port 8001
+cd frontend && npx vite --port 5174
+
+# View v2
+http://localhost:5174
+```
+
+---
+
+## V2 NEW SERVICES
+
+### services/situation.py — Situation Analyzer (Loop 1)
+
+**Purpose:** Smarter WITHIN each decision — classifies situations, evaluates options, provides decision economics.
+
+**Key Exports:**
+- `SituationType` enum — 6 situation types:
+  - `TRAVEL_LOGIN_ANOMALY` - Travel + login pattern
+  - `KNOWN_PHISHING_CAMPAIGN` - Signature match
+  - `CRITICAL_ASSET_MALWARE` - High-value target
+  - `DATA_EXFILTRATION_DETECTED` - Data movement alert
+  - `UNKNOWN_LOGIN_PATTERN` - Novel behavior
+  - `ROUTINE_MALWARE_SCAN` - Low-severity detection
+
+- `classify_situation(alert_type, context) -> SituationType`
+  - Pattern matching logic
+  - Deterministic classification
+
+- `evaluate_options(situation_type, context) -> List[OptionEvaluated]`
+  - Generates 3-4 options per situation
+  - **Wave 6A:** Includes decision economics:
+    - `estimated_resolution_time` — "3 sec", "45 min", "2 hr"
+    - `estimated_analyst_cost` — 0, 43, 127 (dollars)
+    - `risk_if_wrong` — "None", "Low", "Medium", "High"
+
+- `analyze_situation(alert_type, context) -> SituationAnalysis`
+  - Full analysis combining classification and evaluation
+  - **Wave 6A:** Includes `decision_economics` summary:
+    - `time_saved` — "42 minutes vs manual triage"
+    - `cost_avoided` — "$127 analyst cost avoided"
+    - `monthly_projection` — "At 200 similar alerts/month: 150 analyst-hours, $25K saved"
+
+**Lines:** ~280
+
+**Tab Support:** Tab 2 (context), Tab 3 (situation panel)
+
+---
+
+### services/evolver.py — AgentEvolver (Loop 2)
+
+**Purpose:** Smarter ACROSS all decisions — tracks prompt variants, promotes winners, computes operational impact.
+
+**Key Exports:**
+
+**In-Memory State:**
+- `PROMPT_STATS` — Variant performance tracking:
+  ```python
+  {
+    "TRAVEL_CONTEXT_v1": {"success": 24, "total": 34, "success_rate": 0.71},
+    "TRAVEL_CONTEXT_v2": {"success": 42, "total": 47, "success_rate": 0.89},
+    "PHISHING_RESPONSE_v1": {"success": 31, "total": 38, "success_rate": 0.82},
+    "PHISHING_RESPONSE_v2": {"success": 12, "total": 15, "success_rate": 0.80}
+  }
+  ```
+
+- `ACTIVE_PROMPTS` — Currently active variant per alert type:
+  ```python
+  {
+    "anomalous_login": "TRAVEL_CONTEXT_v2",
+    "phishing": "PHISHING_RESPONSE_v1"
+  }
+  ```
+
+**Functions:**
+- `get_prompt_variant(alert_type) -> str`
+  - Returns active prompt variant
+
+- `record_decision_outcome(decision_id, prompt_variant, success)`
+  - Records outcome, updates stats, recalculates success rate
+
+- `check_for_promotion(alert_type) -> Optional[Dict]`
+  - Checks if better variant should be promoted
+  - Requires >5% improvement + 10 samples
+  - Automatically promotes if threshold met
+
+- `generate_what_changed_narrative(alert_type, old_rate, new_rate) -> str` **(Wave 6B)**
+  - Plain English explanation of what improved
+  - Alert-specific narratives:
+    - **anomalous_login:** "Agent learned that VPN location + travel record together indicate safe access. Previously escalated 29% of travel alerts to Tier 2 unnecessarily."
+    - **phishing:** "Agent improved campaign signature matching. Faster identification of known phishing patterns reduces exposure window."
+    - **default:** "Agent behavior improved through accumulated decision outcomes."
+
+- `calculate_operational_impact(old_rate, new_rate) -> OperationalImpact` **(Wave 6B)**
+  - Computes monthly savings from improvement
+  - Returns:
+    - `fewer_false_escalations_pct` — Percentage point improvement
+    - `fewer_false_escalations_monthly` — Count reduction (assumes 200 alerts/month)
+    - `analyst_hours_recovered` — Hours saved (45 min per review)
+    - `estimated_monthly_savings` — Dollar amount ($127 per escalation)
+    - `missed_threats` — Always 0 (eval gates prevent unsafe actions)
+
+- `get_evolution_summary(alert_type) -> PromptEvolution`
+  - Returns current state with any recent promotion
+  - **Wave 6B:** Now includes `what_changed_narrative` and `operational_impact`
+
+**Models:**
+- `OperationalImpact` — Business metrics from evolution
+- `PromptEvolution` — Evolution data for UI display
+
+**Lines:** ~330
+
+**Tab Support:** Tab 2 (AgentEvolver panel)
+
+---
+
+## V2 NEW ENDPOINTS
+
+### POST /api/alert/process-blocked
+
+**Purpose:** Simulates eval gate failure for blocking demo.
+
+**Router:** `evolution.py`
+
+**Request:**
+```json
+{
+  "alert_id": "ALERT-7823"
+}
+```
+
+**Response:**
+```json
+{
+  "alert_id": "ALERT-7823",
+  "routed_to": "soc_copilot_v3.1",
+  "eval_gate": {
+    "checks": [...],  // At least one fails
+    "overall_passed": false,
+    "overall_score": 0.78
+  },
+  "execution": {
+    "status": "blocked",
+    "reason": "One or more eval gates failed: Faithfulness score 0.75 below threshold 0.85"
+  },
+  "blocked_reason": "Eval gate blocked action due to low faithfulness score...",
+  "decision_trace": {...},
+  "triggered_evolution": {"occurred": false}
+}
+```
+
+**Tab Support:** Tab 2 (blocking demo button)
+
+---
+
+### POST /api/triage/analyze (v2 enhanced)
+
+**Purpose:** Analyze alert with situation analysis.
+
+**Router:** `triage.py`
+
+**Request:**
+```json
+{
+  "alert_id": "ALERT-7823"
+}
+```
+
+**Response (v2 additions):**
+```json
+{
+  "decision": {...},
+  "situation_analysis": {  // ★ NEW v2
+    "type": "TRAVEL_LOGIN_ANOMALY",
+    "primary_factors": [
+      "User John Smith traveling to Singapore",
+      "VPN connection from Singapore",
+      "Known pattern PAT-TRAVEL-001 (127 occurrences)"
+    ],
+    "options_evaluated": [
+      {
+        "option": "Auto-close as false positive",
+        "reasoning": "...",
+        "confidence": 0.92,
+        "estimated_resolution_time": "3 sec",  // ★ NEW Wave 6A
+        "estimated_analyst_cost": 0,            // ★ NEW Wave 6A
+        "risk_if_wrong": "Low"                  // ★ NEW Wave 6A
+      },
+      // ... more options
+    ],
+    "reasoning": "...",
+    "decision_economics": {  // ★ NEW Wave 6A
+      "time_saved": "42 minutes vs manual triage",
+      "cost_avoided": "$127 analyst cost avoided",
+      "monthly_projection": "At 200 similar alerts/month: 150 analyst-hours, $25K saved"
+    }
+  },
+  "reasoning": "...",
+  "confidence": 0.92,
+  "graph_data": {...}
+}
+```
+
+**Tab Support:** Tab 3 (situation panel)
+
+---
+
+### GET /api/metrics/compounding (v2 enhanced)
+
+**Purpose:** Get compounding metrics with business impact.
+
+**Router:** `metrics.py`
+
+**Response (v2 additions):**
+```json
+{
+  "period": {...},
+  "headline": {...},
+  "weekly_trend": [...],
+  "evolution_events": [...],
+  "business_impact": {  // ★ NEW Wave 6C
+    "analyst_hours_saved_monthly": 847,
+    "cost_avoided_quarterly": 127000,
+    "mttr_reduction_pct": 75,
+    "alert_backlog_eliminated_monthly": 2400
+  }
+}
+```
+
+**Tab Support:** Tab 4 (business impact banner)
+
+---
+
+## V2 NEW FRONTEND FEATURES
+
+### Tab 2: Runtime Evolution (Enhanced)
+
+**Wave 1 Additions:**
+- **CMA Labels:**
+  - CONSUME badge (blue) on Eval Gate panel
+  - MUTATE badge (purple) on TRIGGERED_EVOLUTION panel
+- **Eval Gate Sequential Animation:**
+  - 800ms delay per check
+  - Opacity + translate transition
+  - Clock spinner during "Checking..." state
+
+**Wave 2 Additions:**
+- **"Simulate Failed Gate" button:**
+  - Calls `POST /api/alert/process-blocked`
+  - Danger-themed button (red/amber)
+- **BLOCKED Banner:**
+  - Shown when `overall_passed: false`
+  - Red gradient background
+  - Shield icon
+  - Reason text
+  - "Escalated to human reviewer" message
+
+**Wave 5 Additions:**
+- **AgentEvolver Panel (purple theme):**
+  - Variant comparison bars (current vs previous success rate)
+  - Promotion status badge (green "Promoted ✓" or gray "Active (monitoring)")
+  - Promotion reason text
+
+**Wave 6B Additions:**
+- **"What Changed" box:**
+  - Lightbulb icon
+  - Italic plain English narrative
+  - Subtle bordered box
+- **Operational Impact Cards (5 cards):**
+  - Card 1: Fewer false escalations % (green)
+  - Card 2: Fewer Tier 2 reviews/mo (green)
+  - Card 3: Analyst hours recovered/mo (green)
+  - Card 4: Monthly savings (green, $, bold)
+  - Card 5: Missed threats (blue, shield icon, always 0)
+
+**Key Message:**
+> "Loop 2 makes the agent smarter ACROSS decisions by learning which prompts work best."
+
+---
+
+### Tab 3: Alert Triage (Enhanced)
+
+**Wave 1 Additions:**
+- **CMA Label:**
+  - ACTIVATE badge (green) on recommendation panel
+
+**Wave 4 Additions:**
+- **Situation Analyzer Panel:**
+  - Situation type badge with color coding (blue, green, orange, red, gray, yellow)
+  - Key factors list (3-5 bullet points)
+  - Options bar chart (Recharts horizontal bars, confidence %)
+  - Situation reasoning text
+
+**Wave 6A Additions:**
+- **Decision Economics in Options:**
+  - Time column: "3 sec", "45 min", "2 hr"
+  - Cost column: "$0", "$43", "$127"
+  - Risk column: "None", "Low", "Medium", "High"
+  - Color-coded risk (green/yellow/orange/red)
+- **Economics Summary Box:**
+  - Time saved
+  - Cost avoided
+  - Monthly projection
+  - Clock + dollar icons
+
+**Alert Queue Updates:**
+- Now includes ALERT-7824 (phishing - Mary Chen)
+
+---
+
+### Tab 4: Compounding Dashboard (Enhanced)
+
+**Wave 1 Additions:**
+- **Counter Animations:**
+  - `useCountUp` custom hook
+  - 3-second count-up with ease-out easing
+  - Applied to Week 4 numbers: nodes, auto-close rate, MTTR, FP investigations
+
+**Wave 6C Additions:**
+- **Business Impact Banner:**
+  - Positioned at top, below header
+  - 4 animated metric cards in flex row:
+    1. **Analyst Hours Saved / Month:** 847 (clock icon, green)
+    2. **Cost Avoided / Quarter:** $127K (dollar icon, blue, bold)
+    3. **MTTR Reduction:** 75% (trending-down icon, purple)
+    4. **Alert Backlog Eliminated / Month:** 2,400 (check-circle icon, emerald)
+  - Executive summary styling (gradient, borders)
+  - CFO reporting message
+
+**Wave 6D Additions:**
+- **Two-Loop Hero Diagram:**
+  - Dark slate background (from-slate-900 via-slate-800)
+  - **Center:** Context Graph (Neo4j) with pulse animation, yellow border, Database icon
+  - **Left:** Loop 1 - Situation Analyzer (blue theme):
+    - Title: "LOOP 1: SITUATION ANALYZER"
+    - Subtitle: "Smarter WITHIN each decision"
+    - 3 bullets: Classifies, Evaluates, Reasons
+    - Footer: "Demo: Tab 3 →"
+  - **Right:** Loop 2 - Agent Evolver (purple theme):
+    - Title: "LOOP 2: AGENT EVOLVER"
+    - Subtitle: "Smarter ACROSS all decisions"
+    - 3 bullets: Tracks, Evolves, Promotes
+    - Footer: "Demo: Tab 2 →"
+  - **Bottom:** TRIGGERED_EVOLUTION connection badge (gradient, yellow border)
+  - **Stats Row (3 cards):**
+    - Situation Types: 2 → 6
+    - Prompt Variants Evolved: 0 → 4
+    - Cross-Alert Patterns: Travel: 47 | Phish: 31
+  - **Key Message:** "SIEMs get better rules. Our copilot becomes a better copilot."
+
+---
+
+## V2 NEW ALERT TYPE
+
+### ALERT-7824: Phishing (Mary Chen)
+
+**Added in:** Wave 5C
+
+**Details:**
+- **User:** Mary Chen (mary.chen@company.com)
+- **Title:** Marketing Manager
+- **Department:** Marketing
+- **Asset:** LAPTOP-MC-003
+- **Alert Type:** phishing
+- **Source:** susanmorgan@phishmail.com
+- **Subject:** "Urgent: Update your email password"
+- **Pattern:** PAT-PHISH-KNOWN (214 occurrences, 82% FP rate)
+- **Campaign:** Operation DarkHook (PhishingCampaign node, November 2025)
+- **Recommended Action:** auto_remediate (quarantine, block sender domain)
+- **Confidence:** 94%
+- **Situation Type:** KNOWN_PHISHING_CAMPAIGN
+
+**Neo4j Relationships:**
+```cypher
+(alert:Alert {id: "ALERT-7824"})
+  -[:DETECTED_ON]-> (laptop:Asset {hostname: "LAPTOP-MC-003"})
+  -[:INVOLVES]-> (user:User {name: "Mary Chen"})
+  -[:CLASSIFIED_AS]-> (type:AlertType {id: "phishing"})
+  -[:MATCHES]-> (pattern:AttackPattern {id: "PAT-PHISH-KNOWN"})
+  -[:PART_OF]-> (campaign:PhishingCampaign {name: "Operation DarkHook"})
+```
+
+---
+
+## V2 ALERT TYPES TABLE (Updated)
+
+| Type | Alert ID | User | Action | Situation Type |
+|------|----------|------|--------|----------------|
+| **anomalous_login** | ALERT-7823 | John Smith (travel to Singapore) | false_positive_close | TRAVEL_LOGIN_ANOMALY |
+| **phishing** | ALERT-7824 | Mary Chen (suspicious email) | auto_remediate | KNOWN_PHISHING_CAMPAIGN |
+| malware_detection | ALERT-7822 | (existing) | auto_remediate / escalate | CRITICAL_ASSET_MALWARE / ROUTINE_MALWARE_SCAN |
+| data_exfiltration | ALERT-7821 | (existing) | escalate_incident | DATA_EXFILTRATION_DETECTED |
+
+---
+
+## V2 KEY ARCHITECTURE CONCEPTS
+
+### Loop 1: Situation Analyzer (NEW)
+
+**Concept:** Smarter WITHIN each decision.
+
+**How it works:**
+1. **Classify** the situation (6 types based on alert + context patterns)
+2. **Evaluate** multiple options (3-4 per situation, not just binary)
+3. **Provide economics** (time/cost/risk per option)
+4. **Show reasoning** (why this situation type was chosen)
+
+**Example:**
+```
+Alert: anomalous_login
+Context: user_traveling=True, vpn_matches_location=True, mfa_completed=True
+
+→ Situation Type: TRAVEL_LOGIN_ANOMALY
+
+→ Options:
+  1. Auto-close as false positive (3 sec, $0, Low risk) — 92% confidence ★
+  2. Enrich with more data (2 min, $5, None risk) — 78% confidence
+  3. Escalate to Tier 2 (45 min, $127, None risk) — 65% confidence
+
+→ Economics: Saves 42 minutes vs manual triage, avoids $127 analyst cost
+→ Monthly: 200 alerts × 42 min = 150 hours, $25K saved
+```
+
+**Value Proposition:**
+- CISOs see: **Time and cost saved per decision**
+- CFOs see: **Monthly projections in dollars**
+
+**Tab Support:** Tab 3 (situation panel)
+
+---
+
+### Loop 2: Agent Evolver (NEW)
+
+**Concept:** Smarter ACROSS all decisions.
+
+**How it works:**
+1. **Track** prompt variant performance (success rate per variant)
+2. **Compare** variants within the same family (v1 vs v2)
+3. **Promote** better variants automatically (>5% improvement + 10 samples)
+4. **Compute** operational impact (what changed, monthly savings)
+
+**Example:**
+```
+Alert Type: anomalous_login
+Active Variant: TRAVEL_CONTEXT_v2 (89% success rate)
+Previous: TRAVEL_CONTEXT_v1 (71% success rate)
+
+→ Improvement: +18 percentage points
+
+→ What Changed: "Agent learned that VPN location + travel record together indicate safe access. Previously escalated 29% of travel alerts to Tier 2 unnecessarily."
+
+→ Operational Impact:
+  - 18% fewer false escalations
+  - 36 fewer Tier 2 reviews/month
+  - 27 analyst hours recovered/month
+  - $4,572 saved/month
+  - 0 missed threats (eval gates prevent unsafe actions)
+```
+
+**Value Proposition:**
+- CISOs see: **Proof that the agent improves over time**
+- CFOs see: **Monthly savings from evolution**
+- VCs see: **Compounding moat (competitors start at zero, we start at 127 patterns)**
+
+**Tab Support:** Tab 2 (AgentEvolver panel)
+
+---
+
+### Decision Economics (NEW - Wave 6A)
+
+**Concept:** Every option shows time, cost, and risk.
+
+**Why it matters:**
+- **CISOs** need to justify automation decisions to auditors
+- **CFOs** need to see ROI in dollars and hours
+- **Compliance** requires risk assessment documentation
+
+**Implementation:**
+- Each option in `evaluate_options()` includes:
+  - `estimated_resolution_time`: "3 sec" / "45 min" / "2 hr"
+  - `estimated_analyst_cost`: $0 / $43 / $127
+  - `risk_if_wrong`: "None" / "Low" / "Medium" / "High"
+
+**Display:**
+- Tab 3: Time/Cost/Risk columns alongside option bars
+- Tab 3: Economics summary box (time saved, cost avoided, monthly projection)
+
+---
+
+### Business Impact (NEW - Wave 6C)
+
+**Concept:** Aggregate savings visible in Tab 4 banner.
+
+**Metrics:**
+- **Analyst Hours Saved / Month:** 847 hours
+- **Cost Avoided / Quarter:** $127K
+- **MTTR Reduction:** 75% (12.4 min → 3.1 min)
+- **Alert Backlog Eliminated / Month:** 2,400 alerts
+
+**Why it matters:**
+- **CISOs** can present these numbers to their CFO
+- **CFOs** see quarterly cost avoidance in dollars
+- **Board** sees operational efficiency improvement
+
+**Implementation:**
+- Backend: `business_impact` object in `/api/metrics/compounding` response
+- Frontend: 4 animated metric cards at top of Tab 4
+- Animation: Counter animation (3-second count-up with ease-out)
+
+---
+
+### Two-Loop Diagram (NEW - Wave 6D)
+
+**Concept:** Hero visual for VCs showing architectural differentiation.
+
+**Layout:**
+```
+       ┌─────────────────────────────┐
+       │   CONTEXT GRAPH (Neo4j)     │
+       │   [pulse animation]         │
+       └─────────────────────────────┘
+                │         │
+        ┌───────┘         └───────┐
+        ▼                         ▼
+┌─────────────────┐     ┌─────────────────┐
+│  LOOP 1 (blue)  │     │  LOOP 2 (purple)│
+│  Situation      │     │  Agent          │
+│  Analyzer       │     │  Evolver        │
+│                 │     │                 │
+│  • Classifies   │     │  • Tracks       │
+│  • Evaluates    │     │  • Evolves      │
+│  • Reasons      │     │  • Promotes     │
+└─────────────────┘     └─────────────────┘
+        │                         │
+        └───────┐         ┌───────┘
+                ▼         ▼
+       ┌─────────────────────────────┐
+       │  TRIGGERED_EVOLUTION        │
+       └─────────────────────────────┘
+```
+
+**Stats Row:**
+- Situation Types: 2 → 6
+- Prompt Variants: 0 → 4
+- Cross-Alert Patterns: Travel 47 | Phishing 31
+
+**Value Proposition:**
+- **VCs** see: "Both loops write to the same graph → compounding intelligence"
+- **SIEMs** have only Loop 1 (better context)
+- **We** have Loop 1 + Loop 2 (better context + better agent)
+
+**Soundbite:**
+> "SIEMs get better rules. Our copilot becomes a better copilot."
+
+**Tab Support:** Tab 4 (two-loop hero diagram)
+
+---
+
+## V2 SUMMARY: What Changed
+
+| Wave | Focus | Files Changed | Key Addition |
+|------|-------|---------------|--------------|
+| **1** | Labels + Animation | Tab 2, 3, 4, App.tsx | CMA labels, 800ms eval gate animation, counter animations |
+| **2** | Blocking Demo | evolution.py, Tab 2, api.ts | process-blocked endpoint, BLOCKED banner |
+| **3** | Situation Backend | situation.py (NEW), evolution.py, triage.py | classify_situation(), evaluate_options(), 6 situation types |
+| **4** | Situation Frontend | Tab 3 | Situation panel with type badge, factors, options chart |
+| **5** | AgentEvolver | evolver.py (NEW), evolution.py, Tab 2, seed_neo4j.py | Prompt tracking, promotion, AgentEvolver panel, phishing alert |
+| **6A** | Decision Economics | situation.py, Tab 3 | Time/cost/risk per option, economics summary |
+| **6B** | Operational Impact | evolver.py, Tab 2 | What-changed narrative, 5 impact cards |
+| **6C** | Business Banner | metrics.py, Tab 4 | 4 animated metrics: hours, cost, MTTR, backlog |
+| **6D** | Two-Loop Diagram | Tab 4 | Hero diagram with center graph, Loop 1 & 2, stats |
+| **6E** | Documentation | CLAUDE.md, PROJECT_STRUCTURE.md | V2 additions documented |
+
+---
+
+*CLAUDE.md for SOC Copilot Demo v2.0 | February 17, 2026*
+*v1 Core (January 2026): Adapted for cybersecurity/SOC domain*
+*v2 Enhancements (February 2026): Two-loop architecture with business impact visibility*
+*Key principle: The demo proves the ARCHITECTURE (two loops → compounding), not agent sophistication.*
+*v2 Focus: Making the business case visible to CISOs and CFOs.*
