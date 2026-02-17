@@ -9,6 +9,7 @@ import uuid
 
 from app.services.agent import agent
 from app.services.reasoning import narrator
+from app.services.situation import analyze_situation
 from app.db.neo4j import neo4j_client
 from app.models.schemas import ProcessAlertRequest
 
@@ -103,21 +104,26 @@ async def analyze_alert(request: ProcessAlertRequest):
             raise HTTPException(status_code=404, detail=f"Context for {alert_id} not found")
 
         # ====================================================================
-        # Step 3: Get agent recommendation
+        # Step 3: Situation Analysis (Loop 1: Context Intelligence)
         # ====================================================================
         alert_type = context.get("alert_type")
+        situation_analysis = analyze_situation(alert_type, context)
+
+        # ====================================================================
+        # Step 4: Get agent recommendation
+        # ====================================================================
         decision = agent.decide(alert_type, context)
 
         # Generate reasoning
         reasoning = await narrator.generate_reasoning(alert_type, decision.action, context)
 
         # ====================================================================
-        # Step 4: Get graph data for visualization
+        # Step 5: Get graph data for visualization
         # ====================================================================
         graph_data = await get_graph_data(alert_id)
 
         # ====================================================================
-        # Step 5: Extract key facts from context
+        # Step 6: Extract key facts from context
         # ====================================================================
         key_facts = []
 
@@ -161,7 +167,8 @@ async def analyze_alert(request: ProcessAlertRequest):
                 "pattern_id": decision.pattern_id,
                 "playbook_id": decision.playbook_id
             },
-            "graph_data": graph_data
+            "graph_data": graph_data,
+            "situation_analysis": situation_analysis.model_dump()
         }
 
     except HTTPException:

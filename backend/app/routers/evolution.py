@@ -10,6 +10,7 @@ import time
 
 from app.services.agent import agent
 from app.services.reasoning import narrator
+from app.services.situation import analyze_situation
 from app.db.neo4j import neo4j_client
 from app.models.schemas import ProcessAlertRequest
 
@@ -95,6 +96,12 @@ async def process_alert(request: ProcessAlertRequest):
             raise HTTPException(status_code=404, detail=f"Alert {request.alert_id} not found")
 
         alert_type = context.get("alert_type")
+
+        # ====================================================================
+        # Step 1.5: Situation Analysis (Loop 1: Context Intelligence)
+        # ====================================================================
+
+        situation_analysis = analyze_situation(alert_type, context)
 
         # ====================================================================
         # Step 2: Agent Decision (Rule-Based)
@@ -221,7 +228,8 @@ async def process_alert(request: ProcessAlertRequest):
                 "asset_hostname": context.get("asset_hostname"),
                 "travel_destination": context.get("travel_destination"),
                 "pattern_count": context.get("pattern_count", 0)
-            }
+            },
+            "situation_analysis": situation_analysis.model_dump()
         }
 
     except HTTPException:
@@ -254,6 +262,9 @@ async def process_alert_blocked(request: ProcessAlertRequest):
             raise HTTPException(status_code=404, detail=f"Alert {request.alert_id} not found")
 
         alert_type = context.get("alert_type")
+
+        # Situation Analysis (Loop 1)
+        situation_analysis = analyze_situation(alert_type, context)
 
         # Agent decision (rule-based)
         decision = agent.decide(alert_type, context)
@@ -363,7 +374,8 @@ async def process_alert_blocked(request: ProcessAlertRequest):
                 "travel_destination": context.get("travel_destination"),
                 "pattern_count": context.get("pattern_count", 0)
             },
-            "blocked_reason": blocked_reason
+            "blocked_reason": blocked_reason,
+            "situation_analysis": situation_analysis.model_dump()
         }
 
     except HTTPException:
