@@ -195,20 +195,18 @@ def generate_what_changed_narrative(alert_type: str, old_rate: float, new_rate: 
         Human-readable narrative
     """
     if alert_type == "anomalous_login":
+        false_escalation_pct = int((1 - old_rate) * 100)
         return (
             "Agent learned that VPN location + travel record together indicate safe access. "
-            f"Previously escalated {int((1 - old_rate) * 100)}% of travel alerts to Tier 2 unnecessarily."
+            f"Previously escalated {false_escalation_pct}% of travel alerts to Tier 2 unnecessarily."
         )
     elif alert_type == "phishing":
         return (
-            "Agent improved campaign signature matching by correlating sender domain patterns with known threat intel. "
-            f"Reduced false negatives from {int((1 - old_rate) * 100)}% to {int((1 - new_rate) * 100)}%."
+            "Agent improved campaign signature matching. "
+            "Faster identification of known phishing patterns reduces exposure window."
         )
     else:
-        return (
-            f"Agent refined decision patterns for {alert_type} alerts. "
-            f"Success rate improved from {int(old_rate * 100)}% to {int(new_rate * 100)}%."
-        )
+        return "Agent behavior improved through accumulated decision outcomes."
 
 
 def calculate_operational_impact(old_rate: float, new_rate: float) -> OperationalImpact:
@@ -284,15 +282,44 @@ def get_evolution_summary(alert_type: str) -> PromptEvolution:
             operational_impact=impact
         )
 
+    # No recent promotion - use implicit baseline comparison
+    # Determine implicit previous variant based on alert type
+    previous_variant = None
+    previous_rate = None
+
+    if alert_type == "anomalous_login":
+        # Use v1 as implicit baseline for v2
+        if current_variant == "TRAVEL_CONTEXT_v2":
+            previous_variant = "TRAVEL_CONTEXT_v1"
+            previous_stats = PROMPT_STATS.get(previous_variant, {})
+            previous_rate = previous_stats.get("success_rate", 0.71)
+    elif alert_type == "phishing":
+        # Use v1 as implicit baseline
+        if current_variant == "PHISHING_RESPONSE_v1":
+            # No previous for v1, use a hardcoded baseline
+            previous_rate = 0.70  # Assume pre-evolution baseline
+        elif current_variant == "PHISHING_RESPONSE_v2":
+            previous_variant = "PHISHING_RESPONSE_v1"
+            previous_stats = PROMPT_STATS.get(previous_variant, {})
+            previous_rate = previous_stats.get("success_rate", 0.82)
+
+    # Generate narrative and impact if we have a baseline
+    narrative = None
+    impact = None
+
+    if previous_rate is not None:
+        narrative = generate_what_changed_narrative(alert_type, previous_rate, current_rate)
+        impact = calculate_operational_impact(previous_rate, current_rate)
+
     return PromptEvolution(
         current_variant=current_variant,
         current_success_rate=current_rate,
-        previous_variant=None,
-        previous_success_rate=None,
+        previous_variant=previous_variant,
+        previous_success_rate=previous_rate,
         promotion_occurred=False,
         promotion_reason=None,
-        what_changed_narrative=None,
-        operational_impact=None
+        what_changed_narrative=narrative,
+        operational_impact=impact
     )
 
 

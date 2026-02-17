@@ -9,6 +9,8 @@ import {
   Activity,
   AlertTriangle,
   TrendingUp,
+  Lightbulb,
+  DollarSign,
 } from 'lucide-react'
 import * as api from '@/lib/api'
 
@@ -78,6 +80,14 @@ interface ProcessResult {
     previous_success_rate?: number | null
     promotion_occurred: boolean
     promotion_reason?: string | null
+    what_changed_narrative?: string
+    operational_impact?: {
+      fewer_false_escalations_pct: number
+      fewer_false_escalations_monthly: number
+      analyst_hours_recovered: number
+      estimated_monthly_savings: number
+      missed_threats: number
+    }
   }
 }
 
@@ -617,6 +627,89 @@ export default function RuntimeEvolutionTab() {
                       </p>
                     )}
                   </div>
+
+                  {/* What Changed Narrative */}
+                  {result.prompt_evolution.what_changed_narrative && (
+                    <div className="p-4 bg-purple-950/20 rounded border border-purple-500/30 mb-3">
+                      <div className="flex items-start gap-2">
+                        <Lightbulb className="w-4 h-4 text-purple-300 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="text-xs font-semibold text-purple-300 uppercase tracking-wide mb-1">
+                            What Changed
+                          </div>
+                          <p className="text-sm text-gray-300 italic">
+                            {result.prompt_evolution.what_changed_narrative}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Operational Impact */}
+                  {result.prompt_evolution.operational_impact && (
+                    <div className="mb-3">
+                      <div className="text-xs font-semibold text-purple-300 uppercase tracking-wide mb-2">
+                        Operational Impact
+                      </div>
+                      <div className="flex gap-3">
+                        {/* Fewer False Escalations */}
+                        <div className="flex-1 bg-purple-950/30 rounded border border-purple-500/20 p-3">
+                          <div className="text-xl font-bold text-green-400">
+                            {result.prompt_evolution.operational_impact.fewer_false_escalations_pct}%
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            fewer false escalations
+                          </div>
+                        </div>
+
+                        {/* Monthly Reviews Saved */}
+                        <div className="flex-1 bg-purple-950/30 rounded border border-purple-500/20 p-3">
+                          <div className="text-xl font-bold text-green-400">
+                            {result.prompt_evolution.operational_impact.fewer_false_escalations_monthly}
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            fewer Tier 2 reviews/mo
+                          </div>
+                        </div>
+
+                        {/* Hours Recovered */}
+                        <div className="flex-1 bg-purple-950/30 rounded border border-purple-500/20 p-3">
+                          <div className="text-xl font-bold text-green-400">
+                            {result.prompt_evolution.operational_impact.analyst_hours_recovered}
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            hrs recovered/mo
+                          </div>
+                        </div>
+
+                        {/* Monthly Savings */}
+                        <div className="flex-1 bg-purple-950/30 rounded border border-purple-500/20 p-3">
+                          <div className="flex items-center gap-1">
+                            <DollarSign className="w-5 h-5 text-green-400" />
+                            <div className="text-xl font-bold text-green-400">
+                              {result.prompt_evolution.operational_impact.estimated_monthly_savings.toLocaleString()}
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            saved/mo
+                          </div>
+                        </div>
+
+                        {/* Missed Threats */}
+                        <div className="flex-1 bg-purple-950/30 rounded border border-purple-500/20 p-3">
+                          <div className="flex items-center gap-1">
+                            <Shield className="w-4 h-4 text-blue-400" />
+                            <div className="text-xl font-bold text-blue-400">
+                              {result.prompt_evolution.operational_impact.missed_threats}
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            missed threats
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Key Insight */}
                   <div className="p-3 bg-purple-950/30 rounded border border-purple-500/30">
