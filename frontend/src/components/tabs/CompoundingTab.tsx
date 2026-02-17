@@ -465,73 +465,150 @@ export default function CompoundingTab() {
           </div>
         </div>
 
-        {/* Two-Loop Visual (Hero) */}
-        <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border-2 border-blue-200 shadow p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
+        {/* Two-Loop Architecture Diagram (Hero Visual) */}
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-lg border-2 border-purple-500 shadow-2xl p-8">
+          <h3 className="text-xl font-bold text-white mb-2 text-center">
             Two-Loop Architecture
           </h3>
-          <div className="space-y-6">
-            {/* Traditional SIEM */}
-            <div>
-              <div className="text-sm font-semibold text-gray-700 mb-2">Traditional SIEM (One Loop)</div>
-              <div className="bg-white rounded-lg p-4 border-2 border-gray-300">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-20 h-10 bg-blue-200 rounded flex items-center justify-center text-xs font-semibold">
-                    Alert
+          <p className="text-sm text-gray-400 text-center mb-6">
+            The VC Story: Both loops write to the same graph
+          </p>
+
+          <div className="relative">
+            {/* Center: Context Graph */}
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
+              <div className="bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg p-6 border-4 border-yellow-400 shadow-2xl animate-pulse">
+                <div className="text-center">
+                  <Database className="w-8 h-8 text-white mx-auto mb-2" />
+                  <div className="text-lg font-bold text-white">
+                    CONTEXT GRAPH
                   </div>
-                  <div className="text-xl">→</div>
-                  <div className="w-20 h-10 bg-blue-300 rounded flex items-center justify-center text-xs font-semibold">
-                    Detect
-                  </div>
-                  <div className="text-xl">→</div>
-                  <div className="w-20 h-10 bg-blue-200 rounded flex items-center justify-center text-xs font-semibold">
-                    Log
+                  <div className="text-xs text-gray-200 font-semibold">(Neo4j)</div>
+                  <div className="mt-2 text-xs text-gray-300 border-t border-gray-400 pt-2">
+                    Patterns | Users | Assets<br />Decisions | Playbooks
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-xl">↓</div>
-                  <div className="text-xs text-gray-600">Manual Tuning</div>
-                </div>
-              </div>
-              <div className="mt-2 text-sm italic text-gray-600">
-                "Their SIEM gets better rules."
               </div>
             </div>
 
-            {/* Our SOC Copilot */}
-            <div>
-              <div className="text-sm font-semibold text-purple-700 mb-2">Our SOC Copilot (Two Loops)</div>
-              <div className="bg-white rounded-lg p-4 border-2 border-purple-400">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-20 h-10 bg-purple-200 rounded flex items-center justify-center text-xs font-semibold">
-                    Alert
+            {/* Layout grid for loops */}
+            <div className="grid grid-cols-2 gap-12 mb-4" style={{ minHeight: '350px' }}>
+              {/* Left: Loop 1 - Situation Analyzer */}
+              <div className="relative">
+                <div className="bg-blue-900/40 rounded-lg border-2 border-blue-400 p-5 h-full">
+                  <div className="mb-3">
+                    <div className="text-lg font-bold text-blue-300 mb-1">
+                      LOOP 1: SITUATION ANALYZER
+                    </div>
+                    <div className="text-xs text-blue-200 italic mb-3">
+                      Smarter WITHIN each decision
+                    </div>
                   </div>
-                  <div className="text-xl">→</div>
-                  <div className="w-20 h-10 bg-purple-300 rounded flex items-center justify-center text-xs font-semibold">
-                    Graph
+
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-1.5" />
+                      <div className="text-sm text-gray-300">Classifies situations</div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-1.5" />
+                      <div className="text-sm text-gray-300">Evaluates options</div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-1.5" />
+                      <div className="text-sm text-gray-300">Reasons over context</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-auto pt-4 border-t border-blue-700">
+                    <div className="text-xs text-blue-300 font-semibold">
+                      Demo: Tab 3 →
+                    </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 mb-3">
-                  <div className="bg-green-100 rounded p-2 border-2 border-green-400">
-                    <div className="text-xs font-semibold text-green-800 text-center">Better Triage</div>
-                    <div className="text-xs text-gray-600 text-center">(Context)</div>
-                  </div>
-                  <div className="bg-blue-100 rounded p-2 border-2 border-blue-400">
-                    <div className="text-xs font-semibold text-blue-800 text-center">Better Agent</div>
-                    <div className="text-xs text-gray-600 text-center">(Evolution)</div>
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xl mb-1">↓</div>
-                  <div className="bg-purple-600 text-white rounded px-4 py-2 font-bold text-sm">
-                    COMPOUNDING
-                  </div>
-                </div>
+
+                {/* Connecting line to center */}
+                <div className="absolute top-1/2 right-0 w-12 h-0.5 bg-blue-400" style={{ transform: 'translateX(100%)' }} />
               </div>
-              <div className="mt-2 text-sm italic text-purple-700 font-semibold">
-                "Our copilot BECOMES a better copilot."
+
+              {/* Right: Loop 2 - Agent Evolver */}
+              <div className="relative">
+                <div className="bg-purple-900/40 rounded-lg border-2 border-purple-400 p-5 h-full">
+                  <div className="mb-3">
+                    <div className="text-lg font-bold text-purple-300 mb-1">
+                      LOOP 2: AGENT EVOLVER
+                    </div>
+                    <div className="text-xs text-purple-200 italic mb-3">
+                      Smarter ACROSS all decisions
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-1.5" />
+                      <div className="text-sm text-gray-300">Tracks prompt success</div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-1.5" />
+                      <div className="text-sm text-gray-300">Evolves behavior</div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-1.5" />
+                      <div className="text-sm text-gray-300">Promotes winners</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-auto pt-4 border-t border-purple-700">
+                    <div className="text-xs text-purple-300 font-semibold">
+                      Demo: Tab 2 →
+                    </div>
+                  </div>
+                </div>
+
+                {/* Connecting line to center */}
+                <div className="absolute top-1/2 left-0 w-12 h-0.5 bg-purple-400" style={{ transform: 'translateX(-100%)' }} />
               </div>
             </div>
+
+            {/* Bottom: Write Back Connection */}
+            <div className="text-center mt-6">
+              <div className="inline-block bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 rounded-lg px-6 py-3 border-2 border-yellow-400">
+                <div className="text-sm font-bold text-white">
+                  BOTH WRITE BACK → TRIGGERED_EVOLUTION
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Row */}
+          <div className="mt-8 pt-6 border-t border-gray-700">
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="bg-slate-800/50 rounded-lg p-3 border border-blue-500/30">
+                <div className="text-xs text-gray-400 mb-1">Situation Types</div>
+                <div className="text-lg font-bold text-blue-400">
+                  2 → 6
+                </div>
+              </div>
+              <div className="bg-slate-800/50 rounded-lg p-3 border border-purple-500/30">
+                <div className="text-xs text-gray-400 mb-1">Prompt Variants Evolved</div>
+                <div className="text-lg font-bold text-purple-400">
+                  0 → 4
+                </div>
+              </div>
+              <div className="bg-slate-800/50 rounded-lg p-3 border border-green-500/30">
+                <div className="text-xs text-gray-400 mb-1">Cross-Alert Patterns</div>
+                <div className="text-lg font-bold text-green-400">
+                  Travel: 47 | Phish: 31
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Key Message */}
+          <div className="mt-6 text-center">
+            <p className="text-sm italic text-gray-400">
+              💡 "SIEMs get better rules. Our copilot <span className="text-purple-400 font-semibold">becomes</span> a better copilot."
+            </p>
           </div>
         </div>
       </div>
