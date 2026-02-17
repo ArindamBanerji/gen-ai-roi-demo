@@ -1,12 +1,15 @@
-# SOC Copilot Demo
+# SOC Copilot Demo v2
 
 > **AI-augmented Security Operations with Runtime Evolution and Compounding Intelligence**
 
 [![Status](https://img.shields.io/badge/status-demo--ready-success)](https://github.com)
+[![Version](https://img.shields.io/badge/version-v2.0-purple)](https://github.com)
 [![Python](https://img.shields.io/badge/python-3.11+-blue)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/react-18.2-blue)](https://react.dev/)
 [![Neo4j](https://img.shields.io/badge/neo4j-5.14-blue)](https://neo4j.com/)
+
+> **✨ v2.0 NEW:** Two-Loop Architecture now visible with **Situation Analyzer** (Loop 1) and **AgentEvolver** (Loop 2), plus business impact metrics in CISO/CFO language
 
 ---
 
@@ -35,6 +38,51 @@ Traditional SIEMs improve through manual rule tuning. Our SOC Copilot uses a **t
 
 **Tab 4: Compounding Dashboard** - "Watch the Moat Grow"
 > *Week 1 (23 patterns) → Week 4 (127 patterns). Same model, more intelligence.*
+
+---
+
+## ✨ What's New in v2
+
+### The Two-Loop Architecture (Now Visible)
+
+**v1** showed that decisions trigger evolution. **v2** shows HOW the system gets smarter through two distinct loops:
+
+| Loop | Name | What It Does | Where |
+|------|------|--------------|-------|
+| **Loop 1** | **Situation Analyzer** | Smarter WITHIN each decision | Tab 3 |
+| **Loop 2** | **AgentEvolver** | Smarter ACROSS decisions | Tab 2 |
+
+### New Features
+
+#### 🧠 Situation Analyzer (Tab 3)
+- **Classifies situations:** Safe Travel Access, Known Phishing Campaign, etc.
+- **Decision Economics:** Shows time/cost/risk for each option
+  - Example: "Auto-close: 3 sec, $0" vs "Escalate: 45 min, $127"
+- **Monthly projections:** "At 200 similar alerts/month: 150 analyst-hours, $25K saved"
+
+#### 🤖 AgentEvolver (Tab 2)
+- **Prompt variant tracking:** Shows which agent behaviors perform best
+- **Operational impact:** Translates evolution into business metrics
+  - "18% fewer false escalations = 36/month avoided, 27 hours recovered, $4,572 saved"
+- **Plain English narrative:** "Agent learned that VPN + travel record = safe access"
+
+#### 💰 Business Impact Banner (Tab 4)
+- **CFO-ready metrics** at top of Compounding tab:
+  - 847 analyst hours saved/month
+  - $127K cost avoided/quarter
+  - 75% MTTR reduction
+  - 2,400 alert backlog eliminated/month
+
+#### 🔁 Enhanced Two-Loop Diagram (Tab 4)
+- Visual showing both loops feeding the same graph
+- TRIGGERED_EVOLUTION connecting decisions to evolution
+
+#### 🎨 Polish
+- C/M/A labels (CONSUME/MUTATE/ACTIVATE) on Tabs 2 & 3
+- Sequential eval gate animation (800ms delay)
+- Blocking demo with "Simulate Failed Gate" button
+- Counter animations on all headline numbers
+- Second alert type (phishing - ALERT-7824)
 
 ---
 
@@ -82,7 +130,7 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Seed Neo4j database
+# Seed Neo4j database (v2 includes 5 alerts: 2 travel, 1 phishing, 2 malware)
 python seed_neo4j.py
 ```
 
@@ -96,21 +144,23 @@ npm install
 
 ### Running the Demo
 
-#### Terminal 1: Start Backend
+#### Terminal 1: Start Backend (v2)
 ```bash
 cd backend
 source venv/bin/activate  # Windows: venv\Scripts\activate
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8001
 ```
 
-#### Terminal 2: Start Frontend
+#### Terminal 2: Start Frontend (v2)
 ```bash
 cd frontend
-npm run dev
+npm run dev -- --port 5174
 ```
 
 #### Open Browser
-Navigate to: **http://localhost:5173**
+Navigate to: **http://localhost:5174**
+
+> **Note:** v2 uses ports 8001/5174 to avoid conflict with v1 (8000/5173)
 
 The app opens on **Tab 2 (Runtime Evolution)** - the key differentiator.
 
@@ -152,6 +202,8 @@ User: "What's our false positive rate?"
 - 🔒 Eval gate with 4 checks (Faithfulness, Safe Action, Playbook, SLA)
 - 🔄 **TRIGGERED_EVOLUTION** - The key differentiator
 - 📈 Pattern confidence increases (91% → 94%)
+- 🤖 **AgentEvolver (v2)** - Shows prompt variant performance and operational impact
+- 💰 **Operational Impact (v2)** - Translates evolution into business metrics (hours saved, cost avoided)
 - ⚡ Processing stats (time, routing, event ID)
 
 **Demo Flow:**
@@ -182,6 +234,8 @@ User: "What's our false positive rate?"
 **Features:**
 - 📋 Alert queue (5 pending alerts with severity badges)
 - 🕸️ Graph traversal (47 nodes consulted)
+- 🧠 **Situation Analyzer (v2)** - Classifies situations and evaluates options with decision economics
+- 💵 **Decision Economics (v2)** - Shows time/cost/risk for each option (e.g., "3 sec vs 45 min", "$127 avoided")
 - 🎯 Recommendation with confidence % and reasoning
 - 🔄 4-step closed loop:
   - ✅ **EXECUTED** - Action sent to target system
@@ -204,9 +258,14 @@ User: "What's our false positive rate?"
 **"When they deploy, they start at zero. We start at 127 patterns."**
 
 **Features:**
+- 💰 **Business Impact Banner (v2)** - Headline CFO metrics with animated counters
+  - 847 analyst hours saved/month
+  - $127K cost avoided/quarter
+  - 75% MTTR reduction
+  - 2,400 alert backlog eliminated/month
 - 📊 Week 1 vs Week 4 headline comparison
 - 📈 Weekly trend chart (auto-close, MTTR, FP rate)
-- 🔁 Two-loop architecture visual
+- 🔁 **Enhanced Two-Loop Diagram (v2)** - Shows both Situation Analyzer (Loop 1) and AgentEvolver (Loop 2)
 - 📜 Recent evolution events timeline
 - 🏰 The moat message
 
@@ -434,11 +493,21 @@ A Neo4j relationship that links agent decisions to system evolution:
 
 **Result:** Show pattern confidence increase (91% → 94%)
 
+**Do (v2):** Point to AgentEvolver panel below
+
+**Say (v2):** "And here's the business impact: The agent learned from this decision. Fewer false escalations means 18% fewer unnecessary Tier 2 reviews—that's 36 fewer escalations per month, 27 analyst hours recovered, $4,572 saved monthly. And missed threats? Zero. The eval gate prevents unsafe actions."
+
 **Soundbite:** "Splunk gets better rules. Our copilot gets SMARTER."
 
 ### Act 3: Closed Loop (4 min - Tab 3)
 
-**Do:** Select ALERT-7823, click "Execute Action"
+**Do:** Select ALERT-7823
+
+**Result (v2):** Situation Analyzer appears showing "Safe Travel Access" classification
+
+**Say (v2):** "The Situation Analyzer classified this as safe travel access and evaluated three options. Look at the decision economics: Auto-close takes 3 seconds and costs $0. Manual escalation takes 45 minutes and costs $127. The agent chose the smart path."
+
+**Do:** Click "Execute Action"
 
 **Result:** 4-step animation (3.2 seconds)
 
@@ -450,13 +519,17 @@ A Neo4j relationship that links agent decisions to system evolution:
 
 ### Act 4: The Moat (2 min - Tab 4)
 
+**Do (v2):** Point to Business Impact Banner at top
+
+**Say (v2):** "Here's what compounding looks like in CFO language: 847 analyst hours saved per month, $127K cost avoided per quarter, 75% MTTR reduction, 2,400 alerts no longer waiting in the backlog. These aren't projections—this is what the graph delivers."
+
 **Do:** Scroll to Week 1 vs Week 4 comparison
 
 **Say:** "Week 1: 23 patterns, 68% auto-close. Week 4: 127 patterns, 89% auto-close. Same model. More intelligence."
 
 **Do:** Point to two-loop visual
 
-**Say:** "They get better rules. We get a better copilot. That's compounding."
+**Say (v2):** "Notice the architecture: Loop 1 (Situation Analyzer) makes better decisions WITHIN each alert. Loop 2 (AgentEvolver) makes a better copilot ACROSS alerts. Both loops feed the same graph. That's compounding."
 
 **Soundbite:** "When they deploy, they start at zero. We start at 127 patterns."
 
@@ -493,33 +566,33 @@ A Neo4j relationship that links agent decisions to system evolution:
 
 #### 1. Backend Health Check
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8001/health
 ```
 
 Expected: `{"status": "healthy"}`
 
 #### 2. Tab 1 - SOC Analytics
 ```bash
-curl -X POST http://localhost:8000/api/soc/query \
+curl -X POST http://localhost:8001/api/soc/query \
   -H "Content-Type: application/json" \
   -d '{"question": "Show MTTR by severity"}'
 ```
 
-#### 3. Tab 2 - Runtime Evolution
+#### 3. Tab 2 - Runtime Evolution (with AgentEvolver)
 ```bash
-curl -X POST http://localhost:8000/api/alert/process \
+curl -X POST http://localhost:8001/api/alert/process \
   -H "Content-Type: application/json" \
   -d '{"alert_id": "ALERT-7823"}'
 ```
 
-#### 4. Tab 3 - Alert Triage
+#### 4. Tab 3 - Alert Triage (with Situation Analyzer)
 ```bash
-curl http://localhost:8000/api/triage/alerts
+curl http://localhost:8001/api/triage/alerts
 ```
 
-#### 5. Tab 4 - Compounding
+#### 5. Tab 4 - Compounding (with Business Impact)
 ```bash
-curl http://localhost:8000/api/metrics/compounding?weeks=4
+curl http://localhost:8001/api/metrics/compounding?weeks=4
 ```
 
 ### Automated Testing
@@ -583,9 +656,9 @@ Eval gate failed: Faithfulness score 0.65 < 0.85
 Frontend spinner never resolves
 
 **Solutions:**
-1. Check backend is running: `curl http://localhost:8000/health`
+1. Check backend is running: `curl http://localhost:8001/health`
 2. Check browser console for CORS errors
-3. Verify frontend is using correct API URL (`/api`)
+3. Verify frontend is using correct API URL (proxy to `http://localhost:8001`)
 4. Restart both backend and frontend
 
 ---
@@ -636,17 +709,69 @@ Frontend spinner never resolves
 
 ---
 
-## 📊 Project Stats
+## 📊 Project Stats (v2)
 
 | Metric | Value |
 |--------|-------|
-| **Total Code** | ~5,084 lines |
-| **Backend Files** | 14 Python files |
+| **Total Code** | ~6,200 lines |
+| **Backend Files** | 16 Python files |
 | **Frontend Files** | 7 TypeScript/TSX files |
-| **API Endpoints** | 12 endpoints across 4 routers |
+| **API Endpoints** | 14 endpoints across 4 routers |
 | **Neo4j Nodes** | 47 nodes consulted per decision |
+| **v2 Additions** | Situation Analyzer (400 lines), AgentEvolver (360 lines) |
 | **Demo Duration** | 15 minutes (4 tabs) |
-| **Build Time** | 2 weeks (with simple agent) |
+| **Build Time** | 3 weeks (v1: 2 weeks, v2: 1 week) |
+
+---
+
+## 📅 Version History
+
+### v2.0 (February 17, 2026) - **Current Release**
+
+**Major Features:**
+- **Situation Analyzer (Loop 1)** - Classifies alert situations and evaluates options with decision economics
+  - 6 situation types (Safe Travel Access, Known Phishing Campaign, etc.)
+  - Time/cost/risk analysis per option
+  - Monthly projection for CISO/CFO reporting
+- **AgentEvolver (Loop 2)** - Tracks prompt variant performance and promotes winners
+  - Prompt variant comparison with success rates
+  - Operational impact metrics (hours saved, cost avoided)
+  - "What changed" narrative in plain English
+- **Business Impact Banner** - Tab 4 headline metrics
+  - 847 analyst hours saved/month
+  - $127K cost avoided/quarter
+  - 75% MTTR reduction
+  - 2,400 alert backlog eliminated/month
+- **Enhanced Two-Loop Diagram** - Visual showing both loops feeding the graph
+- **Second Alert Type** - Added phishing scenario (ALERT-7824, Mary Chen)
+- **C/M/A Labels** - CONSUME/MUTATE/ACTIVATE badges in Tabs 2 & 3
+- **Sequential Eval Gate Animation** - 800ms delay between checks
+- **Blocking Demo** - "Simulate Failed Gate" button shows BLOCKED state
+
+**Technical:**
+- New services: `situation.py` (~400 lines), `evolver.py` (~360 lines)
+- Updated Neo4j schema with PhishingCampaign nodes
+- Seed data for 5 alerts (2 travel, 1 phishing, 2 malware)
+- Frontend enhancements across all 4 tabs
+- Comprehensive documentation updates
+
+**Ports:** 8001 (backend) / 5174 (frontend)
+
+### v1.0 (February 10, 2026)
+
+**Initial Release:**
+- 4-tab demo (SOC Analytics, Runtime Evolution, Alert Triage, Compounding)
+- Simple rule-based agent (~200 lines)
+- Neo4j graph schema with TRIGGERED_EVOLUTION
+- BigQuery mock metrics
+- Firestore operational data
+- Gemini 1.5 Pro for narration
+- Tab 1: Natural language queries with provenance
+- Tab 2: Deployment registry, eval gate, TRIGGERED_EVOLUTION
+- Tab 3: Graph traversal, closed-loop execution
+- Tab 4: Week 1 vs Week 4 comparison
+
+**Ports:** 8000 (backend) / 5173 (frontend)
 
 ---
 
@@ -694,17 +819,26 @@ This project is for demonstration purposes. License TBD.
 
 ---
 
-## 🎯 Key Takeaways
+## 🎯 Key Takeaways (v2)
 
 1. **The Thesis:** "Splunk gets better rules. Our copilot gets SMARTER."
 
 2. **The Differentiator:** `(:Decision)-[:TRIGGERED_EVOLUTION]->(:EvolutionEvent)`
 
-3. **The Architecture:** Two loops (Triage + Evolution) → Compounding
+3. **The Architecture (v2):** Two loops feeding one graph:
+   - **Loop 1 (Situation Analyzer):** Smarter WITHIN decisions
+   - **Loop 2 (AgentEvolver):** Smarter ACROSS decisions
+   - Both loops → Compounding intelligence
 
-4. **The Moat:** When they deploy, they start at zero. We start at 127 patterns.
+4. **The Business Case (v2):** CFO-ready metrics:
+   - 847 analyst hours saved/month
+   - $127K cost avoided/quarter
+   - 75% MTTR reduction
+   - 2,400 alert backlog eliminated/month
 
-5. **The Demo:** 15 minutes, 4 tabs, proves immediate value + long-term moat.
+5. **The Moat:** When they deploy, they start at zero. We start at 127 patterns.
+
+6. **The Demo:** 15 minutes, 4 tabs, proves immediate value + long-term moat.
 
 ---
 
