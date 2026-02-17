@@ -57,6 +57,15 @@ export async function processAlert(alertId: string, simulateFailure: boolean = f
   })
 }
 
+export async function processAlertBlocked(alertId: string) {
+  return fetchJSON('/alert/process-blocked', {
+    method: 'POST',
+    body: JSON.stringify({
+      alert_id: alertId,
+    }),
+  })
+}
+
 export async function simulateFailedGate() {
   return fetchJSON('/eval/simulate-failure', { method: 'POST' })
 }

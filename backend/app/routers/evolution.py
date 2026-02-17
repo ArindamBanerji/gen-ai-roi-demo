@@ -231,6 +231,148 @@ async def process_alert(request: ProcessAlertRequest):
 
 
 # ============================================================================
+# POST /api/alert/process-blocked - Simulate Failed Gate (Full Flow)
+# ============================================================================
+
+@router.post("/alert/process-blocked")
+async def process_alert_blocked(request: ProcessAlertRequest):
+    """
+    Process an alert that will fail the eval gate check.
+    This demonstrates the safety/governance layer to CISOs.
+
+    Same flow as /api/alert/process, but with one gate failing.
+    Shows: Sequential animation → Failed check → BLOCKED → No evolution
+    """
+
+    start_time = time.time()
+
+    try:
+        # Get security context (same as normal flow)
+        context = await neo4j_client.get_security_context(request.alert_id)
+
+        if not context:
+            raise HTTPException(status_code=404, detail=f"Alert {request.alert_id} not found")
+
+        alert_type = context.get("alert_type")
+
+        # Agent decision (rule-based)
+        decision = agent.decide(alert_type, context)
+
+        # LLM narration
+        reasoning = await narrator.generate_reasoning(alert_type, decision.action, context)
+
+        # Create decision trace (even though it will be blocked)
+        decision_id = f"DEC-{uuid.uuid4().hex[:4].upper()}"
+
+        await neo4j_client.create_decision_trace(
+            decision_id=decision_id,
+            alert_id=request.alert_id,
+            action=decision.action,
+            confidence=decision.confidence,
+            reasoning=reasoning,
+            pattern_id=decision.pattern_id,
+            playbook_id=decision.playbook_id,
+            nodes_consulted=context.get("nodes_consulted", 47),
+            context_snapshot={
+                "user": {
+                    "name": context.get("user_name"),
+                    "risk_score": context.get("user_risk_score")
+                },
+                "asset": {
+                    "hostname": context.get("asset_hostname"),
+                    "criticality": context.get("asset_criticality")
+                }
+            }
+        )
+
+        # Build eval gate with ONE FAILED CHECK
+        # Simulate Safe Action check failing
+        eval_gate = {
+            "checks": [
+                {
+                    "name": "Faithfulness",
+                    "score": 0.93,
+                    "threshold": 0.85,
+                    "passed": True,
+                    "message": "Reasoning accurately reflects context and decision"
+                },
+                {
+                    "name": "Safe Action",
+                    "score": 0.41,
+                    "threshold": 0.70,
+                    "passed": False,
+                    "message": "Risk score too high for automated action on this asset"
+                },
+                {
+                    "name": "Playbook Match",
+                    "score": 0.96,
+                    "threshold": 0.80,
+                    "passed": True,
+                    "message": "Decision follows approved playbook"
+                },
+                {
+                    "name": "SLA Compliance",
+                    "score": 0.94,
+                    "threshold": 0.90,
+                    "passed": True,
+                    "message": "Response time within SLA requirements"
+                }
+            ],
+            "overall_passed": False,
+            "overall_score": 0.810,
+            "blocked": True
+        }
+
+        # Build blocked reason
+        blocked_reason = (
+            "Action blocked: Safe Action check failed (score: 0.41, threshold: 0.70). "
+            "Risk score too high for automated action. Escalated to human reviewer."
+        )
+
+        # NO TRIGGERED_EVOLUTION because action was blocked
+        triggered_evolution = {
+            "occurred": False,
+            "reason": "Action blocked by eval gate - no evolution triggered"
+        }
+
+        execution_time = (time.time() - start_time) * 1000  # ms
+
+        return {
+            "alert_id": request.alert_id,
+            "routed_to": request.deployment_version,
+            "eval_gate": eval_gate,
+            "execution": {
+                "status": "blocked",
+                "reason": blocked_reason
+            },
+            "decision_trace": {
+                "id": decision_id,
+                "type": decision.action,
+                "reasoning": reasoning,
+                "confidence": decision.confidence,
+                "action_taken": "BLOCKED",
+                "nodes_consulted": context.get("nodes_consulted", 47),
+                "pattern_id": decision.pattern_id,
+                "playbook_id": decision.playbook_id
+            },
+            "triggered_evolution": triggered_evolution,
+            "execution_time_ms": execution_time,
+            "context_preview": {
+                "user_name": context.get("user_name"),
+                "asset_hostname": context.get("asset_hostname"),
+                "travel_destination": context.get("travel_destination"),
+                "pattern_count": context.get("pattern_count", 0)
+            },
+            "blocked_reason": blocked_reason
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+
+
+# ============================================================================
 # POST /api/eval/simulate-failure - Simulate Failed Gate (Demo)
 # ============================================================================
 

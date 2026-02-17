@@ -131,7 +131,7 @@ export default function RuntimeEvolutionTab() {
     setVisibleChecks([])
 
     try {
-      const data = await api.processAlert('ALERT-7823', true)
+      const data = await api.processAlertBlocked('ALERT-7823')
       setResult(data)
     } catch (error) {
       console.error('Failed to simulate failure:', error)
@@ -317,10 +317,14 @@ export default function RuntimeEvolutionTab() {
                 return (
                   <div
                     key={check.name}
-                    className={`flex items-center justify-between p-4 bg-soc-bg rounded border border-gray-800 transition-all duration-500 ${
+                    className={`flex items-center justify-between p-4 rounded border transition-all duration-500 ${
                       isVisible
                         ? 'opacity-100 translate-y-0'
                         : 'opacity-30 translate-y-2'
+                    } ${
+                      isVisible && !check.passed
+                        ? 'bg-soc-danger/10 border-soc-danger/50'
+                        : 'bg-soc-bg border-gray-800'
                     }`}
                   >
                     {isVisible ? (
@@ -334,10 +338,12 @@ export default function RuntimeEvolutionTab() {
                               <XCircle className="w-4 h-4 text-soc-danger" />
                             )}
                           </div>
-                          <p className="text-sm text-gray-400">{check.message}</p>
+                          <p className={`text-sm ${check.passed ? 'text-gray-400' : 'text-soc-danger'}`}>
+                            {check.message}
+                          </p>
                         </div>
                         <div className="text-right ml-4">
-                          <div className="font-mono text-lg font-bold">
+                          <div className={`font-mono text-lg font-bold ${check.passed ? '' : 'text-soc-danger'}`}>
                             {check.score.toFixed(2)}
                           </div>
                           <div className="text-xs text-gray-500">
@@ -366,6 +372,35 @@ export default function RuntimeEvolutionTab() {
               </div>
             </div>
           </div>
+
+          {/* BLOCKED Banner - Shows when eval gate fails */}
+          {!result.eval_gate.overall_passed && (
+            <div className="bg-gradient-to-r from-soc-danger/30 to-amber-900/30 rounded-lg border-2 border-soc-danger p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-soc-danger/20 rounded-lg">
+                  <Shield className="w-6 h-6 text-soc-danger" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-lg font-bold text-soc-danger">
+                      🛡️ BLOCKED BY EVAL GATE
+                    </h3>
+                    <span className="px-2 py-1 bg-soc-danger/20 text-soc-danger text-xs font-bold rounded">
+                      Safety Layer
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-300 mb-3">
+                    {result.blocked_reason || result.execution.reason || 'Action blocked by evaluation gate.'}
+                  </p>
+                  <div className="p-3 bg-soc-danger/10 rounded border border-soc-danger/30">
+                    <p className="text-sm font-semibold text-amber-400">
+                      ⚠️ Escalated to human reviewer for manual assessment
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Decision Trace */}
           <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
@@ -481,6 +516,33 @@ export default function RuntimeEvolutionTab() {
                   <div className="mt-4 p-3 bg-soc-secondary/10 rounded border border-soc-secondary/30">
                     <p className="text-sm italic text-soc-secondary font-semibold">
                       "Splunk gets better rules. Our copilot gets SMARTER."
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* No Evolution Panel - Shows when action was blocked */}
+          {!result.triggered_evolution.occurred && !result.eval_gate.overall_passed && (
+            <div className="bg-gray-800/50 rounded-lg border-2 border-gray-700 p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-gray-700/50 rounded-lg">
+                  <XCircle className="w-6 h-6 text-gray-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-lg font-bold text-gray-400">
+                      No Evolution Triggered
+                    </h3>
+                  </div>
+                  <p className="text-sm text-gray-400 mb-3">
+                    Agent evolution did not occur because the action was blocked by the eval gate.
+                  </p>
+                  <div className="p-3 bg-gray-900/50 rounded border border-gray-700">
+                    <p className="text-sm text-gray-400">
+                      <strong>Safety First:</strong> Only successful, verified actions contribute to agent learning.
+                      This prevents the agent from learning incorrect patterns or unsafe behaviors.
                     </p>
                   </div>
                 </div>
