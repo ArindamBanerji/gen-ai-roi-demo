@@ -71,6 +71,14 @@ interface ProcessResult {
     travel_destination?: string
     pattern_count: number
   }
+  prompt_evolution?: {
+    current_variant: string
+    current_success_rate: number
+    previous_variant?: string | null
+    previous_success_rate?: number | null
+    promotion_occurred: boolean
+    promotion_reason?: string | null
+  }
 }
 
 export default function RuntimeEvolutionTab() {
@@ -516,6 +524,104 @@ export default function RuntimeEvolutionTab() {
                   <div className="mt-4 p-3 bg-soc-secondary/10 rounded border border-soc-secondary/30">
                     <p className="text-sm italic text-soc-secondary font-semibold">
                       "Splunk gets better rules. Our copilot gets SMARTER."
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Agent Evolution Panel - Loop 2: Smarter ACROSS decisions */}
+          {result && result.prompt_evolution && (
+            <div className="bg-purple-900/20 rounded-lg border-2 border-purple-500/40 p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-purple-500/20 rounded-lg">
+                  <Sparkles className="w-6 h-6 text-purple-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-3">
+                    <h3 className="text-lg font-bold text-purple-300">
+                      🧬 Agent Evolution
+                    </h3>
+                    <span className="px-2 py-0.5 bg-purple-500/30 text-purple-300 text-xs font-semibold rounded border border-purple-400/50">
+                      MUTATE
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-gray-300 mb-4">
+                    Loop 2: Prompt variants track performance across decisions. Better variants get promoted automatically.
+                  </p>
+
+                  {/* Variant Comparison */}
+                  <div className="space-y-3 mb-4">
+                    {result.prompt_evolution.previous_variant && (
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm text-gray-400 font-mono">
+                            {result.prompt_evolution.previous_variant}
+                          </span>
+                          <span className="text-sm text-gray-400">
+                            {(result.prompt_evolution.previous_success_rate! * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-700/50 rounded-full h-2">
+                          <div
+                            className="bg-gray-500 h-2 rounded-full transition-all duration-1000"
+                            style={{
+                              width: `${result.prompt_evolution.previous_success_rate! * 100}%`
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-purple-300 font-mono font-semibold">
+                          {result.prompt_evolution.current_variant}
+                        </span>
+                        <span className="text-sm text-purple-300 font-semibold">
+                          {(result.prompt_evolution.current_success_rate * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-700/50 rounded-full h-2">
+                        <div
+                          className="bg-purple-500 h-2 rounded-full transition-all duration-1000"
+                          style={{
+                            width: `${result.prompt_evolution.current_success_rate * 100}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Promotion Status */}
+                  <div className="p-3 bg-purple-950/40 rounded border border-purple-500/30 mb-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-semibold text-purple-200">
+                        Status:
+                      </span>
+                      {result.prompt_evolution.promotion_occurred ? (
+                        <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs font-semibold rounded border border-green-400/50">
+                          Promoted ✓
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-400">
+                          Active (monitoring)
+                        </span>
+                      )}
+                    </div>
+                    {result.prompt_evolution.promotion_reason && (
+                      <p className="text-sm text-gray-300 mt-2">
+                        {result.prompt_evolution.promotion_reason}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Key Insight */}
+                  <div className="p-3 bg-purple-950/30 rounded border border-purple-500/30">
+                    <p className="text-sm italic text-purple-300">
+                      💡 Loop 2 makes the agent smarter ACROSS decisions by learning which prompts work best.
                     </p>
                   </div>
                 </div>
