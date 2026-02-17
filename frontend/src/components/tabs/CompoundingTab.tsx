@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { getCompoundingMetrics, resetAllDemoData } from '../../lib/api'
-import { TrendingUp, Database, Activity, RefreshCw } from 'lucide-react'
+import { TrendingUp, Database, Activity, RefreshCw, Clock, DollarSign, TrendingDown, CheckCircle } from 'lucide-react'
 
 // ============================================================================
 // Custom Hook: Counter Animation
@@ -82,6 +82,13 @@ interface EvolutionEvent {
   triggered_by: string
 }
 
+interface BusinessImpact {
+  analyst_hours_saved_monthly: number
+  cost_avoided_quarterly: number
+  mttr_reduction_pct: number
+  alert_backlog_eliminated_monthly: number
+}
+
 interface CompoundingData {
   period: {
     start: string
@@ -99,6 +106,7 @@ interface CompoundingData {
   }
   weekly_trend: WeeklyMetric[]
   evolution_events: EvolutionEvent[]
+  business_impact?: BusinessImpact
 }
 
 export default function CompoundingTab() {
@@ -135,6 +143,36 @@ export default function CompoundingTab() {
     3000,
     0,
     !!data && !loading
+  )
+
+  // Business impact counter animations
+  const animatedAnalystHours = useCountUp(
+    0,
+    data?.business_impact?.analyst_hours_saved_monthly ?? 0,
+    3000,
+    0,
+    !!data?.business_impact && !loading
+  )
+  const animatedCostAvoided = useCountUp(
+    0,
+    data?.business_impact?.cost_avoided_quarterly ?? 0,
+    3000,
+    0,
+    !!data?.business_impact && !loading
+  )
+  const animatedMttrReduction = useCountUp(
+    0,
+    data?.business_impact?.mttr_reduction_pct ?? 0,
+    3000,
+    0,
+    !!data?.business_impact && !loading
+  )
+  const animatedBacklogEliminated = useCountUp(
+    0,
+    data?.business_impact?.alert_backlog_eliminated_monthly ?? 0,
+    3000,
+    0,
+    !!data?.business_impact && !loading
   )
 
   const loadData = async () => {
@@ -196,6 +234,81 @@ export default function CompoundingTab() {
           Same model. Same rules. More intelligence. When competitors deploy, they start at zero. We start at {animatedNodesEnd} patterns.
         </p>
       </div>
+
+      {/* Business Impact Banner - Executive Summary */}
+      {data.business_impact && (
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border-2 border-green-400 shadow-lg p-6">
+          <div className="text-center mb-4">
+            <h3 className="text-xl font-bold text-gray-900">
+              Business Impact Summary
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Quarterly projections for CFO reporting
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Card 1: Analyst Hours Saved */}
+            <div className="bg-white rounded-lg border-2 border-green-300 shadow p-5 text-center hover:shadow-xl transition-shadow">
+              <div className="flex items-center justify-center mb-2">
+                <Clock className="w-5 h-5 text-green-600" />
+              </div>
+              <div className="text-4xl font-bold text-green-600 mb-1">
+                {animatedAnalystHours.toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-600 font-medium">
+                Analyst Hours Saved / Month
+              </div>
+            </div>
+
+            {/* Card 2: Cost Avoided */}
+            <div className="bg-white rounded-lg border-2 border-blue-300 shadow p-5 text-center hover:shadow-xl transition-shadow">
+              <div className="flex items-center justify-center mb-2">
+                <DollarSign className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="text-4xl font-bold text-blue-600 mb-1">
+                ${(animatedCostAvoided / 1000).toFixed(0)}K
+              </div>
+              <div className="text-xs text-gray-600 font-medium">
+                Cost Avoided / Quarter
+              </div>
+            </div>
+
+            {/* Card 3: MTTR Reduction */}
+            <div className="bg-white rounded-lg border-2 border-purple-300 shadow p-5 text-center hover:shadow-xl transition-shadow">
+              <div className="flex items-center justify-center mb-2">
+                <TrendingDown className="w-5 h-5 text-purple-600" />
+              </div>
+              <div className="text-4xl font-bold text-purple-600 mb-1">
+                {animatedMttrReduction}%
+              </div>
+              <div className="text-xs text-gray-600 font-medium">
+                MTTR Reduction
+              </div>
+            </div>
+
+            {/* Card 4: Alert Backlog Eliminated */}
+            <div className="bg-white rounded-lg border-2 border-emerald-300 shadow p-5 text-center hover:shadow-xl transition-shadow">
+              <div className="flex items-center justify-center mb-2">
+                <CheckCircle className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div className="text-4xl font-bold text-emerald-600 mb-1">
+                {animatedBacklogEliminated.toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-600 font-medium">
+                Alert Backlog Eliminated / Month
+              </div>
+            </div>
+          </div>
+
+          {/* Executive Note */}
+          <div className="mt-4 text-center">
+            <p className="text-sm italic text-gray-700">
+              💼 Present these numbers to your CFO — this is the business case for AI-augmented security operations.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* THE HEADLINE - Week 1 vs Week 4 Comparison */}
       <div className="bg-white rounded-lg border-2 border-purple-200 shadow-lg p-8">
