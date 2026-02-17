@@ -362,16 +362,24 @@ git push origin feature/v2-enhancements
 
 ---
 
+## Session Log
+
+| Session | Date | Waves Completed | Key Notes |
+|---------|------|-----------------|-----------|
+| Session 1 | 2026-02-17 | Wave 1 + Wave 2 | CMA labels, eval gate animation, counter animation, blocking demo. All verified working on ports 8001/5174. |
+
+---
+
 ## Progress Tracker
 
 | Wave | Prompt | Description | Status | Date |
 |------|--------|-------------|--------|------|
-| 1 | 1A | CONSUME/MUTATE/ACTIVATE labels | ⬜ Not started | |
-| 1 | 1B | Eval gate sequential animation | ⬜ Not started | |
-| 1 | 1C | Counter animations Tab 4 | ⬜ Not started | |
-| 1 | Doc | Update PROJECT_STRUCTURE + CODE_REVIEW | ⬜ Not started | |
-| 2 | 2A | Blocking demo (backend + frontend) | ⬜ Not started | |
-| 2 | Doc | Update docs | ⬜ Not started | |
+| 1 | 1A | CONSUME/MUTATE/ACTIVATE labels | ✅ Complete | 2026-02-17 |
+| 1 | 1B | Eval gate sequential animation | ✅ Complete | 2026-02-17 |
+| 1 | 1C | Counter animations Tab 4 | ✅ Complete | 2026-02-17 |
+| 1 | Doc | Update PROJECT_STRUCTURE + CODE_REVIEW | ⬜ Deferred to Wave 6C | |
+| 2 | 2A | Blocking demo (backend + frontend) | ✅ Complete | 2026-02-17 |
+| 2 | Doc | Update docs | ⬜ Deferred to Wave 6C | |
 | 3 | 3A | Situation models + classification | ⬜ Not started | |
 | 3 | 3B | Wire into API | ⬜ Not started | |
 | 3 | Doc | Update docs | ⬜ Not started | |
