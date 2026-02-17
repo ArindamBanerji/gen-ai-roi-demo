@@ -1,9 +1,9 @@
 # SOC Copilot Demo v2 — Implementation Plan
 
-**Version:** 1.0
+**Version:** 2.0 (Revised)
 **Date:** February 17, 2026
-**Status:** In Progress
-**Working Directory:** `gen-ai-roi-demo-v2` (cloned from main, branch: `feature/v2-enhancements`)
+**Status:** In Progress — Waves 1-5 Complete
+**Working Directory:** `gen-ai-roi-demo-v2` (branch: `feature/v2-enhancements`)
 
 ---
 
@@ -17,317 +17,201 @@
 
 ### Infrastructure
 - **Neo4j Aura:** Shared between v1 and v2 (same `.env` credentials)
-- **Git:** GitHub repo at `github.com/[USER]/gen-ai-roi-demo`, v1.0 tagged
+- **Git:** GitHub repo `git@github.com:ArindamBanerji/gen-ai-roi-demo.git`, v1.0 tagged
 - **IDE:** VSCode with Claude Code; PowerShell terminal
-- **Frontend port config:** `frontend/vite.config.ts` line 19 → `target: 'http://localhost:8001'`
+- **Frontend port config:** `frontend/vite.config.ts` → `target: 'http://localhost:8001'`
 
 ### Key Reference Documents
 | Document | Location | Purpose |
 |----------|----------|---------|
 | `demo_changes_v2.pdf` | `support/docs/` | Original 7-phase plan (restructured below) |
-| `SOC_Copilot_Demo_v2_Design_Spec.md` | `docs/` | Fuller v2 vision (ambitious — partially deferred) |
+| `SOC_Copilot_Demo_v2_Design_Spec.md` | `docs/` | Fuller v2 vision (partially deferred) |
 | `CLAUDE.md` | Root | Claude Code context file |
-| `PROJECT_STRUCTURE.md` | Root | Living architecture doc (update after each wave) |
-| `CODE_REVIEW.md` | Root | Living code review doc (update after each wave) |
+| `PROJECT_STRUCTURE.md` | Root | Living architecture doc (update in 6E) |
+| `CODE_REVIEW.md` | Root | Living code review doc (update in 6E) |
 
 ---
 
-## Implementation Structure: 6 Waves, 15 Prompts
+## Implementation Structure: 6 Waves + Deferred Wave 7
 
 ### Design Principles
 1. **Each prompt does ONE testable thing** — verify before moving to the next
 2. **Backend before frontend** — data models stable before UI touches them
 3. **Documentation after each wave** — not batched at the end
 4. **Sequential over parallel** — Claude Code works better seeing previous output
-5. **Highest demo-impact first** — labels and blocking demo before deep features
+5. **Business impact visible** — every feature should answer "so what does this do for me Monday morning?"
 
 ---
 
-## WAVE 1: Labels + Quick Visual Wins (Day 1)
+## WAVE 1: Labels + Quick Visual Wins ✅ COMPLETE
 
-**Goal:** Visually new in 2-3 hours. Zero backend changes.
+### Prompt 1A — CONSUME / MUTATE / ACTIVATE Labels ✅
+Added colored badge labels to Tabs 2 and 3.
 
-### Prompt 1A — CONSUME / MUTATE / ACTIVATE Labels
-**Scope:** Add colored badge labels to existing panels in Tabs 2 and 3. Pure frontend CSS + text.
-**Files touched:**
-- `frontend/src/components/tabs/RuntimeEvolutionTab.tsx`
-- `frontend/src/components/tabs/AlertTriageTab.tsx`
-- `frontend/src/index.css` (new utility classes)
+### Prompt 1B — Eval Gate Sequential Animation ✅
+Eval gate checks appear one by one with 800ms delay.
 
-**What to add:**
-| Tab | Panel | Label | Color |
-|-----|-------|-------|-------|
-| Tab 2 | Eval gate section | CONSUME ✓ | Blue (#3B82F6) |
-| Tab 2 | TRIGGERED_EVOLUTION panel | MUTATE ✓ | Purple (#8B5CF6) |
-| Tab 3 | Graph traversal | CONSUME | Blue (#3B82F6) |
-| Tab 3 | Closed loop panel | ACTIVATE | Green (#10B981) |
+### Prompt 1C — Counter Animations in Tab 4 ✅
+Week 4 numbers count up over 3 seconds with ease-out.
 
-**Verify:** All 4 tabs still work. Labels appear in correct positions.
-
-### Prompt 1B — Eval Gate Sequential Animation
-**Scope:** Tab 2 only. The 4 eval gate checks (Faithfulness, Safe Action, Playbook, SLA) appear one by one with 400ms delay instead of all at once.
-**Files touched:**
-- `frontend/src/components/tabs/RuntimeEvolutionTab.tsx`
-
-**Verify:** Click "Process Alert" → eval checks appear sequentially, ~1.6s total.
-
-### Prompt 1C — Counter Animations in Tab 4
-**Scope:** Tab 4 only. Week 1 → Week 4 numbers count up instead of static display.
-**Files touched:**
-- `frontend/src/components/tabs/CompoundingTab.tsx`
-
-**Implementation:** Simple `useEffect` + `requestAnimationFrame` counter hook, or install `react-countup`. Duration: 1.5s, easing: ease-out. Triggered when tab becomes visible.
-
-**Verify:** Switch to Tab 4 → numbers count up from Week 1 to Week 4 values.
-
-### Post-Wave 1
-- [ ] Run documentation update prompt (PROJECT_STRUCTURE.md, CODE_REVIEW.md)
-- [ ] `git add . && git commit -m "feat(v2): Wave 1 — CMA labels, eval gate animation, counter animation"`
-- [ ] `git push origin feature/v2-enhancements`
+### Additional: Version bump + animation speed tuning ✅
 
 ---
 
-## WAVE 2: Blocking Demo (Day 2)
+## WAVE 2: Blocking Demo ✅ COMPLETE
 
-**Goal:** Highest demo-impact per line of code. CISOs always ask "what if the AI is wrong?"
-
-### Prompt 2A — Failed Gate Backend + Frontend
-**Scope:** Self-contained feature. ~30 lines backend + ~40 lines frontend.
-**Backend changes:**
-- Add `POST /api/alert/process-blocked` endpoint in `routers/evolution.py`
-- Returns eval gate response with one check failing (e.g., `safe_action`)
-- Include `blocked: true`, `failed_check`, `reason` fields
-
-**Frontend changes:**
-- Add "Simulate Failed Gate" button below "Process Alert" in RuntimeEvolutionTab.tsx
-- When clicked: show eval gate with one check failing (red X + blocked message)
-- Clear visual distinction from success path (red border, warning icon)
-
-**Verify:**
-1. Click "Process Alert" → all 4 checks pass (green) → success
-2. Click "Simulate Failed Gate" → one check fails (red) → blocked message
-
-### Post-Wave 2
-- [ ] Run documentation update prompt
-- [ ] `git add . && git commit -m "feat(v2): Wave 2 — eval gate blocking demo"`
-- [ ] `git push origin feature/v2-enhancements`
+### Prompt 2A — Failed Gate Backend + Frontend ✅
+"Simulate Failed Gate" button in Tab 2. Shows eval gate failure with BLOCKED banner.
 
 ---
 
-## WAVE 3: Situation Analyzer — Backend (Days 3-4)
+## WAVE 3: Situation Analyzer — Backend ✅ COMPLETE
 
-**Goal:** Data foundation before touching UI.
+### Prompt 3A — Situation Models + Classification Logic ✅
+Created `backend/app/services/situation.py` with SituationType enum, classify_situation(), evaluate_options(), analyze_situation().
 
-### Prompt 3A — Situation Models + Classification Logic
-**Scope:** Backend only. New service file + model updates.
-**Files to create:**
-- `backend/app/services/situation.py` (~100 lines)
-
-**Files to update:**
-- `backend/app/models/schemas.py` (add new Pydantic models)
-
-**Contents of situation.py:**
-- `SituationType` enum: TRAVEL_LOGIN_ANOMALY, KNOWN_PHISHING_CAMPAIGN, MALWARE_ON_CRITICAL_ASSET, VIP_AFTER_HOURS, DATA_EXFIL_ATTEMPT, UNKNOWN
-- `classify_situation(alert, context)` — rule-based, mirrors agent.py style
-- `evaluate_options(alert, context, situation_type)` — returns list of `{action, score, factors}`, scores sum to ~1.0
-- `SituationAnalysis` Pydantic model: situation_type, situation_confidence, factors_detected, options_evaluated, selected_option, selection_reasoning
-
-**Verify:** Import works, no syntax errors. Unit test with sample data.
-
-### Prompt 3B — Wire Situation Analysis into API
-**Scope:** Update API to call `analyze_situation()` and return results.
-**Files to update:**
-- `backend/app/routers/evolution.py` or `routers/triage.py` (update `/api/alert/process`)
-
-**Changes:** Call `analyze_situation()` in the process flow, add `situation_analysis` to response JSON. Frontend ignores extra fields (no breakage).
-
-**Verify:** `curl -X POST http://localhost:8001/api/alert/process -H "Content-Type: application/json" -d '{"alert_id":"ALERT-7823"}'` returns `situation_analysis` object with type, confidence, factors, options.
-
-### Post-Wave 3
-- [ ] Run documentation update prompt
-- [ ] `git add . && git commit -m "feat(v2): Wave 3 — Situation Analyzer backend (models + API)"`
-- [ ] `git push origin feature/v2-enhancements`
+### Prompt 3B — Wire Situation Analysis into API ✅
+Added situation_analysis to /api/alert/process, /api/alert/process-blocked, and /api/alert/analyze responses.
 
 ---
 
-## WAVE 4: Situation Analyzer — Frontend (Days 4-5)
+## WAVE 4: Situation Analyzer — Frontend ✅ COMPLETE
 
-**Goal:** Make Loop 1 visible in Tab 3.
-
-### Prompt 4A — Situation Analyzer Panel in Tab 3
-**Scope:** Largest single UI change. New panel between graph viz and recommendation.
-**Files to update:**
-- `frontend/src/components/tabs/AlertTriageTab.tsx`
-- Possibly extract to new component: `SituationAnalyzerPanel.tsx`
-
-**Panel contents:**
-1. Situation type badge (e.g., "TRAVEL_LOGIN_ANOMALY") with colored background
-2. Classification confidence percentage
-3. Factors detected — checkmark list (✓ Active travel record, ✓ MFA completed, etc.)
-4. Options evaluated — horizontal bar chart (3 bars showing scores: FALSE_POSITIVE_CLOSE 92%, ESCALATE_TIER2 6%, ENRICH_AND_WAIT 2%)
-5. Selected option highlighted with distinct styling
-
-**Reads from:** `situation_analysis` field added in Prompt 3B.
-
-**Verify:** Select alert in Tab 3 → see situation classification + options bar chart before the recommendation panel.
-
-### Post-Wave 4
-- [ ] Run documentation update prompt
-- [ ] `git add . && git commit -m "feat(v2): Wave 4 — Situation Analyzer panel in Tab 3 (Loop 1 visible)"`
-- [ ] `git push origin feature/v2-enhancements`
-
-**MILESTONE: Loop 1 story is now visible and demoable.**
+### Prompt 4A — Situation Analyzer Panel in Tab 3 ✅
+New panel between graph viz and recommendation showing situation type badge, factors, options bar chart, reasoning.
 
 ---
 
-## WAVE 5: AgentEvolver + Second Alert (Days 5-7)
+## WAVE 5: AgentEvolver + Second Alert ✅ COMPLETE
 
-**Goal:** Complete the "two loops" narrative.
+### Prompt 5A — AgentEvolver Backend ✅
+Created `backend/app/services/evolver.py` with prompt tracking, promotion logic, wired into API.
 
-### Prompt 5A — AgentEvolver Backend
-**Scope:** New service file + API wiring.
-**Files to create:**
-- `backend/app/services/evolver.py` (~80 lines)
+### Prompt 5B — AgentEvolver Panel in Tab 2 ✅
+New panel below TRIGGERED_EVOLUTION showing variant comparison bars and promotion status.
 
-**Files to update:**
-- `backend/app/routers/evolution.py` (add `prompt_evolution` to response)
-- `backend/app/models/schemas.py` (add PromptVariant model)
-
-**Contents of evolver.py:**
-- In-memory `PROMPT_STATS` dict: `{"TRAVEL_CONTEXT_v1": {success: 24, total: 34}, "TRAVEL_CONTEXT_v2": {success: 42, total: 47}, ...}`
-- `ACTIVE_PROMPTS` dict: `{"anomalous_login": "TRAVEL_CONTEXT_v2", "phishing": "PHISHING_RESPONSE_v1"}`
-- `get_prompt_variant(alert_type)` → returns active prompt name
-- `record_decision_outcome(decision_id, prompt_variant, success)` → updates stats
-- `check_for_promotion(alert_type)` → checks if a better variant should be promoted
-
-**Verify:** API response includes `prompt_evolution` field with variant name, success rate, comparison.
-
-### Prompt 5B — AgentEvolver Panel in Tab 2
-**Scope:** New UI section in RuntimeEvolutionTab.tsx below TRIGGERED_EVOLUTION panel.
-**Files to update:**
-- `frontend/src/components/tabs/RuntimeEvolutionTab.tsx`
-
-**Panel contents:**
-1. Header: "Agent Evolution (Loop 2: Smarter ACROSS decisions)"
-2. Current prompt variant name + success rate
-3. Comparison bar: v1 (71%) vs v2 (89%)
-4. "Promoted ✓" badge if evolution occurred
-5. MUTATE label (purple)
-
-**Verify:** Click "Process Alert" → see AgentEvolver panel below TRIGGERED_EVOLUTION with prompt comparison.
-
-### Prompt 5C — Second Alert Type (Phishing)
-**Scope:** Backend data + minimal frontend.
-**Files to update:**
-- `backend/app/services/agent.py` (ensure phishing rules work)
-- `backend/app/services/situation.py` (add KNOWN_PHISHING_CAMPAIGN classification)
-- `backend/seed_neo4j.py` (add ALERT-7824 phishing data, PAT-PHISH-KNOWN pattern)
-- `frontend/src/components/tabs/AlertTriageTab.tsx` (alert queue shows both alerts)
-
-**New data:**
-- ALERT-7824: Phishing attempt on Mary Chen, Engineering Lead
-- PAT-PHISH-KNOWN pattern with campaign matching
-- KNOWN_PHISHING_CAMPAIGN situation type
-
-**Verify:**
-1. Tab 3 alert queue shows 2+ alerts including ALERT-7824
-2. Selecting ALERT-7824 shows different situation type (KNOWN_PHISHING_CAMPAIGN)
-3. Different options evaluated (AUTO_REMEDIATE dominant instead of FALSE_POSITIVE_CLOSE)
-
-### Post-Wave 5
-- [ ] Run documentation update prompt
-- [ ] `git add . && git commit -m "feat(v2): Wave 5 — AgentEvolver + phishing alert (both loops complete)"`
-- [ ] `git push origin feature/v2-enhancements`
-
-**MILESTONE: Both loops visible. Two alert types. Core v2 narrative complete.**
+### Prompt 5C — Second Alert Type (Phishing) ✅
+Added ALERT-7824 (Mary Chen phishing), PAT-PHISH-KNOWN pattern, PhishingCampaign node, seed data.
 
 ---
 
-## WAVE 6: Tab 4 Enhancement + Final Polish (Days 7-8)
+## WAVE 6: Business Impact + Tab 4 + Documentation (CURRENT)
 
-**Goal:** Hero visual for VCs. Complete the compounding story.
+**Goal:** Transform architecture language into CISO language. Make every feature answer "so what does this save me?"
 
-### Prompt 6A — Two-Loop Diagram in Tab 4
-**Scope:** New visual component in CompoundingTab.tsx.
+### Prompt 6A — Situation Analyzer: Decision Economics
+**Scope:** Add time/cost/risk dimensions to each evaluated option.
+
+**Backend changes (situation.py):**
+- Update `OptionEvaluated` model to include:
+  - `estimated_resolution_time`: string (e.g., "3 sec", "45 min")
+  - `estimated_analyst_cost`: float (e.g., 0, 127, 43)
+  - `risk_if_wrong`: string (e.g., "Low", "None", "Medium")
+- Populate these fields in `evaluate_options()` for each situation type
+- Add `decision_economics` summary to `SituationAnalysis`:
+  - `time_saved`: string (e.g., "42 minutes vs manual triage")
+  - `cost_avoided`: string (e.g., "$127 analyst cost avoided")
+  - `monthly_projection`: string (e.g., "At 200 similar alerts/month: 150 analyst-hours, $25K saved")
+
+**Frontend changes (AlertTriageTab.tsx):**
+- Update options bar chart to show time/cost/risk columns alongside each bar
+- Add "Decision Economics" summary box below options
+- Dollar/clock icons for visual anchoring
+
+**Verify:** Select ALERT-7823 → options show time/cost/risk → economics summary visible.
+
+### Prompt 6B — AgentEvolver: Operational Impact Narrative
+**Scope:** Translate prompt evolution into business impact language.
+
+**Backend changes (evolver.py):**
+- Update `PromptEvolution` model to include:
+  - `what_changed_narrative`: string (plain English)
+  - `operational_impact`: dict with fewer_false_escalations_pct, fewer_false_escalations_monthly, analyst_hours_recovered, estimated_monthly_savings, missed_threats (always 0)
+- Populate based on old vs new variant success rate difference
+
+**Frontend changes (RuntimeEvolutionTab.tsx):**
+- Add "What changed" section with narrative
+- Add "Operational Impact" section with business metrics
+- Keep variant comparison bars with added context
+
+**Verify:** Process alert → AgentEvolver shows narrative + operational impact numbers.
+
+### Prompt 6C — Impact Summary Banner in Tab 4
+**Scope:** Aggregate business impact into headline numbers.
+
+**Backend changes (metrics router):**
+- Update `/api/metrics/compounding` to include `business_impact` summary
+
+**Frontend changes (CompoundingTab.tsx):**
+- Prominent banner at top with 4 headline metrics:
+  - Analyst Hours Saved: 847/month
+  - Cost Avoided: $127K/quarter
+  - MTTR Reduction: 75%
+  - Alert Backlog Eliminated: 2,400/month
+- Counter animation on headline numbers
+- Large bold numbers with icons
+
+**Verify:** Tab 4 shows impact banner with animated numbers.
+
+### Prompt 6D — Two-Loop Diagram in Tab 4
+**Scope:** Hero visual showing both loops feeding same graph.
+
+**Frontend changes (CompoundingTab.tsx):**
+- Two-loop diagram: Context Graph center, Loop 1 (Situation Analyzer), Loop 2 (Agent Evolver)
+- Both arrows back to graph via TRIGGERED_EVOLUTION
+- New metrics: situation types (2→6), prompt variants (0→4)
+- Cross-alert breakdown: 47 travel, 31 phishing patterns
+
+**Verify:** Tab 4 shows two-loop diagram with labels and stats.
+
+### Prompt 6E — Documentation Update (PROJECT_STRUCTURE + CODE_REVIEW + CLAUDE.md)
+**Scope:** Comprehensive refresh of all project docs to reflect v2 state.
+
 **Files to update:**
-- `frontend/src/components/tabs/CompoundingTab.tsx`
+- `PROJECT_STRUCTURE.md` — all new files, endpoints, components, services
+- `CODE_REVIEW.md` — architecture decisions, new services, design patterns
+- `CLAUDE.md` — v2 sections (Situation Analyzer, AgentEvolver, decision economics, phishing)
+- `README.md` — updated feature list, v2 highlights
 
-**Visual:** Two-loop diagram showing:
-- Context Graph (center) — "Neo4j"
-- Loop 1: Situation Analyzer — "Smarter WITHIN each decision" → Demo: Tab 3
-- Loop 2: Agent Evolver — "Smarter ACROSS all decisions" → Demo: Tab 2
-- Both arrows pointing back to graph: "TRIGGERED_EVOLUTION"
-- Built with React divs + CSS or SVG (no heavy library)
-
-**New metrics to add:**
-- Situation types handled: Week 1 (2) → Week 4 (6)
-- Prompt variants evolved: Week 1 (0) → Week 4 (4)
-
-**Verify:** Tab 4 shows the two-loop diagram with proper labels and new metrics.
-
-### Prompt 6B — Cross-Alert Statistics in Tab 4
-**Scope:** Add pattern breakdown by alert type.
-**Files to update:**
-- `backend/app/routers/metrics.py` (add by-type breakdown to compounding endpoint)
-- `frontend/src/components/tabs/CompoundingTab.tsx`
-
-**Shows:** "47 travel patterns, 31 phishing patterns" — proves generalization.
-
-**Verify:** Tab 4 shows breakdown section with per-alert-type pattern counts.
-
-### Prompt 6C — Final Documentation Update
-**Scope:** Comprehensive update to all project docs.
-**Files to update:**
-- `PROJECT_STRUCTURE.md` — new files, new endpoints, new components
-- `CODE_REVIEW.md` — updated architecture notes
-- `CLAUDE.md` — add v2 sections (Situation Analyzer, AgentEvolver, second alert type)
-- `README.md` — update feature list, screenshots placeholder
-
-**Verify:** All docs reflect current state of codebase.
+**Verify:** Docs reflect actual codebase. New developer could understand the project.
 
 ### Post-Wave 6
-- [ ] `git add . && git commit -m "feat(v2): Wave 6 — Tab 4 two-loop diagram + cross-alert stats + docs"`
+- [ ] `git add . && git commit -m "feat(v2): Wave 6 — business impact, two-loop diagram, documentation"`
 - [ ] `git push origin feature/v2-enhancements`
-- [ ] Consider PR to merge to main when ready
+- [ ] Consider PR to merge to main
 
-**MILESTONE: v2 complete. All 6 waves done. Full demo flow operational.**
+**MILESTONE: v2 complete. CISO-ready demo with visible business impact.**
 
 ---
 
 ## DEFERRED TO v2.5 / v3
 
-These features are from `SOC_Copilot_Demo_v2_Design_Spec.md` and are valuable but not critical for the next demo round.
+### v2.5 — Near-Term (Wave 7+)
+| Feature | Estimated Effort | Notes |
+|---------|-----------------|-------|
+| **ROI Calculator** | 2-3 prompts | Interactive sliders; prospect inputs their numbers. Strongest CISO closer. |
+| **3 Scenarios (Travel + Malware + CEO)** | 2-3 days | Scenario selector UI with 3 cards |
+| **SIEM Comparison Side-by-Side** | 1 day | Split view: SIEM vs SOC Copilot |
+| **Streaming "Thinking" Display (SSE)** | 2-3 days | Real-time reasoning; requires backend change |
 
-### v2.5 — Near-Term Additions
-| Feature | Spec Reference | Estimated Effort | Notes |
-|---------|---------------|-----------------|-------|
-| **3 Scenarios (Travel + Malware + CEO)** | Design Spec §2.1 | 2-3 days | Scenario selector UI with 3 cards; needs 2 more seed alerts + agent rules |
-| **ROI Calculator** | Design Spec §3.1 | 1-2 days | Interactive sliders; prospect inputs their numbers, sees savings |
-| **SIEM Comparison Side-by-Side** | Design Spec §2.3 | 1 day | Split view: Traditional SIEM vs SOC Copilot handling same alert |
-| **Streaming "Thinking" Display (SSE)** | Design Spec §1.1 | 2-3 days | Backend sends Server-Sent Events for reasoning steps; high visual impact but requires architecture change |
-
-### v3 — Longer-Term Vision
+### v3 — Longer-Term
 | Feature | Notes |
 |---------|-------|
-| Animated graph traversal (D3/React Flow) | Major rewrite of Tab 3 graph component |
-| Sound design | Howler.js; optional but powerful for live demos |
-| Full AgentEvolver with runtime prompt swapping | Currently simulated; would need actual prompt A/B testing |
-| Multi-copilot support | Multiple domain copilots sharing the same UCL |
-| Evidence Ledger with 7-year retention | Compliance feature for enterprise sales |
-| Governance-as-code | Policy engine integration |
+| Animated graph traversal (D3/React Flow) | Major rewrite of Tab 3 graph |
+| Sound design | Optional but powerful for live demos |
+| Full AgentEvolver with runtime prompt swapping | Currently simulated |
+| Multi-copilot support | Multiple domain copilots sharing UCL |
+| Evidence Ledger with 7-year retention | Compliance feature |
 
 ---
 
 ## Docker & Partner Enablement (Post v2)
 
-Docker setup was initially prioritized but deferred to after v2 features are complete. The plan:
-
-1. Create `docker/` directory with Dockerfiles, compose, scripts
-2. Three-tier approach: Zero Cloud / Cloud-Lite / Full Cloud
-3. Partner onboarding guide (already in `support/docs/PARTNER_ONBOARDING_GUIDE.pdf`)
-4. Specs exist in `support/docs/Docker_README.pdf`
-
-Will be implemented as a separate feature branch after v2 merges to main.
+Deferred to after v2 features complete. Plan:
+1. `docker/` directory with Dockerfiles, compose, scripts
+2. Three-tier: Zero Cloud / Cloud-Lite / Full Cloud
+3. Partner onboarding guide (exists in `support/docs/PARTNER_ONBOARDING_GUIDE.pdf`)
+4. Docker specs in `support/docs/Docker_README.pdf`
 
 ---
 
@@ -335,29 +219,40 @@ Will be implemented as a separate feature branch after v2 merges to main.
 
 ### If resuming in a new conversation:
 1. Reference this document: `docs/V2_IMPLEMENTATION_PLAN.md`
-2. Check which waves are complete by looking at git log: `git log --oneline`
-3. Check current branch: should be `feature/v2-enhancements`
-4. The v2 directory runs on ports 8001 (backend) / 5174 (frontend)
-5. Start backend: `uvicorn app.main:app --reload --port 8001`
-6. Start frontend: `npx vite --port 5174`
-
-### Claude Code prompt format:
-Each prompt in this plan maps to one Claude Code instruction. The prompts should:
-- Reference this plan by wave/prompt number (e.g., "Implement Prompt 1A from V2_IMPLEMENTATION_PLAN.md")
-- Include the specific files to create/modify
-- Include verification steps
-- Ask Claude Code to NOT touch files outside the listed scope
+2. Check git log: `git log --oneline -10`
+3. Check branch: `git branch` → should be `feature/v2-enhancements`
+4. Ports: 8001 (backend) / 5174 (frontend)
+5. Start backend: `cd backend && uvicorn app.main:app --reload --port 8001`
+6. Start frontend: `cd frontend && npx vite --port 5174`
+7. If Neo4j is paused: resume at https://console.neo4j.io
 
 ### Git workflow:
 ```bash
-# After each wave
+# After each prompt or wave
 git add .
 git commit -m "feat(v2): Wave N — description"
 git push origin feature/v2-enhancements
 
-# When v2 is complete
-# Create PR on GitHub: feature/v2-enhancements → main
-# After merge, update v1 directory: cd gen-ai-roi-demo && git pull origin main
+# When v2 complete: PR feature/v2-enhancements → main on GitHub
+```
+
+### Key files created/modified in v2:
+```
+NEW FILES:
+  backend/app/services/situation.py    — Situation Analyzer (Wave 3)
+  backend/app/services/evolver.py      — AgentEvolver (Wave 5)
+  docs/V2_IMPLEMENTATION_PLAN.md       — This file
+
+MODIFIED FILES:
+  frontend/src/App.tsx                 — Version bump (Wave 1)
+  frontend/src/components/tabs/RuntimeEvolutionTab.tsx  — Labels, animation, blocking, AgentEvolver panel
+  frontend/src/components/tabs/AlertTriageTab.tsx       — Labels, Situation Analyzer panel
+  frontend/src/components/tabs/CompoundingTab.tsx       — Counter animations
+  frontend/src/lib/api.ts              — processAlertBlocked() function
+  backend/app/routers/evolution.py     — Blocking endpoint, situation + evolver wiring
+  backend/app/routers/triage.py        — Situation analysis wiring
+  backend/seed_neo4j.py                — Phishing alert seed data
+  .gitignore                           — Added .claude/
 ```
 
 ---
@@ -366,7 +261,9 @@ git push origin feature/v2-enhancements
 
 | Session | Date | Waves Completed | Key Notes |
 |---------|------|-----------------|-----------|
-| Session 1 | 2026-02-17 | Wave 1 + Wave 2 | CMA labels, eval gate animation, counter animation, blocking demo. All verified working on ports 8001/5174. |
+| Session 1 | 2026-02-17 | Wave 1 + Wave 2 | CMA labels, eval gate animation, counter animation, blocking demo. |
+| Session 2 | 2026-02-17 | Waves 3-5 | Situation Analyzer, AgentEvolver, phishing alert. Both loops visible. |
+| Session 3 | 2026-02-17 | Wave 6 (in progress) | Revised plan: decision economics, operational impact, impact banner. CISO "so what" focus. |
 
 ---
 
@@ -377,23 +274,20 @@ git push origin feature/v2-enhancements
 | 1 | 1A | CONSUME/MUTATE/ACTIVATE labels | ✅ Complete | 2026-02-17 |
 | 1 | 1B | Eval gate sequential animation | ✅ Complete | 2026-02-17 |
 | 1 | 1C | Counter animations Tab 4 | ✅ Complete | 2026-02-17 |
-| 1 | Doc | Update PROJECT_STRUCTURE + CODE_REVIEW | ⬜ Deferred to Wave 6C | |
 | 2 | 2A | Blocking demo (backend + frontend) | ✅ Complete | 2026-02-17 |
-| 2 | Doc | Update docs | ⬜ Deferred to Wave 6C | |
-| 3 | 3A | Situation models + classification | ⬜ Not started | |
-| 3 | 3B | Wire into API | ⬜ Not started | |
-| 3 | Doc | Update docs | ⬜ Not started | |
-| 4 | 4A | Situation Analyzer panel (Tab 3) | ⬜ Not started | |
-| 4 | Doc | Update docs | ⬜ Not started | |
-| 5 | 5A | AgentEvolver backend | ⬜ Not started | |
-| 5 | 5B | AgentEvolver panel (Tab 2) | ⬜ Not started | |
-| 5 | 5C | Second alert type (phishing) | ⬜ Not started | |
-| 5 | Doc | Update docs | ⬜ Not started | |
-| 6 | 6A | Two-loop diagram (Tab 4) | ⬜ Not started | |
-| 6 | 6B | Cross-alert statistics | ⬜ Not started | |
-| 6 | 6C | Final documentation update | ⬜ Not started | |
+| 3 | 3A | Situation models + classification | ✅ Complete | 2026-02-17 |
+| 3 | 3B | Wire into API | ✅ Complete | 2026-02-17 |
+| 4 | 4A | Situation Analyzer panel (Tab 3) | ✅ Complete | 2026-02-17 |
+| 5 | 5A | AgentEvolver backend | ✅ Complete | 2026-02-17 |
+| 5 | 5B | AgentEvolver panel (Tab 2) | ✅ Complete | 2026-02-17 |
+| 5 | 5C | Second alert type (phishing) | ✅ Complete | 2026-02-17 |
+| 6 | 6A | Decision economics (Situation Analyzer) | ⬜ Not started | |
+| 6 | 6B | Operational impact (AgentEvolver) | ⬜ Not started | |
+| 6 | 6C | Impact summary banner (Tab 4) | ⬜ Not started | |
+| 6 | 6D | Two-loop diagram (Tab 4) | ⬜ Not started | |
+| 6 | 6E | PROJECT_STRUCTURE + CODE_REVIEW + CLAUDE.md | ⬜ Not started | |
 
 ---
 
-*V2 Implementation Plan v1.0 | February 17, 2026*
-*Source specs: demo_changes_v2.pdf, SOC_Copilot_Demo_v2_Design_Spec.md*
+*V2 Implementation Plan v2.0 | February 17, 2026*
+*Revised: Added business impact enhancements (6A-6C) to strengthen CISO "so what"*
