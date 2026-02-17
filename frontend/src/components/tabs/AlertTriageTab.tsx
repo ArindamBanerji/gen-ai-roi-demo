@@ -60,6 +60,18 @@ interface AnalysisResult {
     nodes: GraphNode[]
     relationships: GraphRelationship[]
   }
+  situation_analysis?: {
+    situation_type: string
+    situation_confidence: number
+    factors_detected: string[]
+    options_evaluated: Array<{
+      action: string
+      score: number
+      factors: string[]
+    }>
+    selected_option: string
+    selection_reasoning: string
+  }
 }
 
 interface ClosedLoopResult {
@@ -390,6 +402,121 @@ export default function AlertTriageTab() {
                       {fact.fact}
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Situation Analyzer Panel */}
+          {analysis && analysis.situation_analysis && (
+            <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
+              {/* Header */}
+              <div className="px-4 py-3 border-b border-gray-800">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold flex items-center gap-2">
+                      🔍 Situation Analysis
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide bg-blue-500 text-white">
+                        CONSUME
+                      </span>
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      (Loop 1: Smarter WITHIN this run)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Situation Type Badge */}
+                <div className="flex items-center gap-4">
+                  <div
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm ${
+                      analysis.situation_analysis.situation_type === 'travel_login_anomaly'
+                        ? 'bg-blue-500/20 text-blue-400 border-2 border-blue-500/50'
+                        : analysis.situation_analysis.situation_type === 'known_phishing_campaign'
+                        ? 'bg-orange-500/20 text-orange-400 border-2 border-orange-500/50'
+                        : analysis.situation_analysis.situation_type === 'malware_on_critical_asset'
+                        ? 'bg-red-500/20 text-red-400 border-2 border-red-500/50'
+                        : analysis.situation_analysis.situation_type === 'vip_after_hours'
+                        ? 'bg-amber-500/20 text-amber-400 border-2 border-amber-500/50'
+                        : analysis.situation_analysis.situation_type === 'data_exfil_attempt'
+                        ? 'bg-red-500/20 text-red-400 border-2 border-red-500/50'
+                        : 'bg-gray-500/20 text-gray-400 border-2 border-gray-500/50'
+                    }`}
+                  >
+                    {analysis.situation_analysis.situation_type.toUpperCase().replace(/_/g, ' ')}
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    <span className="font-semibold text-white">
+                      {(analysis.situation_analysis.situation_confidence * 100).toFixed(0)}%
+                    </span>{' '}
+                    confidence
+                  </div>
+                </div>
+
+                {/* Factors Detected */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-400 mb-3">Factors Detected:</h4>
+                  <div className="space-y-2">
+                    {analysis.situation_analysis.factors_detected.map((factor, idx) => (
+                      <div key={idx} className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-soc-success mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-gray-300">{factor}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Options Evaluated */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-400 mb-3">Options Evaluated:</h4>
+                  <div className="space-y-3">
+                    {analysis.situation_analysis.options_evaluated.map((option, idx) => {
+                      const isSelected = option.action === analysis.situation_analysis?.selected_option
+                      const percentage = (option.score * 100).toFixed(0)
+                      const widthPercentage = option.score * 100
+
+                      return (
+                        <div key={idx} className="space-y-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`font-semibold ${
+                                  isSelected ? 'text-soc-success' : 'text-gray-400'
+                                }`}
+                              >
+                                {option.action.toUpperCase().replace(/_/g, ' ')}
+                              </span>
+                              {isSelected && (
+                                <span className="px-2 py-0.5 bg-soc-success/20 text-soc-success text-xs font-bold rounded">
+                                  Selected ✓
+                                </span>
+                              )}
+                            </div>
+                            <span className={isSelected ? 'text-white font-bold' : 'text-gray-500'}>
+                              {percentage}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-300 ${
+                                isSelected ? 'bg-soc-success' : 'bg-gray-600'
+                              }`}
+                              style={{ width: `${widthPercentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Selection Reasoning */}
+                <div className="p-3 bg-soc-bg/50 rounded border border-gray-800">
+                  <p className="text-sm italic text-gray-400">
+                    {analysis.situation_analysis.selection_reasoning}
+                  </p>
                 </div>
               </div>
             </div>
