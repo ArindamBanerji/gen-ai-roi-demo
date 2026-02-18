@@ -58,3 +58,4 @@ frontend/node_modules/.vite-temp/
 
 # Local utility files
 myFolderTree.txt.claude/
+.claude/
