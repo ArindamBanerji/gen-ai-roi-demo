@@ -10,7 +10,8 @@ import uuid
 from app.services.agent import agent
 from app.services.reasoning import narrator
 from app.services.situation import analyze_situation
-from app.services.feedback import process_outcome, get_feedback_status
+from app.services.feedback import process_outcome, get_feedback_status, reset_feedback_state
+from app.services.policy import detect_policy_conflicts, get_conflict_history, reset_policy_state
 from app.db.neo4j import neo4j_client
 from app.models.schemas import ProcessAlertRequest, OutcomeRequest
 
@@ -301,12 +302,13 @@ async def execute_action(request: ProcessAlertRequest):
 async def reset_demo_alerts():
     """
     Reset all alert statuses back to 'pending' for demo purposes.
+    Also resets feedback and policy conflict state.
     Allows the demo to be run multiple times.
     """
-    print("[TRIAGE] POST /alerts/reset called - resetting alert statuses")
+    print("[TRIAGE] POST /alerts/reset called - resetting all demo state")
 
     try:
-        # Reset all alerts to pending status
+        # Reset all alerts to pending status in Neo4j
         query = """
         MATCH (alert:Alert)
         SET alert.status = 'pending'
@@ -319,9 +321,17 @@ async def reset_demo_alerts():
 
         print(f"[TRIAGE] Reset {reset_count} alerts to 'pending' status")
 
+        # Reset feedback state (v2.5 - Outcome Feedback Loop)
+        print("[TRIAGE] Resetting feedback state...")
+        reset_feedback_state()
+
+        # Reset policy conflict state (v2.5 - Policy Conflict Resolution)
+        print("[TRIAGE] Resetting policy conflict state...")
+        reset_policy_state()
+
         return {
             "status": "success",
-            "message": f"Reset {reset_count} alerts to 'pending' status",
+            "message": f"Reset {reset_count} alerts to 'pending' status. Cleared feedback and policy state.",
             "reset_count": reset_count,
             "timestamp": datetime.now().isoformat()
         }
@@ -417,6 +427,100 @@ async def get_outcome_status(alert_id: str):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get feedback status: {str(e)}"
+        )
+
+
+# ============================================================================
+# GET /api/alert/policy-check - Check Policy Conflicts
+# ============================================================================
+
+@router.get("/alert/policy-check")
+async def check_policy_conflicts(alert_id: str):
+    """
+    Check if an alert has conflicting policies.
+
+    Args:
+        alert_id: Alert identifier (query parameter)
+
+    Returns:
+        PolicyConflict object with conflict detection results
+    """
+    print(f"[POLICY] GET /alert/policy-check called for {alert_id}")
+
+    try:
+        # Build minimal context based on alert_id (demo data)
+        if alert_id == "ALERT-7823":
+            context = {
+                "user_risk_score": 0.85,
+                "user_traveling": True,
+                "vpn_matches_location": True,
+                "alert_type": "anomalous_login"
+            }
+        elif alert_id == "ALERT-7824":
+            context = {
+                "user_risk_score": 0.45,
+                "alert_type": "phishing",
+                "known_campaign_signature": True
+            }
+        else:
+            # Default context
+            context = {
+                "user_risk_score": 0.5,
+                "alert_type": "unknown"
+            }
+
+        print(f"[POLICY] Context: {context}")
+
+        # Detect policy conflicts
+        result = detect_policy_conflicts(alert_id, context)
+
+        print(f"[POLICY] Conflict detected: {result.has_conflict}")
+        if result.has_conflict:
+            print(f"[POLICY] Policies in conflict: {[p.id for p in result.conflicting_policies]}")
+            print(f"[POLICY] Winner: {result.resolution.winning_policy}")
+        else:
+            print(f"[POLICY] Policies applied: {[p.id for p in result.policies_applied]}")
+
+        return result.model_dump()
+
+    except Exception as e:
+        print(f"[ERROR] Failed to check policy conflicts: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to check policy conflicts: {str(e)}"
+        )
+
+
+# ============================================================================
+# GET /api/alert/policy-history - Get Conflict Resolution History
+# ============================================================================
+
+@router.get("/alert/policy-history")
+async def get_policy_history():
+    """
+    Get all resolved policy conflicts for audit/reporting.
+
+    Returns:
+        List of PolicyResolution objects
+    """
+    print("[POLICY] GET /alert/policy-history called")
+
+    try:
+        history = get_conflict_history()
+        print(f"[POLICY] Returning {len(history)} resolved conflicts")
+
+        return {
+            "conflicts": [resolution.model_dump() for resolution in history],
+            "total_count": len(history)
+        }
+
+    except Exception as e:
+        print(f"[ERROR] Failed to get policy history: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get policy history: {str(e)}"
         )
 
 
