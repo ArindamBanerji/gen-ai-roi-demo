@@ -165,3 +165,11 @@ export async function reportOutcome(alertId: string, decisionId: string, outcome
     }),
   })
 }
+
+// ============================================================================
+// Policy Conflict Resolution (v2.5)
+// ============================================================================
+
+export async function checkPolicyConflict(alertId: string) {
+  return fetchJSON(`/alert/policy-check?alert_id=${alertId}`)
+}

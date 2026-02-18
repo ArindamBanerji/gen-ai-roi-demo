@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { getAlerts, analyzeAlert, executeAction, resetAlerts } from '../../lib/api'
 import OutcomeFeedback from '../OutcomeFeedback'
+import PolicyConflict from '../PolicyConflict'
 
 interface Alert {
   id: string
@@ -598,6 +599,11 @@ export default function AlertTriageTab() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Policy Conflict (v2.5) */}
+          {analysis && selectedAlert && (
+            <PolicyConflict alertId={selectedAlert.id} isVisible={!!analysis} />
           )}
 
           {/* Recommendation Panel */}
