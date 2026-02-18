@@ -124,3 +124,25 @@ export async function resetAllDemoData() {
   console.log('[API] POST /api/demo/reset-all response:', response)
   return response
 }
+
+// ============================================================================
+// ROI Calculator (v2.5)
+// ============================================================================
+
+export async function getROIDefaults() {
+  return fetchJSON('/roi/defaults')
+}
+
+export async function calculateROI(inputs: {
+  alerts_per_day: number
+  analysts: number
+  avg_salary: number
+  current_mttr_minutes: number
+  current_auto_close_pct: number
+  avg_escalation_cost: number
+}) {
+  return fetchJSON('/roi/calculate', {
+    method: 'POST',
+    body: JSON.stringify(inputs),
+  })
+}
