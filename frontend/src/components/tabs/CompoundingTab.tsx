@@ -7,7 +7,8 @@
 import { useEffect, useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { getCompoundingMetrics, resetAllDemoData } from '../../lib/api'
-import { TrendingUp, Database, Activity, RefreshCw, Clock, DollarSign, TrendingDown, CheckCircle } from 'lucide-react'
+import { TrendingUp, Database, Activity, RefreshCw, Clock, DollarSign, TrendingDown, CheckCircle, Calculator } from 'lucide-react'
+import ROICalculatorModal from '../ROICalculator'
 
 // ============================================================================
 // Custom Hook: Counter Animation
@@ -113,6 +114,7 @@ export default function CompoundingTab() {
   const [data, setData] = useState<CompoundingData | null>(null)
   const [loading, setLoading] = useState(true)
   const [resetting, setResetting] = useState(false)
+  const [showROI, setShowROI] = useState(false)
 
   // ALL HOOKS MUST BE AT TOP LEVEL - Called unconditionally with safe defaults
   // Uses optional chaining (??) to provide fallback values when data is null
@@ -227,12 +229,23 @@ export default function CompoundingTab() {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          SOC Compounding — "Watch the Moat Grow"
-        </h2>
-        <p className="text-gray-600">
-          Same model. Same rules. More intelligence. When competitors deploy, they start at zero. We start at {animatedNodesEnd} patterns.
-        </p>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              SOC Compounding — "Watch the Moat Grow"
+            </h2>
+            <p className="text-gray-600">
+              Same model. Same rules. More intelligence. When competitors deploy, they start at zero. We start at {animatedNodesEnd} patterns.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowROI(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-all hover:scale-105 shadow-md"
+          >
+            <Calculator className="w-4 h-4" />
+            <span className="text-sm font-semibold">Calculate ROI</span>
+          </button>
+        </div>
       </div>
 
       {/* Business Impact Banner - Executive Summary */}
@@ -306,6 +319,20 @@ export default function CompoundingTab() {
             <p className="text-sm italic text-gray-700">
               💼 Present these numbers to your CFO — this is the business case for AI-augmented security operations.
             </p>
+          </div>
+
+          {/* ROI Calculator CTA Button */}
+          <div className="mt-6">
+            <button
+              onClick={() => setShowROI(true)}
+              className="w-full bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 hover:from-purple-700 hover:via-blue-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-lg shadow-xl transition-all hover:scale-[1.02] hover:shadow-2xl flex items-center justify-center gap-3 group animate-pulse hover:animate-none"
+            >
+              <Calculator className="w-6 h-6 group-hover:rotate-12 transition-transform" />
+              <span className="text-lg">Calculate Your ROI — Input Your SOC Numbers</span>
+              <div className="ml-2 px-3 py-1 bg-white/20 rounded-full text-xs font-semibold">
+                Interactive
+              </div>
+            </button>
           </div>
         </div>
       )}
@@ -667,6 +694,12 @@ export default function CompoundingTab() {
           We start at <span className="text-yellow-300">{animatedNodesEnd} patterns</span>. That's the moat."
         </p>
       </div>
+
+      {/* ROI Calculator Modal */}
+      <ROICalculatorModal
+        isOpen={showROI}
+        onClose={() => setShowROI(false)}
+      />
     </div>
   )
 }
