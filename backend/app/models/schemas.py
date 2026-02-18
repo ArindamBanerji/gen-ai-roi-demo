@@ -3,7 +3,7 @@ Pydantic schemas for SOC Copilot Demo
 Defines data models for alerts, decisions, contexts, and evolution events.
 """
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from pydantic import BaseModel, Field
 
 
@@ -35,6 +35,13 @@ class ProcessAlertRequest(BaseModel):
     alert_id: str
     deployment_version: Optional[str] = "v3.1"
     simulate_failure: bool = False
+
+
+class OutcomeRequest(BaseModel):
+    """Request to report decision outcome (v2.5 - Feedback Loop)"""
+    alert_id: str
+    decision_id: str
+    outcome: Literal["correct", "incorrect"]
 
 
 # ============================================================================

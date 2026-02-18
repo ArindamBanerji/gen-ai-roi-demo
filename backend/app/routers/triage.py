@@ -10,8 +10,9 @@ import uuid
 from app.services.agent import agent
 from app.services.reasoning import narrator
 from app.services.situation import analyze_situation
+from app.services.feedback import process_outcome, get_feedback_status
 from app.db.neo4j import neo4j_client
-from app.models.schemas import ProcessAlertRequest
+from app.models.schemas import ProcessAlertRequest, OutcomeRequest
 
 
 router = APIRouter()
@@ -293,10 +294,6 @@ async def execute_action(request: ProcessAlertRequest):
 
 
 # ============================================================================
-# Helper: Get Graph Data for Visualization
-# ============================================================================
-
-# ============================================================================
 # POST /api/alerts/reset - Reset Demo Alerts
 # ============================================================================
 
@@ -334,6 +331,92 @@ async def reset_demo_alerts():
         raise HTTPException(
             status_code=500,
             detail=f"Failed to reset alerts: {str(e)}"
+        )
+
+
+# ============================================================================
+# POST /api/alert/outcome - Report Decision Outcome (v2.5 - Feedback Loop)
+# ============================================================================
+
+@router.post("/alert/outcome")
+async def report_decision_outcome(request: OutcomeRequest):
+    """
+    Report whether a decision outcome was correct or incorrect.
+    Updates graph based on feedback (self-correction).
+
+    This answers the CISO question: "What happens when the system is wrong?"
+
+    Args:
+        request: OutcomeRequest with alert_id, decision_id, and outcome
+
+    Returns:
+        OutcomeResponse with graph updates and narrative
+    """
+    print(f"[FEEDBACK] POST /alert/outcome called for {request.alert_id}")
+    print(f"[FEEDBACK] Outcome: {request.outcome}")
+
+    try:
+        # Check if feedback already given
+        status = get_feedback_status(request.alert_id)
+        if status["has_feedback"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Feedback already provided for {request.alert_id}. Outcome cannot be changed."
+            )
+
+        # Process the outcome feedback
+        result = process_outcome(
+            alert_id=request.alert_id,
+            decision_id=request.decision_id,
+            outcome=request.outcome
+        )
+
+        print(f"[FEEDBACK] Processed {request.outcome} outcome for {request.alert_id}")
+        print(f"[FEEDBACK] Graph updates: {len(result.graph_updates)}")
+        print(f"[FEEDBACK] Consequence: {result.consequence}")
+
+        return result.model_dump()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Failed to process outcome: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process outcome: {str(e)}"
+        )
+
+
+# ============================================================================
+# GET /api/alert/outcome/status - Get Feedback Status
+# ============================================================================
+
+@router.get("/alert/outcome/status")
+async def get_outcome_status(alert_id: str):
+    """
+    Get feedback status for an alert.
+    Used by frontend to show/hide feedback buttons.
+
+    Args:
+        alert_id: Alert identifier (query parameter)
+
+    Returns:
+        Dictionary with feedback status
+    """
+    print(f"[FEEDBACK] GET /alert/outcome/status called for {alert_id}")
+
+    try:
+        status = get_feedback_status(alert_id)
+        print(f"[FEEDBACK] Status for {alert_id}: has_feedback={status['has_feedback']}")
+        return status
+
+    except Exception as e:
+        print(f"[ERROR] Failed to get feedback status: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get feedback status: {str(e)}"
         )
 
 
