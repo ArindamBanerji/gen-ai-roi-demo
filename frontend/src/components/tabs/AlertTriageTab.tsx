@@ -14,6 +14,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { getAlerts, analyzeAlert, executeAction, resetAlerts } from '../../lib/api'
+import OutcomeFeedback from '../OutcomeFeedback'
 
 interface Alert {
   id: string
@@ -755,6 +756,15 @@ export default function AlertTriageTab() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Outcome Feedback (v2.5 - Loop 3) */}
+          {closedLoop && selectedAlert && (
+            <OutcomeFeedback
+              alertId={selectedAlert.id}
+              decisionId={closedLoop.evidence.decision_id}
+              isVisible={!!closedLoop}
+            />
           )}
         </div>
       </div>

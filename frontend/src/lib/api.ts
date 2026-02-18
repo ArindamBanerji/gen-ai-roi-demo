@@ -146,3 +146,22 @@ export async function calculateROI(inputs: {
     body: JSON.stringify(inputs),
   })
 }
+
+// ============================================================================
+// Outcome Feedback Loop (v2.5)
+// ============================================================================
+
+export async function getOutcomeStatus(alertId: string) {
+  return fetchJSON(`/alert/outcome/status?alert_id=${alertId}`)
+}
+
+export async function reportOutcome(alertId: string, decisionId: string, outcome: 'correct' | 'incorrect') {
+  return fetchJSON('/alert/outcome', {
+    method: 'POST',
+    body: JSON.stringify({
+      alert_id: alertId,
+      decision_id: decisionId,
+      outcome,
+    }),
+  })
+}
