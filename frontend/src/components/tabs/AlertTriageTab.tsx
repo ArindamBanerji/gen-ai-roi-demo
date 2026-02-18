@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Activity,
   AlertCircle,
@@ -120,6 +120,9 @@ export default function AlertTriageTab() {
   const [activeStep, setActiveStep] = useState(0)
   const [resetting, setResetting] = useState(false)
 
+  // Ref to preserve feedback panel visibility (avoids stale closure bug)
+  const preserveFeedbackRef = useRef(false)
+
   useEffect(() => {
     loadAlertQueue()
   }, [])
@@ -152,11 +155,16 @@ export default function AlertTriageTab() {
       setAlerts(data.alerts)
       console.log('[AlertTriageTab] Set alerts state to:', data.alerts)
 
-      if (data.alerts.length > 0) {
+      // Only auto-select first alert on initial load or manual refresh
+      // Don't auto-select if preserveFeedbackRef is true (user just executed action, needs to give feedback)
+      // Using ref avoids stale closure bug where closedLoop state is captured as null
+      if (data.alerts.length > 0 && !preserveFeedbackRef.current) {
         setSelectedAlert(data.alerts[0])
         console.log('[AlertTriageTab] Selected first alert:', data.alerts[0])
-      } else {
+      } else if (data.alerts.length === 0) {
         console.log('[AlertTriageTab] No alerts in response')
+      } else if (preserveFeedbackRef.current) {
+        console.log('[AlertTriageTab] Skipped auto-select (preserving feedback state)')
       }
     } catch (error) {
       console.error('[AlertTriageTab] Failed to load alerts:', error)
@@ -190,6 +198,9 @@ export default function AlertTriageTab() {
       const data = await executeAction(selectedAlert.id)
       setClosedLoop(data)
 
+      // Preserve feedback panel visibility when queue reloads
+      preserveFeedbackRef.current = true
+
       // Animate steps
       for (let i = 0; i < 4; i++) {
         setTimeout(() => setActiveStep(i + 1), i * 800)
@@ -205,6 +216,8 @@ export default function AlertTriageTab() {
   }
 
   const handleAlertSelect = (alert: Alert) => {
+    // Clear feedback preservation when user manually selects a different alert
+    preserveFeedbackRef.current = false
     setSelectedAlert(alert)
     analyzeAlertHandler(alert)
   }
