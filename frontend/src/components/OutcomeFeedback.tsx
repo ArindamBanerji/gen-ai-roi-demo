@@ -188,7 +188,7 @@ export default function OutcomeFeedback({ alertId, decisionId, isVisible }: Outc
                       <span className="text-gray-400">
                         {typeof update.before === 'number' && update.field !== 'precedent_count'
                           ? (update.before * 100).toFixed(1) + '%'
-                          : update.before}
+                          : typeof update.before === 'number' ? Number(update.before).toFixed(1) : update.before}
                       </span>
                       <span className="text-gray-600">→</span>
                       <span
@@ -198,7 +198,7 @@ export default function OutcomeFeedback({ alertId, decisionId, isVisible }: Outc
                       >
                         {typeof update.after === 'number' && update.field !== 'precedent_count'
                           ? (update.after * 100).toFixed(1) + '%'
-                          : update.after}
+                          : typeof update.after === 'number' ? Number(update.after).toFixed(1) : update.after}
                       </span>
                       {update.direction === 'strengthened' ? (
                         <TrendingUp className="w-4 h-4 text-green-400" />
