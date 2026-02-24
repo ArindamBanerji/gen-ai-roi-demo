@@ -13,6 +13,7 @@ from app.services.situation import analyze_situation
 from app.services.feedback import process_outcome, get_feedback_status, reset_feedback_state, get_reward_summary
 from app.services.policy import detect_policy_conflicts, get_conflict_history, reset_policy_state
 from app.services.triage import get_decision_factors
+from app.services.audit import record_decision
 from app.db.neo4j import neo4j_client
 from app.models.schemas import ProcessAlertRequest, OutcomeRequest
 
@@ -211,6 +212,15 @@ async def execute_action(request: ProcessAlertRequest):
         alert_type = context.get("alert_type")
         decision = agent.decide(alert_type, context)
         reasoning = await narrator.generate_reasoning(alert_type, decision.action, context)
+
+        # Record decision in the in-memory audit ledger (Evidence Ledger — Tab 4)
+        record_decision(
+            alert_id=alert_id,
+            situation_type=context.get("situation_type", "unknown"),
+            action_taken=decision.action,
+            factors=list(context.get("factors_matched", [])),
+            confidence=decision.confidence,
+        )
 
         # ====================================================================
         # Step 1: EXECUTED - Take action in target system

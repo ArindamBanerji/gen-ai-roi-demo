@@ -118,7 +118,50 @@ METRIC_REGISTRY = {
         "status": "active",
         "keywords": ["analyst", "efficiency", "productivity", "workload"],
         "chart_type": "bar"
-    }
+    },
+
+    # ---- v3.1: Cross-context graph intelligence queries ----
+
+    "cross_context_travel_risk": {
+        "id": "cross_context_travel_risk",
+        "name": "Travel-Correlated Login Risk",
+        "owner": "soc_analytics@company.com",
+        "definition": "Users with active travel records who triggered authentication anomalies in the last 7 days, cross-referenced with threat intel for destination regions",
+        "version": "v1.0",
+        "status": "active",
+        "keywords": ["travel", "login", "anomaly", "risk", "international", "vpn"],
+        "chart_type": "table"
+    },
+    "device_trust_gaps": {
+        "id": "device_trust_gaps",
+        "name": "Unmanaged Device Access to Sensitive Assets",
+        "owner": "soc_analytics@company.com",
+        "definition": "Devices accessing critical assets that are NOT MDM-enrolled, correlated with user risk scores and recent authentication patterns",
+        "version": "v1.0",
+        "status": "active",
+        "keywords": ["device", "mdm", "unmanaged", "trust", "asset", "endpoint"],
+        "chart_type": "table"
+    },
+    "policy_conflict_landscape": {
+        "id": "policy_conflict_landscape",
+        "name": "Active Policy Conflicts Across Alert Types",
+        "owner": "soc_analytics@company.com",
+        "definition": "All policy pairs that would produce conflicting actions if triggered simultaneously, ranked by frequency of co-occurrence in recent alerts",
+        "version": "v1.0",
+        "status": "active",
+        "keywords": ["policy", "conflict", "governance", "compliance", "rules", "overlap"],
+        "chart_type": "table"
+    },
+    "threat_intel_coverage": {
+        "id": "threat_intel_coverage",
+        "name": "Threat Intelligence Coverage Analysis",
+        "owner": "soc_analytics@company.com",
+        "definition": "Percentage of recent alerts enriched by external threat intelligence, broken down by source, with gaps identified",
+        "version": "v1.0",
+        "status": "active",
+        "keywords": ["threat", "intel", "coverage", "pulsedive", "greynoise", "enrichment", "gap"],
+        "chart_type": "bar"
+    },
 }
 
 
@@ -185,6 +228,87 @@ def get_analyst_efficiency_data() -> List[MetricDataPoint]:
     ]
 
 
+def get_cross_context_travel_risk_data() -> List[MetricDataPoint]:
+    """
+    Travel-correlated login risk — 6 data sources correlated in one query.
+    Each row: User | Destination | Auth anomalies | Threat intel | Resolution
+    """
+    return [
+        MetricDataPoint(
+            label="John Smith | Singapore | 3 anomalous logins | Pulsedive: 103.15.42.17 (high risk) | Resolution: false_positive — travel confirmed",
+            value=0.0,
+        ),
+        MetricDataPoint(
+            label="Maria Chen | Frankfurt | 1 anomalous login | No threat intel match | Resolution: pending review",
+            value=0.0,
+        ),
+        MetricDataPoint(
+            label="David Park | São Paulo | 2 anomalous logins | GreyNoise: scanning activity from region | Resolution: escalated",
+            value=0.0,
+        ),
+    ]
+
+
+def get_device_trust_gaps_data() -> List[MetricDataPoint]:
+    """
+    Unmanaged device access — device × user × asset × risk score in one view.
+    Each row: Device | User | Asset accessed | MDM status | User risk | Last MFA
+    """
+    return [
+        MetricDataPoint(
+            label="BYOD-iPhone-7821 | sarah.jones | Accessed: Financial DB | MDM: No | User risk: 0.72 | Last MFA: 3 days ago",
+            value=0.0,
+        ),
+        MetricDataPoint(
+            label="Unknown-Laptop-0034 | contractor_ext | Accessed: Source Code Repo | MDM: No | User risk: 0.91 | Last MFA: Never",
+            value=0.0,
+        ),
+        MetricDataPoint(
+            label="Personal-iPad-1155 | mike.wong | Accessed: Email only | MDM: No | User risk: 0.15 | Last MFA: 2 hours ago",
+            value=0.0,
+        ),
+        MetricDataPoint(
+            label="BYOD-Android-3390 | alex.kumar | Accessed: HR Portal | MDM: No | User risk: 0.45 | Last MFA: 1 day ago",
+            value=0.0,
+        ),
+    ]
+
+
+def get_policy_conflict_landscape_data() -> List[MetricDataPoint]:
+    """
+    Policy conflict landscape — proactive governance mapping.
+    Each row: Policy pair | Co-occurrence count | Impact | Recommendation
+    """
+    return [
+        MetricDataPoint(
+            label="POL-AUTO-CLOSE-TRAVEL vs POL-ESCALATE-HIGH-RISK | Co-occurred: 23 times this month | Impact: 23 alerts required manual triage | Recommendation: Align priority or add exception for travel-confirmed users",
+            value=0.0,
+        ),
+        MetricDataPoint(
+            label="POL-DLP-BLOCK-EXTERNAL vs POL-ALLOW-PARTNER-SHARE | Co-occurred: 8 times | Impact: 8 file transfers blocked then manually approved | Recommendation: Create partner whitelist exception",
+            value=0.0,
+        ),
+        MetricDataPoint(
+            label="POL-AFTER-HOURS-ALERT vs POL-GLOBAL-TEAM-EXEMPT | Co-occurred: 47 times | Impact: 47 false alerts for APAC team members | Recommendation: Add timezone-aware logic",
+            value=0.0,
+        ),
+    ]
+
+
+def get_threat_intel_coverage_data() -> List[MetricDataPoint]:
+    """
+    Threat intel coverage analysis — shows what the system knows and doesn't know.
+    Value = alert count; last bar (0) highlights the coverage gap.
+    """
+    return [
+        MetricDataPoint(label="Pulsedive enriched (68%)", value=34.0),
+        MetricDataPoint(label="GreyNoise enriched (24%)", value=12.0),
+        MetricDataPoint(label="Enriched by both (16%)", value=8.0),
+        MetricDataPoint(label="No enrichment — GAP (32%)", value=16.0),
+        MetricDataPoint(label="Internal lateral movement (0% coverage)", value=0.0),
+    ]
+
+
 # ============================================================================
 # Metric Matching Logic
 # ============================================================================
@@ -221,7 +345,11 @@ def get_metric_data(metric_id: str) -> List[MetricDataPoint]:
         "fp_rate_by_rule": get_fp_rate_by_rule_data,
         "escalation_rate": get_escalation_rate_data,
         "mttd_by_source": get_mttd_by_source_data,
-        "analyst_efficiency": get_analyst_efficiency_data
+        "analyst_efficiency": get_analyst_efficiency_data,
+        "cross_context_travel_risk": get_cross_context_travel_risk_data,
+        "device_trust_gaps": get_device_trust_gaps_data,
+        "policy_conflict_landscape": get_policy_conflict_landscape_data,
+        "threat_intel_coverage": get_threat_intel_coverage_data,
     }
 
     generator = data_generators.get(metric_id)
@@ -269,7 +397,54 @@ def get_provenance(metric_id: str) -> Provenance:
             freshness_hours=24.0,
             query_preview="SELECT analyst_team, COUNT(*) / COUNT(DISTINCT analyst_id) FROM soc.alerts WHERE status='resolved' GROUP BY analyst_team",
             last_updated=datetime.now().isoformat()
-        )
+        ),
+        "cross_context_travel_risk": Provenance(
+            sources=[
+                "UserProfile (HR)",
+                "TravelCalendar (Concur)",
+                "AuthLogs (Okta)",
+                "ThreatIntel (Pulsedive)",
+                "GreyNoise enrichment",
+                "AlertHistory (SIEM)",
+            ],
+            freshness_hours=0.8,
+            query_preview="MATCH (u:User)-[:HAS_TRAVEL]->(t:TravelContext) MATCH (a:Alert)-[:INVOLVES]->(u) WHERE a.timestamp > datetime()-duration('P7D') OPTIONAL MATCH (ti:ThreatIntel)-[:ASSOCIATED_WITH]->(a) RETURN u.name, t.destination, count(a), ti.severity",
+            last_updated=datetime.now().isoformat()
+        ),
+        "device_trust_gaps": Provenance(
+            sources=[
+                "DeviceInventory (MDM/Intune)",
+                "AssetClassification (CMDB)",
+                "UserProfile (HR)",
+                "AuthLogs (Okta)",
+                "RiskScoring (ACCP)",
+            ],
+            freshness_hours=2.5,
+            query_preview="MATCH (d:Device {mdm_enrolled: false})-[:ACCESSED]->(a:Asset {criticality: 'critical'}) MATCH (u:User)-[:USES]->(d) RETURN d.hostname, u.email, a.name, u.risk_score ORDER BY u.risk_score DESC",
+            last_updated=datetime.now().isoformat()
+        ),
+        "policy_conflict_landscape": Provenance(
+            sources=[
+                "PolicyEngine (ACCP)",
+                "AlertHistory (SIEM)",
+                "ResolutionLog (ACCP)",
+                "UserProfile (HR — timezone/team)",
+            ],
+            freshness_hours=1.5,
+            query_preview="MATCH (p1:Policy)-[:CONFLICTS_WITH]->(p2:Policy) MATCH (a:Alert)-[:TRIGGERED]->(p1) MATCH (a)-[:TRIGGERED]->(p2) RETURN p1.id, p2.id, count(a) AS co_occurrences ORDER BY co_occurrences DESC",
+            last_updated=datetime.now().isoformat()
+        ),
+        "threat_intel_coverage": Provenance(
+            sources=[
+                "ThreatIntel (Pulsedive API)",
+                "GreyNoise (API)",
+                "AlertHistory (SIEM)",
+                "GraphCorrelation (Neo4j)",
+            ],
+            freshness_hours=0.3,
+            query_preview="MATCH (a:Alert) OPTIONAL MATCH (ti:ThreatIntel)-[:ASSOCIATED_WITH]->(a) RETURN ti.source, count(a) AS enriched_count, round(count(a)*100.0/50) AS coverage_pct",
+            last_updated=datetime.now().isoformat()
+        ),
     }
 
     return provenance_map.get(metric_id, Provenance(
@@ -399,4 +574,63 @@ async def list_metrics():
             }
             for metric_id, info in METRIC_REGISTRY.items()
         ]
+    }
+
+
+# ============================================================================
+# GET /api/soc/threat-landscape — Live graph snapshot for Tab 1 summary strip
+# ============================================================================
+
+@router.get("/soc/threat-landscape")
+async def get_threat_landscape():
+    """
+    Returns a live snapshot of what the security graph knows right now.
+    Displayed in the Tab 1 summary strip before any query is made.
+
+    Attempts a live Neo4j count of ThreatIntel nodes; falls back to
+    static numbers if Neo4j is unavailable.
+    """
+    # Attempt live ThreatIntel counts from Neo4j
+    ti_loaded = 47
+    high_severity_iocs = 12
+    try:
+        from app.db.neo4j import neo4j_client
+        results = await neo4j_client.run_query(
+            "MATCH (t:ThreatIntel) "
+            "RETURN count(t) AS total, "
+            "count(CASE WHEN t.severity IN ['critical','high'] THEN 1 END) AS high_sev",
+            {},
+        )
+        if results:
+            ti_loaded = int(results[0].get("total") or ti_loaded)
+            high_severity_iocs = int(results[0].get("high_sev") or high_severity_iocs)
+    except Exception as exc:
+        print(f"[SOC] threat-landscape Neo4j query failed (using static fallback): {exc}")
+
+    return {
+        "threat_intel": {
+            "indicators_loaded": ti_loaded,
+            "sources": ["Pulsedive", "GreyNoise"],
+            "high_severity_iocs": high_severity_iocs,
+            "last_refreshed_minutes_ago": 23,
+        },
+        "active_alerts": {
+            "in_queue": 2,
+            "analyzed_today": 14,
+            "auto_closed_today": 11,
+            "escalated_today": 3,
+        },
+        "governance": {
+            "policy_conflicts_detected": 3,
+            "decisions_today": 14,
+            "audit_chain_verified": True,
+            "avg_confidence": 0.89,
+        },
+        "graph_coverage": {
+            "nodes": 234,
+            "relationships": 891,
+            "alert_types_modeled": 4,
+            "patterns_learned": 127,
+        },
+        "timestamp": datetime.now().isoformat(),
     }

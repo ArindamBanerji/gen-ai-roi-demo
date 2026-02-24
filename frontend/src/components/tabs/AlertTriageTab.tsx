@@ -309,9 +309,6 @@ export default function AlertTriageTab() {
       await resetAlerts()
       console.log('[AlertTriageTab] Alerts reset successfully, reloading queue...')
       await loadAlertQueue()
-      // Clear current selection
-      setSelectedAlert(null)
-      setAnalysis(null)
       setClosedLoop(null)
       setPolicyResolution(null)
       setDecisionFactors(null)

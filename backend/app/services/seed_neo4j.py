@@ -24,6 +24,8 @@ USERS = [
     {"user_id": "agarcia@company.com", "name": "Ana Garcia", "title": "Senior Developer", "department": "Engineering", "risk_score": 0.35, "is_privileged": False},
     {"user_id": "cjohnson@company.com", "name": "Chris Johnson", "title": "CEO", "department": "Executive", "risk_score": 0.95, "is_privileged": True},
     {"user_id": "blee@company.com", "name": "Bob Lee", "title": "SOC Analyst", "department": "Security", "risk_score": 0.25, "is_privileged": False},
+    {"user_id": "rjones@company.com", "name": "Rachel Jones", "title": "Finance Analyst", "department": "Finance", "risk_score": 0.35, "is_privileged": False},
+    {"user_id": "sysadmin@company.com", "name": "System Admin", "title": "IT Operations", "department": "IT", "risk_score": 0.20, "is_privileged": False},
 ]
 
 ALERT_TYPES = [
@@ -60,9 +62,10 @@ TRAVEL_RECORDS = [
 ]
 
 ALERTS = [
+    {"alert_id": "ALERT-7824", "alert_type": "phishing", "severity": "high", "source": "Proofpoint", "asset_id": "LAPTOP-MCHEN", "user_id": "mchen@company.com", "source_location": "External", "status": "pending", "description": "Suspected phishing campaign targeting finance department"},
     {"alert_id": "ALERT-7823", "alert_type": "anomalous_login", "severity": "medium", "source": "Splunk", "asset_id": "LAPTOP-JSMITH", "user_id": "jsmith@company.com", "source_location": "Singapore", "status": "pending", "description": "Login from unusual location: Singapore at 3:47 AM local time"},
-    {"alert_id": "ALERT-7822", "alert_type": "phishing", "severity": "high", "source": "Proofpoint", "asset_id": "MAIL-GW-01", "user_id": "finance_team@company.com", "source_location": "External", "status": "pending", "description": "Phishing email detected targeting Finance team"},
-    {"alert_id": "ALERT-7821", "alert_type": "malware_detection", "severity": "critical", "source": "CrowdStrike", "asset_id": "SRV-DB-PROD-01", "user_id": "system", "source_location": "Internal", "status": "pending", "description": "Known malware hash detected on production database server"},
+    {"alert_id": "ALERT-7822", "alert_type": "phishing", "severity": "high", "source": "Proofpoint", "asset_id": "MAIL-GW-01", "user_id": "rjones@company.com", "source_location": "External", "status": "pending", "description": "Phishing email detected targeting Finance team"},
+    {"alert_id": "ALERT-7821", "alert_type": "malware_detection", "severity": "critical", "source": "CrowdStrike", "asset_id": "SRV-DB-PROD-01", "user_id": "sysadmin@company.com", "source_location": "Internal", "status": "pending", "description": "Known malware hash detected on production database server"},
     {"alert_id": "ALERT-7820", "alert_type": "data_exfiltration", "severity": "high", "source": "DLP", "asset_id": "LAPTOP-MCHEN", "user_id": "mchen@company.com", "source_location": "Internal", "status": "pending", "description": "Large data transfer to external cloud storage"},
     {"alert_id": "ALERT-7819", "alert_type": "anomalous_login", "severity": "low", "source": "Splunk", "asset_id": "LAPTOP-AGARCIA", "user_id": "agarcia@company.com", "source_location": "Denver", "status": "pending", "description": "Login from Denver (user normally in San Francisco)"},
 ]
@@ -93,7 +96,7 @@ EVOLUTIONS = [
 USER_ASSET_MAPPINGS = [("jsmith@company.com", "LAPTOP-JSMITH"), ("mchen@company.com", "LAPTOP-MCHEN"), ("agarcia@company.com", "LAPTOP-AGARCIA")]
 ALERT_PLAYBOOK_MAPPINGS = [("anomalous_login", "PB-LOGIN-001"), ("phishing", "PB-PHISH-001"), ("malware_detection", "PB-MALWARE-001"), ("data_exfiltration", "PB-DLP-001")]
 ASSET_SLA_MAPPINGS = [("LAPTOP-JSMITH", "SLA-HIGH"), ("SRV-DB-PROD-01", "SLA-CRITICAL"), ("LAPTOP-MCHEN", "SLA-HIGH"), ("LAPTOP-AGARCIA", "SLA-MEDIUM"), ("MAIL-GW-01", "SLA-CRITICAL")]
-ALERT_PATTERN_MAPPINGS = [("ALERT-7823", "PAT-TRAVEL-001"), ("ALERT-7822", "PAT-PHISH-KNOWN"), ("ALERT-7821", "PAT-MALWARE-ISOLATE"), ("ALERT-7820", "PAT-VPN-KNOWN"), ("ALERT-7819", "PAT-LOGIN-NORMAL")]
+ALERT_PATTERN_MAPPINGS = [("ALERT-7824", "PAT-PHISH-KNOWN"), ("ALERT-7823", "PAT-TRAVEL-001"), ("ALERT-7822", "PAT-PHISH-KNOWN"), ("ALERT-7821", "PAT-MALWARE-ISOLATE"), ("ALERT-7820", "PAT-VPN-KNOWN"), ("ALERT-7819", "PAT-LOGIN-NORMAL")]
 TRIGGERED_EVOLUTIONS = [
     {"decision_id": "DEC-7823", "evolution_id": "EVO-0891", "impact": "pattern_confidence_increase", "magnitude": 0.03},
     {"decision_id": "DEC-7819", "evolution_id": "EVO-0890", "impact": "threshold_adjustment", "magnitude": 0.02},

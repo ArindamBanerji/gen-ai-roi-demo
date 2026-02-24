@@ -16,7 +16,7 @@ export default defineConfig({
     allowedHosts: ['.ngrok-free.app', '.ngrok.io', 'localhost'], // Allow ngrok domains
     proxy: {
       '/api': {
-        target: 'http://localhost:8001',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
     },

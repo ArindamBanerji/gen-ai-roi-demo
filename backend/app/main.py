@@ -6,8 +6,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from project root
+load_dotenv(dotenv_path="../.env")
 
 app = FastAPI(
     title="SOC Copilot Demo API",
@@ -55,11 +55,11 @@ async def startup_event():
     """Initialize connections on startup"""
     from app.db.neo4j import neo4j_client
     await neo4j_client.connect()
-    print("✓ Connected to Neo4j")
+    print("[OK] Connected to Neo4j")
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Close connections on shutdown"""
     from app.db.neo4j import neo4j_client
     await neo4j_client.close()
-    print("✓ Disconnected from Neo4j")
+    print("[OK] Disconnected from Neo4j")

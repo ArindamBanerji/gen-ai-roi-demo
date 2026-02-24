@@ -151,7 +151,7 @@ def record_decision(
     previous_hash = _get_previous_hash()
     record["hash"] = _compute_hash(previous_hash, record)
     _DECISIONS.append(record)
-    print(f"[AUDIT] Recorded decision {record['id']} for {alert_id} → {action_taken}")
+    print(f"[AUDIT] Recorded decision {record['id']} for {alert_id} -> {action_taken}")
     return record
 
 
@@ -283,7 +283,7 @@ def verify_chain() -> Dict[str, Any]:
 
         previous_hash = stored  # advance chain
 
-    print(f"[AUDIT] Chain verified — {chain_length} records intact")
+    print(f"[AUDIT] Chain verified - {chain_length} records intact")
     return {
         "chain_length": chain_length,
         "verified":     True,

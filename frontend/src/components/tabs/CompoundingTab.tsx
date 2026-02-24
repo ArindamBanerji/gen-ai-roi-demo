@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { getCompoundingMetrics, resetAllDemoData, getAuditDecisions, verifyAuditChain } from '../../lib/api'
+import { getCompoundingMetrics, resetAllDemoData, resetAlerts, getAuditDecisions, verifyAuditChain } from '../../lib/api'
 import { TrendingUp, Database, Activity, RefreshCw, Clock, DollarSign, TrendingDown, CheckCircle, Calculator, Shield, Download } from 'lucide-react'
 import ROICalculatorModal from '../ROICalculator'
 
@@ -222,6 +222,7 @@ export default function CompoundingTab() {
     try {
       console.log('[CompoundingTab] Resetting all demo data...')
       await resetAllDemoData()
+      await resetAlerts()
       console.log('[CompoundingTab] Demo data reset successfully, reloading...')
       await loadData()
     } catch (error) {

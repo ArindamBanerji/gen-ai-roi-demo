@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Shield,
   Search,
@@ -7,8 +7,6 @@ import {
   AlertTriangle,
   FileText,
   Database,
-  TrendingUp,
-  BarChart3,
 } from 'lucide-react'
 import {
   BarChart,
@@ -21,7 +19,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { queryMetric } from '../../lib/api'
+import { queryMetric, getThreatLandscape } from '../../lib/api'
 
 interface MetricContract {
   id: string
@@ -56,7 +54,7 @@ interface QueryResult {
   matched_metric: MetricContract
   result: {
     data: DataPoint[]
-    chart_type: 'bar' | 'line' | 'number'
+    chart_type: 'bar' | 'line' | 'number' | 'table'
   }
   provenance: Provenance
   sprawl_alert: SprawlAlert | null
@@ -69,13 +67,54 @@ const EXAMPLE_QUESTIONS = [
   "What's our false positive rate?",
   "Show escalation rate over time",
   "How efficient are our analysts?",
+  // v3.1: Cross-context graph intelligence queries
+  "Which users traveled internationally and triggered login anomalies this week?",
+  "Show me unmanaged devices accessing sensitive assets",
+  "What policy conflicts exist across my alert types?",
+  "How much of my alert stream has threat intelligence coverage?",
 ]
+
+interface ThreatLandscape {
+  threat_intel: {
+    indicators_loaded: number
+    sources: string[]
+    high_severity_iocs: number
+    last_refreshed_minutes_ago: number
+  }
+  active_alerts: {
+    in_queue: number
+    analyzed_today: number
+    auto_closed_today: number
+    escalated_today: number
+  }
+  governance: {
+    policy_conflicts_detected: number
+    decisions_today: number
+    audit_chain_verified: boolean
+    avg_confidence: number
+  }
+  graph_coverage: {
+    nodes: number
+    relationships: number
+    alert_types_modeled: number
+    patterns_learned: number
+  }
+  timestamp: string
+}
 
 export default function SOCAnalyticsTab() {
   const [question, setQuestion] = useState('')
   const [result, setResult] = useState<QueryResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [threatLandscape, setThreatLandscape] = useState<ThreatLandscape | null>(null)
+
+  // Fetch threat landscape on mount — non-critical, panel hidden on error
+  useEffect(() => {
+    getThreatLandscape()
+      .then((data) => setThreatLandscape(data as ThreatLandscape))
+      .catch(() => {})
+  }, [])
 
   const handleQuery = async (queryText?: string) => {
     const query = queryText || question
@@ -91,7 +130,7 @@ export default function SOCAnalyticsTab() {
 
     try {
       const data = await queryMetric(query)
-      setResult(data)
+      setResult(data as QueryResult)
       setError(null)
     } catch (err: any) {
       setError(err.message || 'Failed to process query')
@@ -139,6 +178,97 @@ export default function SOCAnalyticsTab() {
         </div>
       </div>
 
+      {/* Threat Landscape at a Glance — live graph snapshot, hidden until loaded */}
+      {threatLandscape && (
+        <div className="bg-gradient-to-r from-soc-card via-soc-card to-blue-900/20 rounded-lg border border-blue-800/50 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+            <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
+              Threat Landscape at a Glance
+            </span>
+            <span className="ml-auto text-xs text-gray-600">
+              live · {new Date(threatLandscape.timestamp).toLocaleTimeString()}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-4 gap-6">
+            {/* Threat Intel */}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1.5 text-blue-400 mb-1">
+                <Shield className="w-4 h-4" />
+                <span className="text-xs font-semibold">Threat Intel</span>
+              </div>
+              <div className="text-2xl font-bold text-gray-100">
+                {threatLandscape.threat_intel.indicators_loaded}
+              </div>
+              <div className="text-xs text-gray-500">IOCs loaded</div>
+              <div className="text-xs text-red-400 font-semibold mt-1">
+                {threatLandscape.threat_intel.high_severity_iocs} high severity
+              </div>
+              <div className="text-xs text-gray-600">
+                {threatLandscape.threat_intel.sources.join(' + ')}
+              </div>
+            </div>
+
+            {/* Active Alerts */}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1.5 text-orange-400 mb-1">
+                <AlertTriangle className="w-4 h-4" />
+                <span className="text-xs font-semibold">Active Alerts</span>
+              </div>
+              <div className="text-2xl font-bold text-gray-100">
+                {threatLandscape.active_alerts.in_queue}
+              </div>
+              <div className="text-xs text-gray-500">in queue now</div>
+              <div className="text-xs text-green-400 font-semibold mt-1">
+                {threatLandscape.active_alerts.auto_closed_today} auto-closed today
+              </div>
+              <div className="text-xs text-gray-600">
+                {threatLandscape.active_alerts.escalated_today} escalated
+              </div>
+            </div>
+
+            {/* Governance */}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1.5 text-green-400 mb-1">
+                <FileText className="w-4 h-4" />
+                <span className="text-xs font-semibold">Governance</span>
+              </div>
+              <div className="text-2xl font-bold text-gray-100">
+                {(threatLandscape.governance.avg_confidence * 100).toFixed(0)}%
+              </div>
+              <div className="text-xs text-gray-500">avg decision confidence</div>
+              <div className="text-xs text-yellow-400 font-semibold mt-1">
+                {threatLandscape.governance.policy_conflicts_detected} policy conflicts
+              </div>
+              <div className="text-xs text-gray-600">audit chain verified</div>
+            </div>
+
+            {/* Graph Coverage */}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1.5 text-purple-400 mb-1">
+                <Database className="w-4 h-4" />
+                <span className="text-xs font-semibold">Graph Coverage</span>
+              </div>
+              <div className="text-2xl font-bold text-gray-100">
+                {threatLandscape.graph_coverage.nodes}
+              </div>
+              <div className="text-xs text-gray-500">nodes indexed</div>
+              <div className="text-xs text-purple-400 font-semibold mt-1">
+                {threatLandscape.graph_coverage.patterns_learned} patterns learned
+              </div>
+              <div className="text-xs text-gray-600">
+                {threatLandscape.graph_coverage.relationships.toLocaleString()} relationships
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-gray-800 text-xs text-gray-500 italic">
+            "This is what the graph knows before a single query. Your SIEM shows alerts. We show context."
+          </div>
+        </div>
+      )}
+
       {/* Query Input */}
       <div className="bg-soc-card rounded-lg p-6 border border-gray-800">
         <label className="block text-sm font-semibold mb-3">
@@ -179,9 +309,21 @@ export default function SOCAnalyticsTab() {
         <div className="mt-4">
           <div className="text-xs text-gray-500 mb-2">Try these examples:</div>
           <div className="flex flex-wrap gap-2">
-            {EXAMPLE_QUESTIONS.map((example, idx) => (
+            {EXAMPLE_QUESTIONS.slice(0, 5).map((example, idx) => (
               <button
                 key={idx}
+                onClick={() => handleExampleClick(example)}
+                className="px-3 py-1.5 bg-soc-bg hover:bg-soc-primary/20 border border-gray-700 hover:border-soc-primary rounded text-xs transition-colors"
+              >
+                {example}
+              </button>
+            ))}
+            <div className="w-full mt-1 pt-2 border-t border-gray-800">
+              <span className="text-xs text-slate-500">Cross-context queries:</span>
+            </div>
+            {EXAMPLE_QUESTIONS.slice(5).map((example, idx) => (
+              <button
+                key={`cc-${idx}`}
                 onClick={() => handleExampleClick(example)}
                 className="px-3 py-1.5 bg-soc-bg hover:bg-soc-primary/20 border border-gray-700 hover:border-soc-primary rounded text-xs transition-colors"
               >
@@ -222,82 +364,110 @@ export default function SOCAnalyticsTab() {
             </div>
 
             <div className="p-6">
-              {/* Chart */}
-              <div className="h-80 mb-4">
-                {result.result.chart_type === 'bar' ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={result.result.data}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis
-                        dataKey="label"
-                        stroke="#9ca3af"
-                        style={{ fontSize: '12px' }}
-                      />
-                      <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #374151',
-                          borderRadius: '6px',
-                        }}
-                        labelStyle={{ color: '#f3f4f6' }}
-                        formatter={(value: number) =>
-                          formatValue(value, result.matched_metric.id)
-                        }
-                      />
-                      <Bar dataKey="value" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={result.result.data}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis
-                        dataKey="label"
-                        stroke="#9ca3af"
-                        style={{ fontSize: '12px' }}
-                      />
-                      <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #374151',
-                          borderRadius: '6px',
-                        }}
-                        labelStyle={{ color: '#f3f4f6' }}
-                        formatter={(value: number) =>
-                          formatValue(value, result.matched_metric.id)
-                        }
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="value"
-                        stroke="#10b981"
-                        strokeWidth={2}
-                        dot={{ fill: '#10b981', r: 4 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-
-              {/* Data Table */}
-              <div className="text-xs text-gray-500">
-                <div className="font-semibold mb-2">Data Points:</div>
-                <div className="grid grid-cols-2 gap-2">
-                  {result.result.data.map((point, idx) => (
-                    <div
-                      key={idx}
-                      className="flex justify-between p-2 bg-soc-bg rounded"
-                    >
-                      <span>{point.label}:</span>
-                      <span className="font-bold text-gray-300">
-                        {formatValue(point.value, result.matched_metric.id)}
-                      </span>
-                    </div>
-                  ))}
+              {result.result.chart_type === 'table' ? (
+                /* Cross-context graph intelligence — narrative table rows */
+                <div className="space-y-3">
+                  {result.result.data.map((row, idx) => {
+                    const fields = row.label.split(' | ')
+                    return (
+                      <div
+                        key={idx}
+                        className="p-3 bg-soc-bg rounded-lg border border-gray-700"
+                      >
+                        <div className="font-semibold text-sm text-gray-200 mb-1.5">
+                          {fields[0]}
+                        </div>
+                        <div className="space-y-0.5">
+                          {fields.slice(1).map((field, fi) => (
+                            <div key={fi} className="text-xs text-gray-400">
+                              {field}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-              </div>
+              ) : (
+                <>
+                  {/* Chart */}
+                  <div className="h-80 mb-4">
+                    {result.result.chart_type === 'bar' ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={result.result.data}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                          <XAxis
+                            dataKey="label"
+                            stroke="#9ca3af"
+                            style={{ fontSize: '12px' }}
+                          />
+                          <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: '#1e293b',
+                              border: '1px solid #374151',
+                              borderRadius: '6px',
+                            }}
+                            labelStyle={{ color: '#f3f4f6' }}
+                            formatter={(value: number) =>
+                              formatValue(value, result.matched_metric.id)
+                            }
+                          />
+                          <Bar dataKey="value" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={result.result.data}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                          <XAxis
+                            dataKey="label"
+                            stroke="#9ca3af"
+                            style={{ fontSize: '12px' }}
+                          />
+                          <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: '#1e293b',
+                              border: '1px solid #374151',
+                              borderRadius: '6px',
+                            }}
+                            labelStyle={{ color: '#f3f4f6' }}
+                            formatter={(value: number) =>
+                              formatValue(value, result.matched_metric.id)
+                            }
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="value"
+                            stroke="#10b981"
+                            strokeWidth={2}
+                            dot={{ fill: '#10b981', r: 4 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+
+                  {/* Data Table */}
+                  <div className="text-xs text-gray-500">
+                    <div className="font-semibold mb-2">Data Points:</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {result.result.data.map((point, idx) => (
+                        <div
+                          key={idx}
+                          className="flex justify-between p-2 bg-soc-bg rounded"
+                        >
+                          <span>{point.label}:</span>
+                          <span className="font-bold text-gray-300">
+                            {formatValue(point.value, result.matched_metric.id)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

@@ -327,9 +327,9 @@ async def refresh_threat_intel() -> Dict[str, Any]:
                 })
                 if result:
                     relationships_created += 1
-                    print(f"[THREAT INTEL] Linked {ioc_value} → {alert_id}")
+                    print(f"[THREAT INTEL] Linked {ioc_value} -> {alert_id}")
             except Exception as exc:
-                print(f"[THREAT INTEL] Failed to link {ioc_value} → {alert_id}: {exc}")
+                print(f"[THREAT INTEL] Failed to link {ioc_value} -> {alert_id}: {exc}")
 
     # =========================================================================
     # Step 4 — Build and return summary

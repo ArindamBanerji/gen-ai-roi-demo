@@ -39,6 +39,10 @@ export async function queryMetric(question: string) {
   })
 }
 
+export async function getThreatLandscape() {
+  return fetchJSON('/soc/threat-landscape')
+}
+
 // ============================================================================
 // Tab 2: Runtime Evolution
 // ============================================================================

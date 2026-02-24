@@ -266,7 +266,7 @@ async def reset_all_demo_data():
         # Verify the seed
         verification = await verify_neo4j_seed()
 
-        print("[DEMO RESET] ✓ Comprehensive reset completed successfully")
+        print("[DEMO RESET] Comprehensive reset completed successfully")
 
         return {
             "status": "success",
