@@ -106,6 +106,10 @@ export async function resetAlerts() {
   return response
 }
 
+export async function getDecisionFactors(alertId: string) {
+  return fetchJSON(`/triage/decision-factors/${alertId}`)
+}
+
 // ============================================================================
 // Tab 4: Compounding Metrics
 // ============================================================================

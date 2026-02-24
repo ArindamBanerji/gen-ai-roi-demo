@@ -12,6 +12,7 @@ from app.services.reasoning import narrator
 from app.services.situation import analyze_situation
 from app.services.feedback import process_outcome, get_feedback_status, reset_feedback_state, get_reward_summary
 from app.services.policy import detect_policy_conflicts, get_conflict_history, reset_policy_state
+from app.services.triage import get_decision_factors
 from app.db.neo4j import neo4j_client
 from app.models.schemas import ProcessAlertRequest, OutcomeRequest
 
@@ -549,6 +550,60 @@ async def rl_reward_summary():
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get reward summary: {str(e)}"
+        )
+
+
+# ============================================================================
+# GET /api/triage/decision-factors/{alert_id} - Decision Factor Breakdown (v3.0)
+# ============================================================================
+
+@router.get("/triage/decision-factors/{alert_id}")
+async def decision_factors(alert_id: str):
+    """
+    Return the 6-factor explainability matrix for an agent decision.
+
+    Factor 3 (threat_intel_enrichment) is queried live from Neo4j using the
+    ASSOCIATED_WITH relationship written by the Threat Intel refresh endpoint.
+    The remaining 5 factors are pre-computed from demo context.
+
+    Returns:
+        {
+          "alert_id":           str,
+          "factors":            list of 6 factor dicts,
+          "recommended_action": str,
+          "confidence":         float,
+          "decision_method":    str,
+          "weights_note":       str
+        }
+
+    Each factor dict:
+        { name, value, weight, contribution, explanation }
+        contribution: "high" | "medium" | "low" | "none"
+    """
+    print(f"[TRIAGE] GET /triage/decision-factors/{alert_id} called")
+
+    try:
+        result = await get_decision_factors(alert_id)
+
+        if result is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No analysis found for {alert_id}",
+            )
+
+        print(
+            f"[TRIAGE] Returning {len(result['factors'])} factors "
+            f"for {alert_id}"
+        )
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Failed to get decision factors: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get decision factors: {str(e)}",
         )
 
 

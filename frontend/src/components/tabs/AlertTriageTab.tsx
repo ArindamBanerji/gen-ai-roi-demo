@@ -3,6 +3,8 @@ import {
   Activity,
   AlertCircle,
   CheckCircle,
+  ChevronDown,
+  ChevronUp,
   Clock,
   DollarSign,
   Shield,
@@ -13,7 +15,7 @@ import {
   TrendingDown,
   RefreshCw,
 } from 'lucide-react'
-import { getAlerts, analyzeAlert, executeAction, resetAlerts, checkPolicyConflict, refreshThreatIntel } from '../../lib/api'
+import { getAlerts, analyzeAlert, executeAction, resetAlerts, checkPolicyConflict, refreshThreatIntel, getDecisionFactors } from '../../lib/api'
 import OutcomeFeedback from '../OutcomeFeedback'
 import PolicyConflict from '../PolicyConflict'
 
@@ -133,6 +135,23 @@ interface ThreatIntelStatus {
   }>
 }
 
+interface DecisionFactor {
+  name: string
+  value: number
+  weight: number
+  contribution: 'high' | 'medium' | 'low' | 'none'
+  explanation: string
+}
+
+interface DecisionFactors {
+  alert_id: string
+  factors: DecisionFactor[]
+  recommended_action: string
+  confidence: number
+  decision_method: string
+  weights_note: string
+}
+
 export default function AlertTriageTab() {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null)
@@ -149,6 +168,9 @@ export default function AlertTriageTab() {
 
   const [threatIntel, setThreatIntel] = useState<ThreatIntelStatus | null>(null)
   const [threatIntelLoading, setThreatIntelLoading] = useState(false)
+
+  const [decisionFactors, setDecisionFactors] = useState<DecisionFactors | null>(null)
+  const [decisionFactorsCollapsed, setDecisionFactorsCollapsed] = useState(false)
 
   useEffect(() => {
     loadAlertQueue()
@@ -222,6 +244,7 @@ export default function AlertTriageTab() {
     setClosedLoop(null)
     setActiveStep(0)
     setPolicyResolution(null)
+    setDecisionFactors(null)
 
     try {
       const data = await analyzeAlert(alert.id)
@@ -231,6 +254,12 @@ export default function AlertTriageTab() {
         setPolicyResolution(policyData as PolicyResolutionData)
       } catch {
         // Non-critical — PolicyConflict component handles its own display
+      }
+      try {
+        const factorsData = await getDecisionFactors(alert.id)
+        setDecisionFactors(factorsData as DecisionFactors)
+      } catch {
+        // Non-critical — fail silently, panel won't render
       }
     } catch (error) {
       console.error('Failed to analyze alert:', error)
@@ -285,6 +314,7 @@ export default function AlertTriageTab() {
       setAnalysis(null)
       setClosedLoop(null)
       setPolicyResolution(null)
+      setDecisionFactors(null)
     } catch (error) {
       console.error('[AlertTriageTab] Failed to reset alerts:', error)
     } finally {
@@ -694,6 +724,107 @@ export default function AlertTriageTab() {
                   </p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Why This Decision? Panel (v3.0) */}
+          {analysis && decisionFactors && (
+            <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-800">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">🔎 Why This Decision?</h3>
+                    <p className="text-xs text-gray-500 mt-1">Factor breakdown for this alert</p>
+                  </div>
+                  <button
+                    onClick={() => setDecisionFactorsCollapsed((c) => !c)}
+                    className="p-1 hover:bg-gray-700 rounded transition-colors"
+                    aria-label={decisionFactorsCollapsed ? 'Expand' : 'Collapse'}
+                  >
+                    {decisionFactorsCollapsed
+                      ? <ChevronDown className="w-4 h-4 text-gray-400" />
+                      : <ChevronUp className="w-4 h-4 text-gray-400" />
+                    }
+                  </button>
+                </div>
+              </div>
+
+              {!decisionFactorsCollapsed && (
+                <div className="p-6 space-y-4">
+                  {decisionFactors.factors.map((factor) => {
+                    const barWidth = Math.round(factor.value * factor.weight * 100)
+                    const isThreatIntel = factor.name === 'threat_intel_enrichment'
+                    const isPulsedive = isThreatIntel && factor.explanation.includes('Pulsedive')
+                    const displayName = factor.name
+                      .split('_')
+                      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                      .join(' ')
+
+                    const barColor =
+                      factor.contribution === 'high'
+                        ? 'bg-green-500'
+                        : factor.contribution === 'medium'
+                        ? 'bg-amber-500'
+                        : 'bg-gray-600'
+
+                    const labelColor =
+                      factor.contribution === 'high'
+                        ? 'text-green-400'
+                        : factor.contribution === 'medium'
+                        ? 'text-amber-400'
+                        : 'text-gray-500'
+
+                    return (
+                      <div
+                        key={factor.name}
+                        className={`space-y-1 ${
+                          isThreatIntel
+                            ? 'ring-1 ring-blue-500/30 rounded-md p-2 -mx-2 bg-blue-500/5'
+                            : ''
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-sm">
+                          <span
+                            className={`font-medium ${
+                              isThreatIntel ? 'text-blue-300' : 'text-gray-300'
+                            }`}
+                          >
+                            {isPulsedive && <span className="mr-1">🛡️</span>}
+                            {displayName}
+                          </span>
+                          <span className={`text-xs font-semibold uppercase tracking-wide ${labelColor}`}>
+                            {factor.contribution}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${barColor} transition-all duration-500`}
+                              style={{ width: `${barWidth}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-gray-500 w-8 text-right shrink-0">
+                            {barWidth}%
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 leading-relaxed">
+                          {factor.explanation}
+                        </p>
+                      </div>
+                    )
+                  })}
+
+                  <div className="pt-3 border-t border-gray-800 space-y-1">
+                    <p className="text-xs text-gray-400">
+                      <span className="font-semibold">Decision method:</span>{' '}
+                      {decisionFactors.decision_method}
+                    </p>
+                    <p className="text-xs text-gray-600 italic">
+                      {decisionFactors.weights_note}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
