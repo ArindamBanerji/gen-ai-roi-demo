@@ -325,7 +325,7 @@ export default function CompoundingTab() {
           <div className="mt-6">
             <button
               onClick={() => setShowROI(true)}
-              className="w-full bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 hover:from-purple-700 hover:via-blue-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-lg shadow-xl transition-all hover:scale-[1.02] hover:shadow-2xl flex items-center justify-center gap-3 group animate-pulse hover:animate-none"
+              className="w-full bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 hover:from-purple-700 hover:via-blue-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-lg shadow-xl transition-all hover:scale-[1.02] hover:shadow-2xl flex items-center justify-center gap-3 group"
             >
               <Calculator className="w-6 h-6 group-hover:rotate-12 transition-transform" />
               <span className="text-lg">Calculate Your ROI — Input Your SOC Numbers</span>

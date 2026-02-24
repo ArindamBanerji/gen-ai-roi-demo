@@ -635,12 +635,12 @@ export default function AlertTriageTab() {
               className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden"
               style={{ opacity: policyOverrideActive ? 0.6 : 1 }}
             >
-              {/* Policy Override Banner — shown when security policy requires escalation */}
+              {/* Policy Override Banner — bright amber, prominent, dark text on amber-500 */}
               {policyOverrideActive && (
-                <div className="px-4 py-2 bg-amber-900/50 border-b border-amber-500/60 flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
-                  <p className="text-sm text-amber-300">
-                    <span className="font-semibold">⚠ Policy Override:</span>{' '}
+                <div className="px-4 py-3 bg-amber-500 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-gray-900 mt-0.5 shrink-0" />
+                  <p className="text-sm text-gray-900 font-medium">
+                    <span className="font-bold">⚠ Policy Override:</span>{' '}
                     Security policy requires escalation. See Policy Conflict panel above.
                   </p>
                 </div>
