@@ -13,7 +13,7 @@ import {
   TrendingDown,
   RefreshCw,
 } from 'lucide-react'
-import { getAlerts, analyzeAlert, executeAction, resetAlerts, checkPolicyConflict } from '../../lib/api'
+import { getAlerts, analyzeAlert, executeAction, resetAlerts, checkPolicyConflict, refreshThreatIntel } from '../../lib/api'
 import OutcomeFeedback from '../OutcomeFeedback'
 import PolicyConflict from '../PolicyConflict'
 
@@ -120,6 +120,19 @@ interface PolicyResolutionData {
   } | null
 }
 
+interface ThreatIntelStatus {
+  source: string
+  indicators_ingested: number
+  timestamp: string
+  enrichment_summary: Array<{
+    value: string
+    type: string
+    severity: string
+    source: string
+    context: string
+  }>
+}
+
 export default function AlertTriageTab() {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null)
@@ -134,8 +147,28 @@ export default function AlertTriageTab() {
   // Ref to preserve feedback panel visibility (avoids stale closure bug)
   const preserveFeedbackRef = useRef(false)
 
+  const [threatIntel, setThreatIntel] = useState<ThreatIntelStatus | null>(null)
+  const [threatIntelLoading, setThreatIntelLoading] = useState(false)
+
   useEffect(() => {
     loadAlertQueue()
+  }, [])
+
+  const handleRefreshThreatIntel = async () => {
+    setThreatIntelLoading(true)
+    try {
+      const data = await refreshThreatIntel()
+      setThreatIntel(data as ThreatIntelStatus)
+    } catch {
+      // Badge remains in "Not loaded" state
+    } finally {
+      setThreatIntelLoading(false)
+    }
+  }
+
+  // Auto-fetch on mount so badge shows data immediately if backend is up
+  useEffect(() => {
+    handleRefreshThreatIntel()
   }, [])
 
   useEffect(() => {
@@ -352,6 +385,45 @@ export default function AlertTriageTab() {
 
         {/* Main Content Area */}
         <div className="col-span-2 space-y-6">
+
+          {/* Threat Intel status badge — always visible */}
+          <div className="flex items-center gap-2 text-xs bg-soc-card rounded-lg px-4 py-2 border border-gray-800">
+            <span>🛡️</span>
+            <span className="text-gray-400">Threat Intel:</span>
+            {threatIntel ? (
+              <>
+                <span className="font-semibold text-white">
+                  {threatIntel.indicators_ingested} indicators
+                </span>
+                <span className="text-gray-600">·</span>
+                <span
+                  className={
+                    threatIntel.source.includes('pulsedive')
+                      ? 'font-semibold text-green-400'
+                      : 'font-semibold text-amber-400'
+                  }
+                >
+                  {threatIntel.source.includes('pulsedive') ? 'Pulsedive (live)' : 'Local fallback'}
+                </span>
+                <span className="text-gray-600">·</span>
+                <span className="text-gray-500">
+                  Last refreshed:{' '}
+                  {threatIntel.timestamp.split('T')[1]?.slice(0, 8) ?? threatIntel.timestamp}
+                </span>
+              </>
+            ) : (
+              <span className="text-gray-500 italic">Not loaded · Click Refresh</span>
+            )}
+            <button
+              onClick={handleRefreshThreatIntel}
+              disabled={threatIntelLoading}
+              className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-gray-300 transition-colors"
+            >
+              <RefreshCw className={`w-3 h-3 ${threatIntelLoading ? 'animate-spin' : ''}`} />
+              {threatIntelLoading ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
+
           {/* Selected Alert Details */}
           {selectedAlert && (
             <div className="bg-soc-card rounded-lg p-4 border border-gray-800">
@@ -399,6 +471,7 @@ export default function AlertTriageTab() {
                     <span>[{analysis.context.patterns_matched} patterns]</span>
                   </div>
                 </div>
+
               </div>
 
               {/* Simple Graph Visualization */}

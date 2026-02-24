@@ -38,7 +38,7 @@ async def health():
     return {"status": "healthy"}
 
 # Router imports
-from app.routers import evolution, triage, soc, metrics, roi
+from app.routers import evolution, triage, soc, metrics, roi, graph
 
 # Register routers
 app.include_router(evolution.router, prefix="/api", tags=["Runtime Evolution"])
@@ -46,6 +46,7 @@ app.include_router(triage.router, prefix="/api", tags=["Alert Triage"])
 app.include_router(soc.router, prefix="/api", tags=["SOC Analytics"])
 app.include_router(metrics.router, prefix="/api", tags=["Compounding Metrics"])
 app.include_router(roi.router, prefix="/api", tags=["ROI Calculator"])
+app.include_router(graph.router, prefix="/api", tags=["Graph Intelligence"])
 
 # Lifecycle events
 @app.on_event("startup")

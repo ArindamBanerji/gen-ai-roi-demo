@@ -177,3 +177,14 @@ export async function reportOutcome(alertId: string, decisionId: string, outcome
 export async function checkPolicyConflict(alertId: string) {
   return fetchJSON(`/alert/policy-check?alert_id=${alertId}`)
 }
+
+// ============================================================================
+// Graph Intelligence (v3.0)
+// ============================================================================
+
+export async function refreshThreatIntel() {
+  console.log('[API] Calling POST /api/graph/threat-intel/refresh')
+  const response = await fetchJSON('/graph/threat-intel/refresh', { method: 'POST' })
+  console.log('[API] POST /api/graph/threat-intel/refresh response:', response)
+  return response
+}
