@@ -91,16 +91,39 @@ interface ProcessResult {
   }
 }
 
+interface RewardSummary {
+  total_decisions: number
+  correct: number
+  incorrect: number
+  asymmetric_ratio: number
+  cumulative_r_t: number
+  loop3_status: 'active' | 'insufficient_data'
+  governs: string[]
+}
+
 export default function RuntimeEvolutionTab() {
   const [deployments, setDeployments] = useState<Deployment[]>([])
   const [processing, setProcessing] = useState(false)
   const [result, setResult] = useState<ProcessResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [visibleChecks, setVisibleChecks] = useState<number[]>([])
+  const [rewardSummary, setRewardSummary] = useState<RewardSummary | null>(null)
 
   useEffect(() => {
     loadDeployments()
   }, [])
+
+  // Fetch reward summary on mount (shows muted state initially)
+  useEffect(() => {
+    loadRewardSummary()
+  }, [])
+
+  // Refresh reward summary after any alert processing
+  useEffect(() => {
+    if (result) {
+      loadRewardSummary()
+    }
+  }, [result])
 
   // Sequential animation for eval gate checks
   useEffect(() => {
@@ -125,6 +148,15 @@ export default function RuntimeEvolutionTab() {
       console.error('Failed to load deployments:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadRewardSummary = async () => {
+    try {
+      const data = await api.getRewardSummary()
+      setRewardSummary(data)
+    } catch (error) {
+      console.error('Failed to load reward summary:', error)
     }
   }
 
@@ -772,6 +804,118 @@ export default function RuntimeEvolutionTab() {
           </div>
         </div>
       )}
+
+      {/* Loop 3: RL Reward / Penalty — always visible, independent of result */}
+      <div className="bg-soc-card rounded-lg border border-gray-700 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-700">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="font-semibold flex items-center gap-2">
+                <Activity className="w-4 h-4 text-emerald-400" />
+                Loop 3: RL Reward / Penalty
+              </h3>
+              <p className="text-sm text-gray-400 mt-1">
+                Governs Loops 1 and 2 — continuous reinforcement signal
+              </p>
+            </div>
+            <span className="flex-shrink-0 px-3 py-1 bg-emerald-900/40 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/30">
+              Security-first: penalty 20× reward
+            </span>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {!rewardSummary ? (
+            <div className="text-center py-6 text-gray-600">
+              <p className="text-sm">Loading reward signal...</p>
+            </div>
+          ) : rewardSummary.loop3_status === 'insufficient_data' ? (
+            <div className="text-center py-8 text-gray-500">
+              <Activity className="w-8 h-8 mx-auto mb-3 opacity-25" />
+              <p className="text-sm">Awaiting first verified outcome...</p>
+              <p className="text-xs mt-1 text-gray-600">
+                Process an alert in Tab 3 and mark the outcome correct or incorrect to activate Loop 3.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+
+              {/* Three metrics in a row */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-soc-bg rounded border border-gray-800 p-4">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                    Cumulative r(t)
+                  </div>
+                  <div className={`text-2xl font-bold font-mono ${
+                    rewardSummary.cumulative_r_t >= 0 ? 'text-emerald-400' : 'text-red-400'
+                  }`}>
+                    {rewardSummary.cumulative_r_t >= 0 ? '+' : ''}
+                    {rewardSummary.cumulative_r_t.toFixed(1)}
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">running total</div>
+                </div>
+
+                <div className="bg-soc-bg rounded border border-gray-800 p-4">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                    Asymmetric Ratio
+                  </div>
+                  <div className="text-2xl font-bold font-mono text-amber-400">
+                    {rewardSummary.asymmetric_ratio.toFixed(0)}:1
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">penalty : reward</div>
+                </div>
+
+                <div className="bg-soc-bg rounded border border-gray-800 p-4">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                    Decisions Governed
+                  </div>
+                  <div className="text-2xl font-bold font-mono text-gray-200">
+                    {rewardSummary.total_decisions}
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">
+                    <span className="text-emerald-500">{rewardSummary.correct}✓</span>
+                    {' / '}
+                    <span className="text-red-500">{rewardSummary.incorrect}✗</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Asymmetric bar visual — CSS only, widths proportional to 6.0 max */}
+              <div>
+                <div className="text-xs text-gray-500 uppercase tracking-wide mb-3">
+                  Reward Signal Scale
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-400 w-24 text-right font-mono shrink-0">
+                      +0.3 reward
+                    </span>
+                    <div className="flex-1 h-4 bg-gray-800 rounded overflow-hidden">
+                      {/* 0.3 / 6.0 = 5% */}
+                      <div className="h-full bg-emerald-500 rounded" style={{ width: '5%' }} />
+                    </div>
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-400 w-24 text-right font-mono shrink-0">
+                      −6.0 penalty
+                    </span>
+                    <div className="flex-1 h-4 bg-gray-800 rounded overflow-hidden">
+                      {/* 6.0 / 6.0 = 100% */}
+                      <div className="h-full bg-red-500 rounded" style={{ width: '100%' }} />
+                    </div>
+                    <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-600 mt-2">
+                  Incorrect decisions are penalized 20× harder to preserve security guarantees.
+                </p>
+              </div>
+
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

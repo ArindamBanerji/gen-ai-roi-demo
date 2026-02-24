@@ -10,7 +10,7 @@ import uuid
 from app.services.agent import agent
 from app.services.reasoning import narrator
 from app.services.situation import analyze_situation
-from app.services.feedback import process_outcome, get_feedback_status, reset_feedback_state
+from app.services.feedback import process_outcome, get_feedback_status, reset_feedback_state, get_reward_summary
 from app.services.policy import detect_policy_conflicts, get_conflict_history, reset_policy_state
 from app.db.neo4j import neo4j_client
 from app.models.schemas import ProcessAlertRequest, OutcomeRequest
@@ -521,6 +521,34 @@ async def get_policy_history():
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get policy history: {str(e)}"
+        )
+
+
+# ============================================================================
+# GET /api/rl/reward-summary - RL Reward Summary (Loop 3 governance)
+# ============================================================================
+
+@router.get("/rl/reward-summary")
+async def rl_reward_summary():
+    """
+    Return aggregated RL reward signal from all outcome feedback recorded
+    in this session.
+
+    Reward signal: correct → +0.3, incorrect → -6.0 (asymmetric ratio 20:1).
+    loop3_status is "active" once at least one decision has been recorded.
+    """
+    print("[RL] GET /rl/reward-summary called")
+
+    try:
+        summary = get_reward_summary()
+        print(f"[RL] total_decisions={summary['total_decisions']}, cumulative_r_t={summary['cumulative_r_t']}")
+        return summary
+
+    except Exception as e:
+        print(f"[ERROR] Failed to get reward summary: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get reward summary: {str(e)}"
         )
 
 

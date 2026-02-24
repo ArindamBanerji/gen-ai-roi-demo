@@ -13,7 +13,7 @@ import {
   TrendingDown,
   RefreshCw,
 } from 'lucide-react'
-import { getAlerts, analyzeAlert, executeAction, resetAlerts } from '../../lib/api'
+import { getAlerts, analyzeAlert, executeAction, resetAlerts, checkPolicyConflict } from '../../lib/api'
 import OutcomeFeedback from '../OutcomeFeedback'
 import PolicyConflict from '../PolicyConflict'
 
@@ -111,6 +111,15 @@ interface ClosedLoopResult {
   }
 }
 
+interface PolicyResolutionData {
+  has_conflict: boolean
+  resolution: {
+    action_adjusted: string
+    original_action: string
+    winning_policy: string
+  } | null
+}
+
 export default function AlertTriageTab() {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null)
@@ -120,6 +129,7 @@ export default function AlertTriageTab() {
   const [executing, setExecuting] = useState(false)
   const [activeStep, setActiveStep] = useState(0)
   const [resetting, setResetting] = useState(false)
+  const [policyResolution, setPolicyResolution] = useState<PolicyResolutionData | null>(null)
 
   // Ref to preserve feedback panel visibility (avoids stale closure bug)
   const preserveFeedbackRef = useRef(false)
@@ -178,10 +188,17 @@ export default function AlertTriageTab() {
     setAnalysis(null)
     setClosedLoop(null)
     setActiveStep(0)
+    setPolicyResolution(null)
 
     try {
       const data = await analyzeAlert(alert.id)
       setAnalysis(data)
+      try {
+        const policyData = await checkPolicyConflict(alert.id)
+        setPolicyResolution(policyData as PolicyResolutionData)
+      } catch {
+        // Non-critical — PolicyConflict component handles its own display
+      }
     } catch (error) {
       console.error('Failed to analyze alert:', error)
     } finally {
@@ -234,6 +251,7 @@ export default function AlertTriageTab() {
       setSelectedAlert(null)
       setAnalysis(null)
       setClosedLoop(null)
+      setPolicyResolution(null)
     } catch (error) {
       console.error('[AlertTriageTab] Failed to reset alerts:', error)
     } finally {
@@ -259,6 +277,11 @@ export default function AlertTriageTab() {
   const getActionLabel = (action: string) => {
     return action.replace(/_/g, ' ').toUpperCase()
   }
+
+  // True when policy conflict resolution requires escalation, overriding the AI recommendation
+  const policyOverrideActive =
+    policyResolution?.has_conflict === true &&
+    policyResolution?.resolution?.action_adjusted === 'escalate_tier2'
 
   return (
     <div className="space-y-6">
@@ -608,7 +631,21 @@ export default function AlertTriageTab() {
 
           {/* Recommendation Panel */}
           {analysis && (
-            <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
+            <div
+              className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden"
+              style={{ opacity: policyOverrideActive ? 0.6 : 1 }}
+            >
+              {/* Policy Override Banner — shown when security policy requires escalation */}
+              {policyOverrideActive && (
+                <div className="px-4 py-2 bg-amber-900/50 border-b border-amber-500/60 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+                  <p className="text-sm text-amber-300">
+                    <span className="font-semibold">⚠ Policy Override:</span>{' '}
+                    Security policy requires escalation. See Policy Conflict panel above.
+                  </p>
+                </div>
+              )}
+
               <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
                 <h3 className="font-semibold">Recommendation</h3>
                 <span className="text-sm text-gray-400">
@@ -640,7 +677,13 @@ export default function AlertTriageTab() {
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-soc-primary hover:bg-soc-primary/80 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors"
                 >
                   <Play className="w-4 h-4" />
-                  {executing ? 'Executing...' : closedLoop ? 'Executed' : 'Apply Recommendation'}
+                  {executing
+                    ? 'Executing...'
+                    : closedLoop
+                    ? 'Executed'
+                    : policyOverrideActive
+                    ? 'Apply Policy Resolution'
+                    : 'Apply Recommendation'}
                 </button>
               </div>
             </div>

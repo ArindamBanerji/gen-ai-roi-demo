@@ -70,6 +70,10 @@ export async function simulateFailedGate() {
   return fetchJSON('/eval/simulate-failure', { method: 'POST' })
 }
 
+export async function getRewardSummary() {
+  return fetchJSON('/rl/reward-summary')
+}
+
 // ============================================================================
 // Tab 3: Alert Triage
 // ============================================================================

@@ -266,6 +266,33 @@ def get_current_pattern_state() -> Dict[str, Any]:
     }
 
 
+def get_reward_summary() -> Dict[str, Any]:
+    """
+    Aggregate current in-memory feedback state into an RL reward summary.
+
+    Reward signal:
+        correct   → +0.3  (reinforces good decisions)
+        incorrect → -6.0  (asymmetric penalty, ratio 20:1)
+
+    Returns:
+        Dictionary with totals, cumulative reward, and loop governance info.
+    """
+    total_decisions = len(FEEDBACK_GIVEN)
+    correct = sum(1 for v in FEEDBACK_GIVEN.values() if v["outcome"] == "correct")
+    incorrect = sum(1 for v in FEEDBACK_GIVEN.values() if v["outcome"] == "incorrect")
+    cumulative_r_t = round(correct * 0.3 + incorrect * (-6.0), 4)
+
+    return {
+        "total_decisions": total_decisions,
+        "correct": correct,
+        "incorrect": incorrect,
+        "asymmetric_ratio": 20.0,
+        "cumulative_r_t": cumulative_r_t,
+        "loop3_status": "active" if total_decisions > 0 else "insufficient_data",
+        "governs": ["loop1_situation_analyzer", "loop2_agent_evolver"],
+    }
+
+
 def reset_feedback_state():
     """Reset all feedback state to initial values (for demo reset)"""
     global FEEDBACK_GIVEN, PATTERN_CONFIDENCE, EDGE_WEIGHTS, PRECEDENT_COUNTS

@@ -492,148 +492,170 @@ export default function CompoundingTab() {
           </div>
         </div>
 
-        {/* Two-Loop Architecture Diagram (Hero Visual) */}
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-lg border-2 border-purple-500 shadow-2xl p-8">
-          <h3 className="text-xl font-bold text-white mb-2 text-center">
-            Two-Loop Architecture
+        {/* Three-Loop Architecture Diagram (Hero Visual) */}
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-lg border-2 border-purple-500 shadow-2xl p-5">
+          <h3 className="text-xl font-bold text-white mb-1 text-center">
+            Three-Loop Architecture
           </h3>
-          <p className="text-sm text-gray-400 text-center mb-6">
-            The VC Story: Both loops write to the same graph
+          <p className="text-xs text-gray-400 text-center mb-4">
+            Three cross-layer loops. One living graph. Intelligence that compounds automatically.
           </p>
 
-          <div className="relative">
-            {/* Center: Context Graph */}
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
-              <div className="bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg p-6 border-4 border-yellow-400 shadow-2xl animate-pulse">
-                <div className="text-center">
-                  <Database className="w-8 h-8 text-white mx-auto mb-2" />
-                  <div className="text-lg font-bold text-white">
-                    CONTEXT GRAPH
-                  </div>
-                  <div className="text-xs text-gray-200 font-semibold">(Neo4j)</div>
-                  <div className="mt-2 text-xs text-gray-300 border-t border-gray-400 pt-2">
-                    Patterns | Users | Assets<br />Decisions | Playbooks
-                  </div>
+          {/* Top row: Loop 1 → Living Context Graph ← Loop 2 */}
+          <div className="flex items-stretch gap-1.5 mb-1">
+
+            {/* Loop 1 — Situation Analyzer (blue) */}
+            <div className="flex-1 bg-blue-900/40 rounded border-2 border-blue-500 p-2.5">
+              <div className="text-xs font-bold text-blue-300 uppercase tracking-wide mb-0.5">Loop 1</div>
+              <div className="text-sm font-semibold text-blue-200 mb-0.5">Situation Analyzer</div>
+              <div className="text-xs text-blue-300/60 italic mb-1.5">Smarter within each decision</div>
+              <div className="space-y-0.5">
+                <div className="flex items-start gap-1">
+                  <div className="w-1 h-1 bg-blue-400 rounded-full mt-1.5 shrink-0" />
+                  <span className="text-xs text-gray-300">Classifies situations</span>
                 </div>
+                <div className="flex items-start gap-1">
+                  <div className="w-1 h-1 bg-blue-400 rounded-full mt-1.5 shrink-0" />
+                  <span className="text-xs text-gray-300">Evaluates options</span>
+                </div>
+                <div className="flex items-start gap-1">
+                  <div className="w-1 h-1 bg-blue-400 rounded-full mt-1.5 shrink-0" />
+                  <span className="text-xs text-gray-300">Reasons over context</span>
+                </div>
+              </div>
+              <div className="mt-1.5 pt-1.5 border-t border-blue-800 text-xs text-blue-400">Demo: Tab 3 →</div>
+            </div>
+
+            {/* Arrow → center */}
+            <div className="flex items-center text-gray-500 text-sm font-bold shrink-0">→</div>
+
+            {/* Center: Living Context Graph */}
+            <div className="flex items-center justify-center w-28 shrink-0">
+              <div className="bg-gradient-to-br from-purple-700 to-blue-700 rounded-lg p-3 border-2 border-yellow-400 shadow-xl animate-pulse text-center w-full">
+                <Database className="w-5 h-5 text-white mx-auto mb-1" />
+                <div className="text-xs font-bold text-white leading-tight">Living Context</div>
+                <div className="text-xs font-bold text-white leading-tight">Graph</div>
+                <div className="text-xs text-gray-300 mt-1">(Neo4j)</div>
               </div>
             </div>
 
-            {/* Layout grid for loops */}
-            <div className="grid grid-cols-2 gap-12 mb-4" style={{ minHeight: '350px' }}>
-              {/* Left: Loop 1 - Situation Analyzer */}
-              <div className="relative">
-                <div className="bg-blue-900/40 rounded-lg border-2 border-blue-400 p-5 h-full">
-                  <div className="mb-3">
-                    <div className="text-lg font-bold text-blue-300 mb-1">
-                      LOOP 1: SITUATION ANALYZER
-                    </div>
-                    <div className="text-xs text-blue-200 italic mb-3">
-                      Smarter WITHIN each decision
-                    </div>
-                  </div>
+            {/* Arrow center → */}
+            <div className="flex items-center text-gray-500 text-sm font-bold shrink-0">←</div>
 
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-1.5" />
-                      <div className="text-sm text-gray-300">Classifies situations</div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-1.5" />
-                      <div className="text-sm text-gray-300">Evaluates options</div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-1.5" />
-                      <div className="text-sm text-gray-300">Reasons over context</div>
-                    </div>
-                  </div>
-
-                  <div className="mt-auto pt-4 border-t border-blue-700">
-                    <div className="text-xs text-blue-300 font-semibold">
-                      Demo: Tab 3 →
-                    </div>
-                  </div>
+            {/* Loop 2 — AgentEvolver (purple) */}
+            <div className="flex-1 bg-purple-900/40 rounded border-2 border-purple-500 p-2.5">
+              <div className="text-xs font-bold text-purple-300 uppercase tracking-wide mb-0.5">Loop 2</div>
+              <div className="text-sm font-semibold text-purple-200 mb-0.5">AgentEvolver</div>
+              <div className="text-xs text-purple-300/60 italic mb-1.5">Smarter across decisions</div>
+              <div className="space-y-0.5">
+                <div className="flex items-start gap-1">
+                  <div className="w-1 h-1 bg-purple-400 rounded-full mt-1.5 shrink-0" />
+                  <span className="text-xs text-gray-300">Tracks variants</span>
                 </div>
-
-                {/* Connecting line to center */}
-                <div className="absolute top-1/2 right-0 w-12 h-0.5 bg-blue-400" style={{ transform: 'translateX(100%)' }} />
-              </div>
-
-              {/* Right: Loop 2 - Agent Evolver */}
-              <div className="relative">
-                <div className="bg-purple-900/40 rounded-lg border-2 border-purple-400 p-5 h-full">
-                  <div className="mb-3">
-                    <div className="text-lg font-bold text-purple-300 mb-1">
-                      LOOP 2: AGENT EVOLVER
-                    </div>
-                    <div className="text-xs text-purple-200 italic mb-3">
-                      Smarter ACROSS all decisions
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-1.5" />
-                      <div className="text-sm text-gray-300">Tracks prompt success</div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-1.5" />
-                      <div className="text-sm text-gray-300">Evolves behavior</div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-1.5" />
-                      <div className="text-sm text-gray-300">Promotes winners</div>
-                    </div>
-                  </div>
-
-                  <div className="mt-auto pt-4 border-t border-purple-700">
-                    <div className="text-xs text-purple-300 font-semibold">
-                      Demo: Tab 2 →
-                    </div>
-                  </div>
+                <div className="flex items-start gap-1">
+                  <div className="w-1 h-1 bg-purple-400 rounded-full mt-1.5 shrink-0" />
+                  <span className="text-xs text-gray-300">Evolves behavior</span>
                 </div>
-
-                {/* Connecting line to center */}
-                <div className="absolute top-1/2 left-0 w-12 h-0.5 bg-purple-400" style={{ transform: 'translateX(-100%)' }} />
+                <div className="flex items-start gap-1">
+                  <div className="w-1 h-1 bg-purple-400 rounded-full mt-1.5 shrink-0" />
+                  <span className="text-xs text-gray-300">Promotes winners</span>
+                </div>
               </div>
+              <div className="mt-1.5 pt-1.5 border-t border-purple-800 text-xs text-purple-400">Demo: Tab 2 →</div>
             </div>
+          </div>
 
-            {/* Bottom: Write Back Connection */}
-            <div className="text-center mt-6">
-              <div className="inline-block bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 rounded-lg px-6 py-3 border-2 border-yellow-400">
-                <div className="text-sm font-bold text-white">
-                  BOTH WRITE BACK → TRIGGERED_EVOLUTION
-                </div>
+          {/* Vertical connector from Loop 3 up to center graph */}
+          <div className="flex justify-center">
+            <div className="text-amber-500/50 text-sm leading-none">↑</div>
+          </div>
+
+          {/* Loop 3 — RL Reward / Penalty (amber), centered below graph */}
+          <div className="flex justify-center mb-3">
+            <div className="bg-amber-900/40 rounded border-2 border-amber-500 p-2.5 w-3/5 text-center">
+              <div className="text-xs font-bold text-amber-300 uppercase tracking-wide mb-0.5">Loop 3</div>
+              <div className="text-sm font-semibold text-amber-200 mb-0.5">RL Reward / Penalty</div>
+              <div className="text-xs text-amber-300/60 italic mb-1.5">Governs both loops</div>
+              <div className="flex justify-center gap-2 flex-wrap">
+                <span className="text-xs text-gray-300">+0.3 reward</span>
+                <span className="text-gray-600">·</span>
+                <span className="text-xs text-gray-300">−6.0 penalty</span>
+                <span className="text-gray-600">·</span>
+                <span className="text-xs text-gray-300">20:1 ratio</span>
+              </div>
+              <div className="mt-1.5 pt-1.5 border-t border-amber-800 text-xs text-amber-400">Demo: Tab 2 →</div>
+            </div>
+          </div>
+
+          {/* TRIGGERED_EVOLUTION write-back badge */}
+          <div className="text-center mb-4">
+            <div className="inline-block bg-gradient-to-r from-blue-700 via-purple-700 to-amber-700 rounded-lg px-4 py-2 border border-yellow-400/60">
+              <div className="text-xs font-bold text-white">
+                ALL THREE WRITE BACK → TRIGGERED_EVOLUTION
               </div>
             </div>
           </div>
 
-          {/* Stats Row */}
-          <div className="mt-8 pt-6 border-t border-gray-700">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="bg-slate-800/50 rounded-lg p-3 border border-blue-500/30">
-                <div className="text-xs text-gray-400 mb-1">Situation Types</div>
-                <div className="text-lg font-bold text-blue-400">
-                  2 → 6
-                </div>
+          {/* Four Layers context strip */}
+          <div className="mb-4">
+            <div className="text-xs text-gray-500 uppercase tracking-wide text-center mb-2">
+              Four Dependency-Ordered Layers
+            </div>
+            <div className="flex items-center gap-1">
+              {/* Layer 1: UCL — gray, not highlighted */}
+              <div className="flex-1 bg-slate-700/60 rounded border border-gray-600 px-1.5 py-1.5 text-center min-w-0">
+                <div className="text-xs font-semibold text-gray-300 truncate">UCL</div>
+                <div className="text-xs text-gray-500 leading-tight truncate">CrowdStrike · Pulsedive · SIEM</div>
               </div>
-              <div className="bg-slate-800/50 rounded-lg p-3 border border-purple-500/30">
-                <div className="text-xs text-gray-400 mb-1">Prompt Variants Evolved</div>
-                <div className="text-lg font-bold text-purple-400">
-                  0 → 4
-                </div>
+              <div className="text-gray-600 text-xs shrink-0">→</div>
+              {/* Layer 2: Agent Engineering — gray, not highlighted */}
+              <div className="flex-1 bg-slate-700/60 rounded border border-gray-600 px-1.5 py-1.5 text-center min-w-0">
+                <div className="text-xs font-semibold text-gray-300 truncate">Agent Engineering</div>
+                <div className="text-xs text-gray-500 leading-tight truncate">Runtime evolution</div>
               </div>
-              <div className="bg-slate-800/50 rounded-lg p-3 border border-green-500/30">
-                <div className="text-xs text-gray-400 mb-1">Cross-Alert Patterns</div>
-                <div className="text-lg font-bold text-green-400">
-                  Travel: 47 | Phish: 31
-                </div>
+              <div className="text-gray-600 text-xs shrink-0">→</div>
+              {/* Layer 3: ACCP — blue border, highlighted */}
+              <div className="flex-1 bg-blue-950/60 rounded border border-blue-500 px-1.5 py-1.5 text-center min-w-0">
+                <div className="text-xs font-semibold text-blue-300 truncate">ACCP</div>
+                <div className="text-xs text-blue-400/70 leading-tight truncate">Cognitive control</div>
+              </div>
+              <div className="text-gray-600 text-xs shrink-0">→</div>
+              {/* Layer 4: SOC Copilot — green border, highlighted */}
+              <div className="flex-1 bg-green-950/60 rounded border border-green-500 px-1.5 py-1.5 text-center min-w-0">
+                <div className="text-xs font-semibold text-green-300 truncate">SOC Copilot</div>
+                <div className="text-xs text-green-400/70 leading-tight truncate">Domain copilot</div>
+              </div>
+            </div>
+            <div className="text-right mt-1">
+              <span className="text-xs text-blue-400/50 italic">← this demo shows layers 3 &amp; 4</span>
+            </div>
+          </div>
+
+          {/* Stats Row — 4 items (2×2 grid) */}
+          <div className="pt-4 border-t border-gray-700">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-slate-800/50 rounded p-2 border border-blue-500/30 text-center">
+                <div className="text-xs text-gray-400 mb-0.5">Situation Types</div>
+                <div className="text-base font-bold text-blue-400">2 → 6</div>
+              </div>
+              <div className="bg-slate-800/50 rounded p-2 border border-purple-500/30 text-center">
+                <div className="text-xs text-gray-400 mb-0.5">Prompt Variants Evolved</div>
+                <div className="text-base font-bold text-purple-400">0 → 4</div>
+              </div>
+              <div className="bg-slate-800/50 rounded p-2 border border-green-500/30 text-center">
+                <div className="text-xs text-gray-400 mb-0.5">Cross-Alert Patterns</div>
+                <div className="text-sm font-bold text-green-400">Travel: 47 | Phish: 31</div>
+              </div>
+              <div className="bg-slate-800/50 rounded p-2 border border-amber-500/30 text-center">
+                <div className="text-xs text-gray-400 mb-0.5">Asymmetric Ratio</div>
+                <div className="text-base font-bold text-amber-400">20:1 penalty</div>
               </div>
             </div>
           </div>
 
           {/* Key Message */}
-          <div className="mt-6 text-center">
-            <p className="text-sm italic text-gray-400">
+          <div className="mt-4 text-center">
+            <p className="text-xs italic text-gray-400">
               💡 "SIEMs get better rules. Our copilot <span className="text-purple-400 font-semibold">becomes</span> a better copilot."
             </p>
           </div>
