@@ -1,0 +1,2 @@
+id,alert_id,timestamp,situation_type,action_taken,factors,confidence,outcome
+36b43d13-d1c8-4b59-8074-cda0497454d3,ALERT-7823,2026-02-24T11:55:39.226269,travel_login_anomaly,false_positive_close,user_traveling|vpn_matches_location|mfa_completed|device_fingerprint_match,0.92,correct

@@ -6,8 +6,8 @@
 
 import { useEffect, useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { getCompoundingMetrics, resetAllDemoData } from '../../lib/api'
-import { TrendingUp, Database, Activity, RefreshCw, Clock, DollarSign, TrendingDown, CheckCircle, Calculator } from 'lucide-react'
+import { getCompoundingMetrics, resetAllDemoData, getAuditDecisions, verifyAuditChain } from '../../lib/api'
+import { TrendingUp, Database, Activity, RefreshCw, Clock, DollarSign, TrendingDown, CheckCircle, Calculator, Shield, Download } from 'lucide-react'
 import ROICalculatorModal from '../ROICalculator'
 
 // ============================================================================
@@ -110,11 +110,35 @@ interface CompoundingData {
   business_impact?: BusinessImpact
 }
 
+interface AuditDecision {
+  id: string
+  alert_id: string
+  timestamp: string
+  situation_type: string
+  action_taken: string
+  factors: string[]
+  confidence: number
+  outcome: string | null
+  analyst_confirmed: boolean
+  hash: string
+}
+
+interface AuditVerification {
+  chain_length: number
+  verified: boolean
+  first_record: string | null
+  last_record: string | null
+  broken_at_index?: number
+}
+
 export default function CompoundingTab() {
   const [data, setData] = useState<CompoundingData | null>(null)
   const [loading, setLoading] = useState(true)
   const [resetting, setResetting] = useState(false)
   const [showROI, setShowROI] = useState(false)
+  const [auditDecisions, setAuditDecisions] = useState<AuditDecision[]>([])
+  const [auditVerification, setAuditVerification] = useState<AuditVerification | null>(null)
+  const [auditLoading, setAuditLoading] = useState(false)
 
   // ALL HOOKS MUST BE AT TOP LEVEL - Called unconditionally with safe defaults
   // Uses optional chaining (??) to provide fallback values when data is null
@@ -206,6 +230,26 @@ export default function CompoundingTab() {
       setResetting(false)
     }
   }
+
+  const loadAuditData = async () => {
+    setAuditLoading(true)
+    try {
+      const [decisionsResult, verifyResult] = await Promise.all([
+        getAuditDecisions() as Promise<{ decisions: AuditDecision[]; total: number }>,
+        verifyAuditChain() as Promise<AuditVerification>,
+      ])
+      setAuditDecisions(decisionsResult.decisions.slice(0, 5))
+      setAuditVerification(verifyResult)
+    } catch (error) {
+      console.error('[CompoundingTab] Failed to load audit data:', error)
+    } finally {
+      setAuditLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadAuditData()
+  }, [])
 
   if (loading || !data) {
     return (
@@ -660,6 +704,128 @@ export default function CompoundingTab() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Evidence Ledger */}
+      <div className="bg-white rounded-lg border shadow p-6">
+        <div className="flex items-start justify-between mb-4 gap-4">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <Shield className="w-5 h-5 text-blue-600" />
+              Evidence Ledger
+            </h3>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Tamper-evident decision audit trail
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap justify-end">
+            {/* Chain verification badge */}
+            {auditVerification && (
+              auditVerification.verified ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700 border border-green-300">
+                  <CheckCircle className="w-4 h-4" />
+                  Chain verified ✓
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold bg-red-100 text-red-700 border border-red-300">
+                  Chain broken ✗
+                  {auditVerification.broken_at_index !== undefined && (
+                    <span className="font-normal">(at #{auditVerification.broken_at_index})</span>
+                  )}
+                </span>
+              )
+            )}
+
+            {/* Download CSV */}
+            <a
+              href="/api/audit/decisions?format=csv"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold transition-colors border border-gray-200"
+            >
+              <Download className="w-4 h-4" />
+              Download CSV
+            </a>
+
+            {/* Refresh */}
+            <button
+              onClick={loadAuditData}
+              disabled={auditLoading}
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm font-semibold transition-colors border border-blue-200 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${auditLoading ? 'animate-spin' : ''}`} />
+              {auditLoading ? 'Loading...' : 'Refresh'}
+            </button>
+          </div>
+        </div>
+
+        {/* Table */}
+        {auditDecisions.length === 0 ? (
+          <div className="py-8 text-center text-gray-400 italic text-sm">
+            No decisions recorded yet — run a triage in Tab 3 to populate.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="pb-2 text-left font-semibold text-gray-600 pr-4">Timestamp</th>
+                  <th className="pb-2 text-left font-semibold text-gray-600 pr-4">Alert</th>
+                  <th className="pb-2 text-left font-semibold text-gray-600 pr-4">Action</th>
+                  <th className="pb-2 text-left font-semibold text-gray-600 pr-4">Outcome</th>
+                  <th className="pb-2 text-left font-semibold text-gray-600">Hash</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {auditDecisions.map((decision) => (
+                  <tr key={decision.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="py-2.5 pr-4 text-gray-500 text-xs tabular-nums">
+                      {decision.timestamp.split('T')[1]?.slice(0, 8) ?? decision.timestamp}
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <span className="font-mono text-xs text-blue-700 font-semibold">
+                        {decision.alert_id}
+                      </span>
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <span className="text-xs text-gray-700">
+                        {decision.action_taken.replace(/_/g, ' ')}
+                      </span>
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      {decision.outcome ? (
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
+                          decision.outcome === 'correct'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {decision.outcome}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">pending</span>
+                      )}
+                    </td>
+                    <td className="py-2.5">
+                      <span className="font-mono text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                        {decision.hash ? `${decision.hash.slice(0, 8)}...` : '—'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {auditVerification && auditVerification.chain_length > 0 && (
+              <div className="mt-3 text-xs text-gray-400 text-right">
+                {auditVerification.chain_length} record{auditVerification.chain_length !== 1 ? 's' : ''} in chain
+                {auditVerification.first_record && (
+                  <span> · from {auditVerification.first_record.split('T')[1]?.slice(0, 8)}</span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Recent Evolution Events */}

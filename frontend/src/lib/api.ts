@@ -188,3 +188,15 @@ export async function refreshThreatIntel() {
   console.log('[API] POST /api/graph/threat-intel/refresh response:', response)
   return response
 }
+
+// ============================================================================
+// Audit Trail (v3.0)
+// ============================================================================
+
+export async function getAuditDecisions() {
+  return fetchJSON('/audit/decisions?format=json')
+}
+
+export async function verifyAuditChain() {
+  return fetchJSON('/audit/verify')
+}
