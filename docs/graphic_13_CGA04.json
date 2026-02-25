@@ -1,0 +1,174 @@
+{
+  "size": "2048x1152",
+  "theme": {
+    "mode": "dark",
+    "palette": "technical",
+    "background": "#0f172a"
+  },
+  "layout": {
+    "type": "diagram_flow",
+    "direction": "left_to_right",
+    "max_blocks": 6,
+    "structure": {
+      "top": "title_banner",
+      "middle": "pipeline_blocks",
+      "bottom": "caption"
+    },
+    "_instruction": "ALL 6 PIPELINE BLOCKS MUST BE RENDERED IN A SINGLE HORIZONTAL ROW WITH ARROWS BETWEEN THEM"
+  },
+  "content": {
+    "title": "Enterprise Scaling: Candidate Filtering Pipeline",
+    "subtitle": "Four filters reduce candidate pairs before cross-attention computes — the math stays unchanged",
+    "equation_chip": {
+      "text": "Eq. 6:  CrossAttention(Gᵢ, Gⱼ) = softmax(Eᵢ · Eⱼᵀ / √d) · Vⱼ",
+      "font": "monospace",
+      "border": true,
+      "position": "below_title"
+    },
+    "pipeline": [
+      {
+        "id": "input",
+        "label": "Raw Pairs",
+        "position": 1,
+        "required": true,
+        "_critical": "THIS BLOCK MUST BE THE TALLEST/WIDEST — IT REPRESENTS THE FULL SCALE",
+        "metric": "150,000",
+        "details": [
+          "6 domains × m² entities",
+          "Full Cartesian product"
+        ],
+        "visual": {
+          "size": "largest",
+          "color": "#f59e0b",
+          "text_color": "#0f172a",
+          "emphasis": "high"
+        }
+      },
+      {
+        "id": "blocking",
+        "label": "Candidate Blocking",
+        "position": 2,
+        "required": true,
+        "mechanism": "Shared structural keys",
+        "chips": ["same asset class", "same geography", "same process"],
+        "reduction": "→ ~45K pairs",
+        "reduction_note": "60–80% filtered",
+        "visual": {
+          "size": "large",
+          "color": "#3b82f6",
+          "text_color": "#ffffff"
+        }
+      },
+      {
+        "id": "time_window",
+        "label": "Time-Window",
+        "position": 3,
+        "required": true,
+        "mechanism": "Freshness & recency",
+        "chips": ["active entities only", "Four Clocks encoding"],
+        "reduction": "→ ~30K pairs",
+        "visual": {
+          "size": "medium_large",
+          "color": "#0ea5e9",
+          "text_color": "#ffffff"
+        }
+      },
+      {
+        "id": "ann_index",
+        "label": "ANN Index",
+        "position": 4,
+        "required": true,
+        "mechanism": "Top-K nearest neighbors",
+        "chips": ["LSH", "HNSW graphs", "pre-indexed embeddings"],
+        "reduction": "→ ~20K pairs",
+        "visual": {
+          "size": "medium",
+          "color": "#06b6d4",
+          "text_color": "#ffffff"
+        }
+      },
+      {
+        "id": "governance",
+        "label": "Governance",
+        "position": 5,
+        "required": true,
+        "mechanism": "Eligibility rules",
+        "chips": ["legal hold", "clearance scope", "pre-adjudicated"],
+        "reduction": "→ 15–25K pairs",
+        "visual": {
+          "size": "small_medium",
+          "color": "#8b5cf6",
+          "text_color": "#ffffff"
+        }
+      },
+      {
+        "id": "output",
+        "label": "Evaluated Pairs",
+        "position": 6,
+        "required": true,
+        "_critical": "THIS BLOCK MUST BE THE SMALLEST/MOST COMPACT — IT IS THE FILTERED RESULT",
+        "metric": "15–25K",
+        "details": [
+          "Full attention computed",
+          "< 2 sec on commodity HW"
+        ],
+        "visual": {
+          "size": "compact",
+          "color": "#4ade80",
+          "text_color": "#0f172a",
+          "emphasis": "success"
+        }
+      }
+    ],
+    "arrows": {
+      "between_all_blocks": true,
+      "color": "#e2e8f0",
+      "style": "solid",
+      "glow": true,
+      "_instruction": "ARROWS MUST APPEAR BETWEEN EVERY ADJACENT BLOCK — 5 ARROWS TOTAL"
+    },
+    "caption": {
+      "text": "The math doesn't change. The candidate set does.",
+      "style": "italic",
+      "color": "#94a3b8",
+      "position": "bottom_center"
+    },
+    "source": {
+      "text": "Cross-Graph Attention: Mathematical Foundation — Section 6, Property 1",
+      "position": "bottom_right",
+      "size": "small",
+      "color": "#64748b"
+    }
+  },
+  "color_mapping": {
+    "input": {"background": "#f59e0b", "text": "#0f172a"},
+    "filter_1": {"background": "#3b82f6", "text": "#ffffff"},
+    "filter_2": {"background": "#0ea5e9", "text": "#ffffff"},
+    "filter_3": {"background": "#06b6d4", "text": "#ffffff"},
+    "filter_4": {"background": "#8b5cf6", "text": "#ffffff"},
+    "output": {"background": "#4ade80", "text": "#0f172a"}
+  },
+  "text": {
+    "title_font": "bold",
+    "max_words_per_bullet": 15,
+    "metric_font": "bold_large"
+  },
+  "icons": {
+    "use_icons": false,
+    "_note": "Funnel shape and color gradient carry the visual story — no icons needed"
+  },
+  "effects": {
+    "rounded_corners": true,
+    "soft_shadows": true,
+    "arrows_between_stages": true,
+    "funnel_narrowing": true,
+    "glow_on_output": true
+  },
+  "validation": {
+    "required_blocks": ["input", "blocking", "time_window", "ann_index", "governance", "output"],
+    "min_blocks": 6,
+    "error_if_missing": "input OR output",
+    "required_arrows": 5,
+    "required_caption": true
+  }
+}
