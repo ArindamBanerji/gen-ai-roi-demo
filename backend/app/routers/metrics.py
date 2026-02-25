@@ -256,6 +256,7 @@ async def reset_all_demo_data():
     This is much simpler and more reliable than selective deletion.
     """
     from app.services.seed_neo4j import seed_neo4j_database, verify_neo4j_seed
+    from app.services.audit import reset_audit_state
 
     print("[DEMO RESET] Starting comprehensive demo reset via re-seeding...")
 
@@ -265,6 +266,9 @@ async def reset_all_demo_data():
 
         # Verify the seed
         verification = await verify_neo4j_seed()
+
+        # Reset audit ledger (v3.1 - Evidence Ledger)
+        reset_audit_state()
 
         print("[DEMO RESET] Comprehensive reset completed successfully")
 

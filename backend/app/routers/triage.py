@@ -13,7 +13,7 @@ from app.services.situation import analyze_situation
 from app.services.feedback import process_outcome, get_feedback_status, reset_feedback_state, get_reward_summary
 from app.services.policy import detect_policy_conflicts, get_conflict_history, reset_policy_state
 from app.services.triage import get_decision_factors
-from app.services.audit import record_decision
+from app.services.audit import record_decision, reset_audit_state
 from app.db.neo4j import neo4j_client
 from app.models.schemas import ProcessAlertRequest, OutcomeRequest
 
@@ -340,9 +340,13 @@ async def reset_demo_alerts():
         print("[TRIAGE] Resetting policy conflict state...")
         reset_policy_state()
 
+        # Reset audit ledger (v3.1 - Evidence Ledger)
+        print("[TRIAGE] Resetting audit ledger...")
+        reset_audit_state()
+
         return {
             "status": "success",
-            "message": f"Reset {reset_count} alerts to 'pending' status. Cleared feedback and policy state.",
+            "message": f"Reset {reset_count} alerts to 'pending' status. Cleared feedback, policy, and audit state.",
             "reset_count": reset_count,
             "timestamp": datetime.now().isoformat()
         }

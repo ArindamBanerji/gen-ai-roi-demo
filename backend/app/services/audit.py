@@ -241,6 +241,12 @@ def reconstruct_from_memory() -> int:
     return added
 
 
+def reset_audit_state() -> None:
+    """Clear all decision records (demo reset)."""
+    _DECISIONS.clear()
+    print("[AUDIT] Decision ledger cleared")
+
+
 def verify_chain() -> Dict[str, Any]:
     """
     Walk _DECISIONS in chronological order (insertion order = index 0 first)

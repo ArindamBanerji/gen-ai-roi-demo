@@ -312,6 +312,8 @@ export default function AlertTriageTab() {
       setClosedLoop(null)
       setPolicyResolution(null)
       setDecisionFactors(null)
+      setAnalysis(null)
+      setActiveStep(0)
     } catch (error) {
       console.error('[AlertTriageTab] Failed to reset alerts:', error)
     } finally {
