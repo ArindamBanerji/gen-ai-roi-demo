@@ -35,6 +35,15 @@ export const domainConfig = {
     backlogEliminated:     2400,
   },
 
+  // Business impact card labels (Tab 4) — domain-specific descriptions
+  impactLabels: {
+    hrsSaved: "Analyst Hours Saved / Month",
+    backlog:  "Alert Backlog Eliminated / Month",
+  },
+
+  // Short descriptor for the operations domain (used in CFO narrative)
+  operationsLabel: "security operations",
+
   // Header — exact strings from App.tsx
   headerTitle:    "SOC Copilot Demo",
   headerSubtitle: "AI-Augmented Security Operations with Runtime Evolution",

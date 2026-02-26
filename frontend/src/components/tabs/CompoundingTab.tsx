@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { getCompoundingMetrics, resetAllDemoData, resetAlerts, getAuditDecisions, verifyAuditChain } from '../../lib/api'
+import { domainConfig } from '../../lib/domain'
 import { TrendingUp, Database, Activity, RefreshCw, Clock, DollarSign, TrendingDown, CheckCircle, Calculator, Shield, Download } from 'lucide-react'
 import ROICalculatorModal from '../ROICalculator'
 
@@ -277,7 +278,7 @@ export default function CompoundingTab() {
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              SOC Compounding — "Watch the Moat Grow"
+              {domainConfig.displayName} Compounding — "Watch the Moat Grow"
             </h2>
             <p className="text-gray-600">
               Same model. Same rules. More intelligence. When competitors deploy, they start at zero. We start at {animatedNodesEnd} patterns.
@@ -315,7 +316,7 @@ export default function CompoundingTab() {
                 {animatedAnalystHours.toLocaleString()}
               </div>
               <div className="text-xs text-gray-600 font-medium">
-                Analyst Hours Saved / Month
+                {domainConfig.impactLabels.hrsSaved}
               </div>
             </div>
 
@@ -354,7 +355,7 @@ export default function CompoundingTab() {
                 {animatedBacklogEliminated.toLocaleString()}
               </div>
               <div className="text-xs text-gray-600 font-medium">
-                Alert Backlog Eliminated / Month
+                {domainConfig.impactLabels.backlog}
               </div>
             </div>
           </div>
@@ -362,7 +363,7 @@ export default function CompoundingTab() {
           {/* Executive Note */}
           <div className="mt-4 text-center">
             <p className="text-sm italic text-gray-700">
-              💼 Present these numbers to your CFO — this is the business case for AI-augmented security operations.
+              💼 Present these numbers to your CFO — this is the business case for AI-augmented {domainConfig.operationsLabel}.
             </p>
           </div>
 
@@ -373,7 +374,7 @@ export default function CompoundingTab() {
               className="w-full bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 hover:from-purple-700 hover:via-blue-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-lg shadow-xl transition-all hover:scale-[1.02] hover:shadow-2xl flex items-center justify-center gap-3 group"
             >
               <Calculator className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-              <span className="text-lg">Calculate Your ROI — Input Your SOC Numbers</span>
+              <span className="text-lg">Calculate Your ROI — Input Your {domainConfig.displayName} Numbers</span>
               <div className="ml-2 px-3 py-1 bg-white/20 rounded-full text-xs font-semibold">
                 Interactive
               </div>
@@ -667,7 +668,7 @@ export default function CompoundingTab() {
               <div className="text-gray-600 text-xs shrink-0">→</div>
               {/* Layer 4: SOC Copilot — green border, highlighted */}
               <div className="flex-1 bg-green-950/60 rounded border border-green-500 px-1.5 py-1.5 text-center min-w-0">
-                <div className="text-xs font-semibold text-green-300 truncate">SOC Copilot</div>
+                <div className="text-xs font-semibold text-green-300 truncate">{domainConfig.displayName}</div>
                 <div className="text-xs text-green-400/70 leading-tight truncate">Domain copilot</div>
               </div>
             </div>
