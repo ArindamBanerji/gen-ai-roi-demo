@@ -44,6 +44,9 @@ export const domainConfig = {
   // Short descriptor for the operations domain (used in CFO narrative)
   operationsLabel: "security operations",
 
+  // Domain qualifier adjective — used in "Security Context Graph", "Security policy …"
+  domainAdjective: "Security",
+
   // Loop 3 RL panel labels (Tab 2) — domain-specific principle and guarantee
   loop3BadgeLabel:  "Security-first: penalty 20× reward",
   guaranteesLabel:  "security guarantees",

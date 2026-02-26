@@ -16,6 +16,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { getAlerts, analyzeAlert, executeAction, resetAlerts, checkPolicyConflict, refreshThreatIntel, getDecisionFactors } from '../../lib/api'
+import { domainConfig } from '../../lib/domain'
 import OutcomeFeedback from '../OutcomeFeedback'
 import PolicyConflict from '../PolicyConflict'
 
@@ -351,10 +352,10 @@ export default function AlertTriageTab() {
       <div className="bg-soc-card rounded-lg p-6 border border-gray-800">
         <div className="flex items-center gap-3 mb-2">
           <Activity className="w-6 h-6 text-soc-primary" />
-          <h2 className="text-xl font-semibold">Alert Triage</h2>
+          <h2 className="text-xl font-semibold">{domainConfig.tabs.decision}</h2>
         </div>
         <p className="text-gray-400 text-sm">
-          Watch the security graph think. 47 nodes consulted for contextual
+          Watch the {domainConfig.domainAdjective.toLowerCase()} graph think. 47 nodes consulted for contextual
           decision-making.
         </p>
         <div className="mt-3 text-sm text-soc-primary">
@@ -367,7 +368,7 @@ export default function AlertTriageTab() {
         <div className="col-span-1 bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-800">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-sm">Alert Queue</h3>
+              <h3 className="font-semibold text-sm">{domainConfig.triggerEntity} Queue</h3>
               <span className="px-2 py-1 bg-soc-primary/20 text-soc-primary text-xs rounded">
                 {alerts.length}
               </span>
@@ -378,7 +379,7 @@ export default function AlertTriageTab() {
               className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed rounded text-xs transition-colors"
             >
               <RefreshCw className={`w-3 h-3 ${resetting ? 'animate-spin' : ''}`} />
-              {resetting ? 'Resetting...' : 'Reset Alerts'}
+              {resetting ? 'Resetting...' : `Reset ${domainConfig.triggerEntityPlural}`}
             </button>
           </div>
 
@@ -489,7 +490,7 @@ export default function AlertTriageTab() {
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold flex items-center gap-2">
                     <Network className="w-4 h-4" />
-                    Security Context Graph
+                    {domainConfig.domainAdjective} Context Graph
                     <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide bg-blue-500 text-white">
                       CONSUME
                     </span>
@@ -733,7 +734,7 @@ export default function AlertTriageTab() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold">🔎 Why This Decision?</h3>
-                    <p className="text-xs text-gray-500 mt-1">Factor breakdown for this alert</p>
+                    <p className="text-xs text-gray-500 mt-1">Factor breakdown for this {domainConfig.triggerEntity.toLowerCase()}</p>
                   </div>
                   <button
                     onClick={() => setDecisionFactorsCollapsed((c) => !c)}
@@ -844,7 +845,7 @@ export default function AlertTriageTab() {
                   <AlertCircle className="w-4 h-4 text-gray-900 mt-0.5 shrink-0" />
                   <p className="text-sm text-gray-900 font-medium">
                     <span className="font-bold">⚠ Policy Override:</span>{' '}
-                    Security policy requires escalation. See Policy Conflict panel above.
+                    {domainConfig.domainAdjective} policy requires escalation. See Policy Conflict panel above.
                   </p>
                 </div>
               )}
