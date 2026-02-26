@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Shield, Activity, Zap, TrendingUp } from 'lucide-react'
+import { domainConfig } from './lib/domain'
 import SOCAnalyticsTab from './components/tabs/SOCAnalyticsTab'
 import RuntimeEvolutionTab from './components/tabs/RuntimeEvolutionTab'
 import AlertTriageTab from './components/tabs/AlertTriageTab'
@@ -65,14 +66,14 @@ function App() {
             <div className="flex items-center gap-3">
               <Shield className="w-8 h-8 text-soc-primary" />
               <div>
-                <h1 className="text-2xl font-bold">SOC Copilot Demo</h1>
+                <h1 className="text-2xl font-bold">{domainConfig.headerTitle}</h1>
                 <p className="text-sm text-gray-400">
-                  AI-Augmented Security Operations with Runtime Evolution
+                  {domainConfig.headerSubtitle}
                 </p>
               </div>
             </div>
             <div className="text-right text-sm text-gray-400">
-              <div>CISO Version v3.1</div>
+              <div>CISO Version {domainConfig.version}</div>
               <div className="text-xs">Proving Compounding Intelligence</div>
             </div>
           </div>
