@@ -368,3 +368,37 @@ async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
             status_code=500,
             detail=f"Failed to fetch evolution events: {str(e)}"
         )
+
+
+# ============================================================================
+# GET /api/demo/domains - Domain Registry Status
+# ============================================================================
+
+@router.get("/demo/domains")
+async def get_registered_domains():
+    """
+    Return all registered domain configs and the active domain.
+
+    Used for smoke-testing the v3.2 domain-agnostic architecture:
+    confirms that both SOC and S2P configs are registered and
+    that ACTIVE_DOMAIN is still 'soc'.
+    """
+    from app.core.domain_registry import ACTIVE_DOMAIN, _DOMAIN_CONFIGS
+
+    registered = {}
+    for domain_name, config in _DOMAIN_CONFIGS.items():
+        registered[domain_name] = {
+            "name":                 config.name,
+            "display_name":         config.display_name,
+            "trigger_entity":       config.trigger_entity,
+            "factor_count":         len(config.factors),
+            "action_count":         len(config.actions),
+            "situation_type_count": len(config.situation_types),
+            "policy_count":         len(config.policies),
+            "asymmetry_ratio":      config.asymmetry_ratio,
+        }
+
+    return {
+        "active_domain":      ACTIVE_DOMAIN,
+        "registered_domains": registered,
+    }
