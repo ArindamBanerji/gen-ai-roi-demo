@@ -167,6 +167,9 @@ export default function AlertTriageTab() {
   // Ref to preserve feedback panel visibility (avoids stale closure bug)
   const preserveFeedbackRef = useRef(false)
 
+  // Timer IDs — cleared on unmount to prevent setState-after-unmount warnings (M-3)
+  const timerIdsRef = useRef<ReturnType<typeof setTimeout>[]>([])
+
   const [threatIntel, setThreatIntel] = useState<ThreatIntelStatus | null>(null)
   const [threatIntelLoading, setThreatIntelLoading] = useState(false)
 
@@ -198,6 +201,11 @@ export default function AlertTriageTab() {
     console.log('[AlertTriageTab] alerts state updated:', alerts)
     console.log('[AlertTriageTab] alerts.length:', alerts.length)
   }, [alerts])
+
+  // Clear any pending timers on unmount (M-3 fix)
+  useEffect(() => {
+    return () => { timerIdsRef.current.forEach(clearTimeout) }
+  }, [])
 
   const loadAlertQueue = async () => {
     try {
@@ -284,15 +292,15 @@ export default function AlertTriageTab() {
 
       // Animate steps
       for (let i = 0; i < 4; i++) {
-        setTimeout(() => setActiveStep(i + 1), i * 800)
+        timerIdsRef.current.push(setTimeout(() => setActiveStep(i + 1), i * 800))
       }
 
       // Refresh alert queue
-      setTimeout(loadAlertQueue, 3200)
+      timerIdsRef.current.push(setTimeout(loadAlertQueue, 3200))
     } catch (error) {
       console.error('Failed to execute action:', error)
     } finally {
-      setTimeout(() => setExecuting(false), 3200)
+      timerIdsRef.current.push(setTimeout(() => setExecuting(false), 3200))
     }
   }
 
