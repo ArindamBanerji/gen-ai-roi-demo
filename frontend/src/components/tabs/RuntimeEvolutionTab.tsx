@@ -13,6 +13,7 @@ import {
   DollarSign,
 } from 'lucide-react'
 import * as api from '@/lib/api'
+import { domainConfig } from '@/lib/domain'
 
 interface Deployment {
   agent_name: string
@@ -315,7 +316,7 @@ export default function RuntimeEvolutionTab() {
           ) : (
             <>
               <Activity className="w-4 h-4" />
-              Process Alert (ALERT-7823)
+              Process {domainConfig.triggerEntity} (ALERT-7823)
             </>
           )}
         </button>
@@ -819,7 +820,7 @@ export default function RuntimeEvolutionTab() {
               </p>
             </div>
             <span className="flex-shrink-0 px-3 py-1 bg-emerald-900/40 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/30">
-              Security-first: penalty 20× reward
+              {domainConfig.loop3BadgeLabel}
             </span>
           </div>
         </div>
@@ -834,7 +835,7 @@ export default function RuntimeEvolutionTab() {
               <Activity className="w-8 h-8 mx-auto mb-3 opacity-25" />
               <p className="text-sm">Awaiting first verified outcome...</p>
               <p className="text-xs mt-1 text-gray-600">
-                Process an alert in Tab 3 and mark the outcome correct or incorrect to activate Loop 3.
+                Process an {domainConfig.triggerEntity.toLowerCase()} in Tab 3 and mark the outcome correct or incorrect to activate Loop 3.
               </p>
             </div>
           ) : (
@@ -908,7 +909,7 @@ export default function RuntimeEvolutionTab() {
                   </div>
                 </div>
                 <p className="text-xs text-gray-600 mt-2">
-                  Incorrect decisions are penalized 20× harder to preserve security guarantees.
+                  Incorrect decisions are penalized 20× harder to preserve {domainConfig.guaranteesLabel}.
                 </p>
               </div>
 

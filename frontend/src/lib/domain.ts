@@ -44,6 +44,10 @@ export const domainConfig = {
   // Short descriptor for the operations domain (used in CFO narrative)
   operationsLabel: "security operations",
 
+  // Loop 3 RL panel labels (Tab 2) — domain-specific principle and guarantee
+  loop3BadgeLabel:  "Security-first: penalty 20× reward",
+  guaranteesLabel:  "security guarantees",
+
   // Header — exact strings from App.tsx
   headerTitle:    "SOC Copilot Demo",
   headerSubtitle: "AI-Augmented Security Operations with Runtime Evolution",
