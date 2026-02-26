@@ -357,3 +357,30 @@ def get_variant_comparison(alert_type: str) -> Dict[str, Any]:
         "variants": variants,
         "active_variant": current_variant
     }
+
+
+def reset_evolver_state() -> None:
+    """
+    Reset all evolver state to initial seed values (demo reset — fixes L-14).
+
+    PROMPT_STATS and ACTIVE_PROMPTS are restored to their startup defaults
+    (not just cleared) because the UI depends on pre-seeded variant data.
+    RECENT_PROMOTIONS is cleared because it accumulates during a session.
+    """
+    PROMPT_STATS.clear()
+    PROMPT_STATS.update({
+        "TRAVEL_CONTEXT_v1":    {"success": 24, "total": 34, "success_rate": 0.71},
+        "TRAVEL_CONTEXT_v2":    {"success": 42, "total": 47, "success_rate": 0.89},
+        "PHISHING_RESPONSE_v1": {"success": 31, "total": 38, "success_rate": 0.82},
+        "PHISHING_RESPONSE_v2": {"success": 12, "total": 15, "success_rate": 0.80},
+    })
+
+    ACTIVE_PROMPTS.clear()
+    ACTIVE_PROMPTS.update({
+        "anomalous_login": "TRAVEL_CONTEXT_v2",
+        "phishing":        "PHISHING_RESPONSE_v1",
+    })
+
+    RECENT_PROMOTIONS.clear()
+
+    print("[EVOLVER] State reset to initial values")

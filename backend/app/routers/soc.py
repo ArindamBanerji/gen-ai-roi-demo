@@ -543,7 +543,7 @@ async def query_soc_metrics(request: SOCQueryRequest):
                 "query_preview": provenance.query_preview,
                 "last_updated": provenance.last_updated
             },
-            "sprawl_alert": sprawl_alert.dict() if sprawl_alert else None,
+            "sprawl_alert": sprawl_alert.model_dump() if sprawl_alert else None,
             "confidence": 0.96  # High confidence for keyword matching
         }
 

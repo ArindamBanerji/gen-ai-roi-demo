@@ -34,7 +34,7 @@ Hash chain notes:
 import hashlib
 import json
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 
@@ -139,7 +139,7 @@ def record_decision(
     record: Dict[str, Any] = {
         "id":                str(uuid4()),
         "alert_id":          alert_id,
-        "timestamp":         datetime.utcnow().isoformat(),
+        "timestamp":         datetime.now(timezone.utc).isoformat(),
         "situation_type":    situation_type,
         "action_taken":      action_taken,
         "factors":           factors,
@@ -215,7 +215,7 @@ def reconstruct_from_memory() -> int:
             record: Dict[str, Any] = {
                 "id":                str(uuid4()),
                 "alert_id":          alert_id,
-                "timestamp":         fb.get("timestamp", datetime.utcnow().isoformat()),
+                "timestamp":         fb.get("timestamp", datetime.now(timezone.utc).isoformat()),
                 "situation_type":    ctx["situation_type"],
                 "action_taken":      ctx["action_taken"],
                 "factors":           list(ctx["factors"]),

@@ -209,7 +209,7 @@ def process_outcome(
         "decision_id": decision_id,
         "outcome": outcome,
         "timestamp": datetime.now().isoformat(),
-        "graph_updates": [u.dict() for u in graph_updates]
+        "graph_updates": [u.model_dump() for u in graph_updates]
     }
 
     return OutcomeResponse(

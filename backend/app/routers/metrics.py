@@ -194,7 +194,7 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
         print(f"[COMPOUNDING] Week {weeks}: {data.weekly_trend[-1].pattern_count} patterns, "
               f"{data.weekly_trend[-1].auto_close_rate}% auto-close")
 
-        return data.dict()
+        return data.model_dump()
 
     except Exception as e:
         print(f"[ERROR] Compounding metrics failed: {e}")
@@ -256,7 +256,7 @@ async def reset_all_demo_data():
     This is much simpler and more reliable than selective deletion.
     """
     from app.services.seed_neo4j import seed_neo4j_database, verify_neo4j_seed
-    from app.services.audit import reset_audit_state
+    from app.core.state_manager import state_manager
 
     print("[DEMO RESET] Starting comprehensive demo reset via re-seeding...")
 
@@ -267,8 +267,8 @@ async def reset_all_demo_data():
         # Verify the seed
         verification = await verify_neo4j_seed()
 
-        # Reset audit ledger (v3.1 - Evidence Ledger)
-        reset_audit_state()
+        # Reset all in-memory state (audit, evolver, feedback, policy)
+        state_manager.reset_all()
 
         print("[DEMO RESET] Comprehensive reset completed successfully")
 
@@ -358,7 +358,7 @@ async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
         events = generate_compounding_data().evolution_events
 
         return {
-            "events": [e.dict() for e in events[:limit]],
+            "events": [e.model_dump() for e in events[:limit]],
             "total": len(events)
         }
 

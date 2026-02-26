@@ -57,6 +57,24 @@ async def startup_event():
     await neo4j_client.connect()
     print("[OK] Connected to Neo4j")
 
+    from app.core.domain_registry import get_active_domain, get_domain_config
+    config = get_domain_config()
+    print(f"[DOMAIN] Active domain: {config.display_name} ({config.name})")
+    print(f"[DOMAIN] Factors: {len(config.factors)}, Actions: {len(config.actions)}, Situations: {len(config.situation_types)}")
+
+    # Register all in-memory reset handlers with state_manager.
+    # Both reset endpoints call state_manager.reset_all() — adding a new
+    # state store only requires registering it here, not editing every endpoint.
+    from app.core.state_manager import state_manager
+    from app.services.feedback import reset_feedback_state
+    from app.services.policy import reset_policy_state
+    from app.services.audit import reset_audit_state
+    from app.services.evolver import reset_evolver_state
+    state_manager.register("feedback", reset_feedback_state)
+    state_manager.register("policy",   reset_policy_state)
+    state_manager.register("audit",    reset_audit_state)
+    state_manager.register("evolver",  reset_evolver_state)
+
 @app.on_event("shutdown")
 async def shutdown_event():
     """Close connections on shutdown"""

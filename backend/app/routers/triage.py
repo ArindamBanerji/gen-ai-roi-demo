@@ -10,10 +10,11 @@ import uuid
 from app.services.agent import agent
 from app.services.reasoning import narrator
 from app.services.situation import analyze_situation
-from app.services.feedback import process_outcome, get_feedback_status, reset_feedback_state, get_reward_summary
-from app.services.policy import detect_policy_conflicts, get_conflict_history, reset_policy_state
+from app.services.feedback import process_outcome, get_feedback_status, get_reward_summary
+from app.services.policy import detect_policy_conflicts, get_conflict_history
 from app.services.triage import get_decision_factors
-from app.services.audit import record_decision, reset_audit_state
+from app.services.audit import record_decision
+from app.core.state_manager import state_manager
 from app.db.neo4j import neo4j_client
 from app.models.schemas import ProcessAlertRequest, OutcomeRequest
 
@@ -200,7 +201,6 @@ async def execute_action(request: ProcessAlertRequest):
 
     try:
         alert_id = request.alert_id
-        action = request.deployment_version or "false_positive_close"  # Using this field for action
 
         # Get context for decision trace
         context = await neo4j_client.get_security_context(alert_id)
@@ -213,12 +213,29 @@ async def execute_action(request: ProcessAlertRequest):
         decision = agent.decide(alert_type, context)
         reasoning = await narrator.generate_reasoning(alert_type, decision.action, context)
 
+        # Resolve correct situation_type and factor list for the audit ledger (H-1).
+        # context never carries these keys; derive them from the same functions
+        # used by /alert/analyze. Graceful fallback keeps the execute path safe.
+        situation_type_str = "unknown"
+        factor_names: list = []
+        try:
+            situation = analyze_situation(alert_type, context)
+            situation_type_str = situation.situation_type
+        except Exception as exc:
+            print(f"[EXECUTE] analyze_situation failed for {alert_id}: {exc}")
+        try:
+            factors_result = await get_decision_factors(alert_id)
+            if factors_result:
+                factor_names = [f["name"] for f in factors_result.get("factors", [])]
+        except Exception as exc:
+            print(f"[EXECUTE] get_decision_factors failed for {alert_id}: {exc}")
+
         # Record decision in the in-memory audit ledger (Evidence Ledger — Tab 4)
         record_decision(
             alert_id=alert_id,
-            situation_type=context.get("situation_type", "unknown"),
+            situation_type=situation_type_str,
             action_taken=decision.action,
-            factors=list(context.get("factors_matched", [])),
+            factors=factor_names,
             confidence=decision.confidence,
         )
 
@@ -332,21 +349,12 @@ async def reset_demo_alerts():
 
         print(f"[TRIAGE] Reset {reset_count} alerts to 'pending' status")
 
-        # Reset feedback state (v2.5 - Outcome Feedback Loop)
-        print("[TRIAGE] Resetting feedback state...")
-        reset_feedback_state()
-
-        # Reset policy conflict state (v2.5 - Policy Conflict Resolution)
-        print("[TRIAGE] Resetting policy conflict state...")
-        reset_policy_state()
-
-        # Reset audit ledger (v3.1 - Evidence Ledger)
-        print("[TRIAGE] Resetting audit ledger...")
-        reset_audit_state()
+        # Reset all in-memory state (feedback, policy, audit, evolver)
+        state_manager.reset_all()
 
         return {
             "status": "success",
-            "message": f"Reset {reset_count} alerts to 'pending' status. Cleared feedback, policy, and audit state.",
+            "message": f"Reset {reset_count} alerts to 'pending' status. Cleared feedback, policy, audit, and evolver state.",
             "reset_count": reset_count,
             "timestamp": datetime.now().isoformat()
         }

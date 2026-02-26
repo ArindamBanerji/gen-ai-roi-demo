@@ -1,0 +1,63 @@
+Folder PATH listing for volume Windows-SSD
+Volume serial number is 80E2-4F82
+C:.
+|   backlog_v8.md
+|   blog_advert_replacement_v3.md
+|   blog_advert_review.md
+|   code_review_plan_v31.md
+|   CODE_REVIEW_V31_PASS1.md
+|   deck_a_storyboard_v3.md
+|   deck_b_storyboard_v5.md
+|   docs.txt
+|   EXPERIMENTS.md
+|   graphic_13_CGA04.json
+|   graphic_13_CGA04_prompt.md
+|   linkedin_posts_v6.md
+|   loom_script_v8.md
+|   outreach_emails_v6.md
+|   PROJECT_STRUCTURE.md
+|   session_continuation_package_v9.md
+|   v3_2_refactoring_and_s2p_domain_model_v1.md
+|   v3_all_prompts.md
+|   v3_design_document_v8.md
+|   v4_design_document_v1.md
+|   v4_planning_document_v1.md
+|   
+\---archive
+    |   backlog_v2.md
+    |   backlog_v3.md
+    |   backlog_v6.md
+    |   bootstrap_sequence_v5.md
+    |   BUGFIX_STALE_CLOSURE.md
+    |   code_review_plan_v31.md
+    |   demo_blurb_v25.md
+    |   demo_technical_briefing_ciso_v1.md
+    |   OUTCOME_FEEDBACK_FRONTEND.md
+    |   OUTCOME_FEEDBACK_LOOP.md
+    |   outreach_emails_v2.md
+    |   POLICY_CONFLICT_FRONTEND.md
+    |   ROI_BUG_FIXES.md
+    |   ROI_CALCULATOR_API.md
+    |   ROI_CALCULATOR_COMPONENT.md
+    |   ROI_INTEGRATION_SUMMARY.md
+    |   session_continuation_package_v3.md
+    |   session_continuation_package_v4.md
+    |   session_continuation_package_v7.md
+    |   SOC_Copilot_Demo_v2_Design_Spec.md
+    |   v2.5_v3_design_document_v2.md
+    |   v2.5_v3_design_document_v3.md
+    |   V2_IMPLEMENTATION_PLAN.md
+    |   v3_design_document_v8.md
+    |   v4_design_document_v1.md
+    |   v4_planning_document_v1.md
+    |   vc_demo_build_spec_ciso_v1.md
+    |   
+    +---outreach
+    |       demo_blurb_v25_updated.md
+    |       linkedin_posts_v3.md
+    |       loom_script_v3.md
+    |       outreach_emails_v3.md
+    |       
+    \---planning
+            backlog_v4.md
+            

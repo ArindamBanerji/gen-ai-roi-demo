@@ -268,7 +268,7 @@ async def calculate_roi_endpoint(request: ROIRequest):
 
         print(f"[ROI] Calculated total annual savings: ${result.savings['total_annual']:,.0f}")
 
-        return result.dict()
+        return result.model_dump()
 
     except HTTPException:
         raise
