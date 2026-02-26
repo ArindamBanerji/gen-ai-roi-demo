@@ -47,62 +47,6 @@ class PolicyConflict(BaseModel):
 
 
 # ============================================================================
-# In-Memory Policy Registry (Demo Data)
-# ============================================================================
-
-POLICY_REGISTRY: Dict[str, PolicyDefinition] = {
-    "POL-AUTO-CLOSE-TRAVEL": PolicyDefinition(
-        id="POL-AUTO-CLOSE-TRAVEL",
-        name="Auto-Close Travel Anomalies",
-        description="Automatically close login anomaly alerts when user is traveling and VPN matches travel destination",
-        action="false_positive_close",
-        priority=3,  # Lower priority
-        scope="all_users",
-        conditions={
-            "alert_type": "anomalous_login",
-            "user_traveling": True,
-            "vpn_matches_location": True
-        }
-    ),
-    "POL-ESCALATE-HIGH-RISK": PolicyDefinition(
-        id="POL-ESCALATE-HIGH-RISK",
-        name="Escalate High-Risk Users",
-        description="Escalate all alerts for users with risk score above 0.80 to Tier 2 analysts",
-        action="escalate_tier2",
-        priority=1,  # Higher priority (security-first)
-        scope="high_risk_users",
-        conditions={
-            "user_risk_score_above": 0.80
-        }
-    ),
-    "POL-REMEDIATE-KNOWN-PHISH": PolicyDefinition(
-        id="POL-REMEDIATE-KNOWN-PHISH",
-        name="Auto-Remediate Known Phishing",
-        description="Automatically remediate phishing alerts that match known campaign signatures",
-        action="auto_remediate",
-        priority=2,
-        scope="all_users",
-        conditions={
-            "alert_type": "phishing",
-            "known_campaign_signature": True
-        }
-    ),
-    "POL-ISOLATE-CRITICAL-ASSETS": PolicyDefinition(
-        id="POL-ISOLATE-CRITICAL-ASSETS",
-        name="Isolate Critical Assets",
-        description="Immediately isolate any malware detection on critical infrastructure",
-        action="auto_remediate",
-        priority=1,  # Highest priority
-        scope="critical_assets",
-        conditions={
-            "alert_type": "malware_detection",
-            "asset_criticality": "critical"
-        }
-    )
-}
-
-
-# ============================================================================
 # Conflict Resolution Tracking (Demo State)
 # ============================================================================
 
@@ -112,79 +56,6 @@ CONFLICTS_RESOLVED: Dict[str, PolicyResolution] = {}
 # ============================================================================
 # Core Functions
 # ============================================================================
-
-def get_applicable_policies(alert_id: str, context: Dict[str, Any]) -> List[PolicyDefinition]:
-    """
-    Determine which policies apply to this alert based on context.
-
-    Args:
-        alert_id: Alert identifier
-        context: Security context dictionary
-
-    Returns:
-        List of applicable PolicyDefinition objects
-    """
-    applicable = []
-
-    for policy_id, policy in POLICY_REGISTRY.items():
-        if _policy_matches(policy, alert_id, context):
-            applicable.append(policy)
-
-    return applicable
-
-
-def _policy_matches(policy: PolicyDefinition, alert_id: str, context: Dict[str, Any]) -> bool:
-    """
-    Check if a policy's conditions match the alert context.
-
-    Args:
-        policy: Policy to check
-        alert_id: Alert identifier
-        context: Security context
-
-    Returns:
-        True if policy conditions are met
-    """
-    conditions = policy.conditions
-
-    # Check alert type
-    if "alert_type" in conditions:
-        if context.get("alert_type") != conditions["alert_type"]:
-            return False
-
-    # Check user traveling
-    if "user_traveling" in conditions:
-        if context.get("user_traveling") != conditions["user_traveling"]:
-            return False
-
-    # Check VPN matches location
-    if "vpn_matches_location" in conditions:
-        if context.get("vpn_matches_location") != conditions["vpn_matches_location"]:
-            return False
-
-    # Check MFA completed
-    if "mfa_completed" in conditions:
-        if context.get("mfa_completed") != conditions["mfa_completed"]:
-            return False
-
-    # Check user risk score
-    if "user_risk_score_above" in conditions:
-        threshold = conditions["user_risk_score_above"]
-        if context.get("user_risk_score", 0) <= threshold:
-            return False
-
-    # Check known campaign signature
-    if "known_campaign_signature" in conditions:
-        if context.get("known_campaign_signature") != conditions["known_campaign_signature"]:
-            return False
-
-    # Check asset criticality
-    if "asset_criticality" in conditions:
-        if context.get("asset_criticality") != conditions["asset_criticality"]:
-            return False
-
-    return True
-
 
 def detect_policy_conflicts(alert_id: str, context: Dict[str, Any]) -> PolicyConflict:
     """
@@ -197,8 +68,9 @@ def detect_policy_conflicts(alert_id: str, context: Dict[str, Any]) -> PolicyCon
     Returns:
         PolicyConflict object with conflict detection results
     """
-    # Get all applicable policies
-    applicable = get_applicable_policies(alert_id, context)
+    # Get all applicable policies from the domain module
+    from app.domains.soc.policies import get_applicable_soc_policies
+    applicable = [PolicyDefinition(**p) for p in get_applicable_soc_policies(alert_id, context)]
 
     # No conflict if 0 or 1 policy applies
     if len(applicable) <= 1:
