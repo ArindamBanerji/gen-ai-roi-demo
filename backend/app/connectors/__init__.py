@@ -17,10 +17,15 @@ from app.connectors.registry import registry
 from app.connectors.pulsedive import PulsediveConnector
 registry.register(PulsediveConnector())
 
+# C2 — register GreyNoise connector
+from app.connectors.greynoise import GreyNoiseConnector
+registry.register(GreyNoiseConnector())
+
 __all__ = [
     "UCLConnector",
     "ConnectorResult",
     "HealthStatus",
     "registry",
     "PulsediveConnector",
+    "GreyNoiseConnector",
 ]

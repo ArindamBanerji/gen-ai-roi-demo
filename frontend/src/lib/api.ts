@@ -197,6 +197,14 @@ export async function refreshThreatIntel() {
   return response
 }
 
+export async function getEnrichmentSummary() {
+  return fetchJSON('/graph/enrichment/summary')
+}
+
+export async function getAlertEnrichment(alertId: string) {
+  return fetchJSON(`/graph/enrichment/by-alert/${alertId}`)
+}
+
 // ============================================================================
 // Audit Trail (v3.0)
 // ============================================================================

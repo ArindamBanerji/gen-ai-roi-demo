@@ -15,7 +15,7 @@ import {
   TrendingDown,
   RefreshCw,
 } from 'lucide-react'
-import { getAlerts, analyzeAlert, executeAction, resetAlerts, checkPolicyConflict, refreshThreatIntel, getDecisionFactors } from '../../lib/api'
+import { getAlerts, analyzeAlert, executeAction, resetAlerts, checkPolicyConflict, refreshThreatIntel, getDecisionFactors, getAlertEnrichment } from '../../lib/api'
 import { domainConfig } from '../../lib/domain'
 import OutcomeFeedback from '../OutcomeFeedback'
 import PolicyConflict from '../PolicyConflict'
@@ -136,6 +136,15 @@ interface ThreatIntelStatus {
   }>
 }
 
+interface AlertEnrichmentData {
+  alert_id: string
+  has_enrichment: boolean
+  indicators: string[]
+  sources: Record<string, Record<string, unknown>>
+  source_count: number
+  consensus_severity: string
+}
+
 interface DecisionFactor {
   name: string
   value: number
@@ -176,9 +185,23 @@ export default function AlertTriageTab() {
   const [decisionFactors, setDecisionFactors] = useState<DecisionFactors | null>(null)
   const [decisionFactorsCollapsed, setDecisionFactorsCollapsed] = useState(false)
 
+  const [alertEnrichment, setAlertEnrichment] = useState<AlertEnrichmentData | null>(null)
+  const [enrichmentExpanded, setEnrichmentExpanded] = useState(false)
+
   useEffect(() => {
     loadAlertQueue()
   }, [])
+
+  const loadAlertEnrichment = async (alertId: string) => {
+    try {
+      const data = await getAlertEnrichment(alertId) as AlertEnrichmentData
+      // Null out when no enrichment so the badge shows the "No enrichment" message
+      setAlertEnrichment(data.source_count > 0 ? data : null)
+    } catch {
+      // Badge shows "No enrichment" state — non-critical
+      setAlertEnrichment(null)
+    }
+  }
 
   const handleRefreshThreatIntel = async () => {
     setThreatIntelLoading(true)
@@ -189,10 +212,14 @@ export default function AlertTriageTab() {
       // Badge remains in "Not loaded" state
     } finally {
       setThreatIntelLoading(false)
+      // Reload enrichment for the currently selected alert — connectors may have updated graph
+      if (selectedAlert) {
+        loadAlertEnrichment(selectedAlert.id)
+      }
     }
   }
 
-  // Auto-fetch on mount so badge shows data immediately if backend is up
+  // Auto-fetch threat intel on mount so the badge shows data immediately
   useEffect(() => {
     handleRefreshThreatIntel()
   }, [])
@@ -235,6 +262,7 @@ export default function AlertTriageTab() {
       // Using ref avoids stale closure bug where closedLoop state is captured as null
       if (data.alerts.length > 0 && !preserveFeedbackRef.current) {
         setSelectedAlert(data.alerts[0])
+        loadAlertEnrichment(data.alerts[0].id)
         console.log('[AlertTriageTab] Selected first alert:', data.alerts[0])
       } else if (data.alerts.length === 0) {
         console.log('[AlertTriageTab] No alerts in response')
@@ -308,6 +336,8 @@ export default function AlertTriageTab() {
     // Clear feedback preservation when user manually selects a different alert
     preserveFeedbackRef.current = false
     setSelectedAlert(alert)
+    setEnrichmentExpanded(false)
+    loadAlertEnrichment(alert.id)
     analyzeAlertHandler(alert)
   }
 
@@ -323,6 +353,7 @@ export default function AlertTriageTab() {
       setDecisionFactors(null)
       setAnalysis(null)
       setActiveStep(0)
+      setAlertEnrichment(null)
     } catch (error) {
       console.error('[AlertTriageTab] Failed to reset alerts:', error)
     } finally {
@@ -353,6 +384,16 @@ export default function AlertTriageTab() {
   const policyOverrideActive =
     policyResolution?.has_conflict === true &&
     policyResolution?.resolution?.action_adjusted === 'escalate_tier2'
+
+  const getConsensusSeverityClasses = (sev: string) => {
+    switch (sev) {
+      case 'critical': return 'bg-red-500/20 text-red-400 border-red-500/50'
+      case 'high':     return 'bg-orange-500/20 text-orange-400 border-orange-500/50'
+      case 'medium':   return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'
+      case 'low':      return 'bg-green-500/20 text-green-400 border-green-500/50'
+      default:         return 'bg-gray-500/20 text-gray-400 border-gray-500/50'
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -461,6 +502,67 @@ export default function AlertTriageTab() {
               {threatIntelLoading ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
+
+          {/* Multi-Source Enrichment badge — C4b */}
+          {selectedAlert && (
+            <div className="space-y-0">
+              <div className="flex items-center gap-2 text-xs bg-soc-card rounded-lg px-4 py-2 border border-gray-800">
+                <span>🔗</span>
+                <span className="text-gray-400">Multi-Source:</span>
+                {alertEnrichment ? (
+                  <>
+                    <span className="font-semibold text-white">
+                      {alertEnrichment.source_count} {alertEnrichment.source_count === 1 ? 'source' : 'sources'}
+                    </span>
+                    <span className="text-gray-600">·</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded border font-semibold ${getConsensusSeverityClasses(alertEnrichment.consensus_severity)}`}
+                    >
+                      {alertEnrichment.consensus_severity}
+                    </span>
+                    <button
+                      onClick={() => setEnrichmentExpanded((e) => !e)}
+                      className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
+                    >
+                      {enrichmentExpanded
+                        ? <ChevronUp className="w-3 h-3" />
+                        : <ChevronDown className="w-3 h-3" />}
+                      {enrichmentExpanded ? 'Collapse' : 'Details'}
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-gray-500 italic">No enrichment — click Refresh Threat Intel</span>
+                )}
+              </div>
+
+              {/* Expandable per-source detail panel */}
+              {enrichmentExpanded && alertEnrichment && (
+                <div className="bg-soc-card/50 rounded-b-lg px-4 py-3 border border-t-0 border-gray-700 space-y-3 text-xs">
+                  {Object.entries(alertEnrichment.sources).map(([sourceName, data]) => (
+                    <div key={sourceName}>
+                      <div className="font-semibold text-gray-300 uppercase tracking-wide mb-1">
+                        {sourceName === 'pulsedive' ? '🛡️ Pulsedive' : '🔍 GreyNoise'}
+                      </div>
+                      <div className="pl-3 space-y-0.5 text-gray-400">
+                        {Object.entries(data as Record<string, unknown>).map(([k, v]) => (
+                          <div key={k} className="flex gap-2">
+                            <span className="text-gray-500 min-w-[6rem]">{k}:</span>
+                            <span>
+                              {typeof v === 'boolean'
+                                ? (v ? 'yes' : 'no')
+                                : Array.isArray(v)
+                                ? (v as string[]).join(', ')
+                                : String(v ?? '—')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Selected Alert Details */}
           {selectedAlert && (
