@@ -546,3 +546,50 @@ async def get_weight_history(alert_type: Optional[str] = None):
         "total":             len(history),
         "alert_type_filter": alert_type,
     }
+
+
+# ============================================================================
+# GET /api/evolution/trust-scores - Asymmetric Trust Tracking (F6a)
+# ============================================================================
+
+@router.get("/evolution/trust-scores")
+async def get_trust_scores():
+    """
+    Return per-situation-type trust scores and the full trust update history.
+
+    Trust starts at 0.5 for each situation type.
+    Asymmetric deltas:  correct +0.03, incorrect −0.60  (20:1 ratio).
+    human_review_required is True when trust drops below 0.3.
+
+    Response shape:
+        {
+          "trust_scores": {
+            "travel_login_anomaly": {
+              "trust_score": 0.23,
+              "human_review_required": true
+            },
+            ...
+          },
+          "history": [
+            {
+              "decision_number": 10,
+              "timestamp":       "...",
+              "situation_type":  "travel_login_anomaly",
+              "trust_score":     0.17,
+              "delta":           -0.6,
+              "outcome":         "incorrect"
+            },
+            ...
+          ],
+          "total_updates":        12,
+          "low_trust_situations": ["travel_login_anomaly"]
+        }
+    """
+    from app.services.feedback import get_all_trust_scores
+    result = get_all_trust_scores()
+    print(
+        f"[EVOLUTION] GET /evolution/trust-scores — "
+        f"total_updates={result['total_updates']}, "
+        f"low_trust={result['low_trust_situations']}"
+    )
+    return result

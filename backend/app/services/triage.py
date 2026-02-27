@@ -17,7 +17,7 @@ Endpoint:
   GET /api/triage/decision-factors/{alert_id}
 """
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from app.db.neo4j import neo4j_client
@@ -75,10 +75,59 @@ def append_confidence_snapshot(
     )
 
 
+def seed_confidence_history() -> None:
+    """
+    Pre-populate CONFIDENCE_HISTORY with 15 realistic historical snapshots.
+    Shows three situation types improving in confidence over time:
+      travel_login_anomaly   — 8 decisions, 0.68 → 0.92
+      cloud_misconfiguration — 4 decisions, 0.55 → 0.88
+      data_exfil_attempt     — 3 decisions, 0.60 → 0.85
+    Called at end of reset_confidence_history() and on module import so
+    Tab 4 charts are always populated without requiring live interaction.
+    Live decisions append to this baseline (decision_number continues from 16+).
+    """
+    _SEED_DATA = [
+        # (decision, alert_id, alert_type, situation_type, confidence)
+        ( 1, "ALERT-S001", "anomalous_login",        "travel_login_anomaly",   0.68),
+        ( 2, "ALERT-S002", "anomalous_login",        "travel_login_anomaly",   0.72),
+        ( 3, "ALERT-S003", "anomalous_login",        "travel_login_anomaly",   0.74),
+        ( 4, "ALERT-S004", "cloud_misconfiguration", "cloud_misconfiguration", 0.55),
+        ( 5, "ALERT-S005", "anomalous_login",        "travel_login_anomaly",   0.78),
+        ( 6, "ALERT-S006", "data_exfiltration",      "data_exfil_attempt",     0.60),
+        ( 7, "ALERT-S007", "anomalous_login",        "travel_login_anomaly",   0.82),
+        ( 8, "ALERT-S008", "cloud_misconfiguration", "cloud_misconfiguration", 0.66),
+        ( 9, "ALERT-S009", "anomalous_login",        "travel_login_anomaly",   0.86),
+        (10, "ALERT-S010", "data_exfiltration",      "data_exfil_attempt",     0.72),
+        (11, "ALERT-S011", "cloud_misconfiguration", "cloud_misconfiguration", 0.77),
+        (12, "ALERT-S012", "anomalous_login",        "travel_login_anomaly",   0.90),
+        (13, "ALERT-S013", "data_exfiltration",      "data_exfil_attempt",     0.85),
+        (14, "ALERT-S014", "cloud_misconfiguration", "cloud_misconfiguration", 0.88),
+        (15, "ALERT-S015", "anomalous_login",        "travel_login_anomaly",   0.92),
+    ]
+
+    base_ts = datetime.now(timezone.utc) - timedelta(hours=15)
+    for dec, alert_id, alert_type, situation_type, confidence in _SEED_DATA:
+        ts = base_ts + timedelta(hours=dec)
+        CONFIDENCE_HISTORY.append({
+            "decision_number": dec,
+            "timestamp":       ts.isoformat(),
+            "alert_id":        alert_id,
+            "alert_type":      alert_type,
+            "situation_type":  situation_type,
+            "confidence":      confidence,
+        })
+    print(f"[TRIAGE] Seeded {len(_SEED_DATA)} historical confidence snapshots")
+
+
+# Seed on module import so Tab 4 charts are pre-populated at startup
+seed_confidence_history()
+
+
 def reset_confidence_history() -> None:
     """Clear CONFIDENCE_HISTORY — registered with state_manager for demo reset."""
     CONFIDENCE_HISTORY.clear()
-    print("[TRIAGE] Confidence history cleared")
+    seed_confidence_history()
+    print("[TRIAGE] Confidence history reset to seeded baseline")
 
 
 def get_confidence_trajectory() -> Dict[str, List[Dict[str, Any]]]:

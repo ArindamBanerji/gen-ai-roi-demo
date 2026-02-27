@@ -66,12 +66,13 @@ async def startup_event():
     # Both reset endpoints call state_manager.reset_all() — adding a new
     # state store only requires registering it here, not editing every endpoint.
     from app.core.state_manager import state_manager
-    from app.services.feedback import reset_feedback_state
+    from app.services.feedback import reset_feedback_state, reset_trust_state
     from app.services.policy import reset_policy_state
     from app.services.audit import reset_audit_state
     from app.services.evolver import reset_evolver_state
     from app.services.triage import reset_confidence_history
     state_manager.register("feedback",            reset_feedback_state)
+    state_manager.register("trust",               reset_trust_state)
     state_manager.register("policy",              reset_policy_state)
     state_manager.register("audit",               reset_audit_state)
     state_manager.register("evolver",             reset_evolver_state)

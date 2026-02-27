@@ -144,6 +144,21 @@ export async function reseedDemoData() {
   return response
 }
 
+// F4c: Compounding Proof data feeds
+export async function getWeightHistory(alertType?: string) {
+  const query = alertType ? `?alert_type=${encodeURIComponent(alertType)}` : ''
+  return fetchJSON(`/evolution/weight-history${query}`)
+}
+
+export async function getConfidenceTrajectory() {
+  return fetchJSON('/metrics/confidence-trajectory')
+}
+
+// F6b: Asymmetric trust tracking
+export async function getTrustScores() {
+  return fetchJSON('/evolution/trust-scores')
+}
+
 // ============================================================================
 // ROI Calculator (v2.5)
 // ============================================================================

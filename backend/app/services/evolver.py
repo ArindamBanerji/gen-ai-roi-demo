@@ -6,7 +6,7 @@ The Agent Evolver demonstrates Loop 2: "Smarter ACROSS decisions"
 by tracking which prompt variants perform best and promoting winners.
 """
 from typing import Dict, Any, List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
 
 
@@ -404,6 +404,7 @@ def reset_evolver_state() -> None:
 
     RECENT_PROMOTIONS.clear()
     WEIGHT_HISTORY.clear()
+    seed_weight_history()
 
     print("[EVOLVER] State reset to initial values")
 
@@ -427,3 +428,58 @@ def get_weight_history(alert_type_filter: Optional[str] = None) -> List[Dict[str
     if alert_type_filter:
         return [s for s in WEIGHT_HISTORY if s["alert_type"] == alert_type_filter]
     return list(WEIGHT_HISTORY)
+
+
+# ============================================================================
+# F4c-FIX: Seed weight history for compelling demo charts
+# ============================================================================
+
+def seed_weight_history() -> None:
+    """
+    Pre-populate WEIGHT_HISTORY with 15 realistic historical snapshots.
+    Shows TRAVEL_CONTEXT_v2 rising from 0.65 → 0.90 (the winner trajectory),
+    TRAVEL_CONTEXT_v1 flat ~0.70, and phishing variants improving steadily.
+    Called at end of reset_evolver_state() and on module import so Tab 4
+    charts are always populated without requiring live interaction.
+    Live decisions append to this baseline (decision_number continues from 16+).
+    """
+    _SEED_DATA = [
+        # (decision, alert_type, trigger, outcome, TC_v1, TC_v2, PR_v1, PR_v2)
+        ( 1, "anomalous_login", "TRAVEL_CONTEXT_v2",    True,  0.70, 0.65, 0.72, 0.68),
+        ( 2, "anomalous_login", "TRAVEL_CONTEXT_v2",    True,  0.70, 0.67, 0.72, 0.69),
+        ( 3, "anomalous_login", "TRAVEL_CONTEXT_v2",    True,  0.70, 0.70, 0.73, 0.70),
+        ( 4, "phishing",        "PHISHING_RESPONSE_v1", True,  0.70, 0.73, 0.74, 0.71),
+        ( 5, "anomalous_login", "TRAVEL_CONTEXT_v2",    True,  0.70, 0.75, 0.75, 0.72),
+        ( 6, "phishing",        "PHISHING_RESPONSE_v1", True,  0.71, 0.77, 0.76, 0.73),
+        ( 7, "anomalous_login", "TRAVEL_CONTEXT_v2",    True,  0.71, 0.79, 0.77, 0.74),
+        ( 8, "phishing",        "PHISHING_RESPONSE_v1", False, 0.71, 0.81, 0.78, 0.75),
+        ( 9, "anomalous_login", "TRAVEL_CONTEXT_v2",    True,  0.71, 0.83, 0.79, 0.76),
+        (10, "phishing",        "PHISHING_RESPONSE_v2", True,  0.71, 0.84, 0.80, 0.77),
+        (11, "anomalous_login", "TRAVEL_CONTEXT_v2",    True,  0.71, 0.86, 0.81, 0.78),
+        (12, "anomalous_login", "TRAVEL_CONTEXT_v1",    False, 0.71, 0.87, 0.82, 0.79),
+        (13, "phishing",        "PHISHING_RESPONSE_v1", True,  0.71, 0.88, 0.83, 0.80),
+        (14, "anomalous_login", "TRAVEL_CONTEXT_v2",    True,  0.71, 0.89, 0.84, 0.81),
+        (15, "phishing",        "PHISHING_RESPONSE_v2", True,  0.71, 0.90, 0.84, 0.82),
+    ]
+
+    base_ts = datetime.now(timezone.utc) - timedelta(hours=15)
+    for dec, alert_type, trigger, outcome, tc1, tc2, pr1, pr2 in _SEED_DATA:
+        ts = base_ts + timedelta(hours=dec)
+        WEIGHT_HISTORY.append({
+            "decision_number": dec,
+            "timestamp":       ts.isoformat(),
+            "alert_type":      alert_type,
+            "weights": {
+                "TRAVEL_CONTEXT_v1":    tc1,
+                "TRAVEL_CONTEXT_v2":    tc2,
+                "PHISHING_RESPONSE_v1": pr1,
+                "PHISHING_RESPONSE_v2": pr2,
+            },
+            "trigger":  trigger,
+            "outcome":  outcome,
+        })
+    print(f"[EVOLVER] Seeded {len(_SEED_DATA)} historical weight snapshots")
+
+
+# Seed on module import so Tab 4 charts are pre-populated at startup
+seed_weight_history()
