@@ -745,11 +745,11 @@ export function RuntimeEvolutionTab() {
 git checkout feature/v2-enhancements
 
 # v2 Ports (different from v1)
-Backend:  8001 (v1 uses 8000)
+Backend:  8000
 Frontend: 5174 (v1 uses 5173)
 
 # Start v2
-cd backend && uvicorn app.main:app --reload --port 8001
+cd backend && uvicorn app.main:app --reload --port 8000
 cd frontend && npx vite --port 5174
 
 # View v2

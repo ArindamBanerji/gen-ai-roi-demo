@@ -54,6 +54,8 @@ class SituationAnalysis(BaseModel):
     selected_option: str
     selection_reasoning: str
     decision_economics: DecisionEconomics
+    mitre_technique: str = ""   # e.g. "T1078"  — populated from MITRE_ATTACK_MAP (F1a)
+    mitre_tactic: str = ""      # e.g. "Initial Access"
 
 
 # ============================================================================
@@ -195,16 +197,20 @@ def analyze_situation(alert_type: str, context: Dict[str, Any]) -> SituationAnal
     # Step 1: Classify the situation
     situation_type, confidence, factors = classify_situation(alert_type, context)
 
-    # Step 2: Evaluate options
+    # Step 2: Look up MITRE ATT&CK mapping for the classified situation type (F1a)
+    from app.domains.soc.situations import get_mitre_attack
+    mitre_technique, mitre_tactic = get_mitre_attack(situation_type.value)
+
+    # Step 3: Evaluate options
     options = evaluate_options(alert_type, context, situation_type)
 
-    # Step 3: Select the highest-scored option
+    # Step 4: Select the highest-scored option
     selected = options[0]  # Already sorted by score descending
 
-    # Step 4: Generate selection reasoning
+    # Step 5: Generate selection reasoning
     reasoning = generate_selection_reasoning(situation_type, selected, factors)
 
-    # Step 5: Calculate decision economics
+    # Step 6: Calculate decision economics
     economics = calculate_decision_economics(selected, options)
 
     return SituationAnalysis(
@@ -214,7 +220,9 @@ def analyze_situation(alert_type: str, context: Dict[str, Any]) -> SituationAnal
         options_evaluated=options,
         selected_option=selected.action,
         selection_reasoning=reasoning,
-        decision_economics=economics
+        decision_economics=economics,
+        mitre_technique=mitre_technique,
+        mitre_tactic=mitre_tactic,
     )
 
 

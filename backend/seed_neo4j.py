@@ -134,7 +134,9 @@ async def seed_data():
             status: 'pending',
             vpn_provider: 'hotel-vpn',
             mfa_completed: true,
-            device_fingerprint_match: true
+            device_fingerprint_match: true,
+            mitre_technique: 'T1078',
+            mitre_tactic: 'Initial Access'
         })
 
         CREATE (alert)-[:DETECTED_ON]->(asset)
@@ -291,7 +293,9 @@ async def seed_data():
             user_id: 'alee@company.com',
             status: 'pending',
             mfa_completed: false,
-            device_fingerprint_match: true
+            device_fingerprint_match: true,
+            mitre_technique: 'T1566',
+            mitre_tactic: 'Initial Access'
         })
 
         CREATE (alert)-[:DETECTED_ON]->(asset)
@@ -328,7 +332,9 @@ async def seed_data():
             user_id: 'mchen@company.com',
             status: 'pending',
             mfa_completed: true,
-            device_fingerprint_match: true
+            device_fingerprint_match: true,
+            mitre_technique: 'T1204',
+            mitre_tactic: 'Execution'
         })
 
         CREATE (alert)-[:DETECTED_ON]->(asset)
@@ -354,7 +360,9 @@ async def seed_data():
             user_id: 'alee@company.com',
             status: 'pending',
             mfa_completed: true,
-            device_fingerprint_match: true
+            device_fingerprint_match: true,
+            mitre_technique: 'T1078',
+            mitre_tactic: 'Initial Access'
         })
 
         CREATE (alert)-[:DETECTED_ON]->(asset)
@@ -380,7 +388,9 @@ async def seed_data():
             user_id: 'jsmith@company.com',
             status: 'pending',
             mfa_completed: true,
-            device_fingerprint_match: true
+            device_fingerprint_match: true,
+            mitre_technique: 'T1566',
+            mitre_tactic: 'Initial Access'
         })
 
         CREATE (alert)-[:DETECTED_ON]->(asset)
@@ -412,7 +422,9 @@ async def seed_data():
             device_fingerprint_match: true,
             email_subject: 'Urgent: Verify Your Account',
             sender_domain: 'microsofft-support.com',
-            malicious_url: 'hxxp://evil-phishing-site[.]com/login'
+            malicious_url: 'hxxp://evil-phishing-site[.]com/login',
+            mitre_technique: 'T1566',
+            mitre_tactic: 'Initial Access'
         })
 
         CREATE (alert)-[:DETECTED_ON]->(asset)

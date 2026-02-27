@@ -75,6 +75,17 @@ async def startup_event():
     state_manager.register("audit",    reset_audit_state)
     state_manager.register("evolver",  reset_evolver_state)
 
+    # Initialize UCL Connector registry (C1).
+    # Concrete connectors are registered per build prompt:
+    #   C3 → PulsediveConnector
+    #   C2 → GreyNoiseConnector
+    #   C5 → CrowdStrikeMockConnector
+    from app.connectors.registry import registry as connector_registry
+    print(
+        f"[CONNECTOR] Registry initialized — "
+        f"{connector_registry.count()} connector(s) registered"
+    )
+
 @app.on_event("shutdown")
 async def shutdown_event():
     """Close connections on shutdown"""

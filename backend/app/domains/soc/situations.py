@@ -75,6 +75,47 @@ SOC_SITUATION_TYPES: Dict[str, Dict[str, str]] = {
 
 
 # ============================================================================
+# A2. MITRE ATT&CK mapping (F1a)
+# Maps situation type string → (technique_id, tactic_name).
+# Covers both CURRENT situation types (v3.2) and the F2a expanded types
+# (known_benign, travel_anomaly, etc.) so the classifier works correctly
+# as soon as F2b adds those enum values.
+# Source: v4_design_document_v4.md Section 4, Prompt F1a.
+# ============================================================================
+
+MITRE_ATTACK_MAP: Dict[str, Dict[str, str]] = {
+    # Current situation types (v3.2 classifier)
+    "travel_login_anomaly":      {"technique": "T1078", "tactic": "Initial Access"},
+    "known_phishing_campaign":   {"technique": "T1566", "tactic": "Initial Access"},
+    "malware_on_critical_asset": {"technique": "T1204", "tactic": "Execution"},
+    "vip_after_hours":           {"technique": "T1078", "tactic": "Initial Access"},
+    "data_exfil_attempt":        {"technique": "T1048", "tactic": "Exfiltration"},
+    "unknown":                   {"technique": "",      "tactic": ""},
+
+    # F2a expanded situation types (classifier added in F2b)
+    "known_benign":       {"technique": "T1078", "tactic": "Initial Access"},
+    "travel_anomaly":     {"technique": "T1078", "tactic": "Initial Access"},
+    "suspicious_pattern": {"technique": "T1110", "tactic": "Credential Access"},
+    "known_threat":       {"technique": "T1566", "tactic": "Initial Access"},
+    "anomalous_behavior": {"technique": "T1071", "tactic": "Command and Control"},
+    "compliance_risk":    {"technique": "T1098", "tactic": "Persistence"},
+}
+
+
+def get_mitre_attack(situation_type: str) -> tuple:
+    """
+    Return (technique_id, tactic_name) for the given situation type string.
+    Returns ("", "") for unknown or unmapped types.
+
+    Example:
+        technique, tactic = get_mitre_attack("travel_login_anomaly")
+        # → ("T1078", "Initial Access")
+    """
+    entry = MITRE_ATTACK_MAP.get(situation_type, {"technique": "", "tactic": ""})
+    return entry["technique"], entry["tactic"]
+
+
+# ============================================================================
 # B/D. classify_soc_situation()
 # Exact classification rules from services/situation.classify_situation().
 # Returns plain strings instead of SituationType enum members so this file
