@@ -203,7 +203,7 @@ async def process_alert(request: ProcessAlertRequest):
 
         # Record the outcome (success = gates passed)
         success = eval_result["overall_passed"]
-        evolver.record_decision_outcome(decision_id, prompt_variant, success)
+        evolver.record_decision_outcome(decision_id, prompt_variant, success, alert_type=alert_type)
 
         # Check if a better variant should be promoted
         promotion = evolver.check_for_promotion(alert_type)
@@ -496,3 +496,53 @@ async def get_recent_evolution():
                 }
             ]
         }
+
+
+# ============================================================================
+# GET /api/evolution/weight-history - Weight Matrix Evolution History (F4a)
+# ============================================================================
+
+@router.get("/evolution/weight-history")
+async def get_weight_history(alert_type: Optional[str] = None):
+    """
+    Return the in-memory weight matrix evolution history.
+
+    Each entry is a snapshot of all prompt-variant success rates taken
+    immediately after a decision outcome was recorded this session.
+
+    Optional query parameter:
+        ?alert_type=anomalous_login   — filter to one alert type
+
+    Response shape:
+        {
+          "history": [
+            {
+              "decision_number": 1,
+              "timestamp":       "2026-02-27T12:34:56.789000+00:00",
+              "alert_type":      "anomalous_login",
+              "weights":         {
+                "TRAVEL_CONTEXT_v1": 0.71,
+                "TRAVEL_CONTEXT_v2": 0.89,
+                "PHISHING_RESPONSE_v1": 0.82,
+                "PHISHING_RESPONSE_v2": 0.80
+              },
+              "trigger":         "TRAVEL_CONTEXT_v2",
+              "outcome":         true
+            },
+            ...
+          ],
+          "total":              N,
+          "alert_type_filter":  "anomalous_login" | null
+        }
+
+    Returns an empty history list when no decisions have been processed
+    in this session (e.g. immediately after a demo reset).
+    """
+    history = evolver.get_weight_history(alert_type_filter=alert_type)
+    print(f"[EVOLUTION] GET /evolution/weight-history — "
+          f"total={len(history)}, filter={alert_type!r}")
+    return {
+        "history":           history,
+        "total":             len(history),
+        "alert_type_filter": alert_type,
+    }

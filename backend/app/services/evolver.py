@@ -5,7 +5,8 @@ Agent Evolver - Prompt Variant Performance Tracking
 The Agent Evolver demonstrates Loop 2: "Smarter ACROSS decisions"
 by tracking which prompt variants perform best and promoting winners.
 """
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
+from datetime import datetime, timezone
 from pydantic import BaseModel
 
 
@@ -29,6 +30,9 @@ ACTIVE_PROMPTS: Dict[str, str] = {
 
 # Tracks recent promotions for display
 RECENT_PROMOTIONS: Dict[str, Dict[str, Any]] = {}
+
+# F4a: Weight matrix evolution history — one snapshot appended per decision outcome
+WEIGHT_HISTORY: List[Dict[str, Any]] = []
 
 
 # ============================================================================
@@ -83,15 +87,22 @@ def get_prompt_stats() -> Dict[str, Dict[str, Any]]:
     return PROMPT_STATS.copy()
 
 
-def record_decision_outcome(decision_id: str, prompt_variant: str, success: bool) -> None:
+def record_decision_outcome(
+    decision_id: str,
+    prompt_variant: str,
+    success: bool,
+    alert_type: str = "unknown",
+) -> None:
     """
     Record the outcome of a decision using a specific prompt variant.
     Updates success count and total count, recalculates success rate.
+    Appends a weight snapshot to WEIGHT_HISTORY (F4a).
 
     Args:
-        decision_id: ID of the decision
+        decision_id:   ID of the decision
         prompt_variant: Name of the prompt variant used
-        success: Whether the decision was successful
+        success:       Whether the decision was successful
+        alert_type:    Alert type that triggered this decision (for history filtering)
     """
     if prompt_variant not in PROMPT_STATS:
         # Initialize new variant
@@ -109,6 +120,16 @@ def record_decision_outcome(decision_id: str, prompt_variant: str, success: bool
 
     # Recalculate success rate
     stats["success_rate"] = stats["success"] / stats["total"] if stats["total"] > 0 else 0.0
+
+    # F4a: Snapshot the full weight matrix after each update
+    WEIGHT_HISTORY.append({
+        "decision_number": len(WEIGHT_HISTORY) + 1,
+        "timestamp":       datetime.now(timezone.utc).isoformat(),
+        "alert_type":      alert_type,
+        "weights":         {name: s["success_rate"] for name, s in PROMPT_STATS.items()},
+        "trigger":         prompt_variant,
+        "outcome":         success,
+    })
 
     print(f"[EVOLVER] Recorded outcome for {prompt_variant}: success={success}, "
           f"new stats={stats['success']}/{stats['total']} ({stats['success_rate']:.2%})")
@@ -382,5 +403,27 @@ def reset_evolver_state() -> None:
     })
 
     RECENT_PROMOTIONS.clear()
+    WEIGHT_HISTORY.clear()
 
     print("[EVOLVER] State reset to initial values")
+
+
+def get_weight_history(alert_type_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Return the in-memory weight matrix evolution history (F4a).
+
+    Args:
+        alert_type_filter: If provided, return only snapshots for this alert type.
+
+    Returns:
+        List of snapshot dicts, oldest-first.  Each snapshot:
+          decision_number  — 1-based counter across all decisions this session
+          timestamp        — ISO-8601 UTC string
+          alert_type       — alert type that triggered the update
+          weights          — {variant_name: success_rate} for all tracked variants
+          trigger          — prompt variant name whose stats were just updated
+          outcome          — True if the decision was successful (gates passed)
+    """
+    if alert_type_filter:
+        return [s for s in WEIGHT_HISTORY if s["alert_type"] == alert_type_filter]
+    return list(WEIGHT_HISTORY)

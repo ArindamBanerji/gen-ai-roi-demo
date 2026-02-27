@@ -17,6 +17,7 @@ Endpoint:
   GET /api/triage/decision-factors/{alert_id}
 """
 import asyncio
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from app.db.neo4j import neo4j_client
@@ -33,6 +34,77 @@ _SEVERITY_VALUE: Dict[str, float] = {
     "low":      0.2,
     "none":     0.0,
 }
+
+
+# ============================================================================
+# F4b: Confidence trajectory tracking
+# ============================================================================
+
+# One entry appended per POST /alert/analyze call this session.
+# Cleared by reset_confidence_history() via state_manager on demo reset.
+CONFIDENCE_HISTORY: List[Dict[str, Any]] = []
+
+
+def append_confidence_snapshot(
+    alert_id: str,
+    alert_type: str,
+    situation_type: str,
+    confidence: float,
+) -> None:
+    """
+    Append one confidence observation to CONFIDENCE_HISTORY.
+    Called from routers/triage.py after each alert analysis.
+
+    Args:
+        alert_id:       Alert ID (e.g. "ALERT-7823")
+        alert_type:     Raw alert type string (e.g. "anomalous_login")
+        situation_type: Classified situation from SituationAnalysis
+        confidence:     Agent recommendation confidence score (0.0–1.0)
+    """
+    CONFIDENCE_HISTORY.append({
+        "decision_number": len(CONFIDENCE_HISTORY) + 1,
+        "timestamp":       datetime.now(timezone.utc).isoformat(),
+        "alert_id":        alert_id,
+        "alert_type":      alert_type,
+        "situation_type":  situation_type,
+        "confidence":      round(confidence, 4),
+    })
+    print(
+        f"[TRIAGE] Confidence snapshot #{len(CONFIDENCE_HISTORY)}: "
+        f"{situation_type} confidence={confidence:.2%}"
+    )
+
+
+def reset_confidence_history() -> None:
+    """Clear CONFIDENCE_HISTORY — registered with state_manager for demo reset."""
+    CONFIDENCE_HISTORY.clear()
+    print("[TRIAGE] Confidence history cleared")
+
+
+def get_confidence_trajectory() -> Dict[str, List[Dict[str, Any]]]:
+    """
+    Return confidence history grouped by situation_type (F4b).
+
+    Each group is sorted by decision_number, suitable for charting a
+    confidence-over-time line per situation type.
+
+    Returns:
+        {
+          "travel_login_anomaly":    [{"decision": 1, "confidence": 0.92}, ...],
+          "known_phishing_campaign": [{"decision": 2, "confidence": 0.94}, ...],
+          ...
+        }
+    """
+    grouped: Dict[str, List[Dict[str, Any]]] = {}
+    for snap in CONFIDENCE_HISTORY:
+        sit = snap["situation_type"]
+        if sit not in grouped:
+            grouped[sit] = []
+        grouped[sit].append({
+            "decision":   snap["decision_number"],
+            "confidence": snap["confidence"],
+        })
+    return grouped
 
 
 # ============================================================================

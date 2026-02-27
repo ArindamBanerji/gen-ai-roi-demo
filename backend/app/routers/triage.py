@@ -10,9 +10,10 @@ import uuid
 from app.services.agent import agent
 from app.services.reasoning import narrator
 from app.services.situation import analyze_situation
+from app.services.narrative import generate_narrative
 from app.services.feedback import process_outcome, get_feedback_status, get_reward_summary
 from app.services.policy import detect_policy_conflicts, get_conflict_history
-from app.services.triage import get_decision_factors
+from app.services.triage import get_decision_factors, append_confidence_snapshot
 from app.services.audit import record_decision
 from app.core.state_manager import state_manager
 from app.db.neo4j import neo4j_client
@@ -122,6 +123,14 @@ async def analyze_alert(request: ProcessAlertRequest):
         # Generate reasoning
         reasoning = await narrator.generate_reasoning(alert_type, decision.action, context)
 
+        # F4b: Record confidence snapshot for trajectory tracking
+        append_confidence_snapshot(
+            alert_id       = alert_id,
+            alert_type     = alert_type,
+            situation_type = situation_analysis.situation_type,
+            confidence     = decision.confidence,
+        )
+
         # ====================================================================
         # Step 5: Get graph data for visualization
         # ====================================================================
@@ -153,7 +162,7 @@ async def analyze_alert(request: ProcessAlertRequest):
         # ====================================================================
         # Build Response
         # ====================================================================
-        return {
+        response = {
             "alert": alert_data,
             "analysis": {
                 "root_cause": f"Anomalous {alert_type} from {alert_data.get('source_location', 'unknown location')}",
@@ -175,6 +184,8 @@ async def analyze_alert(request: ProcessAlertRequest):
             "graph_data": graph_data,
             "situation_analysis": situation_analysis.model_dump()
         }
+        response["narrative"] = generate_narrative(response)
+        return response
 
     except HTTPException:
         raise

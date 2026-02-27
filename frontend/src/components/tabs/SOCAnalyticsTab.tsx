@@ -74,6 +74,14 @@ const EXAMPLE_QUESTIONS = [
   "How much of my alert stream has threat intelligence coverage?",
 ]
 
+// v4.0: Cross-source queries — span Pulsedive, GreyNoise, and CrowdStrike EDR
+const CROSS_SOURCE_QUESTIONS = [
+  "Show all indicators with critical consensus severity",
+  "Which assets have CrowdStrike EDR with reduced prevention?",
+  "Find alerts linked to malicious GreyNoise indicators",
+  "What threat intel sources cover ALERT-7823?",
+]
+
 interface ThreatLandscape {
   threat_intel: {
     indicators_loaded: number
@@ -309,6 +317,7 @@ export default function SOCAnalyticsTab() {
         <div className="mt-4">
           <div className="text-xs text-gray-500 mb-2">Try these examples:</div>
           <div className="flex flex-wrap gap-2">
+            {/* Group 1 — SOC metrics */}
             {EXAMPLE_QUESTIONS.slice(0, 5).map((example, idx) => (
               <button
                 key={idx}
@@ -318,6 +327,8 @@ export default function SOCAnalyticsTab() {
                 {example}
               </button>
             ))}
+
+            {/* Group 2 — Cross-context graph queries */}
             <div className="w-full mt-1 pt-2 border-t border-gray-800">
               <span className="text-xs text-slate-500">Cross-context queries:</span>
             </div>
@@ -326,6 +337,21 @@ export default function SOCAnalyticsTab() {
                 key={`cc-${idx}`}
                 onClick={() => handleExampleClick(example)}
                 className="px-3 py-1.5 bg-soc-bg hover:bg-soc-primary/20 border border-gray-700 hover:border-soc-primary rounded text-xs transition-colors"
+              >
+                {example}
+              </button>
+            ))}
+
+            {/* Group 3 — Cross-source queries (Pulsedive · GreyNoise · CrowdStrike) */}
+            <div className="w-full mt-1 pt-2 border-t border-gray-800 flex items-center gap-2">
+              <span className="text-xs text-sky-500 font-medium">Cross-source queries:</span>
+              <span className="text-xs text-gray-600">Pulsedive · GreyNoise · CrowdStrike</span>
+            </div>
+            {CROSS_SOURCE_QUESTIONS.map((example, idx) => (
+              <button
+                key={`xs-${idx}`}
+                onClick={() => handleExampleClick(example)}
+                className="px-3 py-1.5 bg-sky-950/40 hover:bg-sky-900/40 border border-sky-800/60 hover:border-sky-500 rounded text-xs transition-colors text-sky-200"
               >
                 {example}
               </button>

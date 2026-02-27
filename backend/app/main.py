@@ -70,10 +70,12 @@ async def startup_event():
     from app.services.policy import reset_policy_state
     from app.services.audit import reset_audit_state
     from app.services.evolver import reset_evolver_state
-    state_manager.register("feedback", reset_feedback_state)
-    state_manager.register("policy",   reset_policy_state)
-    state_manager.register("audit",    reset_audit_state)
-    state_manager.register("evolver",  reset_evolver_state)
+    from app.services.triage import reset_confidence_history
+    state_manager.register("feedback",            reset_feedback_state)
+    state_manager.register("policy",              reset_policy_state)
+    state_manager.register("audit",               reset_audit_state)
+    state_manager.register("evolver",             reset_evolver_state)
+    state_manager.register("confidence_history",  reset_confidence_history)
 
     # Initialize UCL Connector registry (C1).
     # Concrete connectors are registered per build prompt:

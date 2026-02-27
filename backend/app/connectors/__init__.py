@@ -21,6 +21,10 @@ registry.register(PulsediveConnector())
 from app.connectors.greynoise import GreyNoiseConnector
 registry.register(GreyNoiseConnector())
 
+# C5 — register CrowdStrike mock connector
+from app.connectors.crowdstrike_mock import CrowdStrikeMockConnector
+registry.register(CrowdStrikeMockConnector())
+
 __all__ = [
     "UCLConnector",
     "ConnectorResult",
@@ -28,4 +32,5 @@ __all__ = [
     "registry",
     "PulsediveConnector",
     "GreyNoiseConnector",
+    "CrowdStrikeMockConnector",
 ]

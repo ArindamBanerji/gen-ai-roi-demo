@@ -90,6 +90,15 @@ def _build_view(record: Dict[str, Any]) -> Dict[str, Any]:
             "name":           record.get("gn_name"),
         }
 
+    # CrowdStrike EDR data — present when the alert's asset has an EDR_MANAGED_BY link
+    if record.get("cs_device_id") is not None:
+        sources["crowdstrike"] = {
+            "device_id":         record["cs_device_id"],
+            "os":                record.get("cs_os"),
+            "prevention_status": record.get("cs_prevention_status"),
+            "sensor_version":    record.get("cs_sensor_version"),
+        }
+
     return {
         "indicator":          record.get("value", ""),
         "sources":            sources,
@@ -137,16 +146,21 @@ _ENRICHMENT_QUERY_BY_ALERT = """
 MATCH (alert:Alert {id: $alert_id})
 OPTIONAL MATCH (ti:ThreatIntel)-[:ASSOCIATED_WITH]->(alert)
 OPTIONAL MATCH (ti)-[:ENRICHED_BY]->(gn:GreyNoiseEnrichment)
+OPTIONAL MATCH (alert)-[:DETECTED_ON]->(asset:Asset)-[:EDR_MANAGED_BY]->(cs:CrowdStrikeEnrichment)
 RETURN
-    ti.value          AS value,
-    ti.type           AS type,
-    ti.severity       AS severity,
-    ti.context        AS context,
-    ti.risk_factors   AS risk_factors,
-    gn.classification AS gn_classification,
-    gn.noise          AS gn_noise,
-    gn.riot           AS gn_riot,
-    gn.name           AS gn_name
+    ti.value             AS value,
+    ti.type              AS type,
+    ti.severity          AS severity,
+    ti.context           AS context,
+    ti.risk_factors      AS risk_factors,
+    gn.classification    AS gn_classification,
+    gn.noise             AS gn_noise,
+    gn.riot              AS gn_riot,
+    gn.name              AS gn_name,
+    cs.device_id         AS cs_device_id,
+    cs.os                AS cs_os,
+    cs.prevention_status AS cs_prevention_status,
+    cs.sensor_version    AS cs_sensor_version
 """
 
 
@@ -389,9 +403,12 @@ async def get_enrichment_by_alert(alert_id: str):
             detail=f"Enrichment query failed: {str(exc)}",
         )
 
-    # Filter out the all-NULL row that OPTIONAL MATCH produces when no ThreatIntel
-    # is linked to the alert.
-    valid_records = [r for r in records if r.get("value") is not None]
+    # Filter out the all-NULL row that OPTIONAL MATCH produces when neither
+    # ThreatIntel nor CrowdStrike data is linked to the alert.
+    valid_records = [
+        r for r in records
+        if r.get("value") is not None or r.get("cs_device_id") is not None
+    ]
 
     if not valid_records:
         print(f"[GRAPH] No ThreatIntel linked to {alert_id!r}")

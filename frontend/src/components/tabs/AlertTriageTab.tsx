@@ -89,6 +89,7 @@ interface AnalysisResult {
     mitre_technique?: string
     mitre_tactic?: string
   }
+  narrative?: string
 }
 
 interface ClosedLoopResult {
@@ -174,6 +175,33 @@ const MITRE_TECHNIQUE_NAMES: Record<string, string> = {
   T1048: 'Exfiltration Over Alternative Protocol',
 }
 
+// F3b — highlight ATT&CK IDs (orange), percentages (green), "calibrated" (blue)
+function highlightNarrative(text: string): React.ReactNode[] {
+  const pattern = /(T\d{4}(?:\.\d{3})?|\d+%|calibrated)/g
+  const parts: React.ReactNode[] = []
+  let lastIndex = 0
+  let key = 0
+  let match: RegExpExecArray | null
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index))
+    }
+    const token = match[0]
+    if (/^T\d{4}/.test(token)) {
+      parts.push(<span key={key++} className="text-orange-400 font-semibold">{token}</span>)
+    } else if (token === 'calibrated') {
+      parts.push(<span key={key++} className="text-blue-400">{token}</span>)
+    } else {
+      parts.push(<span key={key++} className="text-green-400 font-semibold">{token}</span>)
+    }
+    lastIndex = match.index + token.length
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex))
+  }
+  return parts
+}
+
 export default function AlertTriageTab() {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null)
@@ -196,6 +224,7 @@ export default function AlertTriageTab() {
 
   const [decisionFactors, setDecisionFactors] = useState<DecisionFactors | null>(null)
   const [decisionFactorsCollapsed, setDecisionFactorsCollapsed] = useState(false)
+  const [narrativeOpen, setNarrativeOpen] = useState(false)
 
   const [alertEnrichment, setAlertEnrichment] = useState<AlertEnrichmentData | null>(null)
   const [enrichmentExpanded, setEnrichmentExpanded] = useState(false)
@@ -591,7 +620,11 @@ export default function AlertTriageTab() {
                   {Object.entries(alertEnrichment.sources).map(([sourceName, data]) => (
                     <div key={sourceName}>
                       <div className="font-semibold text-gray-300 uppercase tracking-wide mb-1">
-                        {sourceName === 'pulsedive' ? '🛡️ Pulsedive' : '🔍 GreyNoise'}
+                        {sourceName === 'pulsedive'
+                          ? '🛡️ Pulsedive'
+                          : sourceName === 'crowdstrike'
+                          ? '🦅 CrowdStrike EDR'
+                          : '🔍 GreyNoise'}
                       </div>
                       <div className="pl-3 space-y-0.5 text-gray-400">
                         {Object.entries(data as Record<string, unknown>).map(([k, v]) => (
@@ -1001,6 +1034,38 @@ export default function AlertTriageTab() {
                       {decisionFactors.weights_note}
                     </p>
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Investigation Narrative Panel (F3b) */}
+          {analysis?.narrative && (
+            <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
+              <button
+                onClick={() => setNarrativeOpen((o) => !o)}
+                className="w-full px-4 py-3 border-b border-gray-800 flex items-center justify-between hover:bg-gray-800/40 transition-colors"
+                aria-expanded={narrativeOpen}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm">📝 Investigation Narrative</span>
+                  {!narrativeOpen && (
+                    <span className="text-xs text-gray-500 italic truncate max-w-xs">
+                      {analysis.narrative.slice(0, 60)}…
+                    </span>
+                  )}
+                </div>
+                {narrativeOpen
+                  ? <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" />
+                  : <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+                }
+              </button>
+
+              {narrativeOpen && (
+                <div className="px-5 py-4">
+                  <p className="text-sm text-gray-300 leading-relaxed">
+                    {highlightNarrative(analysis.narrative)}
+                  </p>
                 </div>
               )}
             </div>

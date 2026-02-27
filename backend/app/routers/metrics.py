@@ -463,3 +463,48 @@ async def get_registered_domains():
         "active_domain":      ACTIVE_DOMAIN,
         "registered_domains": registered,
     }
+
+
+# ============================================================================
+# GET /api/metrics/confidence-trajectory - Per-situation confidence over time (F4b)
+# ============================================================================
+
+@router.get("/metrics/confidence-trajectory")
+async def get_confidence_trajectory_endpoint():
+    """
+    Return agent confidence scores grouped by situation type, in decision order.
+
+    Each entry represents one call to POST /api/alert/analyze this session.
+    History resets with the demo (state_manager.reset_all()).
+
+    Response shape:
+        {
+          "trajectory": {
+            "travel_login_anomaly":    [
+              {"decision": 1, "confidence": 0.92},
+              {"decision": 3, "confidence": 0.92},
+              ...
+            ],
+            "known_phishing_campaign": [
+              {"decision": 2, "confidence": 0.94},
+              ...
+            ]
+          },
+          "total_decisions": N,
+          "situation_types": ["travel_login_anomaly", "known_phishing_campaign", ...]
+        }
+
+    Returns an empty trajectory when no alerts have been analyzed this session.
+    """
+    from app.services.triage import get_confidence_trajectory
+    trajectory = get_confidence_trajectory()
+    total = sum(len(v) for v in trajectory.values())
+    print(
+        f"[METRICS] GET /metrics/confidence-trajectory — "
+        f"total={total}, types={list(trajectory.keys())}"
+    )
+    return {
+        "trajectory":      trajectory,
+        "total_decisions": total,
+        "situation_types": list(trajectory.keys()),
+    }
