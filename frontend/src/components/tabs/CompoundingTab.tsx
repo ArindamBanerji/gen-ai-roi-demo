@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { getCompoundingMetrics, resetAllDemoData, resetAlerts, getAuditDecisions, verifyAuditChain } from '../../lib/api'
+import { getCompoundingMetrics, resetAllDemoData, resetAlerts, reseedDemoData, getAuditDecisions, verifyAuditChain } from '../../lib/api'
 import { domainConfig } from '../../lib/domain'
 import { TrendingUp, Database, Activity, RefreshCw, Clock, DollarSign, TrendingDown, CheckCircle, Calculator, Shield, Download } from 'lucide-react'
 import ROICalculatorModal from '../ROICalculator'
@@ -136,6 +136,8 @@ export default function CompoundingTab() {
   const [data, setData] = useState<CompoundingData | null>(null)
   const [loading, setLoading] = useState(true)
   const [resetting, setResetting] = useState(false)
+  const [reseeding, setReseeding] = useState(false)
+  const [reseedMessage, setReseedMessage] = useState<string | null>(null)
   const [showROI, setShowROI] = useState(false)
   const [auditDecisions, setAuditDecisions] = useState<AuditDecision[]>([])
   const [auditVerification, setAuditVerification] = useState<AuditVerification | null>(null)
@@ -217,6 +219,27 @@ export default function CompoundingTab() {
   useEffect(() => {
     loadData()
   }, [])
+
+  const handleReseed = async () => {
+    if (!window.confirm('Re-seed Neo4j? This will DELETE all current data and restore the canonical demo dataset.')) return
+    setReseeding(true)
+    setReseedMessage(null)
+    try {
+      console.log('[CompoundingTab] Re-seeding demo data...')
+      const result = await reseedDemoData() as { success: boolean; alert_count?: number; error?: string }
+      if (result.success) {
+        setReseedMessage(`Re-seed complete — ${result.alert_count} alerts restored.`)
+        await loadData()
+      } else {
+        setReseedMessage(`Re-seed failed: ${result.error ?? 'unknown error'}`)
+      }
+    } catch (error) {
+      console.error('[CompoundingTab] Re-seed threw:', error)
+      setReseedMessage('Re-seed failed — check backend logs.')
+    } finally {
+      setReseeding(false)
+    }
+  }
 
   const handleReset = async () => {
     setResetting(true)
@@ -832,21 +855,41 @@ export default function CompoundingTab() {
 
       {/* Recent Evolution Events */}
       <div className="bg-white rounded-lg border shadow p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-2">
           <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
             <Database className="w-5 h-5 text-purple-600" />
             Recent Evolution Events
           </h3>
-          <button
-            onClick={handleReset}
-            disabled={resetting}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg transition-colors disabled:opacity-50 font-semibold"
-            title="Reset all demo data: alerts, patterns, decisions, and evolution events"
-          >
-            <RefreshCw className={`w-4 h-4 ${resetting ? 'animate-spin' : ''}`} />
-            {resetting ? 'Resetting All...' : 'Reset All Demo Data'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleReseed}
+              disabled={reseeding || resetting}
+              className="flex items-center gap-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors disabled:opacity-50 font-semibold"
+              title="Delete all Neo4j data and restore the canonical demo dataset"
+            >
+              <Database className={`w-4 h-4 ${reseeding ? 'animate-pulse' : ''}`} />
+              {reseeding ? 'Re-seeding...' : 'Re-seed Data'}
+            </button>
+            <button
+              onClick={handleReset}
+              disabled={resetting || reseeding}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg transition-colors disabled:opacity-50 font-semibold"
+              title="Reset all demo data: alerts, patterns, decisions, and evolution events"
+            >
+              <RefreshCw className={`w-4 h-4 ${resetting ? 'animate-spin' : ''}`} />
+              {resetting ? 'Resetting All...' : 'Reset All Demo Data'}
+            </button>
+          </div>
         </div>
+        {reseedMessage && (
+          <div className={`mb-3 px-3 py-2 rounded text-xs font-medium ${
+            reseedMessage.startsWith('Re-seed complete')
+              ? 'bg-green-50 text-green-700 border border-green-200'
+              : 'bg-red-50 text-red-700 border border-red-200'
+          }`}>
+            {reseedMessage}
+          </div>
+        )}
 
         <div className="space-y-2">
           {evolution_events.map((event) => {

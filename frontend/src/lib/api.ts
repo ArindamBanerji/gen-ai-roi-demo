@@ -137,6 +137,13 @@ export async function resetAllDemoData() {
   return response
 }
 
+export async function reseedDemoData() {
+  console.log('[API] Calling POST /api/demo/reseed')
+  const response = await fetchJSON('/demo/reseed', { method: 'POST' })
+  console.log('[API] POST /api/demo/reseed response:', response)
+  return response
+}
+
 // ============================================================================
 // ROI Calculator (v2.5)
 // ============================================================================

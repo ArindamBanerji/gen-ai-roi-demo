@@ -2,6 +2,8 @@
 Compounding Metrics API - Tab 4
 Shows week-over-week improvement proving the compounding moat
 """
+import os
+import sys
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
@@ -9,6 +11,18 @@ from pydantic import BaseModel
 
 
 router = APIRouter()
+
+
+def _ensure_backend_on_path() -> None:
+    """Ensure backend/ directory is on sys.path so `import seed_neo4j` works
+    regardless of the working directory uvicorn was launched from."""
+    # __file__ is  backend/app/routers/metrics.py
+    # backend/  is three levels up
+    backend_dir = os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    )
+    if backend_dir not in sys.path:
+        sys.path.insert(0, backend_dir)
 
 
 # ============================================================================
@@ -255,17 +269,15 @@ async def reset_all_demo_data():
     Now uses canonical seed data to ensure complete, clean reset every time.
     This is much simpler and more reliable than selective deletion.
     """
-    from app.services.seed_neo4j import seed_neo4j_database, verify_neo4j_seed
+    _ensure_backend_on_path()
+    import seed_neo4j                          # backend/seed_neo4j.py (20 alerts, canonical)
     from app.core.state_manager import state_manager
 
     print("[DEMO RESET] Starting comprehensive demo reset via re-seeding...")
 
     try:
-        # Re-seed the entire database from canonical data
-        summary = await seed_neo4j_database()
-
-        # Verify the seed
-        verification = await verify_neo4j_seed()
+        # Re-seed from the canonical top-level script (20 alerts, full F2a corpus)
+        await seed_neo4j.seed_data()
 
         # Reset all in-memory state (audit, evolver, feedback, policy)
         state_manager.reset_all()
@@ -276,8 +288,6 @@ async def reset_all_demo_data():
             "status": "success",
             "message": "All demo data reset to original state via re-seeding",
             "timestamp": datetime.now().isoformat(),
-            "summary": summary,
-            "verification": verification
         }
 
     except Exception as e:
@@ -288,6 +298,57 @@ async def reset_all_demo_data():
             status_code=500,
             detail=f"Failed to reset demo data: {str(e)}"
         )
+
+
+
+# ============================================================================
+# POST /api/demo/reseed - Re-seed Neo4j from canonical dataset
+# ============================================================================
+
+@router.post("/demo/reseed")
+async def reseed_demo_data():
+    """
+    Re-seed the Neo4j database from the canonical seed dataset.
+
+    Clears all existing nodes/relationships and recreates the full demo graph
+    (alerts, assets, users, patterns, decisions, evolution events, etc.).
+    Also resets all in-memory state (audit trail, evolver stats, feedback).
+
+    Returns {success, alert_count} for minimal, actionable feedback.
+    Never raises HTTPException — caller inspects the success flag instead.
+    """
+    _ensure_backend_on_path()
+    import seed_neo4j                          # backend/seed_neo4j.py (20 alerts, canonical)
+    from app.db.neo4j import neo4j_client
+    from app.core.state_manager import state_manager
+
+    print("[RESEED] POST /api/demo/reseed called")
+    try:
+        await seed_neo4j.seed_data()
+
+        # seed_data() closes the neo4j connection at the end; the count query
+        # requires a reconnect which may transiently fail.  Wrap it separately
+        # so a count failure never masks a successful seed.
+        alert_count = 20  # canonical dataset default
+        try:
+            results = await neo4j_client.run_query(
+                "MATCH (a:Alert) RETURN count(a) AS alert_count"
+            )
+            alert_count = int(results[0]["alert_count"]) if results else 20
+        except Exception as count_exc:
+            print(f"[RESEED] Count query failed (seed still succeeded): {count_exc}")
+
+        # Reset all in-memory state (audit, evolver, feedback, policy)
+        state_manager.reset_all()
+
+        print(f"[RESEED] Complete — {alert_count} alerts in graph")
+        return {"success": True, "alert_count": alert_count}
+
+    except Exception as exc:
+        print(f"[ERROR] Re-seed failed: {exc}")
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(exc)}
 
 
 # ============================================================================
