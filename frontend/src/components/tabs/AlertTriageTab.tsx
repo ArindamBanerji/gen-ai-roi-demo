@@ -86,6 +86,8 @@ interface AnalysisResult {
       cost_avoided: string
       monthly_projection: string
     }
+    mitre_technique?: string
+    mitre_tactic?: string
   }
 }
 
@@ -162,6 +164,16 @@ interface DecisionFactors {
   weights_note: string
 }
 
+const MITRE_TECHNIQUE_NAMES: Record<string, string> = {
+  T1078: 'Valid Accounts',
+  T1110: 'Brute Force',
+  T1566: 'Phishing',
+  T1071: 'Application Layer Protocol',
+  T1098: 'Account Manipulation',
+  T1204: 'User Execution',
+  T1048: 'Exfiltration Over Alternative Protocol',
+}
+
 export default function AlertTriageTab() {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null)
@@ -187,6 +199,8 @@ export default function AlertTriageTab() {
 
   const [alertEnrichment, setAlertEnrichment] = useState<AlertEnrichmentData | null>(null)
   const [enrichmentExpanded, setEnrichmentExpanded] = useState(false)
+  const [severityFilter, setSeverityFilter] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<string>('newest')
 
   useEffect(() => {
     loadAlertQueue()
@@ -432,8 +446,44 @@ export default function AlertTriageTab() {
             </button>
           </div>
 
+          {/* Filter & Sort controls */}
+          <div className="flex gap-2 px-3 py-2 border-b border-gray-800 bg-soc-bg/50">
+            <select
+              value={severityFilter}
+              onChange={e => setSeverityFilter(e.target.value)}
+              className="flex-1 bg-gray-800 border border-gray-700 rounded text-xs text-gray-300 px-2 py-1 focus:outline-none focus:border-soc-primary"
+            >
+              <option value="all">All Severities</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+              className="flex-1 bg-gray-800 border border-gray-700 rounded text-xs text-gray-300 px-2 py-1 focus:outline-none focus:border-soc-primary"
+            >
+              <option value="newest">Newest First</option>
+              <option value="severity">Severity</option>
+              <option value="alert_type">Alert Type</option>
+            </select>
+          </div>
+
           <div className="divide-y divide-gray-800">
-            {alerts.map((alert) => (
+            {alerts
+              .filter(a => severityFilter === 'all' || a.severity === severityFilter)
+              .sort((a, b) => {
+                if (sortBy === 'severity') {
+                  const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+                  return (order[a.severity] ?? 4) - (order[b.severity] ?? 4)
+                }
+                if (sortBy === 'alert_type') {
+                  return a.alert_type.localeCompare(b.alert_type)
+                }
+                return String(b.timestamp ?? '').localeCompare(String(a.timestamp ?? ''))
+              })
+              .map((alert) => (
               <button
                 key={alert.id}
                 onClick={() => handleAlertSelect(alert)}
@@ -590,6 +640,24 @@ export default function AlertTriageTab() {
                   <span className="text-gray-500">User:</span> {selectedAlert.user_name}
                 </div>
               </div>
+              {analysis?.situation_analysis?.mitre_technique && (
+                <div className="mt-3 pt-3 border-t border-gray-800">
+                  <span className="text-gray-500 text-xs uppercase tracking-wide">MITRE ATT&CK</span>
+                  <div className="mt-1 inline-flex items-center gap-2 px-2.5 py-1 rounded bg-orange-500/10 border border-orange-500/30 text-orange-300 text-xs font-mono">
+                    <Shield className="w-3 h-3 text-orange-400 shrink-0" />
+                    <span className="font-semibold">{analysis.situation_analysis.mitre_technique}</span>
+                    {MITRE_TECHNIQUE_NAMES[analysis.situation_analysis.mitre_technique] && (
+                      <span>— {MITRE_TECHNIQUE_NAMES[analysis.situation_analysis.mitre_technique]}</span>
+                    )}
+                    {analysis.situation_analysis.mitre_tactic && (
+                      <>
+                        <span className="text-orange-500">|</span>
+                        <span className="text-orange-400">{analysis.situation_analysis.mitre_tactic}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

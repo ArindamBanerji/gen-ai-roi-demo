@@ -16,6 +16,7 @@ Factor schema:
 Endpoint:
   GET /api/triage/decision-factors/{alert_id}
 """
+import asyncio
 from typing import Any, Dict, List, Optional
 
 from app.db.neo4j import neo4j_client
@@ -99,28 +100,47 @@ async def _build_threat_intel_factor(alert_id: str) -> Dict[str, Any]:
 # Public API
 # ============================================================================
 
+async def _get_alert_type(alert_id: str) -> str:
+    """
+    Query Neo4j for the alert_type property of the given alert_id.
+    Returns "" on miss or error (compute_soc_factors falls back to _default).
+    """
+    query = "MATCH (a:Alert {id: $alert_id}) RETURN a.alert_type AS alert_type LIMIT 1"
+    try:
+        results = await neo4j_client.run_query(query, {"alert_id": alert_id})
+        if results:
+            return results[0].get("alert_type") or ""
+    except Exception as exc:
+        print(f"[TRIAGE] alert_type lookup failed for {alert_id}: {exc}")
+    return ""
+
+
 async def get_decision_factors(alert_id: str) -> Optional[Dict[str, Any]]:
     """
     Return the 6-factor decision breakdown for alert_id.
 
-    Builds 5 static factors from _ALERT_FACTORS (or _DEFAULT_FACTORS for
-    unknown alert IDs), queries Neo4j for the live threat_intel_enrichment
-    factor, inserts it at index 2 (after asset_criticality), and returns
+    Builds 5 static factors from SOC_FACTOR_TEMPLATES (keyed first by
+    alert_id, then by alert_type, then "_default"), queries Neo4j for the
+    live threat_intel_enrichment factor, inserts it at index 2, and returns
     the full factor matrix.
 
     Final factor order:
-      [0] travel_match / campaign_signature_match / alert_severity
-      [1] asset_criticality / sender_domain_risk
+      [0] primary factor (varies by alert type)
+      [1] secondary factor
       [2] threat_intel_enrichment  ← live Neo4j query
       [3] time_anomaly
-      [4] device_trust / asset_criticality
+      [4] device/source/pattern factor
       [5] pattern_history
     """
     from app.domains.soc.factors import compute_soc_factors
-    ti_factor = await _build_threat_intel_factor(alert_id)
-    result = compute_soc_factors(alert_id, ti_factor)
+    alert_type, ti_factor = await asyncio.gather(
+        _get_alert_type(alert_id),
+        _build_threat_intel_factor(alert_id),
+    )
+    result = compute_soc_factors(alert_id, ti_factor, alert_type)
     print(
         f"[TRIAGE] get_decision_factors({alert_id}): "
+        f"alert_type={alert_type!r}, "
         f"{len(result['factors'])} factors, "
         f"ti_contribution={ti_factor['contribution']}"
     )

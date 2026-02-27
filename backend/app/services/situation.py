@@ -22,6 +22,15 @@ class SituationType(str, Enum):
     VIP_AFTER_HOURS = "vip_after_hours"
     DATA_EXFIL_ATTEMPT = "data_exfil_attempt"
     UNKNOWN = "unknown"
+    # F2b: expanded corpus (8 new alert types)
+    BRUTE_FORCE_ATTACK = "brute_force_attack"
+    PRIVILEGE_ESCALATION_DETECTED = "privilege_escalation_detected"
+    CREDENTIAL_STUFFING_ATTACK = "credential_stuffing_attack"
+    C2_COMMUNICATION = "c2_communication"
+    THREAT_INTEL_INDICATOR = "threat_intel_indicator"
+    ANOMALOUS_NETWORK_BEHAVIOR = "anomalous_network_behavior"
+    INSIDER_THREAT_DETECTED = "insider_threat_detected"
+    CLOUD_MISCONFIGURATION = "cloud_misconfiguration"
 
 
 # ============================================================================
@@ -243,5 +252,29 @@ def generate_selection_reasoning(situation_type: SituationType, selected: Option
 
     if situation_type == SituationType.VIP_AFTER_HOURS:
         return "VIP user activity requires careful verification before escalation to avoid false alarms."
+
+    if situation_type == SituationType.BRUTE_FORCE_ATTACK:
+        return "Repeated authentication failures confirm automated attack. Source blocking prevents account compromise."
+
+    if situation_type == SituationType.PRIVILEGE_ESCALATION_DETECTED:
+        return "Unauthorized privilege escalation requires immediate containment to prevent lateral movement."
+
+    if situation_type == SituationType.CREDENTIAL_STUFFING_ATTACK:
+        return "Multiple accounts targeted with leaked credentials. Bulk password reset prevents takeover at scale."
+
+    if situation_type == SituationType.C2_COMMUNICATION:
+        return "Active C2 channel detected. Isolating the host severs attacker control and stops potential exfiltration."
+
+    if situation_type == SituationType.THREAT_INTEL_INDICATOR:
+        return "Confirmed IOC match from threat intelligence feed. Immediate incident escalation contains the threat."
+
+    if situation_type == SituationType.ANOMALOUS_NETWORK_BEHAVIOR:
+        return "Unusual traffic pattern requires additional context before action. Enrichment reduces false positive risk."
+
+    if situation_type == SituationType.INSIDER_THREAT_DETECTED:
+        return "Suspected insider activity requires escalation with HR involvement. Confidential investigation warranted."
+
+    if situation_type == SituationType.CLOUD_MISCONFIGURATION:
+        return "Exposed cloud resource remediation is low-risk and immediate. Auto-fix closes exposure window in seconds."
 
     return "Insufficient context for automated decision. Manual review by Tier 2 analyst recommended."

@@ -42,7 +42,7 @@ async def get_alert_queue():
         MATCH (alert)-[:DETECTED_ON]->(asset:Asset)
         RETURN alert, user.name as user_name, asset.hostname as asset_hostname
         ORDER BY alert.timestamp DESC
-        LIMIT 10
+        LIMIT 50
         """
 
         print("[TRIAGE] Querying Neo4j for pending alerts...")
