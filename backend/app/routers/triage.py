@@ -15,9 +15,15 @@ from app.services.feedback import process_outcome, get_feedback_status, get_rewa
 from app.services.policy import detect_policy_conflicts, get_conflict_history
 from app.services.triage import get_decision_factors, append_confidence_snapshot
 from app.services.audit import record_decision
+from app.services.event_bus import event_bus, DecisionMade, OutcomeVerified, GraphMutated
+from app.services.gae_state import get_learning_state, save_learning_state
+import numpy as np
 from app.core.state_manager import state_manager
 from app.db.neo4j import neo4j_client
 from app.models.schemas import ProcessAlertRequest, OutcomeRequest
+from app.domains.soc.config import SOCDomainConfig
+from app.domains.soc.orchestrator import compute_factor_vector
+from gae.scoring import score_alert
 
 
 router = APIRouter()
@@ -88,6 +94,10 @@ async def analyze_alert(request: ProcessAlertRequest):
     """
     Analyze an alert by traversing the security graph.
     Returns full context, recommendation, and graph data for visualization.
+
+    GAE-2d: Uses GAE scoring pipeline (Eq. 4) instead of hardcoded factors.
+    Writes Decision node to Neo4j after scoring.  Emits DecisionMade +
+    GraphMutated events (design principle: every graph mutation emits events).
     """
 
     try:
@@ -102,7 +112,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
 
         # ====================================================================
-        # Step 2: Get security context (47 nodes)
+        # Step 2: Get security context (47 nodes) — kept for key_facts/narrative
         # ====================================================================
         context = await neo4j_client.get_security_context(alert_id)
 
@@ -116,28 +126,90 @@ async def analyze_alert(request: ProcessAlertRequest):
         situation_analysis = analyze_situation(alert_type, context)
 
         # ====================================================================
-        # Step 4: Get agent recommendation
+        # Step 4: GAE Scoring Pipeline (GAE-2d — replaces agent.decide())
+        #
+        # 4a. Compute factor vector via orchestrator (6 FactorComputers → Neo4j)
+        # 4b. score_alert: Eq. 4  P(action|alert) = softmax(f·Wᵀ / τ)
         # ====================================================================
-        decision = agent.decide(alert_type, context)
+        print(f"[GAE] Computing factor vector for {alert_id}...")
+        computers = SOCDomainConfig.get_factor_computers()
+        f = await compute_factor_vector(alert_data, computers, neo4j_client)
+        f_2d = f.reshape(1, -1)  # score_alert requires shape (1, n_f)
 
-        # Generate reasoning
-        reasoning = await narrator.generate_reasoning(alert_type, decision.action, context)
+        W       = get_learning_state().W            # live, learned weights (4, 6)
+        actions = SOCDomainConfig.get_actions()      # ["escalate", "investigate", "suppress", "monitor"]
+        tau     = SOCDomainConfig.get_temperature()  # 0.25
+
+        scoring = score_alert(f_2d, W, actions, tau)
+        fv_list = f.flatten().tolist()   # JSON-serializable, stored in Decision node (R4)
+
+        print(f"[GAE] action={scoring.selected_action} confidence={scoring.confidence:.3f} "
+              f"f={[round(v, 3) for v in fv_list]}")
+
+        # Generate reasoning using GAE-selected action
+        reasoning = await narrator.generate_reasoning(alert_type, scoring.selected_action, context)
 
         # F4b: Record confidence snapshot for trajectory tracking
         append_confidence_snapshot(
             alert_id       = alert_id,
             alert_type     = alert_type,
             situation_type = situation_analysis.situation_type,
-            confidence     = decision.confidence,
+            confidence     = scoring.confidence,
         )
 
         # ====================================================================
-        # Step 5: Get graph data for visualization
+        # Step 5: Write Decision node to Neo4j (R4 — f(t) stored in graph)
+        #
+        # MATCH (a:Alert {id: $alert_id})
+        # CREATE (d:Decision {id:..., action:..., confidence:..., factor_vector:...,
+        #                     timestamp: datetime(), outcome: null})
+        # CREATE (d)-[:DECIDED_ON]->(a)
+        # ====================================================================
+        decision_id = str(uuid.uuid4())
+        await neo4j_client.run_query(
+            """
+            MATCH (a:Alert {id: $alert_id})
+            CREATE (d:Decision {
+                id:            $decision_id,
+                action:        $action,
+                confidence:    $confidence,
+                factor_vector: $fv,
+                timestamp:     datetime(),
+                outcome:       null
+            })
+            CREATE (d)-[:DECIDED_ON]->(a)
+            """,
+            {
+                "alert_id":    alert_id,
+                "decision_id": decision_id,
+                "action":      scoring.selected_action,
+                "confidence":  scoring.confidence,
+                "fv":          fv_list,
+            },
+        )
+        print(f"[GAE] Decision node written: id={decision_id} [:DECIDED_ON] {alert_id}")
+
+        # ====================================================================
+        # Step 6: Emit events (every graph mutation MUST emit events)
+        # ====================================================================
+        await event_bus.emit(DecisionMade(
+            alert_id      = alert_id,
+            action        = scoring.selected_action,
+            confidence    = scoring.confidence,
+            factor_vector = tuple(fv_list),
+        ))
+        await event_bus.emit(GraphMutated(
+            mutation_type     = "decision",
+            affected_entities = (alert_id,),
+        ))
+
+        # ====================================================================
+        # Step 7: Get graph data for visualization
         # ====================================================================
         graph_data = await get_graph_data(alert_id)
 
         # ====================================================================
-        # Step 6: Extract key facts from context
+        # Step 8: Extract key facts from context
         # ====================================================================
         key_facts = []
 
@@ -159,8 +231,21 @@ async def analyze_alert(request: ProcessAlertRequest):
                 "fact": "MFA authentication completed"
             })
 
+        # Build action_probabilities dict for verification + frontend display
+        probs_flat = scoring.action_probabilities.flatten().tolist()
+        action_probabilities = {a: round(p, 6) for a, p in zip(actions, probs_flat)}
+
+        # Scoring quality flags
+        max_prob = max(probs_flat)
+        sorted_probs = sorted(probs_flat, reverse=True)
+        low_confidence = max_prob < 0.25
+        ambiguous      = (
+            len(sorted_probs) >= 2 and
+            (sorted_probs[0] - sorted_probs[1]) < 0.05
+        )
+
         # ====================================================================
-        # Build Response
+        # Build Response — existing structure preserved; gae_scoring added
         # ====================================================================
         response = {
             "alert": alert_data,
@@ -175,11 +260,28 @@ async def analyze_alert(request: ProcessAlertRequest):
                 "key_facts": key_facts
             },
             "recommendation": {
-                "action": decision.action,
-                "confidence": decision.confidence,
-                "reasoning": reasoning,
-                "pattern_id": decision.pattern_id,
-                "playbook_id": decision.playbook_id
+                "action":       scoring.selected_action,
+                "confidence":   scoring.confidence,
+                "reasoning":    reasoning,
+                "pattern_id":   context.get("pattern_id"),
+                "playbook_id":  context.get("playbook_id"),
+                "decision_id":  decision_id,   # needed by GAE-3a feedback
+            },
+            # GAE scoring details — verification: probs sum to ~1.0
+            "gae_scoring": {
+                "decision_id":          decision_id,
+                "factor_vector":        fv_list,
+                "factor_names":         [c.name for c in computers],
+                "action_probabilities": action_probabilities,
+                "softmax_sum":          round(sum(probs_flat), 8),
+                "temperature":          tau,
+                "low_confidence":       low_confidence,
+                "ambiguous":            ambiguous,
+                "decision_method":      (
+                    "softmax scoring matrix "
+                    "(6 graph-computed factors × 4 actions, "
+                    "W updated via Eq. 4b with 20:1 asymmetry)"
+                ),
             },
             "graph_data": graph_data,
             "situation_analysis": situation_analysis.model_dump()
@@ -191,6 +293,8 @@ async def analyze_alert(request: ProcessAlertRequest):
         raise
     except Exception as e:
         print(f"[ERROR] Failed to analyze alert: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
@@ -408,11 +512,90 @@ async def report_decision_outcome(request: OutcomeRequest):
                 detail=f"Feedback already provided for {request.alert_id}. Outcome cannot be changed."
             )
 
-        # Process the outcome feedback
+        # ====================================================================
+        # GAE-3a: Retrieve f(t) from Decision node, apply Hebbian learning
+        #
+        # MATCH (d:Decision {id: $decision_id})
+        # SET d.outcome, d.correct, d.verified_at
+        # RETURN d.factor_vector, d.action, d.confidence
+        # ====================================================================
+        outcome_int   = +1 if request.outcome == "correct" else -1
+        correct_bool  = outcome_int == +1
+        outcome_label = request.outcome   # "correct" | "incorrect"
+
+        gae_result = await neo4j_client.run_query(
+            """
+            MATCH (d:Decision {id: $decision_id})
+            SET d.outcome    = $outcome_label,
+                d.correct    = $correct,
+                d.verified_at = datetime()
+            RETURN d.factor_vector AS factor_vector,
+                   d.action        AS action,
+                   d.confidence    AS confidence
+            """,
+            {
+                "decision_id":  request.decision_id,
+                "outcome_label": outcome_label,
+                "correct":       correct_bool,
+            },
+        )
+
+        if gae_result:
+            record      = gae_result[0]
+            fv          = record.get("factor_vector")
+            action_name = record.get("action", "")
+            confidence_at_decision = float(record.get("confidence") or 0.0)
+
+            if fv is not None:
+                f = np.array(fv, dtype=np.float64).reshape(1, -1)
+                actions      = SOCDomainConfig.get_actions()
+                action_index = actions.index(action_name) if action_name in actions else 0
+
+                learning_state = get_learning_state()
+                wu = learning_state.update(
+                    action_index=action_index,
+                    action_name=action_name,
+                    outcome=outcome_int,
+                    f=f,
+                    confidence_at_decision=confidence_at_decision,
+                )
+                save_learning_state()
+
+                if wu:
+                    delta_norm = float(np.linalg.norm(wu.delta_applied))
+                    print(
+                        f"[GAE] W updated: action={action_name}({action_index}) "
+                        f"outcome={outcome_int:+d} "
+                        f"delta_norm={delta_norm:.4f} "
+                        f"step={learning_state.decision_count}"
+                    )
+        else:
+            print(
+                f"[GAE] Decision node {request.decision_id!r} not found "
+                f"— skipping weight update"
+            )
+
+        # ====================================================================
+        # Emit events (every graph mutation MUST emit events)
+        # ====================================================================
+        await event_bus.emit(OutcomeVerified(
+            alert_id    = request.alert_id,
+            decision_id = request.decision_id,
+            outcome     = outcome_label,
+            correct     = correct_bool,
+        ))
+        await event_bus.emit(GraphMutated(
+            mutation_type     = "outcome",
+            affected_entities = (request.alert_id, request.decision_id),
+        ))
+
+        # ====================================================================
+        # Process trust / pattern / narrative (existing feedback loop)
+        # ====================================================================
         result = process_outcome(
             alert_id=request.alert_id,
             decision_id=request.decision_id,
-            outcome=request.outcome
+            outcome=request.outcome,
         )
 
         print(f"[FEEDBACK] Processed {request.outcome} outcome for {request.alert_id}")

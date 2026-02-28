@@ -470,8 +470,8 @@ def seed_trust_history() -> None:
     )
 
 
-# Seed on module import so trust charts show the asymmetry story at startup
-seed_trust_history()
+# seed_trust_history() is called explicitly from main.py startup_event()
+# so charts are populated once at boot, not on every module import.
 
 
 def reset_trust_state() -> None:

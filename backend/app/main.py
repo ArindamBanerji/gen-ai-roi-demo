@@ -38,7 +38,7 @@ async def health():
     return {"status": "healthy"}
 
 # Router imports
-from app.routers import evolution, triage, soc, metrics, roi, graph, audit
+from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae
 
 # Register routers
 app.include_router(evolution.router, prefix="/api", tags=["Runtime Evolution"])
@@ -48,6 +48,7 @@ app.include_router(metrics.router, prefix="/api", tags=["Compounding Metrics"])
 app.include_router(roi.router, prefix="/api", tags=["ROI Calculator"])
 app.include_router(graph.router, prefix="/api", tags=["Graph Intelligence"])
 app.include_router(audit.router, prefix="/api", tags=["Audit Trail"])
+app.include_router(gae.router, prefix="/api", tags=["GAE Learning"])
 
 # Lifecycle events
 @app.on_event("startup")
@@ -62,21 +63,33 @@ async def startup_event():
     print(f"[DOMAIN] Active domain: {config.display_name} ({config.name})")
     print(f"[DOMAIN] Factors: {len(config.factors)}, Actions: {len(config.actions)}, Situations: {len(config.situation_types)}")
 
+    # Initialize GAE learning state (loads checkpoint or builds fresh W matrix).
+    # Must be done before registering reset handlers so the singleton is ready.
+    from app.services.gae_state import init_learning_state, reset_learning_state
+    ls = init_learning_state()
+    print(f"[GAE] LearningState ready: W.shape={ls.W.shape}, step={ls.decision_count}")
+
     # Register all in-memory reset handlers with state_manager.
     # Both reset endpoints call state_manager.reset_all() — adding a new
     # state store only requires registering it here, not editing every endpoint.
     from app.core.state_manager import state_manager
-    from app.services.feedback import reset_feedback_state, reset_trust_state
+    from app.services.feedback import reset_feedback_state, reset_trust_state, seed_trust_history
     from app.services.policy import reset_policy_state
     from app.services.audit import reset_audit_state
     from app.services.evolver import reset_evolver_state
-    from app.services.triage import reset_confidence_history
+    from app.services.triage import reset_confidence_history, seed_confidence_history
     state_manager.register("feedback",            reset_feedback_state)
     state_manager.register("trust",               reset_trust_state)
     state_manager.register("policy",              reset_policy_state)
     state_manager.register("audit",               reset_audit_state)
     state_manager.register("evolver",             reset_evolver_state)
     state_manager.register("confidence_history",  reset_confidence_history)
+    state_manager.register("learning_state",      reset_learning_state)
+
+    # Pre-populate demo charts (previously done at module import).
+    # Called here so they run once at boot regardless of import order.
+    seed_trust_history()
+    seed_confidence_history()
 
     # Initialize UCL Connector registry (C1).
     # Concrete connectors are registered per build prompt:

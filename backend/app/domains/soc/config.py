@@ -15,6 +15,10 @@ from app.domains.base import (
     DomainConfig, DomainAction, DomainFactor,
     DomainSituationType, DomainPolicy, PromptVariant,
 )
+from app.domains.soc.factors import (
+    TravelMatchFactor, AssetCriticalityFactor, ThreatIntelEnrichmentFactor,
+    PatternHistoryFactor, TimeAnomalyFactor, DeviceTrustFactor,
+)
 from typing import Dict, List
 
 
@@ -327,6 +331,53 @@ class SOCDomainConfig(DomainConfig):
             "mttr_reduction_pct":      75,     # MTTR improved from 12.4 min → 3.1 min
             "backlog_eliminated":      2400,   # alerts no longer waiting for human review
         }
+
+    # =========================================================================
+    # GAE factor computers — all 6 SOC FactorComputer implementations
+    # Reference: docs/soc_copilot_design_v1.md §14
+    # =========================================================================
+
+    @staticmethod
+    def get_actions() -> List[str]:
+        """
+        Four GAE action names in W-matrix row order.
+        Row 0=escalate, 1=investigate, 2=suppress, 3=monitor.
+        Must stay in sync with get_initial_W() row order.
+        """
+        return ["escalate", "investigate", "suppress", "monitor"]
+
+    @staticmethod
+    def get_factor_computers() -> List:
+        """Return ordered list of all 6 SOC FactorComputer instances."""
+        return [
+            TravelMatchFactor(),
+            AssetCriticalityFactor(),
+            ThreatIntelEnrichmentFactor(),
+            PatternHistoryFactor(),
+            TimeAnomalyFactor(),
+            DeviceTrustFactor(),
+        ]
+
+    # =========================================================================
+    # GAE weight matrix and temperature
+    # Reference: docs/soc_copilot_design_v1.md §14
+    # =========================================================================
+
+    @staticmethod
+    def get_initial_W():
+        """Initial weight matrix (4 actions x 6 factors). Security expert priors."""
+        import numpy as np
+        return np.array([
+            # travel  asset  threat  pattern  time  device
+            [ 0.8,   0.9,    0.9,    0.3,    0.4,   0.3],   # escalate
+            [ 0.5,   0.5,    0.7,    0.5,    0.6,   0.5],   # investigate
+            [-0.3,  -0.2,   -0.5,    0.7,   -0.3,  -0.2],   # suppress
+            [ 0.2,   0.3,    0.4,    0.4,    0.3,   0.4],   # monitor
+        ], dtype=np.float64)
+
+    @staticmethod
+    def get_temperature() -> float:
+        return 0.25
 
     # =========================================================================
     # Stubs — extracted in later prompts

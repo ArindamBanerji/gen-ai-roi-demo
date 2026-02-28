@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
-import { getCompoundingMetrics, resetAllDemoData, resetAlerts, reseedDemoData, getAuditDecisions, verifyAuditChain, getWeightHistory, getConfidenceTrajectory, getTrustScores } from '../../lib/api'
+import { getCompoundingMetrics, resetAllDemoData, resetAlerts, reseedDemoData, getAuditDecisions, verifyAuditChain, getWeightHistory, getConfidenceTrajectory, getTrustScores, getGAEConvergence } from '../../lib/api'
 import { domainConfig } from '../../lib/domain'
 import { TrendingUp, Database, Activity, RefreshCw, Clock, DollarSign, TrendingDown, CheckCircle, Calculator, Shield, Download } from 'lucide-react'
 import ROICalculatorModal from '../ROICalculator'
@@ -182,6 +182,18 @@ interface TrustData {
   low_trust_situations: string[]
 }
 
+// GAE-3c: Convergence monitoring
+interface ConvergenceData {
+  decisions: number
+  weight_norm: number
+  stability: number
+  accuracy: number
+  converged: boolean
+  provisional_dimensions: number
+  pending_autonomous: number
+  message: string | null
+}
+
 // F4c: Color palettes for charts
 const VARIANT_COLORS: Record<string, string> = {
   TRAVEL_CONTEXT_v1:    '#94a3b8',
@@ -218,6 +230,10 @@ export default function CompoundingTab() {
   // F6b: Trust Curve state
   const [trustData, setTrustData] = useState<TrustData | null>(null)
   const [trustLoading, setTrustLoading] = useState(false)
+
+  // GAE-3c: Convergence monitoring state
+  const [convergenceData, setConvergenceData] = useState<ConvergenceData | null>(null)
+  const [convergenceLoading, setConvergenceLoading] = useState(false)
 
   // ALL HOOKS MUST BE AT TOP LEVEL - Called unconditionally with safe defaults
   // Uses optional chaining (??) to provide fallback values when data is null
@@ -388,6 +404,23 @@ export default function CompoundingTab() {
 
   useEffect(() => {
     loadTrustData()
+  }, [])
+
+  // GAE-3c: load convergence metrics
+  const loadConvergenceData = async () => {
+    setConvergenceLoading(true)
+    try {
+      const cd = await getGAEConvergence() as ConvergenceData
+      setConvergenceData(cd)
+    } catch (error) {
+      console.error('[CompoundingTab] Failed to load convergence data:', error)
+    } finally {
+      setConvergenceLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadConvergenceData()
   }, [])
 
   if (loading || !data) {
@@ -1242,6 +1275,98 @@ export default function CompoundingTab() {
 
         </div>
       )}
+
+      {/* GAE Convergence Monitor (GAE-3c) */}
+      <div className="bg-slate-900 rounded-lg border border-blue-500/50 shadow-2xl p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <span className="text-blue-400 text-lg">⚡</span>
+              GAE Weight Convergence
+            </h3>
+            <p className="text-sm text-blue-300 font-medium mt-0.5">
+              Hebbian learning — W updated via Eq. 4b with 20:1 asymmetry
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              stability = std(‖W‖₂ last 10 updates) · accuracy = correct% last 20
+            </p>
+          </div>
+          <button
+            onClick={loadConvergenceData}
+            disabled={convergenceLoading}
+            className="flex items-center gap-2 px-3 py-1.5 bg-blue-900/30 hover:bg-blue-800/40 text-blue-300 rounded-lg text-sm font-medium transition-colors border border-blue-700 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${convergenceLoading ? 'animate-spin' : ''}`} />
+            {convergenceLoading ? 'Loading...' : 'Refresh'}
+          </button>
+        </div>
+
+        {convergenceData?.message ? (
+          <div className="py-6 text-center text-gray-400 italic text-sm">
+            {convergenceData.message}
+          </div>
+        ) : convergenceData ? (
+          <>
+            {/* Converged badge */}
+            <div className="flex items-center gap-3 mb-5">
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold ${
+                convergenceData.converged
+                  ? 'bg-green-500/20 text-green-300 border border-green-500/50'
+                  : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/50'
+              }`}>
+                {convergenceData.converged ? '✓ CONVERGED' : '⟳ LEARNING'}
+              </span>
+              <span className="text-xs text-gray-400">
+                {convergenceData.decisions} weight update{convergenceData.decisions !== 1 ? 's' : ''} completed
+              </span>
+            </div>
+
+            {/* 4 metric cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              <div className="bg-slate-800 rounded-lg p-3 text-center border border-slate-700">
+                <div className="text-xs text-gray-400 mb-1 uppercase tracking-wide">Weight Norm</div>
+                <div className="text-2xl font-bold text-blue-300">
+                  {convergenceData.weight_norm.toFixed(2)}
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">‖W‖_F</div>
+              </div>
+              <div className="bg-slate-800 rounded-lg p-3 text-center border border-slate-700">
+                <div className="text-xs text-gray-400 mb-1 uppercase tracking-wide">Stability</div>
+                <div className={`text-2xl font-bold ${convergenceData.stability < 0.05 ? 'text-green-300' : 'text-yellow-300'}`}>
+                  {convergenceData.stability.toFixed(4)}
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">threshold &lt; 0.05</div>
+              </div>
+              <div className="bg-slate-800 rounded-lg p-3 text-center border border-slate-700">
+                <div className="text-xs text-gray-400 mb-1 uppercase tracking-wide">Accuracy</div>
+                <div className={`text-2xl font-bold ${convergenceData.accuracy > 0.80 ? 'text-green-300' : 'text-red-300'}`}>
+                  {Math.round(convergenceData.accuracy * 100)}%
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">last 20 decisions</div>
+              </div>
+              <div className="bg-slate-800 rounded-lg p-3 text-center border border-slate-700">
+                <div className="text-xs text-gray-400 mb-1 uppercase tracking-wide">Decisions</div>
+                <div className="text-2xl font-bold text-purple-300">
+                  {convergenceData.decisions}
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">total updates</div>
+              </div>
+            </div>
+
+            {/* Convergence criterion explanation */}
+            <div className="bg-slate-800/50 rounded-lg px-4 py-3 text-xs text-gray-400 border border-slate-700">
+              <span className="text-gray-300 font-medium">Convergence criterion: </span>
+              stability &lt; 0.05 AND accuracy &gt; 80% →{' '}
+              {convergenceData.converged
+                ? <span className="text-green-300 font-medium">both met — W has stabilised</span>
+                : <span className="text-yellow-300 font-medium">not yet met — continue processing alerts</span>
+              }
+            </div>
+          </>
+        ) : (
+          <div className="py-6 text-center text-gray-500 text-sm">Loading convergence metrics...</div>
+        )}
+      </div>
 
       {/* Evidence Ledger */}
       <div className="bg-white rounded-lg border shadow p-6">

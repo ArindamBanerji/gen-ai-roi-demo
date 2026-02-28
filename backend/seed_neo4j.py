@@ -1348,6 +1348,11 @@ async def seed_data():
     print("  [OK] Behavioral Anomaly alerts created: ALERT-7826, ALERT-7833, ALERT-7838")
     print("  [OK] Cloud/Infrastructure alerts created: ALERT-7827, ALERT-7834")
 
+    # ========================================================================
+    # GAE-2a: Factor-specific seed data
+    # ========================================================================
+    await _seed_gae_factor_data()
+
     print("[SUCCESS] Sample data created successfully!")
     print("\nCreated:")
     print("  - 4 Users (John Smith, Alice Lee, Mike Chen, Mary Chen)")
@@ -1365,6 +1370,11 @@ async def seed_data():
     print("  - 2 Playbooks (PB-LOGIN-FP, PB-PHISH-AUTO)")
     print("  - 3 AlertTypes (anomalous_login, phishing, malware_detection)")
     print("  - 1 SLA (Medium severity, 30 min)")
+    print("  GAE factor data:")
+    print("  - TravelRecord nodes: jsmith(Singapore), rjones(Tokyo), agarcia(London), kpatel(Dubai)")
+    print("  - DataClass nodes + [:STORES] edges: JSMITH, SRV-DB-PROD-01, MARYCHEN, ALEE")
+    print("  - ThreatIntel nodes + [:ASSOCIATED_WITH] edges: ALERT-7824, ALERT-7821, ALERT-7825")
+    print("  - business_hours_login property set on travel/login alerts")
     print("\nReady for demo!")
     print("  - Tab 2: Try processing ALERT-7823")
     print("  - Tab 3: View alert queue - now has 6 alerts")
@@ -1372,6 +1382,201 @@ async def seed_data():
     print("  - ALERT-7824 -> AUTO_REMEDIATE (known phishing campaign)")
 
     await neo4j_client.close()
+
+
+async def _seed_gae_factor_data():
+    """
+    Add GAE factor-specific nodes: TravelRecord, DataClass, ThreatIntel.
+    Also sets business_hours_login property on alerts for TimeAnomalyFactor.
+
+    Called from seed_data() after the main corpus is seeded.
+    """
+    print("\n[GAE] Seeding factor data (TravelRecord, DataClass, ThreatIntel)...")
+
+    # ========================================================================
+    # TravelRecord nodes — required by TravelMatchFactor ([:HAS_TRAVEL])
+    # The existing TravelContext nodes remain; TravelRecord is the new label.
+    # ========================================================================
+
+    await neo4j_client.run_query("""
+        MERGE (u:User {id: 'jsmith@company.com'})
+        MERGE (t:TravelRecord {id: 'TR-JSMITH-SGP-001'})
+        SET t.destination  = 'Singapore',
+            t.start_date   = date('2026-02-05'),
+            t.end_date     = date('2026-02-10'),
+            t.vpn_expected = ['SingTel', 'hotel-vpn']
+        MERGE (u)-[:HAS_TRAVEL]->(t)
+    """)
+
+    await neo4j_client.run_query("""
+        MERGE (u:User {id: 'rjones@company.com'})
+        MERGE (t:TravelRecord {id: 'TR-RJONES-TYO-001'})
+        SET t.destination  = 'Tokyo',
+            t.start_date   = date('2026-02-24'),
+            t.end_date     = date('2026-03-01'),
+            t.vpn_expected = ['NTT', 'hotel-vpn']
+        MERGE (u)-[:HAS_TRAVEL]->(t)
+    """)
+
+    await neo4j_client.run_query("""
+        MERGE (u:User {id: 'agarcia@company.com'})
+        MERGE (t:TravelRecord {id: 'TR-AGARCIA-LON-001'})
+        SET t.destination  = 'London',
+            t.start_date   = date('2026-02-25'),
+            t.end_date     = date('2026-03-04'),
+            t.vpn_expected = ['BT', 'hotel-vpn']
+        MERGE (u)-[:HAS_TRAVEL]->(t)
+    """)
+
+    await neo4j_client.run_query("""
+        MERGE (u:User {id: 'kpatel@company.com'})
+        MERGE (t:TravelRecord {id: 'TR-KPATEL-DXB-001'})
+        SET t.destination  = 'Dubai',
+            t.start_date   = date('2026-02-26'),
+            t.end_date     = date('2026-02-28'),
+            t.vpn_expected = ['hotel-vpn']
+        MERGE (u)-[:HAS_TRAVEL]->(t)
+    """)
+
+    print("  [GAE-OK] TravelRecord nodes: jsmith(Singapore), rjones(Tokyo), agarcia(London), kpatel(Dubai)")
+
+    # ========================================================================
+    # DataClass nodes — required by AssetCriticalityFactor ([:STORES])
+    # ========================================================================
+
+    await neo4j_client.run_query("""
+        MERGE (a:Asset {id: 'LAPTOP-JSMITH'})
+        MERGE (dc:DataClass {id: 'DC-FINANCE-REPORTS'})
+        SET dc.name           = 'Finance Reports',
+            dc.sensitivity    = 'RESTRICTED',
+            dc.classification = 'CONFIDENTIAL'
+        MERGE (a)-[:STORES]->(dc)
+    """)
+
+    await neo4j_client.run_query("""
+        MERGE (a:Asset {id: 'SRV-DB-PROD-01'})
+        MERGE (dc:DataClass {id: 'DC-CUSTOMER-PII'})
+        SET dc.name           = 'Customer PII',
+            dc.sensitivity    = 'PII',
+            dc.classification = 'RESTRICTED'
+        MERGE (a)-[:STORES]->(dc)
+    """)
+
+    await neo4j_client.run_query("""
+        MERGE (a:Asset {id: 'LAPTOP-MARYCHEN'})
+        MERGE (dc:DataClass {id: 'DC-ENG-DOCS'})
+        SET dc.name           = 'Engineering Documentation',
+            dc.sensitivity    = 'INTERNAL',
+            dc.classification = 'INTERNAL'
+        MERGE (a)-[:STORES]->(dc)
+    """)
+
+    await neo4j_client.run_query("""
+        MERGE (a:Asset {id: 'LAPTOP-ALEE'})
+        MERGE (dc:DataClass {id: 'DC-SOURCE-CODE'})
+        SET dc.name           = 'Source Code',
+            dc.sensitivity    = 'CONFIDENTIAL',
+            dc.classification = 'CONFIDENTIAL'
+        MERGE (a)-[:STORES]->(dc)
+    """)
+
+    print("  [GAE-OK] DataClass nodes + [:STORES] edges: JSMITH, SRV-DB-PROD-01, MARYCHEN, ALEE")
+
+    # ========================================================================
+    # ThreatIntel nodes — required by ThreatIntelEnrichmentFactor ([:ASSOCIATED_WITH])
+    # ========================================================================
+
+    # ALERT-7824: DarkHook phishing campaign — 2 corroborating sources
+    await neo4j_client.run_query("""
+        MERGE (ti:ThreatIntel {id: 'TI-DARKHOOK-001'})
+        SET ti.name      = 'DarkHook Phishing Campaign',
+            ti.severity  = 'high',
+            ti.source    = 'pulsedive',
+            ti.ioc_type  = 'domain',
+            ti.ioc_value = 'microsofft-support.com'
+        WITH ti
+        MATCH (a:Alert {id: 'ALERT-7824'})
+        MERGE (ti)-[:ASSOCIATED_WITH]->(a)
+    """)
+
+    await neo4j_client.run_query("""
+        MERGE (ti:ThreatIntel {id: 'TI-DARKHOOK-002'})
+        SET ti.name      = 'DarkHook URL Indicator',
+            ti.severity  = 'high',
+            ti.source    = 'greynoise',
+            ti.ioc_type  = 'url',
+            ti.ioc_value = 'evil-phishing-site.com'
+        WITH ti
+        MATCH (a:Alert {id: 'ALERT-7824'})
+        MERGE (ti)-[:ASSOCIATED_WITH]->(a)
+    """)
+
+    # ALERT-7821: Malware on production server — 1 source
+    await neo4j_client.run_query("""
+        MERGE (ti:ThreatIntel {id: 'TI-MALWARE-001'})
+        SET ti.name      = 'Cobalt Strike Implant Signature',
+            ti.severity  = 'critical',
+            ti.source    = 'health_isac',
+            ti.ioc_type  = 'process',
+            ti.ioc_value = 'csagent.exe'
+        WITH ti
+        MATCH (a:Alert {id: 'ALERT-7821'})
+        MERGE (ti)-[:ASSOCIATED_WITH]->(a)
+    """)
+
+    # ALERT-7825: C2 beacon — 2 corroborating sources
+    await neo4j_client.run_query("""
+        MERGE (ti:ThreatIntel {id: 'TI-C2-001'})
+        SET ti.name      = 'Cobalt Strike C2 Domain',
+            ti.severity  = 'critical',
+            ti.source    = 'cisa_kev',
+            ti.ioc_type  = 'domain',
+            ti.ioc_value = 'cobaltstrike.github.io'
+        WITH ti
+        MATCH (a:Alert {id: 'ALERT-7825'})
+        MERGE (ti)-[:ASSOCIATED_WITH]->(a)
+    """)
+
+    await neo4j_client.run_query("""
+        MERGE (ti:ThreatIntel {id: 'TI-C2-002'})
+        SET ti.name      = 'Known C2 Infrastructure IP',
+            ti.severity  = 'critical',
+            ti.source    = 'greynoise',
+            ti.ioc_type  = 'ip',
+            ti.ioc_value = '10.0.3.15'
+        WITH ti
+        MATCH (a:Alert {id: 'ALERT-7825'})
+        MERGE (ti)-[:ASSOCIATED_WITH]->(a)
+    """)
+
+    print("  [GAE-OK] ThreatIntel nodes + [:ASSOCIATED_WITH] edges: ALERT-7824, ALERT-7821, ALERT-7825")
+
+    # ========================================================================
+    # business_hours_login property — required by TimeAnomalyFactor
+    # True = within business hours (08:00-18:00 Mon-Fri)
+    # False = after hours or weekend
+    # ========================================================================
+
+    bhl_values = [
+        ("ALERT-7823", False),   # 3 AM home timezone — after hours
+        ("ALERT-7824", True),    # 11:30 — business hours
+        ("ALERT-7821", True),    # 09:30 — business hours
+        ("ALERT-7820", True),    # 08:00 — business hours
+        ("ALERT-7819", False),   # 04:20 — after hours
+        ("ALERT-7822", True),    # 10:15 — business hours
+        ("ALERT-7830", False),   # 14:15 UTC = 23:15 Tokyo — after hours
+        ("ALERT-7835", True),    # 10:30 — business hours
+        ("ALERT-7841", False),   # 05:18 — after hours
+        ("ALERT-7845", False),   # 22:30 — after hours
+    ]
+    for alert_id, bhl in bhl_values:
+        await neo4j_client.run_query(
+            "MATCH (a:Alert {id: $id}) SET a.business_hours_login = $bhl",
+            {"id": alert_id, "bhl": bhl},
+        )
+
+    print("  [GAE-OK] business_hours_login property set on 10 alerts")
+    print("[GAE] Factor data seeding complete.")
 
 
 if __name__ == "__main__":

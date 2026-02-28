@@ -160,6 +160,22 @@ export async function getTrustScores() {
 }
 
 // ============================================================================
+// GAE Learning State (3b/3c)
+// ============================================================================
+
+export async function getGAEWeights() {
+  return fetchJSON('/gae/weights')
+}
+
+export async function getGAEHistory(limit: number = 50) {
+  return fetchJSON(`/gae/history?limit=${limit}`)
+}
+
+export async function getGAEConvergence() {
+  return fetchJSON('/gae/convergence')
+}
+
+// ============================================================================
 // ROI Calculator (v2.5)
 // ============================================================================
 

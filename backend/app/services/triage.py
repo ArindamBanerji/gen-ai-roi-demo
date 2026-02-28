@@ -119,8 +119,8 @@ def seed_confidence_history() -> None:
     print(f"[TRIAGE] Seeded {len(_SEED_DATA)} historical confidence snapshots")
 
 
-# Seed on module import so Tab 4 charts are pre-populated at startup
-seed_confidence_history()
+# seed_confidence_history() is called explicitly from main.py startup_event()
+# so charts are populated once at boot, not on every module import.
 
 
 def reset_confidence_history() -> None:
