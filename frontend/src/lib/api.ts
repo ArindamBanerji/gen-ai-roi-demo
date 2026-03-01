@@ -175,6 +175,22 @@ export async function getGAEConvergence() {
   return fetchJSON('/gae/convergence')
 }
 
+export async function getGAEConfidenceTrajectory() {
+  return fetchJSON('/gae/confidence-trajectory')
+}
+
+export async function getGAETrustCurve() {
+  return fetchJSON('/gae/trust-curve')
+}
+
+export async function getGAEBeforeAfter() {
+  return fetchJSON('/gae/before-after')
+}
+
+export async function getGAEWeightEvolution() {
+  return fetchJSON('/gae/weight-evolution')
+}
+
 // ============================================================================
 // ROI Calculator (v2.5)
 // ============================================================================

@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
-from gae.learning import LearningState
+from gae.learning import LearningState, WeightUpdate
 
 log = logging.getLogger(__name__)
 
@@ -41,17 +41,41 @@ def _make_fresh_state() -> LearningState:
 
 
 def _load_from_file() -> LearningState:
-    """Deserialize W matrix from JSON checkpoint."""
+    """Deserialize W matrix and history from JSON checkpoint."""
     with open(_STATE_PATH, "r", encoding="utf-8") as fh:
         data = json.load(fh)
     W = np.array(data["W"], dtype=np.float64)
-    return LearningState(
+    n_a = data["n_actions"]
+    n_f = data["n_factors"]
+    state = LearningState(
         W=W,
-        n_actions=data["n_actions"],
-        n_factors=data["n_factors"],
+        n_actions=n_a,
+        n_factors=n_f,
         factor_names=data["factor_names"],
         decision_count=data.get("decision_count", 0),
     )
+    # Restore WeightUpdate history so chart endpoints have data after restart.
+    history = []
+    for h in data.get("history", []):
+        try:
+            wu = WeightUpdate(
+                decision_number=        h["decision_number"],
+                timestamp=              h["timestamp"],
+                action_index=           h["action_index"],
+                action_name=            h["action_name"],
+                outcome=                h["outcome"],
+                factor_vector=          np.array(h["factor_vector"], dtype=np.float64),
+                delta_applied=          np.array(h["delta_applied"], dtype=np.float64),
+                W_before=               np.zeros((n_a, n_f), dtype=np.float64),
+                W_after=                np.array(h["W_after"], dtype=np.float64),
+                alpha_effective=        h["alpha_effective"],
+                confidence_at_decision= h["confidence_at_decision"],
+            )
+            history.append(wu)
+        except Exception as exc:
+            log.warning("[GAE] Skipping malformed history entry: %s", exc)
+    state.history = history
+    return state
 
 
 # ---------------------------------------------------------------------------
@@ -120,12 +144,27 @@ def save_learning_state() -> None:
     if _learning_state is None:
         return
     _STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    history_data = []
+    for wu in _learning_state.history:
+        history_data.append({
+            "decision_number":        wu.decision_number,
+            "timestamp":              wu.timestamp,
+            "action_index":           wu.action_index,
+            "action_name":            wu.action_name,
+            "outcome":                wu.outcome,
+            "alpha_effective":        wu.alpha_effective,
+            "confidence_at_decision": wu.confidence_at_decision,
+            "factor_vector":          wu.factor_vector.tolist(),
+            "delta_applied":          wu.delta_applied.tolist(),
+            "W_after":                wu.W_after.tolist(),
+        })
     payload = {
         "W":             _learning_state.W.tolist(),
         "n_actions":     _learning_state.n_actions,
         "n_factors":     _learning_state.n_factors,
         "factor_names":  _learning_state.factor_names,
         "decision_count": _learning_state.decision_count,
+        "history":       history_data,
     }
     fd, tmp = tempfile.mkstemp(
         dir=_STATE_PATH.parent, suffix=".tmp", prefix=".gae_"

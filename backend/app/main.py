@@ -69,6 +69,34 @@ async def startup_event():
     ls = init_learning_state()
     print(f"[GAE] LearningState ready: W.shape={ls.W.shape}, step={ls.decision_count}")
 
+    # Warm up all domain config properties.
+    # Iterates every registered domain and touches all @property accessors so
+    # Python initialises any lazy sub-modules now, not on the first API request.
+    # Without this, GET /api/demo/domains can stall 20+ seconds on a cold server
+    # immediately after a demo reset (neo4j reconnect + lazy S2P module init).
+    import time as _time
+    _wu_start = _time.perf_counter()
+    from app.core.domain_registry import _DOMAIN_CONFIGS
+    for _domain_cfg in _DOMAIN_CONFIGS.values():
+        _ = _domain_cfg.factors
+        _ = _domain_cfg.actions
+        _ = _domain_cfg.situation_types
+        _ = _domain_cfg.policies
+        _ = _domain_cfg.asymmetry_ratio
+        _ = _domain_cfg.prompt_variants
+        _ = _domain_cfg.metrics_config
+    _wu_elapsed = _time.perf_counter() - _wu_start
+    print(f"[WARMUP] Domain warm-up complete in {_wu_elapsed:.1f}s")
+
+    # Warm up LLM narrator (pays the ~8s vertexai import cost at boot).
+    # _ensure_init() is idempotent — safe to call multiple times.
+    try:
+        from app.services.reasoning import narrator as _narrator
+        _narrator._ensure_init()
+        print("[WARMUP] LLM narrator initialized")
+    except Exception as _exc:
+        print(f"[WARMUP] LLM narrator init failed (will retry on first request): {_exc}")
+
     # Register all in-memory reset handlers with state_manager.
     # Both reset endpoints call state_manager.reset_all() — adding a new
     # state store only requires registering it here, not editing every endpoint.

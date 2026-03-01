@@ -7,19 +7,30 @@ This is narration, not decision-making.
 """
 import os
 from typing import Dict, Any
-import vertexai
-from vertexai.generative_models import GenerativeModel
 
 
 class ReasoningNarrator:
     """Generates impressive-sounding justifications for rule-based decisions"""
 
     def __init__(self):
-        project_id = os.getenv("PROJECT_ID")
-        region = os.getenv("VERTEX_AI_LOCATION", "us-central1")
+        # Vertex AI SDK import + init deferred to first use via _ensure_init().
+        # `import vertexai` takes ~8s — doing it at module level blocks every
+        # server cold-start.  The startup warm-up calls _ensure_init() once so
+        # the latency is paid at boot, not on the first analyst request.
+        self._initialized: bool = False
+        self.model = None
 
+    def _ensure_init(self) -> None:
+        """Lazy-import Vertex AI and call vertexai.init() exactly once."""
+        if self._initialized:
+            return
+        import vertexai                                        # deferred import
+        from vertexai.generative_models import GenerativeModel
+        project_id = os.getenv("PROJECT_ID")
+        region     = os.getenv("VERTEX_AI_LOCATION", "us-central1")
         vertexai.init(project=project_id, location=region)
         self.model = GenerativeModel("gemini-1.5-pro-002")
+        self._initialized = True
 
     async def generate_reasoning(
         self,
@@ -31,6 +42,7 @@ class ReasoningNarrator:
         Generate a 2-3 sentence SOC analyst justification.
         The decision is already made - this just explains it.
         """
+        self._ensure_init()
 
         # Build prompt with context
         prompt = f"""You are a SOC analyst writing a brief justification for an alert decision.

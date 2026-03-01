@@ -62,6 +62,7 @@ interface AnalysisResult {
     reasoning: string
     pattern_id?: string
     playbook_id?: string
+    decision_id?: string
   }
   graph_data: {
     nodes: GraphNode[]
@@ -1271,7 +1272,7 @@ export default function AlertTriageTab() {
           {closedLoop && selectedAlert && (
             <OutcomeFeedback
               alertId={selectedAlert.id}
-              decisionId={closedLoop.evidence.decision_id}
+              decisionId={analysis?.recommendation?.decision_id || closedLoop.evidence.decision_id}
               isVisible={!!closedLoop}
             />
           )}

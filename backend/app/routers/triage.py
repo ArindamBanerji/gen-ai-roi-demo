@@ -540,11 +540,15 @@ async def report_decision_outcome(request: OutcomeRequest):
             },
         )
 
+        print(f"[GAE] Outcome lookup: decision_id={request.decision_id!r} → {len(gae_result) if gae_result else 0} result(s)")
         if gae_result:
             record      = gae_result[0]
             fv          = record.get("factor_vector")
             action_name = record.get("action", "")
             confidence_at_decision = float(record.get("confidence") or 0.0)
+
+            if fv is None:
+                print(f"[GAE] Decision node found but factor_vector is NULL — skipping weight update")
 
             if fv is not None:
                 f = np.array(fv, dtype=np.float64).reshape(1, -1)
