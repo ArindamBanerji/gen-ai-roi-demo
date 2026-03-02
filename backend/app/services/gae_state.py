@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
-from gae.learning import LearningState, WeightUpdate
+from gae.learning import LearningState, WeightUpdate, CalibrationProfile
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +27,15 @@ _learning_state: LearningState | None = None
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+def _soc_profile() -> CalibrationProfile:
+    """Return the SOC calibration profile (asymmetry 20:1, τ=0.25)."""
+    return CalibrationProfile(
+        learning_rate   = 0.02,
+        penalty_ratio   = 20.0,   # asymmetry_ratio from SOCDomainConfig
+        temperature     = 0.25,   # SOCDomainConfig.get_temperature()
+    )
+
+
 def _make_fresh_state() -> LearningState:
     """Build a LearningState from SOCDomainConfig expert priors."""
     from app.domains.soc.config import SOCDomainConfig
@@ -37,6 +46,7 @@ def _make_fresh_state() -> LearningState:
         n_actions=4,
         n_factors=6,
         factor_names=factor_names,
+        profile=_soc_profile(),
     )
 
 
@@ -53,6 +63,7 @@ def _load_from_file() -> LearningState:
         n_factors=n_f,
         factor_names=data["factor_names"],
         decision_count=data.get("decision_count", 0),
+        profile=_soc_profile(),
     )
     # Restore WeightUpdate history so chart endpoints have data after restart.
     history = []

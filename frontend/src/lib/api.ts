@@ -43,6 +43,10 @@ export async function getThreatLandscape() {
   return fetchJSON('/soc/threat-landscape')
 }
 
+export async function getAttackTacticBreakdown() {
+  return fetchJSON('/soc/attack-tactic-breakdown')
+}
+
 // ============================================================================
 // Tab 2: Runtime Evolution
 // ============================================================================
@@ -112,6 +116,29 @@ export async function resetAlerts() {
 
 export async function getDecisionFactors(alertId: string) {
   return fetchJSON(`/triage/decision-factors/${alertId}`)
+}
+
+// ============================================================================
+// Simulation (SIM-2)
+// ============================================================================
+
+export async function startSimulation(n_decisions: number, speed_ms: number) {
+  return fetchJSON('/simulation/start', {
+    method: 'POST',
+    body: JSON.stringify({ n_decisions, speed_ms }),
+  })
+}
+
+export async function getSimulationProgress(simId: string) {
+  return fetchJSON(`/simulation/progress/${simId}`)
+}
+
+export async function getSimulationResult(simId: string) {
+  return fetchJSON(`/simulation/result/${simId}`)
+}
+
+export async function getSimulationExperimentLog(simId: string) {
+  return fetchJSON(`/simulation/experiment-log/${simId}`)
 }
 
 // ============================================================================

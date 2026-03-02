@@ -266,20 +266,32 @@ async def reset_all_demo_data():
     """
     Comprehensive demo reset - resets ALL demo data to original state.
 
-    Now uses canonical seed data to ensure complete, clean reset every time.
-    This is much simpler and more reliable than selective deletion.
+    Delegates the atomic GAE + Neo4j + audit reset to StateManager.hard_reset()
+    (TD-026), then resets remaining SOC-specific in-memory state via the
+    legacy DemoStateManager so existing frontend behaviour is unchanged.
     """
-    _ensure_backend_on_path()
-    import seed_neo4j                          # backend/seed_neo4j.py (20 alerts, canonical)
+    from app.services.state_manager import StateManager, ResetError
+    from app.services import gae_state, audit as audit_store
+    from app.db.neo4j import neo4j_client
+    from app.core.domain_registry import get_domain_config
     from app.core.state_manager import state_manager
 
-    print("[DEMO RESET] Starting comprehensive demo reset via re-seeding...")
+    print("[DEMO RESET] Starting comprehensive demo reset via StateManager.hard_reset()...")
 
     try:
-        # Re-seed from the canonical top-level script (20 alerts, full F2a corpus)
-        await seed_neo4j.seed_data()
+        # Atomic reset: GAE learning state + Decision nodes deleted + audit chain + re-seed
+        sm = StateManager(
+            learning_state_service=gae_state,
+            audit_store=audit_store,
+            neo4j_service=neo4j_client,
+            domain_config=get_domain_config(),
+        )
+        await sm.hard_reset()
 
-        # Reset all in-memory state (audit, evolver, feedback, policy)
+        # Reset remaining SOC-specific in-memory state (feedback, trust, policy,
+        # evolver, confidence_history).  Learning state and audit are reset again
+        # here (idempotent), which clears the RESET marker — acceptable for this
+        # legacy endpoint whose callers don't inspect the audit chain.
         state_manager.reset_all()
 
         print("[DEMO RESET] Comprehensive reset completed successfully")
@@ -290,6 +302,9 @@ async def reset_all_demo_data():
             "timestamp": datetime.now().isoformat(),
         }
 
+    except ResetError as exc:
+        print(f"[ERROR] Demo reset failed (StateManager): {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
     except Exception as e:
         print(f"[ERROR] Demo reset failed: {e}")
         import traceback

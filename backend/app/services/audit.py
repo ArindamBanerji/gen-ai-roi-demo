@@ -247,6 +247,31 @@ def reset_audit_state() -> None:
     print("[AUDIT] Decision ledger cleared")
 
 
+def record_reset_marker(mode: str) -> None:
+    """
+    Write a RESET sentinel after reset_audit_state() so the next real
+    decision chains off a known anchor, not a silent genesis.
+
+    The marker uses alert_id='__RESET__' so callers can filter it out.
+    Called by StateManager after clearing the ledger.
+    """
+    record: Dict[str, Any] = {
+        "id":                str(uuid4()),
+        "alert_id":          "__RESET__",
+        "timestamp":         datetime.now(timezone.utc).isoformat(),
+        "situation_type":    "system_reset",
+        "action_taken":      f"reset_{mode}",
+        "factors":           [f"mode={mode}"],
+        "confidence":        1.0,
+        "outcome":           None,
+        "analyst_confirmed": False,
+    }
+    previous_hash = _get_previous_hash()
+    record["hash"] = _compute_hash(previous_hash, record)
+    _DECISIONS.append(record)
+    print(f"[AUDIT] RESET marker written (mode={mode})")
+
+
 def verify_chain() -> Dict[str, Any]:
     """
     Walk _DECISIONS in chronological order (insertion order = index 0 first)

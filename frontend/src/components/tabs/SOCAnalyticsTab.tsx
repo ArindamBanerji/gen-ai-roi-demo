@@ -19,7 +19,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { queryMetric, getThreatLandscape } from '../../lib/api'
+import { queryMetric, getThreatLandscape, getAttackTacticBreakdown } from '../../lib/api'
 
 interface MetricContract {
   id: string
@@ -116,11 +116,15 @@ export default function SOCAnalyticsTab() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [threatLandscape, setThreatLandscape] = useState<ThreatLandscape | null>(null)
+  const [tacticBreakdown, setTacticBreakdown] = useState<Array<{tactic: string; count: number}>>([])
 
-  // Fetch threat landscape on mount — non-critical, panel hidden on error
+  // Fetch threat landscape and tactic breakdown on mount
   useEffect(() => {
     getThreatLandscape()
       .then((data) => setThreatLandscape(data as ThreatLandscape))
+      .catch(() => {})
+    getAttackTacticBreakdown()
+      .then((data: any) => setTacticBreakdown(data?.breakdown ?? []))
       .catch(() => {})
   }, [])
 
@@ -273,6 +277,36 @@ export default function SOCAnalyticsTab() {
 
           <div className="mt-4 pt-3 border-t border-gray-800 text-xs text-gray-500 italic">
             "This is what the graph knows before a single query. Your SIEM shows alerts. We show context."
+          </div>
+        </div>
+      )}
+
+      {/* By ATT&CK Tactic — alert distribution across MITRE tactics */}
+      {tacticBreakdown.length > 0 && (
+        <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-800 flex items-center gap-2">
+            <Shield className="w-4 h-4 text-orange-400" />
+            <span className="text-sm font-semibold">By ATT&CK Tactic</span>
+            <span className="ml-auto text-xs text-gray-600">alert distribution</span>
+          </div>
+          <div className="p-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {tacticBreakdown.map(({ tactic, count }) => {
+              const total = tacticBreakdown.reduce((s, t) => s + t.count, 0)
+              const pct = total > 0 ? Math.round((count / total) * 100) : 0
+              return (
+                <div key={tactic} className="bg-soc-bg rounded-lg p-3 border border-gray-700">
+                  <div className="text-xs font-semibold text-orange-300 mb-1 truncate">{tactic}</div>
+                  <div className="text-2xl font-bold text-gray-100">{count}</div>
+                  <div className="mt-1.5 h-1.5 rounded-full bg-gray-700 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-orange-500/70"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">{pct}% of alerts</div>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

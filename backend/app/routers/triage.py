@@ -10,7 +10,7 @@ import uuid
 from app.services.agent import agent
 from app.services.reasoning import narrator
 from app.services.situation import analyze_situation
-from app.services.narrative import generate_narrative
+from app.services.narrative import get_narrative_provider
 from app.services.feedback import process_outcome, get_feedback_status, get_reward_summary
 from app.services.policy import detect_policy_conflicts, get_conflict_history
 from app.services.triage import get_decision_factors, append_confidence_snapshot
@@ -247,8 +247,19 @@ async def analyze_alert(request: ProcessAlertRequest):
         # ====================================================================
         # Build Response — existing structure preserved; gae_scoring added
         # ====================================================================
+        # ATT&CK fields: prefer Neo4j Alert node properties; fall back to
+        # MITRE_ATTACK_MAP via situation_analysis (already populated above).
+        attack_technique = (
+            alert_data.get("mitre_technique") or situation_analysis.mitre_technique
+        )
+        attack_tactic = (
+            alert_data.get("mitre_tactic") or situation_analysis.mitre_tactic
+        )
+
         response = {
             "alert": alert_data,
+            "attack_technique": attack_technique,
+            "attack_tactic":    attack_tactic,
             "analysis": {
                 "root_cause": f"Anomalous {alert_type} from {alert_data.get('source_location', 'unknown location')}",
                 "severity_assessment": f"{alert_data.get('severity', 'medium').upper()} severity based on context"
@@ -286,7 +297,39 @@ async def analyze_alert(request: ProcessAlertRequest):
             "graph_data": graph_data,
             "situation_analysis": situation_analysis.model_dump()
         }
-        response["narrative"] = generate_narrative(response)
+        # ====================================================================
+        # NAR-1: Build calibration_context and generate structured narrative
+        # ====================================================================
+        _ls = get_learning_state()
+        _factor_names_list = [c.name for c in computers]
+        _factors_for_narr  = [
+            {"name": n, "value": v}
+            for n, v in zip(_factor_names_list, fv_list)
+        ]
+        _top_f = (
+            max(_factors_for_narr, key=lambda x: x["value"])
+            if _factors_for_narr else {}
+        )
+        _bot_f = (
+            min(_factors_for_narr, key=lambda x: x["value"])
+            if _factors_for_narr else {}
+        )
+        calibration_context = {
+            "decision_count": _ls.decision_count,
+            "category_count": _ls.decision_count,   # per-category not tracked yet
+            "category":       alert_data.get("alert_type", "unknown"),
+            "top_factor":     _top_f,
+            "bottom_factor":  _bot_f,
+        }
+        _alert_for_narr = {**alert_data, **situation_analysis.model_dump()}
+        _decision_for_narr = {
+            "action":     scoring.selected_action,
+            "confidence": scoring.confidence,
+            "pattern_id": context.get("pattern_id"),
+        }
+        response["narrative"] = get_narrative_provider().generate(
+            _alert_for_narr, _decision_for_narr, _factors_for_narr, calibration_context
+        )
         return response
 
     except HTTPException:

@@ -1353,6 +1353,12 @@ async def seed_data():
     # ========================================================================
     await _seed_gae_factor_data()
 
+    # ========================================================================
+    # SIM-3a: Simulation alert pool (5 categories, 20 alerts)
+    # ========================================================================
+    from app.data.alert_pool import seed_simulation_alerts
+    await seed_simulation_alerts()
+
     print("[SUCCESS] Sample data created successfully!")
     print("\nCreated:")
     print("  - 4 Users (John Smith, Alice Lee, Mike Chen, Mary Chen)")

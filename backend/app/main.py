@@ -38,7 +38,7 @@ async def health():
     return {"status": "healthy"}
 
 # Router imports
-from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae
+from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae, admin, simulation
 
 # Register routers
 app.include_router(evolution.router, prefix="/api", tags=["Runtime Evolution"])
@@ -49,6 +49,8 @@ app.include_router(roi.router, prefix="/api", tags=["ROI Calculator"])
 app.include_router(graph.router, prefix="/api", tags=["Graph Intelligence"])
 app.include_router(audit.router, prefix="/api", tags=["Audit Trail"])
 app.include_router(gae.router, prefix="/api", tags=["GAE Learning"])
+app.include_router(admin.router, prefix="/api", tags=["Admin"])
+app.include_router(simulation.router, prefix="/api", tags=["Simulation"])
 
 # Lifecycle events
 @app.on_event("startup")
@@ -96,6 +98,14 @@ async def startup_event():
         print("[WARMUP] LLM narrator initialized")
     except Exception as _exc:
         print(f"[WARMUP] LLM narrator init failed (will retry on first request): {_exc}")
+
+    # Initialize NarrativeProvider singleton (NAR-1).
+    # Reads NARRATIVE_PROVIDER env var; defaults to "template".
+    import os as _os
+    from app.services.narrative import create_narrative_provider, set_narrative_provider
+    _narr_type = _os.getenv("NARRATIVE_PROVIDER", "template")
+    set_narrative_provider(create_narrative_provider(_narr_type))
+    print(f"[NARRATIVE] Provider initialized: {_narr_type}")
 
     # Register all in-memory reset handlers with state_manager.
     # Both reset endpoints call state_manager.reset_all() — adding a new

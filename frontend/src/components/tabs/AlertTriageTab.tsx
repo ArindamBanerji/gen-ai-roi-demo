@@ -91,6 +91,12 @@ interface AnalysisResult {
     mitre_tactic?: string
   }
   narrative?: string
+  gae_scoring?: {
+    factor_vector: number[]
+    factor_names: string[]
+    action_probabilities: Record<string, number>
+    decision_method: string
+  }
 }
 
 interface ClosedLoopResult {
@@ -167,13 +173,19 @@ interface DecisionFactors {
 }
 
 const MITRE_TECHNIQUE_NAMES: Record<string, string> = {
-  T1078: 'Valid Accounts',
-  T1110: 'Brute Force',
-  T1566: 'Phishing',
-  T1071: 'Application Layer Protocol',
-  T1098: 'Account Manipulation',
-  T1204: 'User Execution',
-  T1048: 'Exfiltration Over Alternative Protocol',
+  'T1078':     'Valid Accounts',
+  'T1078.004': 'Valid Accounts: Cloud Accounts',
+  'T1110':     'Brute Force',
+  'T1566':     'Phishing',
+  'T1566.001': 'Phishing: Spearphishing Attachment',
+  'T1021':     'Remote Services',
+  'T1021.001': 'Remote Services: Remote Desktop Protocol',
+  'T1071':     'Application Layer Protocol',
+  'T1098':     'Account Manipulation',
+  'T1204':     'User Execution',
+  'T1048':     'Exfiltration Over Alternative Protocol',
+  'T1567':     'Exfiltration Over Web Service',
+  'T1486':     'Data Encrypted for Impact',
 }
 
 // F3b — highlight ATT&CK IDs (orange), percentages (green), "calibrated" (blue)
@@ -201,6 +213,31 @@ function highlightNarrative(text: string): React.ReactNode[] {
     parts.push(text.slice(lastIndex))
   }
   return parts
+}
+
+// NAR-2: split narrative into body + calibration sentence
+const CAL_MARKER = 'This recommendation is calibrated from'
+function splitNarrative(text: string): { body: string; calibration: string | null } {
+  const idx = text.indexOf(CAL_MARKER)
+  if (idx === -1) return { body: text, calibration: null }
+  return { body: text.slice(0, idx).trim(), calibration: text.slice(idx).trim() }
+}
+
+// NAR-2: factor attribution helpers
+function computeFactorAttribution(
+  names: string[],
+  vector: number[],
+): { top: { name: string; value: number }; bot: { name: string; value: number } } | null {
+  if (!names.length || !vector.length) return null
+  const paired = names.map((name, i) => ({ name, value: vector[i] ?? 0 }))
+  const top = paired.reduce((a, b) => (a.value >= b.value ? a : b))
+  const bot = paired.reduce((a, b) => (a.value <= b.value ? a : b))
+  return { top, bot }
+}
+
+function formatFactorName(name: string): string {
+  // "TravelMatchFactor" → "Travel Match"
+  return name.replace(/Factor$/, '').replace(/([A-Z])/g, ' $1').trim()
 }
 
 export default function AlertTriageTab() {
@@ -787,6 +824,18 @@ export default function AlertTriageTab() {
                       (Loop 1: Smarter WITHIN this run)
                     </p>
                   </div>
+                  {/* ATT&CK technique badge — prominent in panel header */}
+                  {analysis.situation_analysis.mitre_technique && (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-orange-500/10 border border-orange-500/30 text-orange-300 text-xs font-mono">
+                      <Shield className="w-3 h-3 text-orange-400 shrink-0" />
+                      <span className="font-semibold">{analysis.situation_analysis.mitre_technique}</span>
+                      {MITRE_TECHNIQUE_NAMES[analysis.situation_analysis.mitre_technique] && (
+                        <span className="hidden xl:inline">
+                          {' — '}{MITRE_TECHNIQUE_NAMES[analysis.situation_analysis.mitre_technique]}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1040,7 +1089,7 @@ export default function AlertTriageTab() {
             </div>
           )}
 
-          {/* Investigation Narrative Panel (F3b) */}
+          {/* Investigation Summary Panel (NAR-2) */}
           {analysis?.narrative && (
             <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
               <button
@@ -1049,10 +1098,11 @@ export default function AlertTriageTab() {
                 aria-expanded={narrativeOpen}
               >
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-sm">📝 Investigation Narrative</span>
+                  <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+                  <span className="font-semibold text-sm">Investigation Summary</span>
                   {!narrativeOpen && (
                     <span className="text-xs text-gray-500 italic truncate max-w-xs">
-                      {analysis.narrative.slice(0, 60)}…
+                      {analysis.narrative.slice(0, 64)}…
                     </span>
                   )}
                 </div>
@@ -1062,13 +1112,55 @@ export default function AlertTriageTab() {
                 }
               </button>
 
-              {narrativeOpen && (
-                <div className="px-5 py-4">
-                  <p className="text-sm text-gray-300 leading-relaxed">
-                    {highlightNarrative(analysis.narrative)}
-                  </p>
-                </div>
-              )}
+              {narrativeOpen && (() => {
+                const { body, calibration } = splitNarrative(analysis.narrative!)
+                const factorAttr = analysis.gae_scoring
+                  ? computeFactorAttribution(
+                      analysis.gae_scoring.factor_names,
+                      analysis.gae_scoring.factor_vector,
+                    )
+                  : null
+                return (
+                  <div className="px-5 py-4 space-y-3">
+                    {/* Main narrative body */}
+                    <p className="text-sm text-gray-300 leading-relaxed max-w-3xl">
+                      {highlightNarrative(body)}
+                    </p>
+
+                    {/* Calibration line — visually distinct */}
+                    {calibration && (
+                      <p className="text-xs text-blue-300/70 italic border-l-2 border-blue-500/30 pl-3 max-w-3xl">
+                        {calibration}
+                      </p>
+                    )}
+
+                    {/* Factor attribution */}
+                    {factorAttr && (
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs pt-1 border-t border-gray-800/60">
+                        <span className="text-gray-500">
+                          <span className="text-gray-400">Dominant factor: </span>
+                          <span className="text-green-400 font-medium">
+                            {formatFactorName(factorAttr.top.name)}
+                          </span>
+                          <span className="text-gray-600">
+                            {' '}({(factorAttr.top.value * 100).toFixed(0)}%)
+                          </span>
+                        </span>
+                        <span className="text-gray-700">·</span>
+                        <span className="text-gray-500">
+                          <span className="text-gray-400">Least influential: </span>
+                          <span className="text-gray-500">
+                            {formatFactorName(factorAttr.bot.name)}
+                          </span>
+                          <span className="text-gray-600">
+                            {' '}({(factorAttr.bot.value * 100).toFixed(0)}%)
+                          </span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
           )}
 

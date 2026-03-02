@@ -33,6 +33,7 @@ import {
   TrendingDown, CheckCircle, Calculator, Shield, Download,
 } from 'lucide-react'
 import ROICalculatorModal from '../ROICalculator'
+import SimulationPanel from '../SimulationPanel'
 
 // ============================================================================
 // Custom Hook: Counter Animation
@@ -312,10 +313,13 @@ export default function CompoundingTab() {
   // — early return while seeded metrics load —
   if (loading || !data) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <Activity className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600">Loading compounding metrics...</p>
+      <div className="space-y-6">
+        <SimulationPanel onSimulationComplete={loadGAECharts} />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <Activity className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-600" />
+            <p className="text-gray-600">Loading compounding metrics...</p>
+          </div>
         </div>
       </div>
     )
@@ -384,6 +388,9 @@ export default function CompoundingTab() {
 
   return (
     <div className="space-y-6">
+
+      {/* ── Simulation Panel ────────────────────────────────────────────────── */}
+      <SimulationPanel onSimulationComplete={loadGAECharts} />
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6">

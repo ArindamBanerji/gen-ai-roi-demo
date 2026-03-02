@@ -209,20 +209,44 @@ def classify_soc_situation(
     factors: List[str] = []
 
     # ====================================================================
-    # Rule 1: Travel Login Anomaly
+    # Rule 1: Travel Login Anomaly (anomalous_login, with or without
+    #         confirmed travel context)
+    #
+    # Confirmed travel (user_traveling=True): high confidence (0.94) —
+    #   travel record + VPN/MFA signals corroborate the foreign login.
+    #
+    # No confirmed travel (user_traveling=False): medium confidence (0.65) —
+    #   foreign source_location or off-hours signals still indicate an
+    #   anomalous login that warrants the same playbook.  The lower
+    #   confidence reflects the absent graph-corroborated travel record.
+    #   (Note: SIM-CA alerts have TravelRecord nodes that the security
+    #   context query cannot see due to the TravelContext label split;
+    #   this branch handles that gracefully without hardcoding alert IDs.)
     # ====================================================================
-    if alert_type == "anomalous_login" and context.get("user_traveling", False):
-        factors = [
-            "active_travel_record",
-            f"destination_matches ({context.get('travel_destination', 'Unknown')})",
-        ]
-        if context.get("vpn_matches_location"):
-            factors.append("vpn_location_match")
-        if context.get("mfa_completed"):
-            factors.append("mfa_completed")
-        if context.get("device_fingerprint_match"):
-            factors.append("device_known")
-        return "travel_login_anomaly", 0.94, factors
+    if alert_type == "anomalous_login":
+        if context.get("user_traveling", False):
+            # Confirmed travel — high confidence
+            factors = [
+                "active_travel_record",
+                f"destination_matches ({context.get('travel_destination', 'Unknown')})",
+            ]
+            if context.get("vpn_matches_location"):
+                factors.append("vpn_location_match")
+            if context.get("mfa_completed"):
+                factors.append("mfa_completed")
+            if context.get("device_fingerprint_match"):
+                factors.append("device_known")
+            return "travel_login_anomaly", 0.94, factors
+        else:
+            # No confirmed travel graph record — classify at lower confidence
+            # using available alert signals
+            factors = ["anomalous_login_signal"]
+            if not context.get("mfa_completed", True):
+                factors.append("mfa_not_completed")
+            if not context.get("device_fingerprint_match", True):
+                factors.append("unrecognised_device")
+            factors.append("unconfirmed_travel_context")
+            return "travel_login_anomaly", 0.65, factors
 
     # ====================================================================
     # Rule 2: Known Phishing Campaign

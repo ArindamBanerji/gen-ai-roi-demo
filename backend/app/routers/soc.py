@@ -634,3 +634,38 @@ async def get_threat_landscape():
         },
         "timestamp": datetime.now().isoformat(),
     }
+
+
+# ============================================================================
+# GET /api/soc/attack-tactic-breakdown — Alert counts grouped by MITRE tactic
+# ============================================================================
+
+@router.get("/soc/attack-tactic-breakdown")
+async def get_attack_tactic_breakdown():
+    """
+    Return alert counts grouped by MITRE ATT&CK tactic.
+
+    Queries Alert nodes for their mitre_tactic property (seeded by
+    seed_simulation_alerts).  Falls back to an empty list if Neo4j
+    is unavailable.
+    """
+    breakdown = []
+    try:
+        from app.db.neo4j import neo4j_client
+        results = await neo4j_client.run_query(
+            """
+            MATCH (a:Alert)
+            WHERE a.mitre_tactic IS NOT NULL AND a.mitre_tactic <> ''
+            RETURN a.mitre_tactic AS tactic, count(a) AS count
+            ORDER BY count DESC
+            """,
+            {},
+        )
+        breakdown = [
+            {"tactic": r["tactic"], "count": int(r["count"])}
+            for r in results
+        ]
+    except Exception as exc:
+        print(f"[SOC] attack-tactic-breakdown query failed: {exc}")
+
+    return {"breakdown": breakdown}
