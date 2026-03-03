@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Download,
   X,
+  Heart,
 } from 'lucide-react'
 import type { ROIRequest, ROIResponse, ROIDefaults } from '../types/roi'
 
@@ -98,6 +99,19 @@ async function calculateROI(inputs: ROIRequest): Promise<ROIResponse> {
 }
 
 // ============================================================================
+// Industry Presets
+// ============================================================================
+
+const HEALTHCARE_PRESET = {
+  alerts_per_day: 50,          // minimum valid; ~1,500 alerts/month small SOC
+  analysts: 12,
+  avg_salary: 95000,
+  current_mttr_minutes: 25,
+  current_auto_close_pct: 0.20,
+  avg_escalation_cost: 250,    // higher due to HIPAA compliance overhead
+}
+
+// ============================================================================
 // Main Component
 // ============================================================================
 
@@ -107,6 +121,9 @@ interface ROICalculatorModalProps {
 }
 
 export default function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps) {
+  // Active preset (name of selected preset, or null for custom)
+  const [activePreset, setActivePreset] = useState<string | null>(null)
+
   // Input state
   const [inputs, setInputs] = useState<ROIRequest>({
     alerts_per_day: 500,
@@ -215,8 +232,16 @@ export default function ROICalculatorModal({ isOpen, onClose }: ROICalculatorMod
     }, 300)
   }, [])
 
-  // Handle input changes
+  // Apply an industry preset
+  const applyPreset = (preset: ROIRequest, name: string) => {
+    setActivePreset(name)
+    setInputs(preset)
+    triggerCalculation(preset)
+  }
+
+  // Handle input changes (clears active preset — user is now customizing)
   const updateInput = <K extends keyof ROIRequest>(key: K, value: ROIRequest[K]) => {
+    setActivePreset(null)
     const newInputs = { ...inputs, [key]: value }
     setInputs(newInputs)
     triggerCalculation(newInputs)
@@ -267,6 +292,31 @@ export default function ROICalculatorModal({ isOpen, onClose }: ROICalculatorMod
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
             {/* LEFT COLUMN - Inputs */}
             <div className="space-y-6">
+              {/* Industry Presets */}
+              <div>
+                <div className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
+                  Quick Presets
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => applyPreset(HEALTHCARE_PRESET, 'healthcare')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                      activePreset === 'healthcare'
+                        ? 'bg-rose-500/20 border-rose-500/50 text-rose-300'
+                        : 'bg-slate-800 border-slate-600 text-slate-300 hover:border-rose-500/40 hover:text-rose-300'
+                    }`}
+                  >
+                    <Heart className="w-3 h-3" />
+                    Healthcare
+                  </button>
+                </div>
+                {activePreset === 'healthcare' && (
+                  <p className="mt-2 text-xs text-slate-500 leading-relaxed">
+                    ~1,500 alerts/month · HIPAA avg $50K/incident · PHI breach avg $150/record
+                  </p>
+                )}
+              </div>
+
               <div>
                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                   <Users className="w-5 h-5 text-blue-400" />
@@ -427,7 +477,7 @@ export default function ROICalculatorModal({ isOpen, onClose }: ROICalculatorMod
                   Projected Impact
                 </h3>
 
-                {error && (
+                {error && !result && (
                   <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-4">
                     <div className="flex items-center gap-2 text-red-400">
                       <AlertCircle className="w-5 h-5" />

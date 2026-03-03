@@ -41,7 +41,8 @@ _ORACLE_SUCCESS_RATES: Dict[str, float] = {
     "lateral_movement":   0.65,
     "data_exfiltration":  0.70,
     "insider_threat":     0.55,
-    # Legacy alert_type fallbacks (used when category is not one of the 5 above)
+    "healthcare":         0.65,
+    # Legacy alert_type fallbacks (used when category is not one of the 6 above)
     "anomalous_login":    0.85,
     "phishing":           0.90,
     "malware":            0.80,
@@ -63,6 +64,7 @@ _ATTACK_TECHNIQUES: Dict[str, str] = {
     "lateral_movement":     "T1021 - Remote Services",
     "data_exfiltration":    "T1048 - Exfiltration Over Alternative Protocol",
     "insider_threat":       "T1078.004 - Valid Accounts: Cloud Accounts",
+    "healthcare":           "T1530 - Data from Cloud Storage Object",
     # Legacy alert_type fallbacks
     "anomalous_login":      "T1078 - Valid Accounts",
     "phishing":             "T1566 - Phishing",

@@ -30,6 +30,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   lateral_movement:   '#f97316',   // orange
   data_exfiltration:  '#ef4444',   // red
   insider_threat:     '#8b5cf6',   // purple
+  healthcare:         '#ec4899',   // pink
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -38,12 +39,14 @@ const CATEGORY_LABELS: Record<string, string> = {
   lateral_movement:   'Lateral Movement',
   data_exfiltration:  'Data Exfiltration',
   insider_threat:     'Insider Threat',
+  healthcare:         'Healthcare',
 }
 
 // Round-robin order matches alert_pool.py interleaving
 const CAT_ORDER = [
   'credential_access', 'threat_intel_match',
   'lateral_movement',  'data_exfiltration', 'insider_threat',
+  'healthcare',
 ]
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -494,7 +497,7 @@ export default function SimulationPanel({ onSimulationComplete }: SimulationPane
               <div className="text-xs text-slate-400 uppercase tracking-wider mb-3">
                 Per-Category Results
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 {CAT_ORDER.map(cat => {
                   const acc = result.category_accuracy[cat]
                   const gt  = result.category_ground_truth[cat]

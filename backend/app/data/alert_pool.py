@@ -1,5 +1,5 @@
 """
-SIM-3a: Expanded simulation alert pool — 5 categories, 20 alerts.
+SIM-3a/HC: Expanded simulation alert pool — 6 categories, 25 alerts.
 
 Categories and their GAE factor signatures:
   credential_access   — TravelMatchFactor HIGH, TimeAnomaly HIGH, DeviceTrust LOW
@@ -7,6 +7,7 @@ Categories and their GAE factor signatures:
   lateral_movement    — DeviceTrust LOW, AssetCriticality CRITICAL, TimeAnomaly HIGH
   data_exfiltration   — AssetCriticality+DataClass HIGH, TimeAnomaly HIGH
   insider_threat      — DeviceTrust HIGH (trusted insider paradox), AssetCriticality HIGH
+  healthcare          — PHI/Medical device alerts; 5 alerts, oracle_rate=0.65
 
 Oracle success rates reflect how reliably GAE selects the optimal action per category.
 """
@@ -58,6 +59,14 @@ ALERT_CATEGORIES: Dict[str, Dict[str, Any]] = {
         "alert_type":          "insider_threat",
         # Trusted insider: cannot escalate without evidence; investigate first.
         "ground_truth_action": "investigate",
+    },
+    "healthcare": {
+        "display":             "Healthcare — PHI / Medical Device",
+        "oracle_success_rate": 0.65,
+        "attack_technique":    "T1530 - Data from Cloud Storage Object",
+        # Representative type; each HC alert carries its own alert_type + ground_truth_action.
+        "alert_type":          "phi_access_anomaly",
+        "ground_truth_action": "escalate",
     },
 }
 
@@ -251,7 +260,63 @@ _IT: List[Dict[str, Any]] = [
     },
 ]
 
-# Interleaved: one per category per round → 5 categories × 4 rounds = 20 alerts.
+_HC: List[Dict[str, Any]] = [
+    # HC-001: PHI access anomaly — nurse, off-hours, no MFA, unknown device (T1530)
+    {
+        "alert_id": "SIM-HC-001", "id": "SIM-HC-001",
+        "alert_type": "phi_access_anomaly", "category": "healthcare",
+        "user_id": "sim-hc-nurse@hospital.org", "source_location": "Internal",
+        "business_hours_login": False, "weekend_login": False,
+        "mfa_completed": False,  "device_fingerprint_match": False,
+        "vpn_provider": None,
+        "ground_truth_action": "escalate",   # PHI exfil risk → escalate
+    },
+    # HC-002: Medical device network scan — T1046, may be scheduled → investigate first
+    {
+        "alert_id": "SIM-HC-002", "id": "SIM-HC-002",
+        "alert_type": "medical_device_scan", "category": "healthcare",
+        "user_id": "sim-hc-labtech@hospital.org", "source_location": "Internal",
+        "business_hours_login": True,  "weekend_login": False,
+        "mfa_completed": False,  "device_fingerprint_match": False,
+        "vpn_provider": None,
+        "ground_truth_action": "investigate",  # could be benign scheduled scan
+    },
+    # HC-003: Health-ISAC IOC match — T1071, confirmed TI source → escalate
+    {
+        "alert_id": "SIM-HC-003", "id": "SIM-HC-003",
+        "alert_type": "threat_intel_match", "category": "healthcare",
+        "user_id": "sim-hc-admin@hospital.org", "source_location": "External",
+        "business_hours_login": True,  "weekend_login": False,
+        "mfa_completed": True,   "device_fingerprint_match": True,
+        "vpn_provider": "corporate-vpn",
+        "ground_truth_action": "escalate",   # confirmed Health-ISAC IOC → escalate
+    },
+    # HC-004: Credential stuffing on patient portal — T1110, weekend / external
+    {
+        "alert_id": "SIM-HC-004", "id": "SIM-HC-004",
+        "alert_type": "credential_stuffing", "category": "healthcare",
+        "user_id": "sim-hc-admin@hospital.org", "source_location": "External",
+        "business_hours_login": False, "weekend_login": True,
+        "mfa_completed": False,  "device_fingerprint_match": False,
+        "vpn_provider": None,
+        "ground_truth_action": "escalate",   # active brute-force on portal → escalate
+    },
+    # HC-005: Lateral movement workstation → EHR server — T1021, off-hours
+    {
+        "alert_id": "SIM-HC-005", "id": "SIM-HC-005",
+        "alert_type": "lateral_movement", "category": "healthcare",
+        "user_id": "sim-hc-admin@hospital.org", "source_location": "Internal",
+        "business_hours_login": False, "weekend_login": False,
+        "mfa_completed": False,  "device_fingerprint_match": False,
+        "vpn_provider": None,
+        "ground_truth_action": "escalate",   # EHR lateral movement → escalate
+    },
+]
+
+# Interleaved: one per category per round.
+# Original 5 categories × 4 rounds = 20 alerts.
+# Healthcare has 5 alerts: rounds 0-3 add 1 HC alert each; round 4 adds HC-005 only.
+# Total: 5 categories × 4 + 1 healthcare × 5 = 25 alerts.
 # Round-robin at step % 20 cycles credential_access → threat_intel_match →
 # lateral_movement → data_exfiltration → insider_threat → repeat, advancing
 # within each category on each full cycle.
@@ -262,13 +327,18 @@ _CATEGORY_ORDER = [
     ("lateral_movement",   _LM),
     ("data_exfiltration",  _DE),
     ("insider_threat",     _IT),
+    ("healthcare",         _HC),
 ]
 ALERT_POOL: List[Dict[str, Any]] = []
-for _i in range(4):
+_max_rounds = max(len(_cat_list) for _, _cat_list in _CATEGORY_ORDER)
+for _i in range(_max_rounds):
     for _cat_name, _cat_list in _CATEGORY_ORDER:
-        _entry = dict(_cat_list[_i])
-        _entry["ground_truth_action"] = ALERT_CATEGORIES[_cat_name]["ground_truth_action"]
-        ALERT_POOL.append(_entry)
+        if _i < len(_cat_list):
+            _entry = dict(_cat_list[_i])
+            # Per-alert ground_truth takes priority; fall back to category default.
+            if "ground_truth_action" not in _entry:
+                _entry["ground_truth_action"] = ALERT_CATEGORIES[_cat_name]["ground_truth_action"]
+            ALERT_POOL.append(_entry)
 
 
 # ---------------------------------------------------------------------------
@@ -276,7 +346,7 @@ for _i in range(4):
 # ---------------------------------------------------------------------------
 
 def get_alert_pool() -> List[Dict[str, Any]]:
-    """Return the canonical simulation alert pool (20 alerts, 4 per category)."""
+    """Return the canonical simulation alert pool (25 alerts: 4 per original category + 5 healthcare)."""
     return list(ALERT_POOL)
 
 
@@ -297,6 +367,8 @@ async def seed_simulation_alerts() -> None:
       lateral_movement   → User (service account), Asset (CRITICAL server), Alert nodes
       data_exfiltration  → User, Asset + DataClass + STORES (PII), Alert nodes
       insider_threat     → User, Asset + DataClass + STORES (RESTRICTED), Alert nodes
+      healthcare (HC-2)  → 3 Users, 3 Assets (EHR CRITICAL), PHI DataClass,
+                           Health-ISAC ThreatIntel, 5 Alert nodes
 
     All Alert nodes include the properties read by TimeAnomalyFactor and
     DeviceTrustFactor directly (business_hours_login, weekend_login,
@@ -304,7 +376,7 @@ async def seed_simulation_alerts() -> None:
     """
     from app.db.neo4j import neo4j_client
 
-    print("\n[SIM-3a] Seeding simulation alerts (20 alerts, 5 categories)...")
+    print("\n[SIM-3a] Seeding simulation alerts (25 alerts, 6 categories)...")
 
     # -----------------------------------------------------------------------
     # Users
@@ -728,4 +800,191 @@ async def seed_simulation_alerts() -> None:
         """, {"type_id": type_id, "ids": ids})
     print("  [SIM-FIX-2] [:CLASSIFIED_AS] edges merged for all 20 SIM alerts")
 
-    print("[SIM-3a] Simulation alert seeding complete — 20 alerts across 5 categories.")
+    print("[SIM-3a] Original simulation alert seeding complete — 20 alerts across 5 categories.")
+
+    # -----------------------------------------------------------------------
+    # HC-2: Healthcare seed data
+    # -----------------------------------------------------------------------
+    print("\n[HC-2] Seeding healthcare alerts (5 alerts)...")
+
+    # Users
+    await neo4j_client.run_query("""
+        MERGE (u:User {id: 'sim-hc-nurse@hospital.org'})
+        SET u.name = 'SIM HC Nurse', u.department = 'Nursing',
+            u.title = 'RN', u.risk_score = 0.3, u.is_privileged = false
+    """)
+    await neo4j_client.run_query("""
+        MERGE (u:User {id: 'sim-hc-labtech@hospital.org'})
+        SET u.name = 'SIM HC Lab Tech', u.department = 'Laboratory',
+            u.title = 'Lab Technician', u.risk_score = 0.25, u.is_privileged = false
+    """)
+    await neo4j_client.run_query("""
+        MERGE (u:User {id: 'sim-hc-admin@hospital.org'})
+        SET u.name = 'SIM HC Admin', u.department = 'Radiology',
+            u.title = 'Systems Administrator', u.risk_score = 0.4, u.is_privileged = true
+    """)
+    print("  [HC-2] Healthcare users created (3)")
+
+    # Assets
+    await neo4j_client.run_query("""
+        MERGE (a:Asset {id: 'SIM-ASSET-HC-EHR'})
+        SET a.hostname = 'SIM-ASSET-HC-EHR', a.type = 'server',
+            a.criticality = 'critical', a.business_unit = 'Clinical',
+            a.os = 'RHEL 8', a.owner_id = 'sim-hc-admin@hospital.org'
+    """)
+    await neo4j_client.run_query("""
+        MERGE (a:Asset {id: 'SIM-ASSET-HC-MEDDEV'})
+        SET a.hostname = 'SIM-ASSET-HC-MEDDEV', a.type = 'medical_device',
+            a.criticality = 'high', a.business_unit = 'Laboratory',
+            a.os = 'Embedded', a.owner_id = 'sim-hc-labtech@hospital.org'
+    """)
+    await neo4j_client.run_query("""
+        MERGE (a:Asset {id: 'SIM-ASSET-HC-PORTAL'})
+        SET a.hostname = 'SIM-ASSET-HC-PORTAL', a.type = 'web_application',
+            a.criticality = 'high', a.business_unit = 'Patient Services',
+            a.os = 'Ubuntu 22.04', a.owner_id = 'sim-hc-admin@hospital.org'
+    """)
+    print("  [HC-2] Healthcare assets created (3: EHR critical, MedDev high, Portal high)")
+
+    # PHI DataClass on EHR server
+    await neo4j_client.run_query("""
+        MERGE (a:Asset {id: 'SIM-ASSET-HC-EHR'})
+        MERGE (dc:DataClass {id: 'DC-SIM-HC-PHI'})
+        SET dc.name           = 'Patient Health Information (PHI)',
+            dc.sensitivity    = 'PHI',
+            dc.classification = 'RESTRICTED'
+        MERGE (a)-[:STORES]->(dc)
+    """)
+    print("  [HC-2] PHI DataClass + [:STORES] on SIM-ASSET-HC-EHR")
+
+    # Alert nodes (SIM-HC-001..005) — created before ThreatIntel ASSOCIATED_WITH
+    _hc_alert_rows = [
+        ("SIM-HC-001", "phi_access_anomaly",  "sim-hc-nurse@hospital.org",
+         "SIM-ASSET-HC-EHR",    "10.1.5.22",    "Internal",
+         False, False, False, False, "T1530",  "Collection",         "critical",
+         "Off-hours PHI record access by nursing staff account"),
+        ("SIM-HC-002", "medical_device_scan",  "sim-hc-labtech@hospital.org",
+         "SIM-ASSET-HC-MEDDEV", "10.1.3.44",    "Internal",
+         True,  False, False, False, "T1046",  "Discovery",          "high",
+         "Network scan originating from medical device segment"),
+        ("SIM-HC-003", "threat_intel_match",   "sim-hc-admin@hospital.org",
+         "SIM-ASSET-HC-EHR",    "198.51.100.99","External",
+         True,  False, True,  True,  "T1071",  "Command and Control","critical",
+         "Health-ISAC feed match: C2 domain contacted from EHR network"),
+        ("SIM-HC-004", "credential_stuffing",  "sim-hc-admin@hospital.org",
+         "SIM-ASSET-HC-PORTAL", "203.0.113.55", "External",
+         False, True,  False, False, "T1110",  "Credential Access",  "high",
+         "High-rate failed logins on patient portal from external IP"),
+        ("SIM-HC-005", "lateral_movement",    "sim-hc-admin@hospital.org",
+         "SIM-ASSET-HC-EHR",    "10.1.2.88",    "Internal",
+         False, False, False, False, "T1021",  "Lateral Movement",   "critical",
+         "Lateral movement from workstation to EHR server via RDP"),
+    ]
+    for (aid, atype, uid, asset_id, src_ip, location,
+         biz_hours, weekend, mfa, fingerprint, technique, tactic, severity, desc
+         ) in _hc_alert_rows:
+        await neo4j_client.run_query("""
+            MERGE (alert:Alert {id: $id})
+            SET alert.alert_type               = $alert_type,
+                alert.severity                 = $severity,
+                alert.source_ip                = $source_ip,
+                alert.source_location          = $location,
+                alert.timestamp                = datetime(),
+                alert.description              = $description,
+                alert.asset_id                 = $asset_id,
+                alert.user_id                  = $uid,
+                alert.status                   = 'pending',
+                alert.mfa_completed            = $mfa,
+                alert.device_fingerprint_match = $fingerprint,
+                alert.business_hours_login     = $biz_hours,
+                alert.weekend_login            = $weekend,
+                alert.mitre_technique          = $technique,
+                alert.mitre_tactic             = $tactic,
+                alert.demo_priority            = 3
+            WITH alert
+            MATCH (asset:Asset {id: $asset_id})
+            MATCH (user:User   {id: $uid})
+            MERGE (alert)-[:DETECTED_ON]->(asset)
+            MERGE (alert)-[:INVOLVES]->(user)
+        """, {
+            "id": aid, "alert_type": atype, "uid": uid, "asset_id": asset_id,
+            "source_ip": src_ip, "location": location,
+            "biz_hours": biz_hours, "weekend": weekend,
+            "mfa": mfa, "fingerprint": fingerprint,
+            "technique": technique, "tactic": tactic,
+            "severity": severity, "description": desc,
+        })
+    print("  [HC-2] Healthcare alert nodes created (SIM-HC-001..005)")
+
+    # AlertType nodes for new healthcare-specific types
+    for at_id, at_name, at_desc, at_severity, at_mitre in [
+        ("phi_access_anomaly",
+         "PHI Access Anomaly",
+         "Unauthorized or anomalous access to protected health information",
+         "critical", "T1530"),
+        ("medical_device_scan",
+         "Medical Device Network Scan",
+         "Network reconnaissance targeting medical device segment",
+         "high", "T1046"),
+        ("credential_stuffing",
+         "Credential Stuffing",
+         "High-rate automated credential attempts on patient portal",
+         "high", "T1110"),
+        ("lateral_movement",
+         "Lateral Movement",
+         "Unauthorized lateral movement between internal systems",
+         "critical", "T1021"),
+    ]:
+        await neo4j_client.run_query("""
+            MERGE (at:AlertType {id: $id})
+            SET at.name            = $name,
+                at.description     = $desc,
+                at.severity        = $severity,
+                at.mitre_technique = $mitre
+        """, {"id": at_id, "name": at_name, "desc": at_desc,
+              "severity": at_severity, "mitre": at_mitre})
+    print("  [HC-2] AlertType nodes merged (4 new healthcare types: phi, meddev, cred-stuffing, lateral)")
+
+    # Health-ISAC ThreatIntel for SIM-HC-003 (alert node must exist first)
+    await neo4j_client.run_query("""
+        MERGE (ti:ThreatIntel {id: 'TI-SIM-HC-ISAC-001'})
+        SET ti.name      = 'Health-ISAC IOC — Ransomware C2',
+            ti.severity  = 'critical',
+            ti.source    = 'health_isac',
+            ti.ioc_type  = 'domain',
+            ti.ioc_value = 'hc-ransom-c2.evil'
+        WITH ti
+        MATCH (a:Alert {id: 'SIM-HC-003'})
+        MERGE (ti)-[:ASSOCIATED_WITH]->(a)
+    """)
+    await neo4j_client.run_query("""
+        MERGE (ti:ThreatIntel {id: 'TI-SIM-HC-ISAC-002'})
+        SET ti.name      = 'Health-ISAC IOC — Exfil IP',
+            ti.severity  = 'high',
+            ti.source    = 'health_isac',
+            ti.ioc_type  = 'ip',
+            ti.ioc_value = '203.0.113.99'
+        WITH ti
+        MATCH (a:Alert {id: 'SIM-HC-003'})
+        MERGE (ti)-[:ASSOCIATED_WITH]->(a)
+    """)
+    print("  [HC-2] Health-ISAC ThreatIntel + [:ASSOCIATED_WITH]: SIM-HC-003 (2 sources)")
+
+    # [:CLASSIFIED_AS] edges
+    _hc_classified = {
+        "SIM-HC-001": "phi_access_anomaly",
+        "SIM-HC-002": "medical_device_scan",
+        "SIM-HC-003": "threat_intel_match",
+        "SIM-HC-004": "credential_stuffing",
+        "SIM-HC-005": "lateral_movement",
+    }
+    for alert_id, type_id in _hc_classified.items():
+        await neo4j_client.run_query("""
+            MATCH (at:AlertType {id: $type_id})
+            MATCH (alert:Alert  {id: $alert_id})
+            MERGE (alert)-[:CLASSIFIED_AS]->(at)
+        """, {"type_id": type_id, "alert_id": alert_id})
+    print("  [HC-2] [:CLASSIFIED_AS] edges merged for SIM-HC-001..005")
+
+    print("[HC-2] Healthcare seed complete — 5 alerts, 3 users, 3 assets, PHI DataClass, Health-ISAC ThreatIntel.")
+    print("[SIM-3a+HC] Simulation alert seeding complete — 25 alerts across 6 categories.")
