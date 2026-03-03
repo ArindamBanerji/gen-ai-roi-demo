@@ -436,11 +436,27 @@ async def execute_action(request: ProcessAlertRequest):
             }
         )
 
+        # Emit events — every graph write MUST emit events (TD-020)
+        await event_bus.emit(DecisionMade(
+            alert_id      = alert_id,
+            action        = decision.action,
+            confidence    = decision.confidence,
+            factor_vector = (),  # rule-based path; no GAE factor vector here
+        ))
+        await event_bus.emit(GraphMutated(
+            mutation_type     = "decision",
+            affected_entities = (alert_id,),
+        ))
+
         # Update alert status in Neo4j
         await neo4j_client.run_query(
             "MATCH (alert:Alert {id: $alert_id}) SET alert.status = 'resolved'",
             {"alert_id": alert_id}
         )
+        await event_bus.emit(GraphMutated(
+            mutation_type     = "alert_status",
+            affected_entities = (alert_id,),
+        ))
 
         # ====================================================================
         # Step 4: KPI IMPACT - Calculate metrics impact

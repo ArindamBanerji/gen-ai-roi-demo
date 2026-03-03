@@ -90,6 +90,23 @@ interface ProcessResult {
       missed_threats: number
     }
   }
+  gae_scoring?: {
+    decision_id: string
+    factor_vector: number[]
+    factor_names: string[]
+    action_probabilities: Record<string, number>
+    softmax_sum: number
+    temperature: number
+    low_confidence: boolean
+    ambiguous: boolean
+    decision_method: string
+  }
+  gae_summary?: {
+    decision_count: number
+    w_norms: Record<string, number>
+    factor_names: string[]
+    has_real_data: boolean
+  }
 }
 
 interface RewardSummary {
@@ -223,11 +240,12 @@ export default function RuntimeEvolutionTab() {
 
       {/* Deployment Registry */}
       <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-800">
+        <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
           <h3 className="font-semibold flex items-center gap-2">
             <Shield className="w-4 h-4" />
             Deployment Registry
           </h3>
+          <span className="text-xs text-gray-600 italic">demo deployment</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -508,6 +526,54 @@ export default function RuntimeEvolutionTab() {
                   {result.decision_trace.reasoning}
                 </p>
               </div>
+
+              {/* GAE Scoring breakdown */}
+              {result.gae_scoring && (
+                <div className="p-4 bg-soc-bg rounded border border-soc-secondary/30">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-sm font-semibold text-soc-secondary">GAE Scoring</span>
+                    <span className="px-1.5 py-0.5 bg-soc-secondary/20 text-soc-secondary text-xs rounded font-mono">
+                      softmax(f·Wᵀ / τ={result.gae_scoring.temperature})
+                    </span>
+                  </div>
+                  {/* Factor vector bars */}
+                  <div className="space-y-1.5 mb-3">
+                    {result.gae_scoring.factor_names.map((name, i) => (
+                      <div key={name} className="flex items-center gap-2 text-xs">
+                        <div className="w-32 text-gray-400 truncate capitalize">
+                          {name.replace(/_/g, ' ')}
+                        </div>
+                        <div className="flex-1 bg-gray-800 rounded-full h-1.5">
+                          <div
+                            className="bg-soc-secondary h-1.5 rounded-full transition-all"
+                            style={{ width: `${(result.gae_scoring!.factor_vector[i] * 100).toFixed(0)}%` }}
+                          />
+                        </div>
+                        <div className="w-10 text-right text-gray-400 font-mono">
+                          {result.gae_scoring.factor_vector[i].toFixed(2)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Action probabilities */}
+                  <div className="flex gap-2 flex-wrap">
+                    {Object.entries(result.gae_scoring.action_probabilities)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([action, prob]) => (
+                        <span
+                          key={action}
+                          className={`px-2 py-0.5 rounded text-xs font-mono ${
+                            action === result.decision_trace.action_taken
+                              ? 'bg-soc-secondary/30 text-soc-secondary font-bold ring-1 ring-soc-secondary/50'
+                              : 'bg-gray-800 text-gray-400'
+                          }`}
+                        >
+                          {action}: {(prob * 100).toFixed(1)}%
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -591,12 +657,47 @@ export default function RuntimeEvolutionTab() {
                     </span>
                   </div>
 
-                  <p className="text-sm text-gray-300 mb-4">
+                  <p className="text-sm text-gray-300 mb-3">
                     Loop 2: Prompt variants track performance across decisions. Better variants get promoted automatically.
                   </p>
 
+                  {/* GAE Learning State — real data strip */}
+                  {result.gae_summary && (
+                    <div className="mb-4 p-3 bg-purple-950/30 rounded border border-purple-500/20 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 text-sm min-w-0">
+                        <Activity className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                        {result.gae_summary.decision_count === 0 ? (
+                          <span className="text-gray-500 text-xs">
+                            W matrix at initialization — submit outcomes in Tab 3 to evolve weights
+                          </span>
+                        ) : (
+                          <span className="text-xs">
+                            <span className="font-bold text-purple-300">
+                              {result.gae_summary.decision_count}
+                            </span>
+                            <span className="text-gray-400"> GAE weight update{result.gae_summary.decision_count !== 1 ? 's' : ''} applied</span>
+                          </span>
+                        )}
+                      </div>
+                      {result.gae_summary.has_real_data && (
+                        <div className="flex gap-3 flex-shrink-0">
+                          {Object.entries(result.gae_summary.w_norms).map(([action, norm]) => (
+                            <div key={action} className="text-center">
+                              <div className="text-xs font-mono text-purple-300">{norm.toFixed(2)}</div>
+                              <div className="text-xs text-gray-600 capitalize">{action.slice(0, 3)}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Variant Comparison */}
                   <div className="space-y-3 mb-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-gray-500 uppercase tracking-wide">Variant performance</span>
+                      <span className="text-xs text-gray-600 italic">demo data — live tracking in v5.0</span>
+                    </div>
                     {result.prompt_evolution.previous_variant && (
                       <div>
                         <div className="flex items-center justify-between mb-1">
@@ -667,8 +768,11 @@ export default function RuntimeEvolutionTab() {
                       <div className="flex items-start gap-2">
                         <Lightbulb className="w-4 h-4 text-purple-300 mt-0.5 flex-shrink-0" />
                         <div>
-                          <div className="text-xs font-semibold text-purple-300 uppercase tracking-wide mb-1">
-                            What Changed
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="text-xs font-semibold text-purple-300 uppercase tracking-wide">
+                              What Changed
+                            </div>
+                            <span className="text-xs text-gray-600 italic">illustrative</span>
                           </div>
                           <p className="text-sm text-gray-300 italic">
                             {result.prompt_evolution.what_changed_narrative}
@@ -681,8 +785,16 @@ export default function RuntimeEvolutionTab() {
                   {/* Operational Impact */}
                   {result.prompt_evolution.operational_impact && (
                     <div className="mb-3">
-                      <div className="text-xs font-semibold text-purple-300 uppercase tracking-wide mb-2">
-                        Operational Impact
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="text-xs font-semibold text-purple-300 uppercase tracking-wide">
+                          Operational Impact
+                        </div>
+                        <span className="px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 text-xs border border-gray-700">
+                          projected
+                        </span>
+                        {result.gae_summary && result.gae_summary.decision_count === 0 && (
+                          <span className="text-xs text-gray-600 italic">based on prompt variant model</span>
+                        )}
                       </div>
                       <div className="flex gap-3">
                         {/* Fewer False Escalations */}

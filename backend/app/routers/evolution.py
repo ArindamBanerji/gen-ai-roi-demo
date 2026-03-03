@@ -8,12 +8,17 @@ from datetime import datetime
 import uuid
 import time
 
-from app.services.agent import agent
+from app.services.agent import agent, DecisionResult
 from app.services.reasoning import narrator
 from app.services.situation import analyze_situation
 from app.services import evolver
+from app.services.event_bus import event_bus, DecisionMade, GraphMutated
+from app.services.gae_state import get_learning_state
 from app.db.neo4j import neo4j_client
 from app.models.schemas import ProcessAlertRequest
+from app.domains.soc.config import SOCDomainConfig
+from app.domains.soc.orchestrator import compute_factor_vector
+from gae.scoring import score_alert
 
 
 router = APIRouter()
@@ -75,21 +80,28 @@ async def process_alert(request: ProcessAlertRequest):
     This is THE KEY FLOW that demonstrates TRIGGERED_EVOLUTION.
 
     Flow:
-    1. Get security context from graph (47 nodes)
-    2. Agent makes decision (rule-based)
+    1. Get alert details + security context from graph (47 nodes)
+    2. GAE scoring: compute_factor_vector → score_alert (replaces agent.decide)
     3. LLM generates reasoning (narration)
     4. Evaluate 4 gates (deterministic)
-    5. Create decision trace in Neo4j
-    6. Check if evolution should trigger
-    7. Create TRIGGERED_EVOLUTION relationship
+    5. Write Decision node to Neo4j with factor_vector (R4)
+    6. Emit DecisionMade + GraphMutated events
+    7. Check if evolution should trigger
+    8. Create TRIGGERED_EVOLUTION relationship
+    9. Agent Evolver (Loop 2: Smarter ACROSS decisions)
     """
 
     start_time = time.time()
 
     try:
         # ====================================================================
-        # Step 1: Get Security Context (47 nodes from graph)
+        # Step 1: Get Alert Data + Security Context
         # ====================================================================
+
+        alert_data = await neo4j_client.get_alert(request.alert_id)
+
+        if not alert_data:
+            raise HTTPException(status_code=404, detail=f"Alert {request.alert_id} not found")
 
         context = await neo4j_client.get_security_context(request.alert_id)
 
@@ -105,16 +117,40 @@ async def process_alert(request: ProcessAlertRequest):
         situation_analysis = analyze_situation(alert_type, context)
 
         # ====================================================================
-        # Step 2: Agent Decision (Rule-Based)
+        # Step 2: GAE Scoring Pipeline (replaces agent.decide())
+        #
+        # 2a. Compute factor vector via orchestrator (6 FactorComputers → Neo4j)
+        # 2b. score_alert: Eq. 4  P(action|alert) = softmax(f·Wᵀ / τ)
         # ====================================================================
 
-        decision = agent.decide(alert_type, context)
+        print(f"[GAE][TAB2] Computing factor vector for {request.alert_id}...")
+        computers = SOCDomainConfig.get_factor_computers()
+        f = await compute_factor_vector(alert_data, computers, neo4j_client)
+        f_2d = f.reshape(1, -1)  # score_alert requires shape (1, n_f)
+
+        W       = get_learning_state().W            # live, learned weights (4, 6)
+        actions = SOCDomainConfig.get_actions()      # ["escalate", "investigate", "suppress", "monitor"]
+        tau     = SOCDomainConfig.get_temperature()  # 0.25
+
+        scoring = score_alert(f_2d, W, actions, tau)
+        fv_list = f.flatten().tolist()   # JSON-serializable, stored in Decision node (R4)
+
+        print(f"[GAE][TAB2] action={scoring.selected_action} confidence={scoring.confidence:.3f} "
+              f"f={[round(v, 3) for v in fv_list]}")
+
+        # Bridge DecisionResult — adapts GAE action vocabulary to eval gates + evolution trigger
+        bridge = DecisionResult(
+            action=scoring.selected_action,
+            confidence=scoring.confidence,
+            pattern_id=context.get("pattern_id"),
+            playbook_id=context.get("playbook_id"),
+        )
 
         # ====================================================================
         # Step 3: LLM Narration (Generate Reasoning)
         # ====================================================================
 
-        reasoning = await narrator.generate_reasoning(alert_type, decision.action, context)
+        reasoning = await narrator.generate_reasoning(alert_type, scoring.selected_action, context)
 
         # ====================================================================
         # Step 4: Eval Gate (4 Checks)
@@ -123,46 +159,71 @@ async def process_alert(request: ProcessAlertRequest):
         # Simulate failure if requested (for demo purposes)
         if request.simulate_failure:
             context["asset_criticality"] = "critical"
-            decision.action = agent.ACTION_AUTO_REMEDIATE
+            bridge.action = agent.ACTION_AUTO_REMEDIATE
 
-        eval_result = agent.evaluate_gates(decision, context, reasoning)
+        eval_result = agent.evaluate_gates(bridge, context, reasoning)
 
         # ====================================================================
-        # Step 5: Create Decision Trace in Neo4j
+        # Step 5: Write Decision Node to Neo4j (R4 — factor_vector stored in graph)
         # ====================================================================
 
         decision_id = f"DEC-{uuid.uuid4().hex[:4].upper()}"
 
-        await neo4j_client.create_decision_trace(
-            decision_id=decision_id,
-            alert_id=request.alert_id,
-            action=decision.action,
-            confidence=decision.confidence,
-            reasoning=reasoning,
-            pattern_id=decision.pattern_id,
-            playbook_id=decision.playbook_id,
-            nodes_consulted=context.get("nodes_consulted", 47),
-            context_snapshot={
-                "user": {
-                    "name": context.get("user_name"),
-                    "risk_score": context.get("user_risk_score")
-                },
-                "asset": {
-                    "hostname": context.get("asset_hostname"),
-                    "criticality": context.get("asset_criticality")
-                }
-            }
+        await neo4j_client.run_query(
+            """
+            MATCH (a:Alert {id: $alert_id})
+            CREATE (d:Decision {
+                id:              $decision_id,
+                action:          $action,
+                confidence:      $confidence,
+                factor_vector:   $fv,
+                reasoning:       $reasoning,
+                pattern_id:      $pattern_id,
+                playbook_id:     $playbook_id,
+                nodes_consulted: $nodes_consulted,
+                timestamp:       datetime(),
+                outcome:         null
+            })
+            CREATE (d)-[:DECIDED_ON]->(a)
+            """,
+            {
+                "alert_id":       request.alert_id,
+                "decision_id":    decision_id,
+                "action":         scoring.selected_action,
+                "confidence":     scoring.confidence,
+                "fv":             fv_list,
+                "reasoning":      reasoning,
+                "pattern_id":     bridge.pattern_id,
+                "playbook_id":    bridge.playbook_id,
+                "nodes_consulted": context.get("nodes_consulted", 47),
+            },
         )
+        print(f"[GAE][TAB2] Decision node written: {decision_id} [:DECIDED_ON] {request.alert_id}")
 
         # ====================================================================
-        # Step 6 & 7: Check for TRIGGERED_EVOLUTION (THE KEY DIFFERENTIATOR)
+        # Step 6: Emit Events (every graph mutation MUST emit events)
+        # ====================================================================
+
+        await event_bus.emit(DecisionMade(
+            alert_id      = request.alert_id,
+            action        = scoring.selected_action,
+            confidence    = scoring.confidence,
+            factor_vector = tuple(fv_list),
+        ))
+        await event_bus.emit(GraphMutated(
+            mutation_type     = "decision",
+            affected_entities = (request.alert_id,),
+        ))
+
+        # ====================================================================
+        # Step 7 & 8: Check for TRIGGERED_EVOLUTION (THE KEY DIFFERENTIATOR)
         # ====================================================================
 
         triggered_evolution = {"occurred": False}
 
         # Only trigger evolution if gates passed
         if eval_result["overall_passed"]:
-            evolution_trigger = agent.maybe_trigger_evolution(decision, context)
+            evolution_trigger = agent.maybe_trigger_evolution(bridge, context)
 
             if evolution_trigger:
                 event_type, evolution_details = evolution_trigger
@@ -195,21 +256,34 @@ async def process_alert(request: ProcessAlertRequest):
                 }
 
         # ====================================================================
-        # Step 8: Agent Evolver (Loop 2: Smarter ACROSS decisions)
+        # Step 9: Agent Evolver (Loop 2: Smarter ACROSS decisions)
         # ====================================================================
 
-        # Get the prompt variant used for this decision
         prompt_variant = evolver.get_prompt_variant(alert_type)
-
-        # Record the outcome (success = gates passed)
         success = eval_result["overall_passed"]
         evolver.record_decision_outcome(decision_id, prompt_variant, success, alert_type=alert_type)
-
-        # Check if a better variant should be promoted
-        promotion = evolver.check_for_promotion(alert_type)
-
-        # Get evolution summary for response
+        evolver.check_for_promotion(alert_type)
         prompt_evolution = evolver.get_evolution_summary(alert_type)
+
+        # ====================================================================
+        # Build GAE scoring details for response
+        # ====================================================================
+
+        probs_flat = scoring.action_probabilities.flatten().tolist()
+        action_probabilities = {a: round(p, 6) for a, p in zip(actions, probs_flat)}
+        max_prob = max(probs_flat)
+        sorted_probs = sorted(probs_flat, reverse=True)
+        low_confidence = max_prob < 0.25
+        ambiguous = len(sorted_probs) >= 2 and (sorted_probs[0] - sorted_probs[1]) < 0.05
+
+        # ====================================================================
+        # Build GAE learning state summary (real data for AgentEvolver panel)
+        # ====================================================================
+        _ls = get_learning_state()
+        _w_norms = {
+            a: round(float(sum(v * v for v in row) ** 0.5), 4)
+            for a, row in zip(actions, _ls.W.tolist())
+        }
 
         # ====================================================================
         # Build Response
@@ -231,13 +305,34 @@ async def process_alert(request: ProcessAlertRequest):
             },
             "decision_trace": {
                 "id": decision_id,
-                "type": decision.action,
+                "type": scoring.selected_action,
                 "reasoning": reasoning,
-                "confidence": decision.confidence,
-                "action_taken": decision.action,
+                "confidence": scoring.confidence,
+                "action_taken": scoring.selected_action,
                 "nodes_consulted": context.get("nodes_consulted", 47),
-                "pattern_id": decision.pattern_id,
-                "playbook_id": decision.playbook_id
+                "pattern_id": bridge.pattern_id,
+                "playbook_id": bridge.playbook_id
+            },
+            "gae_scoring": {
+                "decision_id":          decision_id,
+                "factor_vector":        fv_list,
+                "factor_names":         [c.name for c in computers],
+                "action_probabilities": action_probabilities,
+                "softmax_sum":          round(sum(probs_flat), 8),
+                "temperature":          tau,
+                "low_confidence":       low_confidence,
+                "ambiguous":            ambiguous,
+                "decision_method":      (
+                    "softmax scoring matrix "
+                    "(6 graph-computed factors × 4 actions, "
+                    "W updated via Eq. 4b with 20:1 asymmetry)"
+                ),
+            },
+            "gae_summary": {
+                "decision_count": _ls.decision_count,
+                "w_norms":        _w_norms,
+                "factor_names":   _ls.factor_names,
+                "has_real_data":  _ls.decision_count > 0,
             },
             "triggered_evolution": triggered_evolution,
             "execution_time_ms": execution_time,
