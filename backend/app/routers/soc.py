@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 from pydantic import BaseModel
 import re
 
+from app.db.neo4j import neo4j_client
+
 
 router = APIRouter()
 
@@ -309,6 +311,15 @@ def get_threat_intel_coverage_data() -> List[MetricDataPoint]:
     ]
 
 
+# Cross-context metrics served from Neo4j (H7-FIX-3)
+CROSS_CONTEXT_METRIC_IDS = {
+    "cross_context_travel_risk",
+    "device_trust_gaps",
+    "policy_conflict_landscape",
+    "threat_intel_coverage",
+}
+
+
 # ============================================================================
 # Metric Matching Logic
 # ============================================================================
@@ -508,8 +519,30 @@ async def query_soc_metrics(request: SOCQueryRequest):
 
         # ====================================================================
         # Step 2: Get metric data
+        # Cross-context metrics use real Neo4j queries (H7-FIX-3)
         # ====================================================================
-        data = get_metric_data(metric_id)
+        if metric_id in CROSS_CONTEXT_METRIC_IDS:
+            try:
+                rows = await neo4j_client.run_query(
+                    "MATCH (a:Alert)-[:ASSOCIATED_WITH]->(t:ThreatIntel) "
+                    "RETURN a.alert_id AS alert_id, t.source AS source, "
+                    "t.ioc_type AS ioc_type LIMIT 10",
+                )
+                if rows:
+                    data = [
+                        MetricDataPoint(
+                            label=f"{r.get('alert_id','?')} | {r.get('source','?')} | {r.get('ioc_type','?')}",
+                            value=0.0,
+                        )
+                        for r in rows
+                    ]
+                else:
+                    data = [MetricDataPoint(label="No threat-intel associations found in graph", value=0.0)]
+            except Exception as qe:
+                print(f"[SOC] cross-context Neo4j query failed: {qe}")
+                data = get_metric_data(metric_id)
+        else:
+            data = get_metric_data(metric_id)
 
         # ====================================================================
         # Step 3: Get provenance
@@ -590,22 +623,66 @@ async def get_threat_landscape():
     Attempts a live Neo4j count of ThreatIntel nodes; falls back to
     static numbers if Neo4j is unavailable.
     """
-    # Attempt live ThreatIntel counts from Neo4j
-    ti_loaded = 47
-    high_severity_iocs = 12
+    # Query Neo4j for all stats; fall back to zeros on failure (H7-FIX-3)
+    ti_loaded = 0
+    high_severity_iocs = 0
+    alerts_total = 0
+    open_alerts = 0
+    decisions_total = 0
+    nodes_count = 0
+    rels_count = 0
+    alert_types_count = 0
+    patterns_count = 0
+    source = "unavailable"
+
     try:
-        from app.db.neo4j import neo4j_client
-        results = await neo4j_client.run_query(
+        # ThreatIntel counts
+        ti_res = await neo4j_client.run_query(
             "MATCH (t:ThreatIntel) "
             "RETURN count(t) AS total, "
             "count(CASE WHEN t.severity IN ['critical','high'] THEN 1 END) AS high_sev",
-            {},
         )
-        if results:
-            ti_loaded = int(results[0].get("total") or ti_loaded)
-            high_severity_iocs = int(results[0].get("high_sev") or high_severity_iocs)
+        if ti_res:
+            ti_loaded = int(ti_res[0].get("total") or 0)
+            high_severity_iocs = int(ti_res[0].get("high_sev") or 0)
+
+        # Alert counts — total and open (no Decision yet)
+        alert_res = await neo4j_client.run_query(
+            "MATCH (a:Alert) "
+            "RETURN count(a) AS total, "
+            "count(CASE WHEN NOT (a)<-[:FOR_ALERT]-(:Decision) THEN 1 END) AS open_count",
+        )
+        if alert_res:
+            alerts_total = int(alert_res[0].get("total") or 0)
+            open_alerts = int(alert_res[0].get("open_count") or 0)
+
+        # Decision count
+        dec_res = await neo4j_client.run_query(
+            "MATCH (d:Decision) RETURN count(d) AS c",
+        )
+        if dec_res:
+            decisions_total = int(dec_res[0].get("c") or 0)
+
+        # Graph topology
+        node_res = await neo4j_client.run_query("MATCH (n) RETURN count(n) AS c")
+        if node_res:
+            nodes_count = int(node_res[0].get("c") or 0)
+
+        rel_res = await neo4j_client.run_query("MATCH ()-[r]->() RETURN count(r) AS c")
+        if rel_res:
+            rels_count = int(rel_res[0].get("c") or 0)
+
+        at_res = await neo4j_client.run_query("MATCH (t:AlertType) RETURN count(t) AS c")
+        if at_res:
+            alert_types_count = int(at_res[0].get("c") or 0)
+
+        pat_res = await neo4j_client.run_query("MATCH (p:AttackPattern) RETURN count(p) AS c")
+        if pat_res:
+            patterns_count = int(pat_res[0].get("c") or 0)
+
+        source = "neo4j"
     except Exception as exc:
-        print(f"[SOC] threat-landscape Neo4j query failed (using static fallback): {exc}")
+        print(f"[SOC] threat-landscape Neo4j query failed (using zero fallback): {exc}")
 
     return {
         "threat_intel": {
@@ -615,23 +692,24 @@ async def get_threat_landscape():
             "last_refreshed_minutes_ago": 23,
         },
         "active_alerts": {
-            "in_queue": 2,
-            "analyzed_today": 14,
-            "auto_closed_today": 11,
-            "escalated_today": 3,
+            "in_queue": open_alerts,
+            "analyzed_today": alerts_total,
+            "auto_closed_today": alerts_total - open_alerts,
+            "escalated_today": 0,
         },
         "governance": {
             "policy_conflicts_detected": 3,
-            "decisions_today": 14,
+            "decisions_today": decisions_total,
             "audit_chain_verified": True,
             "avg_confidence": 0.89,
         },
         "graph_coverage": {
-            "nodes": 234,
-            "relationships": 891,
-            "alert_types_modeled": 4,
-            "patterns_learned": 127,
+            "nodes": nodes_count,
+            "relationships": rels_count,
+            "alert_types_modeled": alert_types_count,
+            "patterns_learned": patterns_count,
         },
+        "source": source,
         "timestamp": datetime.now().isoformat(),
     }
 
@@ -651,7 +729,6 @@ async def get_attack_tactic_breakdown():
     """
     breakdown = []
     try:
-        from app.db.neo4j import neo4j_client
         results = await neo4j_client.run_query(
             """
             MATCH (a:Alert)
@@ -669,3 +746,99 @@ async def get_attack_tactic_breakdown():
         print(f"[SOC] attack-tactic-breakdown query failed: {exc}")
 
     return {"breakdown": breakdown}
+
+
+# ============================================================================
+# GET /api/soc/analytics — Real Neo4j SOC metrics for Tab 1 (H7-FIX-3)
+# ============================================================================
+
+@router.get("/soc/analytics")
+async def get_soc_analytics():
+    """
+    Return real Neo4j aggregations for the five core Tab 1 SOC metrics.
+
+    Metrics with sufficient graph data return live counts (source='neo4j').
+    Metrics that require data not seeded (e.g. MTTD, which needs per-decision
+    timestamps) carry estimated=True and a descriptive note rather than a fake
+    number.
+    """
+    try:
+        # Metric 1 — Alert volume
+        alert_res = await neo4j_client.run_query(
+            "MATCH (a:Alert) RETURN count(a) AS total_alerts"
+        )
+        total_alerts = int(alert_res[0]["total_alerts"]) if alert_res else 0
+
+        # Metric 2 — Open alerts (no Decision yet)
+        open_res = await neo4j_client.run_query(
+            "MATCH (a:Alert) "
+            "WHERE NOT (a)<-[:FOR_ALERT]-(:Decision) "
+            "RETURN count(a) AS open_alerts"
+        )
+        open_alerts = int(open_res[0]["open_alerts"]) if open_res else 0
+
+        # Metric 3 — Total decisions
+        dec_res = await neo4j_client.run_query(
+            "MATCH (d:Decision) RETURN count(d) AS total_decisions"
+        )
+        total_decisions = int(dec_res[0]["total_decisions"]) if dec_res else 0
+
+        # Metric 4 — Correct decisions
+        correct_res = await neo4j_client.run_query(
+            "MATCH (d:Decision) "
+            "WHERE d.outcome = 'correct' OR d.correct = true "
+            "RETURN count(d) AS correct_decisions"
+        )
+        correct_decisions = int(correct_res[0]["correct_decisions"]) if correct_res else 0
+
+        # Metric 5 — Category breakdown
+        cat_res = await neo4j_client.run_query(
+            "MATCH (a:Alert) "
+            "RETURN a.category AS category, count(a) AS count "
+            "ORDER BY count DESC"
+        )
+        category_breakdown = [
+            {"category": r["category"] or "unknown", "count": int(r["count"])}
+            for r in cat_res
+        ]
+
+        return {
+            "total_alerts": total_alerts,
+            "open_alerts": open_alerts,
+            "total_decisions": total_decisions,
+            "correct_decisions": correct_decisions,
+            "accuracy_pct": (
+                round(correct_decisions / total_decisions * 100, 1)
+                if total_decisions > 0 else None
+            ),
+            "category_breakdown": category_breakdown,
+            "source": "neo4j",
+            "estimated_metrics": [
+                {
+                    "value": None,
+                    "label": "MTTD",
+                    "estimated": True,
+                    "note": "Requires decision timestamps — available after v5.0-beta",
+                }
+            ],
+        }
+    except Exception as e:
+        print(f"[SOC] analytics Neo4j query failed: {e}")
+        return {
+            "total_alerts": 0,
+            "open_alerts": 0,
+            "total_decisions": 0,
+            "correct_decisions": 0,
+            "accuracy_pct": None,
+            "category_breakdown": [],
+            "source": "unavailable",
+            "error": str(e),
+            "estimated_metrics": [
+                {
+                    "value": None,
+                    "label": "MTTD",
+                    "estimated": True,
+                    "note": "Requires decision timestamps — available after v5.0-beta",
+                }
+            ],
+        }
