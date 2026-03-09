@@ -119,6 +119,14 @@ interface RewardSummary {
   governs: string[]
 }
 
+interface ProfileState {
+  categories: string[]
+  actions: string[]
+  centroids: number[][][]   // shape (6, 4, 6)
+  counts: number[][]        // shape (6, 4)
+  decision_count: number
+}
+
 export default function RuntimeEvolutionTab() {
   const [deployments, setDeployments] = useState<Deployment[]>([])
   const [processing, setProcessing] = useState(false)
@@ -126,6 +134,7 @@ export default function RuntimeEvolutionTab() {
   const [loading, setLoading] = useState(true)
   const [visibleChecks, setVisibleChecks] = useState<number[]>([])
   const [rewardSummary, setRewardSummary] = useState<RewardSummary | null>(null)
+  const [profileState, setProfileState] = useState<ProfileState | null>(null)
 
   useEffect(() => {
     loadDeployments()
@@ -134,6 +143,11 @@ export default function RuntimeEvolutionTab() {
   // Fetch reward summary on mount (shows muted state initially)
   useEffect(() => {
     loadRewardSummary()
+  }, [])
+
+  // Fetch ProfileScorer centroid state on mount (SOC-PROF-3 heatmap)
+  useEffect(() => {
+    loadProfileState()
   }, [])
 
   // Refresh reward summary after any alert processing
@@ -175,6 +189,15 @@ export default function RuntimeEvolutionTab() {
       setRewardSummary(data)
     } catch (error) {
       console.error('Failed to load reward summary:', error)
+    }
+  }
+
+  const loadProfileState = async () => {
+    try {
+      const data = await fetch('/api/soc/profile').then(r => r.json())
+      setProfileState(data)
+    } catch (error) {
+      console.error('Failed to load profile state:', error)
     }
   }
 
@@ -1029,6 +1052,78 @@ export default function RuntimeEvolutionTab() {
           )}
         </div>
       </div>
+
+      {/* ================================================================
+          Profile Centroids — Current State (SOC-PROF-3)
+          Heatmap: rows=categories, cols=actions, value=mean centroid
+      ================================================================ */}
+      <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold">Profile Centroids — Current State</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Mean factor value per (category, action) — higher = stronger signal toward that action
+            </p>
+          </div>
+          {profileState && (
+            <span className="text-xs text-gray-500 font-mono">
+              {profileState.decision_count} decisions recorded
+            </span>
+          )}
+        </div>
+        <div className="p-4 overflow-x-auto">
+          {!profileState ? (
+            <div className="text-sm text-gray-500 py-4 text-center">Loading centroid data…</div>
+          ) : (
+            <>
+              <table style={{ borderCollapse: 'collapse', minWidth: '100%' }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 160, textAlign: 'left', padding: '4px 8px', fontSize: 11, color: '#9ca3af', fontWeight: 500 }}>
+                      Category
+                    </th>
+                    {profileState.actions.map(action => (
+                      <th key={action} style={{ width: 80, textAlign: 'center', padding: '4px 8px', fontSize: 11, color: '#9ca3af', fontWeight: 500, textTransform: 'capitalize' }}>
+                        {action}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {profileState.categories.map((cat, cIdx) => (
+                    <tr key={cat}>
+                      <td style={{ padding: '4px 8px', fontSize: 11, color: '#d1d5db', whiteSpace: 'nowrap' }}>
+                        {cat.replace(/_/g, ' ')}
+                      </td>
+                      {profileState.actions.map((_, aIdx) => {
+                        const factors = profileState.centroids[cIdx][aIdx]
+                        const meanVal = factors.reduce((s, v) => s + v, 0) / factors.length
+                        const count = profileState.counts[cIdx][aIdx]
+                        const bg = `rgba(59, 130, 246, ${meanVal.toFixed(2)})`
+                        const textColor = meanVal > 0.6 ? '#ffffff' : '#d1d5db'
+                        return (
+                          <td key={aIdx} style={{ width: 80, padding: '4px 8px', textAlign: 'center', backgroundColor: bg, color: textColor, borderRadius: 4 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, fontFamily: 'monospace' }}>
+                              {meanVal.toFixed(2)}
+                            </div>
+                            <div style={{ fontSize: 10, opacity: 0.75 }}>
+                              n={count}
+                            </div>
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p style={{ fontSize: 10, color: '#6b7280', marginTop: 8 }}>
+                0.0 = no signal &nbsp;·&nbsp; 1.0 = strong signal &nbsp;·&nbsp; color intensity ∝ mean centroid value
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+
     </div>
   )
 }

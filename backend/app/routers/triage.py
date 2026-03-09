@@ -855,6 +855,31 @@ async def get_policy_history():
 
 
 # ============================================================================
+# GET /api/soc/profile - ProfileScorer state for Tab 2 centroid heatmap
+# ============================================================================
+
+@router.get("/soc/profile")
+async def get_profile_state():
+    """
+    Return current ProfileScorer state for frontend display.
+    Used by Tab 2 centroid heatmap (SOC-PROF-3).
+    """
+    scorer = get_profile_scorer()
+    from app.domains.soc.config import SOC_CATEGORIES, SOC_ACTIONS
+    return {
+        "categories": SOC_CATEGORIES,
+        "actions": SOC_ACTIONS,
+        "centroids": scorer.mu.tolist(),   # shape (6, 4, 6)
+        "counts": scorer.counts.tolist(),  # shape (6, 4)
+        "decision_count": int(sum(
+            scorer.counts[c, a]
+            for c in range(len(SOC_CATEGORIES))
+            for a in range(len(SOC_ACTIONS))
+        )),
+    }
+
+
+# ============================================================================
 # GET /api/rl/reward-summary - RL Reward Summary (Loop 3 governance)
 # ============================================================================
 

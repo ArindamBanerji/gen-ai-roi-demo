@@ -59,6 +59,7 @@ interface AnalysisResult {
   recommendation: {
     action: string
     confidence: number
+    routing_zone?: 'auto_approve' | 'agent_zone' | 'human_review'
     reasoning: string
     pattern_id?: string
     playbook_id?: string
@@ -1189,16 +1190,38 @@ export default function AlertTriageTab() {
               <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
                 <h3 className="font-semibold">Recommendation</h3>
                 <span className="text-sm text-gray-400">
-                  Confidence: {(analysis.recommendation.confidence * 100).toFixed(0)}%
+                  Confidence: {(analysis.recommendation.confidence * 100).toFixed(1)}%
                 </span>
               </div>
 
               <div className="p-4 space-y-4">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <CheckCircle className="w-6 h-6 text-soc-success" />
                   <span className="text-lg font-semibold text-soc-success">
                     {getActionLabel(analysis.recommendation.action)}
                   </span>
+                  <span className="text-sm text-gray-400 font-mono">
+                    {(analysis.recommendation.confidence * 100).toFixed(1)}%
+                  </span>
+                  {(() => {
+                    const zone = analysis.recommendation.routing_zone ?? (
+                      analysis.recommendation.action === 'monitor' ? 'agent_zone' :
+                      analysis.recommendation.confidence >= 0.90 ? 'auto_approve' :
+                      analysis.recommendation.confidence >= 0.60 ? 'agent_zone' :
+                      'human_review'
+                    )
+                    const zoneStyle: Record<string, { bg: string; text: string; label: string }> = {
+                      auto_approve: { bg: '#166534', text: '#86efac', label: 'Auto-Approve' },
+                      agent_zone:   { bg: '#78350f', text: '#fde68a', label: 'Agent Review' },
+                      human_review: { bg: '#7f1d1d', text: '#fca5a5', label: 'Human Review' },
+                    }
+                    const s = zoneStyle[zone] ?? zoneStyle.human_review
+                    return (
+                      <span style={{ backgroundColor: s.bg, color: s.text, padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 }}>
+                        {s.label}
+                      </span>
+                    )
+                  })()}
                 </div>
 
                 <p className="text-sm leading-relaxed text-gray-300">
