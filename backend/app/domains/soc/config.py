@@ -150,6 +150,19 @@ SOC_AGENT_ZONE_ELEVATED = {
     "cloud_infrastructure": True,
 }
 
+# Category → canonical ATT&CK pattern for outcome feedback
+# These are the patterns seeded in the graph (seed_neo4j.py)
+CATEGORY_PATTERN_MAP = {
+    "credential_access":    "PAT-CRED-001",
+    "threat_intel_match":   "PAT-THREAT-001",
+    "lateral_movement":     "PAT-LATERAL-001",
+    "data_exfiltration":    "PAT-EXFIL-001",
+    "insider_threat":       "PAT-INSIDER-001",
+    "cloud_infrastructure": "PAT-CLOUD-001",
+    # Fallback for unknown categories
+    "_default":             "PAT-UNKNOWN-001",
+}
+
 
 class SOCDomainConfig(DomainConfig):
     """Security Operations Center domain module."""
@@ -494,6 +507,15 @@ class SOCDomainConfig(DomainConfig):
         Returns None if action is excluded from auto-approve (monitor).
         """
         return SOC_AUTO_APPROVE_THRESHOLDS.get(action)
+
+    def get_pattern_for_category(self, category: str) -> str:
+        """
+        Return the canonical ATT&CK pattern ID for an alert category.
+        Used by process_outcome() to return category-appropriate patterns.
+        Falls back to _default if category unknown.
+        """
+        return CATEGORY_PATTERN_MAP.get(category,
+               CATEGORY_PATTERN_MAP["_default"])
 
     def build_profile_scorer(self) -> ProfileScorer:
         """

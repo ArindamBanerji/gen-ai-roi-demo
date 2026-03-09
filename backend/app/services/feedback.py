@@ -4,9 +4,14 @@ Handles user feedback on decision outcomes and updates the graph accordingly.
 
 Answers the CISO question: "What happens when the system is wrong?"
 """
+import logging
 from typing import Dict, Any, List, Optional, Literal
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
+from app.domains.soc.config import SOCDomainConfig
+
+logger = logging.getLogger(__name__)
+_soc_cfg = SOCDomainConfig()
 
 
 # ============================================================================
@@ -17,21 +22,56 @@ from pydantic import BaseModel
 FEEDBACK_GIVEN: Dict[str, Dict[str, Any]] = {}
 
 # Pattern confidence scores (simulated)
+# H7-FIX-1: all 6 SOC categories + legacy demo patterns initialised
 PATTERN_CONFIDENCE = {
-    "PAT-TRAVEL-001": 0.94,
-    "PAT-PHISH-001": 0.89,
+    "PAT-TRAVEL-001":  0.94,   # legacy — kept for backward compat
+    "PAT-PHISH-001":   0.89,   # legacy — kept for backward compat
+    "PAT-CRED-001":    0.85,
+    "PAT-THREAT-001":  0.82,
+    "PAT-LATERAL-001": 0.80,
+    "PAT-EXFIL-001":   0.83,
+    "PAT-INSIDER-001": 0.78,
+    "PAT-CLOUD-001":   0.81,
+    "PAT-UNKNOWN-001": 0.70,
 }
 
 # Edge weights (simulated)
+# H7-FIX-1: category-specific edges added alongside legacy keys
 EDGE_WEIGHTS = {
-    "User->TravelContext": 0.91,
-    "User->PhishingCampaign": 0.87,
+    "User->TravelContext":      0.91,   # legacy
+    "User->PhishingCampaign":   0.87,   # legacy
+    "User->CredentialStore":    0.84,
+    "Alert->ThreatFeed":        0.82,
+    "User->LateralHost":        0.80,
+    "Asset->ExternalEndpoint":  0.83,
+    "User->SensitiveAsset":     0.79,
+    "Service->CloudResource":   0.81,
+    "User->Unknown":            0.70,
 }
 
 # Precedent counts (simulated)
+# H7-FIX-1: all 6 SOC category patterns initialised
 PRECEDENT_COUNTS = {
-    "PAT-TRAVEL-001": 127,
-    "PAT-PHISH-001": 89,
+    "PAT-TRAVEL-001":  127,   # legacy
+    "PAT-PHISH-001":    89,   # legacy
+    "PAT-CRED-001":     54,
+    "PAT-THREAT-001":   41,
+    "PAT-LATERAL-001":  33,
+    "PAT-EXFIL-001":    28,
+    "PAT-INSIDER-001":  19,
+    "PAT-CLOUD-001":    37,
+    "PAT-UNKNOWN-001":   0,
+}
+
+# H7-FIX-1: SOC category → graph edge key
+_CATEGORY_EDGE_MAP: Dict[str, str] = {
+    "credential_access":    "User->CredentialStore",
+    "threat_intel_match":   "Alert->ThreatFeed",
+    "lateral_movement":     "User->LateralHost",
+    "data_exfiltration":    "Asset->ExternalEndpoint",
+    "insider_threat":       "User->SensitiveAsset",
+    "cloud_infrastructure": "Service->CloudResource",
+    "_default":             "User->Unknown",
 }
 
 # F6a: Asymmetric trust per situation type.
@@ -79,33 +119,45 @@ class OutcomeResponse(BaseModel):
 def process_outcome(
     alert_id: str,
     decision_id: str,
-    outcome: Literal["correct", "incorrect"]
+    outcome: Literal["correct", "incorrect"],
+    alert_category: str = "",
 ) -> OutcomeResponse:
     """
     Process user feedback on decision outcome and update graph.
 
     Args:
-        alert_id: Alert identifier (e.g., "ALERT-7823")
-        decision_id: Decision identifier (e.g., "DEC-7823-001")
-        outcome: Whether the outcome was correct or incorrect
+        alert_id:       Alert identifier (e.g., "ALERT-7823")
+        decision_id:    Decision identifier (e.g., "DEC-7823-001")
+        outcome:        Whether the outcome was correct or incorrect
+        alert_category: SOC category string (e.g. "credential_access").
+                        When provided, used to select the canonical pattern.
+                        When absent, inferred from alert_id for known demo
+                        alerts; unknown alerts fall back to "_default".
 
     Returns:
         OutcomeResponse with graph updates and narrative
     """
-    # Determine pattern based on alert ID
-    if "7823" in alert_id:
-        pattern_id = "PAT-TRAVEL-001"
-        edge_key = "User->TravelContext"
-        alert_type = "travel login anomaly"
-    elif "7824" in alert_id:
-        pattern_id = "PAT-PHISH-001"
-        edge_key = "User->PhishingCampaign"
-        alert_type = "phishing alert"
-    else:
-        # Default to travel
-        pattern_id = "PAT-TRAVEL-001"
-        edge_key = "User->TravelContext"
-        alert_type = "alert"
+    # H7-FIX-1: derive pattern from category, not from hardcoded alert_id checks.
+    # Caller may pass alert_category directly; fall back to demo-alert mapping
+    # for the two known seed alerts so existing demos continue to work.
+    if not alert_category:
+        if "7823" in alert_id:
+            # ALERT-7823 is a credential-access / travel-login demo alert
+            alert_category = "credential_access"
+        elif "7824" in alert_id:
+            # ALERT-7824 is a threat-intel-match / phishing demo alert
+            alert_category = "threat_intel_match"
+        else:
+            logger.warning(
+                "[H7-FIX-1] Could not determine category for alert %s, "
+                "using default pattern",
+                alert_id,
+            )
+            alert_category = "_default"
+
+    pattern_id = _soc_cfg.get_pattern_for_category(alert_category)
+    edge_key   = _CATEGORY_EDGE_MAP.get(alert_category, _CATEGORY_EDGE_MAP["_default"])
+    alert_type = alert_category.replace("_", " ")
 
     graph_updates = []
     consequence = ""
@@ -492,13 +544,40 @@ def reset_feedback_state():
 
     FEEDBACK_GIVEN.clear()
 
-    PATTERN_CONFIDENCE["PAT-TRAVEL-001"] = 0.94
-    PATTERN_CONFIDENCE["PAT-PHISH-001"] = 0.89
+    # Legacy demo patterns
+    PATTERN_CONFIDENCE["PAT-TRAVEL-001"]  = 0.94
+    PATTERN_CONFIDENCE["PAT-PHISH-001"]   = 0.89
+    # H7-FIX-1: category-based patterns
+    PATTERN_CONFIDENCE["PAT-CRED-001"]    = 0.85
+    PATTERN_CONFIDENCE["PAT-THREAT-001"]  = 0.82
+    PATTERN_CONFIDENCE["PAT-LATERAL-001"] = 0.80
+    PATTERN_CONFIDENCE["PAT-EXFIL-001"]   = 0.83
+    PATTERN_CONFIDENCE["PAT-INSIDER-001"] = 0.78
+    PATTERN_CONFIDENCE["PAT-CLOUD-001"]   = 0.81
+    PATTERN_CONFIDENCE["PAT-UNKNOWN-001"] = 0.70
 
-    EDGE_WEIGHTS["User->TravelContext"] = 0.91
-    EDGE_WEIGHTS["User->PhishingCampaign"] = 0.87
+    # Legacy edges
+    EDGE_WEIGHTS["User->TravelContext"]     = 0.91
+    EDGE_WEIGHTS["User->PhishingCampaign"]  = 0.87
+    # H7-FIX-1: category edges
+    EDGE_WEIGHTS["User->CredentialStore"]   = 0.84
+    EDGE_WEIGHTS["Alert->ThreatFeed"]       = 0.82
+    EDGE_WEIGHTS["User->LateralHost"]       = 0.80
+    EDGE_WEIGHTS["Asset->ExternalEndpoint"] = 0.83
+    EDGE_WEIGHTS["User->SensitiveAsset"]    = 0.79
+    EDGE_WEIGHTS["Service->CloudResource"]  = 0.81
+    EDGE_WEIGHTS["User->Unknown"]           = 0.70
 
-    PRECEDENT_COUNTS["PAT-TRAVEL-001"] = 127
-    PRECEDENT_COUNTS["PAT-PHISH-001"] = 89
+    # Legacy precedents
+    PRECEDENT_COUNTS["PAT-TRAVEL-001"]  = 127
+    PRECEDENT_COUNTS["PAT-PHISH-001"]   =  89
+    # H7-FIX-1: category precedents
+    PRECEDENT_COUNTS["PAT-CRED-001"]    =  54
+    PRECEDENT_COUNTS["PAT-THREAT-001"]  =  41
+    PRECEDENT_COUNTS["PAT-LATERAL-001"] =  33
+    PRECEDENT_COUNTS["PAT-EXFIL-001"]   =  28
+    PRECEDENT_COUNTS["PAT-INSIDER-001"] =  19
+    PRECEDENT_COUNTS["PAT-CLOUD-001"]   =  37
+    PRECEDENT_COUNTS["PAT-UNKNOWN-001"] =   0
 
     print("[FEEDBACK] State reset to initial values")
