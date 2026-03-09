@@ -109,6 +109,13 @@ interface DecisionEconomics {
   note: string
 }
 
+interface OperationalMetrics {
+  mttd: { value_minutes: number | null; estimated: boolean; note?: string }
+  mttr: { value_minutes: number | null; estimated: boolean; note?: string }
+  fp_rate: { rate: number | null; estimated: boolean }
+  source: string
+}
+
 interface EvolutionEventsState {
   events: EvolutionEvent[]
   note: string | null
@@ -249,6 +256,9 @@ export default function CompoundingTab() {
   const [decisionEconomics, setDecisionEconomics] = useState<DecisionEconomics | null>(null)
   const [evolutionEventsReal, setEvolutionEventsReal] = useState<EvolutionEventsState | null>(null)
 
+  // — F4-OVERLAY: operational metrics —
+  const [operationalMetrics, setOperationalMetrics] = useState<OperationalMetrics | null>(null)
+
   // ALL HOOKS MUST BE AT TOP LEVEL
   const animatedNodesEnd = useCountUp(data?.headline.nodes_start ?? 0, data?.headline.nodes_end ?? 0, 3000, 0, !!data && !loading)
   const animatedAutoCloseEnd = useCountUp(data?.headline.auto_close_start ?? 0, data?.headline.auto_close_end ?? 0, 3000, 0, !!data && !loading)
@@ -342,6 +352,30 @@ export default function CompoundingTab() {
     } catch (e) { console.error('[CompoundingTab] Failed to load decision economics:', e) }
   }
   useEffect(() => { loadDecisionEconomics() }, [])
+
+  // F4-OVERLAY: load operational metrics
+  const loadOperationalMetrics = async () => {
+    try {
+      const d = await fetch('/api/soc/operational-metrics').then(r => r.json())
+      setOperationalMetrics(d as OperationalMetrics)
+    } catch (e) { console.error('[CompoundingTab] Failed to load operational metrics:', e) }
+  }
+  useEffect(() => { loadOperationalMetrics() }, [])
+
+  // F4-OVERLAY: board export download
+  const handleBoardExport = async () => {
+    try {
+      const d = await fetch('/api/soc/board-export').then(r => r.json())
+      const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const date = new Date().toISOString().split('T')[0]
+      a.href = url
+      a.download = `ci-platform-board-report-${date}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) { console.error('[CompoundingTab] Board export failed:', e) }
+  }
 
   // H7-FIX-4: load real evolution events from dedicated endpoint
   const loadEvolutionEventsReal = async () => {
@@ -935,6 +969,74 @@ export default function CompoundingTab() {
           <p className="text-xs text-gray-400 mt-3 italic">{decisionEconomics.note}</p>
         </div>
       )}
+
+      {/* ── 5c. Operational Metrics + Board Export — F4-OVERLAY ─────────────── */}
+      <div className="bg-white rounded-lg border shadow p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <Activity className="w-5 h-5 text-blue-600" />
+            Operational Metrics
+            <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">live</span>
+          </h3>
+          <button
+            onClick={handleBoardExport}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export for Board
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          {/* MTTD */}
+          <div className="bg-blue-50 rounded border border-blue-200 p-4 text-center">
+            <div className="text-xs text-gray-500 mb-1 font-medium">MTTD</div>
+            <div className="text-2xl font-bold text-blue-700">
+              {operationalMetrics?.mttd.value_minutes !== null && operationalMetrics?.mttd.value_minutes !== undefined
+                ? `${operationalMetrics.mttd.value_minutes}min`
+                : '—'}
+            </div>
+            <div className="text-xs text-gray-400 mt-1">Mean Time to Detect</div>
+            {operationalMetrics?.mttd.estimated && (
+              <span className="inline-block mt-1.5 px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-xs border border-yellow-200">
+                estimated
+              </span>
+            )}
+          </div>
+          {/* MTTR */}
+          <div className="bg-purple-50 rounded border border-purple-200 p-4 text-center">
+            <div className="text-xs text-gray-500 mb-1 font-medium">MTTR</div>
+            <div className="text-2xl font-bold text-purple-700">
+              {operationalMetrics?.mttr.value_minutes !== null && operationalMetrics?.mttr.value_minutes !== undefined
+                ? `${operationalMetrics.mttr.value_minutes}min`
+                : '—'}
+            </div>
+            <div className="text-xs text-gray-400 mt-1">Mean Time to Respond</div>
+            {operationalMetrics?.mttr.estimated && (
+              <span className="inline-block mt-1.5 px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-xs border border-yellow-200">
+                estimated
+              </span>
+            )}
+          </div>
+          {/* FP Rate */}
+          <div className="bg-red-50 rounded border border-red-200 p-4 text-center">
+            <div className="text-xs text-gray-500 mb-1 font-medium">FP Rate</div>
+            <div className="text-2xl font-bold text-red-600">
+              {operationalMetrics?.fp_rate.rate !== null && operationalMetrics?.fp_rate.rate !== undefined
+                ? `${(operationalMetrics.fp_rate.rate * 100).toFixed(1)}%`
+                : '—'}
+            </div>
+            <div className="text-xs text-gray-400 mt-1">False Positive Rate</div>
+            {operationalMetrics?.fp_rate.estimated && (
+              <span className="inline-block mt-1.5 px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-xs border border-yellow-200">
+                estimated
+              </span>
+            )}
+          </div>
+        </div>
+        {!operationalMetrics && (
+          <p className="text-xs text-gray-400 mt-3 italic text-center">Loading operational metrics…</p>
+        )}
+      </div>
 
       {/* ── 6. Weekly Trend + Three-Loop Architecture ───────────────────────── */}
       <div className="grid md:grid-cols-2 gap-6">

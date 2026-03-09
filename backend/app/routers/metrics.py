@@ -663,6 +663,173 @@ async def get_registered_domains():
 
 
 # ============================================================================
+# GET /api/soc/operational-metrics — MTTD / MTTR / FP rate (F4-OVERLAY)
+# ============================================================================
+
+@router.get("/soc/operational-metrics")
+async def get_operational_metrics():
+    """Operational outcome metrics for ROI dashboard overlay (F4)."""
+
+    # MTTD: alert creation → decision
+    try:
+        mttd_result = await neo4j_client.run_query(
+            "MATCH (d:Decision)-[:FOR_ALERT]->(a:Alert) "
+            "WHERE d.created_at IS NOT NULL AND a.created_at IS NOT NULL "
+            "RETURN avg("
+            "  duration.inSeconds(datetime(a.created_at), datetime(d.created_at)).seconds"
+            ") AS avg_mttd_seconds, count(d) AS sample_size"
+        )
+        if mttd_result and mttd_result[0]["sample_size"] > 0:
+            mttd_seconds = mttd_result[0]["avg_mttd_seconds"]
+            mttd = {
+                "value_seconds": round(mttd_seconds),
+                "value_minutes": round(mttd_seconds / 60, 1),
+                "sample_size": mttd_result[0]["sample_size"],
+                "estimated": False,
+            }
+        else:
+            mttd = {
+                "value_seconds": None,
+                "value_minutes": None,
+                "sample_size": 0,
+                "estimated": True,
+                "note": "Requires decisions with timestamps",
+            }
+    except Exception as exc:
+        print(f"[METRICS] MTTD query failed: {exc}")
+        mttd = {
+            "value_seconds": None, "value_minutes": None, "sample_size": 0,
+            "estimated": True, "note": "Requires decisions with timestamps",
+        }
+
+    # MTTR: decision → outcome verification
+    try:
+        mttr_result = await neo4j_client.run_query(
+            "MATCH (d:Decision) "
+            "WHERE d.created_at IS NOT NULL AND d.verified_at IS NOT NULL "
+            "RETURN avg("
+            "  duration.inSeconds(datetime(d.created_at), datetime(d.verified_at)).seconds"
+            ") AS avg_mttr_seconds, count(d) AS sample_size"
+        )
+        if mttr_result and mttr_result[0]["sample_size"] > 0:
+            mttr_seconds = mttr_result[0]["avg_mttr_seconds"]
+            mttr = {
+                "value_seconds": round(mttr_seconds),
+                "value_minutes": round(mttr_seconds / 60, 1),
+                "sample_size": mttr_result[0]["sample_size"],
+                "estimated": False,
+            }
+        else:
+            mttr = {
+                "value_seconds": None,
+                "value_minutes": None,
+                "sample_size": 0,
+                "estimated": True,
+                "note": "Requires verified outcomes with timestamps",
+            }
+    except Exception as exc:
+        print(f"[METRICS] MTTR query failed: {exc}")
+        mttr = {
+            "value_seconds": None, "value_minutes": None, "sample_size": 0,
+            "estimated": True, "note": "Requires verified outcomes with timestamps",
+        }
+
+    # FP Rate from Decision outcomes
+    try:
+        fp_result = await neo4j_client.run_query(
+            "MATCH (d:Decision) "
+            "RETURN count(d) AS total, "
+            "sum(CASE WHEN d.correct = false OR d.outcome = 'incorrect' "
+            "THEN 1 ELSE 0 END) AS fp_count"
+        )
+        if fp_result and fp_result[0]["total"] > 0:
+            total = int(fp_result[0]["total"])
+            fp_count = int(fp_result[0]["fp_count"] or 0)
+            fp_rate = {
+                "rate": round(fp_count / total, 3),
+                "total_decisions": total,
+                "fp_count": fp_count,
+                "estimated": False,
+            }
+        else:
+            fp_rate = {
+                "rate": None,
+                "total_decisions": 0,
+                "fp_count": 0,
+                "estimated": True,
+                "note": "Requires verified decision outcomes",
+            }
+    except Exception as exc:
+        print(f"[METRICS] FP rate query failed: {exc}")
+        fp_rate = {
+            "rate": None, "total_decisions": 0, "fp_count": 0,
+            "estimated": True, "note": "Requires verified decision outcomes",
+        }
+
+    return {
+        "mttd": mttd,
+        "mttr": mttr,
+        "fp_rate": fp_rate,
+        "source": "neo4j",
+    }
+
+
+# ============================================================================
+# GET /api/soc/board-export — Executive JSON summary (F4-OVERLAY)
+# ============================================================================
+
+@router.get("/soc/board-export")
+async def get_board_export():
+    """Board-ready JSON summary for executive reporting."""
+    from datetime import datetime as _dt
+
+    total, correct, fp_count_val = 0, 0, 0
+
+    try:
+        dec_res = await neo4j_client.run_query(
+            "MATCH (d:Decision) RETURN count(d) AS total"
+        )
+        total = int(dec_res[0]["total"]) if dec_res else 0
+
+        correct_res = await neo4j_client.run_query(
+            "MATCH (d:Decision) WHERE d.outcome = 'correct' OR d.correct = true "
+            "RETURN count(d) AS correct"
+        )
+        correct = int(correct_res[0]["correct"]) if correct_res else 0
+
+        fp_res = await neo4j_client.run_query(
+            "MATCH (d:Decision) RETURN count(d) AS total, "
+            "sum(CASE WHEN d.correct = false OR d.outcome = 'incorrect' "
+            "THEN 1 ELSE 0 END) AS fp_count"
+        )
+        if fp_res and fp_res[0]["total"] > 0:
+            fp_count_val = int(fp_res[0]["fp_count"] or 0)
+    except Exception as exc:
+        print(f"[METRICS] board-export Neo4j query failed: {exc}")
+
+    correct_rate = correct / total if total > 0 else 0.0
+    fp_rate_pct = round(fp_count_val / total * 100, 1) if total > 0 else None
+    time_saved = round(correct_rate * total * 0.5, 2)
+    data_quality = "live" if total > 0 else "insufficient_data"
+
+    return {
+        "generated_at": _dt.utcnow().isoformat(),
+        "product": "Compounding Intelligence Platform",
+        "version": "v5.0",
+        "metrics": {
+            "decisions_made": total,
+            "correct_rate_pct": round(correct_rate * 100, 1),
+            "fp_rate_pct": fp_rate_pct,
+            "mttd_minutes": None,
+            "mttr_minutes": None,
+            "time_saved_hours": time_saved,
+        },
+        "data_quality": data_quality,
+        "note": "Metrics marked null require more decision history.",
+    }
+
+
+# ============================================================================
 # GET /api/metrics/confidence-trajectory - Per-situation confidence over time (F4b)
 # ============================================================================
 
