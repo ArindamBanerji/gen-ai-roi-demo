@@ -319,7 +319,7 @@ export default function AlertTriageTab() {
   const loadAlertQueue = async () => {
     try {
       console.log('[AlertTriageTab] Loading alert queue...')
-      const data = await getAlerts()
+      const data = await getAlerts() as { alerts: Alert[] }
       console.log('[AlertTriageTab] Received data:', data)
       console.log('[AlertTriageTab] data.alerts:', data.alerts)
       console.log('[AlertTriageTab] Number of alerts:', data.alerts?.length)
@@ -366,7 +366,7 @@ export default function AlertTriageTab() {
     setDecisionFactors(null)
 
     try {
-      const data = await analyzeAlert(alert.id)
+      const data = await analyzeAlert(alert.id) as AnalysisResult
       setAnalysis(data)
       try {
         const policyData = await checkPolicyConflict(alert.id)
@@ -394,7 +394,7 @@ export default function AlertTriageTab() {
     setClosedLoop(null)
 
     try {
-      const data = await executeAction(selectedAlert.id)
+      const data = await executeAction(selectedAlert.id) as ClosedLoopResult
       setClosedLoop(data)
 
       // Preserve feedback panel visibility when queue reloads

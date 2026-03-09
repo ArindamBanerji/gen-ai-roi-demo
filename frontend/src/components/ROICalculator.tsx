@@ -140,7 +140,7 @@ export default function ROICalculatorModal({ isOpen, onClose }: ROICalculatorMod
   const [error, setError] = useState<string | null>(null)
 
   // Debounce timer
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null)
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Animated counters for results
   const prevResult = useRef<ROIResponse | null>(null)
