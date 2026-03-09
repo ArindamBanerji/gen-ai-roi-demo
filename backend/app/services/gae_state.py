@@ -35,11 +35,11 @@ _bootstrap_metadata: dict | None = None
 # ---------------------------------------------------------------------------
 
 def _soc_profile() -> CalibrationProfile:
-    """Return the SOC calibration profile (asymmetry 20:1, τ=0.25)."""
+    """Return the SOC calibration profile (asymmetry 20:1, τ=0.1)."""
     return CalibrationProfile(
         learning_rate   = 0.02,
         penalty_ratio   = 20.0,   # asymmetry_ratio from SOCDomainConfig
-        temperature     = 0.25,   # SOCDomainConfig.get_temperature()
+        temperature     = 0.1,    # V3B validated ECE=0.036. Never use 0.25.
     )
 
 
