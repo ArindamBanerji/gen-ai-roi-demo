@@ -68,7 +68,7 @@ def test_all_categories_represented():
 def test_all_factors_present():
     """Every scenario must have all 6 factors with values in [0.0, 1.0]."""
     FACTOR_NAMES = [
-        "travel_match", "asset_criticality", "threat_intel",
+        "travel_match", "asset_criticality", "threat_intel_enrichment",
         "pattern_history", "time_anomaly", "device_trust",
     ]
     scenarios = _load()

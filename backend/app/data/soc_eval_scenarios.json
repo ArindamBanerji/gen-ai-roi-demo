@@ -7,7 +7,7 @@
     "factors": {
       "travel_match": 0.3,
       "asset_criticality": 0.9,
-      "threat_intel": 0.8,
+      "threat_intel_enrichment": 0.8,
       "pattern_history": 0.6,
       "time_anomaly": 0.7,
       "device_trust": 0.1
@@ -16,7 +16,7 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "High-value credential theft attempt with active IOC match on untrusted device.",
-    "dominant_factors": ["asset_criticality", "threat_intel", "device_trust"]
+    "dominant_factors": ["asset_criticality", "threat_intel_enrichment", "device_trust"]
   },
   {
     "scenario_id": "SOC-CA-02",
@@ -26,7 +26,7 @@
     "factors": {
       "travel_match": 0.9,
       "asset_criticality": 0.9,
-      "threat_intel": 0.8,
+      "threat_intel_enrichment": 0.8,
       "pattern_history": 0.6,
       "time_anomaly": 0.7,
       "device_trust": 0.1
@@ -35,7 +35,7 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "Privileged frequent traveler with IOC match — suspicious despite travel context.",
-    "dominant_factors": ["travel_match", "asset_criticality", "threat_intel"]
+    "dominant_factors": ["travel_match", "asset_criticality", "threat_intel_enrichment"]
   },
   {
     "scenario_id": "SOC-CA-03",
@@ -45,7 +45,7 @@
     "factors": {
       "travel_match": 0.4,
       "asset_criticality": 0.6,
-      "threat_intel": 0.5,
+      "threat_intel_enrichment": 0.5,
       "pattern_history": 0.5,
       "time_anomaly": 0.5,
       "device_trust": 0.4
@@ -54,7 +54,7 @@
     "expected_action_index": 1,
     "confidence_tier": "medium",
     "description": "Ambiguous credential access with moderate threat signals requiring analyst review.",
-    "dominant_factors": ["asset_criticality", "threat_intel"]
+    "dominant_factors": ["asset_criticality", "threat_intel_enrichment"]
   },
   {
     "scenario_id": "SOC-CA-04",
@@ -64,7 +64,7 @@
     "factors": {
       "travel_match": 0.2,
       "asset_criticality": 0.2,
-      "threat_intel": 0.1,
+      "threat_intel_enrichment": 0.1,
       "pattern_history": 0.2,
       "time_anomaly": 0.2,
       "device_trust": 0.9
@@ -83,7 +83,7 @@
     "factors": {
       "travel_match": 0.2,
       "asset_criticality": 0.3,
-      "threat_intel": 0.2,
+      "threat_intel_enrichment": 0.2,
       "pattern_history": 0.2,
       "time_anomaly": 0.3,
       "device_trust": 0.8
@@ -102,7 +102,7 @@
     "factors": {
       "travel_match": 0.3,
       "asset_criticality": 0.5,
-      "threat_intel": 0.3,
+      "threat_intel_enrichment": 0.3,
       "pattern_history": 0.4,
       "time_anomaly": 0.3,
       "device_trust": 0.7
@@ -121,7 +121,7 @@
     "factors": {
       "travel_match": 0.3,
       "asset_criticality": 0.8,
-      "threat_intel": 0.9,
+      "threat_intel_enrichment": 0.9,
       "pattern_history": 0.5,
       "time_anomaly": 0.6,
       "device_trust": 0.2
@@ -130,7 +130,7 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "Critical asset with high-confidence IOC match requiring immediate escalation.",
-    "dominant_factors": ["threat_intel", "asset_criticality"]
+    "dominant_factors": ["threat_intel_enrichment", "asset_criticality"]
   },
   {
     "scenario_id": "SOC-TI-02",
@@ -140,7 +140,7 @@
     "factors": {
       "travel_match": 0.9,
       "asset_criticality": 0.9,
-      "threat_intel": 0.9,
+      "threat_intel_enrichment": 0.9,
       "pattern_history": 0.6,
       "time_anomaly": 0.7,
       "device_trust": 0.1
@@ -149,7 +149,7 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "Privileged frequent traveler with critical IOC match — escalate despite travel record.",
-    "dominant_factors": ["threat_intel", "asset_criticality", "travel_match"]
+    "dominant_factors": ["threat_intel_enrichment", "asset_criticality", "travel_match"]
   },
   {
     "scenario_id": "SOC-TI-03",
@@ -159,7 +159,7 @@
     "factors": {
       "travel_match": 0.3,
       "asset_criticality": 0.5,
-      "threat_intel": 0.7,
+      "threat_intel_enrichment": 0.7,
       "pattern_history": 0.5,
       "time_anomaly": 0.5,
       "device_trust": 0.4
@@ -168,7 +168,7 @@
     "expected_action_index": 1,
     "confidence_tier": "medium",
     "description": "Confirmed IOC match on lower-criticality asset — investigate before escalating.",
-    "dominant_factors": ["threat_intel"]
+    "dominant_factors": ["threat_intel_enrichment"]
   },
   {
     "scenario_id": "SOC-TI-04",
@@ -178,7 +178,7 @@
     "factors": {
       "travel_match": 0.2,
       "asset_criticality": 0.2,
-      "threat_intel": 0.2,
+      "threat_intel_enrichment": 0.2,
       "pattern_history": 0.1,
       "time_anomaly": 0.2,
       "device_trust": 0.9
@@ -187,7 +187,7 @@
     "expected_action_index": 2,
     "confidence_tier": "high",
     "description": "Stale IOC false positive on trusted managed device with low asset criticality.",
-    "dominant_factors": ["device_trust", "threat_intel"]
+    "dominant_factors": ["device_trust", "threat_intel_enrichment"]
   },
   {
     "scenario_id": "SOC-TI-05",
@@ -197,7 +197,7 @@
     "factors": {
       "travel_match": 0.2,
       "asset_criticality": 0.2,
-      "threat_intel": 0.1,
+      "threat_intel_enrichment": 0.1,
       "pattern_history": 0.2,
       "time_anomaly": 0.2,
       "device_trust": 0.9
@@ -216,7 +216,7 @@
     "factors": {
       "travel_match": 0.2,
       "asset_criticality": 0.4,
-      "threat_intel": 0.5,
+      "threat_intel_enrichment": 0.5,
       "pattern_history": 0.3,
       "time_anomaly": 0.3,
       "device_trust": 0.7
@@ -225,7 +225,7 @@
     "expected_action_index": 3,
     "confidence_tier": "medium",
     "description": "Low-confidence IOC match on medium-criticality asset — monitor for recurrence.",
-    "dominant_factors": ["threat_intel"]
+    "dominant_factors": ["threat_intel_enrichment"]
   },
   {
     "scenario_id": "SOC-LM-01",
@@ -235,7 +235,7 @@
     "factors": {
       "travel_match": 0.5,
       "asset_criticality": 0.8,
-      "threat_intel": 0.7,
+      "threat_intel_enrichment": 0.7,
       "pattern_history": 0.9,
       "time_anomaly": 0.7,
       "device_trust": 0.2
@@ -254,7 +254,7 @@
     "factors": {
       "travel_match": 0.5,
       "asset_criticality": 0.8,
-      "threat_intel": 0.8,
+      "threat_intel_enrichment": 0.8,
       "pattern_history": 0.8,
       "time_anomaly": 0.7,
       "device_trust": 0.2
@@ -263,7 +263,7 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "High-confidence lateral movement with IOC match and strong behavioral history.",
-    "dominant_factors": ["asset_criticality", "threat_intel", "pattern_history"]
+    "dominant_factors": ["asset_criticality", "threat_intel_enrichment", "pattern_history"]
   },
   {
     "scenario_id": "SOC-LM-03",
@@ -273,7 +273,7 @@
     "factors": {
       "travel_match": 0.4,
       "asset_criticality": 0.6,
-      "threat_intel": 0.5,
+      "threat_intel_enrichment": 0.5,
       "pattern_history": 0.6,
       "time_anomaly": 0.5,
       "device_trust": 0.4
@@ -292,7 +292,7 @@
     "factors": {
       "travel_match": 0.9,
       "asset_criticality": 0.2,
-      "threat_intel": 0.1,
+      "threat_intel_enrichment": 0.1,
       "pattern_history": 0.2,
       "time_anomaly": 0.2,
       "device_trust": 0.8
@@ -311,7 +311,7 @@
     "factors": {
       "travel_match": 0.8,
       "asset_criticality": 0.3,
-      "threat_intel": 0.2,
+      "threat_intel_enrichment": 0.2,
       "pattern_history": 0.2,
       "time_anomaly": 0.3,
       "device_trust": 0.8
@@ -330,7 +330,7 @@
     "factors": {
       "travel_match": 0.4,
       "asset_criticality": 0.4,
-      "threat_intel": 0.3,
+      "threat_intel_enrichment": 0.3,
       "pattern_history": 0.4,
       "time_anomaly": 0.3,
       "device_trust": 0.7
@@ -349,7 +349,7 @@
     "factors": {
       "travel_match": 0.3,
       "asset_criticality": 0.9,
-      "threat_intel": 0.8,
+      "threat_intel_enrichment": 0.8,
       "pattern_history": 0.7,
       "time_anomaly": 0.8,
       "device_trust": 0.1
@@ -358,7 +358,7 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "Large-volume exfiltration from critical repo at 3 AM with known bad destination IP.",
-    "dominant_factors": ["asset_criticality", "time_anomaly", "threat_intel"]
+    "dominant_factors": ["asset_criticality", "time_anomaly", "threat_intel_enrichment"]
   },
   {
     "scenario_id": "SOC-DE-02",
@@ -368,7 +368,7 @@
     "factors": {
       "travel_match": 0.3,
       "asset_criticality": 0.9,
-      "threat_intel": 0.7,
+      "threat_intel_enrichment": 0.7,
       "pattern_history": 0.8,
       "time_anomaly": 0.7,
       "device_trust": 0.2
@@ -387,7 +387,7 @@
     "factors": {
       "travel_match": 0.3,
       "asset_criticality": 0.7,
-      "threat_intel": 0.5,
+      "threat_intel_enrichment": 0.5,
       "pattern_history": 0.5,
       "time_anomaly": 0.6,
       "device_trust": 0.5
@@ -406,7 +406,7 @@
     "factors": {
       "travel_match": 0.2,
       "asset_criticality": 0.3,
-      "threat_intel": 0.1,
+      "threat_intel_enrichment": 0.1,
       "pattern_history": 0.1,
       "time_anomaly": 0.2,
       "device_trust": 0.9
@@ -425,7 +425,7 @@
     "factors": {
       "travel_match": 0.2,
       "asset_criticality": 0.3,
-      "threat_intel": 0.1,
+      "threat_intel_enrichment": 0.1,
       "pattern_history": 0.2,
       "time_anomaly": 0.2,
       "device_trust": 0.8
@@ -444,7 +444,7 @@
     "factors": {
       "travel_match": 0.2,
       "asset_criticality": 0.4,
-      "threat_intel": 0.3,
+      "threat_intel_enrichment": 0.3,
       "pattern_history": 0.3,
       "time_anomaly": 0.3,
       "device_trust": 0.7
@@ -463,7 +463,7 @@
     "factors": {
       "travel_match": 0.4,
       "asset_criticality": 0.7,
-      "threat_intel": 0.6,
+      "threat_intel_enrichment": 0.6,
       "pattern_history": 0.9,
       "time_anomaly": 0.8,
       "device_trust": 0.1
@@ -482,7 +482,7 @@
     "factors": {
       "travel_match": 0.4,
       "asset_criticality": 0.8,
-      "threat_intel": 0.7,
+      "threat_intel_enrichment": 0.7,
       "pattern_history": 0.8,
       "time_anomaly": 0.8,
       "device_trust": 0.2
@@ -501,7 +501,7 @@
     "factors": {
       "travel_match": 0.4,
       "asset_criticality": 0.6,
-      "threat_intel": 0.5,
+      "threat_intel_enrichment": 0.5,
       "pattern_history": 0.7,
       "time_anomaly": 0.6,
       "device_trust": 0.4
@@ -520,7 +520,7 @@
     "factors": {
       "travel_match": 0.3,
       "asset_criticality": 0.2,
-      "threat_intel": 0.1,
+      "threat_intel_enrichment": 0.1,
       "pattern_history": 0.2,
       "time_anomaly": 0.2,
       "device_trust": 0.9
@@ -539,7 +539,7 @@
     "factors": {
       "travel_match": 0.3,
       "asset_criticality": 0.2,
-      "threat_intel": 0.2,
+      "threat_intel_enrichment": 0.2,
       "pattern_history": 0.2,
       "time_anomaly": 0.2,
       "device_trust": 0.8
@@ -558,7 +558,7 @@
     "factors": {
       "travel_match": 0.3,
       "asset_criticality": 0.4,
-      "threat_intel": 0.3,
+      "threat_intel_enrichment": 0.3,
       "pattern_history": 0.5,
       "time_anomaly": 0.3,
       "device_trust": 0.6
@@ -577,7 +577,7 @@
     "factors": {
       "travel_match": 0.2,
       "asset_criticality": 0.9,
-      "threat_intel": 0.8,
+      "threat_intel_enrichment": 0.8,
       "pattern_history": 0.6,
       "time_anomaly": 0.8,
       "device_trust": 0.2
@@ -586,7 +586,7 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "Critical cloud workload accessed from known-bad IP at anomalous hour.",
-    "dominant_factors": ["asset_criticality", "threat_intel", "time_anomaly"]
+    "dominant_factors": ["asset_criticality", "threat_intel_enrichment", "time_anomaly"]
   },
   {
     "scenario_id": "SOC-CI-02",
@@ -596,7 +596,7 @@
     "factors": {
       "travel_match": 0.3,
       "asset_criticality": 0.8,
-      "threat_intel": 0.8,
+      "threat_intel_enrichment": 0.8,
       "pattern_history": 0.6,
       "time_anomaly": 0.7,
       "device_trust": 0.2
@@ -605,7 +605,7 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "Production cloud infrastructure targeted with matching threat actor TTP.",
-    "dominant_factors": ["asset_criticality", "threat_intel"]
+    "dominant_factors": ["asset_criticality", "threat_intel_enrichment"]
   },
   {
     "scenario_id": "SOC-CI-03",
@@ -615,7 +615,7 @@
     "factors": {
       "travel_match": 0.3,
       "asset_criticality": 0.6,
-      "threat_intel": 0.5,
+      "threat_intel_enrichment": 0.5,
       "pattern_history": 0.5,
       "time_anomaly": 0.6,
       "device_trust": 0.5
@@ -634,7 +634,7 @@
     "factors": {
       "travel_match": 0.2,
       "asset_criticality": 0.2,
-      "threat_intel": 0.1,
+      "threat_intel_enrichment": 0.1,
       "pattern_history": 0.1,
       "time_anomaly": 0.2,
       "device_trust": 0.9
@@ -653,7 +653,7 @@
     "factors": {
       "travel_match": 0.2,
       "asset_criticality": 0.3,
-      "threat_intel": 0.1,
+      "threat_intel_enrichment": 0.1,
       "pattern_history": 0.2,
       "time_anomaly": 0.2,
       "device_trust": 0.9
@@ -672,7 +672,7 @@
     "factors": {
       "travel_match": 0.2,
       "asset_criticality": 0.4,
-      "threat_intel": 0.3,
+      "threat_intel_enrichment": 0.3,
       "pattern_history": 0.3,
       "time_anomaly": 0.3,
       "device_trust": 0.7

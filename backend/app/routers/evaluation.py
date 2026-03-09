@@ -32,7 +32,7 @@ def load_soc_scenarios() -> List[EvaluationScenario]:
     Load and deserialise all 36 SOC evaluation scenarios from JSON.
 
     Factor vector order matches SOC_PROFILE_CENTROIDS:
-      [0] travel_match  [1] asset_criticality  [2] threat_intel
+      [0] travel_match  [1] asset_criticality  [2] threat_intel_enrichment
       [3] pattern_history  [4] time_anomaly  [5] device_trust
     """
     raw = json.loads(_SCENARIOS_PATH.read_text(encoding="utf-8"))
@@ -42,7 +42,7 @@ def load_soc_scenarios() -> List[EvaluationScenario]:
         factors_list = [
             f["travel_match"],
             f["asset_criticality"],
-            f["threat_intel"],
+            f["threat_intel_enrichment"],
             f["pattern_history"],
             f["time_anomaly"],
             f["device_trust"],

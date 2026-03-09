@@ -28,7 +28,7 @@ from typing import Dict, List
 
 # ── v5.0 ProfileScorer Configuration ────────────────────────────────
 # 6 SOC categories (rows), 4 actions (cols), 6 factors (depth)
-# Factor order: [travel_match, asset_criticality, threat_intel,
+# Factor order: [travel_match, asset_criticality, threat_intel_enrichment,
 #                pattern_history, time_anomaly, device_trust]
 # Action order: [escalate, investigate, suppress, monitor]
 # Centroid values: what each action looks like for each category.
@@ -49,8 +49,17 @@ SOC_CATEGORIES = [
 ]
 
 # Shape: (6 categories, 4 actions, 6 factors)
-# Factor index: 0=travel_match, 1=asset_criticality, 2=threat_intel,
+# Factor index: 0=travel_match, 1=asset_criticality, 2=threat_intel_enrichment,
 #               3=pattern_history, 4=time_anomaly, 5=device_trust
+SOC_FACTORS = [
+    "travel_match",
+    "asset_criticality",
+    "threat_intel_enrichment",
+    "pattern_history",
+    "time_anomaly",
+    "device_trust",
+]
+
 SOC_PROFILE_CENTROIDS = np.array([
 
   # ── Category 0: credential_access ──────────────────────────────

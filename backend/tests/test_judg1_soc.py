@@ -62,7 +62,7 @@ def test_judgment_response_shape():
     )
     factors = {
         "travel_match": 0.9, "asset_criticality": 0.8,
-        "threat_intel": 0.7, "pattern_history": 0.6,
+        "threat_intel_enrichment": 0.7, "pattern_history": 0.6,
         "time_anomaly": 0.5, "device_trust": 0.3,
     }
     response = build_judgment_response(

@@ -14,24 +14,16 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from gae.judgment import compute_judgment
-from app.domains.soc.config import SOC_CATEGORIES
+from app.domains.soc.config import SOC_CATEGORIES, SOC_FACTORS
 from app.db.neo4j import neo4j_client
 
 router = APIRouter()
 
 # ── Constants ────────────────────────────────────────────────────────────────
 # Factor names in centroid order — must stay in sync with SOC_PROFILE_CENTROIDS
-# depth axis: [0]=travel_match [1]=asset_criticality [2]=threat_intel
+# depth axis: [0]=travel_match [1]=asset_criticality [2]=threat_intel_enrichment
 #             [3]=pattern_history [4]=time_anomaly [5]=device_trust
 SOC_ACTIONS = ["escalate", "investigate", "suppress", "monitor"]
-SOC_FACTORS = [
-    "travel_match",
-    "asset_criticality",
-    "threat_intel",
-    "pattern_history",
-    "time_anomaly",
-    "device_trust",
-]
 
 
 # ── Request model ─────────────────────────────────────────────────────────────
@@ -49,7 +41,7 @@ def _build_factor_vector(factors: Dict[str, float]) -> np.ndarray:
         [
             factors["travel_match"],
             factors["asset_criticality"],
-            factors["threat_intel"],
+            factors["threat_intel_enrichment"],
             factors["pattern_history"],
             factors["time_anomaly"],
             factors["device_trust"],
@@ -172,7 +164,7 @@ async def explain_decision_get(alert_id: str):
         factors = {
             "travel_match":      float(d["travel_match"]),
             "asset_criticality": float(d["asset_criticality"]),
-            "threat_intel":      float(d["threat_intel"]),
+            "threat_intel_enrichment": float(d["threat_intel_enrichment"]),
             "pattern_history":   float(d["pattern_history"]),
             "time_anomaly":      float(d["time_anomaly"]),
             "device_trust":      float(d["device_trust"]),
