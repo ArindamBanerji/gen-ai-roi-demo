@@ -16,11 +16,18 @@ from pathlib import Path
 
 import numpy as np
 from gae.learning import LearningState, WeightUpdate, CalibrationProfile
+from gae import bootstrap_calibration, BootstrapResult
+from app.domains.soc.config import (
+    SOC_BOOTSTRAP_ROUNDS, SOC_BOOTSTRAP_SAMPLES_PER_ACTION,
+    SOC_BOOTSTRAP_SIGMA, SOC_BOOTSTRAP_CONVERGENCE_TOL, SOC_BOOTSTRAP_SEED,
+    SOC_CATEGORIES,
+)
 
 log = logging.getLogger(__name__)
 
 _STATE_PATH = Path(__file__).parent.parent / "data" / "gae_learning_state.json"
 _learning_state: LearningState | None = None
+_bootstrap_metadata: dict | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -89,52 +96,106 @@ def _load_from_file() -> LearningState:
     return state
 
 
+def _read_checkpoint_metadata() -> dict:
+    """Read the metadata field from the checkpoint. Returns {} if absent."""
+    with open(_STATE_PATH, "r", encoding="utf-8") as fh:
+        data = json.load(fh)
+    return data.get("metadata", {})
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
 def init_learning_state() -> LearningState:
     """
-    Initialize the live LearningState.
+    Initialize the live LearningState with bootstrap calibration.
 
-    Loads from the JSON checkpoint if it exists; otherwise builds a fresh
-    state from SOCDomainConfig.get_initial_W().  Called once in
-    main.py startup_event().
+    Three-path startup:
+      1. Checkpoint with metadata.bootstrap=True → load as-is (already calibrated).
+         Log: [GAE] Loaded bootstrap checkpoint (step={n}, drift={drift:.4f})
+      2. Legacy checkpoint (no bootstrap metadata) → run bootstrap, overwrite.
+         Log: [GAE] Legacy checkpoint detected — running bootstrap
+      3. No checkpoint → fresh state, run bootstrap, save.
+         Log: [GAE] Bootstrap calibration complete (decisions={n}, ...)
+
+    Called once in main.py startup_event().
 
     Returns
     -------
     LearningState
         The initialized state (also stored in module-level singleton).
     """
-    global _learning_state
+    global _learning_state, _bootstrap_metadata
+
+    # Build ProfileScorer from SOC_PROFILE_CENTROIDS (always fresh)
+    from app.domains.soc.config import SOCDomainConfig as _SOCDomainConfig
+    _soc_cfg = _SOCDomainConfig()
+    _profile_scorer = _soc_cfg.build_profile_scorer()
+
+    needs_bootstrap = False
+
     if _STATE_PATH.exists():
         try:
             _learning_state = _load_from_file()
-            print(
-                f"[GAE] Loaded learning state from checkpoint "
-                f"(step={_learning_state.decision_count}, W.shape={_learning_state.W.shape})"
-            )
+            checkpoint_meta = _read_checkpoint_metadata()
         except Exception as exc:
             log.warning(
                 "[GAE] Could not load state from %s: %s — using fresh state",
                 _STATE_PATH, exc,
             )
             _learning_state = _make_fresh_state()
+            checkpoint_meta = {}
+
+        if checkpoint_meta.get("bootstrap") is True:
+            # Path 1: already bootstrapped — restore metadata and log
+            _bootstrap_metadata = checkpoint_meta
+            print(
+                f"[GAE] Loaded bootstrap checkpoint "
+                f"(step={_learning_state.decision_count}, "
+                f"drift={checkpoint_meta.get('drift', 0.0):.4f})"
+            )
+        else:
+            # Path 2: legacy checkpoint — run bootstrap, overwrite
+            print("[GAE] Legacy checkpoint detected — running bootstrap")
+            needs_bootstrap = True
     else:
+        # Path 3: no checkpoint — fresh state, run bootstrap
         _learning_state = _make_fresh_state()
-        print(
-            f"[GAE] Fresh learning state initialized "
-            f"(W.shape={_learning_state.W.shape})"
+        needs_bootstrap = True
+
+    if needs_bootstrap:
+        result: BootstrapResult = bootstrap_calibration(
+            scorer=_profile_scorer,
+            categories=list(SOC_CATEGORIES),
+            n_rounds=SOC_BOOTSTRAP_ROUNDS,
+            samples_per_action=SOC_BOOTSTRAP_SAMPLES_PER_ACTION,
+            sigma=SOC_BOOTSTRAP_SIGMA,
+            convergence_tol=SOC_BOOTSTRAP_CONVERGENCE_TOL,
+            seed=SOC_BOOTSTRAP_SEED,
         )
-    # v5.0: attach ProfileScorer for profile-based scoring
-    from app.domains.soc.config import SOCDomainConfig as _SOCDomainConfig
-    _soc_cfg = _SOCDomainConfig()
-    _profile_scorer = _soc_cfg.build_profile_scorer()
+        _learning_state.decision_count = result.n_decisions
+        _bootstrap_metadata = {
+            "bootstrap": True,
+            "drift": result.final_drift,
+            "n_decisions": result.n_decisions,
+            "converged": result.converged,
+        }
+        print(
+            f"[GAE] Bootstrap calibration complete "
+            f"(decisions={result.n_decisions}, converged={result.converged}, "
+            f"drift={result.final_drift:.4f})"
+        )
+
     _learning_state.attach_profile_scorer(_profile_scorer)
     print(
         f"[GAE] ProfileScorer attached "
         f"(actions={_profile_scorer.actions}, tau={_profile_scorer.tau})"
     )
+
+    if needs_bootstrap:
+        save_learning_state()
+
     return _learning_state
 
 
@@ -191,6 +252,8 @@ def save_learning_state() -> None:
         "decision_count": _learning_state.decision_count,
         "history":       history_data,
     }
+    if _bootstrap_metadata:
+        payload["metadata"] = _bootstrap_metadata
     fd, tmp = tempfile.mkstemp(
         dir=_STATE_PATH.parent, suffix=".tmp", prefix=".gae_"
     )

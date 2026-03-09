@@ -67,7 +67,8 @@ async def startup_event():
     print(f"[DOMAIN] Active domain: {config.display_name} ({config.name})")
     print(f"[DOMAIN] Factors: {len(config.factors)}, Actions: {len(config.actions)}, Situations: {len(config.situation_types)}")
 
-    # Initialize GAE learning state (loads checkpoint or builds fresh W matrix).
+    # Initialize GAE learning state (bootstrap calibration on cold start or
+    # legacy checkpoint; load directly if bootstrap metadata present).
     # Must be done before registering reset handlers so the singleton is ready.
     from app.services.gae_state import init_learning_state, reset_learning_state
     ls = init_learning_state()

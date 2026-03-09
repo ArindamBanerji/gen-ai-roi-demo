@@ -60,6 +60,15 @@ SOC_FACTORS = [
     "device_trust",
 ]
 
+# Bootstrap calibration parameters (GAE-BOOT-1)
+# Used by gae_state.init_learning_state() on cold start or legacy checkpoint.
+# Values validated against V3B ECE benchmark.
+SOC_BOOTSTRAP_ROUNDS = 10
+SOC_BOOTSTRAP_SAMPLES_PER_ACTION = 5
+SOC_BOOTSTRAP_SIGMA = 0.08
+SOC_BOOTSTRAP_CONVERGENCE_TOL = 0.01
+SOC_BOOTSTRAP_SEED = 42
+
 SOC_PROFILE_CENTROIDS = np.array([
 
   # ── Category 0: credential_access ──────────────────────────────
