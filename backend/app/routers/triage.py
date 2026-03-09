@@ -2,6 +2,7 @@
 Alert Triage API - Tab 3
 Graph-based reasoning and closed-loop execution
 """
+import logging
 from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Any
 from datetime import datetime
@@ -16,14 +17,21 @@ from app.services.policy import detect_policy_conflicts, get_conflict_history
 from app.services.triage import get_decision_factors, append_confidence_snapshot
 from app.services.audit import record_decision
 from app.services.event_bus import event_bus, DecisionMade, OutcomeVerified, GraphMutated
-from app.services.gae_state import get_learning_state, save_learning_state
+from app.services.gae_state import get_learning_state, save_learning_state, get_profile_scorer
 import numpy as np
 from app.core.state_manager import state_manager
 from app.db.neo4j import neo4j_client
 from app.models.schemas import ProcessAlertRequest, OutcomeRequest
-from app.domains.soc.config import SOCDomainConfig
+from app.domains.soc.config import (
+    SOCDomainConfig,
+    SOC_AUTO_APPROVE_THRESHOLDS,
+    SOC_CATEGORY_CONFIDENCE_FLOORS,
+    SOC_AGENT_ZONE_ELEVATED,
+)
 from app.domains.soc.orchestrator import compute_factor_vector
 from gae.scoring import score_alert
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter()
@@ -134,27 +142,67 @@ async def analyze_alert(request: ProcessAlertRequest):
         print(f"[GAE] Computing factor vector for {alert_id}...")
         computers = SOCDomainConfig.get_factor_computers()
         f = await compute_factor_vector(alert_data, computers, neo4j_client)
-        f_2d = f.reshape(1, -1)  # score_alert requires shape (1, n_f)
+        f_2d = f.reshape(1, -1)  # kept for legacy reference; ProfileScorer uses f.flatten()
 
-        W       = get_learning_state().W            # live, learned weights (4, 6)
+        # DEPRECATED v5.0: W-matrix scoring replaced by ProfileScorer
+        # W       = get_learning_state().W
+        # scoring = score_alert(f_2d, W, actions, tau)
+
         actions = SOCDomainConfig.get_actions()      # ["escalate", "investigate", "suppress", "monitor"]
-        tau     = SOCDomainConfig.get_temperature()  # 0.25
+        tau     = SOCDomainConfig.get_temperature()  # 0.25 (kept for gae_scoring.temperature field)
 
-        scoring = score_alert(f_2d, W, actions, tau)
+        # v5.0: ProfileScorer centroid-proximity scoring (EXP-E1 validated L2, τ=0.1)
+        _scorer = get_profile_scorer()
+        _cfg = SOCDomainConfig()
+        alert_category = alert_type  # alert_type already resolved above from context
+        try:
+            _cat_idx = _cfg.get_category_index(alert_category)
+        except ValueError:
+            logger.warning(
+                "[TRIAGE-v5] Unknown alert category %r — defaulting to category_index=0",
+                alert_category,
+            )
+            _cat_idx = 0
+        _scoring_result = _scorer.score(f.flatten(), category_index=_cat_idx)
+
+        selected_action = _scoring_result.action_name
+        confidence = _scoring_result.confidence
+
+        # v5.0 routing: auto-approve / agent zone / human review
+        _threshold = SOC_AUTO_APPROVE_THRESHOLDS.get(selected_action)
+        _cat_floor = SOC_CATEGORY_CONFIDENCE_FLOORS.get(alert_category, _threshold)
+        _effective_threshold = _cat_floor if _cat_floor else _threshold
+        _elevated = SOC_AGENT_ZONE_ELEVATED.get(alert_category, False)
+
+        if selected_action == "monitor":
+            routing_zone = "agent_zone"   # monitor never auto-approved
+        elif _elevated:
+            routing_zone = "agent_zone"   # threat_intel_match + cloud_infra elevated
+        elif _effective_threshold and confidence >= _effective_threshold:
+            routing_zone = "auto_approve"
+        elif confidence >= 0.60:
+            routing_zone = "agent_zone"
+        else:
+            routing_zone = "human_review"
+
         fv_list = f.flatten().tolist()   # JSON-serializable, stored in Decision node (R4)
 
-        print(f"[GAE] action={scoring.selected_action} confidence={scoring.confidence:.3f} "
+        logger.info(
+            "[TRIAGE-v5] action=%s conf=%.3f zone=%s",
+            selected_action, confidence, routing_zone,
+        )
+        print(f"[GAE] action={selected_action} confidence={confidence:.3f} "
               f"f={[round(v, 3) for v in fv_list]}")
 
         # Generate reasoning using GAE-selected action
-        reasoning = await narrator.generate_reasoning(alert_type, scoring.selected_action, context)
+        reasoning = await narrator.generate_reasoning(alert_type, selected_action, context)
 
         # F4b: Record confidence snapshot for trajectory tracking
         append_confidence_snapshot(
             alert_id       = alert_id,
             alert_type     = alert_type,
             situation_type = situation_analysis.situation_type,
-            confidence     = scoring.confidence,
+            confidence     = confidence,
         )
 
         # ====================================================================
@@ -182,8 +230,8 @@ async def analyze_alert(request: ProcessAlertRequest):
             {
                 "alert_id":    alert_id,
                 "decision_id": decision_id,
-                "action":      scoring.selected_action,
-                "confidence":  scoring.confidence,
+                "action":      selected_action,
+                "confidence":  confidence,
                 "fv":          fv_list,
             },
         )
@@ -194,8 +242,8 @@ async def analyze_alert(request: ProcessAlertRequest):
         # ====================================================================
         await event_bus.emit(DecisionMade(
             alert_id      = alert_id,
-            action        = scoring.selected_action,
-            confidence    = scoring.confidence,
+            action        = selected_action,
+            confidence    = confidence,
             factor_vector = tuple(fv_list),
         ))
         await event_bus.emit(GraphMutated(
@@ -232,7 +280,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             })
 
         # Build action_probabilities dict for verification + frontend display
-        probs_flat = scoring.action_probabilities.flatten().tolist()
+        probs_flat = _scoring_result.probabilities.tolist()
         action_probabilities = {a: round(p, 6) for a, p in zip(actions, probs_flat)}
 
         # Scoring quality flags
@@ -271,8 +319,9 @@ async def analyze_alert(request: ProcessAlertRequest):
                 "key_facts": key_facts
             },
             "recommendation": {
-                "action":       scoring.selected_action,
-                "confidence":   scoring.confidence,
+                "action":       selected_action,
+                "confidence":   confidence,
+                "routing_zone": routing_zone,
                 "reasoning":    reasoning,
                 "pattern_id":   context.get("pattern_id"),
                 "playbook_id":  context.get("playbook_id"),
@@ -288,10 +337,11 @@ async def analyze_alert(request: ProcessAlertRequest):
                 "temperature":          tau,
                 "low_confidence":       low_confidence,
                 "ambiguous":            ambiguous,
+                "routing_zone":         routing_zone,
                 "decision_method":      (
-                    "softmax scoring matrix "
-                    "(6 graph-computed factors × 4 actions, "
-                    "W updated via Eq. 4b with 20:1 asymmetry)"
+                    "ProfileScorer centroid-proximity scoring "
+                    "(6 factors × 4 actions × 6 categories, "
+                    "L2 kernel τ=0.1, EXP-E1 validated)"
                 ),
             },
             "graph_data": graph_data,
@@ -323,8 +373,8 @@ async def analyze_alert(request: ProcessAlertRequest):
         }
         _alert_for_narr = {**alert_data, **situation_analysis.model_dump()}
         _decision_for_narr = {
-            "action":     scoring.selected_action,
-            "confidence": scoring.confidence,
+            "action":     selected_action,
+            "confidence": confidence,
             "pattern_id": context.get("pattern_id"),
         }
         response["narrative"] = get_narrative_provider().generate(

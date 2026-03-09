@@ -126,7 +126,21 @@ def init_learning_state() -> LearningState:
             f"[GAE] Fresh learning state initialized "
             f"(W.shape={_learning_state.W.shape})"
         )
+    # v5.0: attach ProfileScorer for profile-based scoring
+    from app.domains.soc.config import SOCDomainConfig as _SOCDomainConfig
+    _soc_cfg = _SOCDomainConfig()
+    _profile_scorer = _soc_cfg.build_profile_scorer()
+    _learning_state.attach_profile_scorer(_profile_scorer)
+    print(
+        f"[GAE] ProfileScorer attached "
+        f"(actions={_profile_scorer.actions}, tau={_profile_scorer.tau})"
+    )
     return _learning_state
+
+
+def get_profile_scorer():
+    """Return the global ProfileScorer instance."""
+    return get_learning_state().profile_scorer
 
 
 def get_learning_state() -> LearningState:
