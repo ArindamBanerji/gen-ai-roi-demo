@@ -3,9 +3,11 @@ Seed Neo4j with sample data for SOC Copilot Demo
 Run this script to populate the graph with test data for ALERT-7823
 
 Usage:
-    python seed_neo4j.py
+    python seed_neo4j.py               # default seed only
+    python seed_neo4j.py --realistic   # default seed + SEED-2 (200+ users)
 """
 import asyncio
+import sys
 from dotenv import load_dotenv
 
 # Load .env BEFORE importing neo4j_client (it reads os.getenv at import time)
@@ -1583,6 +1585,14 @@ async def _seed_gae_factor_data():
 
     print("  [GAE-OK] business_hours_login property set on 10 alerts")
     print("[GAE] Factor data seeding complete.")
+
+    # ── SEED-2: Realistic data (--realistic flag) ─────────────────────────────
+    realistic = "--realistic" in sys.argv
+    if realistic:
+        print("[SEED-2] Running realistic seed (200+ users)...")
+        from app.scripts.seed_realistic import seed_realistic
+        await seed_realistic(neo4j_client)
+        print("[SEED-2] Realistic seed complete.")
 
 
 if __name__ == "__main__":
