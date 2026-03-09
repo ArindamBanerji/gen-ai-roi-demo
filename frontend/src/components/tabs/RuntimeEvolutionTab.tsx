@@ -46,6 +46,7 @@ interface ProcessResult {
     status: 'executed' | 'blocked'
     reason?: string
   }
+  blocked_reason?: string
   decision_trace: {
     id: string
     type: string
@@ -187,7 +188,7 @@ export default function RuntimeEvolutionTab() {
 
   const loadDeployments = async () => {
     try {
-      const data = await api.getDeployments()
+      const data = await api.getDeployments() as { deployments: Deployment[] }
       setDeployments(data.deployments)
     } catch (error) {
       console.error('Failed to load deployments:', error)
@@ -199,7 +200,7 @@ export default function RuntimeEvolutionTab() {
   const loadRewardSummary = async () => {
     try {
       const data = await api.getRewardSummary()
-      setRewardSummary(data)
+      setRewardSummary(data as RewardSummary)
     } catch (error) {
       console.error('Failed to load reward summary:', error)
     }
@@ -230,7 +231,7 @@ export default function RuntimeEvolutionTab() {
 
     try {
       const data = await api.processAlert(alertId, false)
-      setResult(data)
+      setResult(data as ProcessResult)
     } catch (error) {
       console.error('Failed to process alert:', error)
     } finally {
@@ -245,7 +246,7 @@ export default function RuntimeEvolutionTab() {
 
     try {
       const data = await api.processAlertBlocked('ALERT-7823')
-      setResult(data)
+      setResult(data as ProcessResult)
     } catch (error) {
       console.error('Failed to simulate failure:', error)
     } finally {
@@ -595,7 +596,7 @@ export default function RuntimeEvolutionTab() {
                           />
                         </div>
                         <div className="w-10 text-right text-gray-400 font-mono">
-                          {result.gae_scoring.factor_vector[i].toFixed(2)}
+                          {result.gae_scoring!.factor_vector[i].toFixed(2)}
                         </div>
                       </div>
                     ))}

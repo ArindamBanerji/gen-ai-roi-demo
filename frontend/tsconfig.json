@@ -1,4 +1,7 @@
 {
+  // Requires TypeScript >= 5.0 for moduleResolution: "bundler".
+  // Run `npm install` from frontend/ to get the correct local tsc version.
+  // Do NOT run `npx tsc` from a parent directory — use frontend/node_modules/.bin/tsc.
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
@@ -6,7 +9,7 @@
     "module": "ESNext",
     "skipLibCheck": true,
 
-    /* Bundler mode */
+    /* Bundler mode — requires TypeScript >= 5.0 */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
