@@ -588,6 +588,93 @@ async def query_soc_metrics(request: SOCQueryRequest):
 
 
 # ============================================================================
+# GET /api/soc/detection-engineering — F2-DESIGN: Rule Quality Score + Noise Map
+# ============================================================================
+
+@router.get("/soc/detection-engineering")
+async def get_detection_engineering():
+    """
+    Detection Engineering Feedback (F2).
+    Returns Rule Quality Score (centroid drift from baseline) and
+    Noise Map (per-category FP rate from Decision outcomes).
+    """
+    import numpy as np
+    from app.services.gae_state import get_profile_scorer
+    from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SOC_CATEGORIES
+
+    # --- Rule Quality Score ---
+    category_scores = []
+    overall_quality = None
+    try:
+        scorer = get_profile_scorer()
+        baseline = SOC_PROFILE_CENTROIDS  # shape (6, 4, 6)
+        current = scorer.mu               # shape (6, 4, 6)
+
+        for i, cat in enumerate(SOC_CATEGORIES):
+            drift = float(np.mean(np.abs(current[i] - baseline[i])))
+            quality = round(1.0 - drift, 3)
+            category_scores.append({
+                "category": cat,
+                "quality_score": quality,
+                "drift": round(drift, 3),
+                "status": (
+                    "stable" if drift < 0.05 else
+                    "drifting" if drift < 0.15 else "diverged"
+                ),
+            })
+
+        overall_quality = round(
+            sum(s["quality_score"] for s in category_scores) / len(category_scores), 3
+        )
+    except Exception as exc:
+        print(f"[SOC] detection-engineering scorer error: {exc}")
+        category_scores = [
+            {"category": cat, "quality_score": None, "drift": None, "status": "unavailable"}
+            for cat in SOC_CATEGORIES
+        ]
+
+    # --- Noise Map — FP rate per category from Decision outcomes ---
+    noise_map = []
+    for cat in SOC_CATEGORIES:
+        total = 0
+        fp_rate = None
+        try:
+            rows = await neo4j_client.run_query(
+                "MATCH (d:Decision)-[:DECISION_FOR]->(a:Alert) "
+                "WHERE a.category = $cat "
+                "RETURN count(d) AS total, "
+                "sum(CASE WHEN d.correct = false OR d.outcome = 'incorrect' "
+                "THEN 1 ELSE 0 END) AS fp_count",
+                {"cat": cat},
+            )
+            if rows and rows[0]["total"] > 0:
+                total = int(rows[0]["total"])
+                fp = int(rows[0]["fp_count"] or 0)
+                fp_rate = round(fp / total, 3)
+        except Exception as qe:
+            print(f"[SOC] noise-map query failed for {cat}: {qe}")
+
+        noise_map.append({
+            "category": cat,
+            "fp_rate": fp_rate,
+            "total_decisions": total,
+            "estimated": fp_rate is None,
+        })
+
+    return {
+        "overall_quality_score": overall_quality,
+        "category_scores": category_scores,
+        "noise_map": noise_map,
+        "decisions_required_for_noise": 10,
+        "note": (
+            "Quality score tracks centroid drift from baseline. "
+            "Drift < 0.05 = stable (baseline confirmed). "
+            "Drift > 0.15 = diverged (baseline needs revision)."
+        ),
+    }
+
+
+# ============================================================================
 # GET /api/soc/metrics - List Available Metrics
 # ============================================================================
 

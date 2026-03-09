@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   FileText,
   Database,
+  Settings,
 } from 'lucide-react'
 import {
   BarChart,
@@ -82,6 +83,28 @@ const CROSS_SOURCE_QUESTIONS = [
   "What threat intel sources cover ALERT-7823?",
 ]
 
+interface CategoryScore {
+  category: string
+  quality_score: number | null
+  drift: number | null
+  status: 'stable' | 'drifting' | 'diverged' | 'unavailable'
+}
+
+interface NoiseMapEntry {
+  category: string
+  fp_rate: number | null
+  total_decisions: number
+  estimated: boolean
+}
+
+interface DetectionEngineering {
+  overall_quality_score: number | null
+  category_scores: CategoryScore[]
+  noise_map: NoiseMapEntry[]
+  decisions_required_for_noise: number
+  note: string
+}
+
 interface ThreatLandscape {
   threat_intel: {
     indicators_loaded: number
@@ -117,14 +140,19 @@ export default function SOCAnalyticsTab() {
   const [error, setError] = useState<string | null>(null)
   const [threatLandscape, setThreatLandscape] = useState<ThreatLandscape | null>(null)
   const [tacticBreakdown, setTacticBreakdown] = useState<Array<{tactic: string; count: number}>>([])
+  const [detEng, setDetEng] = useState<DetectionEngineering | null>(null)
 
-  // Fetch threat landscape and tactic breakdown on mount
+  // Fetch threat landscape, tactic breakdown, and detection engineering on mount
   useEffect(() => {
     getThreatLandscape()
       .then((data) => setThreatLandscape(data as ThreatLandscape))
       .catch(() => {})
     getAttackTacticBreakdown()
       .then((data: any) => setTacticBreakdown(data?.breakdown ?? []))
+      .catch(() => {})
+    fetch('/api/soc/detection-engineering')
+      .then((r) => r.json())
+      .then((data) => setDetEng(data as DetectionEngineering))
       .catch(() => {})
   }, [])
 
@@ -308,6 +336,117 @@ export default function SOCAnalyticsTab() {
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* Detection Engineering (F2) */}
+      {detEng && (
+        <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-800 flex items-center gap-2">
+            <Settings className="w-4 h-4 text-indigo-400" />
+            <span className="text-sm font-semibold">Detection Engineering</span>
+            <span className="ml-auto text-xs text-gray-600">F2 · rule quality + noise map</span>
+          </div>
+
+          <div className="p-5 grid grid-cols-2 gap-6">
+            {/* Panel A — Rule Quality Score */}
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="text-4xl font-bold text-indigo-300">
+                  {detEng.overall_quality_score !== null
+                    ? detEng.overall_quality_score.toFixed(3)
+                    : '—'}
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-gray-300">Rule Quality Score</div>
+                  <div className="text-xs text-gray-500">1.0 = baseline confirmed, &lt;0.85 = review rules</div>
+                </div>
+              </div>
+
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-gray-500 border-b border-gray-800">
+                    <th className="text-left py-1 font-normal">Category</th>
+                    <th className="text-right py-1 font-normal">Quality</th>
+                    <th className="text-right py-1 font-normal">Drift</th>
+                    <th className="text-right py-1 font-normal">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {detEng.category_scores.map((s) => (
+                    <tr key={s.category} className="border-b border-gray-800/50">
+                      <td className="py-1.5 text-gray-300 font-mono">{s.category}</td>
+                      <td className="py-1.5 text-right text-gray-200">
+                        {s.quality_score !== null ? s.quality_score.toFixed(3) : '—'}
+                      </td>
+                      <td className="py-1.5 text-right text-gray-400">
+                        {s.drift !== null ? s.drift.toFixed(3) : '—'}
+                      </td>
+                      <td className="py-1.5 text-right">
+                        <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${
+                          s.status === 'stable'
+                            ? 'bg-green-500/20 text-green-400'
+                            : s.status === 'drifting'
+                            ? 'bg-yellow-500/20 text-yellow-400'
+                            : s.status === 'diverged'
+                            ? 'bg-red-500/20 text-red-400'
+                            : 'bg-gray-500/20 text-gray-400'
+                        }`}>
+                          {s.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Panel B — Noise Map */}
+            <div>
+              <div className="text-xs font-semibold text-gray-300 mb-1">Noise Map</div>
+              <div className="text-xs text-gray-500 mb-3">
+                Per-category false positive rate from Decision outcomes
+              </div>
+
+              <div className="space-y-2">
+                {detEng.noise_map.map((entry) => {
+                  const pct = entry.fp_rate !== null ? entry.fp_rate * 100 : null
+                  const color =
+                    pct === null
+                      ? 'text-gray-500'
+                      : pct < 10
+                      ? 'text-green-400'
+                      : pct < 25
+                      ? 'text-yellow-400'
+                      : 'text-red-400'
+                  return (
+                    <div key={entry.category} className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400 font-mono w-40 truncate">
+                        {entry.category}
+                      </span>
+                      <span
+                        className={`text-xs font-semibold ${color}`}
+                        title={
+                          pct === null
+                            ? `Requires ${detEng.decisions_required_for_noise}+ decisions`
+                            : `${entry.total_decisions} decisions`
+                        }
+                      >
+                        {pct !== null ? `${pct.toFixed(1)}%` : '—'}
+                      </span>
+                      {entry.estimated && (
+                        <span className="text-xs text-gray-600 italic">
+                          needs {detEng.decisions_required_for_noise}+ decisions
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="px-5 pb-3 text-xs text-gray-600 italic">{detEng.note}</div>
         </div>
       )}
 
