@@ -579,7 +579,7 @@ export default function RuntimeEvolutionTab() {
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-sm font-semibold text-soc-secondary">GAE Scoring</span>
                     <span className="px-1.5 py-0.5 bg-soc-secondary/20 text-soc-secondary text-xs rounded font-mono">
-                      softmax(f·Wᵀ / τ={result.gae_scoring.temperature})
+                      softmax(−‖f−μ‖² / τ={result.gae_scoring.temperature})
                     </span>
                   </div>
                   {/* Factor vector bars */}

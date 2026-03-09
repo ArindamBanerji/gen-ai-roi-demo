@@ -334,7 +334,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                 "factor_names":         [c.name for c in computers],
                 "action_probabilities": action_probabilities,
                 "softmax_sum":          round(sum(probs_flat), 8),
-                "temperature":          tau,
+                "temperature":          _scorer.tau,
                 "low_confidence":       low_confidence,
                 "ambiguous":            ambiguous,
                 "routing_zone":         routing_zone,
