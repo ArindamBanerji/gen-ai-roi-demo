@@ -688,3 +688,41 @@ async def get_trust_scores():
         f"low_trust={result['low_trust_situations']}"
     )
     return result
+
+
+# ============================================================================
+# GET /api/soc/graph-stats - Real Neo4j graph statistics (H7-FIX-2)
+# ============================================================================
+
+@router.get("/soc/graph-stats")
+async def get_graph_stats():
+    """
+    Return real Neo4j node, relationship, and Decision node counts.
+
+    Replaces the hardcoded 47 / 127 / 891 values displayed in Tab 2.
+    Falls back to zeros with source='unavailable' if Neo4j is unreachable.
+    """
+    try:
+        node_result = await neo4j_client.run_query(
+            "MATCH (n) RETURN count(n) AS node_count"
+        )
+        rel_result = await neo4j_client.run_query(
+            "MATCH ()-[r]->() RETURN count(r) AS rel_count"
+        )
+        dec_result = await neo4j_client.run_query(
+            "MATCH (d:Decision) RETURN count(d) AS dec_count"
+        )
+        return {
+            "nodes_traversed": node_result[0]["node_count"] if node_result else 0,
+            "relationships_analyzed": rel_result[0]["rel_count"] if rel_result else 0,
+            "historical_decisions": dec_result[0]["dec_count"] if dec_result else 0,
+            "source": "neo4j",
+        }
+    except Exception as e:
+        return {
+            "nodes_traversed": 0,
+            "relationships_analyzed": 0,
+            "historical_decisions": 0,
+            "source": "unavailable",
+            "error": str(e),
+        }

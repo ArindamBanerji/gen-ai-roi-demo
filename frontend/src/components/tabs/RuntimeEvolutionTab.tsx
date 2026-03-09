@@ -127,6 +127,13 @@ interface ProfileState {
   decision_count: number
 }
 
+interface GraphStats {
+  nodes_traversed: number
+  relationships_analyzed: number
+  historical_decisions: number
+  source: 'neo4j' | 'unavailable'
+}
+
 export default function RuntimeEvolutionTab() {
   const [deployments, setDeployments] = useState<Deployment[]>([])
   const [processing, setProcessing] = useState(false)
@@ -135,6 +142,7 @@ export default function RuntimeEvolutionTab() {
   const [visibleChecks, setVisibleChecks] = useState<number[]>([])
   const [rewardSummary, setRewardSummary] = useState<RewardSummary | null>(null)
   const [profileState, setProfileState] = useState<ProfileState | null>(null)
+  const [graphStats, setGraphStats] = useState<GraphStats | null>(null)
 
   useEffect(() => {
     loadDeployments()
@@ -148,6 +156,11 @@ export default function RuntimeEvolutionTab() {
   // Fetch ProfileScorer centroid state on mount (SOC-PROF-3 heatmap)
   useEffect(() => {
     loadProfileState()
+  }, [])
+
+  // Fetch real graph database stats on mount (H7-FIX-2)
+  useEffect(() => {
+    loadGraphStats()
   }, [])
 
   // Refresh reward summary after any alert processing
@@ -198,6 +211,15 @@ export default function RuntimeEvolutionTab() {
       setProfileState(data)
     } catch (error) {
       console.error('Failed to load profile state:', error)
+    }
+  }
+
+  const loadGraphStats = async () => {
+    try {
+      const data = await fetch('/api/soc/graph-stats').then(r => r.json())
+      setGraphStats(data as GraphStats)
+    } catch (error) {
+      console.error('Failed to load graph stats:', error)
     }
   }
 
@@ -1048,6 +1070,54 @@ export default function RuntimeEvolutionTab() {
                 </p>
               </div>
 
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ================================================================
+          Graph Database Stats — H7-FIX-2
+          Real node/relationship/decision counts from Neo4j
+      ================================================================ */}
+      <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+          <h3 className="font-semibold flex items-center gap-2">
+            <Activity className="w-4 h-4 text-blue-400" />
+            Graph Database Stats
+          </h3>
+          {graphStats && (
+            <span className={`text-xs font-mono px-2 py-0.5 rounded ${
+              graphStats.source === 'neo4j'
+                ? 'bg-green-900/30 text-green-400 border border-green-700/40'
+                : 'bg-gray-800 text-gray-500'
+            }`}>
+              {graphStats.source}
+            </span>
+          )}
+        </div>
+        <div className="p-4">
+          {!graphStats ? (
+            <div className="text-sm text-gray-500 py-2 text-center">Loading graph stats…</div>
+          ) : (
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-soc-bg rounded border border-gray-800 p-4 text-center">
+                <div className="text-2xl font-bold font-mono text-blue-400">
+                  {graphStats.nodes_traversed.toLocaleString()}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">nodes in graph</div>
+              </div>
+              <div className="bg-soc-bg rounded border border-gray-800 p-4 text-center">
+                <div className="text-2xl font-bold font-mono text-blue-400">
+                  {graphStats.relationships_analyzed.toLocaleString()}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">relationships</div>
+              </div>
+              <div className="bg-soc-bg rounded border border-gray-800 p-4 text-center">
+                <div className="text-2xl font-bold font-mono text-purple-400">
+                  {graphStats.historical_decisions.toLocaleString()}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">historical decisions</div>
+              </div>
             </div>
           )}
         </div>
