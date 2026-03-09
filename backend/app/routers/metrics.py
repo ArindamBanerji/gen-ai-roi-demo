@@ -9,6 +9,8 @@ from typing import List, Dict, Any
 from datetime import datetime, timedelta
 from pydantic import BaseModel
 
+from app.db.neo4j import neo4j_client
+
 
 router = APIRouter()
 
@@ -192,23 +194,84 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
     """
     Get compounding metrics showing week-over-week improvement.
 
-    Args:
-        weeks: Number of weeks to include (default: 4)
-
-    Returns:
-        CompoundingResponse with headline, weekly trend, and evolution events
+    Headline and business_impact are projected (labeled "Projected at Scale" in UI).
+    weekly_trend and evolution_events are served from Neo4j (H7-FIX-4).
     """
     try:
         print(f"[COMPOUNDING] Generating {weeks} weeks of data")
 
-        data = generate_compounding_data(weeks)
+        # Headline / business_impact stay as projected (already labeled in UI)
+        projected = generate_compounding_data(weeks)
+        response = projected.model_dump()
 
-        print(f"[COMPOUNDING] Week 1: {data.weekly_trend[0].pattern_count} patterns, "
-              f"{data.headline['auto_close_start']}% auto-close")
-        print(f"[COMPOUNDING] Week {weeks}: {data.weekly_trend[-1].pattern_count} patterns, "
-              f"{data.weekly_trend[-1].auto_close_rate}% auto-close")
+        # --- WEEKLY TREND: real Decision timeline from Neo4j (H7-FIX-4) ---
+        weekly_trend_estimated = False
+        weekly_trend_note = None
+        try:
+            dec_rows = await neo4j_client.run_query(
+                "MATCH (d:Decision) WHERE d.timestamp IS NOT NULL "
+                "RETURN d.timestamp AS ts, d.type AS action, d.confidence AS confidence "
+                "ORDER BY d.timestamp"
+            )
+            if dec_rows:
+                # Return raw decision points; chart will be empty but real data is available
+                # via /api/metrics/weekly-trends.  Compounding chart needs WeeklyMetric shape,
+                # which requires proper metrics history — so we return [] with a note.
+                response["weekly_trend"] = []
+                weekly_trend_estimated = True
+                weekly_trend_note = (
+                    "Weekly trends require cumulative metrics history — "
+                    "real decision timeline available at /api/metrics/weekly-trends"
+                )
+            else:
+                response["weekly_trend"] = []
+                weekly_trend_estimated = True
+                weekly_trend_note = (
+                    "Weekly trends require decision history — "
+                    "make decisions to populate"
+                )
+        except Exception as exc:
+            print(f"[COMPOUNDING] weekly-trend Neo4j query failed: {exc}")
+            response["weekly_trend"] = []
+            weekly_trend_estimated = True
+            weekly_trend_note = "Weekly trends unavailable — Neo4j unreachable"
 
-        return data.model_dump()
+        response["weekly_trend_estimated"] = weekly_trend_estimated
+        response["weekly_trend_note"] = weekly_trend_note
+
+        # --- EVOLUTION EVENTS: Decision nodes from Neo4j (H7-FIX-4) ---
+        try:
+            evo_rows = await neo4j_client.run_query(
+                "MATCH (d:Decision) "
+                "RETURN d.id AS id, d.type AS action, d.confidence AS confidence, "
+                "d.timestamp AS ts, d.alert_id AS alert_id "
+                "ORDER BY d.timestamp DESC LIMIT 20"
+            )
+            if evo_rows:
+                response["evolution_events"] = [
+                    {
+                        "id": f"DEC-{str(r.get('id', ''))[:8]}",
+                        "event_type": str(r.get("action", "decision")),
+                        "description": (
+                            f"{str(r.get('action', '?')).upper()} on "
+                            f"{str(r.get('alert_id', '?'))} — "
+                            f"conf: {float(r.get('confidence') or 0):.0%}"
+                        ),
+                        "timestamp": str(r.get("ts", datetime.now().isoformat())),
+                        "triggered_by": str(r.get("alert_id", "?")),
+                    }
+                    for r in evo_rows
+                ]
+            else:
+                response["evolution_events"] = []
+        except Exception as exc:
+            print(f"[COMPOUNDING] evolution_events Neo4j query failed: {exc}")
+            # fall back to projected mock events so the panel isn't completely broken
+            response["evolution_events"] = projected.model_dump()["evolution_events"]
+
+        print(f"[COMPOUNDING] weekly_trend_estimated={weekly_trend_estimated}, "
+              f"evolution_events={len(response['evolution_events'])}")
+        return response
 
     except Exception as e:
         print(f"[ERROR] Compounding metrics failed: {e}")
@@ -418,32 +481,151 @@ async def reset_demo_data():
 @router.get("/metrics/evolution-events")
 async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
     """
-    Get recent evolution events from Neo4j.
+    Get recent decisions as evolution events from Neo4j (H7-FIX-4).
 
-    In production, this queries:
-    MATCH (e:EvolutionEvent)
-    OPTIONAL MATCH (e)<-[:TRIGGERED_EVOLUTION]-(d:Decision)
-    RETURN e, d
-    ORDER BY e.timestamp DESC
-    LIMIT $limit
+    Queries Decision nodes ordered by timestamp DESC, formats each as an
+    evolution event record so the Tab 4 panel shows real decision history.
+    Returns estimated=False with a note when no decisions exist yet.
     """
+    print(f"[EVOLUTION EVENTS] Fetching {limit} recent Decision nodes from Neo4j")
     try:
-        print(f"[EVOLUTION EVENTS] Fetching {limit} recent events")
-
-        # Mock data
-        events = generate_compounding_data().evolution_events
-
-        return {
-            "events": [e.model_dump() for e in events[:limit]],
-            "total": len(events)
-        }
+        results = await neo4j_client.run_query(
+            "MATCH (d:Decision) "
+            "RETURN d.id AS id, d.type AS action, d.confidence AS confidence, "
+            "d.timestamp AS ts, d.alert_id AS alert_id "
+            "ORDER BY d.timestamp DESC LIMIT $limit",
+            {"limit": limit},
+        )
+        if not results:
+            return {
+                "events": [],
+                "estimated": False,
+                "note": "No decisions recorded yet — process alerts to see evolution",
+                "total": 0,
+            }
+        events = [
+            {
+                "id": f"DEC-{str(r.get('id', ''))[:8]}",
+                "event_type": str(r.get("action", "decision")),
+                "description": (
+                    f"{str(r.get('action', '?')).upper()} on "
+                    f"{str(r.get('alert_id', '?'))} — "
+                    f"conf: {float(r.get('confidence') or 0):.0%}"
+                ),
+                "timestamp": str(r.get("ts", datetime.now().isoformat())),
+                "triggered_by": str(r.get("alert_id", "?")),
+            }
+            for r in results
+        ]
+        return {"events": events, "estimated": False, "note": None, "total": len(events)}
 
     except Exception as e:
         print(f"[ERROR] Evolution events fetch failed: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to fetch evolution events: {str(e)}"
+        return {"events": [], "estimated": False, "note": str(e), "total": 0}
+
+
+# ============================================================================
+# GET /api/metrics/weekly-trends - Decision timeline (H7-FIX-4)
+# ============================================================================
+
+@router.get("/metrics/weekly-trends")
+async def get_weekly_trends():
+    """
+    Return a raw decision timeline from Neo4j for the Tab 4 weekly trend panel.
+
+    If Decision nodes exist and have timestamps, returns the ordered list of
+    decision points (timestamp, action, confidence).
+
+    If no data yet (fresh seed or no decisions made), returns
+    estimated=True with an explanatory note.
+    """
+    try:
+        results = await neo4j_client.run_query(
+            "MATCH (d:Decision) WHERE d.timestamp IS NOT NULL "
+            "RETURN d.timestamp AS ts, d.type AS action, d.confidence AS confidence "
+            "ORDER BY d.timestamp"
         )
+        if not results:
+            return {
+                "data": [],
+                "estimated": True,
+                "note": (
+                    "Weekly trends require decision history — "
+                    "make decisions to populate"
+                ),
+            }
+        data = [
+            {
+                "ts": str(r.get("ts", "")),
+                "action": str(r.get("action", "")),
+                "confidence": float(r.get("confidence") or 0.0),
+            }
+            for r in results
+        ]
+        return {"data": data, "estimated": False, "note": None}
+
+    except Exception as e:
+        print(f"[METRICS] weekly-trends Neo4j query failed: {e}")
+        return {
+            "data": [],
+            "estimated": True,
+            "note": f"Weekly trends unavailable: {e}",
+        }
+
+
+# ============================================================================
+# GET /api/metrics/decision-economics - Computed economics (H7-FIX-4)
+# ============================================================================
+
+@router.get("/metrics/decision-economics")
+async def get_decision_economics():
+    """
+    Return decision economics computed from real Neo4j Decision nodes.
+
+    - decisions_made: total Decision node count
+    - correct_rate: correct / total  (0.0 if no decisions)
+    - false_positive_rate: 1 - correct_rate
+    - time_saved_hours: correct_rate * decisions_made * 0.5 (labelled estimated)
+
+    Safe against division-by-zero when no decisions exist yet.
+    """
+    try:
+        dec_res = await neo4j_client.run_query(
+            "MATCH (d:Decision) RETURN count(d) AS total_decisions"
+        )
+        total = int(dec_res[0]["total_decisions"]) if dec_res else 0
+
+        correct_res = await neo4j_client.run_query(
+            "MATCH (d:Decision) "
+            "WHERE d.outcome = 'correct' OR d.correct = true "
+            "RETURN count(d) AS correct_decisions"
+        )
+        correct = int(correct_res[0]["correct_decisions"]) if correct_res else 0
+
+        correct_rate = correct / total if total > 0 else 0.0
+        false_positive_rate = 1.0 - correct_rate
+        time_saved_hours = correct_rate * total * 0.5
+
+        return {
+            "decisions_made": total,
+            "correct_rate": round(correct_rate, 3),
+            "false_positive_rate": round(false_positive_rate, 3),
+            "time_saved_hours": round(time_saved_hours, 2),
+            "time_saved_estimated": True,
+            "note": "Time saved estimated at 0.5hr per correct decision",
+        }
+
+    except Exception as e:
+        print(f"[METRICS] decision-economics Neo4j query failed: {e}")
+        return {
+            "decisions_made": 0,
+            "correct_rate": 0.0,
+            "false_positive_rate": 0.0,
+            "time_saved_hours": 0.0,
+            "time_saved_estimated": True,
+            "note": "Time saved estimated at 0.5hr per correct decision",
+            "error": str(e),
+        }
 
 
 # ============================================================================

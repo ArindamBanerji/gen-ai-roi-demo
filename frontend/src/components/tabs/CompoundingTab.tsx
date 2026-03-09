@@ -26,6 +26,7 @@ import {
   getCompoundingMetrics, resetAllDemoData, resetAlerts, reseedDemoData,
   getAuditDecisions, verifyAuditChain, getGAEConvergence,
   getGAEWeightEvolution, getGAEConfidenceTrajectory, getGAETrustCurve, getGAEBeforeAfter,
+  getEvolutionEvents,
 } from '../../lib/api'
 import { domainConfig } from '../../lib/domain'
 import {
@@ -93,8 +94,25 @@ interface CompoundingData {
     fp_investigations_start: number; fp_investigations_end: number
   }
   weekly_trend: WeeklyMetric[]
+  weekly_trend_estimated?: boolean
+  weekly_trend_note?: string
   evolution_events: EvolutionEvent[]
   business_impact?: BusinessImpact
+}
+
+interface DecisionEconomics {
+  decisions_made: number
+  correct_rate: number
+  false_positive_rate: number
+  time_saved_hours: number
+  time_saved_estimated: boolean
+  note: string
+}
+
+interface EvolutionEventsState {
+  events: EvolutionEvent[]
+  note: string | null
+  estimated: boolean
 }
 interface AuditDecision {
   id: string; alert_id: string; timestamp: string; situation_type: string
@@ -227,6 +245,10 @@ export default function CompoundingTab() {
   const [convergenceData, setConvergenceData] = useState<ConvergenceData | null>(null)
   const [convergenceLoading, setConvergenceLoading] = useState(false)
 
+  // — real Tab 4 data (H7-FIX-4) —
+  const [decisionEconomics, setDecisionEconomics] = useState<DecisionEconomics | null>(null)
+  const [evolutionEventsReal, setEvolutionEventsReal] = useState<EvolutionEventsState | null>(null)
+
   // ALL HOOKS MUST BE AT TOP LEVEL
   const animatedNodesEnd = useCountUp(data?.headline.nodes_start ?? 0, data?.headline.nodes_end ?? 0, 3000, 0, !!data && !loading)
   const animatedAutoCloseEnd = useCountUp(data?.headline.auto_close_start ?? 0, data?.headline.auto_close_end ?? 0, 3000, 0, !!data && !loading)
@@ -265,6 +287,8 @@ export default function CompoundingTab() {
     try {
       await resetAllDemoData(); await resetAlerts(); await loadData()
       await loadGAECharts()
+      await loadDecisionEconomics()
+      await loadEvolutionEventsReal()
     } catch (e) { console.error('[CompoundingTab] Failed to reset demo:', e) }
     finally { setResetting(false) }
   }
@@ -309,6 +333,24 @@ export default function CompoundingTab() {
     finally { setConvergenceLoading(false) }
   }
   useEffect(() => { loadConvergenceData() }, [])
+
+  // H7-FIX-4: load real decision economics from Neo4j
+  const loadDecisionEconomics = async () => {
+    try {
+      const d = await fetch('/api/metrics/decision-economics').then(r => r.json())
+      setDecisionEconomics(d as DecisionEconomics)
+    } catch (e) { console.error('[CompoundingTab] Failed to load decision economics:', e) }
+  }
+  useEffect(() => { loadDecisionEconomics() }, [])
+
+  // H7-FIX-4: load real evolution events from dedicated endpoint
+  const loadEvolutionEventsReal = async () => {
+    try {
+      const d = await getEvolutionEvents(20) as EvolutionEventsState
+      setEvolutionEventsReal(d)
+    } catch (e) { console.error('[CompoundingTab] Failed to load evolution events:', e) }
+  }
+  useEffect(() => { loadEvolutionEventsReal() }, [])
 
   // — early return while seeded metrics load —
   if (loading || !data) {
@@ -859,30 +901,75 @@ export default function CompoundingTab() {
         )}
       </div>
 
+      {/* ── 5b. Decision Economics (Live) — H7-FIX-4 ───────────────────────── */}
+      {decisionEconomics && (
+        <div className="bg-white rounded-lg border shadow p-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <Calculator className="w-5 h-5 text-purple-600" />
+            Decision Economics
+            <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">live</span>
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-gray-50 rounded border border-gray-200 p-4 text-center">
+              <div className="text-2xl font-bold text-gray-900">{decisionEconomics.decisions_made}</div>
+              <div className="text-xs text-gray-500 mt-1">decisions made</div>
+            </div>
+            <div className="bg-green-50 rounded border border-green-200 p-4 text-center">
+              <div className="text-2xl font-bold text-green-700">{(decisionEconomics.correct_rate * 100).toFixed(1)}%</div>
+              <div className="text-xs text-gray-500 mt-1">correct rate</div>
+            </div>
+            <div className="bg-red-50 rounded border border-red-200 p-4 text-center">
+              <div className="text-2xl font-bold text-red-600">{(decisionEconomics.false_positive_rate * 100).toFixed(1)}%</div>
+              <div className="text-xs text-gray-500 mt-1">false positive rate</div>
+            </div>
+            <div className="bg-blue-50 rounded border border-blue-200 p-4 text-center">
+              <div className="text-2xl font-bold text-blue-700">
+                {decisionEconomics.time_saved_hours.toFixed(1)}h
+                {decisionEconomics.time_saved_estimated && (
+                  <span className="text-xs font-normal text-gray-500 ml-1">(estimated)</span>
+                )}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">time saved</div>
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 mt-3 italic">{decisionEconomics.note}</p>
+        </div>
+      )}
+
       {/* ── 6. Weekly Trend + Three-Loop Architecture ───────────────────────── */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg border shadow p-6">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Weekly Trend</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={weekly_trend}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="week" label={{ value: 'Week', position: 'insideBottom', offset: -5 }} />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="auto_close_rate" stroke="#8b5cf6" strokeWidth={2} name="Auto-Close %" />
-              <Line type="monotone" dataKey="mttr_minutes"    stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" name="MTTR (min)" />
-              <Line type="monotone" dataKey="fp_rate"         stroke="#ef4444" strokeWidth={2} strokeDasharray="3 3" name="FP Rate %" />
-            </LineChart>
-          </ResponsiveContainer>
-          <div className="mt-4 grid grid-cols-4 gap-2 text-center text-sm">
-            {weekly_trend.map(w => (
-              <div key={w.week} className="bg-gray-50 rounded p-2">
-                <div className="font-semibold text-gray-900">Week {w.week}</div>
-                <div className="text-xs text-gray-600">{w.pattern_count} patterns</div>
+          {weekly_trend.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={weekly_trend}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="week" label={{ value: 'Week', position: 'insideBottom', offset: -5 }} />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="auto_close_rate" stroke="#8b5cf6" strokeWidth={2} name="Auto-Close %" />
+                  <Line type="monotone" dataKey="mttr_minutes"    stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" name="MTTR (min)" />
+                  <Line type="monotone" dataKey="fp_rate"         stroke="#ef4444" strokeWidth={2} strokeDasharray="3 3" name="FP Rate %" />
+                </LineChart>
+              </ResponsiveContainer>
+              <div className="mt-4 grid grid-cols-4 gap-2 text-center text-sm">
+                {weekly_trend.map(w => (
+                  <div key={w.week} className="bg-gray-50 rounded p-2">
+                    <div className="font-semibold text-gray-900">Week {w.week}</div>
+                    <div className="text-xs text-gray-600">{w.pattern_count} patterns</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          ) : (
+            <div className="py-10 text-center">
+              <p className="text-sm text-amber-600 italic">
+                {data.weekly_trend_note ?? 'Trend data will appear as decisions are recorded'}
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-lg border-2 border-purple-500 shadow-2xl p-5">
@@ -964,7 +1051,7 @@ export default function CompoundingTab() {
         </div>
       </div>
 
-      {/* ── 7. Evolution Events — SAMPLE EVENTS ────────────────────────────── */}
+      {/* ── 7. Evolution Events — REAL from Neo4j (H7-FIX-4) ───────────────── */}
       <div className="bg-white rounded-lg border shadow p-6">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
@@ -972,9 +1059,15 @@ export default function CompoundingTab() {
               <Database className="w-5 h-5 text-purple-600" />
               Recent Evolution Events
             </h3>
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">
-              Sample events
-            </span>
+            {evolutionEventsReal && evolutionEventsReal.events.length > 0 ? (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+                live
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">
+                awaiting decisions
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -1004,18 +1097,29 @@ export default function CompoundingTab() {
           </div>
         )}
 
-        <div className="space-y-2">
-          {evolution_events.map(event => (
-            <div key={event.id} className="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-200 hover:bg-purple-100 transition-colors">
-              <div className="flex items-center gap-4 flex-1">
-                <div className="text-sm font-mono text-purple-700 font-semibold">{event.id}</div>
-                <div className="text-sm text-gray-600">{formatEventType(event.event_type)}</div>
-                <div className="text-sm font-semibold text-gray-900">{event.description}</div>
-              </div>
-              <div className="text-xs text-gray-500">{formatTimeAgo(event.timestamp)}</div>
+        {/* Use real events from dedicated endpoint (H7-FIX-4); fall back to compounding data */}
+        {(() => {
+          const displayEvents = (evolutionEventsReal?.events?.length ?? 0) > 0
+            ? evolutionEventsReal!.events
+            : evolution_events
+          const emptyNote = evolutionEventsReal?.note ?? 'No decisions recorded yet — process alerts in Tab 3'
+          return displayEvents.length > 0 ? (
+            <div className="space-y-2">
+              {displayEvents.map(event => (
+                <div key={event.id} className="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-200 hover:bg-purple-100 transition-colors">
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="text-sm font-mono text-purple-700 font-semibold">{event.id}</div>
+                    <div className="text-sm text-gray-600">{formatEventType(event.event_type)}</div>
+                    <div className="text-sm font-semibold text-gray-900">{event.description}</div>
+                  </div>
+                  <div className="text-xs text-gray-500">{formatTimeAgo(event.timestamp)}</div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic py-4 text-center">{emptyNote}</p>
+          )
+        })()}
       </div>
 
       {/* ── 8. The Moat Message ─────────────────────────────────────────────── */}
