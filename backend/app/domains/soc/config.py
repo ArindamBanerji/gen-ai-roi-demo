@@ -64,8 +64,8 @@ SOC_PROFILE_CENTROIDS = np.array([
 
   # ── Category 0: credential_access ──────────────────────────────
   [
-    # escalate: high asset + high threat_intel + low device_trust
-    [0.3, 0.85, 0.80, 0.60, 0.65, 0.15],
+    # escalate: travel anomaly + high asset + high threat_intel + low device_trust
+    [0.72, 0.85, 0.80, 0.60, 0.65, 0.15],
     # investigate: moderate signals, some pattern history
     [0.4, 0.60, 0.55, 0.55, 0.50, 0.40],
     # suppress: low threat, normal hours, trusted device
