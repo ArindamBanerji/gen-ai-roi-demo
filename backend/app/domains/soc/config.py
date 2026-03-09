@@ -11,6 +11,10 @@ Constants are extracted from the existing service files — nothing is invented:
   metrics_config ← routers/metrics.py   BusinessImpact values
 """
 
+import numpy as np
+from gae.profile_scorer import ProfileScorer, build_profile_scorer, KernelType
+from gae.calibration import CalibrationProfile
+
 from app.domains.base import (
     DomainConfig, DomainAction, DomainFactor,
     DomainSituationType, DomainPolicy, PromptVariant,
@@ -20,6 +24,131 @@ from app.domains.soc.factors import (
     PatternHistoryFactor, TimeAnomalyFactor, DeviceTrustFactor,
 )
 from typing import Dict, List
+
+
+# ── v5.0 ProfileScorer Configuration ────────────────────────────────
+# 6 SOC categories (rows), 4 actions (cols), 6 factors (depth)
+# Factor order: [travel_match, asset_criticality, threat_intel,
+#                pattern_history, time_anomaly, device_trust]
+# Action order: [escalate, investigate, suppress, monitor]
+# Centroid values: what each action looks like for each category.
+# Discriminative factors: >0.8 (strong signal) or <0.2 (strong absence)
+# Non-discriminative factors: 0.3-0.6 (moderate)
+# τ=0.1 (V3B validated ECE=0.036). Never use 0.25.
+# ─────────────────────────────────────────────────────────────────────
+
+SOC_ACTIONS = ["escalate", "investigate", "suppress", "monitor"]
+
+SOC_CATEGORIES = [
+    "credential_access",
+    "threat_intel_match",
+    "lateral_movement",
+    "data_exfiltration",
+    "insider_threat",
+    "cloud_infrastructure",
+]
+
+# Shape: (6 categories, 4 actions, 6 factors)
+# Factor index: 0=travel_match, 1=asset_criticality, 2=threat_intel,
+#               3=pattern_history, 4=time_anomaly, 5=device_trust
+SOC_PROFILE_CENTROIDS = np.array([
+
+  # ── Category 0: credential_access ──────────────────────────────
+  [
+    # escalate: high asset + high threat_intel + low device_trust
+    [0.3, 0.85, 0.80, 0.60, 0.65, 0.15],
+    # investigate: moderate signals, some pattern history
+    [0.4, 0.60, 0.55, 0.55, 0.50, 0.40],
+    # suppress: low threat, normal hours, trusted device
+    [0.2, 0.25, 0.15, 0.20, 0.25, 0.85],
+    # monitor: moderate asset, low threat, normal pattern
+    [0.3, 0.45, 0.25, 0.35, 0.35, 0.65],
+  ],
+
+  # ── Category 1: threat_intel_match ─────────────────────────────
+  [
+    # escalate: high threat_intel + high asset_criticality
+    [0.35, 0.80, 0.90, 0.55, 0.60, 0.20],
+    # investigate: confirmed intel but lower asset risk
+    [0.30, 0.55, 0.75, 0.50, 0.50, 0.40],
+    # suppress: false positive intel, trusted device
+    [0.20, 0.20, 0.20, 0.15, 0.20, 0.90],
+    # monitor: low-confidence intel match
+    [0.25, 0.40, 0.45, 0.30, 0.35, 0.70],
+  ],
+
+  # ── Category 2: lateral_movement ───────────────────────────────
+  [
+    # escalate: strong pattern history + high asset
+    [0.50, 0.80, 0.70, 0.85, 0.70, 0.20],
+    # investigate: some lateral signals, moderate asset
+    [0.45, 0.60, 0.50, 0.65, 0.55, 0.40],
+    # suppress: travel explains movement, trusted device
+    [0.85, 0.25, 0.15, 0.20, 0.25, 0.80],
+    # monitor: single hop, low asset, normal hours
+    [0.40, 0.40, 0.30, 0.40, 0.35, 0.65],
+  ],
+
+  # ── Category 3: data_exfiltration ──────────────────────────────
+  [
+    # escalate: high asset + threat_intel + anomaly
+    [0.30, 0.90, 0.75, 0.70, 0.80, 0.15],
+    # investigate: high asset but unclear intent
+    [0.35, 0.75, 0.50, 0.55, 0.60, 0.45],
+    # suppress: authorized transfer, trusted device, normal hours
+    [0.20, 0.30, 0.10, 0.15, 0.20, 0.90],
+    # monitor: low-value asset, no threat intel
+    [0.25, 0.40, 0.25, 0.30, 0.35, 0.70],
+  ],
+
+  # ── Category 4: insider_threat ─────────────────────────────────
+  [
+    # escalate: pattern history + time anomaly + low device_trust
+    [0.40, 0.75, 0.65, 0.85, 0.80, 0.15],
+    # investigate: behavioral signals, moderate confidence
+    [0.45, 0.60, 0.50, 0.70, 0.60, 0.40],
+    # suppress: explainable behavior, trusted device
+    [0.30, 0.25, 0.15, 0.20, 0.20, 0.85],
+    # monitor: weak signals, normal hours
+    [0.35, 0.40, 0.30, 0.45, 0.35, 0.65],
+  ],
+
+  # ── Category 5: cloud_infrastructure ───────────────────────────
+  [
+    # escalate: high asset + threat_intel + time_anomaly
+    [0.25, 0.85, 0.80, 0.60, 0.75, 0.20],
+    # investigate: cloud anomaly, moderate signals
+    [0.30, 0.65, 0.55, 0.50, 0.55, 0.45],
+    # suppress: scheduled maintenance, trusted source
+    [0.20, 0.25, 0.10, 0.15, 0.20, 0.90],
+    # monitor: low-risk cloud activity
+    [0.25, 0.45, 0.30, 0.30, 0.35, 0.70],
+  ],
+
+], dtype=np.float64)
+
+# Auto-approve thresholds (Finding II: monitor excluded permanently)
+# escalate:    100.0% accuracy in band — safe at 0.90
+# investigate:  92.2% [90.8%, 93.5%] — passes 90% target
+# suppress:     99.9% [99.7%, 100%] — exceptionally safe
+# monitor:      86.0% — EXCLUDED, never reaches 99% at any threshold
+SOC_AUTO_APPROVE_THRESHOLDS = {
+    "escalate":    0.90,
+    "investigate": 0.90,
+    "suppress":    0.90,
+    "monitor":     None,   # excluded from auto-approve
+}
+
+# Category confidence floors (Finding LL: credential_access warrants caution)
+SOC_CATEGORY_CONFIDENCE_FLOORS = {
+    "credential_access": 0.95,
+}
+
+# Elevated agent zone categories (62% + 34% of dangerous errors)
+SOC_AGENT_ZONE_ELEVATED = {
+    "threat_intel_match":   True,
+    "cloud_infrastructure": True,
+}
 
 
 class SOCDomainConfig(DomainConfig):
@@ -336,6 +465,46 @@ class SOCDomainConfig(DomainConfig):
     # GAE factor computers — all 6 SOC FactorComputer implementations
     # Reference: docs/soc_copilot_design_v1.md §14
     # =========================================================================
+
+    def get_profile_centroids(self) -> np.ndarray:
+        """
+        Return profile centroids for ProfileScorer.
+        Shape: (n_categories, n_actions, n_factors) = (6, 4, 6).
+        τ=0.1 validated (V3B ECE=0.036).
+        """
+        return SOC_PROFILE_CENTROIDS.copy()
+
+    def get_categories(self) -> list:
+        """Return ordered category names."""
+        return list(SOC_CATEGORIES)
+
+    def get_category_index(self, category: str) -> int:
+        """Return index for a category name. Raises ValueError if unknown."""
+        try:
+            return SOC_CATEGORIES.index(category)
+        except ValueError:
+            raise ValueError(
+                f"Unknown SOC category: {category!r}. "
+                f"Valid: {SOC_CATEGORIES}"
+            )
+
+    def get_auto_approve_threshold(self, action: str):
+        """
+        Return auto-approve confidence threshold for action.
+        Returns None if action is excluded from auto-approve (monitor).
+        """
+        return SOC_AUTO_APPROVE_THRESHOLDS.get(action)
+
+    def build_profile_scorer(self) -> ProfileScorer:
+        """
+        Build a ProfileScorer from this domain config.
+        Uses L2 kernel (EXP-E1 validated), τ=0.1 (V3B validated, default).
+        """
+        return ProfileScorer(
+            mu=self.get_profile_centroids(),
+            actions=self.get_actions(),
+            kernel=KernelType.L2,
+        )
 
     @staticmethod
     def get_actions() -> List[str]:
