@@ -13,10 +13,10 @@ from app.services.reasoning import narrator
 from app.services.situation import analyze_situation
 from app.services import evolver
 from app.services.event_bus import event_bus, DecisionMade, GraphMutated
-from app.services.gae_state import get_learning_state
+from app.services.gae_state import get_learning_state, save_learning_state, get_profile_scorer
 from app.db.neo4j import neo4j_client
 from app.models.schemas import ProcessAlertRequest
-from app.domains.soc.config import SOCDomainConfig
+from app.domains.soc.config import SOCDomainConfig, SOC_CATEGORIES
 from app.domains.soc.orchestrator import compute_factor_vector
 from gae.scoring import score_alert
 
@@ -117,31 +117,38 @@ async def process_alert(request: ProcessAlertRequest):
         situation_analysis = analyze_situation(alert_type, context)
 
         # ====================================================================
-        # Step 2: GAE Scoring Pipeline (replaces agent.decide())
+        # Step 2: GAE Scoring Pipeline (v5.0 ProfileScorer — replaces agent.decide())
         #
         # 2a. Compute factor vector via orchestrator (6 FactorComputers → Neo4j)
-        # 2b. score_alert: Eq. 4  P(action|alert) = softmax(f·Wᵀ / τ)
+        # 2b. ProfileScorer centroid-proximity scoring (L2 kernel, τ=0.1)
+        #     P(action|f,cat) = softmax(−‖f−μ‖² / τ)
         # ====================================================================
 
         print(f"[GAE][TAB2] Computing factor vector for {request.alert_id}...")
         computers = SOCDomainConfig.get_factor_computers()
         f = await compute_factor_vector(alert_data, computers, neo4j_client)
-        f_2d = f.reshape(1, -1)  # score_alert requires shape (1, n_f)
 
-        W       = get_learning_state().W            # live, learned weights (4, 6)
-        actions = SOCDomainConfig.get_actions()      # ["escalate", "investigate", "suppress", "monitor"]
-        tau     = SOCDomainConfig.get_temperature()  # 0.25
+        _scorer = get_profile_scorer()
+        _cat_name = context.get("alert_type") or "credential_access"
+        _categories = SOC_CATEGORIES
+        _cat_idx = _categories.index(_cat_name) \
+                   if _cat_name in _categories else 0
+        _scoring_result = _scorer.score(
+            f.flatten(), category_index=_cat_idx
+        )
+        selected_action = _scoring_result.action_name
+        confidence      = _scoring_result.confidence
+        probs_flat      = _scoring_result.probabilities.tolist()
+        fv_list         = f.flatten().tolist()
+        tau             = _scorer.tau   # 0.1
 
-        scoring = score_alert(f_2d, W, actions, tau)
-        fv_list = f.flatten().tolist()   # JSON-serializable, stored in Decision node (R4)
-
-        print(f"[GAE][TAB2] action={scoring.selected_action} confidence={scoring.confidence:.3f} "
+        print(f"[GAE][TAB2] action={selected_action} confidence={confidence:.3f} "
               f"f={[round(v, 3) for v in fv_list]}")
 
         # Bridge DecisionResult — adapts GAE action vocabulary to eval gates + evolution trigger
         bridge = DecisionResult(
-            action=scoring.selected_action,
-            confidence=scoring.confidence,
+            action=selected_action,
+            confidence=confidence,
             pattern_id=context.get("pattern_id"),
             playbook_id=context.get("playbook_id"),
         )
@@ -150,7 +157,7 @@ async def process_alert(request: ProcessAlertRequest):
         # Step 3: LLM Narration (Generate Reasoning)
         # ====================================================================
 
-        reasoning = await narrator.generate_reasoning(alert_type, scoring.selected_action, context)
+        reasoning = await narrator.generate_reasoning(alert_type, selected_action, context)
 
         # ====================================================================
         # Step 4: Eval Gate (4 Checks)
@@ -189,8 +196,8 @@ async def process_alert(request: ProcessAlertRequest):
             {
                 "alert_id":       request.alert_id,
                 "decision_id":    decision_id,
-                "action":         scoring.selected_action,
-                "confidence":     scoring.confidence,
+                "action":         selected_action,
+                "confidence":     confidence,
                 "fv":             fv_list,
                 "reasoning":      reasoning,
                 "pattern_id":     bridge.pattern_id,
@@ -206,8 +213,8 @@ async def process_alert(request: ProcessAlertRequest):
 
         await event_bus.emit(DecisionMade(
             alert_id      = request.alert_id,
-            action        = scoring.selected_action,
-            confidence    = scoring.confidence,
+            action        = selected_action,
+            confidence    = confidence,
             factor_vector = tuple(fv_list),
         ))
         await event_bus.emit(GraphMutated(
@@ -269,8 +276,6 @@ async def process_alert(request: ProcessAlertRequest):
         # Build GAE scoring details for response
         # ====================================================================
 
-        probs_flat = scoring.action_probabilities.flatten().tolist()
-        action_probabilities = {a: round(p, 6) for a, p in zip(actions, probs_flat)}
         max_prob = max(probs_flat)
         sorted_probs = sorted(probs_flat, reverse=True)
         low_confidence = max_prob < 0.25
@@ -282,7 +287,7 @@ async def process_alert(request: ProcessAlertRequest):
         _ls = get_learning_state()
         _w_norms = {
             a: round(float(sum(v * v for v in row) ** 0.5), 4)
-            for a, row in zip(actions, _ls.W.tolist())
+            for a, row in zip(_scorer.actions, _ls.W.tolist())
         }
 
         # ====================================================================
@@ -305,10 +310,10 @@ async def process_alert(request: ProcessAlertRequest):
             },
             "decision_trace": {
                 "id": decision_id,
-                "type": scoring.selected_action,
+                "type": selected_action,
                 "reasoning": reasoning,
-                "confidence": scoring.confidence,
-                "action_taken": scoring.selected_action,
+                "confidence": confidence,
+                "action_taken": selected_action,
                 "nodes_consulted": context.get("nodes_consulted", 47),
                 "pattern_id": bridge.pattern_id,
                 "playbook_id": bridge.playbook_id
@@ -317,15 +322,15 @@ async def process_alert(request: ProcessAlertRequest):
                 "decision_id":          decision_id,
                 "factor_vector":        fv_list,
                 "factor_names":         [c.name for c in computers],
-                "action_probabilities": action_probabilities,
+                "action_probabilities": dict(zip(_scorer.actions, probs_flat)),
                 "softmax_sum":          round(sum(probs_flat), 8),
-                "temperature":          tau,
+                "temperature":          _scorer.tau,
                 "low_confidence":       low_confidence,
                 "ambiguous":            ambiguous,
                 "decision_method":      (
-                    "softmax scoring matrix "
-                    "(6 graph-computed factors × 4 actions, "
-                    "W updated via Eq. 4b with 20:1 asymmetry)"
+                    "ProfileScorer centroid-proximity scoring "
+                    "(6 factors × 4 actions × 6 categories, "
+                    "L2 kernel τ=0.1, EXP-E1 validated)"
                 ),
             },
             "gae_summary": {
