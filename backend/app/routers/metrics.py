@@ -830,6 +830,105 @@ async def get_board_export():
 
 
 # ============================================================================
+# GET /api/soc/economics — Rich $/time/risk metrics (ECON-1)
+# ============================================================================
+
+@router.get("/soc/economics")
+async def get_economics():
+    """
+    Rich economics metrics for ROI dashboard (ECON-1).
+    Computes $/time/risk from Decision history + user population.
+    """
+    ANALYST_HOURLY = 85.0
+    MANUAL_TRIAGE_HOURS = 0.75
+    AI_TRIAGE_HOURS = 0.133
+    BREACH_COST_PER_INCIDENT = 150000.0  # conservative SMB estimate
+
+    # 1. Decision volume + accuracy (single aggregating query)
+    total = correct = escalations = suppressions = investigations = monitors = 0
+    try:
+        dec_result = await neo4j_client.run_query(
+            "MATCH (d:Decision) "
+            "RETURN "
+            "count(d) AS total, "
+            "sum(CASE WHEN d.correct = true OR d.outcome = 'correct' "
+            "    THEN 1 ELSE 0 END) AS correct_count, "
+            "sum(CASE WHEN d.action = 'escalate'    THEN 1 ELSE 0 END) AS escalations, "
+            "sum(CASE WHEN d.action = 'suppress'    THEN 1 ELSE 0 END) AS suppressions, "
+            "sum(CASE WHEN d.action = 'investigate' THEN 1 ELSE 0 END) AS investigations, "
+            "sum(CASE WHEN d.action = 'monitor'     THEN 1 ELSE 0 END) AS monitors"
+        )
+        if dec_result:
+            total         = int(dec_result[0]["total"]          or 0)
+            correct       = int(dec_result[0]["correct_count"]  or 0)
+            escalations   = int(dec_result[0]["escalations"]    or 0)
+            suppressions  = int(dec_result[0]["suppressions"]   or 0)
+            investigations = int(dec_result[0]["investigations"] or 0)
+            monitors      = int(dec_result[0]["monitors"]       or 0)
+    except Exception as exc:
+        print(f"[ECON] decision query failed: {exc}")
+
+    # 2. User population from realistic seed
+    total_users = privileged = elevated = 0
+    try:
+        user_result = await neo4j_client.run_query(
+            "MATCH (u:User) "
+            "RETURN "
+            "count(u) AS total_users, "
+            "sum(CASE WHEN u.access_level = 'privileged' THEN 1 ELSE 0 END) AS privileged_users, "
+            "sum(CASE WHEN u.access_level = 'elevated'   THEN 1 ELSE 0 END) AS elevated_users"
+        )
+        if user_result:
+            total_users = int(user_result[0]["total_users"]      or 0)
+            privileged  = int(user_result[0]["privileged_users"] or 0)
+            elevated    = int(user_result[0]["elevated_users"]   or 0)
+    except Exception as exc:
+        print(f"[ECON] user query failed: {exc}")
+
+    # 3. Dollar value estimates (always labeled estimated=True)
+    correct_rate = correct / total if total > 0 else 0.0
+    time_saved_hours = total * (MANUAL_TRIAGE_HOURS - AI_TRIAGE_HOURS)
+    cost_saved = time_saved_hours * ANALYST_HOURLY
+    # Risk reduction: escalations correctly handled prevent breach cost
+    # 0.02 = 2% probability that an unhandled escalation becomes a breach
+    correct_escalations = escalations * correct_rate
+    risk_reduction = correct_escalations * BREACH_COST_PER_INCIDENT * 0.02
+
+    return {
+        "decisions": {
+            "total": total,
+            "correct": correct,
+            "correct_rate": round(correct_rate, 3),
+            "by_action": {
+                "escalate":    escalations,
+                "suppress":    suppressions,
+                "investigate": investigations,
+                "monitor":     monitors,
+            },
+        },
+        "population": {
+            "total_users":      total_users,
+            "privileged_users": privileged,
+            "elevated_users":   elevated,
+        },
+        "economics": {
+            "analyst_hourly_rate": ANALYST_HOURLY,
+            "time_saved_hours":    round(time_saved_hours, 1),
+            "cost_saved_usd":      round(cost_saved, 2),
+            "risk_reduction_usd":  round(risk_reduction, 2),
+            "total_value_usd":     round(cost_saved + risk_reduction, 2),
+            "estimated":           True,
+            "note": (
+                "Cost estimates use industry-standard SOC analyst rates. "
+                "Risk reduction assumes 2% breach probability per "
+                "unhandled escalation at $150K average SMB breach cost."
+            ),
+        },
+        "source": "neo4j",
+    }
+
+
+# ============================================================================
 # GET /api/metrics/confidence-trajectory - Per-situation confidence over time (F4b)
 # ============================================================================
 

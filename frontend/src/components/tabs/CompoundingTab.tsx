@@ -116,6 +116,26 @@ interface OperationalMetrics {
   source: string
 }
 
+interface EconomicsData {
+  decisions: {
+    total: number; correct: number; correct_rate: number;
+    by_action: Record<string, number>;
+  };
+  population: {
+    total_users: number; privileged_users: number; elevated_users: number;
+  };
+  economics: {
+    analyst_hourly_rate: number;
+    time_saved_hours: number;
+    cost_saved_usd: number;
+    risk_reduction_usd: number;
+    total_value_usd: number;
+    estimated: boolean;
+    note: string;
+  };
+  source: string;
+}
+
 interface EvolutionEventsState {
   events: EvolutionEvent[]
   note: string | null
@@ -212,6 +232,16 @@ function pickColor(key: string, idx: number): string {
 }
 
 // ============================================================================
+// formatUSD — compact dollar formatter
+// ============================================================================
+
+function formatUSD(value: number): string {
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`
+  if (value >= 1_000) return `$${Math.round(value).toLocaleString()}`
+  return `$${value.toFixed(2)}`
+}
+
+// ============================================================================
 // ChartEmpty — consistent empty-state placeholder
 // ============================================================================
 
@@ -259,6 +289,9 @@ export default function CompoundingTab() {
   // — F4-OVERLAY: operational metrics —
   const [operationalMetrics, setOperationalMetrics] = useState<OperationalMetrics | null>(null)
 
+  // — ECON-1: economics data —
+  const [economicsData, setEconomicsData] = useState<EconomicsData | null>(null)
+
   // ALL HOOKS MUST BE AT TOP LEVEL
   const animatedNodesEnd = useCountUp(data?.headline.nodes_start ?? 0, data?.headline.nodes_end ?? 0, 3000, 0, !!data && !loading)
   const animatedAutoCloseEnd = useCountUp(data?.headline.auto_close_start ?? 0, data?.headline.auto_close_end ?? 0, 3000, 0, !!data && !loading)
@@ -299,6 +332,7 @@ export default function CompoundingTab() {
       await loadGAECharts()
       await loadDecisionEconomics()
       await loadEvolutionEventsReal()
+      await loadEconomicsData()
     } catch (e) { console.error('[CompoundingTab] Failed to reset demo:', e) }
     finally { setResetting(false) }
   }
@@ -376,6 +410,15 @@ export default function CompoundingTab() {
       URL.revokeObjectURL(url)
     } catch (e) { console.error('[CompoundingTab] Board export failed:', e) }
   }
+
+  // ECON-1: load economics data
+  const loadEconomicsData = async () => {
+    try {
+      const d = await fetch('/api/soc/economics').then(r => r.json())
+      setEconomicsData(d as EconomicsData)
+    } catch (e) { console.error('[CompoundingTab] Failed to load economics data:', e) }
+  }
+  useEffect(() => { loadEconomicsData() }, [])
 
   // H7-FIX-4: load real evolution events from dedicated endpoint
   const loadEvolutionEventsReal = async () => {
@@ -1035,6 +1078,116 @@ export default function CompoundingTab() {
         </div>
         {!operationalMetrics && (
           <p className="text-xs text-gray-400 mt-3 italic text-center">Loading operational metrics…</p>
+        )}
+      </div>
+
+      {/* ── 5d. Economics Summary — ECON-1 ──────────────────────────────────── */}
+      <div className="bg-white rounded-lg border shadow p-6">
+        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <DollarSign className="w-5 h-5 text-green-600" />
+          Economics Summary
+          {economicsData && (
+            <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+              {economicsData.source === 'neo4j' ? 'live data' : economicsData.source}
+            </span>
+          )}
+        </h3>
+
+        {economicsData && economicsData.decisions.total === 0 ? (
+          <p className="text-sm text-gray-500 italic text-center py-4">
+            No decisions recorded yet. Process alerts in Tab 3 to generate economics data.
+          </p>
+        ) : economicsData ? (
+          <>
+            {/* ROW 1 — three headline numbers */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="bg-green-50 rounded border border-green-200 p-4 text-center">
+                <div className="text-xs text-gray-500 mb-1 font-medium">Total Value Generated</div>
+                <div className="text-2xl font-bold text-green-700">
+                  {formatUSD(economicsData.economics.total_value_usd)}
+                </div>
+                {economicsData.economics.estimated && (
+                  <span className="text-xs text-gray-400">(estimated)</span>
+                )}
+              </div>
+              <div className="bg-blue-50 rounded border border-blue-200 p-4 text-center">
+                <div className="text-xs text-gray-500 mb-1 font-medium">Analyst Time Saved</div>
+                <div className="text-2xl font-bold text-blue-700">
+                  {economicsData.economics.time_saved_hours.toFixed(1)} hrs
+                </div>
+                {economicsData.economics.estimated && (
+                  <span className="text-xs text-gray-400">(estimated)</span>
+                )}
+              </div>
+              <div className="bg-purple-50 rounded border border-purple-200 p-4 text-center">
+                <div className="text-xs text-gray-500 mb-1 font-medium">Risk Reduction</div>
+                <div className="text-2xl font-bold text-purple-700">
+                  {formatUSD(economicsData.economics.risk_reduction_usd)}
+                </div>
+                {economicsData.economics.estimated && (
+                  <span className="text-xs text-gray-400">(estimated)</span>
+                )}
+              </div>
+            </div>
+
+            {/* ROW 2 — decision breakdown */}
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-4">
+              <div className="bg-gray-50 rounded border border-gray-200 p-3 text-center">
+                <div className="text-xl font-bold text-gray-900">{economicsData.decisions.total}</div>
+                <div className="text-xs text-gray-500 mt-0.5">Total</div>
+              </div>
+              <div className="bg-green-50 rounded border border-green-200 p-3 text-center">
+                <div className="text-xl font-bold text-green-700">
+                  {(economicsData.decisions.correct_rate * 100).toFixed(1)}%
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">Correct</div>
+              </div>
+              <div className="bg-red-50 rounded border border-red-200 p-3 text-center">
+                <div className="text-xl font-bold text-red-600">
+                  {economicsData.decisions.by_action['escalate'] ?? 0}
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">Escalate</div>
+              </div>
+              <div className="bg-emerald-50 rounded border border-emerald-200 p-3 text-center">
+                <div className="text-xl font-bold text-emerald-700">
+                  {economicsData.decisions.by_action['suppress'] ?? 0}
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">Suppress</div>
+              </div>
+              <div className="bg-blue-50 rounded border border-blue-200 p-3 text-center">
+                <div className="text-xl font-bold text-blue-700">
+                  {economicsData.decisions.by_action['investigate'] ?? 0}
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">Investigate</div>
+              </div>
+              <div className="bg-yellow-50 rounded border border-yellow-200 p-3 text-center">
+                <div className="text-xl font-bold text-yellow-700">
+                  {economicsData.decisions.by_action['monitor'] ?? 0}
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">Monitor</div>
+              </div>
+            </div>
+
+            {/* ROW 3 — population context */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+              <div className="bg-gray-50 rounded border border-gray-200 p-3 text-center">
+                <div className="text-xl font-bold text-gray-900">{economicsData.population.total_users}</div>
+                <div className="text-xs text-gray-500 mt-0.5">Total Users</div>
+              </div>
+              <div className="bg-orange-50 rounded border border-orange-200 p-3 text-center">
+                <div className="text-xl font-bold text-orange-700">{economicsData.population.privileged_users}</div>
+                <div className="text-xs text-gray-500 mt-0.5">Privileged Users</div>
+              </div>
+              <div className="bg-yellow-50 rounded border border-yellow-200 p-3 text-center">
+                <div className="text-xl font-bold text-yellow-700">{economicsData.population.elevated_users}</div>
+                <div className="text-xs text-gray-500 mt-0.5">Elevated Users</div>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-400 italic">{economicsData.economics.note}</p>
+          </>
+        ) : (
+          <p className="text-xs text-gray-400 italic text-center py-4">Loading economics data…</p>
         )}
       </div>
 
