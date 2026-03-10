@@ -59,3 +59,5 @@ frontend/node_modules/.vite-temp/
 # Local utility files
 myFolderTree.txt.claude/
 .claude/
+
+backend/app/data/gae_learning_state.json

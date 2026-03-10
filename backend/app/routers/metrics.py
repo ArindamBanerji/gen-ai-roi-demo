@@ -503,6 +503,7 @@ async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
                 "note": "No decisions recorded yet — process alerts to see evolution",
                 "total": 0,
             }
+        _NULLS = (None, "None", "")
         events = [
             {
                 "id": f"DEC-{str(r.get('id', ''))[:8]}",
@@ -516,6 +517,7 @@ async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
                 "triggered_by": str(r.get("alert_id", "?")),
             }
             for r in results
+            if r.get("action") not in _NULLS and r.get("alert_id") not in _NULLS
         ]
         return {"events": events, "estimated": False, "note": None, "total": len(events)}
 
