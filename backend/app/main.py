@@ -12,7 +12,7 @@ load_dotenv(dotenv_path="../.env")
 app = FastAPI(
     title="SOC Copilot Demo API",
     description="AI-augmented Security Operations Center with Runtime Evolution",
-    version="1.0.0",
+    version="5.0.0",
 )
 
 # CORS configuration (allow all for demo/ngrok)
@@ -30,7 +30,7 @@ async def root():
     return {
         "service": "SOC Copilot Demo",
         "status": "operational",
-        "version": "1.0.0"
+        "version": "5.0.0"
     }
 
 @app.get("/health")
