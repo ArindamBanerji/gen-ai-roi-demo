@@ -2,6 +2,7 @@
 Alert Triage API - Tab 3
 Graph-based reasoning and closed-loop execution
 """
+import json
 import logging
 from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Any
@@ -653,6 +654,14 @@ async def report_decision_outcome(request: OutcomeRequest):
         if gae_result:
             record      = gae_result[0]
             fv          = record.get("factor_vector")
+            if isinstance(fv, str):
+                try:
+                    fv = json.loads(fv)
+                except (json.JSONDecodeError, ValueError):
+                    fv = None
+                    print("[GAE] factor_vector string parse failed")
+            if isinstance(fv, list):
+                print(f"[GAE] factor_vector parsed: len={len(fv)}")
             action_name = record.get("action", "")
             confidence_at_decision = float(record.get("confidence") or 0.0)
 
