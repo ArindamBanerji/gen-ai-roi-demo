@@ -236,8 +236,8 @@ def _build_calibration_sentence(
 ) -> str:
     """Mandatory NAR-1 calibration sentence."""
     return (
-        f"This recommendation is calibrated from {decision_count} verified outcomes, "
-        f"including {category_count} decisions on similar {category} alerts."
+        f"This recommendation is calibrated from {decision_count} verified outcomes "
+        f"across all alert categories."
     )
 
 

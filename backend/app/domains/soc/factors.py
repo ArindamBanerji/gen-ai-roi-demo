@@ -609,9 +609,9 @@ def compute_soc_factors(
         "factors":            factors,
         "recommended_action": template["recommended_action"],
         "confidence":         template["confidence"],
-        "decision_method":    "softmax scoring matrix (6 factors × 4 actions)",
+        "decision_method":    "ProfileScorer L2 centroid-proximity scoring (6 factors × 4 actions × 6 categories)",
         "weights_note":       (
-            "Weights calibrate automatically through verified outcomes "
+            "Centroids update automatically through verified analyst decisions "
             "(Loop 2 + Loop 3)"
         ),
     }
