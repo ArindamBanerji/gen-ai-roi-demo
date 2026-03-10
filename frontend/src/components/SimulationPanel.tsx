@@ -62,9 +62,7 @@ interface ProgressSnap {
 interface SimResult {
   n_decisions: number
   overall_accuracy: number
-  ground_truth_accuracy: number
   category_accuracy: Record<string, number>
-  category_ground_truth: Record<string, number>
   duration_seconds: number
 }
 
@@ -466,19 +464,6 @@ export default function SimulationPanel({ onSimulationComplete }: SimulationPane
               </div>
             </div>
 
-            {/* Ground truth accuracy */}
-            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-              <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">
-                Ground Truth Accuracy
-              </div>
-              <div className="text-3xl font-bold text-green-400">
-                {pct(result.ground_truth_accuracy)}
-              </div>
-              <div className="text-xs text-slate-500 mt-1">
-                vs expert-defined optimal action
-              </div>
-            </div>
-
             {/* Duration */}
             <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
               <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">
@@ -500,7 +485,6 @@ export default function SimulationPanel({ onSimulationComplete }: SimulationPane
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 {CAT_ORDER.map(cat => {
                   const acc = result.category_accuracy[cat]
-                  const gt  = result.category_ground_truth[cat]
                   if (acc === undefined) return null
                   return (
                     <div key={cat} className="text-center">
@@ -513,11 +497,6 @@ export default function SimulationPanel({ onSimulationComplete }: SimulationPane
                       <div className="text-xl font-bold text-gray-200">
                         {pct(acc)}
                       </div>
-                      {gt !== undefined && (
-                        <div className="text-xs text-slate-500 mt-0.5">
-                          GT: {pct(gt)}
-                        </div>
-                      )}
                     </div>
                   )
                 })}

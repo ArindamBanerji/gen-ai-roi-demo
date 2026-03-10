@@ -110,8 +110,7 @@ async def _run_simulation_bg(sim_id: str, n_decisions: int, speed_ms: int) -> No
                 "n_decisions":           result.n_decisions,
                 "overall_accuracy":      result.overall_accuracy,
                 "category_accuracy":     result.category_accuracy,
-                "ground_truth_accuracy": result.ground_truth_accuracy,
-                "category_ground_truth": result.category_ground_truth,
+
                 "weight_trajectory":     result.weight_trajectory,
                 "experiment_log":        result.experiment_log,
                 "duration_seconds":      result.duration_seconds,
