@@ -135,6 +135,8 @@ interface GraphStats {
   source: 'neo4j' | 'unavailable'
 }
 
+const DEFAULT_ALERT_ID = 'ALERT-7823'
+
 export default function RuntimeEvolutionTab() {
   const [deployments, setDeployments] = useState<Deployment[]>([])
   const [processing, setProcessing] = useState(false)
@@ -224,7 +226,7 @@ export default function RuntimeEvolutionTab() {
     }
   }
 
-  const processAlert = async (alertId: string = 'ALERT-7823') => {
+  const processAlert = async (alertId: string = DEFAULT_ALERT_ID) => {
     setProcessing(true)
     setResult(null)
     setVisibleChecks([])
@@ -245,7 +247,7 @@ export default function RuntimeEvolutionTab() {
     setVisibleChecks([])
 
     try {
-      const data = await api.processAlertBlocked('ALERT-7823')
+      const data = await api.processAlertBlocked(DEFAULT_ALERT_ID)
       setResult(data as ProcessResult)
     } catch (error) {
       console.error('Failed to simulate failure:', error)
@@ -273,6 +275,7 @@ export default function RuntimeEvolutionTab() {
             THE DIFFERENTIATOR
           </span>
         </div>
+        <p className="text-sm text-gray-500 mb-2">How the system's judgment has evolved from past decisions</p>
         <p className="text-gray-300 mb-4">
           Watch decisions trigger agent evolution. This is what SIEMs don't have.
         </p>
@@ -380,7 +383,7 @@ export default function RuntimeEvolutionTab() {
           ) : (
             <>
               <Activity className="w-4 h-4" />
-              Process {domainConfig.triggerEntity} (ALERT-7823)
+              Process {domainConfig.triggerEntity} ({DEFAULT_ALERT_ID})
             </>
           )}
         </button>

@@ -485,8 +485,9 @@ export default function AlertTriageTab() {
           <Activity className="w-6 h-6 text-soc-primary" />
           <h2 className="text-xl font-semibold">{domainConfig.tabs.decision}</h2>
         </div>
+        <p className="text-sm text-gray-500 mb-1">Active decisions — score, factors, and routing for current alerts</p>
         <p className="text-gray-400 text-sm">
-          Watch the {domainConfig.domainAdjective.toLowerCase()} graph think. 47 nodes consulted for contextual
+          Watch the {domainConfig.domainAdjective.toLowerCase()} graph think. <span title="Context size varies by alert">—</span> nodes consulted for contextual
           decision-making.
         </p>
         <div className="mt-3 text-sm text-soc-primary">
