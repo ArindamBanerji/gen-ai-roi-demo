@@ -164,10 +164,7 @@ interface CentroidEvolutionEntry {
   category: string
   action: string
 }
-interface CentroidEvolutionData {
-  evolution: CentroidEvolutionEntry[]
-  message: string | null
-}
+// CentroidEvolutionData removed — backend returns flat array, not {evolution:[]} wrapper
 
 interface GAEConfidencePoint {
   decision_number: number; confidence: number
@@ -286,7 +283,7 @@ export default function CompoundingTab() {
   const [convergenceLoading, setConvergenceLoading] = useState(false)
 
   // VIS-2: centroid evolution (replaces Chart A) + decision_count for label logic
-  const [centroidEvolution, setCentroidEvolution] = useState<CentroidEvolutionData | null>(null)
+  const [centroidEvolution, setCentroidEvolution] = useState<CentroidEvolutionEntry[]>([])
   const [centroidEvolutionMock, setCentroidEvolutionMock] = useState(false)
   const [vis2DecisionCount, setVis2DecisionCount] = useState(0)
 
@@ -438,7 +435,7 @@ export default function CompoundingTab() {
   // VIS-2: load centroid evolution (Chart A replacement). Falls back to mock on 404.
   const loadCentroidEvolution = async () => {
     try {
-      const d = await getCentroidEvolution(200) as CentroidEvolutionData
+      const d = await getCentroidEvolution(200) as CentroidEvolutionEntry[]
       setCentroidEvolution(d)
       setCentroidEvolutionMock(false)
     } catch {
@@ -450,7 +447,7 @@ export default function CompoundingTab() {
         category: 'credential_access',
         action: 'escalate',
       }))
-      setCentroidEvolution({ evolution: mockEvolution, message: null })
+      setCentroidEvolution(mockEvolution)
       setCentroidEvolutionMock(true)
     }
   }
@@ -715,13 +712,13 @@ export default function CompoundingTab() {
             </div>
           )}
           <div className="bg-white rounded-md p-3">
-            {!centroidEvolution || centroidEvolution.evolution.length === 0 ? (
+            {centroidEvolution.length === 0 ? (
               <ChartEmpty message="Process alerts and provide outcome feedback to see centroid learning magnitude" />
             ) : (
               <ResponsiveContainer width="100%" height={180}>
                 <ComposedChart
                   data={(() => {
-                    const evol = centroidEvolution.evolution
+                    const evol = centroidEvolution
                     const win = 5
                     return evol.map((e, i) => {
                       const slice = evol.slice(Math.max(0, i - win + 1), i + 1)
