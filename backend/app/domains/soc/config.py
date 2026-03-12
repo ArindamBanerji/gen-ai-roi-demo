@@ -544,6 +544,7 @@ class SOCDomainConfig(DomainConfig):
             mu=self.get_profile_centroids(),
             actions=self.get_actions(),
             kernel=KernelType.L2,
+            categories=list(SOC_CATEGORIES),
         )
 
     @staticmethod
