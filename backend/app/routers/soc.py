@@ -2,7 +2,7 @@
 SOC Analytics API - Tab 1
 Governed security metrics with provenance
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from pydantic import BaseModel
@@ -929,3 +929,105 @@ async def get_soc_analytics():
                 }
             ],
         }
+
+
+# ============================================================================
+# GET /api/soc/centroid-evolution — Centroid delta history from Decision nodes
+# Used by Tab-2 Section A/B and Tab-4 Chart A.
+# ============================================================================
+
+@router.get("/soc/centroid-evolution")
+async def get_centroid_evolution(
+    n: int = Query(default=200, ge=1, le=1000),
+    category: Optional[str] = Query(default=None),
+):
+    """
+    Return centroid delta history from Decision nodes.
+    Used by Tab-2 Section A/B and Tab-4 Chart A.
+    Returns [] if no Decision nodes have centroid_delta_norm set yet.
+    """
+    try:
+        rows = await neo4j_client.run_query(
+            """
+            MATCH (d:Decision)
+            WHERE d.centroid_delta_norm IS NOT NULL
+              AND d.centroid_delta_norm > 0
+              AND ($category IS NULL OR d.category = $category)
+            RETURN d.id AS id,
+                   d.centroid_delta_norm AS centroid_delta_norm,
+                   d.category AS category,
+                   d.action AS action,
+                   d.correct AS correct,
+                   d.verified_at AS verified_at
+            ORDER BY d.verified_at ASC
+            LIMIT $n
+            """,
+            {"category": category, "n": n},
+        )
+        result = []
+        for i, r in enumerate(rows):
+            result.append({
+                "decision_number": i + 1,
+                "id": r.get("id"),
+                "centroid_delta_norm": float(r.get("centroid_delta_norm") or 0.0),
+                "category": r.get("category") or "unknown",
+                "action": r.get("action") or "unknown",
+                "correct": bool(r.get("correct")),
+                "verified_at": str(r.get("verified_at") or ""),
+            })
+        print(f"[SOC] centroid-evolution: returned {len(result)} records (n={n}, category={category!r})")
+        return result
+    except Exception as exc:
+        print(f"[SOC] centroid-evolution query failed: {exc}")
+        return []
+
+
+# ============================================================================
+# GET /api/soc/learning-state — Expose LearningState for Tab-2 Section D
+# ============================================================================
+
+@router.get("/soc/learning-state")
+async def get_learning_state_endpoint():
+    """Expose learning state for Tab-2 Section D rollback status."""
+    from app.services.gae_state import get_learning_state as _get_ls
+
+    frozen = False
+    decision_count = 0
+    last_verified_at = None
+
+    try:
+        ls = _get_ls()
+        decision_count = ls.decision_count
+
+        # frozen comes from ProfileScorer._frozen (if scorer is attached)
+        scorer = getattr(ls, "profile_scorer", None)
+        if scorer is not None:
+            frozen = bool(getattr(scorer, "_frozen", False))
+    except RuntimeError:
+        # Learning state not initialized yet — return defaults
+        pass
+    except Exception as exc:
+        print(f"[SOC] learning-state error: {exc}")
+
+    # Query Neo4j for last verified_at
+    try:
+        rows = await neo4j_client.run_query(
+            """
+            MATCH (d:Decision)
+            WHERE d.verified_at IS NOT NULL
+            RETURN d.verified_at AS verified_at
+            ORDER BY d.verified_at DESC
+            LIMIT 1
+            """,
+        )
+        if rows:
+            last_verified_at = str(rows[0].get("verified_at") or "")
+    except Exception as exc:
+        print(f"[SOC] learning-state verified_at query failed: {exc}")
+
+    return {
+        "frozen": frozen,
+        "decision_count": decision_count,
+        "last_verified_at": last_verified_at,
+        "checkpoint_id": None,  # TODO: expose checkpoint versioning when rollback UI is added
+    }
