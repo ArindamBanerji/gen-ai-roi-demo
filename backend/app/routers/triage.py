@@ -633,6 +633,8 @@ async def report_decision_outcome(request: OutcomeRequest):
         correct_bool  = outcome_int == +1
         outcome_label = request.outcome   # "correct" | "incorrect"
 
+        centroid_update_payload = None  # populated below if wu.centroid_update is present
+
         gae_result = await neo4j_client.run_query(
             """
             MATCH (d:Decision {id: $decision_id})
@@ -707,6 +709,14 @@ async def report_decision_outcome(request: OutcomeRequest):
                         f"centroid_delta_norm={cu.centroid_delta_norm:.4f} "
                         f"step={cu.decision_count}"
                     )
+                    centroid_update_payload = {
+                        "centroid_delta_norm": cu.centroid_delta_norm,
+                        "category_name":       cu.category_name,
+                        "action_name":         cu.action_name,
+                        "category_index":      cu.category_index,
+                        "action_index":        cu.action_index,
+                        "correct":             correct_bool,
+                    }
         else:
             print(
                 f"[GAE] Decision node {request.decision_id!r} not found "
@@ -739,8 +749,11 @@ async def report_decision_outcome(request: OutcomeRequest):
         print(f"[FEEDBACK] Processed {request.outcome} outcome for {request.alert_id}")
         print(f"[FEEDBACK] Graph updates: {len(result.graph_updates)}")
         print(f"[FEEDBACK] Consequence: {result.consequence}")
+        print(f"[FEEDBACK] centroid_update in response: {centroid_update_payload is not None}")
 
-        return result.model_dump()
+        response_body = result.model_dump()
+        response_body["centroid_update"] = centroid_update_payload
+        return response_body
 
     except HTTPException:
         raise
