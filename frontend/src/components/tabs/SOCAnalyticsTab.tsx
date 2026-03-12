@@ -21,6 +21,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { queryMetric, getThreatLandscape, getAttackTacticBreakdown } from '../../lib/api'
+import { domainConfig } from '../../lib/domain'
 
 interface MetricContract {
   id: string
@@ -80,7 +81,7 @@ const CROSS_SOURCE_QUESTIONS = [
   "Show all indicators with critical consensus severity",
   "Which assets have CrowdStrike EDR with reduced prevention?",
   "Find alerts linked to malicious GreyNoise indicators",
-  "What threat intel sources cover ALERT-7823?",
+  `What threat intel sources cover ${domainConfig.defaultAlertId}?`,
 ]
 
 interface CategoryScore {

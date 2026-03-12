@@ -51,6 +51,9 @@ export const domainConfig = {
   loop3BadgeLabel:  "Security-first: penalty 20× reward",
   guaranteesLabel:  "security guarantees",
 
+  // Default demo alert ID — used by Tab-2 "Process Alert" and example queries
+  defaultAlertId: 'ALERT-7823',
+
   // Header — exact strings from App.tsx
   headerTitle:    "SOC Copilot Demo",
   headerSubtitle: "AI-Augmented Security Operations with Runtime Evolution",

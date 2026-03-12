@@ -695,11 +695,16 @@ async def report_decision_outcome(request: OutcomeRequest):
                     await neo4j_client.run_query(
                         """
                         MATCH (d:Decision {id: $decision_id})
-                        SET d.centroid_delta_norm = $centroid_delta_norm
+                        SET d.centroid_delta_norm = $centroid_delta_norm,
+                            d.category            = $category,
+                            d.correct             = $correct,
+                            d.verified_at         = datetime()
                         """,
                         {
-                            "decision_id": request.decision_id,
+                            "decision_id":         request.decision_id,
                             "centroid_delta_norm": cu.centroid_delta_norm,
+                            "category":            cu.category_name,
+                            "correct":             correct_bool,
                         },
                     )
                     print(

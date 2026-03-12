@@ -162,16 +162,18 @@ interface ProfileStateWithIks extends ProfileState {
 }
 
 interface CentroidEvolutionEntry {
+  id: string
   decision_number: number
   centroid_delta_norm: number
   correct: boolean
   category: string
   action: string
+  verified_at?: string
 }
 
 // CentroidEvolutionData removed — backend returns flat array, not {evolution:[]} wrapper
 
-const DEFAULT_ALERT_ID = 'ALERT-7823'
+const DEFAULT_ALERT_ID = domainConfig.defaultAlertId
 
 export default function RuntimeEvolutionTab() {
   const [deployments, setDeployments] = useState<Deployment[]>([])
@@ -456,6 +458,11 @@ export default function RuntimeEvolutionTab() {
     return alerts
   })()
 
+  // Section A: find matching centroid-evolution entry for the pending decision (Option A)
+  const pendingEntry = pendingDecisionId
+    ? centroidEvolution.find(e => e.id === pendingDecisionId) ?? null
+    : null
+
   const iksArrow = iks?.delta_7d !== null && iks?.delta_7d !== undefined
     ? (iks.delta_7d > 0 ? '\u2191' : iks.delta_7d < 0 ? '\u2193' : '\u2192')
     : '\u2192'
@@ -645,14 +652,48 @@ export default function RuntimeEvolutionTab() {
             </div>
 
             {!result ? (
-              <div className="bg-soc-card rounded-lg border border-gray-800 p-8 text-center">
-                <Activity className="w-8 h-8 mx-auto mb-3 text-gray-600" />
-                <p className="text-gray-500 text-sm">
-                  {pendingDecisionId
-                    ? `Decision ${pendingDecisionId} was recorded \u2014 process a new alert to see live decision trace.`
-                    : `No verified decisions yet \u2014 click \u201cProcess Alert\u201d above to begin.`}
-                </p>
-              </div>
+              pendingEntry ? (
+                <div className="bg-purple-900/10 border border-purple-500/30 rounded-lg p-5 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-purple-400" />
+                    <span className="text-sm font-semibold text-purple-300">
+                      Decision recorded — centroid updated
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <div className="text-gray-500">Category</div>
+                      <div className="text-gray-200 font-mono mt-0.5">{pendingEntry.category}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Action</div>
+                      <div className="text-gray-200 font-mono mt-0.5">{pendingEntry.action}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Centroid ‖Δμ‖</div>
+                      <div className="text-gray-200 font-mono mt-0.5">{pendingEntry.centroid_delta_norm.toFixed(4)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Outcome</div>
+                      <div className={`font-semibold mt-0.5 ${pendingEntry.correct ? 'text-green-400' : 'text-amber-400'}`}>
+                        {pendingEntry.correct ? 'Correct ✓' : 'Incorrect — corrected'}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Process a new alert above to see the live eval gate and GAE scoring for comparison.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-soc-card rounded-lg border border-gray-800 p-8 text-center">
+                  <Activity className="w-8 h-8 mx-auto mb-3 text-gray-600" />
+                  <p className="text-gray-500 text-sm">
+                    {pendingDecisionId
+                      ? `Decision ${pendingDecisionId} was recorded \u2014 process a new alert to see live decision trace.`
+                      : `No verified decisions yet \u2014 click \u201cProcess Alert\u201d above to begin.`}
+                  </p>
+                </div>
+              )
             ) : (
               <div className="space-y-5">
 
