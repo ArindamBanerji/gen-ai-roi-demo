@@ -1257,7 +1257,7 @@ export default function AlertTriageTab() {
           {closedLoop && selectedAlert && (
             <OutcomeFeedback
               alertId={selectedAlert.id}
-              decisionId={analysis?.recommendation?.decision_id || closedLoop.evidence.decision_id}
+              decisionId={analysis?.recommendation?.decision_id ?? closedLoop.evidence.decision_id}
               isVisible={!!closedLoop}
             />
           )}
