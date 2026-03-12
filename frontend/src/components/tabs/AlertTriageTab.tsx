@@ -1253,6 +1253,15 @@ export default function AlertTriageTab() {
             </div>
           )}
 
+          {/* VIS-2: Outcome Feedback elevated — sits ABOVE Closed Loop */}
+          {closedLoop && selectedAlert && (
+            <OutcomeFeedback
+              alertId={selectedAlert.id}
+              decisionId={analysis?.recommendation?.decision_id || closedLoop.evidence.decision_id}
+              isVisible={!!closedLoop}
+            />
+          )}
+
           {/* Closed Loop Execution */}
           {closedLoop && (
             <div className="bg-gradient-to-r from-soc-success/20 to-soc-primary/20 rounded-lg border-2 border-soc-success/50 overflow-hidden">
@@ -1384,14 +1393,7 @@ export default function AlertTriageTab() {
             </div>
           )}
 
-          {/* Outcome Feedback (v2.5 - Loop 3) */}
-          {closedLoop && selectedAlert && (
-            <OutcomeFeedback
-              alertId={selectedAlert.id}
-              decisionId={analysis?.recommendation?.decision_id || closedLoop.evidence.decision_id}
-              isVisible={!!closedLoop}
-            />
-          )}
+          {/* Outcome Feedback moved above Closed Loop — see VIS-2 */}
         </div>
       </div>
     </div>

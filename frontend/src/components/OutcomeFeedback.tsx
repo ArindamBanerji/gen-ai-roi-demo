@@ -6,7 +6,7 @@
  * Shows graph updates and demonstrates self-correction in action.
  */
 import { useState, useEffect } from 'react'
-import { CheckCircle, XCircle, AlertTriangle, TrendingUp, TrendingDown, Clock } from 'lucide-react'
+import { CheckCircle, XCircle, AlertTriangle, TrendingUp, TrendingDown, Clock, ExternalLink } from 'lucide-react'
 import { getOutcomeStatus, reportOutcome } from '../lib/api'
 
 interface GraphUpdate {
@@ -23,6 +23,16 @@ interface NextAlertsOverride {
   reason: string
 }
 
+// VIS-2: centroid update written by WIRING-1 — optional, present only when
+// the POST /alert/outcome response is extended to include wu.centroid_update.
+// When absent, the centroid section is hidden (correct fallback behaviour).
+interface CentroidUpdateInfo {
+  centroid_delta_norm: number
+  category_name: string
+  action_name: string
+  correct: boolean
+}
+
 interface OutcomeResponse {
   alert_id: string
   outcome: string
@@ -30,6 +40,8 @@ interface OutcomeResponse {
   consequence: string
   next_alerts_override: NextAlertsOverride | null
   narrative: string
+  // VIS-2: optional — present when backend exposes wu.centroid_update
+  centroid_update?: CentroidUpdateInfo | null
 }
 
 interface OutcomeFeedbackProps {
@@ -174,7 +186,7 @@ export default function OutcomeFeedback({ alertId, decisionId, isVisible }: Outc
 
             {/* Graph Updates Table */}
             <div className="bg-soc-bg/50 rounded border border-gray-700 overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-700 bg-gray-800/50">
+              <div className="px-3 py-2 border-b border-gray-700 bg-gray-800/50 flex items-center justify-between">
                 <h4 className="text-sm font-semibold text-gray-300">Graph Updates</h4>
               </div>
               <div className="divide-y divide-gray-700">
@@ -210,6 +222,54 @@ export default function OutcomeFeedback({ alertId, decisionId, isVisible }: Outc
                 ))}
               </div>
             </div>
+
+            {/* VIS-2: Centroid Update — hidden when null/0 (WIRING-1 not yet surfaced in response) */}
+            {result.centroid_update && result.centroid_update.centroid_delta_norm > 0 && (() => {
+              const cu = result.centroid_update!
+              const isReinforced = cu.correct
+              return (
+                <div className="bg-soc-bg/50 rounded border border-gray-700 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-gray-700 bg-gray-800/50">
+                    <h4 className="text-sm font-semibold text-gray-300">Centroid update</h4>
+                  </div>
+                  <div className="px-3 py-2 space-y-1">
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className="text-gray-400 font-mono">
+                        {cu.category_name} → {cu.action_name}
+                      </span>
+                      <span className="text-gray-300 font-mono">
+                        ‖Δμ‖ = {cu.centroid_delta_norm.toFixed(4)}
+                      </span>
+                      <span className={`px-1.5 py-0.5 rounded font-semibold text-xs ${
+                        isReinforced
+                          ? 'bg-green-900/30 text-green-400 border border-green-600/40'
+                          : 'bg-orange-900/30 text-orange-400 border border-orange-600/40'
+                      }`}>
+                        {isReinforced ? '↑ Reinforced' : '↓ Corrected'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 italic">
+                      {cu.category_name}: This decision {isReinforced ? 'reinforced' : 'corrected'} the{' '}
+                      {cu.action_name} centroid. ({isReinforced ? '+' : '-'}{cu.centroid_delta_norm.toFixed(4)} movement)
+                    </p>
+                  </div>
+                  {/* Bridge link → Tab-2 Section A */}
+                  <div className="px-3 py-2 border-t border-gray-700/60">
+                    <button
+                      onClick={() => {
+                        sessionStorage.setItem('vis2_pending_decision', decisionId)
+                        window.dispatchEvent(new CustomEvent('vis2:navigate', { detail: { tab: 'evolution' } }))
+                      }}
+                      className="flex items-center gap-1.5 text-xs text-soc-secondary hover:text-soc-secondary/80 transition-colors"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      See how this decision fits into the category learning curve
+                      <span className="font-semibold">Learning Impact ↗</span>
+                    </button>
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Next Alerts Override (if incorrect) */}
             {result.next_alerts_override && (

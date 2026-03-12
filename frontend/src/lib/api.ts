@@ -82,6 +82,16 @@ export async function getRewardSummary() {
   return fetchJSON('/rl/reward-summary')
 }
 
+// VIS-2: ProfileScorer state including IKS
+export async function getProfileState() {
+  return fetchJSON('/soc/profile')
+}
+
+// VIS-2: Centroid evolution per decision (may return 404 if endpoint not built yet)
+export async function getCentroidEvolution(n: number = 200) {
+  return fetchJSON(`/soc/centroid-evolution?n=${n}`)
+}
+
 // ============================================================================
 // Tab 3: Alert Triage
 // ============================================================================

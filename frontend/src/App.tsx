@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Shield, Activity, Zap, TrendingUp } from 'lucide-react'
 import { domainConfig } from './lib/domain'
 import SOCAnalyticsTab from './components/tabs/SOCAnalyticsTab'
@@ -54,6 +54,16 @@ const tabs: Tab[] = [
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabId>('evolution') // Start with THE differentiator
+
+  // VIS-2: listen for cross-tab navigation events dispatched by OutcomeFeedback bridge link
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const tab = (e as CustomEvent).detail?.tab as TabId
+      if (tab) setActiveTab(tab)
+    }
+    window.addEventListener('vis2:navigate', handler)
+    return () => window.removeEventListener('vis2:navigate', handler)
+  }, [])
 
   const ActiveComponent = tabs.find((t) => t.id === activeTab)?.component
 

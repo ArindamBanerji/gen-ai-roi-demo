@@ -18,15 +18,15 @@
 
 import { useEffect, useState } from 'react'
 import {
-  LineChart, Line, BarChart, Bar,
+  LineChart, Line, Bar, ComposedChart,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import {
   getCompoundingMetrics, resetAllDemoData, resetAlerts, reseedDemoData,
   getAuditDecisions, verifyAuditChain, getGAEConvergence,
-  getGAEWeightEvolution, getGAEConfidenceTrajectory, getGAETrustCurve, getGAEBeforeAfter,
-  getEvolutionEvents,
+  getGAEConfidenceTrajectory, getGAETrustCurve, getGAEBeforeAfter,
+  getEvolutionEvents, getCentroidEvolution, getProfileState,
 } from '../../lib/api'
 import { domainConfig } from '../../lib/domain'
 import {
@@ -156,12 +156,16 @@ interface AuditVerification {
 // Interfaces — GAE real data
 // ============================================================================
 
-interface GAEWeightEvolutionEntry {
-  decision_number: number; action: string; outcome: number
-  delta_norm: number; W_norm_after: number
+// VIS-2: centroid evolution entry from /api/soc/centroid-evolution
+interface CentroidEvolutionEntry {
+  decision_number: number
+  centroid_delta_norm: number
+  correct: boolean
+  category: string
+  action: string
 }
-interface GAEWeightEvolution {
-  evolution: GAEWeightEvolutionEntry[]
+interface CentroidEvolutionData {
+  evolution: CentroidEvolutionEntry[]
   message: string | null
 }
 
@@ -272,7 +276,6 @@ export default function CompoundingTab() {
   const [auditLoading, setAuditLoading] = useState(false)
 
   // — GAE real charts —
-  const [gaeWeightEvo, setGaeWeightEvo] = useState<GAEWeightEvolution | null>(null)
   const [gaeConfTraj, setGaeConfTraj] = useState<GAEConfidenceTrajectory | null>(null)
   const [gaeTrustCurve, setGaeTrustCurve] = useState<GAETrustCurve | null>(null)
   const [gaeBeforeAfter, setGaeBeforeAfter] = useState<GAEBeforeAfter | null>(null)
@@ -281,6 +284,11 @@ export default function CompoundingTab() {
   // — convergence —
   const [convergenceData, setConvergenceData] = useState<ConvergenceData | null>(null)
   const [convergenceLoading, setConvergenceLoading] = useState(false)
+
+  // VIS-2: centroid evolution (replaces Chart A) + decision_count for label logic
+  const [centroidEvolution, setCentroidEvolution] = useState<CentroidEvolutionData | null>(null)
+  const [centroidEvolutionMock, setCentroidEvolutionMock] = useState(false)
+  const [vis2DecisionCount, setVis2DecisionCount] = useState(0)
 
   // — real Tab 4 data (H7-FIX-4) —
   const [decisionEconomics, setDecisionEconomics] = useState<DecisionEconomics | null>(null)
@@ -354,17 +362,15 @@ export default function CompoundingTab() {
   const loadGAECharts = async () => {
     setGaeChartsLoading(true)
     try {
-      const [we, ct, tc, ba] = await Promise.all([
-        getGAEWeightEvolution()       as Promise<GAEWeightEvolution>,
+      const [ct, tc, ba] = await Promise.all([
         getGAEConfidenceTrajectory()  as Promise<GAEConfidenceTrajectory>,
         getGAETrustCurve()            as Promise<GAETrustCurve>,
         getGAEBeforeAfter()           as Promise<GAEBeforeAfter>,
       ])
-      console.log('[GAE] weight-evolution:', we?.evolution?.length ?? 0, 'entries, message:', we?.message)
-      console.log('[GAE] confidence-trajectory:', Object.keys(we && ct?.trajectories || {}), 'message:', ct?.message)
+      console.log('[GAE] confidence-trajectory:', Object.keys(ct?.trajectories || {}), 'message:', ct?.message)
       console.log('[GAE] trust-curve:', Object.keys(tc?.curves || {}), 'message:', tc?.message)
       console.log('[GAE] before-after: ready=', ba?.ready, 'improvement_pp=', ba?.improvement_pp, 'message:', ba?.message)
-      setGaeWeightEvo(we); setGaeConfTraj(ct); setGaeTrustCurve(tc); setGaeBeforeAfter(ba)
+      setGaeConfTraj(ct); setGaeTrustCurve(tc); setGaeBeforeAfter(ba)
     } catch (e) { console.error('[CompoundingTab] Failed to load GAE charts:', e) }
     finally { setGaeChartsLoading(false) }
   }
@@ -429,6 +435,36 @@ export default function CompoundingTab() {
   }
   useEffect(() => { loadEvolutionEventsReal() }, [])
 
+  // VIS-2: load centroid evolution (Chart A replacement). Falls back to mock on 404.
+  const loadCentroidEvolution = async () => {
+    try {
+      const d = await getCentroidEvolution(200) as CentroidEvolutionData
+      setCentroidEvolution(d)
+      setCentroidEvolutionMock(false)
+    } catch {
+      // Endpoint not yet built — generate illustrative mock (50 random bars)
+      const mockEvolution: CentroidEvolutionEntry[] = Array.from({ length: 50 }, (_, i) => ({
+        decision_number: i + 1,
+        centroid_delta_norm: Math.random() * 0.08 + 0.005,
+        correct: Math.random() > 0.2,
+        category: 'credential_access',
+        action: 'escalate',
+      }))
+      setCentroidEvolution({ evolution: mockEvolution, message: null })
+      setCentroidEvolutionMock(true)
+    }
+  }
+  useEffect(() => { loadCentroidEvolution() }, [])
+
+  // VIS-2: load decision_count for label qualification
+  const loadVis2DecisionCount = async () => {
+    try {
+      const d = await getProfileState() as { iks?: { decision_count: number }; decision_count?: number }
+      setVis2DecisionCount(d?.iks?.decision_count ?? d?.decision_count ?? 0)
+    } catch { /* non-critical */ }
+  }
+  useEffect(() => { loadVis2DecisionCount() }, [])
+
   // — early return while seeded metrics load —
   if (loading || !data) {
     return (
@@ -450,15 +486,6 @@ export default function CompoundingTab() {
   const fpChangePercent = (headline.fp_investigations_start - animatedFpEnd) / headline.fp_investigations_start * 100
 
   // — derived chart data (GAE) —
-
-  // Weight Evolution: bar chart, two series for correct/incorrect
-  const gaeWeightBarData = (gaeWeightEvo?.evolution ?? []).map(e => ({
-    decision:        e.decision_number,
-    action:          e.action,
-    W_norm:          e.W_norm_after,
-    delta_correct:   e.outcome === 1  ? e.delta_norm : undefined,
-    delta_incorrect: e.outcome === -1 ? e.delta_norm : undefined,
-  }))
 
   // Confidence trajectory: merge all action series by decision_number
   const gaeConfChartData: Record<string, number>[] = (() => {
@@ -675,35 +702,62 @@ export default function CompoundingTab() {
           </button>
         </div>
 
-        {/* ── Section A: Weight Evolution ─────────────────────────────────── */}
+        {/* ── Section A: Centroid Learning Magnitude ───────────────────────── */}
         <div className="mb-6">
-          <p className="text-xs font-semibold text-purple-300 uppercase tracking-wide mb-1">A · Weight Evolution</p>
+          <p className="text-xs font-semibold text-purple-300 uppercase tracking-wide mb-1">A · Centroid Learning Magnitude</p>
           <p className="text-xs text-gray-500 mb-3">
-            How much the W matrix shifted per decision — green = correct, red = incorrect. Tall red bar = 20:1 asymmetric penalty.
+            How far the ProfileScorer centroid moved per verified decision \u2014 green = reinforced, orange = corrected. Rolling 5-decision average shown as line.
           </p>
+          {centroidEvolutionMock && (
+            <div className="mb-2 flex items-center gap-2 px-3 py-1.5 bg-amber-900/40 border border-amber-500/50 rounded text-xs text-amber-300">
+              <span className="font-semibold">\u26a0 Mock data</span>
+              \u2014 /api/soc/centroid-evolution not yet built. Process alerts and verify outcomes to see real centroid drift.
+            </div>
+          )}
           <div className="bg-white rounded-md p-3">
-            {gaeWeightBarData.length === 0 ? (
-              <ChartEmpty message={gaeWeightEvo?.message ?? 'Process alerts and provide feedback to see weight evolution'} />
+            {!centroidEvolution || centroidEvolution.evolution.length === 0 ? (
+              <ChartEmpty message="Process alerts and provide outcome feedback to see centroid learning magnitude" />
             ) : (
               <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={gaeWeightBarData} margin={{ top: 5, right: 10, left: -10, bottom: 18 }}>
+                <ComposedChart
+                  data={(() => {
+                    const evol = centroidEvolution.evolution
+                    const win = 5
+                    return evol.map((e, i) => {
+                      const slice = evol.slice(Math.max(0, i - win + 1), i + 1)
+                      const avg = slice.reduce((s, x) => s + x.centroid_delta_norm, 0) / slice.length
+                      return {
+                        decision: e.decision_number,
+                        drift_reinforced: e.correct ? e.centroid_delta_norm : undefined,
+                        drift_corrected: !e.correct ? e.centroid_delta_norm : undefined,
+                        rolling_avg: avg,
+                      }
+                    })
+                  })()}
+                  margin={{ top: 5, right: 10, left: -10, bottom: 18 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                   <XAxis dataKey="decision" tick={{ fontSize: 10 }} label={{ value: 'Decision #', position: 'insideBottom', offset: -10, fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => v.toFixed(3)} />
                   <Tooltip
                     formatter={(v: any, name: string) => [
                       Number(v).toFixed(5),
-                      name === 'delta_correct' ? 'ΔW (correct)' : 'ΔW (incorrect)',
+                      name === 'drift_reinforced' ? '\u2016\u0394\u03bc\u2016 reinforced' : name === 'drift_corrected' ? '\u2016\u0394\u03bc\u2016 corrected' : 'rolling avg',
                     ]}
-                    labelFormatter={(label) => {
-                      const row = gaeWeightBarData.find(d => d.decision === label)
-                      return `Decision #${label}  action: ${row?.action ?? '?'}  ‖W‖_F: ${row?.W_norm.toFixed(4) ?? '?'}`
-                    }}
+                    labelFormatter={(label) => `Decision #${label}`}
                   />
-                  <Legend wrapperStyle={{ fontSize: 10 }} formatter={(v: string) => v === 'delta_correct' ? 'ΔW correct' : 'ΔW incorrect'} />
-                  <Bar dataKey="delta_correct"   fill="#10b981" name="delta_correct"   radius={[2, 2, 0, 0]} />
-                  <Bar dataKey="delta_incorrect" fill="#ef4444" name="delta_incorrect" radius={[2, 2, 0, 0]} />
-                </BarChart>
+                  <Legend
+                    wrapperStyle={{ fontSize: 10 }}
+                    formatter={(v: string) =>
+                      v === 'drift_reinforced' ? '\u2016\u0394\u03bc\u2016 reinforced'
+                      : v === 'drift_corrected' ? '\u2016\u0394\u03bc\u2016 corrected'
+                      : 'rolling avg (5)'
+                    }
+                  />
+                  <Bar dataKey="drift_reinforced" fill="#10b981" name="drift_reinforced" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="drift_corrected"  fill="#f97316" name="drift_corrected"  radius={[2, 2, 0, 0]} />
+                  <Line type="monotone" dataKey="rolling_avg" stroke="#8b5cf6" strokeWidth={1.5} dot={false} name="rolling_avg" />
+                </ComposedChart>
               </ResponsiveContainer>
             )}
           </div>
@@ -825,8 +879,8 @@ export default function CompoundingTab() {
                         {Math.round(s.trust * 100)}%
                       </div>
                     </div>
-                    <span className={`text-xs font-bold px-2 py-1 rounded ${s.humanReview ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}>
-                      {s.humanReview ? 'HUMAN REVIEW' : 'TRUSTED'}
+                    <span className={`text-xs font-bold px-2 py-1 rounded ${s.humanReview ? 'bg-amber-600 text-white' : 'bg-green-500 text-white'}`}>
+                      {s.humanReview ? `Learning \u2014 ${vis2DecisionCount} decisions recorded` : 'TRUSTED'}
                     </span>
                   </div>
                 ))}
@@ -1253,9 +1307,9 @@ export default function CompoundingTab() {
             <div className="flex items-center text-gray-500 text-sm font-bold shrink-0">←</div>
             <div className="flex-1 bg-purple-900/40 rounded border-2 border-purple-500 p-2.5">
               <div className="text-xs font-bold text-purple-300 uppercase tracking-wide mb-0.5">Loop 2</div>
-              <div className="text-sm font-semibold text-purple-200 mb-0.5">AgentEvolver</div>
+              <div className="text-sm font-semibold text-purple-200 mb-0.5">ProfileScorer + AgentEvolver</div>
               <div className="text-xs text-purple-300/60 italic mb-1.5">Smarter across decisions</div>
-              {['Tracks variants', 'Evolves behavior', 'Promotes winners'].map(t => (
+              {['ProfileScorer: centroid drift tracks category mastery', 'AgentEvolver: promotes high-performing variants'].map(t => (
                 <div key={t} className="flex items-start gap-1 mb-0.5"><div className="w-1 h-1 bg-purple-400 rounded-full mt-1.5 shrink-0" /><span className="text-xs text-gray-300">{t}</span></div>
               ))}
               <div className="mt-1.5 pt-1.5 border-t border-purple-800 text-xs text-purple-400">Demo: Tab 2 →</div>
