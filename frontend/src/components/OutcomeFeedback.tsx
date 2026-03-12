@@ -254,18 +254,19 @@ export default function OutcomeFeedback({ alertId, decisionId, isVisible }: Outc
                     </p>
                   </div>
                   {/* Bridge link → Tab-2 Section A (only when decisionId is a valid DEC-* id) */}
+                  {(() => { console.log('[BRIDGE] decisionId=', decisionId, 'centroid_delta_norm=', result?.centroid_update?.centroid_delta_norm); return null })()}
                   {decisionId && (
-                    <div className="px-3 py-2 border-t border-purple-700/40 bg-purple-900/20">
+                    <div className="px-3 py-2 border-t border-purple-700/40">
                       <button
                         onClick={() => {
                           sessionStorage.setItem('vis2_pending_decision', decisionId)
                           window.dispatchEvent(new CustomEvent('vis2:navigate', { detail: { tab: 'evolution' } }))
                         }}
-                        className="flex items-center gap-1.5 text-xs font-semibold text-purple-300 hover:text-purple-200 underline underline-offset-2 transition-colors"
+                        className="mt-3 flex items-center gap-2 px-3 py-2 rounded-md bg-purple-900/40 border border-purple-500/60 text-purple-200 text-sm font-semibold hover:bg-purple-800/60 cursor-pointer w-fit"
                       >
                         <ExternalLink className="w-3 h-3 flex-shrink-0" />
                         See how this decision fits into the category learning curve →
-                        <span className="text-soc-secondary">Learning Impact ↗</span>
+                        <span className="text-purple-300">Learning Impact ↗</span>
                       </button>
                     </div>
                   )}
