@@ -165,6 +165,18 @@ def init_learning_state() -> LearningState:
         needs_bootstrap = True
 
     if needs_bootstrap:
+        # Change 0: persist μ₀ (pre-bootstrap centroid state) for IKS computation.
+        # bootstrap_calibration() mutates scorer.mu in-place; capture the prior first.
+        _mu_zero_path = _STATE_PATH.parent / "iks_bootstrap_soc.json"
+        try:
+            mu_zero = _profile_scorer.mu.copy()
+            _mu_zero_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(_mu_zero_path, "w", encoding="utf-8") as _fh:
+                json.dump({"mu_zero": mu_zero.tolist()}, _fh)
+            log.info("[GAE] μ₀ persisted to %s (shape=%s)", _mu_zero_path, list(mu_zero.shape))
+        except Exception as _exc:
+            log.warning("[GAE] Could not persist μ₀ to %s: %s", _mu_zero_path, _exc)
+
         result: BootstrapResult = bootstrap_calibration(
             scorer=_profile_scorer,
             categories=list(SOC_CATEGORIES),

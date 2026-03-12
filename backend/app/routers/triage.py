@@ -683,13 +683,29 @@ async def report_decision_outcome(request: OutcomeRequest):
                 )
                 save_learning_state()
 
-                if wu:
-                    delta_norm = float(np.linalg.norm(wu.delta_applied))
+                # Change 5: ProfileSnapshot every 50 decisions
+                from app.services.snapshots import maybe_write_profile_snapshot
+                await maybe_write_profile_snapshot(learning_state.decision_count)
+
+                if wu and wu.centroid_update is not None:
+                    cu = wu.centroid_update
+                    # Write centroid_delta_norm back to the Decision node
+                    await neo4j_client.run_query(
+                        """
+                        MATCH (d:Decision {id: $decision_id})
+                        SET d.centroid_delta_norm = $centroid_delta_norm
+                        """,
+                        {
+                            "decision_id": request.decision_id,
+                            "centroid_delta_norm": cu.centroid_delta_norm,
+                        },
+                    )
                     print(
-                        f"[GAE] W updated: action={action_name}({action_index}) "
+                        f"[GAE] Centroid updated: action={cu.action_name} "
+                        f"category={cu.category_name} "
                         f"outcome={outcome_int:+d} "
-                        f"delta_norm={delta_norm:.4f} "
-                        f"step={learning_state.decision_count}"
+                        f"centroid_delta_norm={cu.centroid_delta_norm:.4f} "
+                        f"step={cu.decision_count}"
                     )
         else:
             print(
@@ -872,19 +888,36 @@ async def get_profile_state():
     """
     Return current ProfileScorer state for frontend display.
     Used by Tab 2 centroid heatmap (SOC-PROF-3).
+    Includes IKS (Institutional Knowledge Score).
     """
     scorer = get_profile_scorer()
     from app.domains.soc.config import SOC_CATEGORIES, SOC_ACTIONS
+    from app.services.iks import compute_iks, interpret, _compute_delta_7d
+
+    decision_count = int(sum(
+        scorer.counts[c, a]
+        for c in range(len(SOC_CATEGORIES))
+        for a in range(len(SOC_ACTIONS))
+    ))
+
+    iks_result = compute_iks(scorer.mu)
+    delta_7d = await _compute_delta_7d(iks_result["current"])
+    trend = []  # populated lazily via /api/soc/profile/iks-trend if needed
+
     return {
         "categories": SOC_CATEGORIES,
         "actions": SOC_ACTIONS,
         "centroids": scorer.mu.tolist(),   # shape (6, 4, 6)
         "counts": scorer.counts.tolist(),  # shape (6, 4)
-        "decision_count": int(sum(
-            scorer.counts[c, a]
-            for c in range(len(SOC_CATEGORIES))
-            for a in range(len(SOC_ACTIONS))
-        )),
+        "decision_count": decision_count,
+        "iks": {
+            "current":       iks_result["current"],
+            "delta_7d":      delta_7d,
+            "interpretation": interpret(iks_result["current"]),
+            "decision_count": decision_count,
+            "estimated":     iks_result["estimated"],
+            "trend":         trend,
+        },
     }
 
 
