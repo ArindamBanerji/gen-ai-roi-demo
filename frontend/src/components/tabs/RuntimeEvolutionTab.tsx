@@ -169,10 +169,7 @@ interface CentroidEvolutionEntry {
   action: string
 }
 
-interface CentroidEvolutionData {
-  evolution: CentroidEvolutionEntry[]
-  message: string | null
-}
+// CentroidEvolutionData removed — backend returns flat array, not {evolution:[]} wrapper
 
 const DEFAULT_ALERT_ID = 'ALERT-7823'
 
@@ -188,7 +185,7 @@ export default function RuntimeEvolutionTab() {
 
   // VIS-2 new state
   const [profileStateFull, setProfileStateFull] = useState<ProfileStateWithIks | null>(null)
-  const [centroidEvolution, setCentroidEvolution] = useState<CentroidEvolutionData | null>(null)
+  const [centroidEvolution, setCentroidEvolution] = useState<CentroidEvolutionEntry[]>([])
   const [centroidEvoLoading, setCentroidEvoLoading] = useState(false)
   const [centroidEvoError, setCentroidEvoError] = useState(false)
   const [activeSection, setActiveSection] = useState<'a' | 'b' | 'c' | 'd'>('a')
@@ -322,7 +319,7 @@ export default function RuntimeEvolutionTab() {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()
       })
-      setCentroidEvolution(data as CentroidEvolutionData)
+      setCentroidEvolution(data as CentroidEvolutionEntry[])
     } catch {
       setCentroidEvoError(true)
     } finally {
@@ -364,9 +361,9 @@ export default function RuntimeEvolutionTab() {
   const decisionCount = iks?.decision_count ?? profileState?.decision_count ?? 0
 
   const categoryStats = (() => {
-    if (!centroidEvolution || centroidEvolution.evolution.length === 0) return null
+    if (centroidEvolution.length === 0) return null
     const grouped: Record<string, CentroidEvolutionEntry[]> = {}
-    centroidEvolution.evolution.forEach(e => {
+    centroidEvolution.forEach(e => {
       if (!grouped[e.category]) grouped[e.category] = []
       grouped[e.category].push(e)
     })
@@ -385,9 +382,8 @@ export default function RuntimeEvolutionTab() {
   })()
 
   const filteredEvolution = (() => {
-    if (!centroidEvolution) return []
-    if (categoryFilter === 'all') return centroidEvolution.evolution
-    return centroidEvolution.evolution.filter(e => e.category === categoryFilter)
+    if (categoryFilter === 'all') return centroidEvolution
+    return centroidEvolution.filter(e => e.category === categoryFilter)
   })()
 
   const centroidChartData = filteredEvolution.map((e, i) => {
@@ -403,19 +399,16 @@ export default function RuntimeEvolutionTab() {
   })
 
   const availableCategories = (() => {
-    if (!centroidEvolution) return []
-    return [...new Set(centroidEvolution.evolution.map(e => e.category))]
+    return [...new Set(centroidEvolution.map(e => e.category))]
   })()
 
   const categoryConvergenceRows = (() => {
     const cats = profileState?.categories ?? []
     const grouped: Record<string, CentroidEvolutionEntry[]> = {}
-    if (centroidEvolution) {
-      centroidEvolution.evolution.forEach(e => {
-        if (!grouped[e.category]) grouped[e.category] = []
-        grouped[e.category].push(e)
-      })
-    }
+    centroidEvolution.forEach(e => {
+      if (!grouped[e.category]) grouped[e.category] = []
+      grouped[e.category].push(e)
+    })
     return cats.map(cat => {
       const entries = grouped[cat] ?? []
       const last = entries[entries.length - 1]
@@ -434,12 +427,10 @@ export default function RuntimeEvolutionTab() {
   const categoryNarratives = (() => {
     const cats = profileState?.categories ?? []
     const grouped: Record<string, CentroidEvolutionEntry[]> = {}
-    if (centroidEvolution) {
-      centroidEvolution.evolution.forEach(e => {
-        if (!grouped[e.category]) grouped[e.category] = []
-        grouped[e.category].push(e)
-      })
-    }
+    centroidEvolution.forEach(e => {
+      if (!grouped[e.category]) grouped[e.category] = []
+      grouped[e.category].push(e)
+    })
     return cats.map(cat => {
       const entries = grouped[cat] ?? []
       if (entries.length < 5) return null
@@ -450,9 +441,9 @@ export default function RuntimeEvolutionTab() {
 
   const driftAlerts = (() => {
     const D_MAX = 0.30
-    if (!centroidEvolution || centroidEvolution.evolution.length < 50) return null
+    if (centroidEvolution.length < 50) return null
     const grouped: Record<string, CentroidEvolutionEntry[]> = {}
-    centroidEvolution.evolution.forEach(e => {
+    centroidEvolution.forEach(e => {
       if (!grouped[e.category]) grouped[e.category] = []
       grouped[e.category].push(e)
     })
@@ -770,8 +761,8 @@ export default function RuntimeEvolutionTab() {
                 )}
 
                 {/* Centroid delta from most recent entry */}
-                {centroidEvolution && centroidEvolution.evolution.length > 0 && (() => {
-                  const last = centroidEvolution.evolution[centroidEvolution.evolution.length - 1]
+                {centroidEvolution.length > 0 && (() => {
+                  const last = centroidEvolution[centroidEvolution.length - 1]
                   if (last.centroid_delta_norm <= 0) return null
                   return (
                     <div className="bg-soc-card rounded-lg border border-gray-700 p-4">
