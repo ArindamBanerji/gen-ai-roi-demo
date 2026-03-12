@@ -487,7 +487,7 @@ export default function RuntimeEvolutionTab() {
       <div className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 rounded-lg border border-purple-500/40 p-5">
         <div className="flex items-center gap-2 mb-4">
           <Zap className="w-5 h-5 text-soc-secondary" />
-          <h2 className="text-base font-bold text-white">Institutional Intelligence Summary</h2>
+          <h2 className="text-base font-bold text-white">Institutional Intelligence Summary — How the system's judgment has evolved</h2>
           <span className="ml-2 px-2 py-0.5 bg-soc-secondary/30 text-soc-secondary text-xs font-bold rounded-full">THE DIFFERENTIATOR</span>
         </div>
 
