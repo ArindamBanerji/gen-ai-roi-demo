@@ -1025,9 +1025,647 @@ async def get_learning_state_endpoint():
     except Exception as exc:
         print(f"[SOC] learning-state verified_at query failed: {exc}")
 
+    # IKS v2 — composite institutional knowledge metric
+    iks_v2_data = {}
+    try:
+        from app.services.iks import compute_iks_v2
+        iks_v2_data = await compute_iks_v2(neo4j_client)
+    except Exception as exc:
+        print(f"[SOC] learning-state iks_v2 failed: {exc}")
+
+    from app.domains.soc.config import BOOTSTRAP_CATEGORY_WEIGHTS
     return {
-        "frozen": frozen,
-        "decision_count": decision_count,
-        "last_verified_at": last_verified_at,
-        "checkpoint_id": None,  # TODO: expose checkpoint versioning when rollback UI is added
+        "frozen":            frozen,
+        "decision_count":    decision_count,
+        "last_verified_at":  last_verified_at,
+        "checkpoint_id":     None,
+        "iks_v2":            iks_v2_data.get("iks_v2", 0.0),
+        "iks_components":    iks_v2_data.get("components", {}),
+        "iks_interpretation": iks_v2_data.get("interpretation", ""),
+        "total_decisions":   iks_v2_data.get("total_decisions", 0),
+        "categories_active": iks_v2_data.get("categories_active", 0),
+        "bootstrap_category_weights": BOOTSTRAP_CATEGORY_WEIGHTS,
     }
+
+
+# ============================================================================
+# GET /api/soc/iks-trend — IKS v2 trend (Chart A replacement)
+# ============================================================================
+
+@router.get("/soc/iks-trend")
+async def get_iks_trend_endpoint():
+    """
+    Return IKS v2 score trend for Chart A.
+
+    Currently returns the current score as a single trend point.
+    Future: store periodic IKSSnapshot nodes for historical trend.
+
+    Response
+    --------
+    {
+        "trend": [{"decisions": int, "iks_v2": float, "timestamp": str}],
+        "current": {"iks_v2": float, "components": dict, "interpretation": str},
+    }
+    """
+    from app.services.iks import compute_iks_v2
+
+    try:
+        current = await compute_iks_v2(neo4j_client)
+    except Exception as exc:
+        print(f"[SOC] iks-trend compute failed: {exc}")
+        current = {
+            "iks_v2": 0.0,
+            "components": {},
+            "interpretation": "unavailable",
+            "total_decisions": 0,
+            "categories_active": 0,
+        }
+
+    trend_point = {
+        "decisions":  current.get("total_decisions", 0),
+        "iks_v2":     current.get("iks_v2", 0.0),
+        "timestamp":  datetime.utcnow().isoformat() + "Z",
+    }
+
+    return {
+        "trend": [trend_point],
+        "current": {
+            "iks_v2":         current.get("iks_v2", 0.0),
+            "components":     current.get("components", {}),
+            "interpretation": current.get("interpretation", ""),
+        },
+    }
+
+
+# ============================================================================
+# GET /api/soc/explain/{decision_id}  — NL Explanation + Similar Cases (§23.3/23.4)
+# ============================================================================
+
+@router.get("/soc/explain/{decision_id}")
+async def explain_decision(decision_id: str):
+    """
+    Return a human-readable L1 NL explanation for a decision, together with
+    the top-k similar past cases and their action-agreement percentage.
+
+    Pipeline:
+      1. Read Decision + linked Alert/User/Asset nodes via graph traversal
+      2. Extract factor values from factor_vector using SOC_FACTORS ordering
+      3. Build context dict with real entity names and factor-derived strings
+      4. SimilarCasesService.get_similar_cases(factor_vector, category)
+      5. Render NLTemplateEngine.render_l1(category, context)
+
+    Returns
+    -------
+    {
+      "decision_id":           str,
+      "nl_explanation":        str,       # L1 template rendered with real data
+      "similar_cases":         list,      # top-3 similar decisions (empty if suppressed)
+      "similar_cases_message": str|None,  # set when similar_cases is empty
+      "agreement_pct":         float|None,
+      "category":              str,
+      "action":                str,
+      "confidence":            float,
+    }
+    """
+    from app.services.nl_templates import nl_engine
+    from app.services.similar_cases import similar_cases_svc, SIMILAR_CASES_MIN_PRIOR
+    from app.domains.soc.config import SOC_FACTORS
+
+    # ── Step 1: Read Decision + linked Alert/User/Asset nodes ───────────────
+    try:
+        rows = await neo4j_client.run_query(
+            """
+            MATCH (d:Decision {id: $decision_id})
+            OPTIONAL MATCH (d)-[:DECIDED_ON]->(a:Alert)
+            OPTIONAL MATCH (a)-[:INVOLVES]->(u:User)
+            OPTIONAL MATCH (a)-[:DETECTED_ON]->(asset:Asset)
+            RETURN d.factor_vector      AS factor_vector,
+                   d.category           AS category,
+                   d.action             AS action,
+                   d.confidence         AS confidence,
+                   d.timestamp          AS timestamp,
+                   a.source_location    AS source_location,
+                   a.source_ip          AS source_ip,
+                   a.destination_ip     AS destination_ip,
+                   a.description        AS alert_description,
+                   a.alert_type         AS alert_type,
+                   a.severity           AS severity,
+                   u.name               AS user_name,
+                   u.title              AS user_title,
+                   u.department         AS user_department,
+                   asset.hostname       AS asset_hostname,
+                   asset.criticality    AS asset_criticality_str,
+                   asset.business_unit  AS asset_business_unit
+            """,
+            {"decision_id": decision_id},
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Neo4j query failed: {exc}")
+
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"Decision {decision_id!r} not found")
+
+    row      = rows[0]
+    fv_raw   = row.get("factor_vector")
+    category = row.get("category") or "credential_access"
+    action   = row.get("action") or "investigate"
+    conf     = float(row.get("confidence") or 0.0)
+
+    # ── Parse factor_vector (backward-compat: may be JSON string) ──────────
+    if isinstance(fv_raw, str):
+        import json as _json
+        try:
+            fv_raw = _json.loads(fv_raw)
+        except Exception:
+            fv_raw = []
+    factor_vector = [float(x) for x in (fv_raw or [])]
+
+    # ── Extract factor values using SOC_FACTORS ordering ────────────────────
+    factor_map  = dict(zip(SOC_FACTORS, factor_vector)) if factor_vector else {}
+    travel_val  = factor_map.get("travel_match", 0.0)
+    asset_val   = factor_map.get("asset_criticality", 0.0)
+    threat_val  = factor_map.get("threat_intel_enrichment", 0.0)
+    pattern_val = factor_map.get("pattern_history", 0.0)
+    time_val    = factor_map.get("time_anomaly", 0.0)
+    device_val  = factor_map.get("device_trust", 0.0)
+
+    # ── Extract real entity names from linked nodes ──────────────────────────
+    user_name       = row.get("user_name") or "[user]"
+    user_title      = row.get("user_title") or "[role]"
+    asset_hostname  = row.get("asset_hostname") or "[asset]"
+    asset_crit_str  = row.get("asset_criticality_str") or ("high" if asset_val >= 0.7 else "medium")
+    source_location = row.get("source_location") or "[location]"
+    alert_desc      = row.get("alert_description") or "[action]"
+    source_ip       = row.get("source_ip") or "[source host]"
+    destination_ip  = row.get("destination_ip") or "[destination host]"
+
+    # ── Step 2: Calibration count (verified decisions in category) ───────────
+    try:
+        cal_rows = await neo4j_client.run_query(
+            "MATCH (d:Decision {category: $category}) "
+            "WHERE d.outcome IS NOT NULL RETURN count(d) AS cnt",
+            {"category": category},
+        )
+        calibration_count = int((cal_rows[0].get("cnt") or 0) if cal_rows else 0)
+    except Exception:
+        calibration_count = 0
+
+    # ── Step 2b: ThreatIndicator source (for threat_intel_match template) ───
+    ti_source = "threat intelligence feed"
+    try:
+        ti_rows = await neo4j_client.run_query(
+            """
+            MATCH (d:Decision {id: $decision_id})-[:DECIDED_ON]->(a:Alert)
+            -[:HAS_INDICATOR]->(ti:ThreatIndicator)
+            RETURN ti.source AS source LIMIT 1
+            """,
+            {"decision_id": decision_id},
+        )
+        if ti_rows and ti_rows[0].get("source"):
+            ti_source = ti_rows[0]["source"]
+    except Exception:
+        pass
+
+    # ── Step 3: Similar cases ───────────────────────────────────────────────
+    similar_cases: list = []
+    if factor_vector:
+        similar_cases = await similar_cases_svc.get_similar_cases(
+            factor_vector=factor_vector,
+            category=category,
+            neo4j_client=neo4j_client,
+        )
+
+    similar_cases_message = (
+        f"Not enough prior decisions in this category "
+        f"(minimum {SIMILAR_CASES_MIN_PRIOR} required)"
+        if not similar_cases else None
+    )
+
+    # ── Step 4: Agreement pct ───────────────────────────────────────────────
+    agreement_pct = similar_cases_svc.get_agreement_pct(similar_cases, action)
+
+    # ── Step 5: Build context with real data and render NL explanation ───────
+    context = {
+        # Core fields
+        "action_display":    action.replace("_", " ").title(),
+        "confidence":        conf,
+        "calibration_count": calibration_count,
+        "category":          category,
+        # Real entity names from graph nodes
+        "user_display":        user_name,
+        "asset_name":          asset_hostname,
+        "asset_criticality":   asset_crit_str,
+        "location":            source_location,
+        "user_role":           user_title,
+        "action_description":  alert_desc,
+        "alert_description":   alert_desc,
+        "alert_type_display":  (row.get("alert_type") or category).replace("_", " ").title(),
+        "source_host":         source_ip,
+        "destination_host":    destination_ip,
+        # Factor-derived human-readable context strings
+        "travel_context": (
+            f"Travel match {travel_val:.0%} — "
+            f"{'matches travel record' if travel_val > 0.6 else 'no travel record match'}"
+        ),
+        "time_context": (
+            f"Time anomaly {time_val:.0%} — "
+            f"{'login outside normal hours' if time_val > 0.5 else 'within normal hours'}"
+        ),
+        "threat_context": (
+            f"Threat intel {threat_val:.0%} — "
+            f"{'IOC match found' if threat_val > 0.5 else 'no IOC matches'}"
+        ),
+        "pattern_context": (
+            f"Pattern history {pattern_val:.0%} — "
+            f"{'matches prior behavior' if pattern_val > 0.5 else 'no prior pattern match'}"
+        ),
+        "device_context": (
+            f"Device trust {device_val:.0%} — "
+            f"{'enrolled device' if device_val > 0.5 else 'unregistered device'}"
+        ),
+        "asset_context":  f"{asset_hostname} ({asset_crit_str} criticality)",
+        "ioc_context": (
+            f"Threat intel enrichment {threat_val:.0%}"
+            if threat_val > 0 else "No IOC matches found"
+        ),
+        # Fields for less-common category templates
+        "indicator_type":   "IP address",
+        "source_name":      ti_source,
+        "volume_context":   alert_desc,
+        "cloud_operation":  alert_desc,
+        "device_description": f"{asset_hostname} ({asset_crit_str})",
+        "access_context":   f"Asset criticality factor {asset_val:.0%}",
+        "situation_type":   category.replace("_", " ").title(),
+        "dominant_factors_description": (
+            f"travel={travel_val:.2f}, asset={asset_val:.2f}, "
+            f"threat={threat_val:.2f}, pattern={pattern_val:.2f}"
+        ),
+        "agreement_pct": agreement_pct,
+    }
+
+    nl_explanation = nl_engine.render_l1(category, context)
+
+    return {
+        "decision_id":           decision_id,
+        "nl_explanation":        nl_explanation,
+        "similar_cases":         similar_cases,
+        "similar_cases_message": similar_cases_message,
+        "agreement_pct":         agreement_pct,
+        "category":              category,
+        "action":                action,
+        "confidence":            conf,
+    }
+
+
+# ============================================================================
+# Shadow Mode endpoints  (Phase 4 §21)
+# ============================================================================
+
+class ShadowToggleRequest(BaseModel):
+    enabled: bool
+
+
+class AnalystActionRequest(BaseModel):
+    decision_id: str
+    analyst_action: str
+
+
+@router.post("/soc/shadow/toggle")
+async def shadow_toggle(request: ShadowToggleRequest):
+    """Enable or disable shadow mode."""
+    from app.services.shadow_mode import ShadowModeService
+    ShadowModeService.SHADOW_ENABLED = request.enabled
+    return {"shadow_mode": ShadowModeService.SHADOW_ENABLED}
+
+
+@router.post("/soc/shadow/analyst-action")
+async def shadow_analyst_action(request: AnalystActionRequest):
+    """Record what the analyst actually did for a shadow decision."""
+    from app.services.shadow_mode import ShadowModeService
+    await ShadowModeService.record_analyst_action(
+        decision_id=request.decision_id,
+        analyst_action=request.analyst_action,
+        neo4j_service=neo4j_client,
+    )
+    return {"recorded": True}
+
+
+@router.get("/soc/shadow/report")
+async def shadow_report():
+    """Return shadow mode agreement report by category."""
+    from app.services.shadow_mode import ShadowModeService
+    return await ShadowModeService.get_shadow_report(neo4j_client)
+
+
+# ============================================================================
+# Checkpoint / Rollback endpoints  (Phase 4 §17.5)
+# ============================================================================
+
+class CheckpointCreateRequest(BaseModel):
+    reason: str = "manual"
+
+
+class RollbackRequest(BaseModel):
+    checkpoint_id: str
+
+
+@router.post("/soc/checkpoint/create")
+async def checkpoint_create(request: CheckpointCreateRequest):
+    """Snapshot current centroids to a Checkpoint node."""
+    from app.services.checkpoint import CheckpointService
+    from app.services.gae_state import get_profile_scorer
+    try:
+        scorer = get_profile_scorer()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=f"Scorer not ready: {exc}")
+
+    checkpoint_id = await CheckpointService.create_checkpoint(
+        scorer=scorer,
+        neo4j_service=neo4j_client,
+        reason=request.reason,
+    )
+    return {
+        "checkpoint_id": checkpoint_id,
+        "timestamp":     datetime.utcnow().isoformat() + "Z",
+        "reason":        request.reason,
+    }
+
+
+@router.get("/soc/checkpoint/list")
+async def checkpoint_list():
+    """List all checkpoints ordered by timestamp DESC."""
+    from app.services.checkpoint import CheckpointService
+    checkpoints = await CheckpointService.list_checkpoints(neo4j_client)
+    return {"checkpoints": checkpoints}
+
+
+@router.post("/soc/checkpoint/rollback")
+async def checkpoint_rollback(request: RollbackRequest):
+    """Restore centroids from a checkpoint and freeze the scorer."""
+    from app.services.checkpoint import CheckpointService
+    from app.services.gae_state import get_profile_scorer
+    try:
+        scorer = get_profile_scorer()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=f"Scorer not ready: {exc}")
+
+    result = await CheckpointService.rollback(
+        checkpoint_id=request.checkpoint_id,
+        scorer=scorer,
+        neo4j_service=neo4j_client,
+    )
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+
+# ============================================================================
+# Scorer freeze / unfreeze  (Phase 4)
+# ============================================================================
+
+@router.post("/soc/scorer/freeze")
+async def scorer_freeze():
+    """Freeze the ProfileScorer — stops centroid updates."""
+    from app.services.gae_state import get_profile_scorer
+    try:
+        scorer = get_profile_scorer()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=f"Scorer not ready: {exc}")
+    scorer.freeze()
+    return {"frozen": True}
+
+
+@router.post("/soc/scorer/unfreeze")
+async def scorer_unfreeze():
+    """Unfreeze the ProfileScorer — re-enables centroid updates."""
+    from app.services.gae_state import get_profile_scorer
+    try:
+        scorer = get_profile_scorer()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=f"Scorer not ready: {exc}")
+    scorer.unfreeze()
+    return {"frozen": False}
+
+
+# ============================================================================
+# GET /api/soc/auto-approve-stats  — Phase 5 coverage dashboard
+# ============================================================================
+
+@router.get("/soc/auto-approve-stats")
+async def auto_approve_stats():
+    """Return per-category auto-approve coverage.
+
+    Response
+    --------
+    {
+        "total_decisions": int,
+        "auto_approved":   int,
+        "coverage_pct":    float,
+        "by_category": {
+            "credential_access": {"total": X, "auto_approved": Y, "coverage_pct": Z},
+            ...
+        }
+    }
+    """
+    try:
+        rows = await neo4j_client.run_query(
+            """
+            MATCH (d:Decision)
+            RETURN d.category AS category,
+                   count(d) AS total,
+                   sum(CASE WHEN d.auto_approved = true THEN 1 ELSE 0 END) AS approved
+            """,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Neo4j query failed: {exc}")
+
+    by_category: dict = {}
+    grand_total    = 0
+    grand_approved = 0
+
+    for row in rows:
+        cat      = row.get("category") or "unknown"
+        total    = int(row.get("total") or 0)
+        approved = int(row.get("approved") or 0)
+        by_category[cat] = {
+            "total":        total,
+            "auto_approved": approved,
+            "coverage_pct": round(approved / max(total, 1) * 100, 1),
+        }
+        grand_total    += total
+        grand_approved += approved
+
+    return {
+        "total_decisions": grand_total,
+        "auto_approved":   grand_approved,
+        "coverage_pct":    round(grand_approved / max(grand_total, 1) * 100, 1),
+        "by_category":     by_category,
+    }
+
+
+# ============================================================================
+# GET /api/soc/provenance/{decision_id} — Factor Provenance (Phase 6)
+# ============================================================================
+
+@router.get("/soc/provenance/{decision_id}")
+async def get_decision_provenance(decision_id: str):
+    """Return factor provenance for a stored decision.
+
+    Retrieves the decision's factor_vector from the Decision node in Neo4j,
+    then builds human-readable provenance for each of the 6 SOC factors.
+
+    Response
+    --------
+    {
+        "decision_id":           str,
+        "category":              str,
+        "action":                str,
+        "total_nodes_consulted": int,
+        "factors": [
+            {
+                "factor_name":           str,
+                "factor_value":          float,
+                "computation_method":    str,
+                "graph_nodes_consulted": [str],
+                "explanation":           str,
+            },
+            ...   # 6 entries
+        ]
+    }
+    """
+    from app.services.provenance import ProvenanceService
+
+    result = await ProvenanceService.get_provenance_from_graph(decision_id, neo4j_client)
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Decision {decision_id!r} not found or has no factor vector",
+        )
+    return result
+
+
+# ============================================================================
+# GET /api/soc/threat-intel/{alert_id} — Alert-level threat intel (Phase 7)
+# ============================================================================
+
+@router.get("/soc/threat-intel/{alert_id}")
+async def get_threat_intel_for_alert(alert_id: str):
+    """Return ThreatIndicator nodes linked to a specific alert.
+
+    Queries :ThreatIndicator nodes linked via [:ASSOCIATED_WITH] to the alert.
+    Always returns HTTP 200; use total_matches to detect the empty state.
+
+    Response
+    --------
+    {
+        "alert_id":      str,
+        "indicators":    [
+            {"name": str, "ioc_type": str, "ioc_value": str, "severity": str,
+             "source": str, "last_seen": str},
+            ...
+        ],
+        "total_matches": int,
+    }
+    """
+    from app.services.threat_indicator import ThreatIndicatorService
+
+    indicators = await ThreatIndicatorService.get_indicators_for_alert(
+        alert_id, neo4j_client
+    )
+    return {
+        "alert_id":      alert_id,
+        "indicators":    indicators,
+        "total_matches": len(indicators),
+    }
+
+
+# ============================================================================
+# Graph Explorer endpoints — Phase 8 (Tab 1 Panel B)
+# ============================================================================
+
+class _GraphQueryRequest(BaseModel):
+    cypher: str
+
+
+@router.post("/soc/graph/query")
+async def graph_explorer_query(request: _GraphQueryRequest):
+    """Run a validated read-only Cypher query.
+
+    Body: {"cypher": "MATCH (n:User) RETURN n.name LIMIT 5"}
+
+    Returns 400 if the query contains blocked mutation keywords.
+    Returns {"rows": [...], "count": N, "query": str} on success.
+    """
+    from app.services.graph_explorer import GraphExplorerService
+    result = await GraphExplorerService.run_safe_query(request.cypher, neo4j_client)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+
+@router.get("/soc/graph/top-nodes")
+async def graph_top_nodes(
+    type: Optional[str] = None,
+    limit: int = 10,
+):
+    """Return top N most-connected nodes.
+
+    Query params: ?type=User&limit=10 (both optional).
+    Excludes :Decision and :Checkpoint nodes (internal bookkeeping).
+    """
+    from app.services.graph_explorer import GraphExplorerService
+    nodes = await GraphExplorerService.get_top_nodes(
+        neo4j_client, node_type=type, limit=limit
+    )
+    return {"nodes": nodes, "count": len(nodes)}
+
+
+@router.get("/soc/graph/node/{node_id}/neighbors")
+async def graph_node_neighbors(node_id: str):
+    """Return all neighbors of a specific node (up to 50).
+
+    Response: {"node_id": str, "neighbors": [...], "total": int}
+    """
+    from app.services.graph_explorer import GraphExplorerService
+    return await GraphExplorerService.get_node_neighbors(node_id, neo4j_client)
+
+
+@router.get("/soc/graph/summary")
+async def graph_summary():
+    """Return node and relationship type counts for the explorer header.
+
+    Response:
+    {
+        "total_nodes": int,
+        "total_relationships": int,
+        "node_types": {"Alert": N, "User": M, ...},
+        "relationship_types": {"DECIDED_ON": N, ...},
+    }
+    """
+    from app.services.graph_explorer import GraphExplorerService
+    return await GraphExplorerService.get_graph_summary(neo4j_client)
+
+
+@router.get("/soc/graph/prebuilt-queries")
+async def graph_prebuilt_queries_list():
+    """Return the catalogue of pre-built query names and descriptions.
+
+    Response: {"queries": [...], "count": N}
+    """
+    from app.services.graph_explorer import GraphExplorerService
+    queries = GraphExplorerService.list_prebuilt_queries()
+    return {"queries": queries, "count": len(queries)}
+
+
+@router.post("/soc/graph/prebuilt/{query_name}")
+async def graph_run_prebuilt(query_name: str):
+    """Run a pre-built query by name.
+
+    Returns {"rows": [...], "count": N, "query": str}.
+    Returns 404 if query_name is not in the catalogue.
+    """
+    from app.services.graph_explorer import GraphExplorerService
+    result = await GraphExplorerService.run_prebuilt_query(query_name, neo4j_client)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result

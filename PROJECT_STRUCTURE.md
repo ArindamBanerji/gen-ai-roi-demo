@@ -1,1307 +1,534 @@
-# SOC Copilot Demo - Project Structure
+# SOC Copilot Demo — Project Structure
 
-**Last Updated:** February 17, 2026
-**Version:** v2.0 (Wave 6 Complete)
-**Total Files:** 25 code files (~3,800 lines)
-**Architecture:** Two-loop compounding intelligence with runtime evolution, situation analysis, and agent evolution
+**Last Updated:** March 14, 2026
+**Version:** v5.0.0 (branch: v5.0-dev)
+**Architecture:** Three-loop compounding intelligence — Graph-Attention Engine (GAE) + ProfileScorer + Runtime Evolution
 
 ---
 
 ## Table of Contents
 
 - [Directory Tree](#directory-tree)
-- [v2 Enhancements](#v2-enhancements)
 - [Backend Files](#backend-files)
-  - [Main Application](#main-application)
   - [Routers](#routers)
   - [Services](#services)
-  - [Database Clients](#database-clients)
-  - [Models](#models)
-  - [Utilities](#utilities)
+  - [Domains](#domains)
+  - [Connectors](#connectors)
+  - [Data](#data)
 - [Frontend Files](#frontend-files)
-  - [Core Application](#core-application)
   - [Tab Components](#tab-components)
-  - [API Client](#api-client)
-- [Dependency Diagram](#dependency-diagram)
-- [Import Flow](#import-flow)
-- [Tab Support Matrix](#tab-support-matrix)
+  - [Supporting Components](#supporting-components)
+  - [Libraries](#libraries)
+- [SOC Domain Configuration](#soc-domain-configuration)
+- [GAE Library Imports](#gae-library-imports)
+- [Environment & Runtime](#environment--runtime)
 
 ---
 
 ## Directory Tree
 
 ```
-gen-ai-roi-demo-v2/
+gen-ai-roi-demo-v4-v50/
 │
-├── .gitignore                       # Git ignore (includes .claude/)
+├── CLAUDE.md                          # Project rules and commands
+├── PROJECT_STRUCTURE.md               # This file
+├── docs/
+│   ├── PROJECT_STRUCTURE.md           # Docs copy
+│   └── soc_copilot_design_v1.md       # SOC copilot design spec
 │
 ├── backend/
-│   ├── requirements.txt              # Python dependencies
-│   ├── seed_neo4j.py                 # Neo4j seed data script (updated for v2)
+│   ├── requirements.txt
+│   ├── conftest.py                    # Pytest fixtures
+│   ├── seed_neo4j.py                  # Neo4j seed data script
 │   └── app/
-│       ├── main.py                   # FastAPI application entry point
-│       ├── routers/
-│       │   ├── __init__.py
-│       │   ├── soc.py                # Tab 1: SOC Analytics
-│       │   ├── evolution.py          # Tab 2: Runtime Evolution (v2: blocking, situation, evolver)
-│       │   ├── triage.py             # Tab 3: Alert Triage (v2: situation analysis)
-│       │   └── metrics.py            # Tab 4: Compounding Metrics (v2: business impact)
-│       ├── services/
-│       │   ├── __init__.py
-│       │   ├── agent.py              # Simple rule-based decision engine
-│       │   ├── reasoning.py          # LLM narration service
-│       │   ├── situation.py          # ★ NEW v2: Situation Analyzer (6 types, decision economics)
-│       │   ├── evolver.py            # ★ NEW v2: AgentEvolver (prompt tracking, operational impact)
-│       │   └── seed_neo4j.py         # Neo4j seed data (service module, updated for v2)
+│       ├── main.py                    # FastAPI entry point (v5.0.0)
+│       ├── models/
+│       │   └── schemas.py             # Pydantic models (Alert, Decision, etc.)
 │       ├── db/
-│       │   ├── __init__.py
-│       │   └── neo4j.py              # Neo4j Aura client
-│       └── models/
-│           ├── __init__.py
-│           └── schemas.py            # Pydantic models
+│       │   └── neo4j.py               # Async Neo4j Aura client
+│       ├── routers/
+│       │   ├── soc.py                 # SOC Analytics + centroid-evolution + learning-state
+│       │   ├── evolution.py           # Runtime Evolution (Tab 2)
+│       │   ├── triage.py              # Alert Triage + outcome feedback (Tab 3)
+│       │   ├── metrics.py             # Compounding Metrics (Tab 4)
+│       │   ├── roi.py                 # ROI Calculator
+│       │   ├── simulation.py          # Batch GAE simulation (SIM-1)
+│       │   ├── audit.py               # Decision audit trail
+│       │   ├── evaluation.py          # 36-scenario ground-truth evaluation
+│       │   ├── judgment.py            # Human-readable decision judgment
+│       │   ├── graph.py               # Graph intelligence + UCL connectors
+│       │   ├── gae.py                 # GAE learning state endpoints
+│       │   └── admin.py               # Privileged reset operations (TD-026)
+│       ├── services/
+│       │   ├── agent.py               # SOC Copilot agent (decide())
+│       │   ├── evolver.py             # Prompt variant A/B evolver
+│       │   ├── event_bus.py           # Lightweight event bus (v4.1)
+│       │   ├── audit.py               # SHA-256 hash-chain audit ledger
+│       │   ├── feedback.py            # Outcome feedback loop (v2.5)
+│       │   ├── gae_state.py           # LearningState singleton manager
+│       │   ├── iks.py                 # Institutional Knowledge Score
+│       │   ├── snapshots.py           # ProfileSnapshot every 50 decisions
+│       │   ├── simulation.py          # SimulationOrchestrator (SIM-1)
+│       │   ├── threat_intel.py        # Threat intel service (backward-compat)
+│       │   ├── situation.py           # Situation Analyzer (14 types)
+│       │   ├── narrative.py           # Investigation narrative (NAR-1)
+│       │   ├── policy.py              # Policy conflict resolution (v2.5)
+│       │   ├── reasoning.py           # LLM reasoning narration (Vertex AI)
+│       │   ├── triage.py              # Decision factor breakdown service
+│       │   └── state_manager.py       # Atomic reset coordinator (TD-026)
+│       ├── domains/
+│       │   ├── base.py                # Abstract domain interface
+│       │   └── soc/
+│       │       ├── config.py          # SOC constants, centroids, ProfileScorer builder
+│       │       ├── factors.py         # 6 FactorComputer implementations
+│       │       ├── orchestrator.py    # Factor vector orchestration
+│       │       ├── situations.py      # SOC situation types
+│       │       └── policies.py        # SOC policy registry
+│       ├── connectors/
+│       │   ├── base.py                # UCLConnector protocol + ConnectorResult
+│       │   ├── registry.py            # ConnectorRegistry singleton
+│       │   ├── pulsedive.py           # Pulsedive threat intel connector
+│       │   ├── greynoise.py           # GreyNoise IP reputation connector
+│       │   ├── crowdstrike_mock.py    # CrowdStrike EDR mock connector
+│       │   └── __init__.py
+│       ├── core/
+│       │   ├── domain_registry.py     # Domain registry pattern
+│       │   └── state_manager.py       # State management (core layer)
+│       ├── data/
+│       │   ├── alert_pool.py          # 20 canonical alerts, 5 categories (SIM-3a)
+│       │   ├── iks_bootstrap_soc.json # Bootstrap centroid priors μ₀
+│       │   ├── soc_eval_scenarios.json # 36 ground-truth evaluation scenarios
+│       │   └── gae_learning_state.json # Runtime W matrix (gitignored)
+│       └── scripts/
+│           ├── seed_realistic.py
+│           ├── verify_realistic_seed.py
+│           └── verify_seed_data.py
 │
 └── frontend/
+    ├── index.html
     ├── package.json
+    ├── tailwind.config.js             # soc-primary, soc-secondary, soc-bg, soc-card, soc-danger
+    ├── vite.config.ts
     └── src/
-        ├── main.tsx                  # React entry point
-        ├── App.tsx                   # 4-tab navigation root (v2: version 2.0)
+        ├── main.tsx                   # React entry point
+        ├── App.tsx                    # Tab router (4 tabs + vis2:navigate event listener)
+        ├── index.css
+        ├── types/
+        │   └── roi.ts                 # ROIRequest, ROIResponse, ROIDefaults, ROISavings
         ├── lib/
-        │   └── api.ts                # Backend API client (v2: processAlertBlocked)
+        │   ├── api.ts                 # 43 exported API functions
+        │   └── domain.ts              # domainConfig (single source of truth for labels)
         └── components/
-            └── tabs/
-                ├── SOCAnalyticsTab.tsx       # Tab 1
-                ├── RuntimeEvolutionTab.tsx   # Tab 2 (v2: CMA labels, animation, blocking, AgentEvolver)
-                ├── AlertTriageTab.tsx        # Tab 3 (v2: CMA labels, Situation Analyzer)
-                └── CompoundingTab.tsx        # Tab 4 (v2: counter animations, impact banner, two-loop diagram)
+            ├── tabs/
+            │   ├── SOCAnalyticsTab.tsx      # Tab 1
+            │   ├── RuntimeEvolutionTab.tsx  # Tab 2 — THE DIFFERENTIATOR
+            │   ├── AlertTriageTab.tsx       # Tab 3
+            │   └── CompoundingTab.tsx       # Tab 4
+            ├── OutcomeFeedback.tsx          # Loop 3 feedback widget
+            ├── PolicyConflict.tsx           # Policy conflict detector
+            ├── ROICalculator.tsx            # ROI calculator modal
+            └── SimulationPanel.tsx          # SIM-2 batch simulation
 ```
-
----
-
-## v2 Enhancements
-
-**Branch:** `feature/v2-enhancements`
-**Base:** v1.0 (frozen on `main`)
-
-### Wave 1: Labels + Visual Polish ✅
-- **Files:** RuntimeEvolutionTab.tsx, AlertTriageTab.tsx, CompoundingTab.tsx, App.tsx
-- **Features:**
-  - CONSUME/MUTATE/ACTIVATE labels on Tabs 2 & 3
-  - Eval gate sequential animation (800ms per check)
-  - Counter animations in Tab 4 (3-second count-up)
-  - Version bump to v2.0
-
-### Wave 2: Blocking Demo ✅
-- **Files:** evolution.py, RuntimeEvolutionTab.tsx, api.ts
-- **Features:**
-  - POST /api/alert/process-blocked endpoint
-  - "Simulate Failed Gate" button in Tab 2
-  - BLOCKED banner when eval gate fails
-  - Safety layer demonstration
-
-### Wave 3: Situation Analyzer — Backend ✅
-- **Files:** situation.py (NEW), evolution.py, triage.py
-- **Features:**
-  - 6 situation types (TRAVEL_LOGIN_ANOMALY, KNOWN_PHISHING_CAMPAIGN, etc.)
-  - classify_situation() — pattern matching logic
-  - evaluate_options() — multi-option assessment
-  - analyze_situation() — full situation analysis
-  - situation_analysis in API responses
-
-### Wave 4: Situation Analyzer — Frontend ✅
-- **Files:** AlertTriageTab.tsx
-- **Features:**
-  - Situation panel between graph and recommendation
-  - Type badge with color coding
-  - Key factors display
-  - Options bar chart (3-4 options per situation)
-  - Situation reasoning text
-
-### Wave 5: AgentEvolver + Second Alert ✅
-- **Files:** evolver.py (NEW), evolution.py, RuntimeEvolutionTab.tsx, seed_neo4j.py
-- **Features:**
-  - Prompt variant tracking (TRAVEL_CONTEXT_v1 vs v2, etc.)
-  - Promotion logic (>5% improvement → promote)
-  - AgentEvolver panel in Tab 2 (variant bars, promotion status)
-  - Second alert type: ALERT-7824 (phishing - Mary Chen)
-  - PAT-PHISH-KNOWN pattern
-  - PhishingCampaign node (Operation DarkHook)
-
-### Wave 6: Business Impact + Documentation ✅
-- **Files:** situation.py, evolver.py, metrics.py, RuntimeEvolutionTab.tsx, AlertTriageTab.tsx, CompoundingTab.tsx, CLAUDE.md, PROJECT_STRUCTURE.md
-- **Features:**
-  - **6A:** Decision economics (time/cost/risk per option)
-  - **6B:** Operational impact narrative (what changed, monthly savings)
-  - **6C:** Business impact banner in Tab 4 (847 hrs saved, $127K avoided/qtr, 75% MTTR reduction, 2,400 backlog eliminated)
-  - **6D:** Two-loop hero diagram in Tab 4 (dark theme, center graph, Loop 1 & 2 boxes, stats row)
-  - **6E:** Documentation updates (this file + CLAUDE.md)
 
 ---
 
 ## Backend Files
 
-### Main Application
-
-#### `backend/app/main.py`
-
-**Purpose:** FastAPI application entry point with CORS configuration and router registration.
-
-**Key Functions/Exports:**
-- `app` - FastAPI application instance
-- `root()` - Health check endpoint (GET /)
-- `health()` - Health check endpoint (GET /health)
-- `startup_event()` - Initialize Neo4j connection on startup
-- `shutdown_event()` - Close Neo4j connection on shutdown
-
-**Dependencies:**
-```python
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-from app.routers import evolution, triage, soc, metrics
-from app.db.neo4j import neo4j_client
-```
-
-**Tab Support:** All tabs (provides API infrastructure)
-
-**Lines:** ~62
-
----
-
 ### Routers
 
-#### `backend/app/routers/soc.py`
+#### `soc.py` — SOC Analytics + VIS-2 endpoints
+- `GET /api/soc/query` — natural-language metric query
+- `GET /api/soc/threat-landscape` — threat landscape summary
+- `GET /api/soc/attack-tactic-breakdown` — MITRE tactic counts
+- `GET /api/soc/detection-engineering` — rule quality score + noise map per category
+- `GET /api/soc/centroid-evolution?n=200&category=` — flat array of `{decision_number, id, centroid_delta_norm, category, action, correct, verified_at}` ordered by `verified_at` ASC. Returns `[]` if no qualified Decision nodes. Used by Tab-2 Section A/B and Tab-4 Chart A.
+- `GET /api/soc/learning-state` — `{frozen, decision_count, last_verified_at, checkpoint_id}`
+- `GET /api/soc/graph-stats` — Neo4j traversal stats
 
-**Purpose:** Tab 1 (SOC Analytics) API endpoints for governed security metrics with natural language queries.
+#### `evolution.py` — Runtime Evolution (Tab 2)
+- `GET /api/deployments` — deployment registry with A/B traffic splits
+- `POST /api/alert/process` — run alert through full GAE pipeline; returns `ProcessResult` with eval_gate, decision_trace, gae_scoring, prompt_evolution, triggered_evolution
+- `POST /api/eval/simulate-failure` — synthetic failed eval gate
+- `GET /api/rl/reward-summary` — Loop 3 RL signal (correct/incorrect counts, cumulative R(t))
+- `GET /api/soc/profile` — ProfileScorer state: categories, actions, centroids (6×4×6), counts, decision_count, IKS
+- `POST /api/alert/process` creates **DEC-XXXX** Decision nodes (short hex ID, no `factor_vector`)
 
-**Key Functions/Exports:**
-- `router` - FastAPI APIRouter instance
-- `query_soc_metrics(request: SOCQueryRequest)` - POST /api/soc/query
-  - Natural language metric query endpoint
-  - Returns: matched metric, chart data, provenance, sprawl alert
-- `list_metrics()` - GET /api/soc/metrics
-  - Lists all available metrics for discovery
-- `match_metric(question: str)` - Internal keyword matching logic
-- `get_metric_data(metric_id: str)` - Mock data generators
-- `get_provenance(metric_id: str)` - Data provenance information
-- `check_for_sprawl(metric_id: str)` - Detection rule sprawl checker
+#### `triage.py` — Alert Triage + Outcome Feedback (Tab 3)
+- `GET /api/alerts/queue` — pending alert queue
+- `POST /api/alert/analyze` — analyze alert; creates **UUID** Decision node with `factor_vector`; returns `recommendation.decision_id` (UUID)
+- `POST /api/action/execute` — execute action; creates **DEC-XXXX** Decision node; returns `evidence.decision_id` (DEC-XXXX)
+- `POST /api/alert/outcome` — report outcome; updates the UUID Decision node with `centroid_delta_norm`, `category`, `correct`, `verified_at`; triggers GAE weight update via `gae.learning.WeightUpdate`
+- `GET /api/alert/outcome/{alert_id}` — check if feedback already given
+- `POST /api/alerts/reset` — reset alert queue
+- `GET /api/triage/decision-factors/{alert_id}` — 6-factor breakdown with contribution scores
+- `GET /api/soc/profile` — ProfileScorer state (shared route, registered in this router)
 
-**Key Data Structures:**
-- `METRIC_REGISTRY` - 6 metrics (MTTR, auto-close, FP rate, escalation, MTTD, analyst efficiency)
-- Mock data generators for each metric
+**Two Decision node types per alert:**
+| Type | ID format | Has factor_vector | Gets centroid update |
+|------|-----------|-------------------|----------------------|
+| Analyze | UUID (`str(uuid.uuid4())`) | Yes | Yes (via /alert/outcome) |
+| Execute | DEC-XXXX (`DEC-{hex[:4].upper()}`) | No | No |
 
-**Dependencies:**
-```python
-from fastapi import APIRouter, HTTPException
-from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
-from pydantic import BaseModel
-import re
-```
+#### `metrics.py` — Compounding Metrics (Tab 4)
+- `GET /api/metrics/compounding?weeks=N` — weekly metrics: auto_close_rate, mttr_minutes, fp_rate, pattern_count
+- `GET /api/metrics/evolution-events?limit=N` — evolution event log
+- `GET /api/metrics/decisions` — recent Decision nodes for audit display
 
-**Tab Support:** Tab 1 (SOC Analytics)
+#### `roi.py` — ROI Calculator
+- `GET /api/roi/defaults` — default SOC prospect metrics
+- `POST /api/roi/calculate` — prospect-specific ROI projections
 
-**Lines:** ~403
+#### `simulation.py` — Batch GAE Simulation (SIM-1)
+- `POST /api/simulation/start` — kick off N-alert simulation
+- `GET /api/simulation/progress/{sim_id}` — live step/accuracy stream
+- `GET /api/simulation/result/{sim_id}` — full result with learning curves per category
+- `GET /api/simulation/experiment-log/{sim_id}` — raw JSON event log
 
-**Notable Features:**
-- Keyword-based metric matching
-- Rule sprawl detection
-- Mock BigQuery data (no GCP setup required)
+#### `audit.py` — Decision Audit Trail
+- `GET /api/audit/decisions?format=json|csv` — full audit trail with SHA-256 hash chain
+- `GET /api/audit/verify` — verify chain integrity
 
----
+#### `evaluation.py` — Ground-Truth Evaluation (EVAL-2-SOC)
+- Runs 36 scenarios from `data/soc_eval_scenarios.json` through live ProfileScorer
+- Returns accuracy, confusion matrix, per-category breakdown
 
-#### `backend/app/routers/evolution.py`
+#### `judgment.py` — Human-Readable Judgment (JUDG-1-SOC)
+- `POST /api/judgment` — translates raw ProfileScorer output to `JudgmentResult` with confidence, reasoning, alternative actions
 
-**Purpose:** Tab 2 (Runtime Evolution) API endpoints showing TRIGGERED_EVOLUTION - the key differentiator.
+#### `graph.py` — Graph Intelligence + UCL Connectors
+- `POST /api/graph/threat-intel/refresh` — refresh all connectors (backward compat)
+- `GET /api/graph/connectors` — list connectors + health status
+- `POST /api/graph/connectors/refresh-all` — force refresh all
+- `GET /api/graph/enrichment/aggregate/{indicator}` — unified enrichment (Pulsedive + GreyNoise + CrowdStrike)
+- `GET /api/graph/enrichment/summary` — enrichment for all known indicators
+- `GET /api/graph/enrichment/by-alert/{alert_id}` — enrichment via graph traversal
 
-**v2 Updates:**
-- Added POST /api/alert/process-blocked endpoint for blocking demo
-- Integrated situation_analysis from situation.py
-- Integrated prompt_evolution from evolver.py
-- Returns situation_analysis and prompt_evolution in responses
+#### `gae.py` — GAE Learning State
+- `GET /api/gae/weights` — W matrix + recent updates + convergence status
+- `GET /api/gae/history?limit=N` — weight update history
+- `GET /api/gae/convergence` — convergence metrics
+- `GET /api/gae/confidence-trajectory` — confidence over time
+- `GET /api/gae/trust-curve` — asymmetric trust tracking
+- `GET /api/gae/before-after` — W matrix before vs. after learning
+- `GET /api/gae/weight-evolution` — full W matrix history
 
-**Key Functions/Exports:**
-- `router` - FastAPI APIRouter instance
-- `get_deployments()` - GET /api/deployments
-  - Returns: v3.1 (active, 90%) and v3.2 (canary, 10%)
-- `process_alert(request: ProcessAlertRequest)` - POST /api/alert/process
-  - **THE KEY FLOW:** 9 steps (v2 expanded from 7)
-    1. Get security context (47 nodes from Neo4j)
-    2. **Situation analysis (v2 new)**
-    3. Agent decision (rule-based)
-    4. LLM reasoning (narration)
-    5. Eval gate (4 checks)
-    6. Create decision trace in Neo4j
-    7. Check if evolution triggers
-    8. Create TRIGGERED_EVOLUTION relationship
-    9. **Get prompt evolution summary (v2 new)**
-  - Returns: decision, situation_analysis, eval_gate, triggered_evolution, prompt_evolution, execution_stats
-- `process_alert_blocked(request: ProcessAlertRequest)` - POST /api/alert/process-blocked (v2 new)
-  - Simulates eval gate failure for demo
-  - Shows blocked state with detailed reason
-
-**Dependencies:**
-```python
-from fastapi import APIRouter, HTTPException
-from typing import Optional, Dict, Any
-from datetime import datetime
-from pydantic import BaseModel
-from app.db.neo4j import neo4j_client
-from app.services.agent import SecurityAgent
-from app.services.reasoning import ReasoningNarrator
-from app.services.situation import analyze_situation  # v2 new
-from app.services.evolver import get_evolution_summary  # v2 new
-from app.models.schemas import ProcessAlertRequest
-```
-
-**Tab Support:** Tab 2 (Runtime Evolution) ★ THE DIFFERENTIATOR
-
-**Lines:** ~350 (expanded from ~250)
-
-**Notable Features:**
-- Integration point between agent, Neo4j, LLM, situation analyzer, and evolver
-- TRIGGERED_EVOLUTION relationship creation
-- Eval gate with 4 deterministic checks
-- Decision trace persistence
-- Blocking demo simulation
-
----
-
-#### `backend/app/routers/triage.py`
-
-**Purpose:** Tab 3 (Alert Triage) API endpoints for graph-based alert analysis and closed-loop execution.
-
-**v2 Updates:**
-- Integrated situation_analysis from situation.py
-- Added situation_analysis to analyze_alert response
-
-**Key Functions/Exports:**
-- `router` - FastAPI APIRouter instance
-- `get_alert_queue()` - GET /api/triage/alerts
-  - Returns: 5 pending alerts from seed data (v2: now includes ALERT-7824 phishing)
-- `analyze_alert(alert_id: str)` - POST /api/triage/analyze
-  - Graph traversal + situation analysis + recommendation
-  - Returns: decision, situation_analysis (v2 new), reasoning, confidence, graph_data (nodes/edges)
-- `execute_action(request: ActionRequest)` - POST /api/triage/execute
-  - 4-step closed loop:
-    1. EXECUTED - Send action to target system
-    2. VERIFIED - Confirm system response
-    3. EVIDENCE - Capture artifact
-    4. KPI IMPACT - Calculate MTTR improvement
-  - Returns: receipt, verification, evidence, kpi_impact
-- `get_graph_data(alert_id: str)` - Extract nodes/edges for visualization
-
-**Dependencies:**
-```python
-from fastapi import APIRouter, HTTPException
-from typing import List, Dict, Any, Optional
-from datetime import datetime
-from pydantic import BaseModel
-from app.db.neo4j import neo4j_client
-from app.services.agent import SecurityAgent
-from app.services.reasoning import ReasoningNarrator
-from app.services.situation import analyze_situation  # v2 new
-```
-
-**Tab Support:** Tab 3 (Alert Triage)
-
-**Lines:** ~450 (expanded from ~400)
-
-**Notable Features:**
-- Simple graph visualization
-- 4-step closed-loop execution with verification
-- KPI impact calculation (MTTR improvement)
-- Situation analysis integration
-
----
-
-#### `backend/app/routers/metrics.py`
-
-**Purpose:** Tab 4 (Compounding Dashboard) API endpoints showing week-over-week intelligence growth.
-
-**v2 Updates:**
-- Added BusinessImpact model
-- Added business_impact to CompoundingResponse
-- Returns business_impact with 4 key metrics for CFO reporting
-
-**Key Functions/Exports:**
-- `router` - FastAPI APIRouter instance
-- `get_compounding_metrics(weeks: int = 4)` - GET /api/metrics/compounding
-  - Returns: headline (Week 1 vs Week 4), weekly_trend, evolution_events, business_impact (v2 new)
-  - Week 1: 23 patterns, 68% auto-close
-  - Week 4: 127 patterns, 89% auto-close
-  - Business Impact: 847 hrs saved/mo, $127K avoided/qtr, 75% MTTR reduction, 2,400 backlog eliminated
-- `get_evolution_events(limit: int = 10)` - GET /api/metrics/evolution-events
-  - Returns: Recent evolution events list
-- `seed_neo4j()` - POST /api/demo/seed (v2 new)
-  - Seeds Neo4j with canonical test data
-- `reset_all_demo_data()` - POST /api/demo/reset-all (v2 new)
-  - Comprehensive reset via re-seeding
-- `reset_demo_data()` - POST /api/demo/reset (legacy)
-  - Resets demo to Week 1 state
-- `generate_compounding_data(weeks: int)` - Mock data generator
-
-**Dependencies:**
-```python
-from fastapi import APIRouter, HTTPException, Query
-from typing import List, Dict, Any
-from datetime import datetime, timedelta
-from pydantic import BaseModel
-```
-
-**Tab Support:** Tab 4 (Compounding Dashboard)
-
-**Lines:** ~350 (expanded from ~270)
-
-**Notable Features:**
-- Mock data showing gradual improvement (4 weeks)
-- Evolution events timeline
-- Business impact summary for CFO reporting
-- Demo reset functionality for repeated presentations
+#### `admin.py` — Privileged Reset (TD-026)
+- `POST /api/admin/reset` — `{mode: "soft"|"hard", confirm: bool}`
+  - **soft**: W→priors, clear Decision outcomes, fresh audit hash chain
+  - **hard**: soft + delete Decision nodes + re-seed graph
 
 ---
 
 ### Services
 
-#### `backend/app/services/agent.py`
-
-**Purpose:** Simple rule-based decision engine. Intentionally deterministic for demo reliability.
-
-**Key Functions/Exports:**
-- `SecurityAgent` class
-  - `decide(alert_type: str, context: SecurityContext) -> Decision`
-    - 4 primary rules for alert types (v2: now includes phishing)
-    - Returns: action, confidence, pattern_id
-  - `evaluate_gates(decision, context, reasoning) -> EvalGateResult`
-    - 4 checks: Faithfulness, Safe Action, Playbook Match, SLA
-    - Returns: 4 gate scores with pass/fail
-  - `maybe_trigger_evolution(decision, context) -> EvolutionTrigger | None`
-    - Checks if pattern_id exists and occurrence threshold met
-    - Returns: event details if evolution triggered
-
-**Alert Types Handled:**
-1. **anomalous_login** - Travel matching
-2. **phishing** - Known campaign signature check (v2 enhanced)
-3. **malware_detection** - Asset criticality check
-4. **data_exfiltration** - Always escalate to incident
-
-**Dependencies:**
-```python
-from typing import Dict, Any, Optional
-from datetime import datetime
-from app.models.schemas import Decision, SecurityContext, EvalGateResult, EvolutionTrigger
-```
-
-**Tab Support:** Tab 2 (decision engine), Tab 3 (recommendations)
-
-**Lines:** ~250
+| File | Purpose |
+|------|---------|
+| `agent.py` | `SOCAgent.decide()` → `DecisionResult(action, confidence, pattern_id, playbook_id)` |
+| `evolver.py` | Prompt A/B variant tracking; promotes variants by success rate |
+| `event_bus.py` | Event bus: `DecisionMade`, `OutcomeVerified`, `GraphMutated` (frozen dataclasses) |
+| `audit.py` | In-memory SHA-256 hash-chain ledger: `record_decision()`, `verify_chain()` |
+| `feedback.py` | `process_outcome()`, `get_feedback_status()`, `get_reward_summary()` |
+| `gae_state.py` | `LearningState` singleton; `get_profile_scorer()`; persists to `data/gae_learning_state.json` |
+| `iks.py` | IKS = 100 × min(mean(‖μ(t)−μ₀‖₂) / D_MAX, 1.0), D_MAX=0.30 |
+| `snapshots.py` | `maybe_write_profile_snapshot(decision_count)` — writes to Neo4j every 50 decisions |
+| `simulation.py` | `SimulationOrchestrator` — runs full GAE pipeline for N alerts with oracle feedback |
+| `threat_intel.py` | Backward-compat wrapper delegating to `PulsediveConnector` |
+| `situation.py` | `SituationType` enum (14 types) + `OptionEvaluated` scoring |
+| `narrative.py` | `TemplateNarrativeProvider` (deterministic) + `OllamaNarrativeProvider` (with fallback) |
+| `policy.py` | `detect_policy_conflicts()`, `get_conflict_history()` — security-first priority resolution |
+| `reasoning.py` | `ReasoningNarrator.generate_reasoning()` — Vertex AI / Gemini 1.5-pro narration |
+| `triage.py` | `get_decision_factors(alert_id)` — 6-factor matrix with contribution classification |
+| `state_manager.py` | `StateManager.soft_reset()` / `.hard_reset()` — atomic multi-system coordinator |
 
 ---
 
-#### `backend/app/services/reasoning.py`
+### Domains
 
-**Purpose:** LLM narration service using Gemini 1.5 Pro. Makes rule-based decisions sound like expert security analysis.
+#### `domains/base.py`
+Abstract domain interface: `DomainAction`, `DomainFactor`, `DomainSituationType`, `DomainPolicy`, `PromptVariant`, `DomainConfig` (ABC).
 
-**Key Functions/Exports:**
-- `ReasoningNarrator` class
-  - `generate_reasoning(alert_type, decision, context) -> str`
-    - Generates 2-3 sentence justification AFTER decision made
-    - Uses Gemini 1.5 Pro via Vertex AI
-    - Falls back to template if LLM unavailable
+#### `domains/soc/config.py`
+Single source of truth for all SOC domain constants. Key exports:
+- `SOC_CATEGORIES` (6), `SOC_ACTIONS` (4), `SOC_FACTORS` (6) — see [SOC Domain Configuration](#soc-domain-configuration)
+- `SOC_PROFILE_CENTROIDS` — (6, 4, 6) tensor — bootstrap centroid prior μ₀
+- `build_profile_scorer()` — returns `ProfileScorer(mu=..., actions=SOC_ACTIONS, categories=SOC_CATEGORIES, kernel=KernelType.L2)`
+- Bootstrap params: rounds=10, samples_per_action=5, sigma=0.08, convergence_tol=0.01, seed=42
+- Asymmetry: penalty_ratio=20.0, temperature τ=0.1 (V3B validated ECE=0.036)
 
-**Dependencies:**
-```python
-import os
-from typing import Dict, Any
-from google.cloud import aiplatform
-from vertexai.generative_models import GenerativeModel
-from app.models.schemas import Decision, SecurityContext
-```
+#### `domains/soc/factors.py`
+Six `FactorComputer` implementations (async `.compute(alert, neo4j) → float`):
+`TravelMatchFactor`, `AssetCriticalityFactor`, `ThreatIntelEnrichmentFactor`, `PatternHistoryFactor`, `TimeAnomalyFactor`, `DeviceTrustFactor`.
 
-**Tab Support:** Tab 2 (narration), Tab 3 (recommendation text)
+All factor Cypher queries traverse relationships (P10 rule: never read properties directly).
 
-**Lines:** ~50
+#### `domains/soc/orchestrator.py`
+`compute_factor_vector(alert, computers, neo4j)` → calls each FactorComputer, assembles via `gae.factors.assemble_factor_vector()`.
 
 ---
 
-#### `backend/app/services/situation.py` ★ NEW v2
+### Connectors
 
-**Purpose:** Situation Analyzer — classifies alert situations, evaluates options with decision economics.
+UCL (Unified Connector Layer) — standardised external data source interface.
 
-**Key Functions/Exports:**
-- `SituationType` enum - 6 situation types:
-  - TRAVEL_LOGIN_ANOMALY
-  - KNOWN_PHISHING_CAMPAIGN
-  - CRITICAL_ASSET_MALWARE
-  - DATA_EXFILTRATION_DETECTED
-  - UNKNOWN_LOGIN_PATTERN
-  - ROUTINE_MALWARE_SCAN
-- `classify_situation(alert_type, context) -> SituationType`
-  - Pattern matching logic for situation classification
-- `evaluate_options(situation_type, context) -> List[OptionEvaluated]`
-  - Generates 3-4 options per situation
-  - **v2 Wave 6A:** Includes decision economics (time, cost, risk)
-  - Returns: option name, reasoning, confidence, estimated_resolution_time, estimated_analyst_cost, risk_if_wrong
-- `analyze_situation(alert_type, context) -> SituationAnalysis`
-  - Full situation analysis combining classification and evaluation
-  - **v2 Wave 6A:** Includes decision_economics summary (time saved, cost avoided, monthly projection)
-  - Returns: type, primary_factors, options_evaluated, reasoning, decision_economics
+| Connector | Source | Data |
+|-----------|--------|------|
+| `pulsedive.py` | Pulsedive | Threat intel, indicator scores |
+| `greynoise.py` | GreyNoise | IP reputation, noise classification |
+| `crowdstrike_mock.py` | CrowdStrike (mock) | EDR status, prevention policy |
 
-**Dependencies:**
-```python
-from enum import Enum
-from typing import Dict, Any, List, Optional
-from pydantic import BaseModel
-```
-
-**Tab Support:** Tab 2 (situation context), Tab 3 (situation panel)
-
-**Lines:** ~280
-
-**Notable Features:**
-- 6 situation types covering common SOC scenarios
-- Multi-option evaluation (not just binary)
-- Decision economics for CISO/CFO reporting
-- Deterministic classification for demo reliability
+`registry.py` — `ConnectorRegistry` singleton: `register()`, `get()`, `refresh_all()`, `health_check_all()`.
 
 ---
 
-#### `backend/app/services/evolver.py` ★ NEW v2
+### Data
 
-**Purpose:** AgentEvolver — tracks prompt variant performance, promotes winners, computes operational impact.
-
-**Key Functions/Exports:**
-- `PROMPT_STATS` - In-memory prompt performance tracking
-  - TRAVEL_CONTEXT_v1: 24/34 (71%)
-  - TRAVEL_CONTEXT_v2: 42/47 (89%)
-  - PHISHING_RESPONSE_v1: 31/38 (82%)
-  - PHISHING_RESPONSE_v2: 12/15 (80%)
-- `ACTIVE_PROMPTS` - Currently active variant per alert type
-- `get_prompt_variant(alert_type) -> str`
-  - Returns active prompt variant
-- `record_decision_outcome(decision_id, prompt_variant, success)`
-  - Records outcome, updates stats
-- `check_for_promotion(alert_type) -> Optional[Dict]`
-  - Checks if better variant should be promoted (>5% improvement)
-  - Promotes automatically if threshold met
-- `generate_what_changed_narrative(alert_type, old_rate, new_rate) -> str` (v2 Wave 6B)
-  - Plain English explanation of what improved
-  - Alert-specific narratives
-- `calculate_operational_impact(old_rate, new_rate) -> OperationalImpact` (v2 Wave 6B)
-  - Computes monthly savings from improvement
-  - Returns: fewer_false_escalations_pct, fewer_false_escalations_monthly, analyst_hours_recovered, estimated_monthly_savings, missed_threats (always 0)
-- `get_evolution_summary(alert_type) -> PromptEvolution`
-  - Returns current state with any recent promotion
-  - **v2 Wave 6B:** Now includes what_changed_narrative and operational_impact
-
-**Models:**
-- `OperationalImpact` - Business metrics from evolution
-- `PromptEvolution` - Evolution data for UI display
-
-**Dependencies:**
-```python
-from typing import Dict, Any, Optional
-from pydantic import BaseModel
-```
-
-**Tab Support:** Tab 2 (AgentEvolver panel)
-
-**Lines:** ~330
-
-**Notable Features:**
-- Automatic promotion of better variants
-- Operational impact calculation for CISO reporting
-- What-changed narratives in plain English
-- Demo-friendly in-memory state
-
----
-
-#### `backend/app/services/seed_neo4j.py`
-
-**Purpose:** Neo4j seed data constants as a service module. Contains canonical test data.
-
-**v2 Updates:**
-- Added ALERT-7824 (phishing - Mary Chen)
-- Added Mary Chen user definition
-- Added PAT-PHISH-KNOWN pattern
-- Added PhishingCampaign node (Operation DarkHook)
-
-**Key Functions/Exports:**
-- `ASSETS` - List of 5 asset definitions
-- `USERS` - List of 5 user definitions (v2: added Mary Chen)
-- `ALERT_TYPES` - List of 4 alert type definitions
-- `PATTERNS` - List of 5+ attack pattern definitions (v2: added PAT-PHISH-KNOWN)
-- `PLAYBOOKS` - List of 4 playbook definitions
-
-**Dependencies:**
-```python
-from typing import Dict, Any, List
-from app.db.neo4j import neo4j_client
-```
-
-**Tab Support:** Tab 2, Tab 3 (provides canonical seed data)
-
-**Lines:** ~600+ (expanded from ~500+)
-
----
-
-### Database Clients
-
-#### `backend/app/db/neo4j.py`
-
-**Purpose:** Neo4j Aura client for security graph operations, decision traces, and evolution events.
-
-**Key Functions/Exports:**
-- `Neo4jClient` class
-  - `connect()` - Establish Neo4j connection
-  - `close()` - Close connection
-  - `get_security_context(alert_id: str) -> SecurityContext`
-    - Traverses graph to get 47 nodes
-    - Returns: user, asset, travel, patterns, playbook, SLA info
-  - `create_decision_trace(decision_id, alert_id, decision, context, reasoning)`
-    - Creates (:Decision), (:DecisionContext) nodes
-  - `create_evolution_event(event_id, triggered_by, event_type, description)`
-    - Creates (:EvolutionEvent) node
-    - **KEY:** Creates (:Decision)-[:TRIGGERED_EVOLUTION]->(:EvolutionEvent)
-  - `get_alert_details(alert_id: str) -> Dict`
-    - Fetch alert with asset, user, type info
-  - `get_precedent_decisions(alert_type: str, limit: int) -> List[Dict]`
-    - Find similar past decisions
-
-**Dependencies:**
-```python
-import os
-from typing import Dict, Any, List, Optional
-from neo4j import AsyncGraphDatabase, AsyncDriver
-from datetime import datetime
-from app.models.schemas import SecurityContext
-```
-
-**Tab Support:** Tab 2 (context + evolution), Tab 3 (graph traversal)
-
-**Lines:** ~300
-
-**Notable Features:**
-- Fixed Cypher queries (no dynamic generation)
-- TRIGGERED_EVOLUTION relationship (OUR DIFFERENTIATOR)
-- Connection pooling
-- 47 nodes traversal for context
-
----
-
-### Models
-
-#### `backend/app/models/schemas.py`
-
-**Purpose:** Pydantic v2 models for request/response validation across all endpoints.
-
-**v2 Updates:**
-- Added SituationAnalysis, SituationType, OptionEvaluated models
-- Added PromptEvolution, OperationalImpact models
-- Updated ProcessResult to include situation_analysis and prompt_evolution
-- Added DecisionEconomics model
-
-**Key Classes/Exports:**
-
-**Tab 1 Models:** (unchanged)
-- `SOCQueryRequest`, `MetricContract`, `MetricDataPoint`, `Provenance`, `SprawlAlert`
-
-**Tab 2 Models:**
-- `ProcessAlertRequest`, `Deployment`, `EvalGateCheck`, `EvalGateResult`
-- `TriggeredEvolution`, `ExecutionStats`
-- `PromptEvolution` (v2 new) - includes operational_impact, what_changed_narrative
-- `OperationalImpact` (v2 new) - business metrics
-
-**Tab 3 Models:**
-- `AlertSummary`, `ActionRequest`, `Receipt`, `Verification`, `Evidence`, `KpiImpact`
-- `SituationAnalysis` (v2 new), `SituationType` (v2 new), `OptionEvaluated` (v2 new)
-- `DecisionEconomics` (v2 new) - time/cost/risk metrics
-
-**Tab 4 Models:**
-- `WeeklyMetrics`, `EvolutionEvent`, `CompoundingResponse`
-- `BusinessImpact` (v2 new) - CFO reporting metrics
-
-**Core Models:**
-- `SecurityContext`, `Decision`, `EvolutionTrigger`
-
-**Dependencies:**
-```python
-from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
-from datetime import datetime
-```
-
-**Tab Support:** All tabs (data validation layer)
-
-**Lines:** ~550 (expanded from ~400)
-
----
-
-### Utilities
-
-#### `backend/seed_neo4j.py`
-
-**Purpose:** Seed Neo4j database with demo data.
-
-**v2 Updates:**
-- Added ALERT-7824 (phishing - Mary Chen, susanmorgan@phishmail.com)
-- Added Mary Chen user node
-- Added PAT-PHISH-KNOWN pattern (214 occurrences, 82% FP rate)
-- Added PhishingCampaign node (Operation DarkHook, November 2025)
-- Added relationships connecting phishing alert to campaign
-
-**Key Functions/Exports:**
-- `seed_neo4j()` - Main seeding function
-  - Creates 5 users (v2: added Mary Chen, Marketing Manager)
-  - Creates 5 assets
-  - Creates 4 alert types
-  - Creates 6+ attack patterns (v2: added PAT-PHISH-KNOWN)
-  - Creates 4 playbooks
-  - Creates 6 alerts (v2: added ALERT-7824)
-  - Creates travel context for John Smith
-  - Creates phishing campaign node (v2 new)
-
-**Dependencies:**
-```python
-from neo4j import GraphDatabase
-import os
-from datetime import datetime, timedelta
-```
-
-**Tab Support:** Tab 2, Tab 3 (provides graph data)
-
-**Lines:** ~250 (expanded from ~200)
-
-**Usage:**
-```bash
-python backend/seed_neo4j.py
-```
+| File | Contents |
+|------|---------|
+| `alert_pool.py` | 20 canonical alerts across 5 categories (SIM-3a canonical pool) |
+| `iks_bootstrap_soc.json` | μ₀ — bootstrap centroid priors for IKS baseline |
+| `soc_eval_scenarios.json` | 36 ground-truth evaluation scenarios (EVAL-2-SOC) |
+| `gae_learning_state.json` | Live W matrix — runtime state, gitignored |
 
 ---
 
 ## Frontend Files
 
-### Core Application
-
-#### `frontend/src/main.tsx`
-
-**Purpose:** React 18 application entry point with StrictMode.
-
-**Key Functions/Exports:**
-- Mounts React app to DOM
-- Wraps `<App />` in `<React.StrictMode>`
-
-**Dependencies:**
-```typescript
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App'
-import './index.css'
-```
-
-**Tab Support:** All tabs (entry point)
-
-**Lines:** ~10
-
----
-
-#### `frontend/src/App.tsx`
-
-**Purpose:** Root component with 4-tab navigation. Starts on Tab 2 (THE DIFFERENTIATOR).
-
-**v2 Updates:**
-- Version bumped to v2.0
-
-**Key Functions/Exports:**
-- `App` component
-  - Tab state management
-  - Tab navigation UI
-  - Renders active tab component
-
-**Tab Order:**
-1. SOC Analytics (Tab 1)
-2. Runtime Evolution (Tab 2) ★ DEFAULT
-3. Alert Triage (Tab 3)
-4. Compounding (Tab 4)
-
-**Dependencies:**
-```typescript
-import { useState } from 'react'
-import SOCAnalyticsTab from './components/tabs/SOCAnalyticsTab'
-import RuntimeEvolutionTab from './components/tabs/RuntimeEvolutionTab'
-import AlertTriageTab from './components/tabs/AlertTriageTab'
-import CompoundingTab from './components/tabs/CompoundingTab'
-```
-
-**Tab Support:** All tabs (navigation shell)
-
-**Lines:** ~80
-
----
-
 ### Tab Components
 
-#### `frontend/src/components/tabs/SOCAnalyticsTab.tsx`
+#### `SOCAnalyticsTab.tsx` — Tab 1: Governed Security Metrics
+- Metric queries, threat landscape bar chart, attack tactic breakdown
+- Provenance tracking (data lineage display)
+- Cross-source query examples (uses `domainConfig.defaultAlertId`)
 
-**Purpose:** Tab 1 - Natural language security metric queries with governance and provenance.
+#### `RuntimeEvolutionTab.tsx` — Tab 2: THE DIFFERENTIATOR
+Key state: `result` (ProcessResult), `centroidEvolution` (CentroidEvolutionEntry[]), `pendingDecisionId`, `profileState`, `profileStateFull` (with IKS).
 
-**(No v2 changes)**
+**Section A — This Decision**
+- "Process Alert" button calls `processAlert(DEFAULT_ALERT_ID)` → populates `result`
+- When `pendingDecisionId` set (from Tab-3 bridge link via sessionStorage `vis2_pending_decision`):
+  - Finds `pendingEntry = centroidEvolution.find(e => e.id === pendingDecisionId)`
+  - If found: shows centroid summary card (category, action, ‖Δμ‖, outcome)
+  - If not found: shows "Decision was recorded — process a new alert" hint
+- When `result` set: shows full eval gate, GAE scoring, centroid delta, decision trace
 
-**Key Components/Exports:**
-- `SOCAnalyticsTab` - Main tab component
-  - Natural language query input
-  - 5 example question chips
-  - Metric result with chart (Recharts)
-  - Metric contract panel
-  - Provenance panel
-  - Rule sprawl alert
+**Section B — Category Learning Curves**
+- `centroidChartData` — rolling 20-window average of ‖Δμ‖ per decision
+- `categoryConvergenceRows` — convergence status per SOC_CATEGORY (groups by `e.category`)
+- Category filter dropdown (`availableCategories` derived from centroid data)
 
-**API Calls:**
-- POST /api/soc/query
+**Section C — Weight Matrix Evolution**
 
-**Tab Support:** Tab 1 (SOC Analytics)
+**Section D — Learning State / Rollback Status**
+- Sources from `GET /api/soc/learning-state`
 
-**Lines:** ~476
+**Subtitle (required by test):** `"Institutional Intelligence Summary — How the system's judgment has evolved"`
+
+**`CentroidEvolutionEntry` interface:**
+```ts
+interface CentroidEvolutionEntry {
+  id: string           // UUID (from Tab-3 outcome) or DEC-XXXX (from Tab-2 processAlert)
+  decision_number: number
+  centroid_delta_norm: number
+  correct: boolean
+  category: string     // snake_case, e.g. "credential_access"
+  action: string
+  verified_at?: string
+}
+```
+
+**`DEFAULT_ALERT_ID`** = `domainConfig.defaultAlertId` (centralised in domain.ts)
+
+#### `AlertTriageTab.tsx` — Tab 3: Graph-Based Reasoning
+- Alert queue sidebar (left panel)
+- Alert analysis panel: 6-factor breakdown, threat intel enrichment, policy conflict
+- Decision execution → `closedLoop` state
+- `OutcomeFeedback` widget rendered when `closedLoop` is set
+
+**`decisionId` prop to `OutcomeFeedback`:**
+```ts
+decisionId={analysis?.recommendation?.decision_id ?? closedLoop.evidence.decision_id}
+```
+`analysis.recommendation.decision_id` = UUID (truthy, takes precedence).
+`closedLoop.evidence.decision_id` = DEC-XXXX (fallback, never reached in normal flow).
+
+**Bridge link navigation** (in `OutcomeFeedback`):
+```ts
+sessionStorage.setItem('vis2_pending_decision', decisionId)
+window.dispatchEvent(new CustomEvent('vis2:navigate', { detail: { tab: 'evolution' } }))
+```
+`App.tsx` listens for `vis2:navigate` and switches to the evolution tab.
+
+#### `CompoundingTab.tsx` — Tab 4: The Compounding Moat
+- Business Impact Banner (projected metrics from `domainConfig.metrics`)
+- GAE Compounding Evidence (4 charts: Weight Evolution, Confidence Trajectory, Before/After, Trust Curve)
+- `centroidEvolution: CentroidEvolutionEntry[]` state (flat array, same shape as Tab-2)
+- Evidence Ledger with audit hash chain
+- Weekly trend chart + Three-Loop Architecture narrative
+- Evolution events log
+- The Moat Message callout
 
 ---
 
-#### `frontend/src/components/tabs/RuntimeEvolutionTab.tsx`
+### Supporting Components
 
-**Purpose:** Tab 2 - Runtime evolution showing TRIGGERED_EVOLUTION. THE KEY DIFFERENTIATOR.
+#### `OutcomeFeedback.tsx` — Loop 3: Learning from Results
+Rendered by `AlertTriageTab` when `closedLoop` is set and `isVisible=true`.
 
-**v2 Updates:**
-- **Wave 1:** Added CONSUME/MUTATE/ACTIVATE labels
-- **Wave 1:** Added eval gate sequential animation (800ms per check)
-- **Wave 2:** Added "Simulate Failed Gate" button and BLOCKED banner
-- **Wave 5:** Added AgentEvolver panel (variant comparison bars, promotion status)
-- **Wave 6B:** Added operational impact metrics (what changed narrative, 5 impact cards: false escalation %, monthly reviews, hours recovered, monthly savings, missed threats)
+Props: `alertId`, `decisionId` (UUID), `isVisible`.
 
-**Key Components/Exports:**
-- `RuntimeEvolutionTab` - Main tab component
-  - Deployment registry table
-  - Process Alert button (ALERT-7823)
-  - Simulate Failed Gate button (v2 new)
-  - Eval Gate panel with sequential animation (v2: 800ms per check)
-  - BLOCKED banner (v2 new) - shown when eval gate fails
-  - Decision Trace panel
-  - **TRIGGERED_EVOLUTION panel (purple, THE KEY FEATURE)**
-  - **AgentEvolver panel (v2 new)** - Loop 2 visualization:
-    - Variant comparison bars (current vs previous)
-    - Promotion status badge
-    - What changed narrative (v2 Wave 6B)
-    - Operational impact cards (v2 Wave 6B): fewer escalations, hours recovered, monthly savings, missed threats
-  - Execution Stats
+States:
+1. **Initial** — "Confirmed Correct" / "Incorrect — Real Threat" buttons
+2. **Submitted** — shows `OutcomeResponse` with graph updates table, centroid update card, next_alerts_override, narrative
+3. **Already given** — immutable notice
 
-**Key Features:**
-- CMA labels (CONSUME/MUTATE badges)
-- Sequential gate animation (800ms timing)
-- Blocking demo simulation
-- Prompt evolution tracking
-- Operational impact visualization
+**Centroid update card** (VIS-2): shown when `result.centroid_update?.centroid_delta_norm > 0`.
+Includes bridge link button → navigates to Tab-2 via `vis2:navigate` event.
 
-**Dependencies:**
-```typescript
-import { useState, useEffect } from 'react'
-import { getDeployments, processAlert, processAlertBlocked } from '../../lib/api'
-import { Activity, CheckCircle, XCircle, AlertTriangle, Zap, Clock, Sparkles, Shield, TrendingUp, Lightbulb, DollarSign } from 'lucide-react'
+**Bridge link className:**
+```
+mt-3 flex items-center gap-2 px-3 py-2 rounded-md
+bg-purple-900/40 border border-purple-500/60
+text-purple-200 text-sm font-semibold
+hover:bg-purple-800/60 cursor-pointer w-fit
 ```
 
-**API Calls:**
-- GET /api/deployments
-- POST /api/alert/process
-- POST /api/alert/process-blocked (v2 new)
+#### `PolicyConflict.tsx`
+`PolicyDefinition`, `PolicyResolution`, `PolicyConflictData`. Shows winning/losing policy with reason.
 
-**Tab Support:** Tab 2 (Runtime Evolution) ★ THE DIFFERENTIATOR
+#### `ROICalculator.tsx`
+Prospect input form + live ROI projection. `useCountUp()` hook for animated number display.
 
-**Lines:** ~710 (expanded from ~470)
-
-**Soundbites:**
-- "Splunk gets better rules. Our copilot gets **smarter**."
-- "Loop 2 makes the agent smarter ACROSS decisions by learning which prompts work best."
+#### `SimulationPanel.tsx` — SIM-2 Batch Simulation
+Configurable N-alert simulation at speed_ms. Real-time per-category learning curves. Export to JSON/CSV.
 
 ---
 
-#### `frontend/src/components/tabs/AlertTriageTab.tsx`
+### Libraries
 
-**Purpose:** Tab 3 - Graph-based alert triage with closed-loop execution.
+#### `lib/domain.ts` — `domainConfig` (single source of truth)
 
-**v2 Updates:**
-- **Wave 1:** Added CONSUME/MUTATE/ACTIVATE label
-- **Wave 4:** Added Situation Analyzer panel (type badge, factors, options bar chart, reasoning)
-- **Wave 6A:** Added decision economics (time/cost/risk columns in options, economics summary box)
+| Key | Value |
+|-----|-------|
+| `name` | `"soc"` |
+| `displayName` | `"SOC Copilot"` |
+| `triggerEntity` | `"Alert"` |
+| `defaultAlertId` | `"ALERT-7823"` |
+| `metrics.hrsSavedMonthly` | `847` |
+| `metrics.costAvoidedQuarterly` | `127000` |
+| `metrics.mttrReductionPct` | `75` |
+| `metrics.backlogEliminated` | `2400` |
+| `loop3BadgeLabel` | `"Security-first: penalty 20× reward"` |
 
-**Key Components/Exports:**
-- `AlertTriageTab` - Main tab component
-  - Alert Queue sidebar (5+ alerts, v2: includes ALERT-7824 phishing)
-  - **Situation Analyzer panel (v2 new):**
-    - Situation type badge with color coding
-    - Key factors list
-    - Options bar chart with confidence %
-    - **Decision economics (v2 Wave 6A):** time, cost, risk per option
-    - Situation reasoning text
-    - **Economics summary (v2 Wave 6A):** time saved, cost avoided, monthly projection
-  - Simple graph visualization (colored boxes)
-  - Recommendation panel
-  - Closed Loop Execution panel (4 steps)
+#### `lib/api.ts` — 43 exported API functions
 
-**Key Features:**
-- CMA label (ACTIVATE badge)
-- Situation classification (6 types)
-- Multi-option evaluation
-- Decision economics visualization
-- Sequential animation (800ms per step)
-
-**Dependencies:**
-```typescript
-import { useState, useEffect } from 'react'
-import { getAlerts, analyzeAlert, executeAction } from '../../lib/api'
-import { Shield, AlertCircle, CheckCircle, Clock, Database, FileText, Activity, TrendingUp, DollarSign } from 'lucide-react'
-```
-
-**API Calls:**
-- GET /api/triage/alerts
-- POST /api/triage/analyze
-- POST /api/triage/execute
-
-**Tab Support:** Tab 3 (Alert Triage)
-
-**Lines:** ~680 (expanded from ~518)
-
-**Soundbite:** "A SIEM stops at detect. We **close the loop**."
+| Group | Functions |
+|-------|-----------|
+| SOC Analytics | `queryMetric`, `getThreatLandscape`, `getAttackTacticBreakdown` |
+| Runtime Evolution | `getDeployments`, `processAlert`, `processAlertBlocked`, `simulateFailedGate`, `getRewardSummary` |
+| Alert Triage | `getAlerts`, `analyzeAlert`, `executeAction`, `resetAlerts`, `getDecisionFactors` |
+| Simulation | `startSimulation`, `getSimulationProgress`, `getSimulationResult`, `getSimulationExperimentLog` |
+| Compounding | `getCompoundingMetrics`, `getEvolutionEvents`, `resetDemoData`, `resetAllDemoData`, `reseedDemoData`, `getWeightHistory`, `getConfidenceTrajectory`, `getTrustScores` |
+| GAE Learning | `getGAEWeights`, `getGAEHistory`, `getGAEConvergence`, `getGAEConfidenceTrajectory`, `getGAETrustCurve`, `getGAEBeforeAfter`, `getGAEWeightEvolution` |
+| ROI | `getROIDefaults`, `calculateROI` |
+| Outcome Feedback | `getOutcomeStatus`, `reportOutcome` |
+| Policy | `checkPolicyConflict` |
+| Graph Intel | `refreshThreatIntel`, `getEnrichmentSummary`, `getAlertEnrichment` |
+| Audit | `getAuditDecisions`, `verifyAuditChain` |
 
 ---
 
-#### `frontend/src/components/tabs/CompoundingTab.tsx`
+## SOC Domain Configuration
 
-**Purpose:** Tab 4 - Compounding intelligence dashboard proving the moat.
+### Categories (6)
+| Index | Key | Display |
+|-------|-----|---------|
+| 0 | `credential_access` | Credential Access |
+| 1 | `threat_intel_match` | Threat Intel Match |
+| 2 | `lateral_movement` | Lateral Movement |
+| 3 | `data_exfiltration` | Data Exfiltration |
+| 4 | `insider_threat` | Insider Threat |
+| 5 | `cloud_infrastructure` | Cloud Infrastructure |
 
-**v2 Updates:**
-- **Wave 1:** Added counter animations (3-second count-up with ease-out)
-- **Wave 6C:** Added business impact banner (847 hrs saved, $127K avoided, 75% MTTR reduction, 2,400 backlog eliminated) with animated counters
-- **Wave 6D:** Replaced two-loop visual with hero diagram (dark theme, center graph with pulse, Loop 1 & 2 panels, TRIGGERED_EVOLUTION badge, stats row)
+### Actions (4)
+| Index | Key | Agent action(s) |
+|-------|-----|----------------|
+| 0 | `escalate` | `escalate_incident`, `escalate_tier2` |
+| 1 | `investigate` | `enrich_and_wait` |
+| 2 | `suppress` | `auto_remediate`, `false_positive_close` |
+| 3 | `monitor` | watch for patterns |
 
-**Key Components/Exports:**
-- `CompoundingTab` - Main tab component
-  - `useCountUp` hook (v2 new) - custom counter animation with ease-out
-  - **Business Impact Banner (v2 Wave 6C):**
-    - 4 animated metric cards (analyst hours, cost avoided, MTTR reduction, backlog eliminated)
-    - Executive summary styling
-    - CFO reporting focus
-  - **The Headline** - Week 1 vs Week 4 visual comparison (with animated counters)
-  - **Weekly Trend Chart** - Recharts LineChart
-  - **Two-Loop Hero Diagram (v2 Wave 6D):**
-    - Dark slate background
-    - Center: Context Graph (Neo4j) with pulse animation
-    - Left: Loop 1 - Situation Analyzer (blue theme)
-    - Right: Loop 2 - Agent Evolver (purple theme)
-    - Bottom: TRIGGERED_EVOLUTION connection badge
-    - Stats row: Situation types (2→6), Prompt variants (0→4), Cross-alert patterns (47 travel, 31 phishing)
-  - **Recent Evolution Events** - Timeline
-  - **The Moat Message** - Purple-to-blue gradient banner
-  - **Reset Demo Button** - Comprehensive reset
+### Factors (6)
+| Index | Key | Meaning |
+|-------|-----|---------|
+| 0 | `travel_match` | Active travel vs. login geography |
+| 1 | `asset_criticality` | Asset importance score |
+| 2 | `threat_intel_enrichment` | Threat feed signal strength |
+| 3 | `pattern_history` | Historical behavioral pattern match |
+| 4 | `time_anomaly` | Off-hours / anomalous timing |
+| 5 | `device_trust` | Device fingerprint trust score |
 
-**Key Features:**
-- Counter animations (3 seconds, ease-out)
-- Business impact visualization
-- Two-loop architectural diagram
-- Visual graph growth
-- Evolution event timeline
-
-**Dependencies:**
-```typescript
-import { useEffect, useState } from 'react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { getCompoundingMetrics, resetAllDemoData } from '../../lib/api'
-import { TrendingUp, Database, Activity, RefreshCw, Clock, DollarSign, TrendingDown, CheckCircle } from 'lucide-react'
-```
-
-**API Calls:**
-- GET /api/metrics/compounding?weeks=4
-- POST /api/demo/reset-all
-
-**Tab Support:** Tab 4 (Compounding Dashboard)
-
-**Lines:** ~680 (expanded from ~417)
-
-**Soundbites:**
-- "When they deploy, they start at zero. We start at **127 patterns**."
-- "SIEMs get better rules. Our copilot **becomes** a better copilot."
+### ProfileScorer Shape
+`μ` tensor shape: **(6 categories × 4 actions × 6 factors)**
+- Temperature τ = 0.1 (V3B validated, ECE = 0.036)
+- Asymmetry: penalty_ratio = 20.0 (false negative 20× worse than false positive)
+- Learning rate: 0.02
 
 ---
 
-### API Client
+## GAE Library Imports
 
-#### `frontend/src/lib/api.ts`
+The `gae` package is installed via `pip install -e ../../graph-attention-engine`.
 
-**Purpose:** Centralized API client for all backend communication.
-
-**v2 Updates:**
-- Added processAlertBlocked() function for blocking demo
-
-**Key Functions/Exports:**
-
-**Helper:**
-- `fetchJSON<T>(url, options)` - Typed fetch wrapper
-
-**Tab 1: SOC Analytics**
-- `queryMetric(query: string)` - POST /api/soc/query
-
-**Tab 2: Runtime Evolution**
-- `getDeployments()` - GET /api/deployments
-- `processAlert(alertId, simulateFailure)` - POST /api/alert/process
-- `processAlertBlocked(alertId)` - POST /api/alert/process-blocked (v2 new)
-
-**Tab 3: Alert Triage**
-- `getAlerts()` - GET /api/triage/alerts
-- `analyzeAlert(alertId)` - POST /api/triage/analyze
-- `executeAction(alertId, action)` - POST /api/triage/execute
-
-**Tab 4: Compounding Metrics**
-- `getCompoundingMetrics(weeks)` - GET /api/metrics/compounding?weeks=4
-- `getEvolutionEvents(limit)` - GET /api/metrics/evolution-events?limit=10
-- `resetAllDemoData()` - POST /api/demo/reset-all (v2 new)
-
-**Dependencies:**
-```typescript
-// None - pure TypeScript
+```python
+from gae.scoring import score_alert, ScoringResult
+from gae.learning import LearningState, WeightUpdate, CalibrationProfile
+from gae.factors import FactorComputer, assemble_factor_vector
+from gae.contracts import SchemaContract, PropertySpec
+from gae.store import save_state, load_state
+from gae.convergence import get_convergence_metrics
+from gae.evaluation import EvaluationScenario, EvaluationReport, run_evaluation
+from gae.judgment import compute_judgment
 ```
 
-**Tab Support:** All tabs (API abstraction layer)
-
-**Lines:** ~110 (expanded from ~90)
+**Rule**: No GAE math in copilot code — always delegate to `gae.*` library functions.
 
 ---
 
-## Dependency Diagram
-
-### Backend Dependency Flow (v2)
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         main.py                                 │
-│                    (FastAPI Entry Point)                        │
-│                                                                 │
-│  Registers: evolution, triage, soc, metrics routers            │
-│  Manages: Neo4j connection lifecycle                           │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        ▼                     ▼                     ▼
-┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-│  evolution.py    │  │    triage.py     │  │     soc.py       │
-│  (Tab 2 API)     │  │  (Tab 3 API)     │  │  (Tab 1 API)     │
-│                  │  │                  │  │                  │
-│  Imports:        │  │  Imports:        │  │  Imports:        │
-│  • agent.py      │  │  • agent.py      │  │  • datetime      │
-│  • reasoning.py  │  │  • reasoning.py  │  │  • pydantic      │
-│  • situation.py ★│  │  • situation.py ★│  │                  │
-│  • evolver.py ★  │  │  • neo4j.py      │  │  No external     │
-│  • neo4j.py      │  │  • schemas.py    │  │  dependencies    │
-│  • schemas.py    │  └──────────────────┘  └──────────────────┘
-└──────────────────┘           │
-        │                      └──────────────┐
-        └─────────────────────┼───────────────┼─────────────────┐
-                              ▼               ▼                 ▼
-                    ┌──────────────────┐  ┌──────────────────┐
-                    │   metrics.py     │  │   situation.py ★ │
-                    │  (Tab 4 API)     │  │ (Loop 1 Service) │
-                    │                  │  │                  │
-                    │  Imports:        │  │  Imports:        │
-                    │  • datetime      │  │  • schemas.py    │
-                    │  • pydantic      │  │  • pydantic      │
-                    └──────────────────┘  └──────────────────┘
-                              │                      │
-                              ▼                      ▼
-                    ┌──────────────────┐  ┌──────────────────┐
-                    │   evolver.py ★   │  │   agent.py       │
-                    │ (Loop 2 Service) │  │ (Decision Engine)│
-                    │                  │  │                  │
-                    │  Imports:        │  │  Imports:        │
-                    │  • pydantic      │  │  • schemas.py    │
-                    └──────────────────┘  └──────────────────┘
-                                                   │
-                                                   ▼
-                                          ┌──────────────────┐
-                                          │  reasoning.py    │
-                                          │ (LLM Narration)  │
-                                          │                  │
-                                          │  Imports:        │
-                                          │  • schemas.py    │
-                                          │  • Vertex AI     │
-                                          └──────────────────┘
-                                                   │
-                    ┌──────────────────────────────┤
-                    ▼                              ▼
-           ┌──────────────────┐         ┌──────────────────┐
-           │    neo4j.py      │         │   schemas.py     │
-           │  (Graph Client)  │         │ (Pydantic Models)│
-           │                  │         │                  │
-           │  Imports:        │         │  Imports:        │
-           │  • schemas.py    │         │  • pydantic      │
-           │  • neo4j driver  │         │  • typing        │
-           └──────────────────┘         └──────────────────┘
-
-★ = New in v2
-```
-
-### Frontend Dependency Flow (v2)
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         main.tsx                                │
-│                    (React Entry Point)                          │
-│                                                                 │
-│  Mounts: <App />                                                │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                          App.tsx                                │
-│                      (4-Tab Navigation)                         │
-│                         v2.0 ★                                  │
-│                                                                 │
-│  Manages: Active tab state                                      │
-│  Renders: Tab components conditionally                          │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        ▼                     ▼                     ▼
-┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-│SOCAnalyticsTab   │  │RuntimeEvolution  │  │ AlertTriageTab   │
-│    (Tab 1)       │  │    Tab (Tab 2) ★ │  │    (Tab 3) ★     │
-│                  │  │                  │  │                  │
-│  Imports:        │  │  v2 adds:        │  │  v2 adds:        │
-│  • api.ts        │  │  • CMA labels    │  │  • CMA label     │
-│  • Recharts      │  │  • Animation     │  │  • Situation     │
-│  • lucide-react  │  │  • Blocking      │  │    panel         │
-│                  │  │  • AgentEvolver  │  │  • Economics     │
-└──────────────────┘  └──────────────────┘  └──────────────────┘
-        │                      │                     │
-        └──────────────────────┼─────────────────────┘
-                               ▼                     │
-                    ┌──────────────────┐            │
-                    │ CompoundingTab ★ │            │
-                    │    (Tab 4)       │            │
-                    │                  │            │
-                    │  v2 adds:        │            │
-                    │  • Counters      │            │
-                    │  • Impact banner │            │
-                    │  • Hero diagram  │            │
-                    └──────────────────┘            │
-                               │                    │
-                               └────────────────────┘
-                                        ▼
-                               ┌──────────────────┐
-                               │     api.ts ★     │
-                               │  (API Client)    │
-                               │                  │
-                               │  v2 adds:        │
-                               │  • processAlert  │
-                               │    Blocked()     │
-                               │  • resetAllDemo  │
-                               │    Data()        │
-                               └──────────────────┘
-
-★ = Enhanced in v2
-```
-
----
-
-## Tab Support Matrix (v2)
-
-| File | Tab 1 | Tab 2 | Tab 3 | Tab 4 | Purpose |
-|------|-------|-------|-------|-------|---------|
-| **Backend** |
-| `main.py` | ✓ | ✓ | ✓ | ✓ | Application entry |
-| `routers/soc.py` | ✓ | - | - | - | Natural language queries |
-| `routers/evolution.py` | - | ✓ | - | - | Runtime evolution ★ |
-| `routers/triage.py` | - | - | ✓ | - | Alert triage |
-| `routers/metrics.py` | - | - | - | ✓ | Compounding metrics |
-| `services/agent.py` | - | ✓ | ✓ | - | Decision engine |
-| `services/reasoning.py` | - | ✓ | ✓ | - | LLM narration |
-| `services/situation.py` ★ | - | ✓ | ✓ | - | Situation analysis (Loop 1) |
-| `services/evolver.py` ★ | - | ✓ | - | - | Agent evolution (Loop 2) |
-| `services/seed_neo4j.py` | - | ✓ | ✓ | - | Seed data module |
-| `db/neo4j.py` | - | ✓ | ✓ | - | Graph operations |
-| `models/schemas.py` | ✓ | ✓ | ✓ | ✓ | Data validation |
-| `seed_neo4j.py` | - | ✓ | ✓ | - | Demo data |
-| **Frontend** |
-| `main.tsx` | ✓ | ✓ | ✓ | ✓ | React entry |
-| `App.tsx` | ✓ | ✓ | ✓ | ✓ | Tab navigation (v2.0) |
-| `tabs/SOCAnalyticsTab.tsx` | ✓ | - | - | - | Tab 1 UI |
-| `tabs/RuntimeEvolutionTab.tsx` | - | ✓ | - | - | Tab 2 UI ★ (CMA, blocking, evolver) |
-| `tabs/AlertTriageTab.tsx` | - | - | ✓ | - | Tab 3 UI (CMA, situation, economics) |
-| `tabs/CompoundingTab.tsx` | - | - | - | ✓ | Tab 4 UI (counters, impact, diagram) |
-| `lib/api.ts` | ✓ | ✓ | ✓ | ✓ | API client |
-
-★ = New or significantly enhanced in v2
-
----
-
-## Key Architectural Patterns
-
-### 1. Simple Rule-Based Agent
-**Files:** `services/agent.py`
-
-The agent is intentionally simple (~250 lines) with deterministic rules. This proves the ARCHITECTURE, not agent sophistication.
-
-**Why:**
-- Demo reliability (same input → same output)
-- Auditability (CISOs can explain decisions)
-- Faster build (no complex LLM orchestration)
-- Clear separation (architecture ≠ AI magic)
-
-### 2. LLM as Narrator Only
-**Files:** `services/reasoning.py`
-
-Gemini 1.5 Pro generates justification AFTER the decision is made. This is "intelligence theater."
-
-**Why:**
-- Decision already made by rules
-- LLM makes rules sound like expert analysis
-- Fallback templates ensure reliability
-- No LLM = no demo breakage
-
-### 3. Fixed Cypher Queries
-**Files:** `db/neo4j.py`
-
-All Neo4j queries are fixed, no dynamic generation.
-
-**Why:**
-- Predictable results (47 nodes always)
-- Faster execution
-- Safer (no injection risks)
-- Demo reliability
-
-### 4. TRIGGERED_EVOLUTION Relationship
-**Files:** `db/neo4j.py`, `routers/evolution.py`
-
-The key differentiator: `(:Decision)-[:TRIGGERED_EVOLUTION]->(:EvolutionEvent)`
-
-**Why:**
-- SIEMs don't have this
-- Proves compounding intelligence
-- Visual in Tab 2 (purple panel)
-- The moat
-
-### 5. Two-Loop Architecture (v2)
-**Files:** `services/situation.py` (Loop 1), `services/evolver.py` (Loop 2)
-
-**Loop 1 - Situation Analyzer:** Smarter WITHIN each decision
-- Classifies situations (6 types)
-- Evaluates multiple options
-- Provides decision economics
-
-**Loop 2 - Agent Evolver:** Smarter ACROSS all decisions
-- Tracks prompt variant performance
-- Promotes better variants automatically
-- Computes operational impact
-
-**Both loops write to the same graph → COMPOUNDING**
-
----
-
-## File Size Summary (v2)
-
-| Category | Files | Total Lines | Avg Lines/File |
-|----------|-------|-------------|----------------|
-| **Backend Routers** | 4 | ~1,553 | ~388 |
-| **Backend Services** | 5 | ~1,360 | ~272 |
-| **Backend DB** | 1 | ~300 | ~300 |
-| **Backend Models** | 1 | ~550 | ~550 |
-| **Backend Utils** | 1 | ~250 | ~250 |
-| **Frontend Tabs** | 4 | ~2,546 | ~637 |
-| **Frontend Core** | 2 | ~90 | ~45 |
-| **Frontend API** | 1 | ~110 | ~110 |
-| **Total** | **19** | **~6,759** | **~356** |
-
-*Note: v2 added 2 new service files (situation.py, evolver.py) and significantly expanded existing files.*
-
----
-
-## v2 Git Workflow
-
-### Branch Structure
-```
-main (v1.0 frozen, tag: v1.0)
-  └── feature/v2-enhancements (v2 development)
-```
+## Environment & Runtime
 
 ### Ports
-- **Backend:** 8001 (v1 uses 8000)
-- **Frontend:** 5174 (v1 uses 5173)
+- Backend: **8000** (uvicorn)
+- Frontend: **5174** (vite)
 
 ### Commands
 ```bash
-# Start v2 backend
+# Backend
 cd backend
-uvicorn app.main:app --reload --port 8001
+uvicorn app.main:app --reload --port 8000
 
-# Start v2 frontend
+# Frontend
 cd frontend
 npx vite --port 5174
 
-# View v2 in browser
-http://localhost:5174
+# Seed Neo4j
+python backend/seed_neo4j.py
 ```
 
----
+### Environment Variables
+| Variable | Purpose |
+|----------|---------|
+| `NEO4J_URI` | Neo4j Aura connection URI |
+| `NEO4J_USER` | Neo4j username |
+| `NEO4J_PASSWORD` | Neo4j password |
+| `PROJECT_ID` | GCP project (Vertex AI) |
+| `VERTEX_AI_LOCATION` | Vertex AI region (default: `us-central1`) |
 
-## Critical Dependencies
+### Branches
+- **Working branch:** `v5.0-dev`
+- **PR target (main):** `v4.5-dev`
 
-### Backend
-```
-fastapi==0.104.1
-pydantic==2.5.0
-neo4j==5.14.0
-google-cloud-aiplatform==1.38.0
-python-dotenv==1.0.0
-```
-
-### Frontend
-```
-react@18.2.0
-typescript@5.2.2
-recharts@2.10.3
-lucide-react@0.294.0
-tailwindcss@3.3.5
-```
-
----
-
-## Environment Variables
-
-```bash
-# GCP
-PROJECT_ID=soc-copilot-demo
-REGION=us-central1
-
-# Neo4j Aura
-NEO4J_URI=neo4j+s://xxxxx.databases.neo4j.io
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=your-password
-
-# Vertex AI
-VERTEX_AI_LOCATION=us-central1
-```
-
----
-
-## The Five Key Files (Core v2 Demo)
-
-If you read only 5 files to understand the v2 demo:
-
-1. **`routers/evolution.py`** - The entire Tab 2 flow including situation, evolution, and blocking
-2. **`services/situation.py`** ★ - Loop 1: Situation Analyzer with decision economics
-3. **`services/evolver.py`** ★ - Loop 2: AgentEvolver with operational impact
-4. **`services/agent.py`** - The simple decision engine proving architecture > sophistication
-5. **`tabs/RuntimeEvolutionTab.tsx`** - The UI showing both loops and their value
-
-These 5 files (~1,570 lines) contain the core v2 demo thesis.
-
----
-
-**Last Updated:** February 17, 2026
-**Status:** v2.0 Wave 6 Complete — All tabs operational with business impact features
-**Total Code:** ~6,759 lines across 19 core files
-**Key Principle:** The demo proves the ARCHITECTURE (two loops → compounding), not agent sophistication.
-**v2 Focus:** Making the business impact visible to CISOs and CFOs through decision economics and operational metrics.
+### Key Design Rules (from CLAUDE.md)
+- Factor Cypher queries MUST traverse relationships, not read properties (P10)
+- Every graph mutation (decision, outcome) MUST emit events
+- `f(t)` stored in graph (Decision node), not in-memory cache (R4)
+- No GAE math in copilot — use `gae.scoring`, `gae.learning`, `gae.factors`

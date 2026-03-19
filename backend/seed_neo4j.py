@@ -1361,6 +1361,11 @@ async def seed_data():
     from app.data.alert_pool import seed_simulation_alerts
     await seed_simulation_alerts()
 
+    # Ensure ALL ThreatIntel nodes (including those from seed_simulation_alerts)
+    # carry the ThreatIndicator label so ThreatIndicatorService queries work.
+    # Idempotent — nodes already labelled are unaffected.
+    await neo4j_client.run_query("MATCH (ti:ThreatIntel) SET ti:ThreatIndicator")
+
     print("[SUCCESS] Sample data created successfully!")
     print("\nCreated:")
     print("  - 4 Users (John Smith, Alice Lee, Mike Chen, Mary Chen)")
@@ -1556,6 +1561,9 @@ async def _seed_gae_factor_data():
         MATCH (a:Alert {id: 'ALERT-7825'})
         MERGE (ti)-[:ASSOCIATED_WITH]->(a)
     """)
+
+    # Add ThreatIndicator label so ThreatIndicatorService queries work on seeded nodes
+    await neo4j_client.run_query("MATCH (ti:ThreatIntel) SET ti:ThreatIndicator")
 
     print("  [GAE-OK] ThreatIntel nodes + [:ASSOCIATED_WITH] edges: ALERT-7824, ALERT-7821, ALERT-7825")
 

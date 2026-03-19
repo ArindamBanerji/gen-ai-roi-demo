@@ -1,8 +1,8 @@
 """
 verify_seed_data.py — Standalone Neo4j seed verification.
 
-Verifies that the SIM alert seed (20 original + 5 HC = 25 alerts) and all
-associated healthcare graph entities are present in Neo4j.
+Verifies that the SIM alert seed (20 alerts, 5 categories) and all
+associated graph entities are present in Neo4j.
 
 Usage (from backend/):
     python -m app.scripts.verify_seed_data
@@ -52,79 +52,28 @@ async def _q(driver, cypher: str) -> list:
 #   • a.id        not a.alert_id  (Alert nodes use 'id' as their key)
 #   • u.id        not u.user_id   (User nodes use 'id' as their key)
 #   • a.id        not a.asset_id  (Asset nodes use 'id' as their key)
-#   • ti.source = 'health_isac'  not 'Health-ISAC'  (stored lowercase in seed)
-#   • CHECK 7: 'category' is a Python-only field; not written to graph.
+#   • CHECK 1: 'category' is a Python-only field; not written to graph.
 #              Uses presence of one representative alert per category instead.
-#   • CHECK 8: AlertType nodes use {id: 'lateral_movement'}, name='Lateral Movement'
+#   • CHECK 2: AlertType nodes use {id: 'lateral_movement'}, name='Lateral Movement'
 # ---------------------------------------------------------------------------
 
 _CHECKS = [
     {
         "id":       1,
-        "name":     "Total SIM alert pool",
-        "cypher":   "MATCH (a:Alert) WHERE a.id STARTS WITH 'SIM-' RETURN count(a) AS n",
-        "op":       ">=",
-        "expected": 25,
-        "note":     "20 original SIM + 5 HC",
-    },
-    {
-        "id":       2,
-        "name":     "Healthcare users (sim-hc-*)",
-        "cypher":   "MATCH (u:User) WHERE u.id STARTS WITH 'sim-hc' RETURN count(u) AS n",
-        "op":       "==",
-        "expected": 3,
-    },
-    {
-        "id":       3,
-        "name":     "Healthcare assets (SIM-ASSET-HC-*)",
-        "cypher":   "MATCH (a:Asset) WHERE a.id STARTS WITH 'SIM-ASSET-HC' RETURN count(a) AS n",
-        "op":       "==",
-        "expected": 3,
-    },
-    {
-        "id":       4,
-        "name":     "PHI DataClass with [:STORES] edge",
-        "cypher":   (
-            "MATCH (a:Asset)-[:STORES]->(dc:DataClass) "
-            "WHERE dc.sensitivity = 'PHI' RETURN count(a) AS n"
-        ),
-        "op":       ">=",
-        "expected": 1,
-    },
-    {
-        "id":       5,
-        "name":     "Health-ISAC ThreatIntel nodes",
-        "cypher":   "MATCH (ti:ThreatIntel) WHERE ti.source = 'health_isac' RETURN count(ti) AS n",
-        "op":       ">=",
-        "expected": 1,
-        "note":     "source stored as 'health_isac' (lowercase with underscore)",
-    },
-    {
-        "id":       6,
-        "name":     "HC alert [:CLASSIFIED_AS] edges",
-        "cypher":   (
-            "MATCH (a:Alert)-[:CLASSIFIED_AS]->(at:AlertType) "
-            "WHERE a.id STARTS WITH 'SIM-HC' RETURN count(a) AS n"
-        ),
-        "op":       "==",
-        "expected": 5,
-    },
-    {
-        "id":       7,
-        "name":     "All 6 alert categories present (by representative ID)",
+        "name":     "All 5 alert categories present (by representative ID)",
         # 'category' is not stored as a graph property; verify by checking
-        # that one representative alert from each of the 6 categories exists.
+        # that one representative alert from each of the 5 categories exists.
         "cypher":   (
             "MATCH (a:Alert) WHERE a.id IN ["
             "'SIM-CA-001', 'SIM-TI-001', 'SIM-LM-001', "
-            "'SIM-DE-001', 'SIM-IT-001', 'SIM-HC-001'"
+            "'SIM-DE-001', 'SIM-IT-001'"
             "] RETURN count(a) AS n"
         ),
         "op":       "==",
-        "expected": 6,
+        "expected": 5,
         "note":     (
             "representative IDs: CA=credential_access, TI=threat_intel_match, "
-            "LM=lateral_movement, DE=data_exfiltration, IT=insider_threat, HC=healthcare"
+            "LM=lateral_movement, DE=data_exfiltration, IT=insider_threat"
         ),
     },
     {

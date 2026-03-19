@@ -19,6 +19,7 @@ from app.services.triage import get_decision_factors, append_confidence_snapshot
 from app.services.audit import record_decision
 from app.services.event_bus import event_bus, DecisionMade, OutcomeVerified, GraphMutated
 from app.services.gae_state import get_learning_state, save_learning_state, get_profile_scorer
+import dataclasses
 import numpy as np
 from app.core.state_manager import state_manager
 from app.db.neo4j import neo4j_client
@@ -28,6 +29,7 @@ from app.domains.soc.config import (
     SOC_AUTO_APPROVE_THRESHOLDS,
     SOC_CATEGORY_CONFIDENCE_FLOORS,
     SOC_AGENT_ZONE_ELEVATED,
+    LEARNING_ENABLED,
 )
 from app.domains.soc.orchestrator import compute_factor_vector
 from gae.scoring import score_alert
@@ -131,7 +133,7 @@ async def analyze_alert(request: ProcessAlertRequest):
         # ====================================================================
         # Step 3: Situation Analysis (Loop 1: Context Intelligence)
         # ====================================================================
-        alert_type = context.get("alert_type")
+        alert_type = context.get("alert_type") or "unknown"
         situation_analysis = analyze_situation(alert_type, context)
 
         # ====================================================================
@@ -149,22 +151,40 @@ async def analyze_alert(request: ProcessAlertRequest):
         # W       = get_learning_state().W
         # scoring = score_alert(f_2d, W, actions, tau)
 
-        actions = SOCDomainConfig.get_actions()      # ["escalate", "investigate", "suppress", "monitor"]
-        tau     = SOCDomainConfig.get_temperature()  # 0.25 (kept for gae_scoring.temperature field)
+        actions = SOCDomainConfig.get_actions()      # ["escalate", "investigate", "suppress", "monitor", "refer_to_analyst"]
+        tau     = SOCDomainConfig.get_temperature()  # τ=0.1 (V3B validated, ECE=0.036)
 
         # v5.0: ProfileScorer centroid-proximity scoring (EXP-E1 validated L2, τ=0.1)
         _scorer = get_profile_scorer()
         _cfg = SOCDomainConfig()
-        alert_category = alert_type  # alert_type already resolved above from context
-        try:
-            _cat_idx = _cfg.get_category_index(alert_category)
-        except ValueError:
-            logger.warning(
-                "[TRIAGE-v5] Unknown alert category %r — defaulting to category_index=0",
-                alert_category,
-            )
-            _cat_idx = 0
+        # CORR-1: resolve alert_type → category via explicit map (not direct equality)
+        from app.domains.soc.config import resolve_alert_category
+        alert_category = resolve_alert_category(alert_type)
+        _cat_idx = _cfg.get_category_index(alert_category)
         _scoring_result = _scorer.score(f.flatten(), category_index=_cat_idx)
+
+        # ReferralPolicy gate (v5.5): if refer_to_analyst wins but policy blocks it,
+        # fall back to the second-best action via get_fallback_action().
+        from app.services.referral_policy import should_refer_to_analyst, get_fallback_action as _get_fallback
+        if _scoring_result.action_index == 4:  # REFER_ACTION_INDEX
+            _may_refer = should_refer_to_analyst(
+                probabilities=_scoring_result.probabilities,
+                confidence=_scoring_result.confidence,
+                action_index=_scoring_result.action_index,
+                category=alert_category,
+                factors=f.flatten(),
+            )
+            if not _may_refer:
+                _fb_idx = _get_fallback(_scoring_result.probabilities)
+                _scoring_result = dataclasses.replace(
+                    _scoring_result,
+                    action_index=_fb_idx,
+                    action_name=actions[_fb_idx],
+                )
+                logger.info(
+                    "[TRIAGE-v5] refer_to_analyst blocked by policy — fallback to %s",
+                    actions[_fb_idx],
+                )
 
         selected_action = _scoring_result.action_name
         confidence = _scoring_result.confidence
@@ -175,7 +195,9 @@ async def analyze_alert(request: ProcessAlertRequest):
         _effective_threshold = _cat_floor if _cat_floor else _threshold
         _elevated = SOC_AGENT_ZONE_ELEVATED.get(alert_category, False)
 
-        if selected_action == "monitor":
+        if selected_action == "refer_to_analyst":
+            routing_zone = "human_review"   # graduated dispatch — always routes to human
+        elif selected_action == "monitor":
             routing_zone = "agent_zone"   # monitor never auto-approved
         elif _elevated:
             routing_zone = "agent_zone"   # threat_intel_match + cloud_infra elevated
@@ -223,6 +245,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                 action:        $action,
                 confidence:    $confidence,
                 factor_vector: $fv,
+                category:      $category,
                 timestamp:     datetime(),
                 outcome:       null
             })
@@ -234,6 +257,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                 "action":      selected_action,
                 "confidence":  confidence,
                 "fv":          fv_list,
+                "category":    alert_category,
             },
         )
         print(f"[GAE] Decision node written: id={decision_id} [:DECIDED_ON] {alert_id}")
@@ -253,7 +277,66 @@ async def analyze_alert(request: ProcessAlertRequest):
         ))
 
         # ====================================================================
-        # Step 7: Get graph data for visualization
+        # Step 7: Composite discriminant gate (Phase 5 / DISC-1)
+        # ====================================================================
+        from app.services.composite_gate import CompositeDiscriminant
+        from app.services.shadow_mode import ShadowModeService
+        try:
+            _composite = await CompositeDiscriminant.evaluate(
+                score_result=_scoring_result,
+                category=alert_category,
+                factor_vector=f.flatten(),
+                decision_position=0.0,
+                neo4j_service=neo4j_client,
+            )
+            if _composite["auto_approve"] and not ShadowModeService.SHADOW_ENABLED:
+                await neo4j_client.run_query(
+                    "MATCH (d:Decision {id: $id}) SET d.auto_approved = true",
+                    {"id": decision_id},
+                )
+        except Exception as _cg_exc:
+            logger.warning("[TRIAGE] composite gate failed: %s", _cg_exc)
+            _composite = {
+                "auto_approve": False,
+                "approval_score": 0.0,
+                "reason_codes": [f"gate error: {_cg_exc}"],
+                "features": {},
+            }
+
+        # ====================================================================
+        # Step 8a: Build factor provenance (Phase 6)
+        # ====================================================================
+        from app.services.provenance import ProvenanceService
+        try:
+            _prov = ProvenanceService.build_provenance(
+                decision_id=decision_id,
+                factor_names=[c.name for c in computers],
+                factor_values=fv_list,
+                category=alert_category,
+                action=selected_action,
+            )
+            _provenance_payload = {
+                "decision_id":           _prov.decision_id,
+                "category":              _prov.category,
+                "action":                _prov.action,
+                "total_nodes_consulted": _prov.total_nodes_consulted,
+                "factors": [
+                    {
+                        "factor_name":           fp.factor_name,
+                        "factor_value":          fp.factor_value,
+                        "computation_method":    fp.computation_method,
+                        "graph_nodes_consulted": fp.graph_nodes_consulted,
+                        "explanation":           fp.explanation,
+                    }
+                    for fp in _prov.factors
+                ],
+            }
+        except Exception as _prov_exc:
+            logger.warning("[TRIAGE] provenance build failed: %s", _prov_exc)
+            _provenance_payload = {"decision_id": decision_id, "factors": [], "error": str(_prov_exc)}
+
+        # ====================================================================
+        # Step 8: Get graph data for visualization
         # ====================================================================
         graph_data = await get_graph_data(alert_id)
 
@@ -341,12 +424,18 @@ async def analyze_alert(request: ProcessAlertRequest):
                 "routing_zone":         routing_zone,
                 "decision_method":      (
                     "ProfileScorer centroid-proximity scoring "
-                    "(6 factors × 4 actions × 6 categories, "
+                    "(6 factors × 5 actions × 6 categories, "
                     "L2 kernel τ=0.1, EXP-E1 validated)"
                 ),
             },
             "graph_data": graph_data,
-            "situation_analysis": situation_analysis.model_dump()
+            "situation_analysis": situation_analysis.model_dump(),
+            "composite_gate": {
+                "auto_approve":   _composite["auto_approve"],
+                "approval_score": _composite["approval_score"],
+                "reason_codes":   _composite["reason_codes"],
+            },
+            "provenance": _provenance_payload,
         }
         # ====================================================================
         # NAR-1: Build calibration_context and generate structured narrative
@@ -368,7 +457,7 @@ async def analyze_alert(request: ProcessAlertRequest):
         calibration_context = {
             "decision_count": _ls.decision_count,
             "category_count": _ls.decision_count,   # per-category not tracked yet
-            "category":       alert_data.get("alert_type", "unknown"),
+            "category":       alert_category,
             "top_factor":     _top_f,
             "bottom_factor":  _bot_f,
         }
@@ -638,12 +727,14 @@ async def report_decision_outcome(request: OutcomeRequest):
         gae_result = await neo4j_client.run_query(
             """
             MATCH (d:Decision {id: $decision_id})
+            OPTIONAL MATCH (d)-[:DECIDED_ON]->(a:Alert)
             SET d.outcome    = $outcome_label,
                 d.correct    = $correct,
                 d.verified_at = datetime()
             RETURN d.factor_vector AS factor_vector,
                    d.action        AS action,
-                   d.confidence    AS confidence
+                   d.confidence    AS confidence,
+                   coalesce(a.alert_type, 'unknown') AS alert_type
             """,
             {
                 "decision_id":  request.decision_id,
@@ -665,6 +756,7 @@ async def report_decision_outcome(request: OutcomeRequest):
             if isinstance(fv, list):
                 print(f"[GAE] factor_vector parsed: len={len(fv)}")
             action_name = record.get("action", "")
+            alert_type_for_cat = record.get("alert_type", "unknown")
             confidence_at_decision = float(record.get("confidence") or 0.0)
 
             if fv is None:
@@ -684,6 +776,41 @@ async def report_decision_outcome(request: OutcomeRequest):
                     confidence_at_decision=confidence_at_decision,
                 )
                 save_learning_state()
+
+                # CORR-2 fix: ProfileScorer.update() — gated by LEARNING_ENABLED (default False).
+                # gt_action_index = analyst's actual chosen action when provided;
+                # falls back to predicted action_index only when analyst_action is absent.
+                # is_correct is re-derived from the comparison so it stays consistent.
+                if LEARNING_ENABLED:
+                    from app.domains.soc.config import resolve_alert_category, SOCDomainConfig as _SDC_out
+                    _cat_name_out = resolve_alert_category(alert_type_for_cat)
+                    _cat_idx_out  = _SDC_out().get_category_index(_cat_name_out)
+                    _ps_out = get_profile_scorer()
+
+                    _analyst_action = request.analyst_action
+                    if _analyst_action and _analyst_action in actions:
+                        # Analyst supplied their action — authoritative GT
+                        _gt_idx  = actions.index(_analyst_action)
+                        _correct = (action_index == _gt_idx)
+                    else:
+                        # No analyst action: use outcome flag; GT = predicted (correct)
+                        # or unknown (incorrect — predicted is the best proxy available)
+                        _gt_idx  = action_index
+                        _correct = correct_bool
+
+                    _ps_out.update(
+                        f=f.flatten(),
+                        category_index=_cat_idx_out,
+                        action_index=action_index,
+                        correct=_correct,
+                        gt_action_index=_gt_idx,
+                    )
+                    print(
+                        f"[GAE][LEARN] ProfileScorer.update called: "
+                        f"action={action_name} analyst_action={_analyst_action!r} "
+                        f"gt_action_index={_gt_idx} correct={_correct} "
+                        f"category={_cat_name_out}"
+                    )
 
                 # Change 5: ProfileSnapshot every 50 decisions
                 from app.services.snapshots import maybe_write_profile_snapshot
@@ -1035,7 +1162,7 @@ async def get_graph_data(alert_id: str) -> Dict[str, Any]:
     MATCH (alert:Alert {id: $alert_id})
     MATCH (alert)-[:DETECTED_ON]->(asset:Asset)
     MATCH (alert)-[:INVOLVES]->(user:User)
-    MATCH (alert)-[:CLASSIFIED_AS]->(alertType:AlertType)
+    OPTIONAL MATCH (alert)-[:CLASSIFIED_AS]->(alertType:AlertType)
     OPTIONAL MATCH (user)-[:HAS_TRAVEL]->(travel:TravelContext)
     OPTIONAL MATCH (alert)-[:MATCHES]->(pattern:AttackPattern)
     OPTIONAL MATCH (alertType)-[:HANDLED_BY]->(playbook:Playbook)

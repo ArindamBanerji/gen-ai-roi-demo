@@ -21,11 +21,11 @@ from typing import Any, Callable, Coroutine, Dict, List, Optional
 
 import numpy as np
 
-from app.domains.soc.config import SOCDomainConfig
+from app.domains.soc.config import SOCDomainConfig, LEARNING_ENABLED
 from app.domains.soc.orchestrator import compute_factor_vector
 from app.services.audit import record_decision as audit_record_decision
 from app.services.event_bus import event_bus, DecisionMade, OutcomeVerified, GraphMutated
-from app.services.gae_state import get_learning_state, save_learning_state
+from app.services.gae_state import get_learning_state, save_learning_state, get_profile_scorer
 from gae.scoring import score_alert
 
 
@@ -41,8 +41,7 @@ _ORACLE_SUCCESS_RATES: Dict[str, float] = {
     "lateral_movement":   0.65,
     "data_exfiltration":  0.70,
     "insider_threat":     0.55,
-    "healthcare":         0.65,
-    # Legacy alert_type fallbacks (used when category is not one of the 6 above)
+    # Legacy alert_type fallbacks (used when category is not one of the 5 above)
     "anomalous_login":    0.85,
     "phishing":           0.90,
     "malware":            0.80,
@@ -64,7 +63,6 @@ _ATTACK_TECHNIQUES: Dict[str, str] = {
     "lateral_movement":     "T1021 - Remote Services",
     "data_exfiltration":    "T1048 - Exfiltration Over Alternative Protocol",
     "insider_threat":       "T1078.004 - Valid Accounts: Cloud Accounts",
-    "healthcare":           "T1530 - Data from Cloud Storage Object",
     # Legacy alert_type fallbacks
     "anomalous_login":      "T1078 - Valid Accounts",
     "phishing":             "T1566 - Phishing",
@@ -397,6 +395,21 @@ class SimulationOrchestrator:
                 confidence_at_decision = scoring.confidence,
             )
             save_learning_state()
+
+            # CORR-2: ProfileScorer.update() — gated by LEARNING_ENABLED (default False).
+            # gt_action_index derived from ground_truth_action (always available in simulation).
+            if LEARNING_ENABLED:
+                from app.domains.soc.config import resolve_alert_category, SOCDomainConfig as _SDC_sim
+                _cat_name_sim = resolve_alert_category(category)
+                _cat_idx_sim  = _SDC_sim().get_category_index(_cat_name_sim)
+                _gt_idx_sim   = actions.index(ground_truth_action) if ground_truth_action in actions else action_index
+                get_profile_scorer().update(
+                    f=f_for_update.flatten(),
+                    category_index=_cat_idx_sim,
+                    action_index=action_index,
+                    correct=correct,
+                    gt_action_index=_gt_idx_sim,
+                )
 
             # ------------------------------------------------------------------
             # Step 11: Emit OutcomeVerified + GraphMutated

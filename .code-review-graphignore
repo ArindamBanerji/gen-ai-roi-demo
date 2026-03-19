@@ -1,0 +1,9 @@
+node_modules/**
+.next/**
+dist/**
+build/**
+vendor/**
+*.min.js
+*.bundle.js
+__pycache__/**
+.venv/**

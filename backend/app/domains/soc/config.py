@@ -37,7 +37,16 @@ from typing import Dict, List
 # τ=0.1 (V3B validated ECE=0.036). Never use 0.25.
 # ─────────────────────────────────────────────────────────────────────
 
-SOC_ACTIONS = ["escalate", "investigate", "suppress", "monitor"]
+# refer_to_analyst: 5th action (v5.5). Graduated dispatch — medium-confidence
+# situations where the system is not confident enough to act autonomously.
+# Activation requires confidence band + margin gate — see ReferralPolicy.
+# Centroid values: LLM judge consensus (Opus-derived), March 2026.
+SOC_ACTIONS = ["escalate", "investigate", "suppress", "monitor", "refer_to_analyst"]
+
+# Controls whether ProfileScorer.update() is called after verified outcomes.
+# Default False (frozen scorer). Set True per-customer after shadow mode
+# validates that learning improves outcomes.
+LEARNING_ENABLED = False
 
 SOC_CATEGORIES = [
     "credential_access",
@@ -48,7 +57,21 @@ SOC_CATEGORIES = [
     "cloud_infrastructure",
 ]
 
-# Shape: (6 categories, 4 actions, 6 factors)
+# Bootstrap category weights — reflects realistic SOC alert distribution.
+# credential_access and lateral_movement are most frequent.
+# cloud_infrastructure and threat_intel_match are least frequent.
+# Weights must sum to 1.0.
+BOOTSTRAP_CATEGORY_WEIGHTS = {
+    "credential_access":    0.30,
+    "lateral_movement":     0.20,
+    "data_exfiltration":    0.15,
+    "insider_threat":       0.15,
+    "cloud_infrastructure": 0.10,
+    "threat_intel_match":   0.10,
+}
+
+# Shape: (6 categories, 5 actions, 6 factors) = 180 values
+# Action index: 0=escalate, 1=investigate, 2=suppress, 3=monitor, 4=refer_to_analyst
 # Factor index: 0=travel_match, 1=asset_criticality, 2=threat_intel_enrichment,
 #               3=pattern_history, 4=time_anomaly, 5=device_trust
 SOC_FACTORS = [
@@ -76,11 +99,14 @@ SOC_PROFILE_CENTROIDS = np.array([
     # escalate: travel anomaly + high asset + high threat_intel + low device_trust
     [0.72, 0.85, 0.80, 0.60, 0.65, 0.15],
     # investigate: moderate signals, some pattern history
-    [0.4, 0.60, 0.55, 0.55, 0.50, 0.40],
+    [0.40, 0.60, 0.55, 0.55, 0.50, 0.40],
     # suppress: low threat, normal hours, trusted device
-    [0.2, 0.25, 0.15, 0.20, 0.25, 0.85],
+    [0.20, 0.25, 0.15, 0.20, 0.25, 0.85],
     # monitor: moderate asset, low threat, normal pattern
-    [0.3, 0.45, 0.25, 0.35, 0.35, 0.65],
+    [0.30, 0.45, 0.25, 0.35, 0.35, 0.65],
+    # refer_to_analyst: moderate travel, moderate asset, weak TI, moderate pattern/time,
+    # somewhat trusted device. "Might be VPN login ambiguity — quick analyst glance."
+    [0.35, 0.52, 0.35, 0.43, 0.42, 0.55],
   ],
 
   # ── Category 1: threat_intel_match ─────────────────────────────
@@ -93,6 +119,10 @@ SOC_PROFILE_CENTROIDS = np.array([
     [0.20, 0.20, 0.20, 0.15, 0.20, 0.90],
     # monitor: low-confidence intel match
     [0.25, 0.40, 0.45, 0.30, 0.35, 0.70],
+    # refer_to_analyst: TI signal present but not strong, weak corroboration,
+    # moderate device trust. "IOC correlation exists but context is mixed — analyst validates."
+    # NOTE: Activation policy overrides if threat_intel_enrichment > 0.50.
+    [0.27, 0.47, 0.53, 0.38, 0.42, 0.58],
   ],
 
   # ── Category 2: lateral_movement ───────────────────────────────
@@ -105,6 +135,9 @@ SOC_PROFILE_CENTROIDS = np.array([
     [0.85, 0.25, 0.15, 0.20, 0.25, 0.80],
     # monitor: single hop, low asset, normal hours
     [0.40, 0.40, 0.30, 0.40, 0.35, 0.65],
+    # refer_to_analyst: moderate internal traversal, moderate pattern, weak TI,
+    # somewhat trusted. "Some east-west movement but no strong indicators — check it."
+    [0.43, 0.48, 0.38, 0.50, 0.43, 0.55],
   ],
 
   # ── Category 3: data_exfiltration ──────────────────────────────
@@ -117,6 +150,10 @@ SOC_PROFILE_CENTROIDS = np.array([
     [0.20, 0.30, 0.10, 0.15, 0.20, 0.90],
     # monitor: low-value asset, no threat intel
     [0.25, 0.40, 0.25, 0.30, 0.35, 0.70],
+    # refer_to_analyst: conservative placement — exfil is highest-consequence category.
+    # Moderate asset, low TI, moderate timing. Largest escalate distance (0.810).
+    # NOTE: Activation policy overrides if asset_criticality > 0.70 AND time_anomaly > 0.60.
+    [0.28, 0.55, 0.35, 0.40, 0.45, 0.55],
   ],
 
   # ── Category 4: insider_threat ─────────────────────────────────
@@ -129,6 +166,10 @@ SOC_PROFILE_CENTROIDS = np.array([
     [0.30, 0.25, 0.15, 0.20, 0.20, 0.85],
     # monitor: weak signals, normal hours
     [0.35, 0.40, 0.30, 0.45, 0.35, 0.65],
+    # refer_to_analyst: pattern moderately elevated (insider's defining factor),
+    # moderate time anomaly. "Behavioral deviation but not conclusive — human judgment."
+    # NOTE: Activation policy overrides if pattern_history > 0.70 AND time_anomaly > 0.70.
+    [0.38, 0.48, 0.38, 0.55, 0.45, 0.55],
   ],
 
   # ── Category 5: cloud_infrastructure ───────────────────────────
@@ -141,20 +182,25 @@ SOC_PROFILE_CENTROIDS = np.array([
     [0.20, 0.25, 0.10, 0.15, 0.20, 0.90],
     # monitor: low-risk cloud activity
     [0.25, 0.45, 0.30, 0.30, 0.35, 0.70],
+    # refer_to_analyst: cloud misconfig with moderate asset, moderate TI,
+    # trusted-ish device. "Posture finding on known service account — analyst sanity check."
+    [0.27, 0.53, 0.40, 0.38, 0.43, 0.58],
   ],
 
 ], dtype=np.float64)
 
 # Auto-approve thresholds (Finding II: monitor excluded permanently)
-# escalate:    100.0% accuracy in band — safe at 0.90
-# investigate:  92.2% [90.8%, 93.5%] — passes 90% target
-# suppress:     99.9% [99.7%, 100%] — exceptionally safe
-# monitor:      86.0% — EXCLUDED, never reaches 99% at any threshold
+# escalate:          100.0% accuracy in band — safe at 0.90
+# investigate:        92.2% [90.8%, 93.5%] — passes 90% target
+# suppress:           99.9% [99.7%, 100%] — exceptionally safe
+# monitor:            86.0% — EXCLUDED, never reaches 99% at any threshold
+# refer_to_analyst:   EXCLUDED — always routes to human_review by design (v5.5)
 SOC_AUTO_APPROVE_THRESHOLDS = {
-    "escalate":    0.90,
-    "investigate": 0.90,
-    "suppress":    0.90,
-    "monitor":     None,   # excluded from auto-approve
+    "escalate":          0.90,
+    "investigate":       0.90,
+    "suppress":          0.90,
+    "monitor":           None,   # excluded from auto-approve
+    "refer_to_analyst":  None,   # excluded — explicit human dispatch (v5.5)
 }
 
 # Category confidence floors (Finding LL: credential_access warrants caution)
@@ -167,6 +213,70 @@ SOC_AGENT_ZONE_ELEVATED = {
     "threat_intel_match":   True,
     "cloud_infrastructure": True,
 }
+
+# All 19 known alert_types mapped to their correct SOC category.
+# Source: CORR-1 diagnostic, March 14, 2026.
+# When adding new alert_types: add them HERE, not inline.
+ALERT_TYPE_CATEGORY_MAP: dict = {
+    # credential_access
+    "anomalous_login":              "credential_access",
+    "ambiguous_login_location":     "credential_access",
+    "brute_force":                  "credential_access",
+    "credential_stuffing":          "credential_access",
+
+    # threat_intel_match
+    "threat_intel_match":           "threat_intel_match",
+    "phishing":                     "threat_intel_match",
+    "malware_detection":            "threat_intel_match",
+    "c2_beacon":                    "threat_intel_match",
+
+    # lateral_movement
+    "privilege_escalation":         "lateral_movement",
+    "internal_scan_ambiguous":      "lateral_movement",
+
+    # data_exfiltration
+    "data_exfil":                   "data_exfiltration",
+
+    # insider_threat
+    "insider_threat":               "insider_threat",
+    "anomalous_behavior":           "insider_threat",
+
+    # cloud_infrastructure
+    "cloud_config":                      "cloud_infrastructure",
+    "cloud_iam_privilege_escalation":    "cloud_infrastructure",
+    "cloud_storage_public_exposure":     "cloud_infrastructure",
+    "cloud_config_drift":                "cloud_infrastructure",
+    "cloud_unused_resource_anomaly":     "cloud_infrastructure",
+    "cloud_permission_change_review":    "cloud_infrastructure",
+}
+
+DEFAULT_CATEGORY = "credential_access"  # emergency fallback only
+
+
+def resolve_alert_category(alert_type: str) -> str:
+    """Map an alert_type string to its SOC category.
+
+    Uses ALERT_TYPE_CATEGORY_MAP for explicit mapping.
+    Falls back to DEFAULT_CATEGORY with ERROR logging if unmapped.
+
+    This function is the SINGLE routing point. Never resolve alert_type
+    to category anywhere else in the codebase.
+    """
+    import logging
+    _logger = logging.getLogger(__name__)
+
+    category = ALERT_TYPE_CATEGORY_MAP.get(alert_type)
+    if category is None:
+        _logger.error(
+            "ROUTING_FAILURE: alert_type=%r has no mapping in "
+            "ALERT_TYPE_CATEGORY_MAP. Using fallback %r. "
+            "Add this alert_type to ALERT_TYPE_CATEGORY_MAP in config.py.",
+            alert_type,
+            DEFAULT_CATEGORY,
+        )
+        category = DEFAULT_CATEGORY
+    return category
+
 
 # Category → canonical ATT&CK pattern for outcome feedback
 # These are the patterns seeded in the graph (seed_neo4j.py)
@@ -539,6 +649,7 @@ class SOCDomainConfig(DomainConfig):
         """
         Build a ProfileScorer from this domain config.
         Uses L2 kernel (EXP-E1 validated), τ=0.1 (V3B validated, default).
+        Tensor shape: (6 categories, 5 actions, 6 factors) = 180 values (v5.5).
         """
         return ProfileScorer(
             mu=self.get_profile_centroids(),
@@ -550,11 +661,11 @@ class SOCDomainConfig(DomainConfig):
     @staticmethod
     def get_actions() -> List[str]:
         """
-        Four GAE action names in W-matrix row order.
-        Row 0=escalate, 1=investigate, 2=suppress, 3=monitor.
-        Must stay in sync with get_initial_W() row order.
+        Five GAE action names in W-matrix row order (v5.5).
+        Row 0=escalate, 1=investigate, 2=suppress, 3=monitor, 4=refer_to_analyst.
+        Must stay in sync with get_initial_W() row order and SOC_PROFILE_CENTROIDS axis 1.
         """
-        return ["escalate", "investigate", "suppress", "monitor"]
+        return list(SOC_ACTIONS)
 
     @staticmethod
     def get_factor_computers() -> List:
@@ -575,7 +686,7 @@ class SOCDomainConfig(DomainConfig):
 
     @staticmethod
     def get_initial_W():
-        """Initial weight matrix (4 actions x 6 factors). Security expert priors."""
+        """Initial weight matrix (5 actions x 6 factors). Security expert priors (v5.5)."""
         import numpy as np
         return np.array([
             # travel  asset  threat  pattern  time  device
@@ -583,11 +694,15 @@ class SOCDomainConfig(DomainConfig):
             [ 0.5,   0.5,    0.7,    0.5,    0.6,   0.5],   # investigate
             [-0.3,  -0.2,   -0.5,    0.7,   -0.3,  -0.2],   # suppress
             [ 0.2,   0.3,    0.4,    0.4,    0.3,   0.4],   # monitor
+            [ 0.1,   0.4,    0.3,    0.4,    0.3,   0.4],   # refer_to_analyst: conservative moderate
         ], dtype=np.float64)
 
+    # τ=0.1 (V3B validated, ECE=0.036). NEVER return 0.25.
+    # Prior value of 0.25 was a pre-V3B default that was never updated after TD-030.
+    # This affects simulation scoring — all prior simulation runs used wrong τ.
     @staticmethod
     def get_temperature() -> float:
-        return 0.25
+        return 0.1
 
     # =========================================================================
     # Stubs — extracted in later prompts

@@ -14,7 +14,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from gae.judgment import compute_judgment
-from app.domains.soc.config import SOC_CATEGORIES, SOC_FACTORS
+from app.domains.soc.config import SOC_CATEGORIES, SOC_FACTORS, SOC_ACTIONS
 from app.db.neo4j import neo4j_client
 
 router = APIRouter()
@@ -23,7 +23,8 @@ router = APIRouter()
 # Factor names in centroid order — must stay in sync with SOC_PROFILE_CENTROIDS
 # depth axis: [0]=travel_match [1]=asset_criticality [2]=threat_intel_enrichment
 #             [3]=pattern_history [4]=time_anomaly [5]=device_trust
-SOC_ACTIONS = ["escalate", "investigate", "suppress", "monitor"]
+# SOC_ACTIONS imported from config — do not redeclare here (v5.5)
+# SOC_ACTIONS = ["escalate", "investigate", "suppress", "monitor", "refer_to_analyst"]
 
 
 # ── Request model ─────────────────────────────────────────────────────────────

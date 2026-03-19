@@ -1,7 +1,7 @@
 """
 GAE learning state manager — live LearningState singleton for SOC Copilot.
 
-Single source of truth for the W matrix (4 actions × 6 factors) across
+Single source of truth for the W matrix (5 actions × 6 factors) across
 the backend process.  Initialized once at startup, persisted to JSON after
 each outcome update.
 
@@ -28,6 +28,7 @@ log = logging.getLogger(__name__)
 _STATE_PATH = Path(__file__).parent.parent / "data" / "gae_learning_state.json"
 _learning_state: LearningState | None = None
 _bootstrap_metadata: dict | None = None
+_bootstrap_result: BootstrapResult | None = None   # CORR-3: exposed for bootstrap_neo4j writer
 
 
 # ---------------------------------------------------------------------------
@@ -46,12 +47,13 @@ def _soc_profile() -> CalibrationProfile:
 def _make_fresh_state() -> LearningState:
     """Build a LearningState from SOCDomainConfig expert priors."""
     from app.domains.soc.config import SOCDomainConfig
-    W = SOCDomainConfig.get_initial_W()                      # shape (4, 6)
+    W = SOCDomainConfig.get_initial_W()                      # shape (n_actions, 6)
+    n_actions, n_factors = W.shape
     factor_names = [c.name for c in SOCDomainConfig.get_factor_computers()]
     return LearningState(
         W=W.copy(),
-        n_actions=4,
-        n_factors=6,
+        n_actions=n_actions,
+        n_factors=n_factors,
         factor_names=factor_names,
         profile=_soc_profile(),
     )
@@ -126,7 +128,7 @@ def init_learning_state() -> LearningState:
     LearningState
         The initialized state (also stored in module-level singleton).
     """
-    global _learning_state, _bootstrap_metadata
+    global _learning_state, _bootstrap_metadata, _bootstrap_result
 
     # Build ProfileScorer from SOC_PROFILE_CENTROIDS (always fresh)
     from app.domains.soc.config import SOCDomainConfig as _SOCDomainConfig
@@ -186,6 +188,7 @@ def init_learning_state() -> LearningState:
             convergence_tol=SOC_BOOTSTRAP_CONVERGENCE_TOL,
             seed=SOC_BOOTSTRAP_SEED,
         )
+        _bootstrap_result = result          # CORR-3: expose for bootstrap_neo4j writer
         _learning_state.decision_count = result.n_decisions
         _bootstrap_metadata = {
             "bootstrap": True,
@@ -214,6 +217,20 @@ def init_learning_state() -> LearningState:
 def get_profile_scorer():
     """Return the global ProfileScorer instance."""
     return get_learning_state().profile_scorer
+
+
+def get_bootstrap_result() -> BootstrapResult | None:
+    """
+    Return the BootstrapResult from the last bootstrap run, or None.
+
+    Returns None when the server loaded an existing bootstrapped checkpoint
+    (Path 1 in init_learning_state).  Returns a BootstrapResult when
+    bootstrap_calibration() ran this startup (Paths 2 and 3).
+
+    Used by main.py startup_event to decide whether to write bootstrap
+    Decision nodes to Neo4j (CORR-3).
+    """
+    return _bootstrap_result
 
 
 def get_learning_state() -> LearningState:

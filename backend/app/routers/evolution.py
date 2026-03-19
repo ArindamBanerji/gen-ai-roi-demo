@@ -2,6 +2,8 @@
 Runtime Evolution API - THE KEY DIFFERENTIATOR
 Tab 2 endpoints: Deployment registry, eval gates, TRIGGERED_EVOLUTION
 """
+import dataclasses
+
 from fastapi import APIRouter, HTTPException
 from typing import Optional
 from datetime import datetime
@@ -129,13 +131,34 @@ async def process_alert(request: ProcessAlertRequest):
         f = await compute_factor_vector(alert_data, computers, neo4j_client)
 
         _scorer = get_profile_scorer()
-        _cat_name = context.get("alert_type") or "credential_access"
-        _categories = SOC_CATEGORIES
-        _cat_idx = _categories.index(_cat_name) \
-                   if _cat_name in _categories else 0
+        # CORR-1: resolve alert_type → category via explicit map (not direct equality)
+        from app.domains.soc.config import resolve_alert_category, SOCDomainConfig as _SDC
+        _cat_name = resolve_alert_category(context.get("alert_type") or "unknown")
+        _cat_idx = _SDC().get_category_index(_cat_name)
         _scoring_result = _scorer.score(
             f.flatten(), category_index=_cat_idx
         )
+
+        # ReferralPolicy gate (v5.5): if refer_to_analyst wins but policy blocks it,
+        # fall back to the second-best action via get_fallback_action().
+        _actions = SOCDomainConfig.get_actions()
+        from app.services.referral_policy import should_refer_to_analyst, get_fallback_action as _get_fallback
+        if _scoring_result.action_index == 4:  # REFER_ACTION_INDEX
+            _may_refer = should_refer_to_analyst(
+                probabilities=_scoring_result.probabilities,
+                confidence=_scoring_result.confidence,
+                action_index=_scoring_result.action_index,
+                category=_cat_name,
+                factors=f.flatten(),
+            )
+            if not _may_refer:
+                _fb_idx = _get_fallback(_scoring_result.probabilities)
+                _scoring_result = dataclasses.replace(
+                    _scoring_result,
+                    action_index=_fb_idx,
+                    action_name=_actions[_fb_idx],
+                )
+
         selected_action = _scoring_result.action_name
         confidence      = _scoring_result.confidence
         probs_flat      = _scoring_result.probabilities.tolist()
@@ -188,6 +211,7 @@ async def process_alert(request: ProcessAlertRequest):
                 pattern_id:      $pattern_id,
                 playbook_id:     $playbook_id,
                 nodes_consulted: $nodes_consulted,
+                category:        $category,
                 timestamp:       datetime(),
                 outcome:         null
             })
@@ -203,6 +227,7 @@ async def process_alert(request: ProcessAlertRequest):
                 "pattern_id":     bridge.pattern_id,
                 "playbook_id":    bridge.playbook_id,
                 "nodes_consulted": context.get("nodes_consulted", 47),
+                "category":        _cat_name,
             },
         )
         print(f"[GAE][TAB2] Decision node written: {decision_id} [:DECIDED_ON] {request.alert_id}")

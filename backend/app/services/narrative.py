@@ -110,6 +110,7 @@ _ACTION_LABELS: Dict[str, str] = {
     "investigate":           "Investigate further",
     "suppress":              "Suppress (false positive)",
     "monitor":               "Monitor and watch",
+    "refer_to_analyst":      "Refer to analyst for review",  # v5.5 graduated dispatch
 }
 
 # Factor names that indicate active threat intel enrichment was consulted

@@ -60,7 +60,7 @@ class Neo4jClient:
         MATCH (alert:Alert {id: $alert_id})
         MATCH (alert)-[:DETECTED_ON]->(asset:Asset)
         MATCH (alert)-[:INVOLVES]->(user:User)
-        MATCH (alert)-[:CLASSIFIED_AS]->(alertType:AlertType)
+        OPTIONAL MATCH (alert)-[:CLASSIFIED_AS]->(alertType:AlertType)
         OPTIONAL MATCH (alertType)-[:HANDLED_BY]->(playbook:Playbook)
         OPTIONAL MATCH (user)-[:HAS_TRAVEL]->(travel:TravelContext)
         OPTIONAL MATCH (asset)-[:SUBJECT_TO]->(sla:SLA)
@@ -68,7 +68,8 @@ class Neo4jClient:
 
         // Count all nodes consulted
         WITH alert, asset, user, alertType, playbook, travel, sla, pattern,
-             1 + 1 + 1 + 1 +
+             1 + 1 + 1 +
+             CASE WHEN alertType IS NOT NULL THEN 1 ELSE 0 END +
              CASE WHEN playbook IS NOT NULL THEN 1 ELSE 0 END +
              CASE WHEN travel IS NOT NULL THEN 1 ELSE 0 END +
              CASE WHEN sla IS NOT NULL THEN 1 ELSE 0 END +

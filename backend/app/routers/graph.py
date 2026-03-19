@@ -177,8 +177,13 @@ async def refresh_threat_intel_endpoint():
     hardcoded fallback set.  Writes / updates :ThreatIntel nodes in Neo4j and
     creates :ASSOCIATED_WITH relationships to relevant :Alert nodes.
 
+    Phase 7: Also MERGEs each :ThreatIntel node as a :ThreatIndicator node
+    (persistent, 24h TTL) so the firm-specific threat graph is queryable via
+    ThreatIndicatorService.
+
     Returns a summary: source, indicators_ingested, relationships_created,
-    enrichment_summary, live_attempted, live_succeeded, timestamp.
+    enrichment_summary, live_attempted, live_succeeded, timestamp,
+    indicators_persisted.
     """
     print("[GRAPH] POST /graph/threat-intel/refresh called")
     try:
@@ -189,13 +194,42 @@ async def refresh_threat_intel_endpoint():
             f"relationships={summary['relationships_created']}, "
             f"source={summary['source']}"
         )
-        return summary
     except Exception as exc:
         print(f"[ERROR] Threat intel refresh failed: {exc}")
         raise HTTPException(
             status_code=500,
             detail=f"Threat intel refresh failed: {str(exc)}",
         )
+
+    # Phase 7: persist each refreshed ThreatIntel node as a ThreatIndicator
+    from app.services.threat_indicator import ThreatIndicatorService
+    indicators_persisted = 0
+    try:
+        ti_rows = await neo4j_client.run_query(
+            """
+            MATCH (ti:ThreatIntel)
+            RETURN ti.name      AS name,
+                   ti.ioc_type  AS ioc_type,
+                   ti.ioc_value AS ioc_value,
+                   ti.source    AS source,
+                   ti.severity  AS severity
+            """
+        )
+        for row in ti_rows:
+            await ThreatIndicatorService.upsert_indicator(
+                ioc_type  = row.get("ioc_type")  or "unknown",
+                ioc_value = row.get("ioc_value") or "",
+                source    = row.get("source")    or "unknown",
+                severity  = row.get("severity")  or "unknown",
+                name      = row.get("name")      or "",
+                neo4j_service=neo4j_client,
+            )
+            indicators_persisted += 1
+        print(f"[GRAPH] ThreatIndicator MERGE: persisted={indicators_persisted}")
+    except Exception as exc:
+        print(f"[WARN] ThreatIndicator persistence failed (non-fatal): {exc}")
+
+    return {**summary, "indicators_persisted": indicators_persisted}
 
 
 # ---------------------------------------------------------------------------
@@ -352,10 +386,25 @@ async def get_enrichment_summary():
         f"[GRAPH] Enrichment summary: total={len(views)}, "
         f"by_severity={by_severity}"
     )
+
+    # Phase 7: include ThreatIndicator counts
+    from app.services.threat_indicator import ThreatIndicatorService
+    try:
+        ti_summary = await ThreatIndicatorService.get_all_indicators(neo4j_client)
+        threat_indicators = {
+            "total":       ti_summary["total"],
+            "by_type":     ti_summary["by_type"],
+            "by_severity": ti_summary["by_severity"],
+        }
+    except Exception as exc:
+        print(f"[WARN] ThreatIndicator summary failed (non-fatal): {exc}")
+        threat_indicators = {"total": 0, "by_type": {}, "by_severity": {}}
+
     return {
-        "indicators":   views,
-        "total":        len(views),
-        "by_severity":  by_severity,
+        "indicators":        views,
+        "total":             len(views),
+        "by_severity":       by_severity,
+        "threat_indicators": threat_indicators,
     }
 
 

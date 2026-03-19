@@ -42,6 +42,10 @@ class OutcomeRequest(BaseModel):
     alert_id: str
     decision_id: str
     outcome: Literal["correct", "incorrect"]
+    # CORR-2 fix: analyst's actual chosen action (the ground truth).
+    # Optional for backward compatibility with clients that only send correct/incorrect.
+    # When provided, used as gt_action_index in ProfileScorer.update().
+    analyst_action: Optional[str] = None
 
 
 # ============================================================================

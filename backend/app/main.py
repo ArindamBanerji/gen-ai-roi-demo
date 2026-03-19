@@ -70,9 +70,22 @@ async def startup_event():
     # Initialize GAE learning state (bootstrap calibration on cold start or
     # legacy checkpoint; load directly if bootstrap metadata present).
     # Must be done before registering reset handlers so the singleton is ready.
-    from app.services.gae_state import init_learning_state, reset_learning_state
+    from app.services.gae_state import init_learning_state, reset_learning_state, get_bootstrap_result, get_profile_scorer
     ls = init_learning_state()
     print(f"[GAE] LearningState ready: W.shape={ls.W.shape}, step={ls.decision_count}")
+
+    # CORR-3: Write bootstrap Decision nodes to Neo4j if bootstrap ran this startup.
+    # Skipped (get_bootstrap_result() is None) when loading an existing checkpoint.
+    _bs_result = get_bootstrap_result()
+    if _bs_result is not None:
+        from app.services.bootstrap_neo4j import write_bootstrap_decisions
+        from app.domains.soc.config import SOC_CATEGORIES
+        await write_bootstrap_decisions(
+            neo4j_client=neo4j_client,
+            scorer=get_profile_scorer(),
+            categories=list(SOC_CATEGORIES),
+            decisions_per_category=_bs_result.decisions_per_category,
+        )
 
     # Warm up all domain config properties.
     # Iterates every registered domain and touches all @property accessors so
