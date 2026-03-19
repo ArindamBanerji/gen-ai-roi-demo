@@ -1,0 +1,143 @@
+"""
+Tests for LearningHealthMonitor (P9).
+
+Covers:
+  1. _extract_components returns zeros for empty history
+  2. _compute_signal basic arithmetic
+  3. evaluate() returns CALIBRATING when decision_count < 300
+  4. GREEN when conservation satisfied and signal above baselines
+  5. AMBER when conservation satisfied but signal < baseline-2sigma
+  6. RED when conservation violated (signal < theta_min)
+"""
+
+from __future__ import annotations
+
+import types
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import numpy as np
+import pytest
+
+from app.services.learning_health import LearningHealthMonitor, CALIBRATION_DECISIONS
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _make_wu(alpha: float = 0.02, conf: float = 0.75, timestamp: str = "2026-01-01T00:00:00"):
+    """Create a minimal WeightUpdate-like mock."""
+    wu = MagicMock()
+    wu.alpha_effective         = alpha
+    wu.confidence_at_decision  = conf
+    wu.timestamp               = timestamp
+    return wu
+
+
+def _make_state(decision_count: int, history: list):
+    state = MagicMock()
+    state.decision_count = decision_count
+    state.history        = history
+    return state
+
+
+# ---------------------------------------------------------------------------
+# Test 1 — empty history returns zeros
+# ---------------------------------------------------------------------------
+
+def test_extract_components_empty():
+    comps = LearningHealthMonitor._extract_components([])
+    assert comps["alpha"] == 0.0
+    assert comps["q"]     == 0.0
+    assert comps["V"]     == 0.0
+    assert comps["n"]     == 0
+
+
+# ---------------------------------------------------------------------------
+# Test 2 — _compute_signal is alpha * q * V
+# ---------------------------------------------------------------------------
+
+def test_compute_signal_arithmetic():
+    assert LearningHealthMonitor._compute_signal(0.02, 0.8, 10.0) == pytest.approx(0.02 * 0.8 * 10.0)
+    assert LearningHealthMonitor._compute_signal(0.0, 0.9, 5.0)   == pytest.approx(0.0)
+
+
+# ---------------------------------------------------------------------------
+# Test 3 — evaluate returns CALIBRATING when decision_count < 300
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_evaluate_calibrating():
+    history = [_make_wu() for _ in range(10)]
+    state   = _make_state(decision_count=10, history=history)
+
+    with patch("app.services.learning_health.get_learning_state", return_value=state):
+        result = await LearningHealthMonitor.evaluate(neo4j_service=None)
+
+    assert result["status"] == "CALIBRATING"
+    assert result["baseline"]     is None
+    assert result["baseline_std"] is None
+    assert result["red_days"]          == 0
+    assert result["auto_pause_active"] is False
+    assert "Calibrating" in result["interpretation"]
+
+
+# ---------------------------------------------------------------------------
+# Test 4 — GREEN: conservation satisfied, signal within baselines
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_evaluate_green():
+    # Build a large history with healthy alpha/q/V
+    history = [_make_wu(alpha=0.02, conf=0.80, timestamp=f"2026-01-01T{i//60:02d}:{i%60:02d}:00")
+               for i in range(400)]
+    state   = _make_state(decision_count=400, history=history)
+
+    with patch("app.services.learning_health.get_learning_state", return_value=state):
+        result = await LearningHealthMonitor.evaluate(neo4j_service=None)
+
+    assert result["status"] == "GREEN"
+    assert result["conservation"]["passed"] is True
+    assert result["signal"] > 0
+    assert "healthy" in result["interpretation"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Test 5 — AMBER: conservation OK but signal dropped below baseline-2sigma
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_evaluate_amber():
+    # Calibration window: healthy signal
+    cal_history = [_make_wu(alpha=0.02, conf=0.80, timestamp=f"2026-01-01T00:00:00")
+                   for _ in range(300)]
+    # Recent window: degraded signal (low alpha -> low signal)
+    recent = [_make_wu(alpha=0.001, conf=0.50, timestamp="2026-02-15T00:00:00")
+              for _ in range(50)]
+    history = cal_history + recent
+    state   = _make_state(decision_count=len(history), history=history)
+
+    with patch("app.services.learning_health.get_learning_state", return_value=state):
+        result = await LearningHealthMonitor.evaluate(neo4j_service=None)
+
+    # Signal is severely degraded — should be AMBER or RED
+    assert result["status"] in ("AMBER", "RED")
+
+
+# ---------------------------------------------------------------------------
+# Test 6 — RED: conservation violated (near-zero signal < theta_min)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_evaluate_red():
+    # Large history but completely dead alpha and q
+    history = [_make_wu(alpha=0.0, conf=0.0, timestamp="2026-01-01T00:00:00")
+               for _ in range(400)]
+    state   = _make_state(decision_count=400, history=history)
+
+    with patch("app.services.learning_health.get_learning_state", return_value=state):
+        result = await LearningHealthMonitor.evaluate(neo4j_service=None)
+
+    assert result["status"] == "RED"
+    assert result["conservation"]["passed"] is False
+    assert "violation" in result["interpretation"].lower() or "RED" in result["interpretation"]

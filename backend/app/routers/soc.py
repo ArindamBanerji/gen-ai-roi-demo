@@ -1669,3 +1669,33 @@ async def graph_run_prebuilt(query_name: str):
     if "error" in result:
         raise HTTPException(status_code=404, detail=result["error"])
     return result
+
+
+# ---------------------------------------------------------------------------
+# GET /api/soc/learning-health  (P9 — Learning Health Monitor)
+# ---------------------------------------------------------------------------
+
+@router.get("/soc/learning-health")
+async def learning_health():
+    """Return learning health status based on conservation law monitoring.
+
+    Evaluates alpha(t)*q(t)*V(t) >= theta_min (absolute floor) and
+    relative-drop thresholds (baseline-2sigma=AMBER, baseline-3sigma=RED).
+
+    Returns
+    -------
+    {
+        status            : "GREEN" | "AMBER" | "RED" | "CALIBRATING",
+        signal            : float,
+        theta_min         : float,
+        conservation      : {passed, status, headroom},
+        components        : {alpha, q, V, n},
+        baseline          : float | null,
+        baseline_std      : float | null,
+        red_days          : int,
+        auto_pause_active : bool,
+        interpretation    : str,
+    }
+    """
+    from app.services.learning_health import LearningHealthMonitor
+    return await LearningHealthMonitor.evaluate(neo4j_client)
