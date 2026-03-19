@@ -139,28 +139,14 @@ async def process_alert(request: ProcessAlertRequest):
             f.flatten(), category_index=_cat_idx
         )
 
-        # ReferralPolicy gate (v5.5): if refer_to_analyst wins but policy blocks it,
-        # fall back to the second-best action via get_fallback_action().
-        _actions = SOCDomainConfig.get_actions()
-        from app.services.referral_policy import should_refer_to_analyst, get_fallback_action as _get_fallback
-        if _scoring_result.action_index == 4:  # REFER_ACTION_INDEX
-            _may_refer = should_refer_to_analyst(
-                probabilities=_scoring_result.probabilities,
-                confidence=_scoring_result.confidence,
-                action_index=_scoring_result.action_index,
-                category=_cat_name,
-                factors=f.flatten(),
-            )
-            if not _may_refer:
-                _fb_idx = _get_fallback(_scoring_result.probabilities)
-                _scoring_result = dataclasses.replace(
-                    _scoring_result,
-                    action_index=_fb_idx,
-                    action_name=_actions[_fb_idx],
-                )
-
+        # Phase 0b gate: scorer outputs A=4; gate overrides to refer_to_analyst
+        # when confidence is below CONFIDENCE_THRESHOLD (0.70).
+        from app.services.composite_gate import CompositeDiscriminant as _CGD
         selected_action = _scoring_result.action_name
         confidence      = _scoring_result.confidence
+
+        if confidence < _CGD.CONFIDENCE_THRESHOLD:
+            selected_action = "refer_to_analyst"
         probs_flat      = _scoring_result.probabilities.tolist()
         fv_list         = f.flatten().tolist()
         tau             = _scorer.tau   # 0.1

@@ -151,7 +151,7 @@ async def analyze_alert(request: ProcessAlertRequest):
         # W       = get_learning_state().W
         # scoring = score_alert(f_2d, W, actions, tau)
 
-        actions = SOCDomainConfig.get_actions()      # ["escalate", "investigate", "suppress", "monitor", "refer_to_analyst"]
+        actions = SOCDomainConfig.get_actions()      # full 5-action API list (incl. refer_to_analyst for response)
         tau     = SOCDomainConfig.get_temperature()  # τ=0.1 (V3B validated, ECE=0.036)
 
         # v5.0: ProfileScorer centroid-proximity scoring (EXP-E1 validated L2, τ=0.1)
@@ -163,31 +163,20 @@ async def analyze_alert(request: ProcessAlertRequest):
         _cat_idx = _cfg.get_category_index(alert_category)
         _scoring_result = _scorer.score(f.flatten(), category_index=_cat_idx)
 
-        # ReferralPolicy gate (v5.5): if refer_to_analyst wins but policy blocks it,
-        # fall back to the second-best action via get_fallback_action().
-        from app.services.referral_policy import should_refer_to_analyst, get_fallback_action as _get_fallback
-        if _scoring_result.action_index == 4:  # REFER_ACTION_INDEX
-            _may_refer = should_refer_to_analyst(
-                probabilities=_scoring_result.probabilities,
-                confidence=_scoring_result.confidence,
-                action_index=_scoring_result.action_index,
-                category=alert_category,
-                factors=f.flatten(),
-            )
-            if not _may_refer:
-                _fb_idx = _get_fallback(_scoring_result.probabilities)
-                _scoring_result = dataclasses.replace(
-                    _scoring_result,
-                    action_index=_fb_idx,
-                    action_name=actions[_fb_idx],
-                )
-                logger.info(
-                    "[TRIAGE-v5] refer_to_analyst blocked by policy — fallback to %s",
-                    actions[_fb_idx],
-                )
-
+        # Phase 0b gate: scorer outputs A=4 (escalate/investigate/suppress/monitor).
+        # refer_to_analyst is NOT a scorer action — the gate adds it when confidence
+        # is below CONFIDENCE_THRESHOLD (0.70).  This replaces the v5.5 ReferralPolicy
+        # centroid-proximity gate and raises accuracy ceiling from 80.6% → ~90-95%.
+        from app.services.composite_gate import CompositeDiscriminant as _CGD
         selected_action = _scoring_result.action_name
         confidence = _scoring_result.confidence
+
+        if confidence < _CGD.CONFIDENCE_THRESHOLD:
+            selected_action = "refer_to_analyst"
+            logger.info(
+                "[TRIAGE-Phase0b] conf=%.3f < %.2f — gate overrides to refer_to_analyst (cat=%s)",
+                confidence, _CGD.CONFIDENCE_THRESHOLD, alert_category,
+            )
 
         # v5.0 routing: auto-approve / agent zone / human review
         _threshold = SOC_AUTO_APPROVE_THRESHOLDS.get(selected_action)

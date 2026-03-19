@@ -43,6 +43,11 @@ from typing import Dict, List
 # Centroid values: LLM judge consensus (Opus-derived), March 2026.
 SOC_ACTIONS = ["escalate", "investigate", "suppress", "monitor", "refer_to_analyst"]
 
+# Phase 0b: 4-action scorer list.  refer_to_analyst is handled by the confidence
+# gate in triage.py — not by the ProfileScorer centroid distance.
+# Cross-experiment validation: A=4 static accuracy = 90.6% ± 0.6% (was 80.6% at A=5).
+SCORER_ACTIONS = ["escalate", "investigate", "suppress", "monitor"]
+
 # Controls whether ProfileScorer.update() is called after verified outcomes.
 # Default False (frozen scorer). Set True per-customer after shadow mode
 # validates that learning improves outcomes.
@@ -188,6 +193,11 @@ SOC_PROFILE_CENTROIDS = np.array([
   ],
 
 ], dtype=np.float64)
+
+# Phase 0b: scorer centroid tensor — drops refer_to_analyst row (axis-1 index 4).
+# Shape: (6 categories, 4 scorer actions, 6 factors).
+# SOC_PROFILE_CENTROIDS kept at (6, 5, 6) for provenance; scorer uses this slice.
+SCORER_PROFILE_CENTROIDS = SOC_PROFILE_CENTROIDS[:, :4, :]
 
 # Auto-approve thresholds (Finding II: monitor excluded permanently)
 # escalate:          100.0% accuracy in band — safe at 0.90
@@ -649,11 +659,15 @@ class SOCDomainConfig(DomainConfig):
         """
         Build a ProfileScorer from this domain config.
         Uses L2 kernel (EXP-E1 validated), τ=0.1 (V3B validated, default).
-        Tensor shape: (6 categories, 5 actions, 6 factors) = 180 values (v5.5).
+
+        Phase 0b: scorer uses SCORER_ACTIONS (A=4) and SCORER_PROFILE_CENTROIDS
+        (6, 4, 6).  refer_to_analyst is handled by the confidence gate in
+        triage.py, not by centroid proximity.  SOC_ACTIONS (A=5) is kept
+        for the API response and NL templates.
         """
         return ProfileScorer(
-            mu=self.get_profile_centroids(),
-            actions=self.get_actions(),
+            mu=SCORER_PROFILE_CENTROIDS.copy(),
+            actions=list(SCORER_ACTIONS),
             kernel=KernelType.L2,
             categories=list(SOC_CATEGORIES),
         )
