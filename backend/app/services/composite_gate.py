@@ -34,11 +34,23 @@ class CompositeDiscriminant:
     Validated by DISC-1: 70.4% coverage at 85% precision (synthetic).
     """
 
-    # Thresholds
+    # Global fallback confidence threshold (used when category not in CATEGORY_CONFIDENCE_THRESHOLDS)
     CONFIDENCE_THRESHOLD      = 0.70
     MARGIN_THRESHOLD          = 0.30
     MIN_CAT_COUNT             = 50
     SUPPRESS_SAFETY_THRESHOLD = 0.95
+
+    # Phase 0b per-category confidence thresholds (A=4 calibration).
+    # Derived from cross-experiment validation; tighter categories get higher thresholds.
+    # Falls back to CONFIDENCE_THRESHOLD (0.70) for any unmapped category.
+    CATEGORY_CONFIDENCE_THRESHOLDS: dict = {
+        "credential_access":    0.62,
+        "data_exfiltration":    0.67,
+        "lateral_movement":     0.62,
+        "threat_intel_match":   0.69,
+        "cloud_infrastructure": 0.65,
+        "insider_threat":       0.70,
+    }
 
     @staticmethod
     async def evaluate(
@@ -118,10 +130,13 @@ class CompositeDiscriminant:
         reason_codes: list[str] = []
         auto_approve = True
 
-        if confidence < CompositeDiscriminant.CONFIDENCE_THRESHOLD:
+        _conf_threshold = CompositeDiscriminant.CATEGORY_CONFIDENCE_THRESHOLDS.get(
+            category, CompositeDiscriminant.CONFIDENCE_THRESHOLD
+        )
+        if confidence < _conf_threshold:
             auto_approve = False
             reason_codes.append(
-                f"confidence {confidence:.2f} < {CompositeDiscriminant.CONFIDENCE_THRESHOLD}"
+                f"confidence {confidence:.2f} < {_conf_threshold} ({category})"
             )
 
         if margin < CompositeDiscriminant.MARGIN_THRESHOLD:

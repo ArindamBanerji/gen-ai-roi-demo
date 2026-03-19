@@ -145,7 +145,10 @@ async def process_alert(request: ProcessAlertRequest):
         selected_action = _scoring_result.action_name
         confidence      = _scoring_result.confidence
 
-        if confidence < _CGD.CONFIDENCE_THRESHOLD:
+        _refer_threshold = _CGD.CATEGORY_CONFIDENCE_THRESHOLDS.get(
+            _cat_name, _CGD.CONFIDENCE_THRESHOLD
+        )
+        if confidence < _refer_threshold:
             selected_action = "refer_to_analyst"
         probs_flat      = _scoring_result.probabilities.tolist()
         fv_list         = f.flatten().tolist()

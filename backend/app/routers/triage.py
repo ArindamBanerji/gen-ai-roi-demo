@@ -171,11 +171,14 @@ async def analyze_alert(request: ProcessAlertRequest):
         selected_action = _scoring_result.action_name
         confidence = _scoring_result.confidence
 
-        if confidence < _CGD.CONFIDENCE_THRESHOLD:
+        _refer_threshold = _CGD.CATEGORY_CONFIDENCE_THRESHOLDS.get(
+            alert_category, _CGD.CONFIDENCE_THRESHOLD
+        )
+        if confidence < _refer_threshold:
             selected_action = "refer_to_analyst"
             logger.info(
                 "[TRIAGE-Phase0b] conf=%.3f < %.2f — gate overrides to refer_to_analyst (cat=%s)",
-                confidence, _CGD.CONFIDENCE_THRESHOLD, alert_category,
+                confidence, _refer_threshold, alert_category,
             )
 
         # v5.0 routing: auto-approve / agent zone / human review
