@@ -1699,3 +1699,38 @@ async def learning_health():
     """
     from app.services.learning_health import LearningHealthMonitor
     return await LearningHealthMonitor.evaluate(neo4j_client)
+
+
+# ---------------------------------------------------------------------------
+# GET /api/soc/onboarding-calendar  (P8 — Convergence timeline per category)
+# ---------------------------------------------------------------------------
+
+@router.get("/soc/onboarding-calendar")
+async def onboarding_calendar(
+    alerts_per_day: int = 200,
+    verification_rate: float = 0.30,
+    graph_level: str = "G1",
+):
+    """
+    L-08: Predicted convergence timeline per category.
+
+    Returns the week at which each SOC category reaches calibration,
+    given the customer's actual alert volume and verification rate.
+
+    Query parameters
+    ----------------
+    alerts_per_day     : int   — total daily alert volume (default 200)
+    verification_rate  : float — fraction of decisions analysts verify (default 0.30)
+    graph_level        : str   — SIEM/graph enrichment tier G1-G4 (default G1)
+    """
+    from gae.convergence import generate_onboarding_calendar
+    from app.domains.soc.config import SOC_CATEGORIES, BOOTSTRAP_CATEGORY_WEIGHTS
+
+    calendar = generate_onboarding_calendar(
+        categories=SOC_CATEGORIES,
+        category_weights=BOOTSTRAP_CATEGORY_WEIGHTS,
+        alerts_per_day=alerts_per_day,
+        verification_rate=verification_rate,
+        graph_level=graph_level,
+    )
+    return calendar
