@@ -1734,3 +1734,42 @@ async def onboarding_calendar(
         graph_level=graph_level,
     )
     return calendar
+
+
+# ---------------------------------------------------------------------------
+# GET /api/soc/attack-chains  (P16 — L-06 Attack Chain Correlation)
+# ---------------------------------------------------------------------------
+
+@router.get("/soc/attack-chains")
+async def attack_chains(hours_back: int = 72):
+    """L-06: Detected attack chain campaigns.
+
+    Scans recent alerts for entity-correlated, tactic-progression, and
+    IOC-linked campaigns.  A campaign is >=3 alerts sharing >=1 mechanism
+    within 24 hours.
+
+    Query parameters
+    ----------------
+    hours_back : int — look-back window in hours (default 72)
+    """
+    from app.services.attack_chain import AttackChainService
+    service = AttackChainService(neo4j_client)
+    campaigns = await service.scan_recent_alerts(hours_back=hours_back)
+    return {
+        "campaigns": [
+            {
+                "campaign_id":      c.campaign_id,
+                "alert_count":      len(c.alerts),
+                "alerts":           c.alerts,
+                "shared_entities":  c.shared_entities,
+                "correlation_type": c.correlation_type,
+                "confidence":       c.confidence,
+                "first_seen":       c.first_seen,
+                "last_seen":        c.last_seen,
+                "summary":          c.summary,
+            }
+            for c in campaigns
+        ],
+        "total_campaigns":   len(campaigns),
+        "scan_window_hours": hours_back,
+    }
