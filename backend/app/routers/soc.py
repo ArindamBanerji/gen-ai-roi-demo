@@ -1977,3 +1977,29 @@ async def three_claims():
     """P15: Three unconditional guarantees for board presentation."""
     from app.services.three_claims import generate_three_claims
     return generate_three_claims()
+
+
+# ============================================================================
+# GET /api/soc/benchmarking-level2 — P32 Level 2 Benchmarking Section
+# ============================================================================
+
+@router.get("/soc/benchmarking-level2")
+async def benchmarking_level2():
+    """P32: Level 2 benchmarking section (mock data for validation)."""
+    from app.services.benchmarking_level2 import Level2BenchmarkingSection
+    section = Level2BenchmarkingSection()
+    # Mock data from P29 synthetic A/B results
+    mock_ab = {
+        'group_a': {'acceptance_rate': 0.701, 'accuracy': 0.695,
+                    'resolution_time': 1.427, 'reward': 0.7187,
+                    'n_decisions': 382},
+        'group_b': {'acceptance_rate': 0.802, 'accuracy': 0.790,
+                    'resolution_time': 1.246, 'reward': 0.7977,
+                    'n_decisions': 387},
+        'variant_promoted': True,
+        'decisions_to_promotion': 143,
+        'conservation_breached': False,
+        'p_value': 0.0001,
+        'cohens_d': 3.746
+    }
+    return section.generate_section(mock_ab)
