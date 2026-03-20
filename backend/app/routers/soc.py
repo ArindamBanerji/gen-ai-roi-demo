@@ -1911,3 +1911,46 @@ async def transparency_page():
     """
     from app.services.transparency_page import generate_transparency_page
     return generate_transparency_page()
+
+
+# ============================================================================
+# GET /api/soc/benchmarking-report — P17 Analyst Benchmarking Report (L-04)
+# ============================================================================
+
+@router.get("/soc/benchmarking-report")
+async def benchmarking_report(
+    start_date: str = "2026-01-01",
+    end_date: str = "2026-12-31",
+    analyst_hourly_cost: float = 85.0
+):
+    """L-04: Analyst benchmarking report."""
+    from app.services.benchmarking_report import BenchmarkingEngine
+    engine = BenchmarkingEngine(neo4j_client)
+    report = engine.generate_report(start_date, end_date, analyst_hourly_cost)
+    summary = engine.format_executive_summary(report)
+    return {
+        'report': {
+            'period': {'start': report.period_start, 'end': report.period_end},
+            'total_decisions': report.total_decisions,
+            'section_1_accuracy': {
+                'system_accuracy': report.system_accuracy,
+                'analyst_accuracy': report.analyst_accuracy,
+                'disagreement_rate': report.disagreement_rate,
+                'system_correct_on_disagreements': report.system_correct_on_disagreements,
+                'analyst_correct_on_disagreements': report.analyst_correct_on_disagreements,
+                'per_category': report.per_category_accuracy
+            },
+            'section_2_adaptation': {
+                'iks_start': report.iks_start,
+                'iks_end': report.iks_end,
+                'iks_delta': report.iks_delta,
+                'categories_calibrated': report.categories_calibrated
+            },
+            'section_3_consistency': {
+                'acceptance_rate': report.system_acceptance_rate,
+                'guaranteed_consistency': report.guaranteed_consistency,
+                'savings': report.estimated_annual_savings
+            }
+        },
+        'executive_summary': summary
+    }
