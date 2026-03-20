@@ -1894,3 +1894,20 @@ async def compliance_dashboard():
     """
     from app.services.compliance_dashboard import generate_compliance_page
     return generate_compliance_page()
+
+
+# ============================================================================
+# GET /api/soc/transparency — P21 Transparency Page (L-11)
+# ============================================================================
+
+@router.get("/soc/transparency")
+async def transparency_page():
+    """L-11: How This System Works — three depth levels.
+
+    Level 1 (Analyst): plain language, no equations.
+    Level 2 (CISO): convergence, IKS, conservation law.
+    Level 3 (Auditor): equations, experiment catalog, formal definitions.
+    Limitations: always visible.
+    """
+    from app.services.transparency_page import generate_transparency_page
+    return generate_transparency_page()
