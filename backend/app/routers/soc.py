@@ -1879,3 +1879,18 @@ async def intervention_history(limit: int = Query(50, ge=1, le=500)):
         raise HTTPException(status_code=503, detail=str(exc))
     records = await ctrl.get_intervention_history(limit=limit)
     return {"interventions": records, "count": len(records)}
+
+
+# ============================================================================
+# GET /api/soc/compliance — P20 EU AI Act Compliance Dashboard (L-10)
+# ============================================================================
+
+@router.get("/soc/compliance")
+async def compliance_dashboard():
+    """L-10: EU AI Act compliance evidence page.
+
+    Maps Articles 9, 12, 13, 14, 15 to specific product mechanisms.
+    Enforcement: August 2, 2026.
+    """
+    from app.services.compliance_dashboard import generate_compliance_page
+    return generate_compliance_page()
