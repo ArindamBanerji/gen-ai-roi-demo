@@ -1773,3 +1773,109 @@ async def attack_chains(hours_back: int = 72):
         "total_campaigns":   len(campaigns),
         "scan_window_hours": hours_back,
     }
+
+
+# ============================================================================
+# P22: Intervention Controls — EU AI Act Article 14 human oversight (L-12)
+# ============================================================================
+
+class FreezeRequest(BaseModel):
+    initiated_by: str
+    reason: str
+
+
+class RollbackInterventionRequest(BaseModel):
+    snapshot_id: str
+    initiated_by: str
+    reason: str
+    preview: bool = False
+
+
+class ThresholdRequest(BaseModel):
+    category: str
+    new_threshold: float
+    initiated_by: str
+    reason: str
+
+
+def _get_intervention_controls():
+    """Build InterventionControls from existing singletons."""
+    from app.services.gae_state import get_profile_scorer
+    from app.services.checkpoint import checkpoint_svc
+    from app.services.composite_gate import CompositeDiscriminant
+    from app.services.intervention_controls import InterventionControls
+    scorer = get_profile_scorer()
+    return InterventionControls(
+        db_client=neo4j_client,
+        scorer=scorer,
+        checkpoint_service=checkpoint_svc,
+        composite_gate=CompositeDiscriminant,
+    )
+
+
+@router.post("/soc/interventions/freeze")
+async def intervention_freeze(request: FreezeRequest):
+    """Freeze all centroid learning globally."""
+    try:
+        ctrl = _get_intervention_controls()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    return await ctrl.freeze_all_learning(request.initiated_by, request.reason)
+
+
+@router.post("/soc/interventions/unfreeze")
+async def intervention_unfreeze(request: FreezeRequest):
+    """Resume centroid learning globally."""
+    try:
+        ctrl = _get_intervention_controls()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    return await ctrl.unfreeze_all_learning(request.initiated_by, request.reason)
+
+
+@router.post("/soc/interventions/rollback")
+async def intervention_rollback(request: RollbackInterventionRequest):
+    """Rollback to a centroid snapshot. preview=True returns what would change."""
+    try:
+        ctrl = _get_intervention_controls()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    result = await ctrl.rollback(
+        request.snapshot_id, request.initiated_by, request.reason, request.preview
+    )
+    if "error" in result and not result.get("preview"):
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+
+@router.post("/soc/interventions/threshold")
+async def intervention_threshold(request: ThresholdRequest):
+    """Adjust auto-approve confidence threshold for a category."""
+    try:
+        ctrl = _get_intervention_controls()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    return await ctrl.adjust_threshold(
+        request.category, request.new_threshold, request.initiated_by, request.reason
+    )
+
+
+@router.get("/soc/interventions/state")
+async def intervention_state():
+    """Current state of all intervention controls."""
+    try:
+        ctrl = _get_intervention_controls()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    return await ctrl.get_current_state()
+
+
+@router.get("/soc/interventions/history")
+async def intervention_history(limit: int = Query(50, ge=1, le=500)):
+    """Intervention audit log."""
+    try:
+        ctrl = _get_intervention_controls()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    records = await ctrl.get_intervention_history(limit=limit)
+    return {"interventions": records, "count": len(records)}

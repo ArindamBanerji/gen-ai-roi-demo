@@ -52,6 +52,12 @@ class CompositeDiscriminant:
         "insider_threat":       0.70,
     }
 
+    # P22 Intervention Controls — EU AI Act Article 14.
+    # Mutated at runtime by InterventionControls; process-level state.
+    AUTO_APPROVE_DISABLED: bool = False
+    FROZEN_CATEGORIES: set = set()
+    FORCE_REVIEW_CATEGORIES: set = set()
+
     @staticmethod
     async def evaluate(
         score_result: Any,
