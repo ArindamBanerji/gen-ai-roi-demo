@@ -1954,3 +1954,26 @@ async def benchmarking_report(
         },
         'executive_summary': summary
     }
+
+
+# ============================================================================
+# GET /api/soc/executive-narrative — P18 Executive Learning Narrative (L-05)
+# ============================================================================
+
+@router.get("/soc/executive-narrative")
+async def executive_narrative(week_ending: str = None):
+    """L-05: Weekly executive learning digest."""
+    from app.services.executive_narrative import ExecutiveNarrative
+    narrative = ExecutiveNarrative(neo4j_client)
+    return narrative.generate_weekly(week_ending)
+
+
+# ============================================================================
+# GET /api/soc/three-claims — P15 Three Unconditional Claims (board one-pager)
+# ============================================================================
+
+@router.get("/soc/three-claims")
+async def three_claims():
+    """P15: Three unconditional guarantees for board presentation."""
+    from app.services.three_claims import generate_three_claims
+    return generate_three_claims()

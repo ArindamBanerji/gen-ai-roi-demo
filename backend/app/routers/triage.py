@@ -722,16 +722,18 @@ async def report_decision_outcome(request: OutcomeRequest):
             OPTIONAL MATCH (d)-[:DECIDED_ON]->(a:Alert)
             SET d.outcome    = $outcome_label,
                 d.correct    = $correct,
-                d.verified_at = datetime()
+                d.verified_at = datetime(),
+                d.override_comment = $override_comment
             RETURN d.factor_vector AS factor_vector,
                    d.action        AS action,
                    d.confidence    AS confidence,
                    coalesce(a.alert_type, 'unknown') AS alert_type
             """,
             {
-                "decision_id":  request.decision_id,
-                "outcome_label": outcome_label,
-                "correct":       correct_bool,
+                "decision_id":    request.decision_id,
+                "outcome_label":  outcome_label,
+                "correct":        correct_bool,
+                "override_comment": request.override_comment,
             },
         )
 
