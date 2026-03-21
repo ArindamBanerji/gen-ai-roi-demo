@@ -2003,3 +2003,23 @@ async def benchmarking_level2():
         'cohens_d': 3.746
     }
     return section.generate_section(mock_ab)
+
+
+# ============================================================================
+# GET /api/soc/frozen-roi — Frozen ROI Calculator (Adjustment E)
+# ============================================================================
+
+@router.get("/soc/frozen-roi")
+async def frozen_roi(
+    alerts_per_day: float = 200,
+    analyst_hourly_cost: float = 85.0,
+    auto_approve_rate: float = 0.04
+):
+    """Frozen mode ROI — value before learning is enabled."""
+    from app.services.economics import FrozenROICalculator
+    calc = FrozenROICalculator(
+        analyst_hourly_cost=analyst_hourly_cost,
+        alerts_per_day=alerts_per_day,
+        auto_approve_rate=auto_approve_rate
+    )
+    return calc.compute()
