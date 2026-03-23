@@ -248,9 +248,12 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
                 "ORDER BY d.timestamp DESC LIMIT 20"
             )
             if evo_rows:
-                response["evolution_events"] = [
-                    {
-                        "id": f"DEC-{str(r.get('id', ''))[:8]}",
+                _evo_events = []
+                for r in evo_rows:
+                    _rid = str(r.get('id', ''))
+                    _display_id = _rid if _rid.upper().startswith('DEC-') else f"DEC-{_rid[:8]}"
+                    _evo_events.append({
+                        "id": _display_id,
                         "event_type": str(r.get("action", "decision")),
                         "description": (
                             f"{str(r.get('action', '?')).upper()} on "
@@ -259,9 +262,8 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
                         ),
                         "timestamp": str(r.get("ts", datetime.now().isoformat())),
                         "triggered_by": str(r.get("alert_id", "?")),
-                    }
-                    for r in evo_rows
-                ]
+                    })
+                response["evolution_events"] = _evo_events
             else:
                 response["evolution_events"] = []
         except Exception as exc:
@@ -504,9 +506,14 @@ async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
                 "total": 0,
             }
         _NULLS = (None, "None", "")
-        events = [
-            {
-                "id": f"DEC-{str(r.get('id', ''))[:8]}",
+        events = []
+        for r in results:
+            if r.get("action") in _NULLS or r.get("alert_id") in _NULLS:
+                continue
+            _rid = str(r.get('id', ''))
+            _display_id = _rid if _rid.upper().startswith('DEC-') else f"DEC-{_rid[:8]}"
+            events.append({
+                "id": _display_id,
                 "event_type": str(r.get("action", "decision")),
                 "description": (
                     f"{str(r.get('action', '?')).upper()} on "
@@ -515,10 +522,7 @@ async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
                 ),
                 "timestamp": str(r.get("ts", datetime.now().isoformat())),
                 "triggered_by": str(r.get("alert_id", "?")),
-            }
-            for r in results
-            if r.get("action") not in _NULLS and r.get("alert_id") not in _NULLS
-        ]
+            })
         return {"events": events, "estimated": False, "note": None, "total": len(events)}
 
     except Exception as e:
