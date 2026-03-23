@@ -98,6 +98,11 @@ interface AnalysisResult {
     action_probabilities: Record<string, number>
     decision_method: string
   }
+  referral?: {
+    should_refer: boolean
+    reasons: string[]
+    audit_summary: string
+  }
 }
 
 interface ClosedLoopResult {
@@ -239,6 +244,16 @@ function computeFactorAttribution(
 function formatFactorName(name: string): string {
   // "TravelMatchFactor" → "Travel Match"
   return name.replace(/Factor$/, '').replace(/([A-Z])/g, ' $1').trim()
+}
+
+const REFERRAL_REASON_LABELS: Record<string, string> = {
+  EXECUTIVE_ACCOUNT:  'Executive account — policy requires human review',
+  RAPID_SUCCESSION:   'Rapid succession alerts from same source',
+  COMPLIANCE_MANDATE: 'Compliance mandate — category requires human review',
+  HIGH_VALUE_DATA:    'High-value data exfiltration with low-confidence action',
+  ACTIVE_INCIDENT:    'Active incident in progress',
+  NEW_ASSET:          'New asset — insufficient baseline',
+  CROSS_CATEGORY:     'Cross-category activity — same user, multiple alert types',
 }
 
 export default function AlertTriageTab() {
@@ -1232,6 +1247,36 @@ export default function AlertTriageTab() {
                 {analysis.recommendation.pattern_id && (
                   <div className="text-xs text-gray-500">
                     Pattern: {analysis.recommendation.pattern_id}
+                  </div>
+                )}
+
+                {/* Referral callout — rendered only when should_refer === true */}
+                {analysis.referral?.should_refer && (
+                  <div className="rounded-lg border border-orange-500/70 bg-orange-950/40 overflow-hidden">
+                    <div className="px-3 py-2 bg-orange-900/50 flex items-center gap-2">
+                      <span className="text-orange-300 font-bold text-sm">⚠ Referred to Analyst</span>
+                      {analysis.recommendation.confidence >= 0.90 && (
+                        <span className="ml-auto text-xs font-semibold text-orange-200 bg-orange-800/60 px-2 py-0.5 rounded">
+                          Auto-approve overridden — analyst review required
+                        </span>
+                      )}
+                    </div>
+                    <div className="px-3 py-2 space-y-1.5">
+                      <ul className="space-y-1">
+                        {analysis.referral.reasons.map((code) => (
+                          <li key={code} className="flex items-start gap-1.5 text-xs text-orange-100">
+                            <span className="text-orange-400 font-mono shrink-0">{code}</span>
+                            <span className="text-gray-400">—</span>
+                            <span>{REFERRAL_REASON_LABELS[code] ?? code}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {analysis.referral.audit_summary && (
+                        <p className="text-xs text-gray-500 mt-1 border-t border-orange-900/50 pt-1.5 font-mono">
+                          {analysis.referral.audit_summary}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
 

@@ -140,21 +140,26 @@ export default function SOCAnalyticsTab() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [threatLandscape, setThreatLandscape] = useState<ThreatLandscape | null>(null)
+  const [threatLandscapeLoading, setThreatLandscapeLoading] = useState(true)
   const [tacticBreakdown, setTacticBreakdown] = useState<Array<{tactic: string; count: number}>>([])
+  const [tacticBreakdownLoading, setTacticBreakdownLoading] = useState(true)
   const [detEng, setDetEng] = useState<DetectionEngineering | null>(null)
+  const [detEngError, setDetEngError] = useState(false)
 
   // Fetch threat landscape, tactic breakdown, and detection engineering on mount
   useEffect(() => {
     getThreatLandscape()
       .then((data) => setThreatLandscape(data as ThreatLandscape))
       .catch(() => {})
+      .finally(() => setThreatLandscapeLoading(false))
     getAttackTacticBreakdown()
       .then((data: any) => setTacticBreakdown(data?.breakdown ?? []))
       .catch(() => {})
+      .finally(() => setTacticBreakdownLoading(false))
     fetch('/api/soc/detection-engineering')
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() })
       .then((data) => setDetEng(data as DetectionEngineering))
-      .catch(() => {})
+      .catch(() => setDetEngError(true))
   }, [])
 
   const handleQuery = async (queryText?: string) => {
@@ -219,8 +224,12 @@ export default function SOCAnalyticsTab() {
         </div>
       </div>
 
-      {/* Threat Landscape at a Glance — live graph snapshot, hidden until loaded */}
-      {threatLandscape && (
+      {/* Threat Landscape at a Glance — live graph snapshot */}
+      {threatLandscapeLoading ? (
+        <div className="bg-soc-card rounded-lg border border-gray-800 p-5 text-sm text-gray-500">
+          Loading threat landscape...
+        </div>
+      ) : threatLandscape ? (
         <div className="bg-gradient-to-r from-soc-card via-soc-card to-blue-900/20 rounded-lg border border-blue-800/50 p-5">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
@@ -308,10 +317,16 @@ export default function SOCAnalyticsTab() {
             "This is what the graph knows before a single query. Your SIEM shows alerts. We show context."
           </div>
         </div>
+      ) : (
+        <div className="bg-soc-card rounded-lg border border-gray-800 p-5 text-sm text-gray-500">
+          No data available
+        </div>
       )}
 
       {/* By ATT&CK Tactic — alert distribution across MITRE tactics */}
-      {tacticBreakdown.length > 0 && (
+      {tacticBreakdownLoading ? (
+        <div className="text-sm text-gray-500 px-1">Loading ATT&CK tactic data...</div>
+      ) : tacticBreakdown.length > 0 ? (
         <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-800 flex items-center gap-2">
             <Shield className="w-4 h-4 text-orange-400" />
@@ -338,10 +353,16 @@ export default function SOCAnalyticsTab() {
             })}
           </div>
         </div>
+      ) : (
+        <div className="text-sm text-gray-500 px-1">No data available</div>
       )}
 
       {/* Detection Engineering (F2) */}
-      {detEng && (
+      {detEngError ? (
+        <div className="bg-soc-card rounded-lg border border-gray-800 p-5 text-sm text-gray-500">
+          Detection engineering data unavailable
+        </div>
+      ) : detEng ? (
         <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-800 flex items-center gap-2">
             <Settings className="w-4 h-4 text-indigo-400" />
@@ -449,7 +470,7 @@ export default function SOCAnalyticsTab() {
 
           <div className="px-5 pb-3 text-xs text-gray-600 italic">{detEng.note}</div>
         </div>
-      )}
+      ) : null}
 
       {/* Query Input */}
       <div className="bg-soc-card rounded-lg p-6 border border-gray-800">

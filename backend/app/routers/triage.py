@@ -1095,13 +1095,18 @@ async def get_profile_state():
     Includes IKS (Institutional Knowledge Score).
     """
     scorer = get_profile_scorer()
-    from app.domains.soc.config import SOC_CATEGORIES, SOC_ACTIONS
+    from app.domains.soc.config import SOC_CATEGORIES, SCORER_ACTIONS
     from app.services.iks import compute_iks, interpret, _compute_delta_7d
 
+    # Use scorer.counts.shape[1] as source of truth — not len(SOC_ACTIONS).
+    # SOC_ACTIONS has 5 elements (includes refer_to_analyst for referral policy);
+    # ProfileScorer uses A=4 only (SCORER_ACTIONS). Iterating range(5) on a
+    # (6,4) array causes IndexError at index 4.
+    n_cats, n_actions = scorer.counts.shape
     decision_count = int(sum(
         scorer.counts[c, a]
-        for c in range(len(SOC_CATEGORIES))
-        for a in range(len(SOC_ACTIONS))
+        for c in range(n_cats)
+        for a in range(n_actions)
     ))
 
     iks_result = compute_iks(scorer.mu)
@@ -1110,7 +1115,7 @@ async def get_profile_state():
 
     return {
         "categories": SOC_CATEGORIES,
-        "actions": SOC_ACTIONS,
+        "actions": SCORER_ACTIONS,         # A=4 — matches counts/centroids shape
         "centroids": scorer.mu.tolist(),   # shape (6, 4, 6)
         "counts": scorer.counts.tolist(),  # shape (6, 4)
         "decision_count": decision_count,

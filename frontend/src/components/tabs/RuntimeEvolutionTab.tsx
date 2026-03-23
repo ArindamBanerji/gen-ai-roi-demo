@@ -190,6 +190,7 @@ export default function RuntimeEvolutionTab() {
   const [centroidEvolution, setCentroidEvolution] = useState<CentroidEvolutionEntry[]>([])
   const [centroidEvoLoading, setCentroidEvoLoading] = useState(false)
   const [centroidEvoError, setCentroidEvoError] = useState(false)
+  const [profileError, setProfileError] = useState(false)
   const [activeSection, setActiveSection] = useState<'a' | 'b' | 'c' | 'd'>('a')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [pendingDecisionId, setPendingDecisionId] = useState<string | null>(null)
@@ -296,11 +297,15 @@ export default function RuntimeEvolutionTab() {
 
   const loadProfileState = async () => {
     try {
-      const data = await fetch('/api/soc/profile').then(r => r.json())
+      // Use api.getProfileState() which calls fetchJSON and throws on !response.ok.
+      // The previous raw fetch().then(r => r.json()) had no .ok check — a 500 body
+      // would be stored as profileState causing silent rendering bugs downstream.
+      const data = await api.getProfileState()
       setProfileStateFull(data as ProfileStateWithIks)
       setProfileState(data as ProfileState)
     } catch (error) {
       console.error('Failed to load profile state:', error)
+      setProfileError(true)
     }
   }
 
@@ -1353,6 +1358,12 @@ export default function RuntimeEvolutionTab() {
             </div>
 
             <div className="space-y-5">
+
+              {profileError && (
+                <div className="text-sm text-red-400 py-2 px-3 bg-red-900/20 rounded border border-red-800/50">
+                  Unable to load profile data — check backend connection
+                </div>
+              )}
 
               {/* F1. IKS Block */}
               <div className="bg-soc-card rounded-lg border border-gray-800 p-5">
