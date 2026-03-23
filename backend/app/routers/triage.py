@@ -238,6 +238,8 @@ async def analyze_alert(request: ProcessAlertRequest):
                 confidence:    $confidence,
                 factor_vector: $fv,
                 category:      $category,
+                source_id:     $source_id,
+                user_id:       $user_id,
                 timestamp:     datetime(),
                 outcome:       null
             })
@@ -250,6 +252,8 @@ async def analyze_alert(request: ProcessAlertRequest):
                 "confidence":  confidence,
                 "fv":          fv_list,
                 "category":    alert_category,
+                "source_id":   alert_data.get("source_location", ""),
+                "user_id":     context.get("user_id", ""),
             },
         )
         print(f"[GAE] Decision node written: id={decision_id} [:DECIDED_ON] {alert_id}")
@@ -369,6 +373,66 @@ async def analyze_alert(request: ProcessAlertRequest):
         )
 
         # ====================================================================
+        # Step 8b: Referral VETO — independent of ProfileScorer (EXP-REFER-LAYERED)
+        #
+        # Rules R1-R7 evaluate alert_context and fire a VETO at any confidence.
+        # Action routing (ProfileScorer) and referral routing (ReferralRules)
+        # are independent pipelines. Referral wins if any rule fires.
+        # Missing context keys → rule does not fire (safe degradation).
+        # ====================================================================
+        from gae.referral import ReferralEngine
+        from app.services.referral_rules import get_soc_referral_rules
+
+        # R2/R7: query Decision nodes for sequence and cross-category counts
+        _source_id = alert_data.get('source_location')
+        _user_id   = context.get('user_id')
+        _sequence_count       = await neo4j_client.get_sequence_count(_source_id)
+        _cross_category_count = await neo4j_client.get_cross_category_count(_user_id)
+        logger.debug(
+            "[TRIAGE-Referral] source_id=%r seq=%d user_id=%r cross_cat=%d",
+            _source_id, _sequence_count, _user_id, _cross_category_count,
+        )
+
+        _alert_context = {
+            # R1: executive account
+            'identity_tier':        alert_data.get('identity_tier', 'standard'),
+            # R2: rapid succession — live Neo4j count
+            'sequence_count':       _sequence_count,
+            # R3: compliance mandate
+            'category':             alert_category,
+            'compliance_mode':      False,
+            # R4: high value data
+            'asset_criticality':    fv_list[1] if len(fv_list) > 1 else 0.0,
+            'stage1_action':        _scoring_result.action_name,
+            # R5: active incident
+            'incident_active':      False,
+            # R6: new asset
+            'asset_age_days':       alert_data.get('asset_age_days', 365),
+            # R7: cross-category — live Neo4j count
+            'cross_category_count': _cross_category_count,
+            # full factor vector for future rules
+            'factor_values':        fv_list,
+        }
+
+        _referral_engine = ReferralEngine(rules=get_soc_referral_rules())
+        _referral = _referral_engine.evaluate(_alert_context)
+
+        if _referral.should_refer:
+            selected_action = "refer_to_analyst"
+            routing_zone = "human_review"
+            logger.info(
+                "[TRIAGE-Referral] VETO fired — rules=%s audit=%s",
+                _referral.reason_codes,
+                _referral.audit_summary,
+            )
+
+        _referral_payload = {
+            'should_refer':  _referral.should_refer,
+            'reasons':       _referral.reason_codes,
+            'audit_summary': _referral.audit_summary,
+        }
+
+        # ====================================================================
         # Build Response — existing structure preserved; gae_scoring added
         # ====================================================================
         # ATT&CK fields: prefer Neo4j Alert node properties; fall back to
@@ -428,6 +492,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                 "reason_codes":   _composite["reason_codes"],
             },
             "provenance": _provenance_payload,
+            "referral":   _referral_payload,
         }
         # ====================================================================
         # NAR-1: Build calibration_context and generate structured narrative

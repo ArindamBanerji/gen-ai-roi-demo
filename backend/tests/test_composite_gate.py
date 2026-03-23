@@ -264,7 +264,9 @@ def test_analyze_includes_composite_gate():
     mock_neo4j.get_security_context = AsyncMock(return_value={
         "alert_type": "anomalous_login", "alert_id": "ALERT-7823",
     })
-    mock_neo4j.run_query            = AsyncMock(side_effect=fake_run_query)
+    mock_neo4j.run_query                = AsyncMock(side_effect=fake_run_query)
+    mock_neo4j.get_sequence_count       = AsyncMock(return_value=0)
+    mock_neo4j.get_cross_category_count = AsyncMock(return_value=0)
 
     scorer = _scorer()
     mock_ls = MagicMock()

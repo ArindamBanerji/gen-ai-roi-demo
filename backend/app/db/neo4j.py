@@ -2,10 +2,13 @@
 Neo4j Aura client for Security Graph
 Handles all graph queries for the SOC Copilot Demo
 """
+import logging
 import os
 from typing import Optional, Dict, Any, List
 from neo4j import AsyncGraphDatabase, AsyncDriver
 from contextlib import asynccontextmanager
+
+logger = logging.getLogger(__name__)
 
 
 class Neo4jClient:
@@ -287,6 +290,67 @@ class Neo4jClient:
         query = "MATCH (alert:Alert {id: $alert_id}) RETURN alert"
         result = await self.run_query(query, {"alert_id": alert_id})
         return result[0]["alert"] if result else None
+
+    # ========================================================================
+    # Referral Rule Context Queries (R2, R7)
+    # ========================================================================
+
+    async def get_sequence_count(self, source_id: str, window_seconds: int = 3600) -> int:
+        """
+        Count Decision nodes for the same source within the rolling window.
+
+        Used by R2 (RapidSuccessionRule).  Returns 0 on missing source_id or
+        any Neo4j exception — rule must not fire on missing context (P-REF-2).
+        """
+        if not source_id:
+            logger.debug("[SEQ-COUNT] source_id is None/empty — returning 0 (P-REF-2)")
+            return 0
+        try:
+            result = await self.run_query(
+                """
+                MATCH (d:Decision)
+                WHERE d.source_id = $source_id
+                AND d.timestamp > datetime() - duration({seconds: $window_seconds})
+                RETURN count(d) AS sequence_count
+                """,
+                {"source_id": source_id, "window_seconds": window_seconds},
+            )
+            return int(result[0].get("sequence_count") or 0) if result else 0
+        except Exception as exc:
+            logger.debug(
+                "[SEQ-COUNT] query failed for source_id=%r: %s — returning 0 (P-REF-2)",
+                source_id, exc,
+            )
+            return 0
+
+    async def get_cross_category_count(self, user_id: str, window_seconds: int = 3600) -> int:
+        """
+        Count distinct alert categories in Decision nodes for the same user
+        within the rolling window.
+
+        Used by R7 (CrossCategoryRule).  Returns 0 on missing user_id or any
+        Neo4j exception — rule must not fire on missing context (P-REF-2).
+        """
+        if not user_id:
+            logger.debug("[CROSS-CAT] user_id is None/empty — returning 0 (P-REF-2)")
+            return 0
+        try:
+            result = await self.run_query(
+                """
+                MATCH (d:Decision)
+                WHERE d.user_id = $user_id
+                AND d.timestamp > datetime() - duration({seconds: $window_seconds})
+                RETURN count(DISTINCT d.category) AS cross_category_count
+                """,
+                {"user_id": user_id, "window_seconds": window_seconds},
+            )
+            return int(result[0].get("cross_category_count") or 0) if result else 0
+        except Exception as exc:
+            logger.debug(
+                "[CROSS-CAT] query failed for user_id=%r: %s — returning 0 (P-REF-2)",
+                user_id, exc,
+            )
+            return 0
 
 
 # Global client instance
