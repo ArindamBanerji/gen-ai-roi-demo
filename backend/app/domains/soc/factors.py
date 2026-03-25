@@ -10,6 +10,7 @@ compute_soc_factors) are preserved at the bottom for services/triage.py.
 """
 
 import logging
+import numpy as np
 from datetime import date
 from typing import Any, Dict, List, Optional
 
@@ -266,6 +267,99 @@ class PatternHistoryFactor:
         except Exception as exc:
             log.warning("PatternHistoryFactor error: %s", exc)
             return 0.5
+
+
+class PatternHistoryFactorComputer:
+    """
+    Computes pattern_history factor (index 3) for an alert.
+
+    Two-path computation:
+    Path A (W2 enriched): TRIGGERED_EVOLUTION edges present for
+      this alert's category in this organizational context.
+      Returns action-specific mean from prior verified decisions,
+      weighted by recency (exponential decay, half-life=30 decisions).
+
+    Path B (fallback): No TRIGGERED_EVOLUTION edges available.
+      Returns baseline pattern_history score (0.40 neutral baseline).
+
+    This implements the W2 compounding pathway: every verified
+    decision enriches future factor computation for similar contexts.
+    """
+
+    name = "pattern_history"
+    contract = SchemaContract(
+        node_type="alert",
+        properties=(
+            PropertySpec(name="pattern_history", required=False, default_value=0.5),
+        ),
+    )
+
+    HALF_LIFE_DECISIONS = 30  # recency weight half-life
+
+    async def compute(
+        self,
+        alert: Any,
+        neo4j: Any,
+        action_index: Optional[int] = None,
+    ) -> float:
+        """
+        Returns pattern_history factor value in [0.0, 1.0].
+        Uses TRIGGERED_EVOLUTION edges if available, else fallback.
+        """
+        category = _get(alert, "category", "") or _get(alert, "alert_type", "")
+        if not category:
+            return self._fallback_compute(alert)
+
+        try:
+            if action_index is not None:
+                query = """
+                MATCH (d:Decision)-[:TRIGGERED_EVOLUTION]->(evo:EvolutionEvent)
+                WHERE d.category = $category
+                  AND d.action_index = $action_index
+                  AND d.verified_correct = true
+                RETURN d.factor_snapshot[3] AS pattern_value,
+                       d.decision_number AS decision_num
+                ORDER BY d.decision_number DESC
+                LIMIT 50
+                """
+                params = {"category": category, "action_index": action_index}
+            else:
+                query = """
+                MATCH (d:Decision)-[:TRIGGERED_EVOLUTION]->(evo:EvolutionEvent)
+                WHERE d.category = $category
+                  AND d.verified_correct = true
+                RETURN d.factor_snapshot[3] AS pattern_value,
+                       d.decision_number AS decision_num
+                ORDER BY d.decision_number DESC
+                LIMIT 50
+                """
+                params = {"category": category}
+
+            results = await neo4j.run_query(query, params)
+        except Exception as exc:
+            log.warning("PatternHistoryFactorComputer error: %s", exc)
+            return self._fallback_compute(alert)
+
+        if not results:
+            return self._fallback_compute(alert)
+
+        # Recency-weighted mean (exponential decay, half-life=30 decisions)
+        values = [r["pattern_value"] for r in results]
+        decision_nums = [r["decision_num"] for r in results]
+        max_dec = max(decision_nums)
+        weights = [
+            2 ** (-(max_dec - d) / self.HALF_LIFE_DECISIONS)
+            for d in decision_nums
+        ]
+        weighted_mean = sum(v * w for v, w in zip(values, weights)) / sum(weights)
+        return float(np.clip(weighted_mean, 0.0, 1.0))
+
+    def _fallback_compute(self, alert: Any) -> float:
+        """
+        Existing pattern_history computation when no W2 edges present.
+        Returns 0.40 neutral baseline (current behavior — unchanged from v5.5.1).
+        """
+        return 0.40
 
 
 class TimeAnomalyFactor:

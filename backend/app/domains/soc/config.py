@@ -21,7 +21,7 @@ from app.domains.base import (
 )
 from app.domains.soc.factors import (
     TravelMatchFactor, AssetCriticalityFactor, ThreatIntelEnrichmentFactor,
-    PatternHistoryFactor, TimeAnomalyFactor, DeviceTrustFactor,
+    PatternHistoryFactor, PatternHistoryFactorComputer, TimeAnomalyFactor, DeviceTrustFactor,
 )
 from typing import Dict, List
 
@@ -688,7 +688,7 @@ class SOCDomainConfig(DomainConfig):
             TravelMatchFactor(),
             AssetCriticalityFactor(),
             ThreatIntelEnrichmentFactor(),
-            PatternHistoryFactor(),
+            PatternHistoryFactorComputer(),
             TimeAnomalyFactor(),
             DeviceTrustFactor(),
         ]
