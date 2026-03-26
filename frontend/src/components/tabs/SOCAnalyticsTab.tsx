@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import CampaignIntelligencePanel from '../CampaignIntelligencePanel'
 import {
   Shield,
   Search,
@@ -852,6 +853,9 @@ export default function SOCAnalyticsTab() {
           </div>
         </div>
       )}
+
+      {/* F6 — Campaign Intelligence Panel */}
+      <CampaignIntelligencePanel />
     </div>
   )
 }

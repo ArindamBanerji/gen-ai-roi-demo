@@ -103,6 +103,9 @@ interface AnalysisResult {
     reasons: string[]
     audit_summary: string
   }
+  campaign_id?: string
+  campaign_severity?: string
+  campaign_alert_count?: number
 }
 
 interface ClosedLoopResult {
@@ -636,6 +639,30 @@ export default function AlertTriageTab() {
               {threatIntelLoading ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
+
+          {/* Campaign membership badge — F6 */}
+          {analysis?.campaign_id && (
+            <div className="flex items-center gap-2 text-xs bg-red-950 rounded-lg px-4 py-2 border border-red-800">
+              <span>🔗</span>
+              <span className="text-red-300 font-semibold">Part of Campaign</span>
+              <span className="text-gray-500">·</span>
+              <span className="text-red-400">
+                {analysis.campaign_severity || 'ACTIVE'}
+              </span>
+              {analysis.campaign_alert_count && (
+                <>
+                  <span className="text-gray-500">·</span>
+                  <span className="text-gray-400">{analysis.campaign_alert_count} alerts</span>
+                </>
+              )}
+              <button
+                onClick={() => window.open(`/api/soc/campaigns/${analysis.campaign_id}`, '_blank')}
+                className="ml-auto text-xs text-red-400 hover:text-red-200 transition-colors"
+              >
+                View →
+              </button>
+            </div>
+          )}
 
           {/* Multi-Source Enrichment badge — C4b */}
           {selectedAlert && (
