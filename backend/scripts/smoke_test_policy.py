@@ -1,3 +1,6 @@
+# Manual smoke test — requires live server on localhost:8001
+# Run manually: python scripts/smoke_test_policy.py
+# Do NOT run under pytest.
 """
 Quick test script for policy conflict endpoints.
 Run this while the backend server is running on port 8001.
