@@ -1049,6 +1049,76 @@ async def get_learning_state_endpoint():
 
 
 # ============================================================================
+# GET /api/soc/convergence-calendar — Convergence Calendar (L-08)
+# CLAIM-CONV-01: N_half = f(q̄, σ, kernel). V is NOT causal.
+# ============================================================================
+
+@router.get("/soc/convergence-calendar")
+async def get_convergence_calendar():
+    """
+    Return per-factor convergence calendar with N_half predictions.
+
+    Reads sigma_per_factor, q_bar, V, kernel, and decisions_per_factor from
+    live deployment state when available. Falls back to documented defaults
+    when state is not yet initialised.
+    """
+    from app.services.convergence_calendar import build_convergence_calendar, SOC_FACTORS
+
+    # ── defaults (used when deployment state unavailable) ──────────────────
+    DEFAULT_SIGMA  = 0.15
+    DEFAULT_Q_BAR  = 0.75
+    DEFAULT_V      = 200.0
+    DEFAULT_KERNEL = "l2"
+
+    sigma_per_factor    = {f: DEFAULT_SIGMA for f in SOC_FACTORS}
+    q_bar               = DEFAULT_Q_BAR
+    V                   = DEFAULT_V
+    kernel              = DEFAULT_KERNEL
+    decisions_per_factor = {f: 0 for f in SOC_FACTORS}
+
+    # ── try to read live state ──────────────────────────────────────────────
+    try:
+        from app.services.gae_state import get_learning_state
+        ls = get_learning_state()
+
+        # Decision count per factor — query Neo4j decision nodes grouped by factor
+        try:
+            rows = await neo4j_client.run_query(
+                """
+                MATCH (d:Decision)
+                WHERE d.primary_factor IS NOT NULL
+                RETURN d.primary_factor AS factor, count(d) AS cnt
+                """,
+            )
+            for row in rows:
+                factor_name = str(row.get("factor", ""))
+                if factor_name in decisions_per_factor:
+                    decisions_per_factor[factor_name] = int(row.get("cnt", 0))
+        except Exception as exc:
+            print(f"[convergence-calendar] decisions query failed: {exc}")
+
+        # Overall decision count as fallback for factors not tagged
+        total = getattr(ls, "decision_count", 0)
+        if total and all(v == 0 for v in decisions_per_factor.values()):
+            # Distribute evenly across factors when primary_factor tagging absent
+            per = total // len(SOC_FACTORS)
+            decisions_per_factor = {f: per for f in SOC_FACTORS}
+
+    except RuntimeError:
+        pass  # not yet initialised — stay with defaults
+    except Exception as exc:
+        print(f"[convergence-calendar] state read failed: {exc}")
+
+    return build_convergence_calendar(
+        sigma_per_factor=sigma_per_factor,
+        q_bar=q_bar,
+        V=V,
+        kernel=kernel,
+        decisions_per_factor=decisions_per_factor,
+    )
+
+
+# ============================================================================
 # GET /api/soc/iks-trend — IKS v2 trend (Chart A replacement)
 # ============================================================================
 

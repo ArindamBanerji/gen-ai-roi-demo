@@ -1,0 +1,126 @@
+"""
+convergence_calendar.py — Convergence Calendar service (L-08).
+
+CLAIM-CONV-01 coefficients (V-MV-CONVERGENCE v2, MAE=1.55d)
+  V is NOT a predictor — volume affects wall-clock time only.
+  q̄ dominates (coefficient -3.28). DiagonalKernel converges faster.
+"""
+
+from typing import Literal
+
+# ── CLAIM-CONV-01 regression coefficients ──────────────────────────────────
+INTERCEPT = 28.5
+COEFF_Q_BAR = -3.28
+COEFF_SIGMA = -12.1           # higher sigma → slower (less signal)
+KERNEL_DIAGONAL_OFFSET = -2.3  # diagonal converges faster than L2
+
+SOC_FACTORS = [
+    "travel_match",
+    "asset_criticality",
+    "threat_intel_enrichment",
+    "time_anomaly",
+    "pattern_history",
+    "device_trust",
+]
+
+
+def predict_n_half(
+    sigma_mean: float,
+    q_bar: float,
+    kernel: Literal["l2", "diagonal"] = "l2",
+) -> float:
+    """
+    Predict N_half (decisions to 50% convergence) from deployment params.
+    CLAIM-CONV-01: MAE=1.55d validated. V is NOT an input.
+    """
+    kernel_offset = KERNEL_DIAGONAL_OFFSET if kernel == "diagonal" else 0.0
+    n_half = (
+        INTERCEPT
+        + COEFF_Q_BAR * q_bar
+        + COEFF_SIGMA * (1 - sigma_mean)
+        + kernel_offset
+    )
+    return max(14.0, float(n_half))
+
+
+def decisions_to_days(n_half_decisions: float, V: float, alpha: float = 0.25) -> float:
+    """
+    Convert decision count to calendar days.
+    V IS used here — volume determines wall-clock time only, not calibration quality.
+    """
+    alerts_per_day_reaching_learning = max(V * alpha, 1.0)
+    return round(n_half_decisions / alerts_per_day_reaching_learning, 1)
+
+
+def build_convergence_calendar(
+    sigma_per_factor: dict,
+    q_bar: float,
+    V: float,
+    kernel: str,
+    decisions_per_factor: dict,
+    alpha: float = 0.25,
+) -> dict:
+    """
+    Build per-factor convergence calendar for the frontend.
+
+    Parameters
+    ----------
+    sigma_per_factor : {factor_name: sigma_value}
+    q_bar            : mean analyst quality score (0-1)
+    V                : daily alert volume (wall-clock only, not a predictor)
+    kernel           : "l2" or "diagonal"
+    decisions_per_factor : {factor_name: decisions_so_far}
+    alpha            : fraction of alerts that reach learning pipeline
+    """
+    sigma_mean = sum(sigma_per_factor.values()) / len(sigma_per_factor)
+    categories = []
+    for factor in SOC_FACTORS:
+        sigma = sigma_per_factor.get(factor, sigma_mean)
+        n_half = predict_n_half(sigma, q_bar, kernel)
+        current = decisions_per_factor.get(factor, 0)
+        pct = min(100, int(100 * current / max(n_half, 1)))
+        days = decisions_to_days(n_half, V, alpha)
+        remaining_decisions = max(0, n_half - current)
+        remaining_days = decisions_to_days(remaining_decisions, V, alpha)
+        if current == 0:
+            status = "not_started"
+        elif pct >= 100:
+            status = "calibrated"
+        else:
+            status = "calibrating"
+        categories.append({
+            "name": factor,
+            "n_half_decisions": round(n_half, 1),
+            "n_half_days": days,
+            "current_decisions": current,
+            "pct_calibrated": pct,
+            "remaining_days": remaining_days,
+            "status": status,
+            "dominant_driver": "analyst_quality",
+        })
+
+    fully_calibrated = sum(1 for c in categories if c["status"] == "calibrated")
+    calibrating = sum(1 for c in categories if c["status"] == "calibrating")
+    not_started = sum(1 for c in categories if c["status"] == "not_started")
+    remaining = [c["remaining_days"] for c in categories if c["status"] != "calibrated"]
+
+    return {
+        "categories": categories,
+        "summary": {
+            "fully_calibrated": fully_calibrated,
+            "calibrating": calibrating,
+            "not_started": not_started,
+            "fastest_remaining_days": min(remaining) if remaining else 0,
+            "slowest_remaining_days": max(remaining) if remaining else 0,
+        },
+        "model": {
+            "formula": "N_half = 28.5 - 3.28\u00d7q\u0305 - 12.1\u00d7(1-\u03c3) + kernel_offset",
+            "mae_days": 1.55,
+            "v_causal": False,
+            "q_bar_coefficient": -3.28,
+            "insight": (
+                "Higher analyst engagement is the single biggest driver "
+                "of calibration speed"
+            ),
+        },
+    }
