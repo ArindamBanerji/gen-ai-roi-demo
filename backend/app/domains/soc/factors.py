@@ -184,6 +184,9 @@ class ThreatIntelEnrichmentFactor:
         alert_id = _get(alert, "id", "")
         if not alert_id:
             return 0.0
+
+        # Pass 1: IOC matching (existing logic)
+        pass1_value = 0.0
         try:
             results = await neo4j.run_query(
                 """
@@ -192,24 +195,82 @@ class ThreatIntelEnrichmentFactor:
                 """,
                 {"alert": alert_id},
             )
-            if not results:
-                return 0.0
-
-            max_score = 0.0
-            sources: set = set()
-            for record in results:
-                sev = str(record.get("severity") or "low").lower()
-                sources.add(str(record.get("source") or "unknown"))
-                max_score = max(max_score, self._SEV_MAP.get(sev, 0.3))
-
-            # Corroboration boost: multiple independent sources
-            if len(sources) > 1:
-                max_score = min(max_score + 0.1, 1.0)
-
-            return float(max_score)
+            if results:
+                max_score = 0.0
+                sources: set = set()
+                for record in results:
+                    sev = str(record.get("severity") or "low").lower()
+                    sources.add(str(record.get("source") or "unknown"))
+                    max_score = max(max_score, self._SEV_MAP.get(sev, 0.3))
+                if len(sources) > 1:
+                    max_score = min(max_score + 0.1, 1.0)
+                pass1_value = float(max_score)
         except Exception as exc:
-            log.warning("ThreatIntelEnrichmentFactor error: %s", exc)
-            return 0.0
+            log.warning("ThreatIntelEnrichmentFactor Pass 1 error: %s", exc)
+
+        pass1_result = {"value": pass1_value, "provenance_nodes": [],
+                        "contribution": f"IOC score {pass1_value:.2f}"}
+
+        # Pass 3: Internal campaign membership (highest signal when present)
+        pass3 = await self._internal_campaign_score(alert_id, neo4j)
+
+        # Select the result with the lowest value (strongest escalate signal)
+        # Pass 3 wins if campaign membership present (value < 0.50)
+        all_passes = [pass1_result, pass3]
+        best = min(all_passes, key=lambda r: r["value"])
+        return float(best["value"])
+
+    async def _internal_campaign_score(
+        self, alert_id: str, neo4j: Any
+    ) -> dict:
+        """
+        Pass 3: Check if alert is part of an internally correlated campaign.
+        HIGH severity campaign → value=0.05 (strong escalate signal)
+        MEDIUM severity campaign → value=0.20
+        LOW or not in campaign → value=0.50 (neutral)
+
+        Returns dict with value, provenance_nodes, contribution fields.
+        Never raises — exceptions return neutral 0.50.
+        """
+        try:
+            results = await neo4j.execute_read("""
+                MATCH (a:Alert {id: $alert_id})-[:MEMBER_OF]->(c:Campaign)
+                RETURN c.confidence AS confidence,
+                       c.severity AS severity,
+                       c.id AS campaign_id,
+                       c.nl_summary AS summary,
+                       c.trigger_rule AS trigger_rule
+                LIMIT 1
+            """, alert_id=alert_id)
+
+            if not results:
+                return {
+                    "value": 0.50,
+                    "provenance_nodes": [],
+                    "contribution": "No campaign membership — neutral threat intel signal.",
+                }
+
+            c = results[0]
+            severity = c.get("severity", "LOW")
+            value = 0.05 if severity == "HIGH" else (
+                    0.20 if severity == "MEDIUM" else 0.40)
+
+            return {
+                "value": value,
+                "provenance_nodes": [c["campaign_id"]],
+                "contribution": (
+                    f"Campaign member ({severity} severity, "
+                    f"{float(c['confidence'] or 0):.0%} confidence). "
+                    f"{c.get('summary', '')}"
+                ),
+            }
+        except Exception as e:
+            log.warning("_internal_campaign_score failed for %s: %s", alert_id, e)
+            return {
+                "value": 0.50,
+                "provenance_nodes": [],
+                "contribution": "Campaign lookup unavailable — neutral signal.",
+            }
 
 
 class PatternHistoryFactor:
