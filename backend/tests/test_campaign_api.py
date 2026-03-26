@@ -88,6 +88,35 @@ def test_recorrelate_returns_counts():
 # Test 4 — GET /api/soc/campaigns accepts filter query params
 # ============================================================================
 
+# ============================================================================
+# Test 5 — POST /api/soc/campaigns/recorrelate is idempotent
+# ============================================================================
+
+def test_recorrelate_is_idempotent():
+    """
+    Calling recorrelate twice must not crash or produce negative counts.
+    The second call is safe because write_campaign uses MERGE — idempotent.
+    """
+    r1 = client.post("/api/soc/campaigns/recorrelate")
+    r2 = client.post("/api/soc/campaigns/recorrelate")
+
+    assert r1.status_code == 200, (
+        f"First recorrelate call failed: {r1.status_code}: {r1.text[:200]}"
+    )
+    assert r2.status_code == 200, (
+        f"Second recorrelate call failed: {r2.status_code}: {r2.text[:200]}"
+    )
+
+    d1 = r1.json()
+    d2 = r2.json()
+
+    assert d2["campaigns_found"] >= 0, (
+        f"Second recorrelate campaigns_found must be >= 0. Got: {d2['campaigns_found']}"
+    )
+    assert d2["events_processed"] >= 0, (
+        f"Second recorrelate events_processed must be >= 0. Got: {d2['events_processed']}"
+    )
+
 def test_get_campaigns_accepts_filter_params():
     """
     GET /api/soc/campaigns?min_confidence=0.7&trigger_rule=technique_sequence

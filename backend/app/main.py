@@ -156,6 +156,25 @@ async def startup_event():
         f"{connector_registry.count()} connector(s) registered"
     )
 
+    # F6 startup recorrelation — runs only if no Campaign nodes exist yet.
+    # Non-blocking: any exception is logged and swallowed.
+    try:
+        from app.domains.soc.campaigns import CampaignCorrelationEngine, CampaignRepository
+        from app.domains.soc.config import SOCDomainConfig
+        _camp_repo = CampaignRepository(neo4j_client)
+        if not await _camp_repo.campaigns_exist():
+            _camp_config = SOCDomainConfig.get_campaign_config()
+            _camp_engine = CampaignCorrelationEngine(_camp_config)
+            _camp_events = await _camp_repo.fetch_all_events()
+            _campaigns = _camp_engine.correlate(_camp_events)
+            for _c in _campaigns:
+                await _camp_repo.write_campaign(_c)
+            print(f"[F6] Startup recorrelation: {len(_campaigns)} campaigns found.")
+        else:
+            print("[F6] Campaign nodes exist — skipping startup recorrelation.")
+    except Exception as _camp_exc:
+        print(f"[F6] Startup recorrelation failed (non-blocking): {_camp_exc}")
+
 @app.on_event("shutdown")
 async def shutdown_event():
     """Close connections on shutdown"""
