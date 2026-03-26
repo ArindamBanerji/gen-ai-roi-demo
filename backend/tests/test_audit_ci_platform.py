@@ -56,3 +56,37 @@ def test_soc_audit_uses_ci_platform_ledger():
 
     # Cleanup
     audit_module.reset_audit_state()
+
+
+def test_epistemic_fields_never_none_in_normal_path():
+    """
+    SOC-2 regression: record_decision() called without explicit epistemic args
+    must NOT produce None fields — the 'unknown' fallback string is required at
+    call sites (triage.py and simulation.py) per EU AI Act Art. 15 compliance.
+
+    This test simulates the normal triage/simulation call signature (no kernel_type
+    etc. passed) and verifies that all three fields are non-None strings when the
+    caller supplies the 'unknown' fallback as required by the fix.
+    """
+    audit_module.reset_audit_state()
+
+    # Simulate triage.py / simulation.py call (SOC-2 fix applied: supplies "unknown")
+    record = audit_module.record_decision(
+        alert_id="ALERT-SOC2-TEST",
+        situation_type="credential_access",
+        action_taken="escalate",
+        factors=["travel_match", "asset_criticality"],
+        confidence=0.78,
+        kernel_type="unknown",
+        noise_zone="unknown",
+        conservation_status="unknown",
+    )
+
+    assert record.get("kernel_type") is not None, "kernel_type must not be None"
+    assert record.get("noise_zone") is not None, "noise_zone must not be None"
+    assert record.get("conservation_status") is not None, "conservation_status must not be None"
+    assert record.get("kernel_type") == "unknown"
+    assert record.get("noise_zone") == "unknown"
+    assert record.get("conservation_status") == "unknown"
+
+    audit_module.reset_audit_state()

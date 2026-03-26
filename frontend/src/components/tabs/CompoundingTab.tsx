@@ -432,23 +432,17 @@ export default function CompoundingTab() {
   }
   useEffect(() => { loadEvolutionEventsReal() }, [])
 
-  // VIS-2: load centroid evolution (Chart A replacement). Falls back to mock on 404.
+  // VIS-2: load centroid evolution (Chart A replacement).
+  // On fetch error: renders ChartEmpty — no mock data (SOC-4 fix).
   const loadCentroidEvolution = async () => {
     try {
       const d = await getCentroidEvolution(200) as CentroidEvolutionEntry[]
       setCentroidEvolution(d)
       setCentroidEvolutionMock(false)
     } catch {
-      // Endpoint not yet built — generate illustrative mock (50 random bars)
-      const mockEvolution: CentroidEvolutionEntry[] = Array.from({ length: 50 }, (_, i) => ({
-        decision_number: i + 1,
-        centroid_delta_norm: Math.random() * 0.08 + 0.005,
-        correct: Math.random() > 0.2,
-        category: 'credential_access',
-        action: 'escalate',
-      }))
-      setCentroidEvolution(mockEvolution)
-      setCentroidEvolutionMock(true)
+      // Endpoint unavailable — show empty state instead of random illustrative data.
+      setCentroidEvolution([])
+      setCentroidEvolutionMock(false)
     }
   }
   useEffect(() => { loadCentroidEvolution() }, [])

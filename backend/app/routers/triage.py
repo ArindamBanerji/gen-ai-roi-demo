@@ -586,12 +586,17 @@ async def execute_action(request: ProcessAlertRequest):
             print(f"[EXECUTE] get_decision_factors failed for {alert_id}: {exc}")
 
         # Record decision in the in-memory audit ledger (Evidence Ledger — Tab 4)
+        # EU AI Act Art. 15 epistemic fields: supply "unknown" when not yet available
+        # rather than None — documented absence is compliant; null is not (SOC-2).
         record_decision(
             alert_id=alert_id,
             situation_type=situation_type_str,
             action_taken=decision.action,
             factors=factor_names,
             confidence=decision.confidence,
+            kernel_type="unknown",
+            noise_zone="unknown",
+            conservation_status="unknown",
         )
 
         # ====================================================================

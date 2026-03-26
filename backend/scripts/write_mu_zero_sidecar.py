@@ -2,6 +2,12 @@
 One-time backfill script — write the μ₀ IKS sidecar from the current live
 ProfileScorer centroid state.
 
+WARNING: Run ONLY on a fresh system before first deployment.
+If iks_bootstrap_soc.json already exists, this script aborts.
+Running on a system with an active checkpoint would overwrite
+the IKS anchor with the evolved live centroid, causing IKS
+to understate all accumulated learning.
+
 Context
 -------
 The bootstrap checkpoint already has metadata.bootstrap=True, so the normal
@@ -35,6 +41,15 @@ _SIDECAR_PATH = _BACKEND_DIR / "app" / "data" / "iks_bootstrap_soc.json"
 
 
 def main() -> None:
+    # Guard (SOC-3): abort if anchor already exists — never overwrite a live anchor.
+    # Overwriting with a post-bootstrap centroid silently resets IKS to zero drift,
+    # destroying all accumulated learning history.
+    if _SIDECAR_PATH.exists():
+        print(f"ABORT: {_SIDECAR_PATH} already exists.")
+        print("IKS anchor must not be overwritten on a running system.")
+        print("Delete the file manually if re-bootstrapping from scratch.")
+        sys.exit(1)
+
     # Step 1: initialize learning state the same way the backend does at startup
     from app.services.gae_state import init_learning_state
 

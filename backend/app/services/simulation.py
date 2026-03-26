@@ -449,11 +449,14 @@ class SimulationOrchestrator:
             # (Tab 4 / GET /api/audit/decisions).
             # ------------------------------------------------------------------
             audit_record_decision(
-                alert_id       = alert_id,
-                situation_type = situation_type,
-                action_taken   = scoring.selected_action,
-                factors        = [c.name for c in computers],
-                confidence     = scoring.confidence,
+                alert_id           = alert_id,
+                situation_type     = situation_type,
+                action_taken       = scoring.selected_action,
+                factors            = [c.name for c in computers],
+                confidence         = scoring.confidence,
+                kernel_type        = "unknown",
+                noise_zone         = "unknown",
+                conservation_status= "unknown",
             )
 
             # ------------------------------------------------------------------

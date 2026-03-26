@@ -271,7 +271,8 @@ class PatternHistoryFactor:
 
 class PatternHistoryFactorComputer:
     """
-    Computes pattern_history factor (index 3) for an alert.
+    Computes pattern_history factor (position 3 in 0-based indexing,
+    the 4th factor in weight matrix column order).
 
     Two-path computation:
     Path A (W2 enriched): TRIGGERED_EVOLUTION edges present for

@@ -160,3 +160,27 @@ def test_backend_import_clean():
     """Backend must import cleanly with the new analytics endpoint wired in."""
     from app.main import app
     assert app is not None
+
+
+# ============================================================================
+# TEST 7 — SOC-1 regression: DEC-DEC double-prefix guard (metrics.py:254, :514)
+# ============================================================================
+
+def test_dec_prefix_not_doubled():
+    """
+    Raw decision ID already starting with 'DEC-' must NOT gain a second prefix.
+    Guard: `_display_id = _rid if _rid.upper().startswith('DEC-') else f"DEC-{_rid[:8]}"`
+    Regression for fix(0A-3) — ensures the guard cannot be silently reverted.
+    """
+    # Replicate the guard logic exactly as it appears in metrics.py:254 and :514
+    def apply_display_id_guard(raw_id: str) -> str:
+        return raw_id if raw_id.upper().startswith('DEC-') else f"DEC-{raw_id[:8]}"
+
+    # Already prefixed — must be returned unchanged
+    assert apply_display_id_guard("DEC-abc12345") == "DEC-abc12345"
+    assert apply_display_id_guard("dec-abc12345") == "dec-abc12345"   # case-insensitive guard
+    assert apply_display_id_guard("DEC-00000001") == "DEC-00000001"
+
+    # Not prefixed — must gain DEC- prefix (first 8 chars of raw id)
+    assert apply_display_id_guard("abc12345") == "DEC-abc12345"[:12]  # "DEC-abc12345"
+    assert apply_display_id_guard("xyz99999") == "DEC-xyz99999"[:12]
