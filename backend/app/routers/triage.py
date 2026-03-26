@@ -1131,6 +1131,21 @@ async def get_profile_state():
             "decision_count": decision_count,
             "estimated":     iks_result["estimated"],
             "trend":         trend,
+            "switching_cost": {
+                "decisions_accumulated": decision_count,
+                "equivalent_calendar": (
+                    "full quarter at V=200"
+                    if decision_count >= 537
+                    else f"{decision_count} decisions accumulated"
+                ),
+                "common_categories_days": 14,
+                "rare_categories_note": "Rare categories take longer — all context lost on switch.",
+                "competitor_iks": 0,
+                "interpretation": (
+                    f"{decision_count} verified analyst decisions are embedded in your system. "
+                    f"A competitor starting fresh starts at IKS=0."
+                ),
+            },
         },
     }
 
