@@ -1,10 +1,11 @@
 import { useState, useEffect, Component, type ErrorInfo, type ReactNode } from 'react'
-import { Shield, Activity, Zap, TrendingUp } from 'lucide-react'
+import { Shield, Activity, Zap, TrendingUp, FileText } from 'lucide-react'
 import { domainConfig } from './lib/domain'
 import SOCAnalyticsTab from './components/tabs/SOCAnalyticsTab'
 import RuntimeEvolutionTab from './components/tabs/RuntimeEvolutionTab'
 import AlertTriageTab from './components/tabs/AlertTriageTab'
 import CompoundingTab from './components/tabs/CompoundingTab'
+import ExecutiveNarrativeTab from './components/tabs/ExecutiveNarrativeTab'
 
 // ErrorBoundary must be a class component — hooks cannot catch render errors.
 interface ErrorBoundaryState { hasError: boolean; message: string }
@@ -32,7 +33,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
   }
 }
 
-type TabId = 'soc' | 'evolution' | 'triage' | 'compounding'
+type TabId = 'soc' | 'evolution' | 'triage' | 'compounding' | 'executive'
 
 interface Tab {
   id: TabId
@@ -75,6 +76,14 @@ const tabs: Tab[] = [
     component: CompoundingTab,
     energyPercent: 15,
     description: 'Two-loop architecture visualization',
+  },
+  {
+    id: 'executive',
+    label: 'Executive Narrative',
+    icon: <FileText className="w-4 h-4" />,
+    component: ExecutiveNarrativeTab,
+    energyPercent: 0,
+    description: 'Weekly digest for CISO — what changed, discovered, and what the system knows',
   },
 ]
 

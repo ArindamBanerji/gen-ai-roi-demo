@@ -2178,11 +2178,88 @@ async def benchmarking_report(
 # ============================================================================
 
 @router.get("/soc/executive-narrative")
-async def executive_narrative(week_ending: str = None):
-    """L-05: Weekly executive learning digest."""
-    from app.services.executive_narrative import ExecutiveNarrative
-    narrative = ExecutiveNarrative(neo4j_client)
-    return narrative.generate_weekly(week_ending)
+async def executive_narrative():
+    """F12: Executive narrative digest consumed by Tab 5."""
+    from app.services.executive_narrative import build_executive_narrative
+    return build_executive_narrative(neo4j_client)
+
+
+@router.get("/soc/executive-narrative/pdf")
+async def executive_narrative_pdf():
+    """F12: Export executive narrative as a PDF (reportlab)."""
+    import io
+    from fastapi.responses import StreamingResponse
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.colors import HexColor
+    from app.services.executive_narrative import build_executive_narrative
+
+    data = build_executive_narrative(neo4j_client)
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=letter,
+                            leftMargin=inch, rightMargin=inch,
+                            topMargin=inch, bottomMargin=inch)
+    styles = getSampleStyleSheet()
+    dark_gray = HexColor('#1f2937')
+    blue = HexColor('#3b82f6')
+
+    title_style = ParagraphStyle('Title', parent=styles['Title'],
+                                 textColor=blue, fontSize=18, spaceAfter=6)
+    h2_style = ParagraphStyle('H2', parent=styles['Heading2'],
+                              textColor=dark_gray, fontSize=13, spaceAfter=4)
+    body_style = ParagraphStyle('Body', parent=styles['Normal'],
+                                fontSize=10, leading=14, spaceAfter=3)
+
+    def _p(text, style=body_style):
+        return Paragraph(str(text), style)
+
+    story = [
+        _p('SOC Copilot — Executive Narrative', title_style),
+        _p(f"Generated: {data['generated_at']}", body_style),
+        Spacer(1, 0.15 * inch),
+        _p(data['headline'], body_style),
+        Spacer(1, 0.2 * inch),
+
+        _p('Key Metrics', h2_style),
+        _p(f"Alerts processed: {data['metrics']['alerts_total']}", body_style),
+        _p(f"Verified decisions: {data['metrics']['decisions_verified']}", body_style),
+        _p(f"Campaigns detected: {data['metrics']['campaigns_detected']}", body_style),
+        _p(f"IKS score: {data['metrics']['iks_current']}", body_style),
+        Spacer(1, 0.2 * inch),
+
+        _p('What Changed', h2_style),
+        _p(f"Verified decisions: {data['what_changed']['total_verified']}", body_style),
+        _p(f"Centroid updates: {data['what_changed']['total_centroid_updates']}", body_style),
+    ]
+    for shift in data['what_changed'].get('top_shifts', []):
+        story.append(_p(f"  • {shift.get('description', '')}", body_style))
+
+    story += [
+        Spacer(1, 0.2 * inch),
+        _p('What Was Discovered', h2_style),
+        _p(f"Attack chains: {data['what_discovered']['attack_chains_detected']}", body_style),
+    ]
+    for s in data['what_discovered'].get('chain_summaries', []):
+        story.append(_p(f"  • {s}", body_style))
+
+    story += [
+        Spacer(1, 0.2 * inch),
+        _p('What the System Knows', h2_style),
+        _p(f"IKS: {data['what_knows']['iks_current']}  |  "
+           f"Categories calibrated: {data['what_knows']['categories_calibrated']}/{data['what_knows']['categories_total']}  |  "
+           f"Health: {data['what_knows']['health_status']}", body_style),
+    ]
+
+    doc.build(story)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type='application/pdf',
+        headers={'Content-Disposition': 'attachment; filename="executive_narrative.pdf"'},
+    )
 
 
 # ============================================================================

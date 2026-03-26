@@ -154,6 +154,39 @@ class ExecutiveNarrative:
             'health_status': health_status
         }
 
+    def _get_metrics(self) -> Dict:
+        """Raw counts for the metrics block."""
+        alerts_total = 0
+        decisions_verified = 0
+        campaigns_detected = 0
+        iks_current = 0.0
+        try:
+            counts_query = """
+            MATCH (a:Alert) WITH count(a) AS alerts
+            OPTIONAL MATCH (d:Decision) WHERE d.verified = true
+            WITH alerts, count(d) AS verified
+            RETURN alerts, verified
+            """
+            records = self.db.run_query(counts_query)
+            if records:
+                alerts_total = int(records[0].get('alerts') or 0)
+                decisions_verified = int(records[0].get('verified') or 0)
+            camp_q = "MATCH (c:Campaign) RETURN count(c) AS camps"
+            camp_r = self.db.run_query(camp_q)
+            if camp_r:
+                campaigns_detected = int(camp_r[0].get('camps') or 0)
+            from app.services.iks import compute_iks
+            iks_result = compute_iks(self.db)
+            iks_current = float(iks_result.get('iks_score', 0.0))
+        except Exception:
+            pass
+        return {
+            'alerts_total': alerts_total,
+            'decisions_verified': decisions_verified,
+            'campaigns_detected': campaigns_detected,
+            'iks_current': round(iks_current, 2),
+        }
+
     def _generate_headline(self) -> str:
         """
         One sentence: "System processed X alerts, learned from Y
@@ -195,3 +228,26 @@ class ExecutiveNarrative:
             f"{decisions_verified} verified decisions, detected "
             f"{campaigns_detected} campaigns. IKS: {iks_current:.0f}."
         )
+
+
+def build_executive_narrative(db_client) -> Dict:
+    """
+    F12: Build the executive narrative dict consumed by Tab 5.
+
+    Returns:
+        {
+          headline, what_changed, what_discovered, what_knows,
+          metrics, generated_at, pdf_available
+        }
+    """
+    en = ExecutiveNarrative(db_client)
+    metrics = en._get_metrics()
+    return {
+        'headline': en._generate_headline(),
+        'what_changed': en._what_changed(),
+        'what_discovered': en._what_discovered(),
+        'what_knows': en._what_system_knows(),
+        'metrics': metrics,
+        'generated_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'pdf_available': True,
+    }
