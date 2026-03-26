@@ -1192,6 +1192,80 @@ async def get_ols_status_endpoint():
 
 
 # ============================================================================
+# GET /api/soc/flywheel-comparison — W2 Flywheel Demo Moment (Feature 3)
+# ============================================================================
+
+@router.get("/soc/flywheel-comparison")
+async def get_flywheel_comparison(alert_id: str = "ALERT-001", category: str = "credential_access"):
+    """
+    Return W2 flywheel Day-1 vs current comparison for a given alert category.
+
+    Suppressed when TRIGGERED_EVOLUTION edge count < 10 (cold-start guard).
+
+    Response
+    --------
+    {
+        "suppressed": bool,
+        "reason": str (if suppressed),
+        "category": str,
+        "day_1_snapshot": {...},
+        "current": {...},
+        "delta": {"confidence_gain", "action_changed", "edge_count_gain", "interpretation"},
+    }
+    """
+    from app.services.flywheel_comparison import build_flywheel_comparison
+
+    try:
+        # Count TRIGGERED_EVOLUTION edges for this category
+        edge_result = await neo4j_client.run_query(
+            "MATCH (d:Decision)-[:TRIGGERED_EVOLUTION]->(e:EvolutionEvent) "
+            "WHERE d.category = $category "
+            "RETURN count(e) AS edge_count",
+            {"category": category},
+        )
+        edge_count = int(edge_result[0]["edge_count"]) if edge_result else 0
+
+        if edge_count < 10:
+            return build_flywheel_comparison(
+                current_edges=edge_count,
+                current_factor_4=0.40,
+                current_confidence=0.71,
+                current_action="investigate",
+                current_provenance="",
+                category=category,
+            )
+
+        # Read latest factor_4 and confidence from most recent Decision for category
+        decision_result = await neo4j_client.run_query(
+            "MATCH (d:Decision) WHERE d.category = $category "
+            "RETURN d.factor_snapshot[3] AS factor_4, d.confidence AS confidence, "
+            "d.action AS action ORDER BY d.decision_number DESC LIMIT 1",
+            {"category": category},
+        )
+        if decision_result:
+            factor_4 = float(decision_result[0].get("factor_4") or 0.40)
+            confidence = float(decision_result[0].get("confidence") or 0.71)
+            action = str(decision_result[0].get("action") or "investigate")
+        else:
+            factor_4, confidence, action = 0.40, 0.71, "investigate"
+
+        provenance = f"{edge_count} verified decisions on {category}. Pattern history strong."
+
+        return build_flywheel_comparison(
+            current_edges=edge_count,
+            current_factor_4=factor_4,
+            current_confidence=confidence,
+            current_action=action,
+            current_provenance=provenance,
+            category=category,
+        )
+
+    except Exception as exc:
+        print(f"[flywheel-comparison] Neo4j error: {exc}")
+        return {"suppressed": True, "reason": "data_unavailable"}
+
+
+# ============================================================================
 # GET /api/soc/iks-trend — IKS v2 trend (Chart A replacement)
 # ============================================================================
 
