@@ -1119,6 +1119,79 @@ async def get_convergence_calendar():
 
 
 # ============================================================================
+# GET /api/soc/ols-status — OLS Dashboard (L-09)
+# ============================================================================
+
+@router.get("/soc/ols-status")
+async def get_ols_status_endpoint():
+    """
+    Return OLS (Override Lift Score) dashboard status.
+
+    Uses GAE 0.7.18 OLSMonitor (CUSUM, plateau-snapshot baseline).
+    ACM activates only for analysts with >= 20 overrides.
+
+    Response
+    --------
+    {
+        "status": "warming_up" | "monitoring" | "alarm",
+        "baseline_ols": float | null,
+        "current_ols": float | null,
+        "delta_pct": float | null,
+        "cusum": float,
+        "alarm": bool,
+        "baseline_frozen": bool,
+        "qualified_analysts": int,
+        "acm_active": bool,
+        "message": str,
+    }
+    """
+    from app.services.ols_status import get_ols_status
+
+    ols_history: list = []
+    analyst_overrides: dict = {}
+    warm_start_active: bool = False
+
+    try:
+        # Read OLS history from Decision nodes (ols_score property)
+        result = await neo4j_client.run_query(
+            "MATCH (d:Decision) WHERE d.ols_score IS NOT NULL "
+            "RETURN d.ols_score AS ols_score ORDER BY d.decision_number ASC",
+            {},
+        )
+        ols_history = [float(r["ols_score"]) for r in result]
+    except Exception as exc:
+        print(f"[ols-status] ols_history query failed: {exc}")
+
+    try:
+        # Read override counts per analyst
+        result = await neo4j_client.run_query(
+            "MATCH (d:Decision) WHERE d.analyst_id IS NOT NULL AND d.was_override = true "
+            "RETURN d.analyst_id AS analyst_id, count(*) AS cnt",
+            {},
+        )
+        analyst_overrides = {r["analyst_id"]: int(r["cnt"]) for r in result}
+    except Exception as exc:
+        print(f"[ols-status] analyst_overrides query failed: {exc}")
+
+    try:
+        # Check warm_start flag from LearningState node if present
+        result = await neo4j_client.run_query(
+            "MATCH (ls:LearningState) RETURN ls.warm_start_active AS warm_start LIMIT 1",
+            {},
+        )
+        if result:
+            warm_start_active = bool(result[0].get("warm_start", False))
+    except Exception as exc:
+        print(f"[ols-status] warm_start query failed: {exc}")
+
+    return get_ols_status(
+        ols_history=ols_history,
+        warm_start_active=warm_start_active,
+        analyst_overrides=analyst_overrides,
+    )
+
+
+# ============================================================================
 # GET /api/soc/iks-trend — IKS v2 trend (Chart A replacement)
 # ============================================================================
 
