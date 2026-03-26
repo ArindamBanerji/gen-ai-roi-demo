@@ -11,10 +11,14 @@ Confidence model:
   multi-rule boost   +0.10  capped at 0.95
 """
 
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional
+import logging
 import uuid
+
+log = logging.getLogger(__name__)
 
 
 # ── Kill-chain templates ─────────────────────────────────────────────────────
@@ -248,3 +252,209 @@ def compute_confidence(trigger_rule: str,
     if additional_rules:
         base = min(base + CONFIDENCE_MULTI_RULE_BOOST, CONFIDENCE_MAX)
     return base
+
+
+# ── CampaignCorrelationEngine ─────────────────────────────────────────────────
+
+class CampaignCorrelationEngine:
+    """
+    Finds campaigns from alert event data.
+    Rule priority: technique_sequence > shared_entity > temporal.
+    Campaign IDs are deterministic — same alert set = same campaign_id.
+    All methods accept plain dicts — no Neo4j dependency in this class.
+    Neo4j queries live in CampaignRepository (Step 5).
+    """
+
+    def __init__(self, config: dict):
+        self.window_seconds = config["correlation_window_hours"] * 3600
+        self.temporal_window = config["temporal_window_minutes"] * 60
+        self.min_alerts = config["min_alerts_for_campaign"]
+
+    def correlate(self, events: List[dict]) -> List[Campaign]:
+        """
+        Run all 3 rules against a list of alert events.
+        Each event dict must have:
+          alert_id, category, source_entity_id (nullable),
+          ts (datetime), technique_id (nullable), severity
+
+        Returns list of Campaign objects. Each alert appears in
+        at most ONE campaign (highest-priority rule wins).
+        """
+        claimed: set = set()   # alert_ids already assigned to a campaign
+        campaigns: List[Campaign] = []
+
+        # Pass 1 — technique_sequence (highest confidence, first priority)
+        new_campaigns, claimed = self._apply_technique_sequence(events, claimed)
+        campaigns += new_campaigns
+
+        # Pass 2 — shared_entity on unclaimed alerts
+        unclaimed = [e for e in events if e["alert_id"] not in claimed]
+        new_campaigns, claimed = self._apply_shared_entity(unclaimed, claimed)
+        campaigns += new_campaigns
+
+        # Pass 3 — temporal on remaining unclaimed alerts
+        unclaimed = [e for e in events if e["alert_id"] not in claimed]
+        new_campaigns, claimed = self._apply_temporal(unclaimed, claimed)
+        campaigns += new_campaigns
+
+        return campaigns
+
+    def _apply_technique_sequence(
+        self, events: List[dict], claimed: set
+    ) -> tuple:
+        """
+        Rule 2: Group events by source_entity_id. For each group,
+        check if the category sequence contains a known kill chain.
+        Longest matching chain wins (checked first via length sort).
+        One chain match per entity — both loops exit on first match.
+        """
+        entity_groups: dict = defaultdict(list)
+        for e in events:
+            if e.get("source_entity_id") and e["alert_id"] not in claimed:
+                entity_groups[e["source_entity_id"]].append(e)
+
+        # Flatten all chains, sorted longest first so greedy match is correct
+        all_chains: List[tuple] = []
+        for chain_list in KILL_CHAINS.values():
+            all_chains.extend(chain_list)
+        all_chains.sort(key=lambda c: len(c), reverse=True)
+
+        new_campaigns: List[Campaign] = []
+        for entity_id, group in entity_groups.items():
+            group_sorted = sorted(group, key=lambda e: e["ts"])
+            categories = [e["category"] for e in group_sorted]
+
+            for chain in all_chains:
+                if is_subsequence(chain, categories):
+                    matching = self._extract_chain_events(group_sorted, chain)
+                    if len(matching) >= self.min_alerts:
+                        alert_ids = [e["alert_id"] for e in matching]
+                        # Skip only if every member already claimed
+                        if all(aid in claimed for aid in alert_ids):
+                            continue
+                        campaign = self._build_campaign(
+                            matching,
+                            trigger_rule="technique_sequence",
+                            confidence=CONFIDENCE_TECHNIQUE_SEQUENCE,
+                            shared_entities=[entity_id],
+                        )
+                        new_campaigns.append(campaign)
+                        claimed.update(alert_ids)
+                        break  # one chain match per entity — exit chain loop
+
+        return new_campaigns, claimed
+
+    def _apply_shared_entity(
+        self, events: List[dict], claimed: set
+    ) -> tuple:
+        """
+        Rule 1: Group unclaimed events by source_entity_id within window.
+        """
+        entity_groups: dict = defaultdict(list)
+        for e in events:
+            if e.get("source_entity_id") and e["alert_id"] not in claimed:
+                entity_groups[e["source_entity_id"]].append(e)
+
+        new_campaigns: List[Campaign] = []
+        for entity_id, group in entity_groups.items():
+            group_sorted = sorted(group, key=lambda e: e["ts"])
+            windowed = self._filter_to_window(group_sorted, self.window_seconds)
+            if len(windowed) >= self.min_alerts:
+                alert_ids = [e["alert_id"] for e in windowed]
+                campaign = self._build_campaign(
+                    windowed,
+                    trigger_rule="shared_entity",
+                    confidence=CONFIDENCE_SHARED_ENTITY,
+                    shared_entities=[entity_id],
+                )
+                new_campaigns.append(campaign)
+                claimed.update(alert_ids)
+
+        return new_campaigns, claimed
+
+    def _apply_temporal(
+        self, events: List[dict], claimed: set
+    ) -> tuple:
+        """
+        Rule 3: Group unclaimed events by category, then cluster
+        by temporal proximity. No shared entity required.
+        """
+        category_groups: dict = defaultdict(list)
+        for e in events:
+            if e["alert_id"] not in claimed:
+                category_groups[e["category"]].append(e)
+
+        new_campaigns: List[Campaign] = []
+        for category, group in category_groups.items():
+            group_sorted = sorted(group, key=lambda e: e["ts"])
+            clusters = sliding_window_cluster(group_sorted, self.temporal_window)
+            for cluster in clusters:
+                if len(cluster) >= self.min_alerts:
+                    alert_ids = [e["alert_id"] for e in cluster]
+                    if all(aid in claimed for aid in alert_ids):
+                        continue
+                    campaign = self._build_campaign(
+                        cluster,
+                        trigger_rule="temporal",
+                        confidence=CONFIDENCE_TEMPORAL,
+                        shared_entities=[],
+                    )
+                    new_campaigns.append(campaign)
+                    claimed.update(alert_ids)
+
+        return new_campaigns, claimed
+
+    def _build_campaign(
+        self, events: List[dict], trigger_rule: str,
+        confidence: float, shared_entities: List[str],
+    ) -> Campaign:
+        alert_ids = [e["alert_id"] for e in events]
+        cats = [e["category"] for e in events]
+        techniques = [e["technique_id"] for e in events if e.get("technique_id")]
+        severities = [e.get("severity", "LOW") for e in events]
+
+        return Campaign(
+            campaign_id=make_campaign_id(alert_ids),
+            first_seen=min(e["ts"] for e in events),
+            last_seen=max(e["ts"] for e in events),
+            alert_count=len(alert_ids),
+            category_sequence=cats,
+            shared_entities=shared_entities,
+            technique_sequence=techniques,
+            confidence=confidence,
+            trigger_rule=trigger_rule,
+            severity=derive_severity(severities),
+            member_decision_ids=[],
+            member_alert_ids=alert_ids,
+            correlation_window_hours=self.window_seconds // 3600,
+            nl_summary=build_nl_summary(events, shared_entities, trigger_rule),
+        )
+
+    def _extract_chain_events(
+        self, events: List[dict], chain: tuple
+    ) -> List[dict]:
+        """
+        Extract events that match the chain in order.
+        Returns the first matching event per chain category.
+        """
+        result = []
+        chain_list = list(chain)
+        chain_idx = 0
+        for e in events:
+            if chain_idx < len(chain_list) and e["category"] == chain_list[chain_idx]:
+                result.append(e)
+                chain_idx += 1
+        return result
+
+    @staticmethod
+    def _filter_to_window(
+        events: List[dict], window_seconds: int
+    ) -> List[dict]:
+        """Keep events within window_seconds of the first event."""
+        if not events:
+            return []
+        start_ts = events[0]["ts"]
+        return [
+            e for e in events
+            if (e["ts"] - start_ts).total_seconds() <= window_seconds
+        ]
