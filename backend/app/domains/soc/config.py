@@ -693,6 +693,15 @@ class SOCDomainConfig(DomainConfig):
             DeviceTrustFactor(),
         ]
 
+    @staticmethod
+    def get_campaign_config() -> dict:
+        return {
+            "correlation_window_hours": 24,
+            "temporal_window_minutes": 60,
+            "min_alerts_for_campaign": 2,
+            "max_campaign_age_days": 30,
+        }
+
     # =========================================================================
     # GAE weight matrix and temperature
     # Reference: docs/soc_copilot_design_v1.md §14

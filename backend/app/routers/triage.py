@@ -259,6 +259,29 @@ async def analyze_alert(request: ProcessAlertRequest):
         print(f"[GAE] Decision node written: id={decision_id} [:DECIDED_ON] {alert_id}")
 
         # ====================================================================
+        # Step 5b: Campaign correlation (F6) — non-blocking
+        # ====================================================================
+        try:
+            from app.domains.soc.campaigns import (
+                CampaignCorrelationEngine, CampaignRepository, CampaignMatcher,
+            )
+            _camp_config = SOCDomainConfig.get_campaign_config()
+            _camp_engine = CampaignCorrelationEngine(_camp_config)
+            _camp_repo = CampaignRepository(neo4j_client)
+            _camp_matcher = CampaignMatcher(
+                neo4j_client, _camp_config, _camp_engine, _camp_repo
+            )
+            _campaign_id = await _camp_matcher.check_alert(alert_id)
+            if _campaign_id:
+                await neo4j_client.run_query(
+                    "MATCH (d:Decision {id: $decision_id}) "
+                    "SET d.campaign_id = $campaign_id",
+                    {"decision_id": decision_id, "campaign_id": _campaign_id},
+                )
+        except Exception as _camp_exc:
+            logger.warning("[TRIAGE] Campaign wiring failed for %s: %s", alert_id, _camp_exc)
+
+        # ====================================================================
         # Step 6: Emit events (every graph mutation MUST emit events)
         # ====================================================================
         await event_bus.emit(DecisionMade(

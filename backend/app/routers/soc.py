@@ -2240,3 +2240,165 @@ async def frozen_roi(
         auto_approve_rate=auto_approve_rate
     )
     return calc.compute()
+
+
+# ============================================================================
+# Campaign helpers (F6)
+# ============================================================================
+
+def _parse_dt(dt_value) -> datetime:
+    """Parse datetime from Neo4j result (str or datetime)."""
+    if isinstance(dt_value, datetime):
+        return dt_value
+    try:
+        return datetime.fromisoformat(str(dt_value).replace("Z", "+00:00"))
+    except Exception:
+        return datetime.utcnow()
+
+
+def _format_campaign(raw: dict) -> dict:
+    """Format raw Neo4j campaign row for API response."""
+    c = raw.get("c", raw)  # handle both wrapped and unwrapped
+    if hasattr(c, "data"):   # Neo4j Node object
+        c = dict(c)
+    return {
+        "campaign_id": c.get("id", ""),
+        "first_seen": str(c.get("first_seen", "")),
+        "last_seen": str(c.get("last_seen", "")),
+        "alert_count": c.get("alert_count", 0),
+        "category_sequence": c.get("category_sequence", []),
+        "shared_entities": c.get("shared_entities", []),
+        "confidence": c.get("confidence", 0.0),
+        "trigger_rule": c.get("trigger_rule", ""),
+        "severity": c.get("severity", "LOW"),
+        "nl_summary": c.get("nl_summary", ""),
+    }
+
+
+def _format_campaign_detail(raw: dict) -> dict:
+    """Format full campaign detail including decisions."""
+    c = raw.get("c", raw)
+    if hasattr(c, "data"):
+        c = dict(c)
+    decisions = raw.get("decisions", [])
+    formatted = _format_campaign(raw)
+
+    # Build attack_progression
+    stage_map = {}
+    for d in (decisions or []):
+        if not isinstance(d, dict):
+            continue
+        cat = d.get("category", "unknown")
+        if cat not in stage_map:
+            stage_map[cat] = {"category": cat, "count": 0,
+                              "first_seen": d.get("timestamp")}
+        stage_map[cat]["count"] += 1
+
+    formatted["decisions"] = decisions
+    formatted["attack_progression"] = {"stages": list(stage_map.values())}
+    try:
+        formatted["duration_hours"] = round(
+            (
+                _parse_dt(c.get("last_seen", datetime.utcnow())) -
+                _parse_dt(c.get("first_seen", datetime.utcnow()))
+            ).total_seconds() / 3600, 1
+        )
+    except Exception:
+        formatted["duration_hours"] = 0.0
+    return formatted
+
+
+# ============================================================================
+# GET /api/soc/campaigns — F6 Campaign list
+# ============================================================================
+
+@router.get("/soc/campaigns")
+async def get_campaigns(
+    limit: int = 50,
+    min_confidence: float = 0.0,
+    trigger_rule: Optional[str] = None,
+):
+    """
+    Return list of detected multi-alert campaigns.
+
+    Response: {campaigns, total, active_campaigns}
+    """
+    from app.domains.soc.campaigns import CampaignRepository
+
+    repo = CampaignRepository(neo4j_client)
+    campaigns_raw = await repo.get_campaigns(
+        limit=limit,
+        min_confidence=min_confidence,
+        trigger_rule=trigger_rule,
+    )
+
+    now = datetime.utcnow()
+    active = 0
+    for c in campaigns_raw:
+        node = c.get("c", c)
+        if hasattr(node, "data"):
+            node = dict(node)
+        last_seen_val = node.get("last_seen") if isinstance(node, dict) else None
+        if last_seen_val:
+            try:
+                if (_parse_dt(last_seen_val).replace(tzinfo=None) - now).total_seconds() < 86400 or \
+                   (now - _parse_dt(last_seen_val).replace(tzinfo=None)).total_seconds() < 86400:
+                    active += 1
+            except Exception:
+                pass
+
+    return {
+        "campaigns": [_format_campaign(c) for c in campaigns_raw],
+        "total": len(campaigns_raw),
+        "active_campaigns": active,
+    }
+
+
+# ============================================================================
+# GET /api/soc/campaigns/{campaign_id} — F6 Campaign detail
+# ============================================================================
+
+@router.get("/soc/campaigns/{campaign_id}")
+async def get_campaign_detail(campaign_id: str):
+    """Return full campaign detail including member decisions."""
+    from app.domains.soc.campaigns import CampaignRepository
+
+    repo = CampaignRepository(neo4j_client)
+    detail = await repo.get_campaign_detail(campaign_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    return _format_campaign_detail(detail)
+
+
+# ============================================================================
+# POST /api/soc/campaigns/recorrelate — F6 Retroactive correlation
+# ============================================================================
+
+@router.post("/soc/campaigns/recorrelate")
+async def recorrelate_campaigns():
+    """
+    Retroactively correlate all unclaimed alert events into campaigns.
+    Idempotent — MERGE ensures safe repeated calls.
+
+    Response: {campaigns_found, campaigns_written, events_processed}
+    """
+    from app.domains.soc.campaigns import CampaignCorrelationEngine, CampaignRepository
+    from app.domains.soc.config import SOCDomainConfig
+
+    config = SOCDomainConfig.get_campaign_config()
+    repo = CampaignRepository(neo4j_client)
+    engine = CampaignCorrelationEngine(config)
+
+    events = await repo.fetch_all_events()
+    campaigns = engine.correlate(events)
+
+    written = 0
+    for c in campaigns:
+        if await repo.write_campaign(c):
+            written += 1
+
+    return {
+        "campaigns_found": len(campaigns),
+        "campaigns_written": written,
+        "events_processed": len(events),
+    }
