@@ -9,6 +9,7 @@ from typing import Dict, Any, List, Optional, Literal
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
 from app.domains.soc.config import SOCDomainConfig
+from app.framework.feedback_store import FEEDBACK_GIVEN  # noqa: F401 — re-exported for callers
 
 logger = logging.getLogger(__name__)
 _soc_cfg = SOCDomainConfig()
@@ -18,8 +19,7 @@ _soc_cfg = SOCDomainConfig()
 # In-Memory State (simulates persistent storage)
 # ============================================================================
 
-# Tracks which alerts have received feedback
-FEEDBACK_GIVEN: Dict[str, Dict[str, Any]] = {}
+# FEEDBACK_GIVEN lives in app.framework.feedback_store — imported above.
 
 # Pattern confidence scores (simulated)
 # H7-FIX-1: all 6 SOC categories + legacy demo patterns initialised

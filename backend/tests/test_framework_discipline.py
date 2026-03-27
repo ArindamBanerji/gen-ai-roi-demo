@@ -62,6 +62,7 @@ def test_framework_modules_importable():
         "app.framework.agent",
         "app.framework.intervention_controls",
         "app.framework.convergence_math",
+        "app.framework.feedback_store",
     ]
     for m in modules:
         mod = importlib.import_module(m)
