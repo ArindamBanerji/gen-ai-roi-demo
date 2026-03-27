@@ -9,6 +9,12 @@ Confidence model:
   shared_entity       0.70  (common asset/user/host across alerts)
   temporal            0.45  (time-proximity only)
   multi-rule boost   +0.10  capped at 0.95
+
+# Innovation mapping (MAP v4.6):
+# F6 Attack Chain Correlation maps to:
+#   Innovation 7 (CGA/W2 — graph compounds across decisions)
+#   Innovation 4 (pluggable kernels — campaign confidence uses
+#                 DiagonalKernel weighting via ThreatIntelEnrichmentFactor)
 """
 
 from collections import defaultdict
@@ -255,6 +261,9 @@ def compute_confidence(trigger_rule: str,
 
 
 # ── CampaignCorrelationEngine ─────────────────────────────────────────────────
+# TODO(CopilotFramework): CampaignCorrelationEngine is framework-level.
+# Move to ci-platform CopilotFramework during Phase 3 Priority 2
+# extraction. KILL_CHAINS and get_campaign_config() stay SOC domain.
 
 class CampaignCorrelationEngine:
     """

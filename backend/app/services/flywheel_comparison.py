@@ -28,7 +28,7 @@ def build_flywheel_comparison(
     CLAIM-W2: +10.13pp (p=0.0002). PatternHistoryFactorComputer ships.
     """
     if current_edges < MIN_EDGES_TO_SHOW:
-        return {"suppressed": True, "reason": "cold_start", "edge_count": current_edges}
+        return {"flywheel_active": False, "reason": "cold_start", "edge_count": current_edges}
 
     day1 = {
         "triggered_evolution_edges": 0,
@@ -50,7 +50,7 @@ def build_flywheel_comparison(
     confidence_gain = round(current_confidence - 0.71, 3)  # 0.71 = typical Day-1 baseline
 
     return {
-        "suppressed": False,
+        "flywheel_active": True,
         "category": category,
         "day_1_snapshot": day1,
         "current": current,

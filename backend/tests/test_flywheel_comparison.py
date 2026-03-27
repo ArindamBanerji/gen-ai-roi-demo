@@ -31,8 +31,8 @@ def test_fallback_factor_4_when_no_edges():
         current_provenance="...", category="credential_access"
     )
 
-    assert result["suppressed"] is True, (
-        f"Expected suppressed=True with 0 edges. Got: {result}"
+    assert result["flywheel_active"] == False, (
+        f"Expected flywheel_active=False with 0 edges. Got: {result}"
     )
     assert result["reason"] == "cold_start", (
         f"Expected reason='cold_start'. Got: {result.get('reason')!r}"
@@ -55,8 +55,8 @@ def test_day1_snapshot_shows_fallback():
         current_provenance="847 verified decisions.", category="credential_access"
     )
 
-    assert result["suppressed"] is False, (
-        f"847 edges >> MIN_EDGES_TO_SHOW ({MIN_EDGES_TO_SHOW}). Should not be suppressed."
+    assert result["flywheel_active"] == True, (
+        f"847 edges >> MIN_EDGES_TO_SHOW ({MIN_EDGES_TO_SHOW}). flywheel_active must be True."
     )
     assert result["day_1_snapshot"]["factor_4_value"] == FALLBACK_FACTOR_4, (
         f"day_1_snapshot factor_4_value must always be {FALLBACK_FACTOR_4}. "
@@ -109,7 +109,31 @@ def test_panel_suppressed_when_edges_below_threshold():
         current_provenance="...", category="credential_access"
     )
 
-    assert result["suppressed"] is True, (
-        f"9 < MIN_EDGES_TO_SHOW ({MIN_EDGES_TO_SHOW}) — must be suppressed. "
+    assert result["flywheel_active"] == False, (
+        f"9 < MIN_EDGES_TO_SHOW ({MIN_EDGES_TO_SHOW}) — flywheel_active must be False. "
         f"Got: {result}"
     )
+
+
+# ============================================================================
+# Test 5 — field name contract (frontend depends on this exact key)
+# ============================================================================
+
+def test_flywheel_active_field_name_contract():
+    """Field name contract — frontend depends on this exact key."""
+    result_suppressed = build_flywheel_comparison(
+        current_edges=5, current_factor_4=0.40,
+        current_confidence=0.71, current_action="investigate",
+        current_provenance="...", category="credential_access"
+    )
+    result_active = build_flywheel_comparison(
+        current_edges=50, current_factor_4=0.75,
+        current_confidence=0.85, current_action="suppress",
+        current_provenance="50 verified decisions.", category="lateral_movement"
+    )
+
+    assert "flywheel_active" in result_suppressed
+    assert result_suppressed["flywheel_active"] == False
+    assert "flywheel_active" in result_active
+    assert result_active["flywheel_active"] == True
+    assert "suppressed" not in result_suppressed, "old 'suppressed' key must be gone"
