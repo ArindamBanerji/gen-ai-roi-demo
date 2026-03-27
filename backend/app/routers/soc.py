@@ -1751,8 +1751,14 @@ async def get_decision_provenance(decision_id: str):
     }
     """
     from app.services.provenance import ProvenanceService
+    from app.domains.soc.config import SOC_FACTORS, resolve_alert_category
 
-    result = await ProvenanceService.get_provenance_from_graph(decision_id, neo4j_client)
+    result = await ProvenanceService.get_provenance_from_graph(
+        decision_id,
+        neo4j_client,
+        factor_names=list(SOC_FACTORS),
+        resolve_category=resolve_alert_category,
+    )
     if result is None:
         raise HTTPException(
             status_code=404,
