@@ -1,18 +1,17 @@
 """
 convergence_calendar.py — Convergence Calendar service (L-08).
 
-CLAIM-CONV-01 coefficients (V-MV-CONVERGENCE v2, MAE=1.55d)
-  V is NOT a predictor — volume affects wall-clock time only.
-  q̄ dominates (coefficient -3.28). DiagonalKernel converges faster.
+SOC-specific calendar builder. Pure math lives in app.framework.convergence_math.
 """
 
-from typing import Literal
-
-# ── CLAIM-CONV-01 regression coefficients ──────────────────────────────────
-INTERCEPT = 28.5
-COEFF_Q_BAR = -3.28
-COEFF_SIGMA = -12.1           # higher sigma → slower (less signal)
-KERNEL_DIAGONAL_OFFSET = -2.3  # diagonal converges faster than L2
+from app.framework.convergence_math import (  # noqa: F401
+    predict_n_half,
+    decisions_to_days,
+    INTERCEPT,
+    COEFF_Q_BAR,
+    COEFF_SIGMA,
+    KERNEL_DIAGONAL_OFFSET,
+)
 
 SOC_FACTORS = [
     "travel_match",
@@ -22,34 +21,6 @@ SOC_FACTORS = [
     "pattern_history",
     "device_trust",
 ]
-
-
-def predict_n_half(
-    sigma_mean: float,
-    q_bar: float,
-    kernel: Literal["l2", "diagonal"] = "l2",
-) -> float:
-    """
-    Predict N_half (decisions to 50% convergence) from deployment params.
-    CLAIM-CONV-01: MAE=1.55d validated. V is NOT an input.
-    """
-    kernel_offset = KERNEL_DIAGONAL_OFFSET if kernel == "diagonal" else 0.0
-    n_half = (
-        INTERCEPT
-        + COEFF_Q_BAR * q_bar
-        + COEFF_SIGMA * (1 - sigma_mean)
-        + kernel_offset
-    )
-    return max(14.0, float(n_half))
-
-
-def decisions_to_days(n_half_decisions: float, V: float, alpha: float = 0.25) -> float:
-    """
-    Convert decision count to calendar days.
-    V IS used here — volume determines wall-clock time only, not calibration quality.
-    """
-    alerts_per_day_reaching_learning = max(V * alpha, 1.0)
-    return round(n_half_decisions / alerts_per_day_reaching_learning, 1)
 
 
 def build_convergence_calendar(

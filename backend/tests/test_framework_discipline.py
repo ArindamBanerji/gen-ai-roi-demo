@@ -56,6 +56,12 @@ def test_framework_modules_importable():
         "app.framework.event_bus",
         "app.framework.decision_history",
         "app.framework.checkpoint",
+        "app.framework.economics",
+        "app.framework.shadow_mode",
+        "app.framework.composite_gate",
+        "app.framework.agent",
+        "app.framework.intervention_controls",
+        "app.framework.convergence_math",
     ]
     for m in modules:
         mod = importlib.import_module(m)
