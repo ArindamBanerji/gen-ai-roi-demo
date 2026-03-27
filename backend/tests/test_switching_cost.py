@@ -1,7 +1,7 @@
 """
 tests/test_switching_cost.py — Switching Cost Demo Moment (Feature 4) test suite.
 
-2 tests validating the switching_cost sub-dict in GET /api/soc/profile.
+4 tests validating the switching_cost sub-dict in GET /api/soc/profile.
 
 Run from backend/:
     pytest tests/test_switching_cost.py -v
@@ -83,3 +83,59 @@ def test_competitor_iks_always_zero():
         f"competitor_iks must always be 0 (static invariant). "
         f"Got: {switching_cost['competitor_iks']!r}"
     )
+
+
+# ============================================================================
+# Test 3 — decisions_per_day and qualifies_one_quarter fields present
+# ============================================================================
+
+def test_switching_cost_new_fields_present():
+    """
+    switching_cost must contain decisions_per_day (float) and
+    qualifies_one_quarter (bool) — V-SWITCHING-COST-FACTORIAL fields.
+    """
+    response = client.get("/api/soc/profile")
+    assert response.status_code == 200, response.text[:300]
+
+    switching_cost = response.json()["iks"]["switching_cost"]
+
+    assert "decisions_per_day" in switching_cost, (
+        f"switching_cost missing 'decisions_per_day': {list(switching_cost.keys())}"
+    )
+    assert "qualifies_one_quarter" in switching_cost, (
+        f"switching_cost missing 'qualifies_one_quarter': {list(switching_cost.keys())}"
+    )
+    assert isinstance(switching_cost["decisions_per_day"], float), (
+        f"decisions_per_day must be float, got {type(switching_cost['decisions_per_day'])}"
+    )
+    assert isinstance(switching_cost["qualifies_one_quarter"], bool), (
+        f"qualifies_one_quarter must be bool, got {type(switching_cost['qualifies_one_quarter'])}"
+    )
+
+
+# ============================================================================
+# Test 4 — qualifies_one_quarter threshold logic
+# ============================================================================
+
+def test_switching_cost_qualifies_threshold():
+    """
+    qualifies_one_quarter must be True when decisions_per_day >= 20.0
+    and False when decisions_per_day < 20.0.
+
+    Default deployment: V=200, alpha=0.25 → decisions_per_day=50.0 → True.
+    """
+    response = client.get("/api/soc/profile")
+    assert response.status_code == 200, response.text[:300]
+
+    switching_cost = response.json()["iks"]["switching_cost"]
+    dpd = switching_cost["decisions_per_day"]
+    qualifies = switching_cost["qualifies_one_quarter"]
+
+    if dpd >= 20.0:
+        assert qualifies is True, (
+            f"decisions_per_day={dpd} >= 20.0 but qualifies_one_quarter={qualifies}"
+        )
+    else:
+        assert qualifies is False, (
+            f"decisions_per_day={dpd} < 20.0 but qualifies_one_quarter={qualifies}"
+        )

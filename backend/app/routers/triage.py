@@ -1141,6 +1141,34 @@ async def get_profile_state():
     delta_7d = await _compute_delta_7d(iks_result["current"])
     trend = []  # populated lazily via /api/soc/profile/iks-trend if needed
 
+    # V-SWITCHING-COST-FACTORIAL: decisions_per_day = V × α
+    # V = daily alert volume, α = override/verification rate.
+    # Defaults: V=200, α=0.25 → 50.0 decisions/day.
+    _V     = 200.0
+    _alpha = 0.25
+    try:
+        from app.services.gae_state import get_learning_state as _get_ls
+        _ls = _get_ls()
+        _prof = getattr(_ls, "profile_scorer", None)
+        if _prof is not None:
+            # ProfileScorer may expose tau (temperature); V and alpha come from
+            # deployment config which is not yet wired — use defaults for now.
+            pass
+    except Exception:
+        pass
+    decisions_per_day: float = round(_V * _alpha, 4)
+    qualifies_one_quarter: bool = decisions_per_day >= 20.0
+
+    _base_interpretation = (
+        f"{decision_count} verified analyst decisions are embedded in your system. "
+        f"A competitor starting fresh starts at IKS=0."
+    )
+    if not qualifies_one_quarter:
+        _base_interpretation += (
+            f" At {decisions_per_day:.1f} decisions/day, full learning plateau"
+            f" takes longer than one quarter."
+        )
+
     return {
         "categories": SOC_CATEGORIES,
         "actions": SCORER_ACTIONS,         # A=4 — matches counts/centroids shape
@@ -1164,10 +1192,9 @@ async def get_profile_state():
                 "common_categories_days": 14,
                 "rare_categories_note": "Rare categories take longer — all context lost on switch.",
                 "competitor_iks": 0,
-                "interpretation": (
-                    f"{decision_count} verified analyst decisions are embedded in your system. "
-                    f"A competitor starting fresh starts at IKS=0."
-                ),
+                "decisions_per_day":      decisions_per_day,
+                "qualifies_one_quarter":  qualifies_one_quarter,
+                "interpretation": _base_interpretation,
             },
         },
     }
