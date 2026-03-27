@@ -22,25 +22,17 @@ Design decisions:
 from __future__ import annotations
 
 import logging
-import os
-from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+from typing import Any, Dict, List, Optional
+
+from app.framework.narrative_base import (  # noqa: F401 — re-exported for callers
+    NarrativeProvider,
+    create_narrative_provider,
+    get_narrative_provider,
+    set_narrative_provider,
+    register_narrative_provider,
+)
 
 logger = logging.getLogger(__name__)
-
-
-# ============================================================================
-# Protocol
-# ============================================================================
-
-@runtime_checkable
-class NarrativeProvider(Protocol):
-    def generate(
-        self,
-        alert: Dict[str, Any],
-        decision: Dict[str, Any],
-        factors: List[Dict[str, Any]],
-        calibration_context: Dict[str, Any],
-    ) -> str: ...
 
 
 # ============================================================================
@@ -433,56 +425,10 @@ class OllamaNarrativeProvider:
 
 
 # ============================================================================
-# Factory
+# Register SOC implementations with the framework registry
 # ============================================================================
+# Called at module import time so create_narrative_provider() and
+# get_narrative_provider() resolve correctly when this module is imported.
 
-def create_narrative_provider(provider_type: str = "template") -> NarrativeProvider:
-    """
-    Create a NarrativeProvider instance.
-
-    Args:
-        provider_type: "template" (default) or "ollama".
-                       Reads NARRATIVE_PROVIDER env var if not specified.
-
-    Returns:
-        A NarrativeProvider instance.
-    """
-    pt = provider_type.lower().strip()
-    if pt == "ollama":
-        logger.info("[NARRATIVE] Creating OllamaNarrativeProvider")
-        return OllamaNarrativeProvider()
-    if pt != "template":
-        logger.warning(
-            "[NARRATIVE] Unknown provider type %r; falling back to template", provider_type
-        )
-    logger.info("[NARRATIVE] Creating TemplateNarrativeProvider")
-    return TemplateNarrativeProvider()
-
-
-# ============================================================================
-# Module-level singleton
-# ============================================================================
-
-_provider: Optional[NarrativeProvider] = None
-
-
-def get_narrative_provider() -> NarrativeProvider:
-    """
-    Return the active NarrativeProvider singleton.
-
-    If set_narrative_provider() was never called (e.g. in tests),
-    creates a TemplateNarrativeProvider on first access.
-    """
-    global _provider
-    if _provider is None:
-        _provider = create_narrative_provider(
-            os.getenv("NARRATIVE_PROVIDER", "template")
-        )
-    return _provider
-
-
-def set_narrative_provider(provider: NarrativeProvider) -> None:
-    """Set the module-level singleton. Called once at app startup."""
-    global _provider
-    _provider = provider
-    logger.info("[NARRATIVE] Provider set: %s", type(provider).__name__)
+register_narrative_provider("template", TemplateNarrativeProvider)
+register_narrative_provider("ollama", OllamaNarrativeProvider)

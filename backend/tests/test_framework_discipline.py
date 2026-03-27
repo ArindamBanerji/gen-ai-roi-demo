@@ -65,6 +65,7 @@ def test_framework_modules_importable():
         "app.framework.feedback_store",
         "app.framework.audit",
         "app.framework.provenance",
+        "app.framework.narrative_base",
     ]
     for m in modules:
         mod = importlib.import_module(m)
