@@ -38,13 +38,14 @@ async def health():
     return {"status": "healthy"}
 
 # Router imports
-from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae, admin, simulation, evaluation, judgment
+from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae, admin, simulation, evaluation, judgment, framework_router
 
 # Register routers
 app.include_router(evaluation.router, prefix="/api/soc", tags=["evaluation"])
 app.include_router(judgment.router, prefix="/api/soc", tags=["judgment"])
 app.include_router(evolution.router, prefix="/api", tags=["Runtime Evolution"])
 app.include_router(triage.router, prefix="/api", tags=["Alert Triage"])
+app.include_router(framework_router.router, prefix="/api", tags=["CopilotFramework"])
 app.include_router(soc.router, prefix="/api", tags=["SOC Analytics"])
 app.include_router(metrics.router, prefix="/api", tags=["Compounding Metrics"])
 app.include_router(roi.router, prefix="/api", tags=["ROI Calculator"])

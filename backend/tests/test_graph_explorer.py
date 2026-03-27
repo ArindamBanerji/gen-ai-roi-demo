@@ -108,7 +108,7 @@ def test_top_nodes_endpoint():
     async def fake_run_query(query, params=None):
         return sample_rows
 
-    with patch("app.routers.soc.neo4j_client") as mock_neo4j:
+    with patch("app.routers.framework_router.neo4j_client") as mock_neo4j:
         mock_neo4j.run_query = fake_run_query
         client = TestClient(app)
         resp = client.get("/api/soc/graph/top-nodes")
@@ -139,7 +139,7 @@ def test_graph_summary():
             return [{"type": "INVOLVES", "count": 6}]
         return []
 
-    with patch("app.routers.soc.neo4j_client") as mock_neo4j:
+    with patch("app.routers.framework_router.neo4j_client") as mock_neo4j:
         mock_neo4j.run_query = fake_run_query
         client = TestClient(app)
         resp = client.get("/api/soc/graph/summary")
@@ -161,7 +161,7 @@ def test_prebuilt_queries_list():
     """GET /api/soc/graph/prebuilt-queries returns exactly 5 pre-built queries."""
     from app.main import app
 
-    with patch("app.routers.soc.neo4j_client"):
+    with patch("app.routers.framework_router.neo4j_client"):
         client = TestClient(app)
         resp = client.get("/api/soc/graph/prebuilt-queries")
 
@@ -195,7 +195,7 @@ def test_prebuilt_query_run():
     async def fake_run_query(query, params=None):
         return sample_user_rows
 
-    with patch("app.routers.soc.neo4j_client") as mock_neo4j:
+    with patch("app.routers.framework_router.neo4j_client") as mock_neo4j:
         mock_neo4j.run_query = fake_run_query
         client = TestClient(app)
         resp = client.post("/api/soc/graph/prebuilt/top_risk_users")

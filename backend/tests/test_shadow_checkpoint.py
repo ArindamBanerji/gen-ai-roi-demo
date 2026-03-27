@@ -48,7 +48,7 @@ def test_shadow_toggle():
     """POST toggle enables then disables shadow mode."""
     from app.services.shadow_mode import ShadowModeService
 
-    with patch("app.routers.soc.neo4j_client", _neo4j_noop()):
+    with patch("app.routers.framework_router.neo4j_client", _neo4j_noop()):
         client = TestClient(app)
 
         resp = client.post("/api/soc/shadow/toggle", json={"enabled": True})
@@ -68,7 +68,7 @@ def test_shadow_toggle():
 
 def test_shadow_report_empty():
     """GET shadow report with no shadow decisions returns total = 0."""
-    with patch("app.routers.soc.neo4j_client", _neo4j_noop()):
+    with patch("app.routers.framework_router.neo4j_client", _neo4j_noop()):
         client = TestClient(app)
         resp = client.get("/api/soc/shadow/report")
 
@@ -108,7 +108,7 @@ def test_checkpoint_create_and_list():
 
     scorer = _make_scorer()
 
-    with patch("app.routers.soc.neo4j_client") as mock_neo4j, \
+    with patch("app.routers.framework_router.neo4j_client") as mock_neo4j, \
          patch("app.services.gae_state.get_profile_scorer", return_value=scorer):
         mock_neo4j.run_query = fake_run_query
         client = TestClient(app)
@@ -149,7 +149,7 @@ def test_checkpoint_rollback():
             }}]
         return []
 
-    with patch("app.routers.soc.neo4j_client") as mock_neo4j, \
+    with patch("app.routers.framework_router.neo4j_client") as mock_neo4j, \
          patch("app.services.gae_state.get_profile_scorer", return_value=scorer):
         mock_neo4j.run_query = fake_run_query
         client = TestClient(app)
@@ -171,7 +171,7 @@ def test_freeze_unfreeze():
     """POST /freeze returns frozen=True; POST /unfreeze returns frozen=False."""
     scorer = _make_scorer()
 
-    with patch("app.routers.soc.neo4j_client", _neo4j_noop()), \
+    with patch("app.routers.framework_router.neo4j_client", _neo4j_noop()), \
          patch("app.services.gae_state.get_profile_scorer", return_value=scorer):
         client = TestClient(app)
 
@@ -192,7 +192,7 @@ def test_freeze_unfreeze():
 
 def test_shadow_analyst_action():
     """POST /shadow/analyst-action returns recorded=True."""
-    with patch("app.routers.soc.neo4j_client", _neo4j_noop()):
+    with patch("app.routers.framework_router.neo4j_client", _neo4j_noop()):
         client = TestClient(app)
         resp = client.post(
             "/api/soc/shadow/analyst-action",
@@ -265,7 +265,7 @@ def test_shadow_report_with_decisions():
             return shadow_data
         return []
 
-    with patch("app.routers.soc.neo4j_client") as mock_neo4j:
+    with patch("app.routers.framework_router.neo4j_client") as mock_neo4j:
         mock_neo4j.run_query = fake_run_query
         client = TestClient(app)
         resp = client.get("/api/soc/shadow/report")

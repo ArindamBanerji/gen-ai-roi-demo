@@ -222,7 +222,7 @@ def test_auto_approve_stats_endpoint():
             ]
         return []
 
-    with patch("app.routers.soc.neo4j_client") as mock_neo4j:
+    with patch("app.routers.framework_router.neo4j_client") as mock_neo4j:
         mock_neo4j.run_query = fake_run_query
         client = TestClient(app)
         resp = client.get("/api/soc/auto-approve-stats")
