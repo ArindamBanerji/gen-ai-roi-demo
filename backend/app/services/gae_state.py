@@ -1,38 +1,47 @@
 """
 GAE learning state manager — live LearningState singleton for SOC Copilot.
 
-Single source of truth for the W matrix (5 actions × 6 factors) across
+Single source of truth for the W matrix (n_actions × 6 factors) across
 the backend process.  Initialized once at startup, persisted to JSON after
 each outcome update.
+
+Design:
+  Serialization/deserialization LOGIC lives in app.framework.learning_state.
+  Module-level singleton STATE (path, instances, metadata) lives here so
+  it is patchable in tests via patch.object(gae_state, ...).
 
 Reference: docs/soc_copilot_design_v1.md §14.
 """
 
 import json
 import logging
-import os
-import tempfile
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
-from gae.learning import LearningState, WeightUpdate, CalibrationProfile
+from gae.learning import LearningState, CalibrationProfile
 from gae import bootstrap_calibration, BootstrapResult
 from app.domains.soc.config import (
     SOC_BOOTSTRAP_ROUNDS, SOC_BOOTSTRAP_SAMPLES_PER_ACTION,
     SOC_BOOTSTRAP_SIGMA, SOC_BOOTSTRAP_CONVERGENCE_TOL, SOC_BOOTSTRAP_SEED,
     SOC_CATEGORIES,
 )
+import app.framework.learning_state as _fw
 
 log = logging.getLogger(__name__)
 
+# ── Module-level singleton state (owned here for test-patchability) ──────────
+
 _STATE_PATH = Path(__file__).parent.parent / "data" / "gae_learning_state.json"
-_learning_state: LearningState | None = None
-_bootstrap_metadata: dict | None = None
-_bootstrap_result: BootstrapResult | None = None   # CORR-3: exposed for bootstrap_neo4j writer
+_learning_state: Optional[LearningState] = None
+_bootstrap_metadata: Optional[dict] = None
+_bootstrap_result: Optional[BootstrapResult] = None   # CORR-3: exposed for bootstrap_neo4j writer
+
+_MU_ZERO_PATH = Path(__file__).parent.parent / "data" / "iks_bootstrap_soc.json"
 
 
 # ---------------------------------------------------------------------------
-# Internal helpers
+# SOC-specific helpers
 # ---------------------------------------------------------------------------
 
 def _soc_profile() -> CalibrationProfile:
@@ -48,61 +57,18 @@ def _make_fresh_state() -> LearningState:
     """Build a LearningState from SOCDomainConfig expert priors."""
     from app.domains.soc.config import SOCDomainConfig
     W = SOCDomainConfig.get_initial_W()                      # shape (n_actions, 6)
-    n_actions, n_factors = W.shape
     factor_names = [c.name for c in SOCDomainConfig.get_factor_computers()]
-    return LearningState(
-        W=W.copy(),
-        n_actions=n_actions,
-        n_factors=n_factors,
-        factor_names=factor_names,
-        profile=_soc_profile(),
-    )
+    return _fw.make_state(W, factor_names, _soc_profile())
 
 
 def _load_from_file() -> LearningState:
     """Deserialize W matrix and history from JSON checkpoint."""
-    with open(_STATE_PATH, "r", encoding="utf-8") as fh:
-        data = json.load(fh)
-    W = np.array(data["W"], dtype=np.float64)
-    n_a = data["n_actions"]
-    n_f = data["n_factors"]
-    state = LearningState(
-        W=W,
-        n_actions=n_a,
-        n_factors=n_f,
-        factor_names=data["factor_names"],
-        decision_count=data.get("decision_count", 0),
-        profile=_soc_profile(),
-    )
-    # Restore WeightUpdate history so chart endpoints have data after restart.
-    history = []
-    for h in data.get("history", []):
-        try:
-            wu = WeightUpdate(
-                decision_number=        h["decision_number"],
-                timestamp=              h["timestamp"],
-                action_index=           h["action_index"],
-                action_name=            h["action_name"],
-                outcome=                h["outcome"],
-                factor_vector=          np.array(h["factor_vector"], dtype=np.float64),
-                delta_applied=          np.array(h["delta_applied"], dtype=np.float64),
-                W_before=               np.zeros((n_a, n_f), dtype=np.float64),
-                W_after=                np.array(h["W_after"], dtype=np.float64),
-                alpha_effective=        h["alpha_effective"],
-                confidence_at_decision= h["confidence_at_decision"],
-            )
-            history.append(wu)
-        except Exception as exc:
-            log.warning("[GAE] Skipping malformed history entry: %s", exc)
-    state.history = history
-    return state
+    return _fw.load_from_file(_STATE_PATH, _soc_profile())
 
 
 def _read_checkpoint_metadata() -> dict:
     """Read the metadata field from the checkpoint. Returns {} if absent."""
-    with open(_STATE_PATH, "r", encoding="utf-8") as fh:
-        data = json.load(fh)
-    return data.get("metadata", {})
+    return _fw.read_checkpoint_metadata(_STATE_PATH)
 
 
 # ---------------------------------------------------------------------------
@@ -115,24 +81,15 @@ def init_learning_state() -> LearningState:
 
     Three-path startup:
       1. Checkpoint with metadata.bootstrap=True → load as-is (already calibrated).
-         Log: [GAE] Loaded bootstrap checkpoint (step={n}, drift={drift:.4f})
       2. Legacy checkpoint (no bootstrap metadata) → run bootstrap, overwrite.
-         Log: [GAE] Legacy checkpoint detected — running bootstrap
       3. No checkpoint → fresh state, run bootstrap, save.
-         Log: [GAE] Bootstrap calibration complete (decisions={n}, ...)
 
     Called once in main.py startup_event().
-
-    Returns
-    -------
-    LearningState
-        The initialized state (also stored in module-level singleton).
     """
     global _learning_state, _bootstrap_metadata, _bootstrap_result
 
-    # Build ProfileScorer from SOC_PROFILE_CENTROIDS (always fresh)
-    from app.domains.soc.config import SOCDomainConfig as _SOCDomainConfig
-    _soc_cfg = _SOCDomainConfig()
+    from app.domains.soc.config import SOCDomainConfig
+    _soc_cfg = SOCDomainConfig()
     _profile_scorer = _soc_cfg.build_profile_scorer()
 
     needs_bootstrap = False
@@ -150,7 +107,6 @@ def init_learning_state() -> LearningState:
             checkpoint_meta = {}
 
         if checkpoint_meta.get("bootstrap") is True:
-            # Path 1: already bootstrapped — restore metadata and log
             _bootstrap_metadata = checkpoint_meta
             print(
                 f"[GAE] Loaded bootstrap checkpoint "
@@ -158,26 +114,22 @@ def init_learning_state() -> LearningState:
                 f"drift={checkpoint_meta.get('drift', 0.0):.4f})"
             )
         else:
-            # Path 2: legacy checkpoint — run bootstrap, overwrite
             print("[GAE] Legacy checkpoint detected — running bootstrap")
             needs_bootstrap = True
     else:
-        # Path 3: no checkpoint — fresh state, run bootstrap
         _learning_state = _make_fresh_state()
         needs_bootstrap = True
 
     if needs_bootstrap:
-        # Change 0: persist μ₀ (pre-bootstrap centroid state) for IKS computation.
-        # bootstrap_calibration() mutates scorer.mu in-place; capture the prior first.
-        _mu_zero_path = _STATE_PATH.parent / "iks_bootstrap_soc.json"
+        # Persist μ₀ (pre-bootstrap centroid state) for IKS computation.
         try:
             mu_zero = _profile_scorer.mu.copy()
-            _mu_zero_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(_mu_zero_path, "w", encoding="utf-8") as _fh:
+            _MU_ZERO_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with open(_MU_ZERO_PATH, "w", encoding="utf-8") as _fh:
                 json.dump({"mu_zero": mu_zero.tolist()}, _fh)
-            log.info("[GAE] μ₀ persisted to %s (shape=%s)", _mu_zero_path, list(mu_zero.shape))
-        except Exception as _exc:
-            log.warning("[GAE] Could not persist μ₀ to %s: %s", _mu_zero_path, _exc)
+            log.info("[GAE] μ₀ persisted to %s (shape=%s)", _MU_ZERO_PATH, list(mu_zero.shape))
+        except Exception as exc:
+            log.warning("[GAE] Could not persist μ₀ to %s: %s", _MU_ZERO_PATH, exc)
 
         result: BootstrapResult = bootstrap_calibration(
             scorer=_profile_scorer,
@@ -188,7 +140,7 @@ def init_learning_state() -> LearningState:
             convergence_tol=SOC_BOOTSTRAP_CONVERGENCE_TOL,
             seed=SOC_BOOTSTRAP_SEED,
         )
-        _bootstrap_result = result          # CORR-3: expose for bootstrap_neo4j writer
+        _bootstrap_result = result
         _learning_state.decision_count = result.n_decisions
         _bootstrap_metadata = {
             "bootstrap": True,
@@ -219,16 +171,12 @@ def get_profile_scorer():
     return get_learning_state().profile_scorer
 
 
-def get_bootstrap_result() -> BootstrapResult | None:
+def get_bootstrap_result() -> Optional[BootstrapResult]:
     """
     Return the BootstrapResult from the last bootstrap run, or None.
 
-    Returns None when the server loaded an existing bootstrapped checkpoint
-    (Path 1 in init_learning_state).  Returns a BootstrapResult when
-    bootstrap_calibration() ran this startup (Paths 2 and 3).
-
-    Used by main.py startup_event to decide whether to write bootstrap
-    Decision nodes to Neo4j (CORR-3).
+    Returns None when the server loaded an existing bootstrapped checkpoint.
+    Returns a BootstrapResult when bootstrap_calibration() ran this startup.
     """
     return _bootstrap_result
 
@@ -252,54 +200,9 @@ def get_learning_state() -> LearningState:
 def save_learning_state() -> None:
     """
     Atomically persist the current W matrix to the JSON checkpoint.
-
-    Uses a temp-file + rename strategy to prevent partial writes on crash.
     No-op if the state has not been initialized.
     """
-    if _learning_state is None:
-        return
-    _STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    history_data = []
-    for wu in _learning_state.history:
-        history_data.append({
-            "decision_number":        wu.decision_number,
-            "timestamp":              wu.timestamp,
-            "action_index":           wu.action_index,
-            "action_name":            wu.action_name,
-            "outcome":                wu.outcome,
-            "alpha_effective":        wu.alpha_effective,
-            "confidence_at_decision": wu.confidence_at_decision,
-            "factor_vector":          wu.factor_vector.tolist(),
-            "delta_applied":          wu.delta_applied.tolist(),
-            "W_after":                wu.W_after.tolist(),
-        })
-    payload = {
-        "W":             _learning_state.W.tolist(),
-        "n_actions":     _learning_state.n_actions,
-        "n_factors":     _learning_state.n_factors,
-        "factor_names":  _learning_state.factor_names,
-        "decision_count": _learning_state.decision_count,
-        "history":       history_data,
-    }
-    if _bootstrap_metadata:
-        payload["metadata"] = _bootstrap_metadata
-    fd, tmp = tempfile.mkstemp(
-        dir=_STATE_PATH.parent, suffix=".tmp", prefix=".gae_"
-    )
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            json.dump(payload, fh, indent=2)
-        os.replace(tmp, _STATE_PATH)
-        log.debug(
-            "[GAE] State saved to %s (step=%d)",
-            _STATE_PATH, _learning_state.decision_count,
-        )
-    except Exception:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
+    _fw.save_state(_learning_state, _bootstrap_metadata, _STATE_PATH)
 
 
 def reset_learning_state() -> None:

@@ -68,6 +68,7 @@ def test_framework_modules_importable():
         "app.framework.narrative_base",
         "app.framework.similar_cases_base",
         "app.framework.iks_base",
+        "app.framework.learning_state",
     ]
     for m in modules:
         mod = importlib.import_module(m)
