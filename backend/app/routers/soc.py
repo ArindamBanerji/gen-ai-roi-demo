@@ -1721,6 +1721,53 @@ async def get_campaign_detail(campaign_id: str):
 # POST /api/soc/campaigns/recorrelate — F6 Retroactive correlation
 # ============================================================================
 
+# ============================================================================
+# GET /api/soc/accuracy-trajectory — C1b accuracy trajectory
+# ============================================================================
+
+@router.get("/soc/accuracy-trajectory")
+async def get_accuracy_trajectory():
+    """
+    Return current accuracy trajectory for each alert category.
+
+    Combines:
+      - Live decision counts per category from Neo4j
+      - Published reference curve (V-ACC-TRAJ-1b-v2) from constants.py
+      - Interpolated current accuracy and progress toward enriched plateau
+
+    Cold-start safe — works with 0 decisions.
+    """
+    from app.services.accuracy_trajectory import build_accuracy_trajectory
+
+    live_data: dict[str, int] = {}
+    decisions_per_day: float = 50.0
+    sigma_per_category: dict[str, float] = {}
+
+    try:
+        rows = await neo4j_client.run_query(
+            """
+            MATCH (d:Decision)
+            RETURN d.category AS category, count(d) AS cnt
+            """,
+            {},
+        )
+        for record in rows:
+            cat = record.get("category") or "unknown"
+            live_data[cat] = int(record.get("cnt", 0))
+    except Exception:
+        pass  # cold-start safe — empty live_data falls back to reference curve
+
+    return build_accuracy_trajectory(
+        live_data=live_data,
+        decisions_per_day=decisions_per_day,
+        sigma_per_category=sigma_per_category,
+    )
+
+
+# ============================================================================
+# POST /api/soc/campaigns/recorrelate — F6 Retroactive correlation
+# ============================================================================
+
 @router.post("/soc/campaigns/recorrelate")
 async def recorrelate_campaigns():
     """
