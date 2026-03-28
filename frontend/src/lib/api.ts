@@ -307,3 +307,9 @@ export async function getAuditDecisions() {
 export async function verifyAuditChain() {
   return fetchJSON('/audit/verify')
 }
+
+export async function getAccuracyTrajectory() {
+  const res = await fetch('/api/soc/accuracy-trajectory')
+  if (!res.ok) throw new Error('accuracy-trajectory fetch failed')
+  return res.json()
+}

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import {
   ComposedChart, Bar, Line,
+  AreaChart, Area, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer,
 } from 'recharts'
@@ -174,6 +175,137 @@ interface CentroidEvolutionEntry {
 // CentroidEvolutionData removed — backend returns flat array, not {evolution:[]} wrapper
 
 const DEFAULT_ALERT_ID = domainConfig.defaultAlertId
+
+
+// ============================================================================
+// AccuracyTrajectoryPanel — two-plateau visualization (C2)
+// ============================================================================
+
+function AccuracyTrajectoryPanel() {
+  const [data, setData]         = useState<any>(null)
+  const [loading, setLoading]   = useState(true)
+  const [selected, setSelected] = useState<string>('')
+
+  useEffect(() => {
+    api.getAccuracyTrajectory()
+      .then((d: any) => {
+        setData(d)
+        if (d.categories?.length > 0) {
+          setSelected(d.categories[0].category)
+        }
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
+
+  if (loading) return (
+    <div className="p-4 text-gray-400 text-sm">
+      Loading accuracy trajectory...
+    </div>
+  )
+  if (!data) return (
+    <div className="p-4 text-gray-400 text-sm">
+      Accuracy trajectory unavailable.
+    </div>
+  )
+
+  const categoryNames: string[] = (data.categories ?? []).map((c: any) => c.category)
+  const cat = (data.categories ?? []).find((c: any) => c.category === selected)
+  if (!cat) return null
+
+  const chartData = (cat.trajectory_points ?? []).map((pt: any) => ({
+    decisions:    pt.decisions,
+    cold_start:   Math.round(pt.accuracy * 1000) / 10,
+    enriched:     Math.round(cat.enriched_plateau * 1000) / 10,
+    cold_plateau: Math.round(cat.cold_start_plateau * 1000) / 10,
+  }))
+
+  const gapPP     = cat.permanent_gap_pp?.toFixed(1) ?? '—'
+  const nHalfNote = cat.n_half_applicable
+    ? 'Convergence to plateau within one quarter.'
+    : `Cold-start plateau ${(cat.cold_start_plateau * 100).toFixed(1)}% — permanent gap.`
+
+  return (
+    <div className="bg-gray-900 rounded-xl p-5 mt-4">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-green-400" />
+          <h3 className="text-white font-semibold">Accuracy Trajectory</h3>
+          <span className="text-xs text-gray-400 ml-2">
+            σ-band: {cat.sigma_band ?? 'medium'}
+          </span>
+        </div>
+        <select
+          value={selected}
+          onChange={e => setSelected(e.target.value)}
+          className="bg-gray-800 text-gray-300 text-xs rounded px-2 py-1
+                     border border-gray-700 focus:outline-none"
+        >
+          {categoryNames.map(c => (
+            <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>
+          ))}
+        </select>
+      </div>
+
+      <ResponsiveContainer width="100%" height={220}>
+        <AreaChart data={chartData}
+          margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+          <XAxis dataKey="decisions"
+            tick={{ fill: '#9CA3AF', fontSize: 11 }}
+            label={{ value: 'Decisions', position: 'insideBottom',
+                     offset: -2, fill: '#6B7280', fontSize: 11 }} />
+          <YAxis domain={[20, 100]}
+            tick={{ fill: '#9CA3AF', fontSize: 11 }}
+            tickFormatter={(v: number) => `${v}%`} />
+          <Tooltip
+            contentStyle={{ backgroundColor: '#1F2937',
+                            border: '1px solid #374151' }}
+            formatter={(v: any, name: string) => [
+              `${v}%`,
+              name === 'cold_start' ? 'Cold-start (no enrichment)' :
+              name === 'enriched'   ? 'Enriched (your deployment)' : name
+            ]}
+            labelFormatter={(v: any) => `${v} decisions`} />
+
+          <Area type="monotone" dataKey="enriched"
+            stroke="#22C55E" strokeWidth={2} strokeDasharray="6 3"
+            fill="#22C55E" fillOpacity={0.10} name="enriched" dot={false} />
+
+          <Line type="monotone" dataKey="cold_start"
+            stroke="#F59E0B" strokeWidth={2}
+            name="cold_start" dot={false} />
+
+          <ReferenceLine
+            y={Math.round(cat.cold_start_plateau * 1000) / 10}
+            stroke="#F59E0B" strokeDasharray="4 4" strokeOpacity={0.5} />
+        </AreaChart>
+      </ResponsiveContainer>
+
+      <div className="mt-3 space-y-1">
+        <div className="flex items-start gap-2">
+          <div className="w-3 h-3 rounded-full bg-green-500 mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-gray-300">
+            Your deployment: enriched plateau
+            {' '}{(cat.enriched_plateau * 100).toFixed(1)}% from Day 1.
+          </p>
+        </div>
+        <div className="flex items-start gap-2">
+          <div className="w-3 h-3 rounded-full bg-amber-500 mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-gray-300">
+            Without enrichment: cold-start levels off at
+            {' '}{(cat.cold_start_plateau * 100).toFixed(1)}%.{' '}
+            <span className="text-amber-400 font-medium">
+              Permanent gap: {gapPP}pp.
+            </span>
+          </p>
+        </div>
+        <p className="text-xs text-gray-500 mt-1">{nHalfNote}</p>
+      </div>
+    </div>
+  )
+}
+
 
 export default function RuntimeEvolutionTab() {
   const [deployments, setDeployments] = useState<Deployment[]>([])
@@ -1539,6 +1671,9 @@ export default function RuntimeEvolutionTab() {
                   )}
                 </div>
               </div>
+
+              {/* C2. Accuracy Trajectory */}
+              <AccuracyTrajectoryPanel />
 
             </div>
           </div>
