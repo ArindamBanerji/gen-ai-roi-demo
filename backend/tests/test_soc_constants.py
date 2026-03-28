@@ -10,6 +10,7 @@ Run from backend/:
 from app.domains.soc.constants import (
     get_sigma_band,
     get_permanent_gap_pp,
+    n_half_applicable,
     COLD_START_REFERENCE_TRAJECTORY,
     S2P_COLD_START_REFERENCE,
 )
@@ -28,9 +29,18 @@ def test_get_sigma_band_boundaries():
 
 def test_permanent_gap_pp_returns_float():
     """get_permanent_gap_pp() returns correct pp values for each sigma band."""
-    assert get_permanent_gap_pp(0.18) == 7.5   # medium band: 0.075 × 100
-    assert get_permanent_gap_pp(0.08) == 3.5   # low band:    0.035 × 100
-    assert get_permanent_gap_pp(0.30) == 8.8   # high band:   0.088 × 100
+    assert get_permanent_gap_pp(0.18) == 6.8   # medium band: 0.068 × 100
+    assert get_permanent_gap_pp(0.08) == 3.4   # low band:    0.034 × 100
+    assert get_permanent_gap_pp(0.30) == 8.4   # high band:   0.084 × 100
+
+
+def test_n_half_applicable():
+    """n_half_applicable() is True only for low-sigma (σ≤0.12) environments."""
+    assert n_half_applicable(0.08)  is True   # low sigma
+    assert n_half_applicable(0.12)  is True   # boundary — still low
+    assert n_half_applicable(0.13)  is False  # medium
+    assert n_half_applicable(0.18)  is False
+    assert n_half_applicable(0.30)  is False
 
 
 def test_trajectory_dicts_monotonically_increasing():

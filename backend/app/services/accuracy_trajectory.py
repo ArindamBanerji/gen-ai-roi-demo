@@ -16,6 +16,7 @@ from app.domains.soc.constants import (
     get_sigma_band,
     get_permanent_gap_pp,
     COLD_START_PLATEAU_BY_SIGMA,
+    n_half_applicable,
 )
 
 # Reference trajectory decision checkpoints (sorted)
@@ -92,17 +93,19 @@ def build_trajectory_for_category(
         for k, v in COLD_START_REFERENCE_TRAJECTORY.items()
     ]
 
+    gap_pp = get_permanent_gap_pp(sigma)
     return {
-        "category":          category,
-        "decision_count":    decision_count,
-        "sigma":             sigma,
-        "sigma_band":        band,
-        "current_accuracy":  current_acc,
-        "enriched_plateau":  ENRICHED_PLATEAU,
+        "category":           category,
+        "decision_count":     decision_count,
+        "sigma":              sigma,
+        "sigma_band":         band,
+        "current_accuracy":   current_acc,
+        "enriched_plateau":   ENRICHED_PLATEAU,
         "cold_start_plateau": cold_plateau,
-        "permanent_gap_pp":  get_permanent_gap_pp(sigma),
-        "trajectory_points": trajectory_points,
-        "pct_to_enriched":   pct,
+        "permanent_gap_pp":   gap_pp,
+        "n_half_applicable":  n_half_applicable(sigma),
+        "trajectory_points":  trajectory_points,
+        "pct_to_enriched":    pct,
     }
 
 
