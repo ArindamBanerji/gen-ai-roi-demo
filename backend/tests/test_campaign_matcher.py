@@ -45,7 +45,7 @@ def test_check_alert_returns_none_on_exception():
     Neo4j failure → log warning → return None.
     """
     mock_neo4j = AsyncMock()
-    mock_neo4j.execute_read.side_effect = Exception("Neo4j down")
+    mock_neo4j.run_query.side_effect = Exception("Neo4j down")
 
     engine = CampaignCorrelationEngine(DEFAULT_CONFIG)
     repo = CampaignRepository(mock_neo4j)
@@ -68,9 +68,8 @@ def test_check_alert_joins_existing_campaign():
     add the alert to that campaign and return its ID.
     """
     mock_neo4j = AsyncMock()
-    # First execute_read call (_find_matching_campaign) returns existing campaign
-    mock_neo4j.execute_read.return_value = [{"campaign_id": "camp-abc"}]
-    mock_neo4j.execute_write.return_value = None
+    # First run_query call (_find_matching_campaign) returns existing campaign
+    mock_neo4j.run_query.return_value = [{"campaign_id": "camp-abc"}]
 
     engine = CampaignCorrelationEngine(DEFAULT_CONFIG)
     repo = CampaignRepository(mock_neo4j)
@@ -94,7 +93,7 @@ def test_check_alert_returns_none_when_no_campaign():
     """
     mock_neo4j = AsyncMock()
     # All reads return empty — no existing campaign, no recent events
-    mock_neo4j.execute_read.return_value = []
+    mock_neo4j.run_query.return_value = []
 
     engine = CampaignCorrelationEngine(DEFAULT_CONFIG)
     repo = CampaignRepository(mock_neo4j)
@@ -117,7 +116,7 @@ def test_repository_write_campaign_is_idempotent():
     must succeed both times (return True). No unique-constraint violation.
     """
     mock_neo4j = AsyncMock()
-    mock_neo4j.execute_write.return_value = None
+    mock_neo4j.run_query.return_value = None
 
     repo = CampaignRepository(mock_neo4j)
 
