@@ -686,15 +686,18 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
     },
 
     # Default — conservative fallback for unknown alert IDs
+    # Factor order matches SOC_FACTORS: travel_match, asset_criticality,
+    # [threat_intel_enrichment inserted by compute_soc_factors at pos 2],
+    # pattern_history, time_anomaly, device_trust.
     "_default": {
         "recommended_action": "escalate_tier2",
         "confidence":         0.60,
         "factors": [
-            {"name": "alert_severity",  "value": 0.50, "weight": 0.60, "explanation": "Alert severity classified as medium — manual review warranted"},
+            {"name": "travel_match",    "value": 0.50, "weight": 0.60, "explanation": "No travel context available — defaulting to neutral score"},
             {"name": "asset_criticality","value": 0.50, "weight": 0.45, "explanation": "Asset criticality undetermined — defaulting to conservative action"},
+            {"name": "pattern_history", "value": 0.30, "weight": 0.60, "explanation": "Limited pattern history for this alert type"},
             {"name": "time_anomaly",    "value": 0.50, "weight": 0.50, "explanation": "Activity detected outside normal business hours"},
             {"name": "device_trust",    "value": 0.50, "weight": 0.55, "explanation": "Device trust level undetermined"},
-            {"name": "pattern_history", "value": 0.30, "weight": 0.60, "explanation": "Limited pattern history for this alert type"},
         ],
     },
 }
