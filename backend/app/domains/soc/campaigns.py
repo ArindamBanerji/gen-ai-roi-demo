@@ -27,6 +27,15 @@ import uuid
 log = logging.getLogger(__name__)
 
 
+def _to_python_dt(value):
+    """Convert neo4j DateTime to Python datetime; pass through if already datetime."""
+    if isinstance(value, datetime):
+        return value
+    if hasattr(value, "to_native"):
+        return value.to_native()
+    return value
+
+
 # ── Kill-chain templates ─────────────────────────────────────────────────────
 
 KILL_CHAINS = {
@@ -224,7 +233,7 @@ def build_nl_summary(events: list, shared_entities: List[str],
                      trigger_rule: str) -> str:
     """Deterministic NL summary. No LLM — template only."""
     n = len(events)
-    cats = list(dict.fromkeys([e["category"] for e in events]))
+    cats = list(dict.fromkeys([e["category"] or "unknown" for e in events]))
     dur_hours = int(
         (max(e["ts"] for e in events) -
          min(e["ts"] for e in events)).total_seconds() / 3600
@@ -487,7 +496,7 @@ class CampaignRepository:
         Returns list of event dicts compatible with CampaignCorrelationEngine.
         """
         try:
-            results = await self.neo4j.execute_read("""
+            results = await self.neo4j.run_query("""
                 MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
                 WHERE NOT (a)-[:MEMBER_OF]->(:Campaign)
                 RETURN a.id AS alert_id,
@@ -498,8 +507,8 @@ class CampaignRepository:
                        COALESCE(a.severity, 'MEDIUM') AS severity,
                        d.id AS decision_id
                 ORDER BY d.timestamp
-            """)
-            return [dict(r) for r in results] if results else []
+            """, {})
+            return [{**dict(r), "ts": _to_python_dt(r["ts"])} for r in results] if results else []
         except Exception as e:
             log.warning(f"fetch_all_events failed: {e}")
             return []
@@ -511,7 +520,7 @@ class CampaignRepository:
         Fetch recent unclaimed events for real-time matching.
         """
         try:
-            results = await self.neo4j.execute_read("""
+            results = await self.neo4j.run_query("""
                 MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
                 WHERE NOT (a)-[:MEMBER_OF]->(:Campaign)
                   AND d.timestamp > datetime() - duration({hours: $hours})
@@ -523,8 +532,8 @@ class CampaignRepository:
                        COALESCE(a.severity, 'MEDIUM') AS severity,
                        d.id AS decision_id
                 ORDER BY d.timestamp
-            """, hours=window_hours)
-            return [dict(r) for r in results] if results else []
+            """, {"hours": window_hours})
+            return [{**dict(r), "ts": _to_python_dt(r["ts"])} for r in results] if results else []
         except Exception as e:
             log.warning(f"fetch_recent_events failed: {e}")
             return []
@@ -532,7 +541,7 @@ class CampaignRepository:
     async def fetch_single_alert_event(self, alert_id: str) -> Optional[dict]:
         """Fetch one alert event by ID."""
         try:
-            results = await self.neo4j.execute_read("""
+            results = await self.neo4j.run_query("""
                 MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert {id: $alert_id})
                 RETURN a.id AS alert_id,
                        d.category AS category,
@@ -542,8 +551,12 @@ class CampaignRepository:
                        COALESCE(a.severity, 'MEDIUM') AS severity,
                        d.id AS decision_id
                 LIMIT 1
-            """, alert_id=alert_id)
-            return dict(results[0]) if results else None
+            """, {"alert_id": alert_id})
+            if results:
+                r = dict(results[0])
+                r["ts"] = _to_python_dt(r["ts"])
+                return r
+            return None
         except Exception as e:
             log.warning(f"fetch_single_alert_event failed: {e}")
             return None
@@ -555,7 +568,7 @@ class CampaignRepository:
         Returns True on success.
         """
         try:
-            await self.neo4j.execute_write("""
+            await self.neo4j.run_query("""
                 MERGE (c:Campaign {id: $campaign_id})
                 SET c.first_seen = $first_seen,
                     c.last_seen = $last_seen,
@@ -569,28 +582,28 @@ class CampaignRepository:
                     c.correlation_window_hours = $correlation_window_hours,
                     c.nl_summary = $nl_summary,
                     c.updated_at = datetime()
-            """,
-            campaign_id=campaign.campaign_id,
-            first_seen=campaign.first_seen.isoformat(),
-            last_seen=campaign.last_seen.isoformat(),
-            alert_count=campaign.alert_count,
-            category_sequence=campaign.category_sequence,
-            shared_entities=campaign.shared_entities,
-            technique_sequence=campaign.technique_sequence,
-            confidence=campaign.confidence,
-            trigger_rule=campaign.trigger_rule,
-            severity=campaign.severity,
-            correlation_window_hours=campaign.correlation_window_hours,
-            nl_summary=campaign.nl_summary)
+            """, {
+                "campaign_id": campaign.campaign_id,
+                "first_seen": campaign.first_seen.isoformat(),
+                "last_seen": campaign.last_seen.isoformat(),
+                "alert_count": campaign.alert_count,
+                "category_sequence": campaign.category_sequence,
+                "shared_entities": campaign.shared_entities,
+                "technique_sequence": campaign.technique_sequence,
+                "confidence": campaign.confidence,
+                "trigger_rule": campaign.trigger_rule,
+                "severity": campaign.severity,
+                "correlation_window_hours": campaign.correlation_window_hours,
+                "nl_summary": campaign.nl_summary,
+            })
 
             # Write :MEMBER_OF edges
             for alert_id in campaign.member_alert_ids:
-                await self.neo4j.execute_write("""
+                await self.neo4j.run_query("""
                     MATCH (a:Alert {id: $alert_id})
                     MATCH (c:Campaign {id: $campaign_id})
                     MERGE (a)-[:MEMBER_OF]->(c)
-                """, alert_id=alert_id,
-                     campaign_id=campaign.campaign_id)
+                """, {"alert_id": alert_id, "campaign_id": campaign.campaign_id})
             return True
         except Exception as e:
             log.error(f"write_campaign failed for {campaign.campaign_id}: {e}")
@@ -606,16 +619,14 @@ class CampaignRepository:
             where_clause = "WHERE c.confidence >= $min_confidence"
             if trigger_rule:
                 where_clause += " AND c.trigger_rule = $trigger_rule"
-            results = await self.neo4j.execute_read(f"""
+            results = await self.neo4j.run_query(f"""
                 MATCH (c:Campaign)
                 {where_clause}
                 OPTIONAL MATCH (a:Alert)-[:MEMBER_OF]->(c)
                 RETURN c, collect(a.id) AS alert_ids
                 ORDER BY c.last_seen DESC
                 LIMIT $limit
-            """, min_confidence=min_confidence,
-                 trigger_rule=trigger_rule,
-                 limit=limit)
+            """, {"min_confidence": min_confidence, "trigger_rule": trigger_rule, "limit": limit})
             return [dict(r) for r in results] if results else []
         except Exception as e:
             log.warning(f"get_campaigns failed: {e}")
@@ -624,7 +635,7 @@ class CampaignRepository:
     async def get_campaign_detail(self, campaign_id: str) -> Optional[dict]:
         """Fetch full campaign detail for GET /api/soc/campaigns/{id}."""
         try:
-            results = await self.neo4j.execute_read("""
+            results = await self.neo4j.run_query("""
                 MATCH (c:Campaign {id: $campaign_id})
                 MATCH (a:Alert)-[:MEMBER_OF]->(c)
                 OPTIONAL MATCH (d:Decision)-[:DECIDED_ON]->(a)
@@ -638,7 +649,7 @@ class CampaignRepository:
                            confidence: d.confidence,
                            timestamp: d.timestamp
                        }) AS decisions
-            """, campaign_id=campaign_id)
+            """, {"campaign_id": campaign_id})
             return dict(results[0]) if results else None
         except Exception as e:
             log.warning(f"get_campaign_detail failed: {e}")
@@ -647,9 +658,9 @@ class CampaignRepository:
     async def campaigns_exist(self) -> bool:
         """Check if any Campaign nodes exist (for startup recorrelation)."""
         try:
-            results = await self.neo4j.execute_read("""
-                MATCH (c:Campaign) RETURN count(c) AS n LIMIT 1
-            """)
+            results = await self.neo4j.run_query(
+                "MATCH (c:Campaign) RETURN count(c) AS n LIMIT 1", {}
+            )
             return results[0]["n"] > 0 if results else False
         except Exception:
             return False
@@ -713,7 +724,7 @@ class CampaignMatcher:
     ) -> Optional[str]:
         """Find existing open campaign this alert should join."""
         try:
-            results = await self.neo4j.execute_read("""
+            results = await self.neo4j.run_query("""
                 MATCH (a_new:Alert {id: $alert_id})
                 MATCH (a_existing:Alert)-[:MEMBER_OF]->(c:Campaign)
                 WHERE a_existing.source_entity_id IS NOT NULL
@@ -721,8 +732,8 @@ class CampaignMatcher:
                   AND c.last_seen > datetime() - duration({hours: $hours})
                 RETURN c.id AS campaign_id
                 ORDER BY c.last_seen DESC LIMIT 1
-            """, alert_id=alert_id,
-                 hours=self.config["correlation_window_hours"])
+            """, {"alert_id": alert_id,
+                  "hours": self.config["correlation_window_hours"]})
             return results[0]["campaign_id"] if results else None
         except Exception as e:
             log.warning(f"_find_matching_campaign failed: {e}")
@@ -733,12 +744,12 @@ class CampaignMatcher:
     ) -> None:
         """Add alert to existing campaign, update last_seen + alert_count."""
         try:
-            await self.neo4j.execute_write("""
+            await self.neo4j.run_query("""
                 MATCH (a:Alert {id: $alert_id})
                 MATCH (c:Campaign {id: $campaign_id})
                 MERGE (a)-[:MEMBER_OF]->(c)
                 SET c.last_seen = datetime(),
                     c.alert_count = c.alert_count + 1
-            """, alert_id=alert_id, campaign_id=campaign_id)
+            """, {"alert_id": alert_id, "campaign_id": campaign_id})
         except Exception as e:
             log.warning(f"_add_alert_to_campaign failed: {e}")

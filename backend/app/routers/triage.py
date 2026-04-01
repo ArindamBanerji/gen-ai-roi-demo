@@ -111,6 +111,14 @@ async def analyze_alert(request: ProcessAlertRequest):
     GraphMutated events (design principle: every graph mutation emits events).
     """
 
+    # Guard: ProfileScorer must be attached before any scoring attempt
+    from app.services.gae_state import get_profile_scorer as _get_scorer
+    if _get_scorer() is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Scorer not ready — backend restarting or reset in progress"
+        )
+
     try:
         alert_id = request.alert_id
 
@@ -748,8 +756,20 @@ async def reset_demo_alerts():
 
         print(f"[TRIAGE] Reset {reset_count} alerts to 'pending' status")
 
-        # Reset all in-memory state (feedback, policy, audit, evolver)
+        # Reset all in-memory state (feedback, policy, audit, evolver, learning_state)
         state_manager.reset_all()
+
+        # Re-attach ProfileScorer — reset_learning_state() replaces _learning_state
+        # with a fresh object that has no scorer; re-build from domain config so
+        # analyze_alert() doesn't receive a NoneType scorer.
+        from app.services.gae_state import get_profile_scorer, get_learning_state
+        from app.domains.soc.config import SOCDomainConfig
+        scorer = get_profile_scorer()
+        if scorer is None:
+            _soc_cfg = SOCDomainConfig()
+            _profile_scorer = _soc_cfg.build_profile_scorer()
+            get_learning_state().attach_profile_scorer(_profile_scorer)
+            print("[RESET] ProfileScorer re-attached after reset")
 
         return {
             "status": "success",

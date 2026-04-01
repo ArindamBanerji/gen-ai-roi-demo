@@ -8,7 +8,7 @@ Run from backend/:
     pytest tests/test_enrichment_advisor.py -v
 """
 
-from app.services.enrichment_advisor import get_enrichment_advice
+from app.services.enrichment_advisor import get_enrichment_advice, _ioc_coverage_band
 from app.domains.soc.constants import get_permanent_gap_pp
 
 
@@ -90,4 +90,44 @@ def test_permanent_gap_pp_scales_with_sigma():
         f"Expected gap to increase with sigma: "
         f"get_permanent_gap_pp(0.28)={high_gap} must be > "
         f"get_permanent_gap_pp(0.07)={low_gap}"
+    )
+
+
+# ============================================================================
+# Test 5 — ioc_coverage_band thresholds
+# ============================================================================
+
+def test_ioc_coverage_band_assignment():
+    """
+    Band boundaries: ≥0.40 → strong, ≥0.20 → moderate, else → sparse.
+    """
+    assert _ioc_coverage_band(0.45) == "strong", "0.45 must be strong"
+    assert _ioc_coverage_band(0.40) == "strong", "0.40 boundary must be strong"
+    assert _ioc_coverage_band(0.25) == "moderate", "0.25 must be moderate"
+    assert _ioc_coverage_band(0.20) == "moderate", "0.20 boundary must be moderate"
+    assert _ioc_coverage_band(0.10) == "sparse", "0.10 must be sparse"
+    assert _ioc_coverage_band(0.00) == "sparse", "0.00 must be sparse"
+
+
+# ============================================================================
+# Test 6 — ioc_coverage_note varies by band
+# ============================================================================
+
+def test_ioc_coverage_note_varies_by_band():
+    """
+    Strong note mentions '23% faster'; sparse note mentions '40%+'.
+    Notes must differ between bands.
+    """
+    strong_advice = get_enrichment_advice(ioc_coverage=0.45)
+    sparse_advice = get_enrichment_advice(ioc_coverage=0.10)
+
+    strong_note = strong_advice["ioc_coverage_note"]
+    sparse_note = sparse_advice["ioc_coverage_note"]
+
+    assert strong_note != sparse_note, "Notes must differ between strong and sparse bands"
+    assert "23%" in strong_note, (
+        f"Strong note must mention '23%'. Got: {strong_note!r}"
+    )
+    assert "40%" in sparse_note, (
+        f"Sparse note must mention '40%'. Got: {sparse_note!r}"
     )

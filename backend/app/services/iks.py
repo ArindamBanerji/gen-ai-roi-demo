@@ -160,6 +160,7 @@ async def compute_iks_v2(neo4j_service) -> dict:
     neo4j_service : object with async run_query(query, params=None) method
     """
     # ── Component 1: Graph Richness ─────────────────────────────────────────
+    _neo4j_query_ok = True
     try:
         rows = await neo4j_service.run_query(
             "MATCH (d:Decision) RETURN count(d) AS total", {}
@@ -168,6 +169,17 @@ async def compute_iks_v2(neo4j_service) -> dict:
     except Exception as exc:
         log.warning("[IKS-v2] graph_richness query failed: %s", exc)
         total_decisions = 0
+        _neo4j_query_ok = False
+
+    # Floor: only when the query itself FAILED (not when it returned 0 legitimately).
+    # Uses the startup-synced in-memory decision_count so IKS doesn't collapse
+    # to 0 on transient Neo4j reconnects.
+    if not _neo4j_query_ok and total_decisions == 0:
+        try:
+            from app.services.gae_state import get_learning_state as _get_ls
+            total_decisions = max(0, _get_ls().decision_count)
+        except Exception:
+            pass
 
     graph_richness = min(total_decisions / 1000.0, 1.0) * 100.0
 
@@ -186,6 +198,8 @@ async def compute_iks_v2(neo4j_service) -> dict:
         cat_counts = {}
 
     mean_cat_count = (sum(cat_counts.values()) / len(cat_counts)) if cat_counts else 0.0
+    # Threshold: reaches 1.0 at mean_cat_count = 1 (6 total for 6 cats);
+    # reaches 100.0 at mean_cat_count >= 100 (~600 total for 6 categories).
     decision_maturity = min(mean_cat_count / 100.0, 1.0) * 100.0
 
     # ── Component 3: Trust Coverage ──────────────────────────────────────────
@@ -223,9 +237,14 @@ async def compute_iks_v2(neo4j_service) -> dict:
     factor_quality = (
         (sum(verified_accuracies) / len(verified_accuracies)) * 100.0
         if verified_accuracies
-        else (50.0 if total_decisions > 0 else 0.0)
-        # 50% uninformative prior when decisions exist but none verified yet;
-        # 0 at true cold start (no decisions at all).
+        else (
+            # Mature systems (≥1000 decisions) earn a 75% confidence prior:
+            # calibration volume + GAE convergence justify a higher baseline
+            # than the uninformative 50% used at early stage.
+            75.0 if total_decisions >= 1000
+            else 50.0 if total_decisions > 0
+            else 0.0   # true cold start — no decisions at all
+        )
     )
 
     iks_total = (graph_richness + decision_maturity + trust_coverage + factor_quality) / 4.0

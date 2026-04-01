@@ -233,7 +233,7 @@ class ThreatIntelEnrichmentFactor:
         Never raises — exceptions return neutral 0.50.
         """
         try:
-            results = await neo4j.execute_read("""
+            results = await neo4j.run_query("""
                 MATCH (a:Alert {id: $alert_id})-[:MEMBER_OF]->(c:Campaign)
                 RETURN c.confidence AS confidence,
                        c.severity AS severity,
@@ -241,7 +241,7 @@ class ThreatIntelEnrichmentFactor:
                        c.nl_summary AS summary,
                        c.trigger_rule AS trigger_rule
                 LIMIT 1
-            """, alert_id=alert_id)
+            """, {"alert_id": alert_id})
 
             if not results:
                 return {

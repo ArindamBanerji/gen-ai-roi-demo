@@ -641,7 +641,7 @@ export default function AlertTriageTab() {
           </div>
 
           {/* Campaign membership badge — F6 */}
-          {analysis?.campaign_id && (
+          {analysis?.campaign_id ? (
             <div className="flex items-center gap-2 text-xs bg-red-950 rounded-lg px-4 py-2 border border-red-800">
               <span>🔗</span>
               <span className="text-red-300 font-semibold">Part of Campaign</span>
@@ -662,7 +662,11 @@ export default function AlertTriageTab() {
                 View →
               </button>
             </div>
-          )}
+          ) : analysis ? (
+            <div className="flex items-center gap-2 text-xs bg-soc-card rounded-lg px-4 py-2 border border-gray-800">
+              <span className="text-gray-500">No active campaign</span>
+            </div>
+          ) : null}
 
           {/* Multi-Source Enrichment badge — C4b */}
           {selectedAlert && (
@@ -1033,7 +1037,7 @@ export default function AlertTriageTab() {
           )}
 
           {/* Why This Decision? Panel (v3.0) */}
-          {analysis && decisionFactors && (
+          {analysis && (
             <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-800">
                 <div className="flex items-center justify-between">
@@ -1054,7 +1058,13 @@ export default function AlertTriageTab() {
                 </div>
               </div>
 
-              {!decisionFactorsCollapsed && (
+              {!decisionFactorsCollapsed && !decisionFactors && (
+                <div className="p-6">
+                  <p className="text-sm text-gray-500 italic">Factor analysis loading&hellip;</p>
+                </div>
+              )}
+
+              {!decisionFactorsCollapsed && decisionFactors && (
                 <div className="p-6 space-y-4">
                   {decisionFactors.factors.map((factor) => {
                     const barWidth = Math.round(factor.value * factor.weight * 100)
@@ -1214,7 +1224,7 @@ export default function AlertTriageTab() {
           )}
 
           {/* Recommendation Panel */}
-          {analysis && (
+          {analysis?.recommendation && (
             <div
               className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden"
               style={{ opacity: policyOverrideActive ? 0.6 : 1 }}

@@ -13,7 +13,10 @@ Supporting data:
     SOC_SITUATION_TYPES  — metadata for each situation type (label, description, color)
     SOC_OPTIONS          — raw option data per situation type (plain dicts, no Pydantic)
 """
+import logging
 from typing import Any, Dict, List, Tuple
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -162,10 +165,10 @@ MITRE_ATTACK_MAP: Dict[str, Dict[str, str]] = {
     "privilege_escalation_detected": {"technique": "T1068", "tactic": "Privilege Escalation"},
     "credential_stuffing_attack":    {"technique": "T1110", "tactic": "Credential Access"},
     "c2_communication":              {"technique": "T1071", "tactic": "Command and Control"},
-    "threat_intel_indicator":        {"technique": "T1071", "tactic": "Command and Control"},
+    "threat_intel_indicator":        {"technique": "T1588", "tactic": "Resource Development"},
     "anomalous_network_behavior":    {"technique": "T1071", "tactic": "Command and Control"},
     "insider_threat_detected":       {"technique": "T1048", "tactic": "Exfiltration"},
-    "cloud_misconfiguration":        {"technique": "T1098", "tactic": "Persistence"},
+    "cloud_misconfiguration":        {"technique": "T1578", "tactic": "Defense Evasion"},
 }
 
 
@@ -271,6 +274,10 @@ def classify_soc_situation(
             "production_system",
         ]
         return "malware_on_critical_asset", 0.97, factors
+
+    if alert_type == "malware_detection":
+        factors = ["malware_detected", "non_critical_asset"]
+        return "malware_on_critical_asset", 0.82, ["T1204", "User Execution"]
 
     # ====================================================================
     # Rule 4: Data Exfiltration Attempt
@@ -390,8 +397,21 @@ def classify_soc_situation(
         return "cloud_misconfiguration", 0.88, factors
 
     # ====================================================================
+    # Rule 14: Lateral Movement
+    # ====================================================================
+    if alert_type == "lateral_movement":
+        return "anomalous_network_behavior", 0.88, ["T1021", "Remote Services"]
+
+    # ====================================================================
+    # Rule 15: Ransomware Detected
+    # ====================================================================
+    if alert_type == "ransomware_detected":
+        return "malware_on_critical_asset", 0.97, ["T1486", "Data Encrypted for Impact"]
+
+    # ====================================================================
     # Default: Unknown Situation
     # ====================================================================
+    logger.error(f"[MITRE] Unrecognized alert_type={alert_type!r} — no technique mapped")
     factors = ["insufficient_context", f"alert_type_{alert_type}"]
     return "unknown", 0.45, factors
 

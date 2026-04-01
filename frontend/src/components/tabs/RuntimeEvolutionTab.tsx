@@ -323,6 +323,7 @@ export default function RuntimeEvolutionTab() {
   const [centroidEvoLoading, setCentroidEvoLoading] = useState(false)
   const [centroidEvoError, setCentroidEvoError] = useState(false)
   const [profileError, setProfileError] = useState(false)
+  const [learningStateData, setLearningStateData] = useState<{ iks_v2: number } | null>(null)
   const [activeSection, setActiveSection] = useState<'a' | 'b' | 'c' | 'd'>('a')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [pendingDecisionId, setPendingDecisionId] = useState<string | null>(null)
@@ -351,6 +352,10 @@ export default function RuntimeEvolutionTab() {
 
   useEffect(() => {
     loadCentroidEvolution()
+  }, [])
+
+  useEffect(() => {
+    loadLearningState()
   }, [])
 
   useEffect(() => {
@@ -466,6 +471,18 @@ export default function RuntimeEvolutionTab() {
     }
   }
 
+  const loadLearningState = async () => {
+    try {
+      const data = await fetch('/api/soc/learning-state').then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json()
+      })
+      setLearningStateData(data)
+    } catch {
+      // Non-critical — IKS v2 display falls back to v1
+    }
+  }
+
   const processAlert = async (alertId: string = DEFAULT_ALERT_ID) => {
     setProcessing(true)
     setResult(null)
@@ -497,6 +514,11 @@ export default function RuntimeEvolutionTab() {
   // ── Derived values ────────────────────────────────────────────────────
 
   const iks = profileStateFull?.iks ?? null
+  // IKS v1 (centroid-drift) is 0 until centroids drift from bootstrap.
+  // Prefer IKS v2 (Neo4j composite) which reflects actual decision volume.
+  const iksCurrentDisplay: number | null = (iks?.current !== null && iks?.current !== undefined && iks.current > 0)
+    ? iks.current
+    : (learningStateData?.iks_v2 ?? iks?.current ?? null)
   const decisionCount = iks?.decision_count ?? profileState?.decision_count ?? 0
 
   const categoryStats = (() => {
@@ -538,7 +560,11 @@ export default function RuntimeEvolutionTab() {
   })
 
   const availableCategories = (() => {
-    return [...new Set(centroidEvolution.map(e => e.category))]
+    // Always include all SOC categories from profileState, supplemented by
+    // any additional categories that appear in centroidEvolution data.
+    const base = profileState?.categories ?? []
+    const fromEvolution = centroidEvolution.map(e => e.category)
+    return [...new Set([...base, ...fromEvolution])]
   })()
 
   const categoryConvergenceRows = (() => {
@@ -1500,27 +1526,27 @@ export default function RuntimeEvolutionTab() {
               {/* F1. IKS Block */}
               <div className="bg-soc-card rounded-lg border border-gray-800 p-5">
                 <h4 className="text-sm font-semibold text-gray-200 mb-3">Institutional Knowledge Score (IKS)</h4>
-                {!iks ? (
+                {!iks && !learningStateData ? (
                   <div className="text-sm text-gray-500 py-2">Loading IKS&hellip;</div>
-                ) : iks.current === null ? (
+                ) : iksCurrentDisplay === null ? (
                   <div className="text-sm text-gray-400 italic">IKS: &mdash; (baseline not established)</div>
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-center gap-4">
                       <div>
-                        <div className="text-3xl font-bold font-mono text-soc-secondary">{iks.current.toFixed(1)}</div>
+                        <div className="text-3xl font-bold font-mono text-soc-secondary">{iksCurrentDisplay.toFixed(1)}</div>
                         <div className="text-xs text-gray-500">/ 100</div>
                       </div>
                       <div>
-                        <div className={`text-lg font-semibold ${iks.delta_7d !== null && iks.delta_7d !== undefined && iks.delta_7d > 0 ? 'text-green-400' : iks.delta_7d !== null && iks.delta_7d !== undefined && iks.delta_7d < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                        <div className={`text-lg font-semibold ${iks?.delta_7d !== null && iks?.delta_7d !== undefined && iks.delta_7d > 0 ? 'text-green-400' : iks?.delta_7d !== null && iks?.delta_7d !== undefined && iks.delta_7d < 0 ? 'text-red-400' : 'text-gray-500'}`}>
                           {iksArrow} {iksDeltaLabel}
                         </div>
                       </div>
                     </div>
                     <div className="bg-soc-bg rounded border border-gray-700 p-3">
-                      <p className="text-sm text-gray-300 italic">{iks.interpretation}</p>
+                      <p className="text-sm text-gray-300 italic">{iks?.interpretation}</p>
                     </div>
-                    {iks.estimated && (!iks.trend || iks.trend.length === 0) && (
+                    {iks?.estimated && (!iks?.trend || iks.trend.length === 0) && (
                       <p className="text-xs text-gray-500 italic">(Drift trend available after first 50 verified decisions)</p>
                     )}
                   </div>

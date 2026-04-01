@@ -33,7 +33,7 @@ def test_high_severity_campaign_returns_low_value():
     value=0.05 — the strongest escalate signal (lowest value).
     """
     mock_neo4j = AsyncMock()
-    mock_neo4j.execute_read.return_value = [{
+    mock_neo4j.run_query.return_value = [{
         "confidence": 0.85,
         "severity": "HIGH",
         "campaign_id": "camp-001",
@@ -61,7 +61,7 @@ def test_medium_severity_campaign_returns_medium_value():
     MEDIUM severity campaign → value=0.20 (moderate escalate signal).
     """
     mock_neo4j = AsyncMock()
-    mock_neo4j.execute_read.return_value = [{
+    mock_neo4j.run_query.return_value = [{
         "confidence": 0.70,
         "severity": "MEDIUM",
         "campaign_id": "camp-002",
@@ -90,7 +90,7 @@ def test_no_campaign_returns_neutral():
     Pass 3 must return neutral value=0.50 with empty provenance_nodes.
     """
     mock_neo4j = AsyncMock()
-    mock_neo4j.execute_read.return_value = []
+    mock_neo4j.run_query.return_value = []
 
     factor = ThreatIntelEnrichmentFactor()
     result = run(factor._internal_campaign_score("alert-3", mock_neo4j))
@@ -114,7 +114,7 @@ def test_neo4j_failure_returns_neutral_not_exception():
     the contribution message (per spec).
     """
     mock_neo4j = AsyncMock()
-    mock_neo4j.execute_read.side_effect = Exception("connection failed")
+    mock_neo4j.run_query.side_effect = Exception("connection failed")
 
     factor = ThreatIntelEnrichmentFactor()
     result = run(factor._internal_campaign_score("alert-x", mock_neo4j))

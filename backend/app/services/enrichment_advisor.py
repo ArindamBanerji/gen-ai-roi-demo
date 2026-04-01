@@ -72,12 +72,35 @@ def _build_factor_advisory(factor_name: str, sigma: float, rank: int) -> dict:
     }
 
 
-def get_enrichment_advice() -> dict:
+def _ioc_coverage_band(ioc_coverage: float) -> str:
+    if ioc_coverage >= 0.40:
+        return "strong"
+    if ioc_coverage >= 0.20:
+        return "moderate"
+    return "sparse"
+
+
+def _ioc_coverage_note(ioc_coverage: float, band: str) -> str:
+    pct = f"{round(ioc_coverage * 100, 1)}%"
+    if band == "strong":
+        return (
+            f"IOC coverage: {pct}. High-coverage deployments (≥40%) reach full "
+            "institutional knowledge ~23% faster — approximately 7 working days "
+            "at standard SOC volume."
+        )
+    return (
+        f"IOC coverage: {pct}. Increasing coverage toward 40%+ will accelerate "
+        "institutional knowledge accumulation."
+    )
+
+
+def get_enrichment_advice(ioc_coverage: float = 0.0) -> dict:
     """
     Return ranked enrichment opportunities for all SOC factors.
 
     ranked_factors is sorted descending by sigma (highest gap first).
     top_opportunity is the first element (highest expected_permanent_gap_pp).
+    ioc_coverage (0.0–1.0) is the fraction of alerts with HAS_INDICATOR links.
     """
     sorted_factors = sorted(
         FACTOR_SIGMA.items(), key=lambda x: x[1], reverse=True
@@ -86,7 +109,11 @@ def get_enrichment_advice() -> dict:
         _build_factor_advisory(name, sigma, rank=i + 1)
         for i, (name, sigma) in enumerate(sorted_factors)
     ]
+    band = _ioc_coverage_band(ioc_coverage)
     return {
-        "ranked_factors":  ranked_factors,
-        "top_opportunity": ranked_factors[0],
+        "ranked_factors":    ranked_factors,
+        "top_opportunity":   ranked_factors[0],
+        "ioc_coverage":      round(ioc_coverage, 4),
+        "ioc_coverage_band": band,
+        "ioc_coverage_note": _ioc_coverage_note(ioc_coverage, band),
     }

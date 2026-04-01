@@ -193,3 +193,79 @@ def test_learning_state_includes_iks_v2():
     assert "iks_v2" in data, f"'iks_v2' missing from learning-state response: {list(data.keys())}"
     assert "iks_components" in data, f"'iks_components' missing: {list(data.keys())}"
     assert "iks_interpretation" in data, f"'iks_interpretation' missing: {list(data.keys())}"
+
+
+# ---------------------------------------------------------------------------
+# Test 7: IKS reflects 2,851 historical decisions (CLAIM-SC production scale)
+# ---------------------------------------------------------------------------
+
+def test_iks_reflects_historical_decisions():
+    """
+    At 2,851 historical decisions IKS v2 must be meaningfully above 50.
+
+    Formula at 2851 (6 cats × 475 each, 75% high-confidence, no verified outcomes):
+      graph_richness    = min(2851/1000, 1) × 100 = 100.0
+      decision_maturity = min(475/100, 1) × 100   = 100.0  (threshold: 100/cat)
+      trust_coverage    = 2138/2851 × 100          ≈ 75.0
+      factor_quality    = 75.0  (mature-system prior: ≥1000 decisions)
+      iks_v2            = (100 + 100 + 75 + 75) / 4 = 87.5
+    """
+    _6_cats = {
+        "travel_login_anomaly":      475,
+        "known_phishing_campaign":   475,
+        "malware_on_critical_asset": 475,
+        "vip_after_hours":           475,
+        "data_exfil_attempt":        475,
+        "anomalous_network_behavior": 476,   # sum = 2851
+    }
+    fake = _make_neo4j(
+        total=2851,
+        cat_counts=_6_cats,
+        high_conf=2138,   # ~75% of 2851
+        accuracies=[],    # no verified outcomes → uses mature-system prior
+    )
+    result = asyncio.run(compute_iks_v2(fake))
+
+    assert result["iks_v2"] > 50, (
+        f"IKS v2 at 2851 decisions should be > 50, got {result['iks_v2']}. "
+        f"Components: {result['components']}"
+    )
+    assert result["total_decisions"] == 2851
+    assert result["categories_active"] == 6
+
+
+# ---------------------------------------------------------------------------
+# Test 8: IKS at 537 decisions ≈ 67 (CLAIM-SC-01 calibration point)
+# ---------------------------------------------------------------------------
+
+def test_iks_at_537_decisions():
+    """
+    At 537 decisions IKS v2 must be in [60, 75] — validating CLAIM-SC-01 (~67).
+
+    Formula at 537 (6 cats × 89 each, 75% high-confidence, no verified outcomes):
+      graph_richness    = min(537/1000, 1) × 100 = 53.7
+      decision_maturity = min(89/100, 1) × 100   = 89.0  (89 < 100, not yet saturated)
+      trust_coverage    = 403/537 × 100           ≈ 75.0
+      factor_quality    = 50.0  (early-stage prior: 537 < 1000 decision threshold)
+      iks_v2            = (53.7 + 89 + 75 + 50) / 4 ≈ 66.9
+    """
+    _6_cats = {
+        "travel_login_anomaly":      89,
+        "known_phishing_campaign":   89,
+        "malware_on_critical_asset": 90,
+        "vip_after_hours":           90,
+        "data_exfil_attempt":        89,
+        "anomalous_network_behavior": 90,   # sum = 537
+    }
+    fake = _make_neo4j(
+        total=537,
+        cat_counts=_6_cats,
+        high_conf=403,    # ~75% of 537
+        accuracies=[],    # no verified outcomes → uses early-stage 50% prior
+    )
+    result = asyncio.run(compute_iks_v2(fake))
+
+    assert 60 <= result["iks_v2"] <= 75, (
+        f"IKS v2 at 537 decisions should be in [60, 75] (CLAIM-SC-01 ≈ 67), "
+        f"got {result['iks_v2']}. Components: {result['components']}"
+    )

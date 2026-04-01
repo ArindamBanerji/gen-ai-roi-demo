@@ -63,6 +63,15 @@ async def startup_event():
     await neo4j_client.connect()
     print("[OK] Connected to Neo4j")
 
+    # Load analyst correct-override examples into OverrideDetector.
+    # Activates automatically when >= 50 examples are found in Neo4j.
+    from app.services.override_detector import load_from_neo4j as _load_od
+    _od = await _load_od(neo4j_client)
+    print(
+        f"[OverrideDetector] {'ACTIVATED' if _od.activated else 'inactive'} — "
+        f"{_od.example_count} correct-override examples loaded."
+    )
+
     from app.core.domain_registry import get_active_domain, get_domain_config
     config = get_domain_config()
     print(f"[DOMAIN] Active domain: {config.display_name} ({config.name})")
@@ -87,6 +96,23 @@ async def startup_event():
             categories=list(SOC_CATEGORIES),
             decisions_per_category=_bs_result.decisions_per_category,
         )
+
+    # Sync decision_count from Neo4j so IKS reflects historical decisions
+    # on every server restart (fixes cold-start IKS = 1.7/100 regression).
+    try:
+        _count_result = await neo4j_client.run_query(
+            "MATCH (d:Decision) RETURN count(d) AS cnt"
+        )
+        _historical_count = _count_result[0]["cnt"] if _count_result else 0
+        from app.services.gae_state import get_learning_state as _get_ls
+        _ls = _get_ls()
+        if _ls.decision_count < _historical_count:
+            _ls.decision_count = _historical_count
+            print(f"[STARTUP] Synced decision_count from Neo4j: {_historical_count}")
+        else:
+            print(f"[STARTUP] decision_count already current ({_ls.decision_count}), skipping Neo4j sync")
+    except Exception as _sync_exc:
+        print(f"[STARTUP] decision_count sync failed (non-blocking): {_sync_exc}")
 
     # Warm up all domain config properties.
     # Iterates every registered domain and touches all @property accessors so

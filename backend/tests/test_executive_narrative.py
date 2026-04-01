@@ -127,6 +127,75 @@ def test_f12_what_changed_structure():
     assert isinstance(wc["top_shifts"], list)
 
 
+# ============================================================================
+# Tests for build_executive_narrative_async — unit-level with FakeNeo4j
+# ============================================================================
+
+import asyncio
+from app.services.executive_narrative import build_executive_narrative_async
+
+
+def _make_narrative_neo4j(verified: int, correct: int, campaigns: int, alerts: int):
+    """Return a fake async neo4j service for build_executive_narrative_async."""
+
+    async def run_query(query, params=None):
+        q = query.strip()
+        if "d.outcome IS NOT NULL" in q and "d.verified_at IS NOT NULL" in q and "category" not in q:
+            return [{"cnt": verified}]
+        if "d.correct = true" in q and "category" not in q:
+            return [{"cnt": correct}]
+        if "MATCH (c:Campaign)" in q and "c.id" not in q:
+            return [{"cnt": campaigns}]
+        if "MATCH (a:Alert)" in q:
+            return [{"cnt": alerts}]
+        # IKS v2 queries
+        if "RETURN count(d) AS total" in q:
+            return [{"total": verified}]
+        if "RETURN d.category AS category, count(d) AS n" in q:
+            return []
+        if "d.confidence >= 0.70" in q:
+            return [{"high_conf": 0}]
+        if "d.outcome IS NOT NULL" in q and "avg(" in q:
+            return []
+        # categories calibrated
+        if "d.outcome IS NOT NULL" in q and "category" in q:
+            return []
+        # top_shifts
+        if "d.correct = true" in q and "category" in q:
+            return []
+        # campaign summaries
+        if "c.id AS id" in q:
+            return [
+                {"id": f"CAMP-{i}", "summary": f"Campaign {i}", "alert_count": 2, "confidence": 0.8}
+                for i in range(campaigns)
+            ]
+        return []
+
+    class FakeNeo4j:
+        pass
+
+    FakeNeo4j.run_query = staticmethod(run_query)
+    return FakeNeo4j()
+
+
+def test_narrative_reads_verified_decisions():
+    """mock Neo4j returning 50 verified decisions → metrics.decisions_verified == 50."""
+    fake = _make_narrative_neo4j(verified=50, correct=40, campaigns=0, alerts=100)
+    result = asyncio.run(build_executive_narrative_async(fake))
+    assert result["metrics"]["decisions_verified"] == 50, (
+        f"Expected decisions_verified=50, got {result['metrics']['decisions_verified']}"
+    )
+
+
+def test_narrative_campaigns():
+    """mock 3 campaigns → metrics.campaigns_detected == 3."""
+    fake = _make_narrative_neo4j(verified=10, correct=8, campaigns=3, alerts=50)
+    result = asyncio.run(build_executive_narrative_async(fake))
+    assert result["metrics"]["campaigns_detected"] == 3, (
+        f"Expected campaigns_detected=3, got {result['metrics']['campaigns_detected']}"
+    )
+
+
 def test_f12_pdf_endpoint_returns_pdf_bytes():
     """
     GET /api/soc/executive-narrative/pdf must return 200,

@@ -251,3 +251,167 @@ def build_executive_narrative(db_client) -> Dict:
         'generated_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
         'pdf_available': True,
     }
+
+
+# ============================================================================
+# Async version — queries Neo4j with correct field names and async API.
+# Called by the router; the sync class above is kept for unit-test compat.
+# ============================================================================
+
+async def build_executive_narrative_async(neo4j_service) -> Dict:
+    """
+    F12 async: queries Neo4j directly with the correct field names.
+
+    Fixes vs the legacy sync version:
+    - Awaits run_query() (neo4j_client is async)
+    - Uses d.outcome / d.verified_at / d.correct (actual Decision fields)
+    - Reads Campaign nodes (not AttackChain) for campaigns_detected
+    - Calls compute_iks_v2() for a real IKS score
+    - Each query is try/except so a disconnected DB returns zeros gracefully
+    """
+    # ── 1. verified_decisions ────────────────────────────────────────────────
+    verified_decisions = 0
+    try:
+        rows = await neo4j_service.run_query(
+            "MATCH (d:Decision) WHERE d.outcome IS NOT NULL "
+            "AND d.verified_at IS NOT NULL RETURN count(d) AS cnt"
+        )
+        verified_decisions = int((rows[0].get("cnt") or 0) if rows else 0)
+    except Exception:
+        pass
+
+    # ── 2. centroid_updates (correct decisions) ──────────────────────────────
+    centroid_updates = 0
+    try:
+        rows = await neo4j_service.run_query(
+            "MATCH (d:Decision) WHERE d.correct = true RETURN count(d) AS cnt"
+        )
+        centroid_updates = int((rows[0].get("cnt") or 0) if rows else 0)
+    except Exception:
+        pass
+
+    # ── 3. campaigns_detected ────────────────────────────────────────────────
+    campaigns_detected = 0
+    try:
+        rows = await neo4j_service.run_query(
+            "MATCH (c:Campaign) RETURN count(c) AS cnt"
+        )
+        campaigns_detected = int((rows[0].get("cnt") or 0) if rows else 0)
+    except Exception:
+        pass
+
+    # ── 4. alerts_total ──────────────────────────────────────────────────────
+    alerts_total = 0
+    try:
+        rows = await neo4j_service.run_query(
+            "MATCH (a:Alert) RETURN count(a) AS cnt"
+        )
+        alerts_total = int((rows[0].get("cnt") or 0) if rows else 0)
+    except Exception:
+        pass
+
+    # ── 5. IKS v2 ────────────────────────────────────────────────────────────
+    iks_current = 0.0
+    try:
+        from app.services.iks import compute_iks_v2
+        iks_data = await compute_iks_v2(neo4j_service)
+        iks_current = float(iks_data.get("iks_v2", 0.0))
+    except Exception:
+        pass
+
+    # ── 6. categories_calibrated (≥10 verified decisions each) ───────────────
+    categories_calibrated = 0
+    try:
+        rows = await neo4j_service.run_query(
+            "MATCH (d:Decision) WHERE d.outcome IS NOT NULL "
+            "RETURN d.category AS category, count(d) AS n"
+        )
+        categories_calibrated = sum(
+            1 for r in rows if int(r.get("n") or 0) >= 10
+        )
+    except Exception:
+        pass
+
+    # ── 7. what_changed: top category/action pairs by correct-decision count ─
+    top_shifts = []
+    try:
+        rows = await neo4j_service.run_query(
+            "MATCH (d:Decision) WHERE d.correct = true "
+            "RETURN d.category AS category, d.action AS action, count(d) AS n "
+            "ORDER BY n DESC LIMIT 3"
+        )
+        for r in rows:
+            cat   = r.get("category") or "unknown"
+            act   = r.get("action")   or "unknown"
+            n     = int(r.get("n") or 0)
+            denom = max(centroid_updates, 1)
+            top_shifts.append({
+                "label":       f"{cat}/{act}",
+                "magnitude":   round(n / denom, 4),
+                "description": f"{cat}/{act}: {n} correct decisions drove centroid update.",
+            })
+    except Exception:
+        pass
+
+    # ── 8. what_discovered: Campaign summaries ───────────────────────────────
+    campaign_summaries = []
+    try:
+        rows = await neo4j_service.run_query(
+            "MATCH (c:Campaign) "
+            "RETURN c.id AS id, c.nl_summary AS summary, "
+            "       c.alert_count AS alert_count, c.confidence AS confidence "
+            "ORDER BY c.last_seen DESC LIMIT 3"
+        )
+        for r in rows:
+            summary = r.get("summary") or f"Campaign {r.get('id', 'unknown')}"
+            campaign_summaries.append(summary)
+    except Exception:
+        pass
+
+    # ── headline ─────────────────────────────────────────────────────────────
+    if alerts_total == 0 and verified_decisions == 0:
+        headline = (
+            "Weekly digest not yet populated — requires 7 days of live data."
+        )
+    else:
+        headline = (
+            f"System processed {alerts_total} alerts, learned from "
+            f"{verified_decisions} verified decisions, detected "
+            f"{campaigns_detected} campaigns. IKS: {iks_current:.0f}."
+        )
+
+    health_status = "GREEN"
+    if iks_current < 20:
+        health_status = "RED"
+    elif iks_current < 40:
+        health_status = "AMBER"
+
+    return {
+        "headline": headline,
+        "what_changed": {
+            "total_verified":          verified_decisions,
+            "total_centroid_updates":  centroid_updates,
+            "top_shifts":              top_shifts,
+            "iks_delta":               0.0,
+        },
+        "what_discovered": {
+            "attack_chains_detected": campaigns_detected,
+            "chain_summaries":        campaign_summaries,
+            "new_entities":   {"users": 0, "assets": 0, "threat_indicators": 0},
+            "graph_growth":   {"nodes_added": 0, "relationships_added": 0},
+        },
+        "what_knows": {
+            "iks_current":           round(iks_current, 2),
+            "categories_calibrated": categories_calibrated,
+            "categories_total":      6,
+            "health_status":         health_status,
+        },
+        "metrics": {
+            "alerts_total":       alerts_total,
+            "decisions_verified": verified_decisions,
+            "campaigns_detected": campaigns_detected,
+            "iks_current":        round(iks_current, 2),
+        },
+        "generated_at":  datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "pdf_available": True,
+    }

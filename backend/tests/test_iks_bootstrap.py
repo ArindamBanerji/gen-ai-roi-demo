@@ -1,7 +1,10 @@
-"""Tests for iks_bootstrap_soc.json — shape and value parity with SOC_PROFILE_CENTROIDS."""
+"""Tests for iks_bootstrap_soc.json — shape and value parity with SCORER_PROFILE_CENTROIDS.
+
+Scorer uses A=4 (SCORER_ACTIONS) → sidecar shape is (6, 4, 6).
+Key is "mu_zero" — matches the loader in app/services/iks.py.
+"""
 import json
 import numpy as np
-import pytest
 from pathlib import Path
 
 
@@ -9,21 +12,22 @@ _JSON_PATH = Path(__file__).parent.parent / "app" / "data" / "iks_bootstrap_soc.
 
 
 def test_iks_bootstrap_shape_matches_config():
-    from app.domains.soc.config import SOC_PROFILE_CENTROIDS
+    """Sidecar must be {"mu_zero": [...]} with shape (6, 4, 6) — 4-action scorer."""
+    from app.domains.soc.config import SCORER_PROFILE_CENTROIDS
     with open(_JSON_PATH) as f:
         data = json.load(f)
-    mu0 = np.array(data["data"])
-    mu_config = np.array(SOC_PROFILE_CENTROIDS)
-    assert data["shape"] == [6, 5, 6]
-    assert mu0.shape == (6, 5, 6)
+    assert "mu_zero" in data, f"Expected key 'mu_zero', got keys: {list(data.keys())}"
+    mu0 = np.array(data["mu_zero"])
+    mu_config = np.array(SCORER_PROFILE_CENTROIDS)
+    assert mu0.shape == (6, 4, 6), f"Expected shape (6, 4, 6), got {mu0.shape}"
     assert mu0.shape == mu_config.shape
 
 
 def test_iks_bootstrap_values_match_config():
-    """μ₀ should be identical to SOC_PROFILE_CENTROIDS at generation time."""
-    from app.domains.soc.config import SOC_PROFILE_CENTROIDS
+    """μ₀ must equal SCORER_PROFILE_CENTROIDS (A=4 slice) at generation time."""
+    from app.domains.soc.config import SCORER_PROFILE_CENTROIDS
     with open(_JSON_PATH) as f:
         data = json.load(f)
-    mu0 = np.array(data["data"])
-    mu_config = np.array(SOC_PROFILE_CENTROIDS)
+    mu0 = np.array(data["mu_zero"])
+    mu_config = np.array(SCORER_PROFILE_CENTROIDS)
     np.testing.assert_array_almost_equal(mu0, mu_config, decimal=6)
