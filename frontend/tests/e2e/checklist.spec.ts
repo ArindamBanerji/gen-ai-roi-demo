@@ -856,3 +856,56 @@ test.describe('Error and edge cases', () => {
     await expect(page.locator('body')).toBeVisible();
   });
 });
+
+// ─── Tab 5: Executive Narrative (content gate) ───────────────────────────────
+
+test.describe('Tab 5 – Executive Narrative (content gate)', () => {
+
+  test('What Changed section has specific centroid shift content', async ({ page }) => {
+    await page.goto(FRONTEND);
+    await page.getByRole('button', { name: /Executive/i }).click();
+    await page.waitForLoadState('networkidle');
+    // "What Changed" must show at least one category/action shift
+    // pattern: "category_name/action_name: N correct decisions"
+    const shiftContent = page.locator('text=/\\w+\\/\\w+.*correct decisions/i');
+    await expect(shiftContent.first()).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('verified decisions count > 100 on Tab 5', async ({ page }) => {
+    await page.goto(FRONTEND);
+    await page.getByRole('button', { name: /Executive/i }).click();
+    await page.waitForLoadState('networkidle');
+    // GET executive-narrative and assert verified_decisions > 100
+    const res = await page.request.get(`${BACKEND}/api/soc/executive-narrative`);
+    const body = await res.json();
+    expect(body.metrics?.decisions_verified ?? body.verified_decisions ?? 0)
+      .toBeGreaterThan(100);
+  });
+
+  test('campaigns detected count >= 1 on Tab 5', async ({ page }) => {
+    await page.goto(FRONTEND);
+    await page.getByRole('button', { name: /Executive/i }).click();
+    await page.waitForLoadState('networkidle');
+    const res = await page.request.get(`${BACKEND}/api/soc/executive-narrative`);
+    const body = await res.json();
+    expect(body.metrics?.campaigns_detected ?? body.campaigns_detected ?? 0)
+      .toBeGreaterThanOrEqual(1);
+  });
+
+  test('IKS score > 0 on executive narrative API', async ({ page }) => {
+    const res = await page.request.get(`${BACKEND}/api/soc/executive-narrative`);
+    const body = await res.json();
+    const iks = body.metrics?.iks_current ?? body.iks_score ?? 0;
+    expect(iks).toBeGreaterThan(0);
+  });
+
+  test('What Was Discovered shows at least one chain summary', async ({ page }) => {
+    await page.goto(FRONTEND);
+    await page.getByRole('button', { name: /Executive/i }).click();
+    await page.waitForLoadState('networkidle');
+    // Chain summary pattern: "N alerts in category_name cluster"
+    const chainSummary = page.locator('text=/\\d+ alerts in \\w+ cluster/i');
+    await expect(chainSummary.first()).toBeVisible({ timeout: 10_000 });
+  });
+
+});

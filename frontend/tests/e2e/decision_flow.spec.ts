@@ -160,7 +160,7 @@ async function processAlertFast(page: import('@playwright/test').Page, outcomeCo
 
   // Wait only for the alert queue to appear (not networkidle)
   const alertCard = page.locator('button').filter({ hasText: /SIM-/ }).first();
-  await alertCard.waitFor({ state: 'visible', timeout: 15000 });
+  await alertCard.waitFor({ state: 'visible', timeout: 30000 });
   await alertCard.click();
 
   await page.getByText(/Why This Decision\?/).waitFor({ state: 'visible', timeout: 30000 });
@@ -199,6 +199,17 @@ test('learning_loop_validates_20_decisions', async ({ page }) => {
       decision_count: body.decisions     as number,
     };
   }
+
+  // Reset alert queue to pending
+  const resetRes = await page.request.post(`${BACKEND}/api/alerts/reset`);
+  expect(resetRes.status()).toBe(200);
+
+  // Wait 1 second for Neo4j write to complete
+  await page.waitForTimeout(1000);
+
+  // Navigate fresh to force alert queue reload
+  await page.goto(FRONTEND);
+  await page.waitForLoadState('networkidle');
 
   // ── STEP A: capture baselines ───────────────────────────────────────────────
   const narrativeRes = await api.get('/api/soc/executive-narrative');

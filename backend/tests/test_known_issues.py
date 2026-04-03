@@ -47,10 +47,17 @@ on April 1, 2026.
 # Priority: P1 — causes 500 on analyze endpoint
 # Status: FIXED in this session
 
+# BACKLOG-007: "8 of 6 categories calibrated" — count exceeds 6
+# Root cause: synthetic_v1 decisions include "unknown" category
+# which is counted as a 7th calibrated category.
+# Fix: filter calibrated count to SOC_CATEGORIES only (exclude "unknown")
+# in executive_narrative.py _what_knows() method.
+# Priority: P2 — cosmetic only
+
 def test_backlog_documented():
     """Placeholder — confirms backlog file is present and parseable."""
     issues = [
         "BACKLOG-001", "BACKLOG-002", "BACKLOG-003",
-        "BACKLOG-004", "BACKLOG-005", "BACKLOG-006"
+        "BACKLOG-004", "BACKLOG-005", "BACKLOG-006", "BACKLOG-007"
     ]
-    assert len(issues) == 6
+    assert len(issues) == 7
