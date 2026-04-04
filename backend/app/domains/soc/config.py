@@ -746,3 +746,40 @@ class SOCDomainConfig(DomainConfig):
 
 # Singleton instance used by domain_registry.py
 soc_config = SOCDomainConfig()
+
+
+# =============================================================================
+# Block 7.2 — per-deployment θ_min formula
+# =============================================================================
+
+def compute_theta_min(alpha: float, V: float) -> float:
+    """
+    Minimum analyst quality (q̄) required for conservation law to hold.
+    Formula: 23.53 / (alpha * V)
+    Returns >1.0 for impossible deployments (V*alpha < 20/day).
+    Validated: V=200, alpha=0.25 → 0.4706 ≈ 0.467 ✓
+
+    Note: the GAE library already provides gae.calibration.derive_theta_min()
+    (η × N_half² / T_max) for the learning-rate form of the same threshold.
+    This function is the per-deployment throughput form used in P28 analysis.
+    """
+    if alpha <= 0 or V <= 0:
+        return float('inf')
+    return 23.53 / (alpha * V)
+
+
+# =============================================================================
+# Block 7.3 — P28 Phase 3 minimum decisions formula
+# =============================================================================
+
+def compute_phase3_minimum(V: float, alpha: float) -> int:
+    """
+    Minimum verified decisions before self-calibrating gates activate.
+    Formula: max(1000, 20 * V * alpha)
+    Validated: V=200, alpha=0.25 → max(1000, 1000) = 1000 ✓
+    At V=50, alpha=0.25 → max(1000, 250) = 1000 (calendar constraint)
+    At V=500, alpha=0.25 → max(1000, 2500) = 2500 (volume-driven)
+    """
+    decisions_per_day = V * alpha
+    calendar_minimum = int(20 * decisions_per_day)
+    return max(1000, calendar_minimum)

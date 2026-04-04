@@ -30,6 +30,7 @@ from typing import Optional
 
 import numpy as np
 
+from app.domains.soc.config import compute_phase3_minimum as _p3min
 from app.framework.iks_base import (  # noqa: F401 — re-export for callers
     compute_iks as _compute_iks_base,
     interpret,
@@ -182,7 +183,7 @@ async def compute_iks_v2(neo4j_service) -> dict:
         except Exception:
             pass
 
-    graph_richness = min(total_decisions / 1000.0, 1.0) * 100.0
+    graph_richness = min(total_decisions / float(_p3min(200.0, 0.25)), 1.0) * 100.0
 
     # ── Component 2: Decision Maturity ──────────────────────────────────────
     try:
@@ -239,10 +240,10 @@ async def compute_iks_v2(neo4j_service) -> dict:
         (sum(verified_accuracies) / len(verified_accuracies)) * 100.0
         if verified_accuracies
         else (
-            # Mature systems (≥1000 decisions) earn a 75% confidence prior:
+            # Mature systems (≥phase3 minimum decisions) earn a 75% confidence prior:
             # calibration volume + GAE convergence justify a higher baseline
             # than the uninformative 50% used at early stage.
-            75.0 if total_decisions >= 1000
+            75.0 if total_decisions >= _p3min(200.0, 0.25)
             else 50.0 if total_decisions > 0
             else 0.0   # true cold start — no decisions at all
         )
