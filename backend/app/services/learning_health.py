@@ -275,3 +275,142 @@ class LearningHealthMonitor:
 
 def _round_comps(comps: dict) -> dict:
     return {k: (round(v, 4) if isinstance(v, float) else v) for k, v in comps.items()}
+
+
+# ---------------------------------------------------------------------------
+# Block 7.6 — Verification rate health
+# ---------------------------------------------------------------------------
+
+async def compute_verification_health(neo4j_client: Any) -> dict:
+    """
+    Compute verification rate health across 3 conditions.
+
+    Condition 1 — Coverage: verified_decisions / total_decisions >= 0.20
+    Condition 2 — Drift: last-7d rate >= prior-7d rate * 0.80
+    Condition 3 — Conservation: GREEN or UNKNOWN (not AMBER/RED)
+
+    Status:
+      GREEN : all 3 conditions healthy
+      AMBER : 1-2 conditions unhealthy
+      RED   : all 3 unhealthy, OR coverage_rate == 0
+
+    Feeds the Phase 6 verification health dashboard (Tab 2).
+    """
+    import time as _time
+    now_ms         = int(_time.time() * 1000)
+    day_ms         = 86_400_000
+    last_7d_start  = now_ms - 7  * day_ms
+    prior_7d_start = now_ms - 14 * day_ms
+
+    # ── Condition 1: overall coverage ────────────────────────────────────────
+    total_decisions    = 0
+    verified_decisions = 0
+    try:
+        rows = await neo4j_client.run_query(
+            "MATCH (d:Decision) RETURN count(d) AS total", {}
+        )
+        total_decisions = int((rows[0].get("total") or 0) if rows else 0)
+    except Exception as exc:
+        log.debug("[VERIF-HEALTH] total_decisions query failed: %s", exc)
+
+    try:
+        rows = await neo4j_client.run_query(
+            "MATCH (d:Decision) "
+            "WHERE d.outcome IS NOT NULL AND d.verified_at_epoch IS NOT NULL "
+            "RETURN count(d) AS verified",
+            {},
+        )
+        verified_decisions = int((rows[0].get("verified") or 0) if rows else 0)
+    except Exception as exc:
+        log.debug("[VERIF-HEALTH] verified_decisions query failed: %s", exc)
+
+    coverage_rate    = (verified_decisions / total_decisions) if total_decisions > 0 else 0.0
+    coverage_healthy = coverage_rate >= 0.20
+
+    # ── Condition 2: drift (last 7d vs prior 7d) ─────────────────────────────
+    def _rate(verified: int, total: int) -> float:
+        return (verified / total) if total > 0 else 0.0
+
+    last_7d_total = last_7d_verified = 0
+    prior_7d_total = prior_7d_verified = 0
+    try:
+        rows = await neo4j_client.run_query(
+            """
+            MATCH (d:Decision)
+            WHERE d.timestamp_epoch >= $last_start AND d.timestamp_epoch < $now
+            RETURN
+              count(d) AS total,
+              count(CASE WHEN d.verified_at_epoch IS NOT NULL THEN 1 END) AS verified
+            """,
+            {"last_start": last_7d_start, "now": now_ms},
+        )
+        if rows:
+            last_7d_total    = int(rows[0].get("total")    or 0)
+            last_7d_verified = int(rows[0].get("verified") or 0)
+    except Exception as exc:
+        log.debug("[VERIF-HEALTH] last_7d query failed: %s", exc)
+
+    try:
+        rows = await neo4j_client.run_query(
+            """
+            MATCH (d:Decision)
+            WHERE d.timestamp_epoch >= $prior_start AND d.timestamp_epoch < $last_start
+            RETURN
+              count(d) AS total,
+              count(CASE WHEN d.verified_at_epoch IS NOT NULL THEN 1 END) AS verified
+            """,
+            {"prior_start": prior_7d_start, "last_start": last_7d_start},
+        )
+        if rows:
+            prior_7d_total    = int(rows[0].get("total")    or 0)
+            prior_7d_verified = int(rows[0].get("verified") or 0)
+    except Exception as exc:
+        log.debug("[VERIF-HEALTH] prior_7d query failed: %s", exc)
+
+    rate_last_7d  = _rate(last_7d_verified,  last_7d_total)
+    rate_prior_7d = _rate(prior_7d_verified, prior_7d_total)
+    # Drift healthy if last_7d rate >= 80% of prior_7d rate.
+    # If prior rate is 0 (no decisions in that window), treat as healthy.
+    drift_healthy = (
+        rate_last_7d >= rate_prior_7d * 0.80
+        if rate_prior_7d > 0
+        else True
+    )
+
+    # ── Condition 3: conservation status ─────────────────────────────────────
+    conservation_status = "UNKNOWN"
+    try:
+        health = await LearningHealthMonitor.evaluate(neo4j_client)
+        conservation_status = health.get("status", "UNKNOWN")
+    except Exception as exc:
+        log.debug("[VERIF-HEALTH] conservation check failed: %s", exc)
+
+    conservation_healthy = conservation_status in ("GREEN", "CALIBRATING", "UNKNOWN")
+
+    # ── Overall status ────────────────────────────────────────────────────────
+    unhealthy_count = sum([
+        not coverage_healthy,
+        not drift_healthy,
+        not conservation_healthy,
+    ])
+
+    if coverage_rate == 0 or unhealthy_count == 3:
+        status = "RED"
+    elif unhealthy_count >= 1:
+        status = "AMBER"
+    else:
+        status = "GREEN"
+
+    return {
+        "status":              status,
+        "coverage_rate":       round(coverage_rate, 4),
+        "coverage_healthy":    coverage_healthy,
+        "drift_rate_last_7d":  round(rate_last_7d,  4),
+        "drift_rate_prior_7d": round(rate_prior_7d, 4),
+        "drift_healthy":       drift_healthy,
+        "conservation_status": conservation_status,
+        "conservation_healthy": conservation_healthy,
+        "total_decisions":     total_decisions,
+        "verified_decisions":  verified_decisions,
+        "timestamp_epoch":     now_ms,
+    }

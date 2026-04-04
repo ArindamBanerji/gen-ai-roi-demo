@@ -1962,6 +1962,25 @@ async def get_enrichment_advisor():
 
 
 # =============================================================================
+# GET /api/soc/verification-health — Block 7.6
+# Feeds the Phase 6 verification health dashboard (Tab 2).
+# =============================================================================
+
+@router.get("/soc/verification-health")
+async def get_verification_health():
+    """
+    Return verification rate health across 3 conditions:
+      1. Coverage:     verified_decisions / total_decisions >= 20%
+      2. Drift:        last-7d rate >= prior-7d rate * 80%
+      3. Conservation: learning health not AMBER/RED
+
+    Status: GREEN (all healthy) | AMBER (1-2 unhealthy) | RED (all unhealthy or 0 verifications)
+    """
+    from app.services.learning_health import compute_verification_health
+    return await compute_verification_health(neo4j_client)
+
+
+# =============================================================================
 # Block 2.1 — Centroid PITR backup / restore / list
 # =============================================================================
 
