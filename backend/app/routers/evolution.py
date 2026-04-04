@@ -201,22 +201,23 @@ async def process_alert(request: ProcessAlertRequest):
                 playbook_id:     $playbook_id,
                 nodes_consulted: $nodes_consulted,
                 category:        $category,
-                timestamp:       datetime(),
+                timestamp_epoch: $timestamp_epoch,
                 outcome:         null
             })
             CREATE (d)-[:DECIDED_ON]->(a)
             """,
             {
-                "alert_id":       request.alert_id,
-                "decision_id":    decision_id,
-                "action":         selected_action,
-                "confidence":     confidence,
-                "fv":             fv_list,
-                "reasoning":      reasoning,
-                "pattern_id":     bridge.pattern_id,
-                "playbook_id":    bridge.playbook_id,
+                "alert_id":        request.alert_id,
+                "decision_id":     decision_id,
+                "action":          selected_action,
+                "confidence":      confidence,
+                "fv":              fv_list,
+                "reasoning":       reasoning,
+                "pattern_id":      bridge.pattern_id,
+                "playbook_id":     bridge.playbook_id,
                 "nodes_consulted": context.get("nodes_consulted", 47),
                 "category":        _cat_name,
+                "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
             },
         )
         print(f"[GAE][TAB2] Decision node written: {decision_id} [:DECIDED_ON] {request.alert_id}")

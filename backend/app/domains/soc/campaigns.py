@@ -214,14 +214,29 @@ def derive_severity(severities: List[str]) -> str:
     return "LOW"
 
 
+def _ts_to_seconds(ts) -> float:
+    """Convert ts to a comparable float (seconds since epoch).
+
+    ts may be a Python datetime, a neo4j DateTime (has .to_native()), or an
+    epoch integer in milliseconds (as written by the migrated epoch fields).
+    """
+    if isinstance(ts, (int, float)):
+        return ts / 1000.0  # epoch millis → seconds
+    if hasattr(ts, "to_native"):
+        ts = ts.to_native()
+    if isinstance(ts, datetime):
+        return ts.timestamp()
+    return float(ts)
+
+
 def sliding_window_cluster(alerts: list, window_seconds: int) -> List[list]:
     """Group alerts into time-proximity clusters."""
     if not alerts:
         return []
     clusters = [[alerts[0]]]
     for alert in alerts[1:]:
-        last_ts = clusters[-1][-1]["ts"]
-        delta = (alert["ts"] - last_ts).total_seconds()
+        last_ts = _ts_to_seconds(clusters[-1][-1]["ts"])
+        delta = _ts_to_seconds(alert["ts"]) - last_ts
         if delta <= window_seconds:
             clusters[-1].append(alert)
         else:
@@ -234,10 +249,8 @@ def build_nl_summary(events: list, shared_entities: List[str],
     """Deterministic NL summary. No LLM — template only."""
     n = len(events)
     cats = list(dict.fromkeys([e["category"] or "unknown" for e in events]))
-    dur_hours = int(
-        (max(e["ts"] for e in events) -
-         min(e["ts"] for e in events)).total_seconds() / 3600
-    )
+    ts_values = [_ts_to_seconds(e["ts"]) for e in events]
+    dur_hours = int((max(ts_values) - min(ts_values)) / 3600)
     cat_str = " → ".join(cats)
     if trigger_rule == "technique_sequence":
         return (f"{n} alerts: {cat_str} over {dur_hours}h. "
@@ -503,10 +516,10 @@ class CampaignRepository:
                        d.category AS category,
                        a.source_entity_id AS source_entity_id,
                        a.technique_id AS technique_id,
-                       d.timestamp AS ts,
+                       d.timestamp_epoch AS ts,
                        COALESCE(a.severity, 'MEDIUM') AS severity,
                        d.id AS decision_id
-                ORDER BY d.timestamp
+                ORDER BY d.timestamp_epoch
             """, {})
             return [{**dict(r), "ts": _to_python_dt(r["ts"])} for r in results] if results else []
         except Exception as e:
@@ -523,16 +536,16 @@ class CampaignRepository:
             results = await self.neo4j.run_query("""
                 MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
                 WHERE NOT (a)-[:MEMBER_OF]->(:Campaign)
-                  AND d.timestamp > datetime() - duration({hours: $hours})
+                  AND d.timestamp_epoch > $cutoff_epoch
                 RETURN a.id AS alert_id,
                        d.category AS category,
                        a.source_entity_id AS source_entity_id,
                        a.technique_id AS technique_id,
-                       d.timestamp AS ts,
+                       d.timestamp_epoch AS ts,
                        COALESCE(a.severity, 'MEDIUM') AS severity,
                        d.id AS decision_id
-                ORDER BY d.timestamp
-            """, {"hours": window_hours})
+                ORDER BY d.timestamp_epoch
+            """, {"cutoff_epoch": int((datetime.utcnow().timestamp() - window_hours * 3600) * 1000)})
             return [{**dict(r), "ts": _to_python_dt(r["ts"])} for r in results] if results else []
         except Exception as e:
             log.warning(f"fetch_recent_events failed: {e}")
@@ -547,7 +560,7 @@ class CampaignRepository:
                        d.category AS category,
                        a.source_entity_id AS source_entity_id,
                        a.technique_id AS technique_id,
-                       d.timestamp AS ts,
+                       d.timestamp_epoch AS ts,
                        COALESCE(a.severity, 'MEDIUM') AS severity,
                        d.id AS decision_id
                 LIMIT 1
@@ -581,7 +594,7 @@ class CampaignRepository:
                     c.severity = $severity,
                     c.correlation_window_hours = $correlation_window_hours,
                     c.nl_summary = $nl_summary,
-                    c.updated_at = datetime()
+                    c.updated_at_epoch = $updated_at_epoch
             """, {
                 "campaign_id": campaign.campaign_id,
                 "first_seen": campaign.first_seen.isoformat(),
@@ -595,6 +608,7 @@ class CampaignRepository:
                 "severity": campaign.severity,
                 "correlation_window_hours": campaign.correlation_window_hours,
                 "nl_summary": campaign.nl_summary,
+                "updated_at_epoch": int(datetime.utcnow().timestamp() * 1000),
             })
 
             # Write :MEMBER_OF edges
@@ -729,11 +743,11 @@ class CampaignMatcher:
                 MATCH (a_existing:Alert)-[:MEMBER_OF]->(c:Campaign)
                 WHERE a_existing.source_entity_id IS NOT NULL
                   AND a_existing.source_entity_id = a_new.source_entity_id
-                  AND c.last_seen > datetime() - duration({hours: $hours})
+                  AND c.last_seen_epoch > $cutoff_epoch
                 RETURN c.id AS campaign_id
-                ORDER BY c.last_seen DESC LIMIT 1
+                ORDER BY c.last_seen_epoch DESC LIMIT 1
             """, {"alert_id": alert_id,
-                  "hours": self.config["correlation_window_hours"]})
+                  "cutoff_epoch": int((datetime.utcnow().timestamp() - self.config["correlation_window_hours"] * 3600) * 1000)})
             return results[0]["campaign_id"] if results else None
         except Exception as e:
             log.warning(f"_find_matching_campaign failed: {e}")
@@ -748,8 +762,9 @@ class CampaignMatcher:
                 MATCH (a:Alert {id: $alert_id})
                 MATCH (c:Campaign {id: $campaign_id})
                 MERGE (a)-[:MEMBER_OF]->(c)
-                SET c.last_seen = datetime(),
+                SET c.last_seen_epoch = $last_seen_epoch,
                     c.alert_count = c.alert_count + 1
-            """, {"alert_id": alert_id, "campaign_id": campaign_id})
+            """, {"alert_id": alert_id, "campaign_id": campaign_id,
+                  "last_seen_epoch": int(datetime.utcnow().timestamp() * 1000)})
         except Exception as e:
             log.warning(f"_add_alert_to_campaign failed: {e}")

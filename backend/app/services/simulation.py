@@ -306,21 +306,22 @@ class SimulationOrchestrator:
                 """
                 MATCH (a:Alert {id: $alert_id})
                 CREATE (d:Decision {
-                    id:            $decision_id,
-                    action:        $action,
-                    confidence:    $confidence,
-                    factor_vector: $fv,
-                    timestamp:     datetime(),
-                    outcome:       null
+                    id:              $decision_id,
+                    action:          $action,
+                    confidence:      $confidence,
+                    factor_vector:   $fv,
+                    timestamp_epoch: $timestamp_epoch,
+                    outcome:         null
                 })
                 CREATE (d)-[:DECIDED_ON]->(a)
                 """,
                 {
-                    "alert_id":    alert_id,
-                    "decision_id": decision_id,
-                    "action":      scoring.selected_action,
-                    "confidence":  scoring.confidence,
-                    "fv":          fv_list,
+                    "alert_id":        alert_id,
+                    "decision_id":     decision_id,
+                    "action":          scoring.selected_action,
+                    "confidence":      scoring.confidence,
+                    "fv":              fv_list,
+                    "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
                 },
             )
 
@@ -354,17 +355,18 @@ class SimulationOrchestrator:
             gae_result = await neo4j_client.run_query(
                 """
                 MATCH (d:Decision {id: $decision_id})
-                SET d.outcome    = $outcome_label,
-                    d.correct    = $correct,
-                    d.verified_at = datetime()
+                SET d.outcome           = $outcome_label,
+                    d.correct           = $correct,
+                    d.verified_at_epoch = $verified_at_epoch
                 RETURN d.factor_vector AS factor_vector,
                        d.action        AS action,
                        d.confidence    AS confidence
                 """,
                 {
-                    "decision_id":   decision_id,
-                    "outcome_label": outcome_str,
-                    "correct":       correct,
+                    "decision_id":      decision_id,
+                    "outcome_label":    outcome_str,
+                    "correct":          correct,
+                    "verified_at_epoch": int(datetime.utcnow().timestamp() * 1000),
                 },
             )
 

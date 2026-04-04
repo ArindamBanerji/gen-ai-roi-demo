@@ -20,6 +20,7 @@ Reference: docs/project_status_and_plan_v3_part2.md P9
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Any, Optional
 
 import numpy as np
@@ -232,10 +233,10 @@ class LearningHealthMonitor:
                 """
                 MATCH (h:HealthLog)
                 WHERE h.status = 'RED'
-                  AND h.timestamp >= datetime() - duration({days: $days})
-                RETURN count(DISTINCT date(h.timestamp)) AS red_days
+                  AND h.timestamp_epoch >= $cutoff_epoch
+                RETURN count(DISTINCT (h.timestamp_epoch / 86400000)) AS red_days
                 """,
-                {"days": AUTO_PAUSE_RED_DAYS + 1},
+                {"cutoff_epoch": int((datetime.utcnow().timestamp() - (AUTO_PAUSE_RED_DAYS + 1) * 86400) * 1000)},
             )
             return int((rows[0].get("red_days") or 0) if rows else 0)
         except Exception as exc:

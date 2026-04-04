@@ -680,10 +680,9 @@ async def get_operational_metrics():
     try:
         mttd_result = await neo4j_client.run_query(
             "MATCH (d:Decision)-[:FOR_ALERT]->(a:Alert) "
-            "WHERE d.created_at IS NOT NULL AND a.created_at IS NOT NULL "
-            "RETURN avg("
-            "  duration.inSeconds(datetime(a.created_at), datetime(d.created_at)).seconds"
-            ") AS avg_mttd_seconds, count(d) AS sample_size"
+            "WHERE d.created_at_epoch IS NOT NULL AND a.created_at_epoch IS NOT NULL "
+            "RETURN avg((d.created_at_epoch - a.created_at_epoch) / 1000.0)"
+            " AS avg_mttd_seconds, count(d) AS sample_size"
         )
         if mttd_result and mttd_result[0]["sample_size"] > 0:
             mttd_seconds = mttd_result[0]["avg_mttd_seconds"]
@@ -712,10 +711,9 @@ async def get_operational_metrics():
     try:
         mttr_result = await neo4j_client.run_query(
             "MATCH (d:Decision) "
-            "WHERE d.created_at IS NOT NULL AND d.verified_at IS NOT NULL "
-            "RETURN avg("
-            "  duration.inSeconds(datetime(d.created_at), datetime(d.verified_at)).seconds"
-            ") AS avg_mttr_seconds, count(d) AS sample_size"
+            "WHERE d.created_at_epoch IS NOT NULL AND d.verified_at_epoch IS NOT NULL "
+            "RETURN avg((d.verified_at_epoch - d.created_at_epoch) / 1000.0)"
+            " AS avg_mttr_seconds, count(d) AS sample_size"
         )
         if mttr_result and mttr_result[0]["sample_size"] > 0:
             mttr_seconds = mttr_result[0]["avg_mttr_seconds"]

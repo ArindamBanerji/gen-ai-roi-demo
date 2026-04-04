@@ -10,6 +10,7 @@ Categories and their GAE factor signatures:
 
 Oracle success rates reflect how reliably GAE selects the optimal action per category.
 """
+from datetime import datetime
 from typing import Any, Dict, List
 
 
@@ -512,7 +513,7 @@ async def seed_simulation_alerts() -> None:
                 alert.severity               = 'high',
                 alert.source_ip              = $source_ip,
                 alert.source_location        = $location,
-                alert.timestamp              = datetime(),
+                alert.timestamp_epoch        = $timestamp_epoch,
                 alert.description            = 'Login from travel destination at unusual time',
                 alert.asset_id               = $asset_id,
                 alert.user_id                = $uid,
@@ -534,6 +535,7 @@ async def seed_simulation_alerts() -> None:
             "source_ip": src_ip, "location": location,
             "mfa": mfa, "fingerprint": fingerprint,
             "weekend": weekend, "technique": technique,
+            "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
         })
     print("  [SIM-3a] credential_access alerts created (SIM-CA-001..004)")
 
@@ -553,7 +555,7 @@ async def seed_simulation_alerts() -> None:
                 alert.severity               = 'critical',
                 alert.source_ip              = '198.51.100.77',
                 alert.source_location        = 'External',
-                alert.timestamp              = datetime(),
+                alert.timestamp_epoch        = $timestamp_epoch,
                 alert.description            = 'Indicator matches active APT threat feed',
                 alert.asset_id               = 'SIM-ASSET-TI-01',
                 alert.user_id                = 'sim-ti-user@company.com',
@@ -570,7 +572,8 @@ async def seed_simulation_alerts() -> None:
             MATCH (user:User   {id: 'sim-ti-user@company.com'})
             MERGE (alert)-[:DETECTED_ON]->(asset)
             MERGE (alert)-[:INVOLVES]->(user)
-        """, {"id": aid, "mfa": mfa, "fingerprint": fingerprint, "weekend": weekend})
+        """, {"id": aid, "mfa": mfa, "fingerprint": fingerprint, "weekend": weekend,
+              "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000)})
     print("  [SIM-3a] threat_intel_match alerts created (SIM-TI-001..004)")
 
     # -----------------------------------------------------------------------
@@ -589,7 +592,7 @@ async def seed_simulation_alerts() -> None:
                 alert.severity               = 'critical',
                 alert.source_ip              = '10.0.5.99',
                 alert.source_location        = 'Internal',
-                alert.timestamp              = datetime(),
+                alert.timestamp_epoch        = $timestamp_epoch,
                 alert.description            = 'Service account lateral movement on critical server',
                 alert.asset_id               = 'SIM-ASSET-LM-01',
                 alert.user_id                = 'sim-lm-svc@internal',
@@ -606,7 +609,8 @@ async def seed_simulation_alerts() -> None:
             MATCH (user:User   {id: 'sim-lm-svc@internal'})
             MERGE (alert)-[:DETECTED_ON]->(asset)
             MERGE (alert)-[:INVOLVES]->(user)
-        """, {"id": aid, "mfa": mfa, "fingerprint": fingerprint, "weekend": weekend})
+        """, {"id": aid, "mfa": mfa, "fingerprint": fingerprint, "weekend": weekend,
+              "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000)})
     print("  [SIM-3a] lateral_movement alerts created (SIM-LM-001..004)")
 
     # -----------------------------------------------------------------------
@@ -625,7 +629,7 @@ async def seed_simulation_alerts() -> None:
                 alert.severity               = 'critical',
                 alert.source_ip              = '10.0.4.33',
                 alert.source_location        = 'External',
-                alert.timestamp              = datetime(),
+                alert.timestamp_epoch        = $timestamp_epoch,
                 alert.description            = 'Large data upload to external destination after hours',
                 alert.asset_id               = 'SIM-ASSET-DE-01',
                 alert.user_id                = 'sim-de-user@company.com',
@@ -642,7 +646,8 @@ async def seed_simulation_alerts() -> None:
             MATCH (user:User   {id: 'sim-de-user@company.com'})
             MERGE (alert)-[:DETECTED_ON]->(asset)
             MERGE (alert)-[:INVOLVES]->(user)
-        """, {"id": aid, "mfa": mfa, "fingerprint": fingerprint, "weekend": weekend})
+        """, {"id": aid, "mfa": mfa, "fingerprint": fingerprint, "weekend": weekend,
+              "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000)})
     print("  [SIM-3a] data_exfiltration alerts created (SIM-DE-001..004)")
 
     # -----------------------------------------------------------------------
@@ -656,7 +661,7 @@ async def seed_simulation_alerts() -> None:
                 alert.severity               = 'high',
                 alert.source_ip              = '10.0.2.55',
                 alert.source_location        = 'Office',
-                alert.timestamp              = datetime(),
+                alert.timestamp_epoch        = $timestamp_epoch,
                 alert.description            = 'Bulk data collection by trusted employee',
                 alert.asset_id               = 'SIM-ASSET-IT-01',
                 alert.user_id                = 'sim-it-user@company.com',
@@ -673,7 +678,8 @@ async def seed_simulation_alerts() -> None:
             MATCH (user:User   {id: 'sim-it-user@company.com'})
             MERGE (alert)-[:DETECTED_ON]->(asset)
             MERGE (alert)-[:INVOLVES]->(user)
-        """, {"id": f"SIM-IT-00{i}"})
+        """, {"id": f"SIM-IT-00{i}",
+              "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000)})
     print("  [SIM-3a] insider_threat alerts created (SIM-IT-001..004)")
 
     # -----------------------------------------------------------------------
@@ -717,7 +723,7 @@ async def seed_simulation_alerts() -> None:
                 alert.severity               = $sev,
                 alert.source_ip              = $source_ip,
                 alert.source_location        = $loc,
-                alert.timestamp              = datetime(),
+                alert.timestamp_epoch        = $timestamp_epoch,
                 alert.description            = $desc,
                 alert.asset_id               = 'SIM-ASSET-CI-01',
                 alert.user_id                = $uid,
@@ -740,6 +746,7 @@ async def seed_simulation_alerts() -> None:
             "loc": loc, "biz_hrs": biz_hrs, "weekend": weekend,
             "mfa": mfa, "fp": fp, "vpn": vpn, "desc": desc,
             "uid": uid, "mitre_t": mitre_t, "mitre_tac": mitre_tac,
+            "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
         })
     print("  [CORR-1b] cloud_infrastructure alerts created (SIM-CI-001..004, SIM-CI-REF-001)")
 
@@ -754,7 +761,7 @@ async def seed_simulation_alerts() -> None:
             alert.severity               = 'medium',
             alert.source_ip              = '185.10.20.30',
             alert.source_location        = 'Dublin',
-            alert.timestamp              = datetime(),
+            alert.timestamp_epoch        = $timestamp_epoch,
             alert.description            = 'Login from unfamiliar location; partial credentials',
             alert.asset_id               = 'SIM-ASSET-CA-01',
             alert.user_id                = 'sim-ca-user1@company.com',
@@ -772,14 +779,14 @@ async def seed_simulation_alerts() -> None:
         MATCH (user:User   {id: 'sim-ca-user1@company.com'})
         MERGE (alert)-[:DETECTED_ON]->(asset)
         MERGE (alert)-[:INVOLVES]->(user)
-    """)
+    """, {"timestamp_epoch": int(datetime.utcnow().timestamp() * 1000)})
     await neo4j_client.run_query("""
         MERGE (alert:Alert {id: 'SIM-LM-REF-001'})
         SET alert.alert_type             = 'internal_scan_ambiguous',
             alert.severity               = 'medium',
             alert.source_ip              = '10.0.5.99',
             alert.source_location        = 'Internal',
-            alert.timestamp              = datetime(),
+            alert.timestamp_epoch        = $timestamp_epoch,
             alert.description            = 'Internal scan from known dev machine outside scan window',
             alert.asset_id               = 'SIM-ASSET-LM-01',
             alert.user_id                = 'sim-lm-svc@internal',
@@ -797,7 +804,7 @@ async def seed_simulation_alerts() -> None:
         MATCH (user:User   {id: 'sim-lm-svc@internal'})
         MERGE (alert)-[:DETECTED_ON]->(asset)
         MERGE (alert)-[:INVOLVES]->(user)
-    """)
+    """, {"timestamp_epoch": int(datetime.utcnow().timestamp() * 1000)})
     print("  [CORR-1b] refer_to_analyst alerts created (SIM-CA-REF-001, SIM-LM-REF-001)")
 
     # -----------------------------------------------------------------------

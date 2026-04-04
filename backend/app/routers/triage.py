@@ -241,27 +241,28 @@ async def analyze_alert(request: ProcessAlertRequest):
             """
             MATCH (a:Alert {id: $alert_id})
             CREATE (d:Decision {
-                id:            $decision_id,
-                action:        $action,
-                confidence:    $confidence,
-                factor_vector: $fv,
-                category:      $category,
-                source_id:     $source_id,
-                user_id:       $user_id,
-                timestamp:     datetime(),
-                outcome:       null
+                id:              $decision_id,
+                action:          $action,
+                confidence:      $confidence,
+                factor_vector:   $fv,
+                category:        $category,
+                source_id:       $source_id,
+                user_id:         $user_id,
+                timestamp_epoch: $timestamp_epoch,
+                outcome:         null
             })
             CREATE (d)-[:DECIDED_ON]->(a)
             """,
             {
-                "alert_id":    alert_id,
-                "decision_id": decision_id,
-                "action":      selected_action,
-                "confidence":  confidence,
-                "fv":          fv_list,
-                "category":    alert_category,
-                "source_id":   alert_data.get("source_location", ""),
-                "user_id":     context.get("user_id", ""),
+                "alert_id":        alert_id,
+                "decision_id":     decision_id,
+                "action":          selected_action,
+                "confidence":      confidence,
+                "fv":              fv_list,
+                "category":        alert_category,
+                "source_id":       alert_data.get("source_location", ""),
+                "user_id":         context.get("user_id", ""),
+                "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
             },
         )
         print(f"[GAE] Decision node written: id={decision_id} [:DECIDED_ON] {alert_id}")
@@ -833,19 +834,20 @@ async def report_decision_outcome(request: OutcomeRequest):
             """
             MATCH (d:Decision {id: $decision_id})
             OPTIONAL MATCH (d)-[:DECIDED_ON]->(a:Alert)
-            SET d.outcome    = $outcome_label,
-                d.correct    = $correct,
-                d.verified_at = datetime(),
-                d.override_comment = $override_comment
+            SET d.outcome           = $outcome_label,
+                d.correct           = $correct,
+                d.verified_at_epoch = $verified_at_epoch,
+                d.override_comment  = $override_comment
             RETURN d.factor_vector AS factor_vector,
                    d.action        AS action,
                    d.confidence    AS confidence,
                    coalesce(a.alert_type, 'unknown') AS alert_type
             """,
             {
-                "decision_id":    request.decision_id,
-                "outcome_label":  outcome_label,
-                "correct":        correct_bool,
+                "decision_id":      request.decision_id,
+                "outcome_label":    outcome_label,
+                "correct":          correct_bool,
+                "verified_at_epoch": int(datetime.utcnow().timestamp() * 1000),
                 "override_comment": request.override_comment,
             },
         )
@@ -932,13 +934,14 @@ async def report_decision_outcome(request: OutcomeRequest):
                         SET d.centroid_delta_norm = $centroid_delta_norm,
                             d.category            = $category,
                             d.correct             = $correct,
-                            d.verified_at         = datetime()
+                            d.verified_at_epoch   = $verified_at_epoch
                         """,
                         {
                             "decision_id":         request.decision_id,
                             "centroid_delta_norm": cu.centroid_delta_norm,
                             "category":            cu.category_name,
                             "correct":             correct_bool,
+                            "verified_at_epoch":   int(datetime.utcnow().timestamp() * 1000),
                         },
                     )
                     print(

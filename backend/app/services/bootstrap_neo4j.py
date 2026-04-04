@@ -19,6 +19,7 @@ Reference: docs/soc_copilot_design_v1.md §14 (CORR-3).
 
 import logging
 import uuid
+from datetime import datetime
 from typing import Any, Dict, List
 
 import numpy as np
@@ -199,13 +200,13 @@ async def write_bootstrap_decisions(
             centroid_snapshot: dec.centroid_snapshot,
             category:         dec.category,
             source:           dec.source,
-            timestamp:        datetime(),
+            timestamp_epoch:  $timestamp_epoch,
             auto_approved:    false,
             shadow_mode:      false,
             outcome:          null
         })
         """,
-        {"decisions": records},
+        {"decisions": records, "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000)},
     )
 
     n = len(records)

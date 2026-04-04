@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+from datetime import datetime
 from typing import Any
 
 import numpy as np
@@ -49,18 +50,19 @@ class CheckpointService:
         await neo4j_service.run_query(
             """CREATE (cp:Checkpoint {
                 id:               $id,
-                timestamp:        datetime(),
+                timestamp_epoch:  $timestamp_epoch,
                 reason:           $reason,
                 mu_snapshot:      $mu,
                 counts_snapshot:  $counts,
                 decision_count:   $dc
             })""",
             {
-                "id":     checkpoint_id,
-                "reason": reason,
-                "mu":     json.dumps(mu_snapshot),
-                "counts": json.dumps(counts_snapshot),
-                "dc":     decision_count,
+                "id":              checkpoint_id,
+                "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
+                "reason":          reason,
+                "mu":              json.dumps(mu_snapshot),
+                "counts":          json.dumps(counts_snapshot),
+                "dc":              decision_count,
             },
         )
         log.info(
@@ -75,11 +77,11 @@ class CheckpointService:
         try:
             result = await neo4j_service.run_query(
                 """MATCH (cp:Checkpoint)
-                   RETURN cp.id             AS id,
-                          toString(cp.timestamp) AS timestamp,
-                          cp.reason         AS reason,
-                          cp.decision_count AS decision_count
-                   ORDER BY cp.timestamp DESC""",
+                   RETURN cp.id              AS id,
+                          cp.timestamp_epoch AS timestamp,
+                          cp.reason          AS reason,
+                          cp.decision_count  AS decision_count
+                   ORDER BY cp.timestamp_epoch DESC""",
             )
         except Exception as exc:
             log.warning("[CHECKPOINT] list_checkpoints query failed: %s", exc)

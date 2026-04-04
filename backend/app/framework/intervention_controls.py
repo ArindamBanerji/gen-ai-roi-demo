@@ -334,19 +334,20 @@ class InterventionControls:
         try:
             await self.db.run_query(
                 """CREATE (i:Intervention {
-                    id:           $id,
-                    type:         $type,
-                    initiated_by: $initiated_by,
-                    reason:       $reason,
-                    timestamp:    datetime(),
-                    details:      $details
+                    id:              $id,
+                    type:            $type,
+                    initiated_by:    $initiated_by,
+                    reason:          $reason,
+                    timestamp_epoch: $timestamp_epoch,
+                    details:         $details
                 })""",
                 {
-                    "id":           intervention_id,
-                    "type":         intervention_type,
-                    "initiated_by": initiated_by,
-                    "reason":       reason,
-                    "details":      json.dumps(details),
+                    "id":              intervention_id,
+                    "type":            intervention_type,
+                    "initiated_by":    initiated_by,
+                    "reason":          reason,
+                    "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
+                    "details":         json.dumps(details),
                 },
             )
         except Exception as exc:

@@ -4,6 +4,7 @@ Handles all graph queries for the SOC Copilot Demo
 """
 import logging
 import os
+from datetime import datetime
 from typing import Optional, Dict, Any, List
 from neo4j import AsyncGraphDatabase, AsyncDriver
 from contextlib import asynccontextmanager
@@ -168,7 +169,7 @@ class Neo4jClient:
             type: $action,
             reasoning: $reasoning,
             confidence: $confidence,
-            timestamp: datetime(),
+            timestamp_epoch: $timestamp_epoch,
             alert_id: $alert_id,
             action_taken: $action
         })
@@ -195,16 +196,17 @@ class Neo4jClient:
         """
 
         result = await self.run_query(query, {
-            "decision_id": decision_id,
-            "alert_id": alert_id,
-            "action": action,
-            "confidence": confidence,
-            "reasoning": reasoning,
-            "playbook_id": playbook_id,
+            "decision_id":    decision_id,
+            "alert_id":       alert_id,
+            "action":         action,
+            "confidence":     confidence,
+            "reasoning":      reasoning,
+            "playbook_id":    playbook_id,
             "nodes_consulted": nodes_consulted,
-            "user_snapshot": str(context_snapshot.get("user", {})),
+            "user_snapshot":  str(context_snapshot.get("user", {})),
             "asset_snapshot": str(context_snapshot.get("asset", {})),
             "patterns_matched": [pattern_id] if pattern_id else [],
+            "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
         })
 
         return result[0]["decision_id"] if result else decision_id
@@ -238,27 +240,28 @@ class Neo4jClient:
             before_state: $before_state,
             after_state: $after_state,
             description: $description,
-            timestamp: datetime()
+            timestamp_epoch: $timestamp_epoch
         })
 
         CREATE (decision)-[:TRIGGERED_EVOLUTION {
             impact: $impact,
             magnitude: $magnitude,
-            timestamp: datetime()
+            timestamp_epoch: $timestamp_epoch
         }]->(event)
 
         RETURN event.id as event_id
         """
 
         result = await self.run_query(query, {
-            "event_id": event_id,
-            "event_type": event_type,
-            "triggered_by": triggered_by,
-            "before_state": str(before_state),
-            "after_state": str(after_state),
-            "description": description,
-            "impact": impact,
-            "magnitude": magnitude,
+            "event_id":        event_id,
+            "event_type":      event_type,
+            "triggered_by":    triggered_by,
+            "before_state":    str(before_state),
+            "after_state":     str(after_state),
+            "description":     description,
+            "impact":          impact,
+            "magnitude":       magnitude,
+            "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
         })
 
         return result[0]["event_id"] if result else event_id
@@ -310,10 +313,10 @@ class Neo4jClient:
                 """
                 MATCH (d:Decision)
                 WHERE d.source_id = $source_id
-                AND d.timestamp > datetime() - duration({seconds: $window_seconds})
+                AND d.timestamp_epoch > $cutoff_epoch
                 RETURN count(d) AS sequence_count
                 """,
-                {"source_id": source_id, "window_seconds": window_seconds},
+                {"source_id": source_id, "cutoff_epoch": int((datetime.utcnow().timestamp() - window_seconds) * 1000)},
             )
             return int(result[0].get("sequence_count") or 0) if result else 0
         except Exception as exc:
@@ -339,10 +342,10 @@ class Neo4jClient:
                 """
                 MATCH (d:Decision)
                 WHERE d.user_id = $user_id
-                AND d.timestamp > datetime() - duration({seconds: $window_seconds})
+                AND d.timestamp_epoch > $cutoff_epoch
                 RETURN count(DISTINCT d.category) AS cross_category_count
                 """,
-                {"user_id": user_id, "window_seconds": window_seconds},
+                {"user_id": user_id, "cutoff_epoch": int((datetime.utcnow().timestamp() - window_seconds) * 1000)},
             )
             return int(result[0].get("cross_category_count") or 0) if result else 0
         except Exception as exc:

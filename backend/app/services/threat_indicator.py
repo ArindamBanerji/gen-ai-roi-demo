@@ -16,6 +16,7 @@ Reference: docs/project_status_and_plan_v3_part2.md Phase 7
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Any
 
 log = logging.getLogger(__name__)
@@ -52,23 +53,24 @@ class ThreatIndicatorService:
             result = await neo4j_service.run_query(
                 """
                 MERGE (ti:ThreatIndicator {ioc_value: $ioc_value, ioc_type: $ioc_type})
-                ON CREATE SET ti.id         = randomUUID(),
-                              ti.name       = $name,
-                              ti.source     = $source,
-                              ti.severity   = $severity,
-                              ti.created_at = datetime(),
-                              ti.last_seen  = datetime()
-                ON MATCH SET  ti.last_seen  = datetime(),
-                              ti.source     = $source,
-                              ti.severity   = $severity
+                ON CREATE SET ti.id              = randomUUID(),
+                              ti.name            = $name,
+                              ti.source          = $source,
+                              ti.severity        = $severity,
+                              ti.created_at_epoch = $now_epoch,
+                              ti.last_seen_epoch  = $now_epoch
+                ON MATCH SET  ti.last_seen_epoch  = $now_epoch,
+                              ti.source           = $source,
+                              ti.severity         = $severity
                 RETURN ti.id AS id
                 """,
                 {
-                    "ioc_value": ioc_value,
-                    "ioc_type":  ioc_type,
-                    "source":    source,
-                    "severity":  severity,
-                    "name":      name,
+                    "ioc_value":  ioc_value,
+                    "ioc_type":   ioc_type,
+                    "source":     source,
+                    "severity":   severity,
+                    "name":       name,
+                    "now_epoch":  int(datetime.utcnow().timestamp() * 1000),
                 },
             )
             return result[0]["id"] if result else ""
@@ -173,12 +175,12 @@ class ThreatIndicatorService:
             result = await neo4j_service.run_query(
                 """
                 MATCH (ti:ThreatIndicator)
-                WHERE ti.last_seen < datetime() - duration({hours: $ttl})
+                WHERE ti.last_seen_epoch < $cutoff_epoch
                 WITH ti
                 DETACH DELETE ti
                 RETURN count(ti) AS removed
                 """,
-                {"ttl": ThreatIndicatorService.TTL_HOURS},
+                {"cutoff_epoch": int((datetime.utcnow().timestamp() - ThreatIndicatorService.TTL_HOURS * 3600) * 1000)},
             )
             return int(result[0]["removed"]) if result else 0
         except Exception as exc:

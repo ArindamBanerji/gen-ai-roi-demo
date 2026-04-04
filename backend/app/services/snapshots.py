@@ -9,6 +9,7 @@ Reference: docs/soc_copilot_design_v1.md §14 (IKS / ProfileSnapshot).
 
 import logging
 import time
+from datetime import datetime
 
 log = logging.getLogger(__name__)
 
@@ -46,16 +47,17 @@ async def _write_profile_snapshot(decision_count: int) -> None:
         await neo4j_client.run_query(
             """
             CREATE (ps:ProfileSnapshot {
-                decision_count: $decision_count,
-                timestamp:      datetime(),
-                mu:             $mu,
-                counts:         $counts
+                decision_count:  $decision_count,
+                timestamp_epoch: $timestamp_epoch,
+                mu:              $mu,
+                counts:          $counts
             })
             """,
             {
-                "decision_count": decision_count,
-                "mu":             str(mu_list),   # store as JSON string (Neo4j has no tensor type)
-                "counts":         str(counts_list),
+                "decision_count":  decision_count,
+                "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
+                "mu":              str(mu_list),   # store as JSON string (Neo4j has no tensor type)
+                "counts":          str(counts_list),
             },
         )
         log.info(

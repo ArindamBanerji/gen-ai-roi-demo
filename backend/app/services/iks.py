@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -275,12 +276,12 @@ async def _compute_delta_7d(current_iks: float) -> float:
         rows = await neo4j_client.run_query(
             """
             MATCH (ps:ProfileSnapshot)
-            WHERE ps.timestamp >= datetime() - duration({days: 7})
+            WHERE ps.timestamp_epoch >= $cutoff_epoch
             RETURN ps.mu AS mu
             ORDER BY ps.decision_count ASC
             LIMIT 1
             """,
-            {},
+            {"cutoff_epoch": int((datetime.utcnow().timestamp() - 7 * 86400) * 1000)},
         )
     except Exception as exc:
         log.debug("[IKS] delta_7d query failed: %s", exc)
