@@ -214,3 +214,130 @@ def reset_learning_state() -> None:
     _learning_state = _make_fresh_state()
     save_learning_state()
     print("[GAE] Learning state reset to initial W matrix")
+
+
+# =============================================================================
+# Block 2.1 — Centroid tensor PITR backup helpers
+# =============================================================================
+
+_BACKUP_DIR = Path(__file__).resolve().parents[2] / "app" / "data" / "centroid_backups"
+
+
+def _ensure_backup_dir() -> Path:
+    _BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    return _BACKUP_DIR
+
+
+def serialize_centroid_tensor(scorer) -> dict:
+    """
+    Serialize the ProfileScorer centroid tensor (mu) with a SHA-256 integrity hash.
+
+    Returns a dict ready to be written as JSON.  The sha256 is computed over
+    a canonical JSON encoding of the payload (sort_keys=True, no hash field),
+    so it can be re-verified without the original object.
+    """
+    import hashlib
+    import time
+
+    mu = scorer.mu.tolist()
+    step = getattr(scorer, "decision_count", 0)
+    payload = {
+        "mu":              mu,
+        "shape":           list(scorer.mu.shape),
+        "step":            step,
+        "timestamp_epoch": int(time.time() * 1000),
+        "version":         "1.0",
+    }
+    canonical = json.dumps(payload, sort_keys=True)
+    payload["sha256"] = hashlib.sha256(canonical.encode()).hexdigest()
+    return payload
+
+
+def write_centroid_backup(scorer) -> dict:
+    """
+    Serialize mu, write timestamped + latest backup files.
+    Returns the payload dict (includes sha256 and backup_id).
+    """
+    payload = serialize_centroid_tensor(scorer)
+    ts = payload["timestamp_epoch"]
+    backup_id = f"centroid_backup_{ts}"
+    payload["backup_id"] = backup_id
+
+    d = _ensure_backup_dir()
+    timestamped = d / f"{backup_id}.json"
+    latest = d / "centroid_backup_latest.json"
+
+    data = json.dumps(payload)
+    timestamped.write_text(data)
+    latest.write_text(data)
+
+    return payload
+
+
+def list_centroid_backups() -> list:
+    """
+    List all timestamped backup files in _BACKUP_DIR.
+    Returns list of dicts: [{backup_id, timestamp_epoch, step, sha256}]
+    sorted newest-first.
+    """
+    d = _ensure_backup_dir()
+    results = []
+    for f in sorted(d.glob("centroid_backup_[0-9]*.json"), reverse=True):
+        try:
+            raw = json.loads(f.read_text())
+            results.append({
+                "backup_id":       raw.get("backup_id", f.stem),
+                "timestamp_epoch": raw.get("timestamp_epoch", 0),
+                "step":            raw.get("step", 0),
+                "sha256":          raw.get("sha256", ""),
+            })
+        except Exception:
+            pass
+    return results
+
+
+def load_centroid_backup(backup_id: str | None = None) -> dict:
+    """
+    Load a backup payload by backup_id, or the latest if backup_id is None/empty.
+    Raises FileNotFoundError if the file does not exist.
+    """
+    d = _ensure_backup_dir()
+    if not backup_id:
+        path = d / "centroid_backup_latest.json"
+    else:
+        path = d / f"{backup_id}.json"
+    if not path.exists():
+        raise FileNotFoundError(f"Backup not found: {path}")
+    return json.loads(path.read_text())
+
+
+def restore_centroid_from_backup(backup_id: str | None = None) -> dict:
+    """
+    Load backup, verify SHA-256, and restore mu into the live ProfileScorer.
+
+    Returns the payload dict on success.
+    Raises ValueError on checksum mismatch.
+    Raises RuntimeError if ProfileScorer is not attached.
+    """
+    import hashlib
+
+    payload = load_centroid_backup(backup_id)
+
+    # Re-compute canonical hash (same fields as serialize, minus sha256)
+    verify_payload = {k: v for k, v in payload.items()
+                      if k not in ("sha256", "backup_id")}
+    canonical = json.dumps(verify_payload, sort_keys=True)
+    expected = hashlib.sha256(canonical.encode()).hexdigest()
+    if payload.get("sha256") != expected:
+        raise ValueError(
+            f"Checksum mismatch: stored={payload.get('sha256')!r} "
+            f"computed={expected!r}"
+        )
+
+    scorer = get_profile_scorer()
+    if scorer is None:
+        raise RuntimeError("ProfileScorer not attached — call init_learning_state() first")
+
+    mu_array = np.array(payload["mu"], dtype=np.float64)
+    scorer.mu[:] = mu_array
+    return payload

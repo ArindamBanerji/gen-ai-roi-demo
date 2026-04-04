@@ -1959,3 +1959,89 @@ async def get_enrichment_advisor():
         pass
 
     return get_enrichment_advice(ioc_coverage)
+
+
+# =============================================================================
+# Block 2.1 — Centroid PITR backup / restore / list
+# =============================================================================
+
+@router.post("/soc/backup-centroid")
+async def backup_centroid():
+    """
+    Serialize the live centroid tensor and write it to the backup store.
+    Returns backup metadata: {backup_id, sha256, shape, step, timestamp_epoch}.
+    """
+    from app.services.gae_state import get_profile_scorer, write_centroid_backup
+    scorer = get_profile_scorer()
+    if scorer is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail="ProfileScorer not ready")
+    payload = write_centroid_backup(scorer)
+    return {
+        "backup_id":       payload["backup_id"],
+        "sha256":          payload["sha256"],
+        "shape":           payload["shape"],
+        "step":            payload["step"],
+        "timestamp_epoch": payload["timestamp_epoch"],
+    }
+
+
+@router.post("/soc/restore-centroid")
+async def restore_centroid(body: dict = {}):
+    """
+    Restore the centroid tensor from a backup.
+    Body: {"backup_id": "centroid_backup_<ts>"} or {} to use latest.
+    Returns 409 on SHA-256 checksum mismatch.
+    """
+    from fastapi import HTTPException
+    from app.services.gae_state import restore_centroid_from_backup
+    backup_id = (body or {}).get("backup_id") or None
+    try:
+        payload = restore_centroid_from_backup(backup_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    return {
+        "restored":        True,
+        "backup_id":       payload.get("backup_id"),
+        "sha256":          payload["sha256"],
+        "step":            payload["step"],
+        "timestamp_epoch": payload["timestamp_epoch"],
+    }
+
+
+@router.get("/soc/centroid-backups")
+async def list_centroid_backups_endpoint():
+    """
+    List all centroid backup files.
+    Returns [{backup_id, timestamp_epoch, step, sha256}] newest-first.
+    """
+    from app.services.gae_state import list_centroid_backups
+    return {"backups": list_centroid_backups()}
+
+
+# =============================================================================
+# GET /api/soc/gate-config — Block 7.4
+# =============================================================================
+
+@router.get("/soc/gate-config")
+async def get_gate_config():
+    """
+    Return GateConfig summary for the current deployment.
+
+    Reads n_decisions from in-memory learning state.
+    Switches from conservative defaults to calibrated values
+    once n_decisions >= compute_phase3_minimum(V=200, alpha=0.25).
+    """
+    from app.domains.soc.config import GateConfig
+    from app.services.gae_state import get_learning_state
+
+    n_decisions = 0
+    try:
+        n_decisions = get_learning_state().decision_count
+    except Exception:
+        pass
+
+    cfg = GateConfig(n_decisions=n_decisions, V=200.0, alpha=0.25)
+    return cfg.summary()
