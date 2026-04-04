@@ -54,10 +54,21 @@ on April 1, 2026.
 # in executive_narrative.py _what_knows() method.
 # Priority: P2 — cosmetic only
 
+# BACKLOG-008: rebuild_neo4j_v6.py end-to-end run not yet verified
+# Action: Run rebuild_neo4j_v6.py (without --dry-run) against a
+# test/staging Aura instance to confirm full recreation works.
+# Do NOT run against production Aura until datetime migration is complete
+# and epoch integers are in all seed scripts.
+# Gate: node count summary matches pre-migration snapshot counts.
+# Priority: P1 — recovery path must be verified before pilot signing.
+# Dependency: datetime migration (Block 8.3) must complete first so
+# seed scripts write epoch integers, not Neo4j datetime objects.
+
 def test_backlog_documented():
     """Placeholder — confirms backlog file is present and parseable."""
     issues = [
         "BACKLOG-001", "BACKLOG-002", "BACKLOG-003",
-        "BACKLOG-004", "BACKLOG-005", "BACKLOG-006", "BACKLOG-007"
+        "BACKLOG-004", "BACKLOG-005", "BACKLOG-006", "BACKLOG-007",
+        "BACKLOG-008"
     ]
-    assert len(issues) == 7
+    assert len(issues) == 8
