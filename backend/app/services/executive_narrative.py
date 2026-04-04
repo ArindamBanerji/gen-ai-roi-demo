@@ -274,7 +274,7 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     try:
         rows = await neo4j_service.run_query(
             "MATCH (d:Decision) WHERE d.outcome IS NOT NULL "
-            "AND d.verified_at IS NOT NULL RETURN count(d) AS cnt"
+            "AND d.verified_at_epoch IS NOT NULL RETURN count(d) AS cnt"
         )
         verified_decisions = int((rows[0].get("cnt") or 0) if rows else 0)
     except Exception:

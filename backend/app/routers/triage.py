@@ -76,7 +76,7 @@ async def get_alert_queue():
                 "severity": alert["severity"],
                 "asset_hostname": record["asset_hostname"],
                 "user_name": record["user_name"],
-                "timestamp": alert["timestamp"],
+                "timestamp": alert.get("timestamp_epoch", alert.get("timestamp", 0)),
                 "status": alert["status"],
                 "source_location": alert.get("source_location", "Unknown")
             })
