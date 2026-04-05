@@ -2067,6 +2067,250 @@ async def get_gate_config():
 
 
 # =============================================================================
+# GET /api/soc/tab/{n}/content — Step 11.1 tab content export
+# =============================================================================
+
+_TAB_NAMES = {
+    1: "Alert Triage",
+    2: "Institutional Intelligence",
+    3: "Alert Detail",
+    4: "Decision Economics",
+    5: "Executive Narrative",
+}
+
+
+async def _tab1_content() -> dict:
+    """Tab 1 — Alert Triage: alert_count, top_alert_types, pending_count."""
+    alert_count  = 0
+    pending_count = 0
+    top_alert_types: list = []
+
+    try:
+        rows = await neo4j_client.run_query(
+            "MATCH (a:Alert) RETURN count(a) AS cnt", {}
+        )
+        alert_count = int((rows[0].get("cnt") or 0) if rows else 0)
+    except Exception:
+        pass
+
+    try:
+        rows = await neo4j_client.run_query(
+            "MATCH (a:Alert) WHERE a.status IN ['pending', 'open'] "
+            "RETURN count(a) AS cnt", {}
+        )
+        pending_count = int((rows[0].get("cnt") or 0) if rows else 0)
+    except Exception:
+        pass
+
+    try:
+        rows = await neo4j_client.run_query(
+            "MATCH (a:Alert) RETURN a.type AS type, count(a) AS n "
+            "ORDER BY n DESC LIMIT 3", {}
+        )
+        top_alert_types = [
+            {"type": r.get("type") or "unknown", "count": int(r.get("n") or 0)}
+            for r in rows
+        ]
+    except Exception:
+        pass
+
+    return {
+        "alert_count":     alert_count,
+        "top_alert_types": top_alert_types,
+        "pending_count":   pending_count,
+    }
+
+
+async def _tab2_content() -> dict:
+    """Tab 2 — Institutional Intelligence: IKS, category accuracy, drift, override."""
+    from app.services.iks import compute_iks_v2
+
+    iks_score         = 0.0
+    iks_interpretation = ""
+    category_accuracy_summary: dict = {}
+    drift_alert_count = 0
+    override_learning_status = "inactive"
+
+    try:
+        iks_data = await compute_iks_v2(neo4j_client)
+        iks_score          = iks_data.get("iks_v2", 0.0)
+        iks_interpretation = iks_data.get("interpretation", "")
+        category_accuracy_summary = iks_data.get("components", {})
+    except Exception:
+        pass
+
+    try:
+        rows = await neo4j_client.run_query(
+            "MATCH (d:Decision) WHERE d.confidence IS NOT NULL AND d.confidence < 0.50 "
+            "RETURN count(d) AS cnt", {}
+        )
+        drift_alert_count = int((rows[0].get("cnt") or 0) if rows else 0)
+    except Exception:
+        pass
+
+    try:
+        from app.services.override_detector import override_detector as _od
+        if _od.activated:
+            override_learning_status = f"active ({_od.example_count} examples)"
+        else:
+            override_learning_status = f"inactive ({_od.example_count} examples)"
+    except Exception:
+        pass
+
+    return {
+        "iks_score":               iks_score,
+        "iks_interpretation":      iks_interpretation,
+        "category_accuracy_summary": category_accuracy_summary,
+        "drift_alert_count":       drift_alert_count,
+        "override_learning_status": override_learning_status,
+    }
+
+
+async def _tab3_content() -> dict:
+    """Tab 3 — Alert Detail: factor_names, decision_method, graph_node_count."""
+    from app.domains.soc.config import SOCDomainConfig
+
+    factor_names: list = []
+    graph_node_count = 0
+
+    try:
+        factor_names = [c.name for c in SOCDomainConfig.get_factor_computers()]
+    except Exception:
+        pass
+
+    try:
+        rows = await neo4j_client.run_query(
+            "MATCH (n) RETURN count(n) AS cnt", {}
+        )
+        graph_node_count = int((rows[0].get("cnt") or 0) if rows else 0)
+    except Exception:
+        pass
+
+    return {
+        "factor_names":   factor_names,
+        "decision_method": "gae_scoring",
+        "graph_node_count": graph_node_count,
+    }
+
+
+async def _tab4_content() -> dict:
+    """Tab 4 — Decision Economics: roi_annual_usd, decisions_per_day,
+    qualifies_one_quarter, evolution_events_count."""
+    from app.domains.soc.config import compute_phase3_minimum
+
+    total_decisions  = 0
+    decisions_per_day = 50.0   # default throughput assumption
+    evolution_events_count = 0
+
+    try:
+        rows = await neo4j_client.run_query(
+            "MATCH (d:Decision) RETURN count(d) AS cnt", {}
+        )
+        total_decisions = int((rows[0].get("cnt") or 0) if rows else 0)
+    except Exception:
+        pass
+
+    try:
+        # Estimate decisions/day from timestamp spread of Decision nodes
+        rows = await neo4j_client.run_query(
+            """
+            MATCH (d:Decision)
+            WHERE d.timestamp_epoch IS NOT NULL
+            RETURN min(d.timestamp_epoch) AS t_min, max(d.timestamp_epoch) AS t_max,
+                   count(d) AS n
+            """, {}
+        )
+        if rows and rows[0].get("n"):
+            t_min = rows[0].get("t_min") or 0
+            t_max = rows[0].get("t_max") or 0
+            n     = int(rows[0].get("n") or 0)
+            span_days = max((t_max - t_min) / 86_400_000.0, 1.0)
+            decisions_per_day = round(n / span_days, 1)
+    except Exception:
+        pass
+
+    try:
+        rows = await neo4j_client.run_query(
+            "MATCH (d:Decision) WHERE d.correct = true RETURN count(d) AS cnt", {}
+        )
+        evolution_events_count = int((rows[0].get("cnt") or 0) if rows else 0)
+    except Exception:
+        pass
+
+    # ROI: 0.25 analyst-hours saved per auto-closed decision, $75/hr loaded cost
+    roi_annual_usd = round(decisions_per_day * 365 * 0.25 * 75.0, 2)
+
+    # Qualifies for phase-3 calibration within one quarter (90 days)?
+    n_min = compute_phase3_minimum(V=200.0, alpha=0.25)
+    qualifies_one_quarter = (decisions_per_day * 90) >= n_min
+
+    return {
+        "roi_annual_usd":        roi_annual_usd,
+        "decisions_per_day":     decisions_per_day,
+        "qualifies_one_quarter": qualifies_one_quarter,
+        "evolution_events_count": evolution_events_count,
+    }
+
+
+async def _tab5_content() -> dict:
+    """Tab 5 — Executive Narrative: headline, what_changed, what_discovered, what_system_knows."""
+    from app.services.executive_narrative import build_executive_narrative_async
+
+    narr = await build_executive_narrative_async(neo4j_client)
+
+    what_changed_raw    = narr.get("what_changed", {})
+    what_discovered_raw = narr.get("what_discovered", {})
+    what_knows_raw      = narr.get("what_knows", {})
+
+    return {
+        "headline":         narr.get("headline", ""),
+        "what_changed":     what_changed_raw.get("top_shifts", [])[:3],
+        "what_discovered": {
+            "campaign_count": what_discovered_raw.get("attack_chains_detected", 0),
+            "chain_count":    len(what_discovered_raw.get("chain_summaries", [])),
+        },
+        "what_system_knows": {
+            "iks":                  what_knows_raw.get("iks_current", 0.0),
+            "categories_calibrated": what_knows_raw.get("categories_calibrated", 0),
+            "health_status":        what_knows_raw.get("health_status", "UNKNOWN"),
+        },
+    }
+
+
+_TAB_HANDLERS = {
+    1: _tab1_content,
+    2: _tab2_content,
+    3: _tab3_content,
+    4: _tab4_content,
+    5: _tab5_content,
+}
+
+
+@router.get("/soc/tab/{n}/content")
+async def get_tab_content(n: int):
+    """
+    Export the text content of tab n (1–5) for V-NARRATIVE-CISO evaluation.
+
+    Returns:
+      {tab, tab_name, content, generated_at_epoch}
+    """
+    import time as _time
+
+    if n not in _TAB_NAMES:
+        raise HTTPException(status_code=404, detail=f"Tab {n} not found — valid range is 1-5")
+
+    handler = _TAB_HANDLERS[n]
+    content = await handler()
+
+    return {
+        "tab":               n,
+        "tab_name":          _TAB_NAMES[n],
+        "content":           content,
+        "generated_at_epoch": int(_time.time() * 1000),
+    }
+
+
+# =============================================================================
 # GET /api/soc/deployment-state — Block 2.2
 # =============================================================================
 
