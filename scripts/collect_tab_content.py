@@ -53,11 +53,17 @@ else:
     print("[SANITY] Tab 2 glossary: WARNING — missing")
     warnings += 1
 
-# Tab 3: recommendation present
-if "recommendation" in tabs.get("tab_3",{}).get("content",{}):
-    print("[SANITY] Tab 3 recommendation: PASS")
-else:
+# Tab 3: recommendation present and action is a real SOC action
+_VALID_ACTIONS = {"escalate", "investigate", "suppress", "monitor"}
+_tab3_rec = tabs.get("tab_3",{}).get("content",{}).get("recommendation",{})
+_tab3_action = _tab3_rec.get("action","")
+if _tab3_action in _VALID_ACTIONS:
+    print(f"[SANITY] Tab 3 action: PASS — {_tab3_action}")
+elif not _tab3_action:
     print("[SANITY] Tab 3 recommendation: WARNING — missing")
+    warnings += 1
+else:
+    print(f"[SANITY] Tab 3 action: WARNING — unexpected action: {_tab3_action}")
     warnings += 1
 
 # Tab 4: roi_methodology present

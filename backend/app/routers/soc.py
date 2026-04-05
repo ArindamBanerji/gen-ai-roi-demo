@@ -2325,18 +2325,53 @@ async def _tab3_content() -> dict:
     # Best factor = highest kernel_weight
     top_factor = max(factor_breakdown, key=lambda x: x["kernel_weight"], default={})
 
-    # Derive recommendation from live state
-    n_decisions = 0
+    # Derive recommendation from a live pending alert (or centroid fallback)
+    import numpy as _np
+    from app.domains.soc.config import resolve_alert_category, SOCDomainConfig as _SDC
+    from app.services.gae_state import get_profile_scorer as _get_scorer
+
+    rec_action = "investigate"
+    rec_conf   = 0.70
+    rec_basis  = "centroid_fallback"
+
     try:
-        n_decisions = _get_ls().decision_count
+        _scorer = _get_scorer()
     except Exception:
-        pass
-    if n_decisions >= 100:
-        rec_action = "Proceed — model has sufficient verified decisions for reliable scoring"
-        rec_conf   = 0.87
-    else:
-        rec_action = "Collect more verified decisions — model in early learning phase"
-        rec_conf   = 0.60
+        _scorer = None
+
+    if _scorer is not None:
+        # Step 1: try a real pending alert
+        _alert_cat = None
+        try:
+            _rows = await neo4j_client.run_query(
+                "MATCH (a:Alert {status: 'pending'}) "
+                "RETURN a.id AS alert_id, a.category AS category, a.alert_type AS alert_type "
+                "LIMIT 1",
+                {},
+            )
+            if _rows:
+                _alert_cat = _rows[0].get("category") or resolve_alert_category(
+                    _rows[0].get("alert_type") or ""
+                )
+        except Exception:
+            pass
+
+        # Step 2: resolve category index (default: credential_access = 0)
+        _cfg = _SDC()
+        try:
+            _cat_idx = _cfg.get_category_index(_alert_cat) if _alert_cat else 0
+        except Exception:
+            _cat_idx = 0
+
+        # Step 3: score with neutral factor vector
+        try:
+            _f = _np.full(6, 0.5)
+            _result = _scorer.score(_f, _cat_idx)
+            rec_action = _result.action_name
+            rec_conf   = round(float(_result.confidence), 3)
+            rec_basis  = "live_scoring" if _alert_cat else "centroid_fallback"
+        except Exception:
+            pass
 
     # FIX 2.5 — graph context translation
     graph_context = (
@@ -2351,9 +2386,10 @@ async def _tab3_content() -> dict:
         "decision_method": "gae_scoring",
         "graph_node_count": graph_node_count,
         "graph_context":   graph_context,                # FIX 2.5
-        "recommendation":  {                             # FIX 2.4
+        "recommendation":  {                             # FIX 2.4 (revised)
             "action":     rec_action,
             "confidence": rec_conf,
+            "basis":      rec_basis,
         },
         "kernel_note": (                                 # FIX 2.4
             "Higher-noise factors are automatically down-weighted. "

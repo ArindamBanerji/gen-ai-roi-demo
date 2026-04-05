@@ -198,9 +198,17 @@ def test_tab2_has_decision_glossary():
 def test_tab3_has_recommendation_and_kernel_weights():
     """Tab 3 content includes recommendation, kernel_note, and factor_breakdown with weights."""
     from app.routers.soc import _tab3_content
+    from app.services.gae_state import init_learning_state
+
+    init_learning_state()  # scorer must be ready for centroid fallback scoring
+
+    _VALID_ACTIONS = {"escalate", "investigate", "suppress", "monitor"}
 
     mock_client = AsyncMock()
-    mock_client.run_query.return_value = [{"cnt": 5000}]
+    mock_client.run_query.side_effect = [
+        [{"cnt": 5000}],   # graph node count query
+        [],                # no pending alert → centroid fallback
+    ]
 
     with patch("app.routers.soc.neo4j_client", mock_client):
         content = _run(_tab3_content())
@@ -212,7 +220,14 @@ def test_tab3_has_recommendation_and_kernel_weights():
     rec = content["recommendation"]
     assert "action"     in rec, "recommendation missing 'action'"
     assert "confidence" in rec, "recommendation missing 'confidence'"
+    assert "basis"      in rec, "recommendation missing 'basis'"
     assert isinstance(rec["confidence"], float)
+    assert rec["action"] in _VALID_ACTIONS, (
+        f"action must be one of {_VALID_ACTIONS}, got: {rec['action']!r}"
+    )
+    assert rec["basis"] in ("live_scoring", "centroid_fallback"), (
+        f"basis must be live_scoring or centroid_fallback, got: {rec['basis']!r}"
+    )
 
     breakdown = content.get("factor_breakdown", [])
     assert len(breakdown) > 0, "factor_breakdown must not be empty"
