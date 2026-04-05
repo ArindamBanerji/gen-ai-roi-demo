@@ -2460,3 +2460,40 @@ async def get_frozen_categories_endpoint():
         "category_baseline": category_baseline,
         "freeze_threshold":  2.0,
     }
+
+
+# =============================================================================
+# GET /api/soc/spike-cap-status — Block 9.4 D7 spike update cap
+# =============================================================================
+
+@router.get("/soc/spike-cap-status")
+async def get_spike_cap_status_endpoint():
+    """
+    Return current spike update cap status.
+
+    spike_cap = int(1.5 × baseline_daily_mean).
+    Resets to 0 updates each cadence via reset_spike_counter().
+
+    Returns
+    -------
+    {
+      "spike_active":         bool,
+      "spike_cap":            int,
+      "updates_this_cadence": int,
+      "cap_reached":          bool,
+      "baseline_daily":       float
+    }
+    """
+    from app.services.gae_state import get_spike_cap_status
+    from app.services.learning_health import compute_volume_baseline
+
+    status = get_spike_cap_status()
+    baseline_daily = 0.0
+    try:
+        baseline = await compute_volume_baseline(neo4j_client)
+        baseline_daily = baseline.get("daily_mean", 0.0)
+    except Exception:
+        pass
+
+    status["baseline_daily"] = baseline_daily
+    return status

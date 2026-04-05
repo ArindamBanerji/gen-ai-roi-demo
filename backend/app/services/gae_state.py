@@ -49,6 +49,12 @@ _volume_spike_active: bool = False
 # Categories in this set have their centroid updates skipped.
 _frozen_categories: set = set()
 
+# Block 9.4 — Spike update cap (D7).
+# _spike_update_cap  = int(1.5 × baseline_daily); 0 means not set.
+# _spike_update_count = updates processed in current cadence (resets each cadence).
+_spike_update_cap:   int = 0
+_spike_update_count: int = 0
+
 _MU_ZERO_PATH = Path(__file__).parent.parent / "data" / "iks_bootstrap_soc.json"
 
 
@@ -498,6 +504,7 @@ def guarded_update(scorer, f, category_index: int, action_index: int,
       1. D3 global spike flag — skip all updates when volume spike active.
       2. D2 category freeze — skip updates for over-represented categories
          during a spike (coupled to D3; frozen_categories is empty when no spike).
+      3. D7 spike cap — skip updates once 1.5× baseline daily count is reached.
 
     Parameters
     ----------
@@ -511,7 +518,7 @@ def guarded_update(scorer, f, category_index: int, action_index: int,
 
     Returns
     -------
-    CentroidUpdate on success, None when update was frozen by either guard.
+    CentroidUpdate on success, None when update was frozen by any guard.
     """
     if _volume_spike_active:
         log.warning(
@@ -525,6 +532,13 @@ def guarded_update(scorer, f, category_index: int, action_index: int,
             "[D2] guarded_update: category '%s' frozen — skipping update "
             "(action=%d, correct=%s)",
             category_name, action_index, correct,
+        )
+        return None
+    if not increment_spike_counter():
+        log.warning(
+            "[D7] guarded_update: spike cap reached (%d) — skipping update "
+            "(category=%d/%s, action=%d)",
+            _spike_update_cap, category_index, category_name or "?", action_index,
         )
         return None
     return scorer.update(f=f, category_index=category_index,
@@ -563,3 +577,81 @@ def get_frozen_categories() -> set:
 def is_category_frozen(category: str) -> bool:
     """Return True if the given category name is currently frozen."""
     return category in _frozen_categories
+
+
+# =============================================================================
+# Block 9.4 — Spike update cap (D7, coupled to D3)
+# =============================================================================
+
+def set_spike_cap(baseline_daily: float) -> None:
+    """
+    Set the per-cadence update cap to 1.5 × baseline_daily.
+
+    Call this when a volume spike is detected, passing daily_mean from
+    compute_volume_baseline(). Cap of 0 disables D7 enforcement.
+
+    Parameters
+    ----------
+    baseline_daily : float — mean daily alert/decision count from 30-day window
+    """
+    global _spike_update_cap
+    _spike_update_cap = int(1.5 * baseline_daily)
+    log.info("[D7] Spike update cap set: %d (1.5 × %.1f)", _spike_update_cap, baseline_daily)
+
+
+def reset_spike_counter() -> None:
+    """
+    Reset the per-cadence update counter to 0.
+
+    Call at the start of each cadence (each day or scoring batch).
+    """
+    global _spike_update_count
+    _spike_update_count = 0
+    log.debug("[D7] Spike update counter reset")
+
+
+def increment_spike_counter() -> bool:
+    """
+    Increment the cadence update counter and check against the cap.
+
+    Returns True if the update is allowed; False if the cap is reached.
+    Always returns True when no spike is active or cap is not set.
+
+    Returns
+    -------
+    bool : True → proceed with update; False → skip (cap reached)
+    """
+    global _spike_update_count, _spike_update_cap
+    if not _volume_spike_active:
+        return True          # no cap outside of spike
+    if _spike_update_cap <= 0:
+        return True          # cap not configured
+    if _spike_update_count >= _spike_update_cap:
+        return False         # cap exhausted
+    _spike_update_count += 1
+    return True
+
+
+def get_spike_cap_status() -> dict:
+    """
+    Return current spike cap state for the endpoint and monitoring.
+
+    Returns
+    -------
+    dict:
+      spike_active          : bool
+      spike_cap             : int   — 0 means not set
+      updates_this_cadence  : int
+      cap_reached           : bool
+    """
+    cap_reached = (
+        _volume_spike_active
+        and _spike_update_cap > 0
+        and _spike_update_count >= _spike_update_cap
+    )
+    return {
+        "spike_active":         _volume_spike_active,
+        "spike_cap":            _spike_update_cap,
+        "updates_this_cadence": _spike_update_count,
+        "cap_reached":          cap_reached,
+    }
