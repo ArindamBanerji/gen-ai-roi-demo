@@ -2064,3 +2064,25 @@ async def get_gate_config():
 
     cfg = GateConfig(n_decisions=n_decisions, V=200.0, alpha=0.25)
     return cfg.summary()
+
+
+# =============================================================================
+# GET /api/soc/deployment-state — Block 2.2
+# =============================================================================
+
+@router.get("/soc/deployment-state")
+async def get_deployment_state():
+    """
+    Return the bootstrap centroid tensor (μ₀) stored in the DeploymentState Neo4j node.
+
+    Written at every startup by write_bootstrap_state().
+    Returns {mu, shape, stored_at, gae_version} or 404 if not yet stored.
+    """
+    from app.services.gae_state import get_bootstrap_centroids
+    result = await get_bootstrap_centroids(neo4j_client)
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="DeploymentState not found — server may not have completed startup",
+        )
+    return result

@@ -84,6 +84,14 @@ async def startup_event():
     ls = init_learning_state()
     print(f"[GAE] LearningState ready: W.shape={ls.W.shape}, step={ls.decision_count}")
 
+    # Block 2.2: Persist bootstrap μ₀ centroid tensor to DeploymentState node.
+    # Runs every startup so the centroid export endpoint always reflects current μ₀.
+    try:
+        from app.services.gae_state import write_bootstrap_state
+        await write_bootstrap_state(neo4j_client, get_profile_scorer())
+    except Exception as _ds_exc:
+        print(f"[GAE] DeploymentState write failed (non-blocking): {_ds_exc}")
+
     # CORR-3: Write bootstrap Decision nodes to Neo4j if bootstrap ran this startup.
     # Skipped (get_bootstrap_result() is None) when loading an existing checkpoint.
     _bs_result = get_bootstrap_result()

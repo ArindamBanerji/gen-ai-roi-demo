@@ -311,6 +311,84 @@ def load_centroid_backup(backup_id: str | None = None) -> dict:
     return json.loads(path.read_text())
 
 
+# =============================================================================
+# Block 2.2 — DeploymentState persistence (bootstrap μ₀ → Neo4j)
+# =============================================================================
+
+_GAE_VERSION = "0.7.20"
+
+WRITE_DEPLOYMENT_STATE = """
+MERGE (ds:DeploymentState {id: "current"})
+SET ds.bootstrap_mu           = $bootstrap_mu,
+    ds.bootstrap_shape        = $bootstrap_shape,
+    ds.bootstrap_stored_at    = $timestamp_epoch,
+    ds.gae_version            = $gae_version
+RETURN ds
+"""
+
+READ_DEPLOYMENT_STATE = """
+MATCH (ds:DeploymentState {id: "current"})
+RETURN ds.bootstrap_mu        AS bootstrap_mu,
+       ds.bootstrap_shape     AS bootstrap_shape,
+       ds.bootstrap_stored_at AS stored_at,
+       ds.gae_version         AS gae_version
+"""
+
+
+async def write_bootstrap_state(neo4j_client, scorer) -> dict:
+    """
+    Persist the current bootstrap centroid tensor (μ₀) to a
+    DeploymentState node in Neo4j.
+
+    Called at startup after ProfileScorer is attached so μ₀ survives
+    server restarts and is available to the centroid export endpoint (Block 2.3).
+
+    Returns the stored payload.
+    """
+    import time as _time
+    ts = int(_time.time() * 1000)
+    mu_list = scorer.mu.tolist()
+    shape   = list(scorer.mu.shape)
+
+    await neo4j_client.run_query(
+        WRITE_DEPLOYMENT_STATE,
+        {
+            "bootstrap_mu":    mu_list,
+            "bootstrap_shape": shape,
+            "timestamp_epoch": ts,
+            "gae_version":     _GAE_VERSION,
+        },
+    )
+    log.info("[GAE] DeploymentState written — shape=%s gae_version=%s", shape, _GAE_VERSION)
+    return {
+        "bootstrap_mu":       mu_list,
+        "bootstrap_shape":    shape,
+        "bootstrap_stored_at": ts,
+        "gae_version":        _GAE_VERSION,
+    }
+
+
+async def get_bootstrap_centroids(neo4j_client) -> dict | None:
+    """
+    Read bootstrap_centroids from the DeploymentState node.
+    Returns {mu, shape, stored_at, gae_version} or None if not set.
+    """
+    try:
+        rows = await neo4j_client.run_query(READ_DEPLOYMENT_STATE)
+        if not rows or rows[0].get("bootstrap_mu") is None:
+            return None
+        r = rows[0]
+        return {
+            "mu":         r["bootstrap_mu"],
+            "shape":      r["bootstrap_shape"],
+            "stored_at":  r["stored_at"],
+            "gae_version": r.get("gae_version", "unknown"),
+        }
+    except Exception as exc:
+        log.warning("[GAE] get_bootstrap_centroids failed: %s", exc)
+        return None
+
+
 def restore_centroid_from_backup(backup_id: str | None = None) -> dict:
     """
     Load backup, verify SHA-256, and restore mu into the live ProfileScorer.
