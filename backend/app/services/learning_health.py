@@ -278,6 +278,120 @@ def _round_comps(comps: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Block 9.2 — Spike detector (deployment-specific σ)
+# ---------------------------------------------------------------------------
+
+_VOLUME_WINDOW_DAYS = 30
+
+
+async def compute_volume_baseline(neo4j_client: Any) -> dict:
+    """
+    Compute rolling 30-day alert volume baseline from Alert nodes.
+
+    Groups alerts into daily buckets using timestamp_epoch.
+    spike_sigma comes from GateConfig — 5.0 before N_min, 3.0 after.
+
+    Returns
+    -------
+    dict:
+      daily_mean      : float  — mean daily alert count over window
+      daily_std       : float  — std of daily counts (floor=1.0)
+      spike_threshold : float  — mean + spike_sigma * std
+      spike_sigma     : float  — 5.0 (conservative) or 3.0 (calibrated)
+      window_days     : int    — 30
+      data_points     : int    — number of days with at least one alert
+    """
+    import time as _time
+    from app.domains.soc.config import GateConfig
+
+    now_epoch   = int(_time.time() * 1000)
+    cutoff_epoch = now_epoch - _VOLUME_WINDOW_DAYS * 86_400_000
+
+    daily_counts: list[float] = []
+    try:
+        rows = await neo4j_client.run_query(
+            """
+            MATCH (a:Alert)
+            WHERE a.timestamp_epoch > $cutoff_epoch
+            WITH a.timestamp_epoch / 86400000 AS day_bucket, count(a) AS daily_count
+            RETURN day_bucket, daily_count
+            ORDER BY day_bucket
+            """,
+            {"cutoff_epoch": cutoff_epoch},
+        )
+        daily_counts = [float(r.get("daily_count") or 0) for r in rows if r.get("daily_count")]
+    except Exception as exc:
+        log.warning("[D3] volume_baseline query failed: %s", exc)
+
+    daily_mean = float(np.mean(daily_counts)) if daily_counts else 0.0
+    daily_std  = float(np.std(daily_counts))  if daily_counts else 0.0
+    # Floor std at 1.0 to prevent degenerate zero-variance threshold
+    daily_std_floored = max(daily_std, 1.0)
+
+    # spike_sigma from GateConfig — uses current decision count
+    n_decisions = 0
+    try:
+        from app.services.gae_state import get_learning_state as _get_ls
+        n_decisions = _get_ls().decision_count
+    except Exception:
+        pass
+    cfg = GateConfig(n_decisions=n_decisions, V=200.0, alpha=0.25)
+    spike_sigma = cfg.spike_sigma
+
+    spike_threshold = daily_mean + spike_sigma * daily_std_floored
+
+    return {
+        "daily_mean":      round(daily_mean, 2),
+        "daily_std":       round(daily_std, 2),
+        "spike_threshold": round(spike_threshold, 2),
+        "spike_sigma":     spike_sigma,
+        "window_days":     _VOLUME_WINDOW_DAYS,
+        "data_points":     len(daily_counts),
+    }
+
+
+async def detect_volume_spike(neo4j_client: Any, today_count: int) -> dict:
+    """
+    Compare today's alert count against the 30-day baseline.
+
+    Parameters
+    ----------
+    neo4j_client : async Neo4j client
+    today_count  : int — number of alerts received so far today
+
+    Returns
+    -------
+    dict:
+      spike_detected  : bool
+      today_count     : int
+      spike_threshold : float
+      daily_mean      : float
+      daily_std       : float
+    """
+    baseline = await compute_volume_baseline(neo4j_client)
+    spike_detected = today_count > baseline["spike_threshold"]
+
+    if spike_detected:
+        log.warning(
+            "[D3] Volume spike detected: today=%d > threshold=%.1f "
+            "(mean=%.1f, std=%.1f, sigma=%.1f)",
+            today_count,
+            baseline["spike_threshold"],
+            baseline["daily_mean"],
+            baseline["daily_std"],
+            baseline["spike_sigma"],
+        )
+
+    return {
+        "spike_detected":  spike_detected,
+        "today_count":     today_count,
+        "spike_threshold": baseline["spike_threshold"],
+        "daily_mean":      baseline["daily_mean"],
+        "daily_std":       baseline["daily_std"],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Block 9.1 — Per-analyst precision computation
 # ---------------------------------------------------------------------------
 

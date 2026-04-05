@@ -2400,3 +2400,26 @@ async def get_analyst_eta_weights_endpoint():
         "n_min":       cfg.n_min,
         "analysts":    analysts,
     }
+
+
+# =============================================================================
+# GET /api/soc/volume-baseline — Block 9.2 D3 spike detector
+# =============================================================================
+
+@router.get("/soc/volume-baseline")
+async def get_volume_baseline():
+    """
+    Return 30-day alert volume baseline and current spike status.
+
+    spike_sigma = 5.0 (conservative, < N_min decisions)
+                = 3.0 (calibrated, >= N_min decisions)
+    threshold   = daily_mean + spike_sigma * max(daily_std, 1.0)
+
+    Returns compute_volume_baseline() result + spike_active flag.
+    """
+    from app.services.learning_health import compute_volume_baseline
+    from app.services.gae_state import is_volume_spike_active
+
+    baseline = await compute_volume_baseline(neo4j_client)
+    baseline["spike_active"] = is_volume_spike_active()
+    return baseline

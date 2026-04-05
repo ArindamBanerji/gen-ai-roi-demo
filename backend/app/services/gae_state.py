@@ -41,6 +41,10 @@ _bootstrap_result: Optional[BootstrapResult] = None   # CORR-3: exposed for boot
 # Keyed by analyst name; values are multiplicative weights in [0.5, 1.5].
 _analyst_eta_weights: dict = {}
 
+# Block 9.2 — Volume spike flag.
+# When True, centroid updates must be skipped for the current cadence.
+_volume_spike_active: bool = False
+
 _MU_ZERO_PATH = Path(__file__).parent.parent / "data" / "iks_bootstrap_soc.json"
 
 
@@ -455,3 +459,60 @@ def apply_analyst_eta_weights(scorer, eta_weights: dict) -> None:
 def get_analyst_eta_weights() -> dict:
     """Return the current module-level analyst η weights (may be empty dict)."""
     return dict(_analyst_eta_weights)
+
+
+# =============================================================================
+# Block 9.2 — Volume spike flag + guarded update
+# =============================================================================
+
+def set_volume_spike(active: bool) -> None:
+    """
+    Set the volume spike flag.
+
+    When active=True, callers must skip centroid updates this cadence to
+    prevent bulk-alert poisoning. Typically set by detect_volume_spike().
+    """
+    global _volume_spike_active
+    _volume_spike_active = bool(active)
+    if active:
+        log.warning("[D3] Volume spike flag SET — centroid updates frozen this cadence")
+    else:
+        log.info("[D3] Volume spike flag CLEARED — centroid updates resumed")
+
+
+def is_volume_spike_active() -> bool:
+    """Return True if a volume spike is currently active."""
+    return _volume_spike_active
+
+
+def guarded_update(scorer, f, category_index: int, action_index: int,
+                   correct: bool, **kwargs):
+    """
+    Spike-guarded wrapper around ProfileScorer.update().
+
+    Checks is_volume_spike_active() before delegating to scorer.update().
+    If a spike is active, skips the update and returns None so cadence
+    callers can detect the skip.
+
+    Parameters
+    ----------
+    scorer         : ProfileScorer — the live scorer
+    f              : np.ndarray — factor vector
+    category_index : int
+    action_index   : int
+    correct        : bool
+    **kwargs       : forwarded to scorer.update() (e.g. gt_action_index, confidence)
+
+    Returns
+    -------
+    CentroidUpdate on success, None when update was frozen by spike guard.
+    """
+    if _volume_spike_active:
+        log.warning(
+            "[D3] guarded_update: spike active — skipping centroid update "
+            "(category=%d, action=%d, correct=%s)",
+            category_index, action_index, correct,
+        )
+        return None
+    return scorer.update(f=f, category_index=category_index,
+                         action_index=action_index, correct=correct, **kwargs)
