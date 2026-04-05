@@ -487,20 +487,20 @@ def test_tab1_analyst_insight_gates_on_verified_count():
     """analyst_insight contains 'YOUR environment' only when verified_count > 0."""
     from app.routers.soc import _tab1_content
 
-    # Case A: verified_count = 50 → "YOUR environment" must appear
+    # Case A: verified_count = 150 (≥100) → "YOUR environment" must appear
     mock_with_decisions = AsyncMock()
     mock_with_decisions.run_query.side_effect = [
         [{"cnt": 120}],
         [{"cnt": 15}],
         [{"category": "credential_access", "alert_type": None, "n": 42}],
-        [{"category": "credential_access", "verified": 50, "overrides": 5}],
+        [{"category": "credential_access", "verified": 150, "overrides": 5}],
     ]
     with patch("app.routers.soc.neo4j_client", mock_with_decisions):
         content_a = _run(_tab1_content())
 
     insight_a = content_a["top_alert_types"][0]["analyst_insight"]
     assert "YOUR environment" in insight_a, (
-        f"verified_count=50 must produce 'YOUR environment' in analyst_insight, got: {insight_a!r}"
+        f"verified_count=150 must produce 'YOUR environment' in analyst_insight, got: {insight_a!r}"
     )
 
     # Case B: verified_count = 0 → "YOUR environment" must NOT appear
@@ -597,4 +597,92 @@ def test_tab5_flywheel_preactivation_reframe():
     )
     assert "+10.13pp" in note, (
         f"flywheel_activation_note must state +10.13pp, got: {note!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 14 — FIX 1 v2: Tab 1 Microsoft comparison requires ≥100 verified
+# ---------------------------------------------------------------------------
+
+def test_tab1_microsoft_only_above_threshold():
+    """Microsoft Copilot comparison appears only for categories with ≥100 verified decisions."""
+    from app.routers.soc import _tab1_content
+
+    # threat_intel_match with 12 decisions — must NOT mention Microsoft Copilot
+    mock_low = AsyncMock()
+    mock_low.run_query.side_effect = [
+        [{"cnt": 500}],
+        [{"cnt": 20}],
+        [{"category": "threat_intel_match", "alert_type": None, "n": 30}],
+        [{"category": "threat_intel_match", "verified": 12, "overrides": 1}],
+    ]
+    with patch("app.routers.soc.neo4j_client", mock_low):
+        content_low = _run(_tab1_content())
+
+    insight_low = content_low["top_alert_types"][0]["analyst_insight"]
+    assert "Microsoft Copilot" not in insight_low, (
+        f"threat_intel_match (12 decisions) must NOT mention Microsoft Copilot, got: {insight_low!r}"
+    )
+    assert "learning" in insight_low, (
+        f"Low-count insight must mention 'learning', got: {insight_low!r}"
+    )
+
+    # credential_access with 1723 decisions — must contain "YOUR environment"
+    mock_high = AsyncMock()
+    mock_high.run_query.side_effect = [
+        [{"cnt": 500}],
+        [{"cnt": 20}],
+        [{"category": "credential_access", "alert_type": None, "n": 200}],
+        [{"category": "credential_access", "verified": 1723, "overrides": 50}],
+    ]
+    with patch("app.routers.soc.neo4j_client", mock_high):
+        content_high = _run(_tab1_content())
+
+    insight_high = content_high["top_alert_types"][0]["analyst_insight"]
+    assert "YOUR environment" in insight_high, (
+        f"credential_access (1723 decisions) must contain 'YOUR environment', got: {insight_high!r}"
+    )
+    assert "Microsoft Copilot" in insight_high, (
+        f"credential_access (1723 decisions) must mention Microsoft Copilot, got: {insight_high!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 15 — FIX 2 v2: Tab 5 centroid_summary uses business language
+# ---------------------------------------------------------------------------
+
+def test_tab5_centroid_summary_business_language():
+    """centroid_summary must not contain 'centered near prior' — business translation required."""
+    from app.routers.soc import _tab5_content
+    from app.services.gae_state import init_learning_state
+
+    init_learning_state()
+
+    mock_narrative = {
+        "headline": "Test.",
+        "what_changed": {"top_shifts": []},
+        "what_discovered": {"attack_chains_detected": 0, "chain_summaries": []},
+        "what_knows": {
+            "iks_current": 65.0,
+            "categories_calibrated": 4,
+            "health_status": "GREEN",
+        },
+    }
+
+    mock_client = AsyncMock()
+    mock_client.run_query.return_value = [{"cnt": 0}]
+
+    with patch(
+        "app.services.executive_narrative.build_executive_narrative_async",
+        new=AsyncMock(return_value=mock_narrative),
+    ):
+        with patch("app.routers.soc.neo4j_client", mock_client):
+            content = _run(_tab5_content())
+
+    summary = content["what_system_knows"]["centroid_summary"]
+    assert "centered near prior" not in summary, (
+        f"centroid_summary must not contain 'centered near prior', got: {summary!r}"
+    )
+    assert "institutional" in summary or "calibrated" in summary, (
+        f"centroid_summary must use business language, got: {summary!r}"
     )
