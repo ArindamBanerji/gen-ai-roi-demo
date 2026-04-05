@@ -64,11 +64,45 @@ on April 1, 2026.
 # Dependency: datetime migration (Block 8.3) must complete first so
 # seed scripts write epoch integers, not Neo4j datetime objects.
 
+# BACKLOG-009: V-NARRATIVE-CISO P0 — Tab 1 alert_type vs category
+# Root cause: GET /api/soc/tab/1/content was reading a.type (Sentinel
+# string e.g. "Unfamiliar sign-in properties") instead of a.category
+# (internal name e.g. "credential_access"). Fixed in Fix 1.1 — query
+# now reads a.category with _SENTINEL_TO_CATEGORY fallback mapping.
+# Gate: Re-run V-NARRATIVE-CISO after Fix 1.1+1.2; confirm Tab 1 shows
+# real category names, not "unknown".
+# Priority: P0 — judge evaluation blocker.
+
+# BACKLOG-010: Add E2E test — Tab 1 content endpoint returns real category names
+# Action: Add Playwright test that hits GET /api/soc/tab/1/content and asserts
+# top_alert_types[0].type != "unknown" (requires live Neo4j with seeded data).
+# Gate: Test passes against staging environment with synthetic pilot decisions.
+# Priority: P1 — regression guard for Fix 1.1.
+
+# BACKLOG-011: Add E2E test — Tab 5 decision count glossary
+# Action: Verify that the executive narrative Tab 5 defines all three decision
+# count metrics (537/104/5200) with labels visible to the CISO-level audience.
+# Gate: V-NARRATIVE-CISO Judge B rates Tab 5 "ACHIEVED" for metrics clarity.
+# Priority: P1 — CISO readability requirement.
+
+# BACKLOG-012: Add E2E test — Tab 4 ROI methodology note visible
+# Action: Confirm GET /api/soc/tab/4/content exposes roi_methodology field
+# explaining the 0.25hr × $75 savings formula to prevent "black box" objection.
+# Gate: Methodology note rendered in frontend Tab 4 Decision Economics panel.
+# Priority: P2 — transparency / trust signal.
+
+# BACKLOG-013: Re-run V-NARRATIVE-CISO after Fix 1.1+1.2+2.1-2.10
+# Action: Execute full 3-judge V-NARRATIVE-CISO evaluation after all narrative
+# fixes land. Gate: all 5 tabs ACHIEVED by GPT-5.4 (Judge B).
+# Dependency: Fix 1.1, Fix 1.2, Blocks 2.1-2.3 (all complete as of Block 2.3).
+# Priority: P0 — pilot sign-off gate.
+
 def test_backlog_documented():
     """Placeholder — confirms backlog file is present and parseable."""
     issues = [
         "BACKLOG-001", "BACKLOG-002", "BACKLOG-003",
         "BACKLOG-004", "BACKLOG-005", "BACKLOG-006", "BACKLOG-007",
-        "BACKLOG-008"
+        "BACKLOG-008", "BACKLOG-009", "BACKLOG-010", "BACKLOG-011",
+        "BACKLOG-012", "BACKLOG-013",
     ]
-    assert len(issues) == 8
+    assert len(issues) == 13

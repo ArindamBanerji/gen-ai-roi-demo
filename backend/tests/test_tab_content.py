@@ -22,15 +22,20 @@ client = TestClient(app)
 # ---------------------------------------------------------------------------
 
 def _neo4j_tab1_mock():
-    """Mock neo4j_client.run_query for Tab 1 queries (alert_count, pending, types)."""
+    """Mock neo4j_client.run_query for Tab 1 queries."""
     mock = AsyncMock()
     mock.run_query.side_effect = [
-        [{"cnt": 120}],                                         # alert_count
-        [{"cnt": 15}],                                          # pending_count
-        [                                                       # top_alert_types
-            {"type": "brute_force", "n": 42},
-            {"type": "phishing",    "n": 35},
-            {"type": "malware",     "n": 20},
+        [{"cnt": 120}],                                          # alert_count
+        [{"cnt": 15}],                                           # pending_count
+        [                                                        # top_alert_types (Fix 1.1)
+            {"category": "brute_force", "alert_type": None, "n": 42},
+            {"category": "phishing",    "alert_type": None, "n": 35},
+            {"category": "malware",     "alert_type": None, "n": 20},
+        ],
+        [                                                        # per-category verified (Fix 1.2)
+            {"category": "brute_force", "verified": 50,  "overrides": 5},
+            {"category": "phishing",    "verified": 30,  "overrides": 3},
+            {"category": "malware",     "verified": 120, "overrides": 10},
         ],
     ]
     return mock
@@ -58,8 +63,14 @@ def test_tab1_returns_content():
     assert content["alert_count"]   == 120
     assert content["pending_count"] == 15
     assert len(content["top_alert_types"]) == 3
-    assert content["top_alert_types"][0]["type"] == "brute_force"
-    assert content["top_alert_types"][0]["count"] == 42
+    first = content["top_alert_types"][0]
+    assert first["type"]  == "brute_force"
+    assert first["count"] == 42
+    # Fix 1.2 fields
+    assert "learning_signal"  in first, "Missing learning_signal"
+    assert "analyst_insight"  in first, "Missing analyst_insight"
+    assert "brute force" in first["learning_signal"]
+    assert "brute force" in first["analyst_insight"]
 
 
 # ---------------------------------------------------------------------------

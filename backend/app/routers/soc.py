@@ -2079,9 +2079,35 @@ _TAB_NAMES = {
 }
 
 
+# Fix 1.1 — Sentinel alert_type → internal category mapping.
+# a.type holds the raw Sentinel string; a.category holds the canonical name.
+# This mapping is the fallback when a.category is absent on older Alert nodes.
+_SENTINEL_TO_CATEGORY = {
+    "Unfamiliar sign-in properties":                 "credential_access",
+    "Lateral movement involving one account":         "lateral_movement",
+    "Mass download of files from SharePoint":         "data_exfiltration",
+    "Suspicious PowerShell activity":                 "malware_execution",
+    "Sensitive data access outside working hours":    "insider_threat",
+    "New admin role assigned":                        "cloud_infrastructure",
+}
+
+
+def _resolve_category(row: dict) -> str:
+    """Return internal category name, preferring a.category over a.type fallback."""
+    cat = row.get("category")
+    if cat:
+        return cat
+    raw_type = row.get("alert_type") or row.get("type") or ""
+    return _SENTINEL_TO_CATEGORY.get(raw_type, "unknown")
+
+
 async def _tab1_content() -> dict:
-    """Tab 1 — Alert Triage: alert_count, top_alert_types, pending_count."""
-    alert_count  = 0
+    """Tab 1 — Alert Triage: alert_count, top_alert_types, pending_count.
+
+    Fix 1.1: reads a.category (internal canonical name) with Sentinel fallback.
+    Fix 1.2: adds learning_signal + analyst_insight per top alert type.
+    """
+    alert_count   = 0
     pending_count = 0
     top_alert_types: list = []
 
@@ -2102,17 +2128,69 @@ async def _tab1_content() -> dict:
     except Exception:
         pass
 
+    # Fix 1.1: read a.category AND a.type so we can resolve internal names
+    raw_top: list = []
     try:
         rows = await neo4j_client.run_query(
-            "MATCH (a:Alert) RETURN a.type AS type, count(a) AS n "
+            "MATCH (a:Alert) "
+            "RETURN a.category AS category, a.type AS alert_type, count(a) AS n "
             "ORDER BY n DESC LIMIT 3", {}
         )
-        top_alert_types = [
-            {"type": r.get("type") or "unknown", "count": int(r.get("n") or 0)}
-            for r in rows
-        ]
+        raw_top = rows
     except Exception:
         pass
+
+    # Fix 1.2: fetch per-category verified decisions + override counts in one query
+    top_categories = [_resolve_category(r) for r in raw_top]
+    verified_map: dict = {}   # category → {"verified": int, "overrides": int}
+    if top_categories:
+        try:
+            rows = await neo4j_client.run_query(
+                """
+                MATCH (d:Decision)
+                WHERE d.category IN $cats AND d.verified_at_epoch IS NOT NULL
+                RETURN d.category AS category,
+                       count(d) AS verified,
+                       sum(CASE WHEN d.correct = false THEN 1 ELSE 0 END) AS overrides
+                """,
+                {"cats": top_categories},
+            )
+            for r in rows:
+                cat = r.get("category")
+                if cat:
+                    verified_map[cat] = {
+                        "verified":  int(r.get("verified")  or 0),
+                        "overrides": int(r.get("overrides") or 0),
+                    }
+        except Exception:
+            pass
+
+    for r in raw_top:
+        category = _resolve_category(r)
+        count    = int(r.get("n") or 0)
+
+        stats           = verified_map.get(category, {"verified": 0, "overrides": 0})
+        verified_count  = stats["verified"]
+        override_count  = stats["overrides"]
+        override_rate   = round(
+            (override_count / verified_count * 100) if verified_count > 0 else 0.0, 1
+        )
+        calibration_status = "calibrated" if verified_count >= 100 else "learning"
+
+        top_alert_types.append({
+            "type":  category,
+            "count": count,
+            # Fix 1.2: learning signal fields
+            "learning_signal": (
+                f"Analysts override AI on {category.replace('_', ' ')} "
+                f"{override_rate}% of the time — review carefully."
+            ),
+            "analyst_insight": (
+                f"Your team has verified {verified_count} "
+                f"{category.replace('_', ' ')} decisions. "
+                f"System confidence: {calibration_status}."
+            ),
+        })
 
     return {
         "alert_count":     alert_count,
