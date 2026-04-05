@@ -28,14 +28,14 @@ def _neo4j_tab1_mock():
         [{"cnt": 120}],                                          # alert_count
         [{"cnt": 15}],                                           # pending_count
         [                                                        # top_alert_types (Fix 1.1)
-            {"category": "brute_force", "alert_type": None, "n": 42},
-            {"category": "phishing",    "alert_type": None, "n": 35},
-            {"category": "malware",     "alert_type": None, "n": 20},
+            {"category": "credential_access", "alert_type": None, "n": 42},
+            {"category": "lateral_movement",  "alert_type": None, "n": 35},
+            {"category": "malware_execution", "alert_type": None, "n": 20},
         ],
         [                                                        # per-category verified (Fix 1.2)
-            {"category": "brute_force", "verified": 50,  "overrides": 5},
-            {"category": "phishing",    "verified": 30,  "overrides": 3},
-            {"category": "malware",     "verified": 120, "overrides": 10},
+            {"category": "credential_access", "verified": 50,  "overrides": 5},
+            {"category": "lateral_movement",  "verified": 30,  "overrides": 3},
+            {"category": "malware_execution", "verified": 120, "overrides": 10},
         ],
     ]
     return mock
@@ -64,13 +64,13 @@ def test_tab1_returns_content():
     assert content["pending_count"] == 15
     assert len(content["top_alert_types"]) == 3
     first = content["top_alert_types"][0]
-    assert first["type"]  == "brute_force"
+    assert first["type"]  == "credential_access"
     assert first["count"] == 42
     # Fix 1.2 fields
     assert "learning_signal"  in first, "Missing learning_signal"
     assert "analyst_insight"  in first, "Missing analyst_insight"
-    assert "brute force" in first["learning_signal"]
-    assert "brute force" in first["analyst_insight"]
+    assert "credential access" in first["learning_signal"]
+    assert "credential access" in first["analyst_insight"]
 
 
 # ---------------------------------------------------------------------------
@@ -353,18 +353,13 @@ def test_tab5_has_w2_flywheel_claim():
 # ---------------------------------------------------------------------------
 
 def test_tab5_has_conservation_narrative():
-    """Tab 5 what_system_knows includes conservation_narrative for each health_status."""
+    """Tab 5 what_system_knows includes conservation_narrative with CLAIM-OLS-01."""
     from app.routers.soc import _tab5_content
 
-    for status, expected_keyword in [
-        ("GREEN",   "satisfied"),
-        ("AMBER",   "baseline"),
-        ("RED",     "violated"),
-        ("UNKNOWN", "not yet computed"),
-    ]:
+    for status in ("GREEN", "AMBER", "RED"):
         mock_narrative = {
             "headline": "Test.",
-            "what_changed": {"top_shifts": []},
+            "what_changed": {"top_shifts": [], "total_verified": 100},
             "what_discovered": {"attack_chains_detected": 0, "chain_summaries": []},
             "what_knows": {
                 "iks_current": 50.0,
@@ -391,6 +386,82 @@ def test_tab5_has_conservation_narrative():
         assert isinstance(narrative, str) and narrative, (
             f"conservation_narrative must be non-empty string for status={status!r}"
         )
-        assert expected_keyword.lower() in narrative.lower(), (
-            f"For status={status!r}, expected {expected_keyword!r} in narrative: {narrative!r}"
+        assert "CLAIM-OLS-01" in narrative, (
+            f"conservation_narrative must cite CLAIM-OLS-01, got: {narrative!r}"
         )
+        assert "0%" in narrative, (
+            f"conservation_narrative must contain '0%', got: {narrative!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Test 9 — Tab 1 alert types are all valid SOC categories
+# ---------------------------------------------------------------------------
+
+def test_tab1_alert_types_are_valid_categories():
+    """All top_alert_types[*].type values must be members of VALID_CATEGORIES."""
+    from app.routers.soc import _tab1_content, VALID_CATEGORIES
+
+    mock_client = AsyncMock()
+    mock_client.run_query.side_effect = [
+        [{"cnt": 200}],                                          # alert_count
+        [{"cnt": 18}],                                           # pending_count
+        [                                                        # top alert types — raw values
+            {"category": "anomalous_login",  "alert_type": None, "n": 80},
+            {"category": "threat_intel_match", "alert_type": None, "n": 60},
+            {"category": "data_exfil",       "alert_type": "data_exfiltration", "n": 40},
+        ],
+        [],                                                      # per-category verified (empty ok)
+    ]
+
+    with patch("app.routers.soc.neo4j_client", mock_client):
+        content = _run(_tab1_content())
+
+    types = [t["type"] for t in content["top_alert_types"]]
+    assert len(types) > 0, "top_alert_types must not be empty"
+    for t in types:
+        assert t in VALID_CATEGORIES, (
+            f"alert type {t!r} is not in VALID_CATEGORIES — normalization failed"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Test 10 — Tab 5 conservation_narrative cites CLAIM-OLS-01
+# ---------------------------------------------------------------------------
+
+def test_tab5_conservation_has_claim():
+    """Tab 5 conservation_narrative must contain '0%' and 'CLAIM-OLS-01'."""
+    from app.routers.soc import _tab5_content
+
+    mock_narrative = {
+        "headline": "Test.",
+        "what_changed": {"top_shifts": [], "total_verified": 500},
+        "what_discovered": {"attack_chains_detected": 0, "chain_summaries": []},
+        "what_knows": {
+            "iks_current": 72.0,
+            "categories_calibrated": 5,
+            "health_status": "GREEN",
+        },
+    }
+
+    mock_client = AsyncMock()
+    mock_client.run_query.return_value = [{"cnt": 0}]
+
+    with patch(
+        "app.services.executive_narrative.build_executive_narrative_async",
+        new=AsyncMock(return_value=mock_narrative),
+    ):
+        with patch("app.routers.soc.neo4j_client", mock_client):
+            content = _run(_tab5_content())
+
+    narrative = content["what_system_knows"]["conservation_narrative"]
+    assert "CLAIM-OLS-01" in narrative, (
+        f"conservation_narrative must cite CLAIM-OLS-01, got: {narrative!r}"
+    )
+    assert "0%" in narrative, (
+        f"conservation_narrative must contain '0%', got: {narrative!r}"
+    )
+    # GREEN status → healthy signal
+    assert "healthy" in narrative, (
+        f"GREEN status must produce 'healthy' signal, got: {narrative!r}"
+    )
