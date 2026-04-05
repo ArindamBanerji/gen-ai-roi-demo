@@ -151,3 +151,211 @@ def test_invalid_tab_returns_404():
         assert "1-5" in detail or str(invalid_n) in detail, (
             f"404 detail should reference valid range, got: {detail!r}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Block 11.2 — Test 4: Tab 2 has decision_count_glossary (FIX 2.1)
+# ---------------------------------------------------------------------------
+
+def test_tab2_has_decision_glossary():
+    """Tab 2 content includes decision_count_glossary with three keys."""
+    from app.routers.soc import _tab2_content
+
+    mock_iks = {
+        "iks_v2": 71.0,
+        "interpretation": "Calibrated — model has sufficient training signal",
+        "components": {"trust_coverage": 50.0},
+        "total_decisions": 537,
+    }
+
+    mock_client = AsyncMock()
+    mock_client.run_query.return_value = [{"cnt": 12}]
+
+    with patch("app.services.iks.compute_iks_v2", new=AsyncMock(return_value=mock_iks)):
+        with patch("app.routers.soc.neo4j_client", mock_client):
+            content = _run(_tab2_content())
+
+    assert "decision_count_glossary" in content, "Missing decision_count_glossary"
+    glossary = content["decision_count_glossary"]
+    assert "verified_decisions"       in glossary, "Missing verified_decisions key"
+    assert "switching_cost_threshold" in glossary, "Missing switching_cost_threshold key"
+    assert "override_examples"        in glossary, "Missing override_examples key"
+    # All three values must be non-empty strings
+    for key, val in glossary.items():
+        assert isinstance(val, str) and val, f"Glossary[{key!r}] must be a non-empty string"
+
+    assert "drift_alert_summary"    in content, "Missing drift_alert_summary (FIX 2.2)"
+    assert "trust_coverage_summary" in content, "Missing trust_coverage_summary (FIX 2.3)"
+
+
+# ---------------------------------------------------------------------------
+# Block 11.2 — Test 5: Tab 3 has recommendation and kernel weights (FIX 2.4)
+# ---------------------------------------------------------------------------
+
+def test_tab3_has_recommendation_and_kernel_weights():
+    """Tab 3 content includes recommendation, kernel_note, and factor_breakdown with weights."""
+    from app.routers.soc import _tab3_content
+
+    mock_client = AsyncMock()
+    mock_client.run_query.return_value = [{"cnt": 5000}]
+
+    with patch("app.routers.soc.neo4j_client", mock_client):
+        content = _run(_tab3_content())
+
+    assert "recommendation" in content, "Missing recommendation (FIX 2.4)"
+    assert "kernel_note"    in content, "Missing kernel_note (FIX 2.4)"
+    assert "graph_context"  in content, "Missing graph_context (FIX 2.5)"
+
+    rec = content["recommendation"]
+    assert "action"     in rec, "recommendation missing 'action'"
+    assert "confidence" in rec, "recommendation missing 'confidence'"
+    assert isinstance(rec["confidence"], float)
+
+    breakdown = content.get("factor_breakdown", [])
+    assert len(breakdown) > 0, "factor_breakdown must not be empty"
+    for item in breakdown:
+        assert "sigma"          in item, f"factor_breakdown item missing 'sigma': {item}"
+        assert "kernel_weight"  in item, f"factor_breakdown item missing 'kernel_weight': {item}"
+        assert "interpretation" in item, f"factor_breakdown item missing 'interpretation': {item}"
+        assert 0.0 <= item["kernel_weight"] <= 1.0, (
+            f"kernel_weight out of [0,1]: {item['kernel_weight']}"
+        )
+
+    # threat_intel_enrichment must have the highest kernel weight (σ=0.07)
+    weights = {item["name"]: item["kernel_weight"] for item in breakdown}
+    if "threat_intel_enrichment" in weights:
+        assert weights["threat_intel_enrichment"] == max(weights.values()), (
+            "threat_intel_enrichment (σ=0.07) must have the highest kernel weight"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Block 11.2 — Test 6: Tab 4 has ROI methodology note (FIX 2.6) and switching cost (FIX 2.7)
+# ---------------------------------------------------------------------------
+
+def test_tab4_has_roi_methodology():
+    """Tab 4 content includes roi_methodology and switching_cost_dollars."""
+    from app.routers.soc import _tab4_content
+
+    mock_client = AsyncMock()
+    mock_client.run_query.side_effect = [
+        [{"t_min": 1_700_000_000_000, "t_max": 1_700_086_400_000, "n": 200}],  # decisions
+        [{"cnt": 180}],  # evolution events (correct decisions)
+    ]
+
+    with patch("app.routers.soc.neo4j_client", mock_client):
+        content = _run(_tab4_content())
+
+    assert "roi_methodology"        in content, "Missing roi_methodology (FIX 2.6)"
+    assert "switching_cost_dollars" in content, "Missing switching_cost_dollars (FIX 2.7)"
+
+    meth = content["roi_methodology"]
+    assert meth["baseline_min_per_alert"] == 44, "Baseline must be 44 min/alert"
+    assert meth["system_min_per_alert"]   == 13, "System must be 13 min/alert"
+    assert "source" in meth and meth["source"], "Missing source attribution"
+
+    sw = content["switching_cost_dollars"]
+    assert "cost_usd"               in sw, "Missing cost_usd"
+    assert "analyst_days_to_rebuild" in sw, "Missing analyst_days_to_rebuild"
+    assert "narrative"              in sw and sw["narrative"], "Missing switching cost narrative"
+    assert sw["cost_usd"] > 0, "Switching cost must be positive"
+
+
+# ---------------------------------------------------------------------------
+# Block 11.2 — Test 7: Tab 5 has w2_flywheel claim (FIX 2.8)
+# ---------------------------------------------------------------------------
+
+def test_tab5_has_w2_flywheel_claim():
+    """Tab 5 what_system_knows includes w2_flywheel string."""
+    from app.routers.soc import _tab5_content
+
+    mock_narrative = {
+        "headline": "System processed 500 alerts.",
+        "what_changed": {
+            "top_shifts": [
+                {"label": "lateral_movement/escalate", "magnitude": 0.35,
+                 "description": "lateral_movement/escalate: 28 decisions."},
+            ],
+        },
+        "what_discovered": {
+            "attack_chains_detected": 2,
+            "chain_summaries": ["Campaign A"],
+        },
+        "what_knows": {
+            "iks_current": 71.0,
+            "categories_calibrated": 5,
+            "health_status": "GREEN",
+        },
+    }
+
+    # Mock: 50 evolution edges → flywheel active
+    mock_client = AsyncMock()
+    mock_client.run_query.return_value = [{"n": 50}]
+
+    with patch(
+        "app.services.executive_narrative.build_executive_narrative_async",
+        new=AsyncMock(return_value=mock_narrative),
+    ):
+        with patch("app.routers.soc.neo4j_client", mock_client):
+            content = _run(_tab5_content())
+
+    wsk = content["what_system_knows"]
+    assert "w2_flywheel" in wsk, "Missing w2_flywheel in what_system_knows (FIX 2.8)"
+    assert isinstance(wsk["w2_flywheel"], str) and wsk["w2_flywheel"], (
+        "w2_flywheel must be a non-empty string"
+    )
+    # With 50 edges, flywheel should be active
+    assert "50" in wsk["w2_flywheel"] or "flywheel" in wsk["w2_flywheel"].lower(), (
+        "w2_flywheel string should reference edge count or flywheel"
+    )
+
+    assert "centroid_summary" in wsk, "Missing centroid_summary (FIX 2.9)"
+    assert isinstance(wsk["centroid_summary"], str) and wsk["centroid_summary"]
+
+
+# ---------------------------------------------------------------------------
+# Block 11.2 — Test 8: Tab 5 has conservation_narrative (FIX 2.10)
+# ---------------------------------------------------------------------------
+
+def test_tab5_has_conservation_narrative():
+    """Tab 5 what_system_knows includes conservation_narrative for each health_status."""
+    from app.routers.soc import _tab5_content
+
+    for status, expected_keyword in [
+        ("GREEN",   "satisfied"),
+        ("AMBER",   "baseline"),
+        ("RED",     "violated"),
+        ("UNKNOWN", "not yet computed"),
+    ]:
+        mock_narrative = {
+            "headline": "Test.",
+            "what_changed": {"top_shifts": []},
+            "what_discovered": {"attack_chains_detected": 0, "chain_summaries": []},
+            "what_knows": {
+                "iks_current": 50.0,
+                "categories_calibrated": 3,
+                "health_status": status,
+            },
+        }
+
+        mock_client = AsyncMock()
+        mock_client.run_query.return_value = [{"n": 0}]
+
+        with patch(
+            "app.services.executive_narrative.build_executive_narrative_async",
+            new=AsyncMock(return_value=mock_narrative),
+        ):
+            with patch("app.routers.soc.neo4j_client", mock_client):
+                content = _run(_tab5_content())
+
+        wsk = content["what_system_knows"]
+        assert "conservation_narrative" in wsk, (
+            f"Missing conservation_narrative for health_status={status!r}"
+        )
+        narrative = wsk["conservation_narrative"]
+        assert isinstance(narrative, str) and narrative, (
+            f"conservation_narrative must be non-empty string for status={status!r}"
+        )
+        assert expected_keyword.lower() in narrative.lower(), (
+            f"For status={status!r}, expected {expected_keyword!r} in narrative: {narrative!r}"
+        )
