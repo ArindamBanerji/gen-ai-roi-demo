@@ -67,9 +67,9 @@ else:
     print("[SANITY] Tab 4 ROI methodology: WARNING — missing")
     warnings += 1
 
-# Tab 5: w2_flywheel present
+# Tab 5: flywheel_claim present
 w2 = tabs.get("tab_5",{}).get("content",{}).get(
-    "what_system_knows",{}).get("w2_flywheel","")
+    "what_system_knows",{}).get("flywheel_claim","")
 if w2:
     print("[SANITY] Tab 5 W2 flywheel: PASS")
 else:

@@ -115,11 +115,14 @@ def test_tab5_returns_narrative_fields():
         "pdf_available": True,
     }
 
+    mock_client_t2 = AsyncMock()
+    mock_client_t2.run_query.return_value = [{"cnt": 0}]
+
     with patch(
         "app.services.executive_narrative.build_executive_narrative_async",
         new=AsyncMock(return_value=mock_narrative),
     ):
-        with patch("app.routers.soc.neo4j_client", AsyncMock()):
+        with patch("app.routers.soc.neo4j_client", mock_client_t2):
             content = _run(_tab5_content())
 
     assert "headline" in content,          "Missing headline"
@@ -266,7 +269,7 @@ def test_tab4_has_roi_methodology():
 # ---------------------------------------------------------------------------
 
 def test_tab5_has_w2_flywheel_claim():
-    """Tab 5 what_system_knows includes w2_flywheel string."""
+    """Tab 5 what_system_knows includes structured flywheel fields (FIX 2.8)."""
     from app.routers.soc import _tab5_content
 
     mock_narrative = {
@@ -288,9 +291,9 @@ def test_tab5_has_w2_flywheel_claim():
         },
     }
 
-    # Mock: 50 evolution edges → flywheel active
+    # Case A: 50 edges → flywheel active
     mock_client = AsyncMock()
-    mock_client.run_query.return_value = [{"n": 50}]
+    mock_client.run_query.return_value = [{"cnt": 50}]
 
     with patch(
         "app.services.executive_narrative.build_executive_narrative_async",
@@ -300,14 +303,31 @@ def test_tab5_has_w2_flywheel_claim():
             content = _run(_tab5_content())
 
     wsk = content["what_system_knows"]
-    assert "w2_flywheel" in wsk, "Missing w2_flywheel in what_system_knows (FIX 2.8)"
-    assert isinstance(wsk["w2_flywheel"], str) and wsk["w2_flywheel"], (
-        "w2_flywheel must be a non-empty string"
-    )
-    # With 50 edges, flywheel should be active
-    assert "50" in wsk["w2_flywheel"] or "flywheel" in wsk["w2_flywheel"].lower(), (
-        "w2_flywheel string should reference edge count or flywheel"
-    )
+    assert "flywheel_claim"      in wsk, "Missing flywheel_claim (FIX 2.8)"
+    assert "flywheel_message"    in wsk, "Missing flywheel_message (FIX 2.8)"
+    assert "flywheel_status"     in wsk, "Missing flywheel_status (FIX 2.8)"
+    assert "flywheel_edge_count" in wsk, "Missing flywheel_edge_count (FIX 2.8)"
+
+    assert "+10.13pp" in wsk["flywheel_claim"], "flywheel_claim must contain validated stat"
+    assert wsk["flywheel_status"]     == "active", "50 edges → status must be 'active'"
+    assert wsk["flywheel_edge_count"] == 50,        "edge count must match mock"
+    assert "50" in wsk["flywheel_message"],          "flywheel_message must reference edge count"
+
+    # Case B: 0 edges → pre_activation
+    mock_client_cold = AsyncMock()
+    mock_client_cold.run_query.return_value = [{"cnt": 0}]
+
+    with patch(
+        "app.services.executive_narrative.build_executive_narrative_async",
+        new=AsyncMock(return_value=mock_narrative),
+    ):
+        with patch("app.routers.soc.neo4j_client", mock_client_cold):
+            content_cold = _run(_tab5_content())
+
+    wsk_cold = content_cold["what_system_knows"]
+    assert wsk_cold["flywheel_status"]     == "pre_activation", "0 edges → pre_activation"
+    assert wsk_cold["flywheel_edge_count"] == 0
+    assert "+10.13pp" in wsk_cold["flywheel_claim"]
 
     assert "centroid_summary" in wsk, "Missing centroid_summary (FIX 2.9)"
     assert isinstance(wsk["centroid_summary"], str) and wsk["centroid_summary"]
@@ -339,7 +359,7 @@ def test_tab5_has_conservation_narrative():
         }
 
         mock_client = AsyncMock()
-        mock_client.run_query.return_value = [{"n": 0}]
+        mock_client.run_query.return_value = [{"cnt": 0}]
 
         with patch(
             "app.services.executive_narrative.build_executive_narrative_async",

@@ -2459,30 +2459,44 @@ async def _tab5_content() -> dict:
     what_discovered_raw = narr.get("what_discovered", {})
     what_knows_raw      = narr.get("what_knows", {})
 
-    # FIX 2.8 — W2 flywheel claim: human-readable string for CISO audience
-    evolution_edges = 0
+    # FIX 2.8 — W2 flywheel: structured fields for CISO audience
+    flywheel_edge_count = 0
     try:
         rows = await neo4j_client.run_query(
-            "MATCH ()-[r:TRIGGERED_EVOLUTION]->() RETURN count(r) AS n", {}
+            "MATCH ()-[r:TRIGGERED_EVOLUTION]->() RETURN count(r) AS cnt", {}
         )
-        evolution_edges = int((rows[0].get("n") or 0) if rows else 0)
+        flywheel_edge_count = int((rows[0].get("cnt") or 0) if rows else 0)
     except Exception:
         pass
 
-    if evolution_edges >= 10:
-        w2_flywheel = (
-            f"W2 flywheel active: {evolution_edges:,} pattern-history edges accumulated. "
-            "Each verified decision compounds future scoring — this institutional knowledge "
-            "cannot be replicated by a competing system starting from Day 1."
+    flywheel_claim = "+10.13pp accuracy on pattern-matched alerts (validated, p=0.0002, N=30)"
+
+    if flywheel_edge_count == 0:
+        flywheel_status = "pre_activation"
+        flywheel_message = (
+            "Every verified analyst decision you make today creates a "
+            "pattern edge in the institutional knowledge graph. When a "
+            "future alert matches a prior verified pattern, the system "
+            "routes with +10.13pp higher accuracy (validated, p=0.0002, "
+            "N=30).\n\n"
+            "Current state: 0 pattern edges — flywheel activates as "
+            "decisions accumulate.\n"
+            "Validated claim: unconditional across SOC and S2P domains."
         )
     else:
-        w2_flywheel = (
-            "W2 flywheel in cold-start: pattern-history edges still accumulating. "
-            "Flywheel effect will activate after 10+ decisions are verified."
+        flywheel_status = "active"
+        flywheel_message = (
+            f"W2 flywheel active: {flywheel_edge_count:,} pattern edges in institutional "
+            f"knowledge graph. Alerts matching prior verified patterns "
+            f"route with +10.13pp higher accuracy (validated, p=0.0002, "
+            f"N=30)."
         )
 
     # FIX 2.9 — Centroid summary: human-readable string instead of raw magnitude
-    scorer = get_profile_scorer()
+    try:
+        scorer = get_profile_scorer()
+    except Exception:
+        scorer = None
     mu = scorer.mu if scorer is not None else None
     if mu is not None:
         shape = list(mu.shape)
@@ -2538,7 +2552,10 @@ async def _tab5_content() -> dict:
             "iks":                    what_knows_raw.get("iks_current", 0.0),
             "categories_calibrated":  what_knows_raw.get("categories_calibrated", 0),
             "health_status":          health_status,
-            "w2_flywheel":            w2_flywheel,            # FIX 2.8
+            "flywheel_message":       flywheel_message,        # FIX 2.8
+            "flywheel_edge_count":    flywheel_edge_count,     # FIX 2.8
+            "flywheel_status":        flywheel_status,         # FIX 2.8
+            "flywheel_claim":         flywheel_claim,          # FIX 2.8
             "centroid_summary":       centroid_summary,        # FIX 2.9
             "conservation_narrative": conservation_narrative,  # FIX 2.10
         },
