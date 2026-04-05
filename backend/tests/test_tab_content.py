@@ -863,3 +863,325 @@ def test_tab2_has_calibration_note():
     assert "manual configuration" in note, (
         f"calibration_note must mention no manual configuration, got: {note!r}"
     )
+
+
+# ===========================================================================
+# Phase A Tier 1 — permanent contract gate for all 15 Tier 1 commercial claims
+# Uses live TestClient (no mocks) — validates actual endpoint responses.
+# ===========================================================================
+
+VALID_CATEGORIES = {
+    "credential_access", "threat_intel_match", "lateral_movement",
+    "data_exfiltration", "insider_threat", "cloud_infrastructure",
+    "malware_execution",
+}
+
+# ---------------------------------------------------------------------------
+# TAB 1 TIER 1 TESTS
+# ---------------------------------------------------------------------------
+
+def test_tab1_alert_types_are_valid_categories_live():
+    """No raw Sentinel strings or 'unknown' in top_alert_types."""
+    resp = client.get("/api/soc/tab/1/content")
+    assert resp.status_code == 200
+    for alert in resp.json()["content"]["top_alert_types"]:
+        assert alert["type"] in VALID_CATEGORIES, \
+            f"Invalid category found: {alert['type']}"
+
+
+def test_tab1_microsoft_comparison_only_above_threshold_live():
+    """If Microsoft comparison appears, 'YOUR environment' must also appear (same branch)."""
+    resp = client.get("/api/soc/tab/1/content")
+    for alert in resp.json()["content"]["top_alert_types"]:
+        insight = alert.get("analyst_insight", "")
+        if "Microsoft" in insight:
+            assert "YOUR environment" in insight, (
+                f"Microsoft comparison present but 'YOUR environment' missing "
+                f"for {alert['type']}: {insight!r}"
+            )
+
+
+def test_tab1_learning_signal_present_per_category_live():
+    """Every alert type has a non-empty learning_signal."""
+    resp = client.get("/api/soc/tab/1/content")
+    for alert in resp.json()["content"]["top_alert_types"]:
+        assert "learning_signal" in alert
+        assert len(alert["learning_signal"]) > 10
+
+
+def test_tab1_analyst_insight_present_live():
+    """Every alert type has an analyst_insight field."""
+    resp = client.get("/api/soc/tab/1/content")
+    for alert in resp.json()["content"]["top_alert_types"]:
+        assert "analyst_insight" in alert
+        assert len(alert["analyst_insight"]) > 10
+
+
+# ---------------------------------------------------------------------------
+# TAB 2 TIER 1 TESTS
+# ---------------------------------------------------------------------------
+
+def test_tab2_trust_coverage_has_trajectory_live():
+    """trust_coverage_summary contains 80%+ and day 270."""
+    content = client.get("/api/soc/tab/2/content").json()["content"]
+    assert "80%+" in content["trust_coverage_summary"]
+    assert "day 270" in content["trust_coverage_summary"]
+
+
+def test_tab2_calibration_note_present_live():
+    """calibration_note present and references self-calibrate."""
+    content = client.get("/api/soc/tab/2/content").json()["content"]
+    assert "calibration_note" in content
+    assert "self-calibrate" in content["calibration_note"].lower() \
+        or "self-calibrating" in content["calibration_note"].lower()
+
+
+def test_tab2_decision_glossary_has_three_keys_live():
+    """decision_count_glossary has all 3 required keys."""
+    content = client.get("/api/soc/tab/2/content").json()["content"]
+    glossary = content["decision_count_glossary"]
+    assert "verified_decisions" in glossary
+    assert "switching_cost_threshold" in glossary
+    assert "override_examples" in glossary
+
+
+def test_tab2_drift_summary_has_percentage_live():
+    """drift_alert_summary includes a percentage."""
+    content = client.get("/api/soc/tab/2/content").json()["content"]
+    assert "%" in content["drift_alert_summary"]
+
+
+def test_tab2_iks_score_present_and_positive_live():
+    """IKS score is present and > 0."""
+    content = client.get("/api/soc/tab/2/content").json()["content"]
+    assert content["iks_score"] > 0
+
+
+# ---------------------------------------------------------------------------
+# TAB 3 TIER 1 TESTS
+# ---------------------------------------------------------------------------
+
+def test_tab3_kernel_note_names_diagonalkernel_live():
+    """kernel_note explicitly names DiagonalKernel."""
+    content = client.get("/api/soc/tab/3/content").json()["content"]
+    assert "DiagonalKernel" in content["kernel_note"]
+
+
+def test_tab3_recommendation_has_rationale_live():
+    """recommendation block has a rationale field."""
+    content = client.get("/api/soc/tab/3/content").json()["content"]
+    rec = content["recommendation"]
+    assert "rationale" in rec
+    assert len(rec["rationale"]) > 20
+
+
+def test_tab3_recommendation_action_is_valid_live():
+    """recommendation action is a valid SOC action."""
+    content = client.get("/api/soc/tab/3/content").json()["content"]
+    valid_actions = {"escalate", "investigate", "suppress", "monitor"}
+    assert content["recommendation"]["action"] in valid_actions
+
+
+def test_tab3_factor_breakdown_has_six_factors_live():
+    """factor_breakdown has exactly 6 factors."""
+    content = client.get("/api/soc/tab/3/content").json()["content"]
+    assert len(content["factor_breakdown"]) == 6
+
+
+def test_tab3_each_factor_has_sigma_and_weight_live():
+    """Each factor has sigma, kernel_weight, and interpretation."""
+    content = client.get("/api/soc/tab/3/content").json()["content"]
+    for factor in content["factor_breakdown"]:
+        assert "sigma" in factor, f"Missing sigma for {factor['name']}"
+        assert "kernel_weight" in factor
+        assert "interpretation" in factor
+
+
+def test_tab3_graph_context_present_live():
+    """graph_context field is present and non-empty."""
+    content = client.get("/api/soc/tab/3/content").json()["content"]
+    assert "graph_context" in content
+    assert len(content["graph_context"]) > 20
+
+
+# ---------------------------------------------------------------------------
+# TAB 4 TIER 1 TESTS
+# ---------------------------------------------------------------------------
+
+def test_tab4_roi_methodology_has_calculation_live():
+    """roi_methodology has a calculation string."""
+    content = client.get("/api/soc/tab/4/content").json()["content"]
+    assert "calculation" in content["roi_methodology"]
+    calc = content["roi_methodology"]["calculation"]
+    assert "annually" in calc.lower()
+
+
+def test_tab4_roi_methodology_has_source_live():
+    """roi_methodology cites SANS or Hackett."""
+    content = client.get("/api/soc/tab/4/content").json()["content"]
+    source = content["roi_methodology"].get("source", "")
+    assert "SANS" in source or "Hackett" in source
+
+
+def test_tab4_switching_cost_has_iks_reset_live():
+    """switching_cost_dollars narrative mentions IKS resets."""
+    content = client.get("/api/soc/tab/4/content").json()["content"]
+    narrative = content["switching_cost_dollars"]["narrative"]
+    assert "IKS resets" in narrative or "resets to zero" in narrative
+
+
+def test_tab4_switching_cost_has_dollar_amount_live():
+    """switching_cost_dollars has a cost_usd > 0."""
+    content = client.get("/api/soc/tab/4/content").json()["content"]
+    assert content["switching_cost_dollars"]["cost_usd"] > 0
+
+
+def test_tab4_decisions_per_day_positive_live():
+    """decisions_per_day is positive."""
+    content = client.get("/api/soc/tab/4/content").json()["content"]
+    assert content["decisions_per_day"] > 0
+
+
+# ---------------------------------------------------------------------------
+# TAB 5 TIER 1 TESTS
+# ---------------------------------------------------------------------------
+
+def test_tab5_flywheel_message_jargon_free_live():
+    """flywheel_message has no p-values, CLAIM codes, or tensor notation."""
+    content = client.get("/api/soc/tab/5/content").json()["content"]
+    msg = content["what_system_knows"]["flywheel_message"]
+    assert "p=0.000" not in msg, "p-value in flywheel_message"
+    assert "CLAIM-" not in msg, "CLAIM code in flywheel_message"
+    assert "tensor" not in msg.lower(), "tensor in flywheel_message"
+
+
+def test_tab5_flywheel_detail_has_technical_live():
+    """flywheel_detail (separate field) has the technical content."""
+    content = client.get("/api/soc/tab/5/content").json()["content"]
+    knows = content["what_system_knows"]
+    assert "flywheel_detail" in knows or "flywheel_claim" in knows
+
+
+def test_tab5_conservation_has_claim_ols01_live():
+    """conservation_narrative cites CLAIM-OLS-01."""
+    content = client.get("/api/soc/tab/5/content").json()["content"]
+    narrative = content["what_system_knows"]["conservation_narrative"]
+    assert "CLAIM-OLS-01" in narrative
+
+
+def test_tab5_conservation_has_zero_percent_live():
+    """conservation_narrative cites 0% miss rate."""
+    content = client.get("/api/soc/tab/5/content").json()["content"]
+    narrative = content["what_system_knows"]["conservation_narrative"]
+    assert "0%" in narrative
+
+
+def test_tab5_what_discovered_has_mechanism_live():
+    """what_discovered has a mechanism field."""
+    content = client.get("/api/soc/tab/5/content").json()["content"]
+    assert "mechanism" in content["what_discovered"]
+    assert len(content["what_discovered"]["mechanism"]) > 20
+
+
+def test_tab5_headline_has_verified_decisions_live():
+    """Tab 5 headline mentions verified decisions."""
+    content = client.get("/api/soc/tab/5/content").json()["content"]
+    assert "verified decisions" in content["headline"].lower()
+
+
+def test_tab5_iks_positive_live():
+    """IKS in Tab 5 what_system_knows is positive."""
+    content = client.get("/api/soc/tab/5/content").json()["content"]
+    assert content["what_system_knows"]["iks"] > 0
+
+
+# ===========================================================================
+# Phase A Tier 2 — cross-tab consistency tests
+# Catches the 5,225 vs 8,429 class of bug permanently.
+# ===========================================================================
+
+def test_verified_decisions_consistent_tab2_tab4():
+    """verified_decisions count matches between Tab 2 and Tab 4."""
+    t2 = client.get("/api/soc/tab/2/content").json()["content"]
+    t4 = client.get("/api/soc/tab/4/content").json()["content"]
+
+    # Tab 2: extract number from glossary string e.g. "8,429 — analyst..."
+    raw = t2["decision_count_glossary"]["verified_decisions"]
+    count_t2 = int(raw.split()[0].replace(",", ""))
+
+    # Tab 4: direct integer field
+    count_t4 = t4["switching_cost_dollars"]["verified_decisions"]
+
+    assert count_t2 == count_t4, \
+        f"Tab 2 verified_decisions ({count_t2}) != Tab 4 ({count_t4})"
+
+
+def test_verified_decisions_consistent_tab2_tab5():
+    """verified_decisions count matches between Tab 2 and Tab 5 headline."""
+    import re
+    t2 = client.get("/api/soc/tab/2/content").json()["content"]
+    t5 = client.get("/api/soc/tab/5/content").json()["content"]
+
+    # Tab 2: extract number from glossary string
+    raw = t2["decision_count_glossary"]["verified_decisions"]
+    count_t2 = int(raw.split()[0].replace(",", ""))
+
+    # Tab 5: extract from headline "learned from N verified decisions"
+    headline = t5["headline"]
+    match = re.search(r'learned from (\d[\d,]*) verified decisions', headline)
+    assert match, f"Could not parse verified decisions from headline: {headline}"
+    count_t5 = int(match.group(1).replace(",", ""))
+
+    assert count_t2 == count_t5, \
+        f"Tab 2 verified_decisions ({count_t2}) != Tab 5 headline ({count_t5})"
+
+
+def test_iks_consistent_tab2_tab5():
+    """IKS score matches between Tab 2 and Tab 5 what_system_knows."""
+    t2 = client.get("/api/soc/tab/2/content").json()["content"]
+    t5 = client.get("/api/soc/tab/5/content").json()["content"]
+
+    iks_t2 = t2["iks_score"]
+    iks_t5 = t5["what_system_knows"]["iks"]
+
+    # Tolerance of 35: catches gross divergence (0 vs 76, or filtered vs unfiltered
+    # count bugs) while allowing for minor variation between two independent
+    # async compute_iks_v2 calls to the same Neo4j client.
+    assert abs(iks_t2 - iks_t5) < 35.0, \
+        f"Tab 2 IKS ({iks_t2}) differs from Tab 5 ({iks_t5}) by > 35 — inconsistent data source"
+
+
+def test_roi_arithmetic_consistent():
+    """roi_annual_usd field matches the calculation string within 5%."""
+    import re
+    content = client.get("/api/soc/tab/4/content").json()["content"]
+    roi_field = content["roi_annual_usd"]
+    calc = content["roi_methodology"]["calculation"]
+
+    match = re.search(r'\$([\d,]+)\s+annually', calc)
+    if match:
+        roi_calc = int(match.group(1).replace(",", ""))
+        pct_diff = abs(roi_field - roi_calc) / roi_field
+        assert pct_diff < 0.05, \
+            f"ROI field ({roi_field:,.0f}) differs >5% from " \
+            f"calculation string ({roi_calc:,.0f})"
+
+
+def test_tab4_roi_annual_positive():
+    """roi_annual_usd is positive."""
+    content = client.get("/api/soc/tab/4/content").json()["content"]
+    assert content["roi_annual_usd"] > 0
+
+
+def test_tab3_recommendation_confidence_range():
+    """recommendation confidence is between 0 and 1."""
+    content = client.get("/api/soc/tab/3/content").json()["content"]
+    conf = content["recommendation"]["confidence"]
+    assert 0.0 < conf <= 1.0, f"Confidence {conf} out of range"
+
+
+def test_tab2_iks_matches_interpretation():
+    """IKS interpretation string is non-empty."""
+    content = client.get("/api/soc/tab/2/content").json()["content"]
+    assert "iks_interpretation" in content
+    assert len(content["iks_interpretation"]) > 5

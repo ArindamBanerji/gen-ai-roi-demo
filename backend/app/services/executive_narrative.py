@@ -283,6 +283,15 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     except Exception:
         pass
 
+    # Floor: align with IKS and Tab 4 — use in-memory learning state when
+    # Neo4j returns 0 so all tabs show the same verified_decisions count.
+    if verified_decisions == 0:
+        try:
+            from app.services.gae_state import get_learning_state as _get_ls_en
+            verified_decisions = max(0, _get_ls_en().decision_count)
+        except Exception:
+            pass
+
     # ── 2. centroid_updates (correct decisions) ──────────────────────────────
     centroid_updates = 0
     try:

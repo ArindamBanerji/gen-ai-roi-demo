@@ -2498,6 +2498,15 @@ async def _tab4_content() -> dict:
     except Exception:
         pass
 
+    # Floor: when Neo4j returns 0, fall back to in-memory learning state
+    # (same pattern as compute_iks_v2) so Tab 4 stays consistent with Tab 2.
+    if total_decisions == 0:
+        try:
+            from app.services.gae_state import get_learning_state as _get_ls_t4
+            total_decisions = max(0, _get_ls_t4().decision_count)
+        except Exception:
+            pass
+
     try:
         # Estimate decisions/day from timestamp spread of Decision nodes
         rows = await neo4j_client.run_query(

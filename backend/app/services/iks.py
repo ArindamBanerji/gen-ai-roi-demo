@@ -214,7 +214,7 @@ async def compute_iks_v2(neo4j_service) -> dict:
         log.warning("[IKS-v2] trust_coverage query failed: %s", exc)
         high_conf = 0
 
-    trust_coverage = (high_conf / max(total_decisions, 1)) * 100.0
+    trust_coverage = min((high_conf / max(total_decisions, 1)) * 100.0, 100.0)
 
     # ── Component 4: Factor Quality ──────────────────────────────────────────
     try:
