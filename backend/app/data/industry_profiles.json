@@ -1,0 +1,71 @@
+{
+  "healthcare": {
+    "id": "healthcare",
+    "label": "Healthcare / Hospital System",
+    "description": "Large hospital network with strict HIPAA compliance requirements, high-sensitivity patient data, and 24/7 SOC coverage.",
+    "V": 150,
+    "alpha": 0.30,
+    "analyst_hourly_cost": 90,
+    "regulatory_multiplier": 1.4,
+    "notes": "Regulatory multiplier reflects HIPAA breach cost exposure and mandatory 72-hour notification window.",
+    "typical_alert_categories": [
+      "credential_access",
+      "insider_threat",
+      "data_exfiltration",
+      "lateral_movement",
+      "cloud_infrastructure"
+    ]
+  },
+  "finserv": {
+    "id": "finserv",
+    "label": "Financial Services / Bank",
+    "description": "Tier-1 bank with PCI-DSS and SOX obligations, high-volume transaction monitoring, and dedicated threat intel team.",
+    "V": 400,
+    "alpha": 0.25,
+    "analyst_hourly_cost": 110,
+    "regulatory_multiplier": 1.6,
+    "notes": "High V due to transaction alert volume. Regulatory multiplier captures PCI-DSS fine exposure and reputational cost of breach.",
+    "typical_alert_categories": [
+      "credential_access",
+      "threat_intel_match",
+      "data_exfiltration",
+      "lateral_movement",
+      "cloud_infrastructure"
+    ]
+  },
+  "manufacturing": {
+    "id": "manufacturing",
+    "label": "Manufacturing / OT Environment",
+    "description": "Industrial manufacturer with OT/IT convergence, CISA critical infrastructure classification, and lean SOC team.",
+    "V": 80,
+    "alpha": 0.20,
+    "analyst_hourly_cost": 75,
+    "regulatory_multiplier": 1.2,
+    "notes": "Lower V reflects OT alert volume. Lean SOC team means higher per-alert analyst time and slower phase-3 qualification.",
+    "typical_alert_categories": [
+      "lateral_movement",
+      "malware_execution",
+      "insider_threat",
+      "cloud_infrastructure",
+      "credential_access"
+    ]
+  },
+  "generic": {
+    "id": "generic",
+    "label": "Generic Enterprise",
+    "description": "Mid-market enterprise with standard security posture, mixed cloud/on-prem footprint, and shared SOC function.",
+    "V": 200,
+    "alpha": 0.25,
+    "analyst_hourly_cost": 75,
+    "regulatory_multiplier": 1.0,
+    "notes": "Baseline archetype. Used as default when no industry is specified. Matches validated SOC Copilot pilot configuration.",
+    "typical_alert_categories": [
+      "credential_access",
+      "threat_intel_match",
+      "lateral_movement",
+      "data_exfiltration",
+      "insider_threat",
+      "cloud_infrastructure"
+    ]
+  }
+}

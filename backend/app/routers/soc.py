@@ -2500,8 +2500,9 @@ async def _tab4_content() -> dict:
         "calculation": (
             f"{decisions_per_day:.1f} decisions/day "
             f"× 15 min saved per decision "
-            f"× $75/hr analyst cost "
-            f"÷ 60 min "
+            f"(at current 40% auto-approve rate — full 31 min gap realized "
+            f"at 100% auto-approval) "
+            f"× $75/hr analyst cost ÷ 60 min "
             f"= ${decisions_per_day * 75 * 0.25:,.0f}/day "
             f"× 365 days "
             f"= ${roi_annual_usd:,.0f} annually."
@@ -2677,6 +2678,49 @@ async def get_tab_content(n: int):
         "content":           content,
         "generated_at_epoch": int(_time.time() * 1000),
     }
+
+
+# =============================================================================
+# =============================================================================
+# GET /api/soc/industry-profiles and GET /api/soc/industry-profile — Block 1.1
+# =============================================================================
+
+@router.get("/soc/industry-profiles")
+async def list_industry_profiles():
+    """
+    Return all available industry archetypes (id + label only).
+
+    Used by frontend dropdowns to let the user select an industry before
+    viewing personalised ROI projections.
+    """
+    from app.services.industry_profile import list_industries, load_industry_profile
+    ids = list_industries()
+    return {
+        "industries": [
+            {"id": i, "label": load_industry_profile(i)["label"]}
+            for i in ids
+        ]
+    }
+
+
+@router.get("/soc/industry-profile")
+async def get_industry_profile(industry: str = "generic"):
+    """
+    Return full profile for *industry* including derived metrics.
+
+    Query param: industry (default: "generic")
+    Returns: id, label, V, alpha, analyst_hourly_cost, regulatory_multiplier,
+             decisions_per_day, theta_min, phase3_minimum, roi_annual_usd,
+             roi_annual_usd_regulated, typical_alert_categories, notes.
+
+    404 if industry is not one of the known archetypes.
+    """
+    from app.services.industry_profile import load_industry_profile
+    try:
+        profile = load_industry_profile(industry)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    return profile
 
 
 # =============================================================================
