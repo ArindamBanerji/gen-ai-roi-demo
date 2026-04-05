@@ -189,6 +189,9 @@ def test_tab2_has_decision_glossary():
 
     assert "drift_alert_summary"    in content, "Missing drift_alert_summary (FIX 2.2)"
     assert "trust_coverage_summary" in content, "Missing trust_coverage_summary (FIX 2.3)"
+    trust_summary = content["trust_coverage_summary"]
+    assert "80%+" in trust_summary,   f"trust_coverage_summary must contain '80%+': {trust_summary!r}"
+    assert "day 270" in trust_summary, f"trust_coverage_summary must contain 'day 270': {trust_summary!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -271,6 +274,13 @@ def test_tab4_has_roi_methodology():
     assert meth["baseline_min_per_alert"] == 44, "Baseline must be 44 min/alert"
     assert meth["system_min_per_alert"]   == 13, "System must be 13 min/alert"
     assert "source" in meth and meth["source"], "Missing source attribution"
+    assert "calculation" in meth, "roi_methodology must include 'calculation' field (FIX 3)"
+    calc = meth["calculation"]
+    assert "15 min" in calc,   f"calculation must mention '15 min saved': {calc!r}"
+    assert "$75"    in calc,   f"calculation must mention '$75' hourly rate: {calc!r}"
+    assert "365 days" in calc, f"calculation must mention '365 days': {calc!r}"
+    assert "/day"   in calc,   f"calculation must include daily figure: {calc!r}"
+    assert "annually" in calc, f"calculation must include annual figure: {calc!r}"
 
     sw = content["switching_cost_dollars"]
     assert "cost_usd"               in sw, "Missing cost_usd"

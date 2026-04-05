@@ -2270,8 +2270,9 @@ async def _tab2_content() -> dict:
     categories_active = category_accuracy_summary.get("trust_coverage", 0.0)
     trust_pct = round(float(categories_active), 1) if isinstance(categories_active, (int, float)) else 0.0
     trust_coverage_summary = (
-        f"{trust_pct}% of alert categories have ≥100 verified decisions (trust threshold). "
-        "At current volume: 40–60% expected by day 180. Full coverage: approximately day 365 at V=200."
+        f"{trust_pct:.1f}% of alert categories have ≥100 verified decisions (trust threshold). "
+        "At current V=200: 80%+ expected by day 270. "
+        "Full coverage (all categories): approximately day 365."
     )
 
     # FIX 2.1 — Three-number glossary
@@ -2488,11 +2489,23 @@ async def _tab4_content() -> dict:
     qualifies_one_quarter = (decisions_per_day * 90) >= n_min
 
     # FIX 2.6 — ROI methodology note
+    # calculation string uses SAME formula as roi_annual_usd (line 2484):
+    #   decisions_per_day × 0.25 hr × $75/hr × 365 days
+    # 0.25 hr = 15 min saved per decision
     roi_methodology = {
         "baseline_min_per_alert": 44,
         "system_min_per_alert":   13,
         "source": "SANS SOC benchmark + Hackett Group procurement study",
         "note":   "Full methodology available on request.",
+        "calculation": (
+            f"{decisions_per_day:.1f} decisions/day "
+            f"× 15 min saved per decision "
+            f"× $75/hr analyst cost "
+            f"÷ 60 min "
+            f"= ${decisions_per_day * 75 * 0.25:,.0f}/day "
+            f"× 365 days "
+            f"= ${roi_annual_usd:,.0f} annually."
+        ),
     }
 
     # FIX 2.7 — Switching cost in dollars
