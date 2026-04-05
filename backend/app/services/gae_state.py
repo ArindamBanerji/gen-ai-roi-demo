@@ -407,6 +407,66 @@ async def get_bootstrap_centroids(neo4j_client) -> dict | None:
         return None
 
 
+_EXPORT_CATEGORIES = [
+    "credential_access", "lateral_movement",
+    "data_exfiltration", "malware_execution",
+    "insider_threat", "cloud_infrastructure",
+]
+_EXPORT_ACTIONS = ["escalate", "investigate", "suppress", "monitor"]
+_EXPORT_VERSION = "1.0"
+_EXPORT_GAE_VERSION = "0.7.21"
+
+
+async def build_centroid_export(scorer, neo4j_client) -> dict:
+    """
+    Build the 10-field portable centroid export artifact.
+
+    Fields
+    ------
+    export_version       : str   — "1.0"
+    generated_at_epoch   : int   — ms since epoch
+    gae_version          : str   — "0.7.21"
+    tensor_shape         : list  — [n_categories, n_actions, n_factors]
+    current_mu           : list  — full centroid tensor (nested list)
+    bootstrap_mu         : list|None — μ₀ from DeploymentState, or None
+    drift_from_bootstrap : float|None — mean(|current - bootstrap|), or None
+    decision_count       : int   — scorer.decision_count
+    categories           : list[str]
+    actions              : list[str]
+    sha256               : str   — SHA-256 over canonical JSON of current_mu
+    """
+    import hashlib
+    import json
+    import time as _time
+
+    bootstrap = await get_bootstrap_centroids(neo4j_client)
+    current_mu = scorer.mu.tolist()
+
+    if bootstrap and bootstrap.get("mu") is not None:
+        boot_arr = np.array(bootstrap["mu"], dtype=np.float64)
+        curr_arr = np.array(current_mu,      dtype=np.float64)
+        drift: float | None = float(np.mean(np.abs(curr_arr - boot_arr)))
+    else:
+        drift = None
+
+    canonical = json.dumps({"mu": current_mu}, sort_keys=True)
+    sha256 = hashlib.sha256(canonical.encode()).hexdigest()
+
+    return {
+        "export_version":       _EXPORT_VERSION,
+        "generated_at_epoch":   int(_time.time() * 1000),
+        "gae_version":          _EXPORT_GAE_VERSION,
+        "tensor_shape":         list(scorer.mu.shape),
+        "current_mu":           current_mu,
+        "bootstrap_mu":         bootstrap["mu"] if bootstrap else None,
+        "drift_from_bootstrap": drift,
+        "decision_count":       scorer.decision_count,
+        "categories":           _EXPORT_CATEGORIES,
+        "actions":              _EXPORT_ACTIONS,
+        "sha256":               sha256,
+    }
+
+
 def restore_centroid_from_backup(backup_id: str | None = None) -> dict:
     """
     Load backup, verify SHA-256, and restore mu into the live ProfileScorer.

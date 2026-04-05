@@ -2497,3 +2497,33 @@ async def get_spike_cap_status_endpoint():
 
     status["baseline_daily"] = baseline_daily
     return status
+
+
+# =============================================================================
+# GET /api/soc/centroid-export — Block 2.3
+# =============================================================================
+
+@router.get("/soc/centroid-export")
+async def get_centroid_export(format: str = "json"):
+    """
+    Export the current centroid tensor as a portable artifact.
+
+    ?format=json    (default) — full 10-field export including tensor data
+    ?format=summary           — all fields except current_mu and bootstrap_mu
+
+    Use the summary format for display; use json for archival/portability.
+    """
+    from app.services.gae_state import build_centroid_export, get_profile_scorer
+
+    try:
+        scorer = get_profile_scorer()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+    export = await build_centroid_export(scorer, neo4j_client)
+
+    if format == "summary":
+        export = {k: v for k, v in export.items()
+                  if k not in ("current_mu", "bootstrap_mu")}
+
+    return export
