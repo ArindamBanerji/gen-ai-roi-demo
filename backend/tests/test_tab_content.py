@@ -1185,3 +1185,11 @@ def test_tab2_iks_matches_interpretation():
     content = client.get("/api/soc/tab/2/content").json()["content"]
     assert "iks_interpretation" in content
     assert len(content["iks_interpretation"]) > 5
+
+
+def test_tab5_categories_calibrated_max_six():
+    """categories_calibrated must be ≤ 6 (BACKLOG-007: 'unknown' exclusion)."""
+    content = client.get("/api/soc/tab/5/content").json()["content"]
+    knows = content["what_system_knows"]
+    assert knows["categories_calibrated"] <= 6, \
+        f"categories_calibrated={knows['categories_calibrated']} > 6"
