@@ -45,6 +45,10 @@ _analyst_eta_weights: dict = {}
 # When True, centroid updates must be skipped for the current cadence.
 _volume_spike_active: bool = False
 
+# Block 9.3 — Category freeze set (populated during spike events only).
+# Categories in this set have their centroid updates skipped.
+_frozen_categories: set = set()
+
 _MU_ZERO_PATH = Path(__file__).parent.parent / "data" / "iks_bootstrap_soc.json"
 
 
@@ -486,13 +490,14 @@ def is_volume_spike_active() -> bool:
 
 
 def guarded_update(scorer, f, category_index: int, action_index: int,
-                   correct: bool, **kwargs):
+                   correct: bool, category_name: str = "", **kwargs):
     """
-    Spike-guarded wrapper around ProfileScorer.update().
+    Spike-guarded + category-freeze wrapper around ProfileScorer.update().
 
-    Checks is_volume_spike_active() before delegating to scorer.update().
-    If a spike is active, skips the update and returns None so cadence
-    callers can detect the skip.
+    Guards (checked in order):
+      1. D3 global spike flag — skip all updates when volume spike active.
+      2. D2 category freeze — skip updates for over-represented categories
+         during a spike (coupled to D3; frozen_categories is empty when no spike).
 
     Parameters
     ----------
@@ -501,18 +506,60 @@ def guarded_update(scorer, f, category_index: int, action_index: int,
     category_index : int
     action_index   : int
     correct        : bool
+    category_name  : str — human-readable category name for D2 freeze check
     **kwargs       : forwarded to scorer.update() (e.g. gt_action_index, confidence)
 
     Returns
     -------
-    CentroidUpdate on success, None when update was frozen by spike guard.
+    CentroidUpdate on success, None when update was frozen by either guard.
     """
     if _volume_spike_active:
         log.warning(
             "[D3] guarded_update: spike active — skipping centroid update "
-            "(category=%d, action=%d, correct=%s)",
-            category_index, action_index, correct,
+            "(category=%d/%s, action=%d, correct=%s)",
+            category_index, category_name or "?", action_index, correct,
+        )
+        return None
+    if category_name and is_category_frozen(category_name):
+        log.warning(
+            "[D2] guarded_update: category '%s' frozen — skipping update "
+            "(action=%d, correct=%s)",
+            category_name, action_index, correct,
         )
         return None
     return scorer.update(f=f, category_index=category_index,
                          action_index=action_index, correct=correct, **kwargs)
+
+
+# =============================================================================
+# Block 9.3 — Category freeze (volume spikes only)
+# =============================================================================
+
+def set_frozen_categories(categories: list) -> None:
+    """
+    Replace the frozen-category set.
+
+    Must only be called when a volume spike is active (D3 coupled constraint).
+    Clears automatically when set_volume_spike(False) is called, but callers
+    should also call set_frozen_categories([]) on spike clearance.
+
+    Parameters
+    ----------
+    categories : list[str] — category names to freeze
+    """
+    global _frozen_categories
+    _frozen_categories = set(categories)
+    if _frozen_categories:
+        log.warning("[D2] Frozen categories set: %s", sorted(_frozen_categories))
+    else:
+        log.info("[D2] Frozen categories cleared")
+
+
+def get_frozen_categories() -> set:
+    """Return the current set of frozen category names (may be empty)."""
+    return set(_frozen_categories)
+
+
+def is_category_frozen(category: str) -> bool:
+    """Return True if the given category name is currently frozen."""
+    return category in _frozen_categories

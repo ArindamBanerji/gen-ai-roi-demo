@@ -392,6 +392,101 @@ async def detect_volume_spike(neo4j_client: Any, today_count: int) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Block 9.3 — Category freeze (volume spikes only)
+# ---------------------------------------------------------------------------
+
+_FREEZE_MULTIPLIER = 2.0   # freeze when today_share > 2× baseline_share
+
+
+async def compute_category_baseline(neo4j_client: Any) -> dict[str, float]:
+    """
+    Compute 30-day baseline category distribution of Alert nodes.
+
+    Returns fractional share per category (sums to ≈1.0).
+    Returns {} when no alert data is available.
+
+    Example: {"credential_access": 0.35, "lateral_movement": 0.15, ...}
+    """
+    import time as _time
+    cutoff_epoch = int(_time.time() * 1000) - _VOLUME_WINDOW_DAYS * 86_400_000
+
+    try:
+        rows = await neo4j_client.run_query(
+            """
+            MATCH (a:Alert)
+            WHERE a.timestamp_epoch > $cutoff_epoch AND a.category IS NOT NULL
+            RETURN a.category AS category, count(a) AS cnt
+            """,
+            {"cutoff_epoch": cutoff_epoch},
+        )
+    except Exception as exc:
+        log.warning("[D2] compute_category_baseline query failed: %s", exc)
+        return {}
+
+    total = sum(int(r.get("cnt") or 0) for r in rows)
+    if total == 0:
+        return {}
+
+    return {
+        r["category"]: round(int(r.get("cnt") or 0) / total, 6)
+        for r in rows
+        if r.get("category")
+    }
+
+
+async def detect_frozen_categories(
+    neo4j_client: Any,
+    today_category_counts: dict,
+) -> list:
+    """
+    Return list of category names to freeze during the current spike.
+
+    Only meaningful when a volume spike is active (D3 coupled constraint).
+    Returns [] immediately if no spike is active — do not freeze on other signals.
+
+    A category is frozen when its share of today's alerts exceeds
+    _FREEZE_MULTIPLIER (2×) its 30-day baseline share.
+
+    Parameters
+    ----------
+    neo4j_client          : async Neo4j client
+    today_category_counts : dict[str, int] — alert counts by category for today
+
+    Returns
+    -------
+    list[str] of frozen category names (may be empty)
+    """
+    from app.services.gae_state import is_volume_spike_active
+
+    if not is_volume_spike_active():
+        return []
+
+    today_total = sum(today_category_counts.values())
+    if today_total == 0:
+        return []
+
+    baseline = await compute_category_baseline(neo4j_client)
+
+    frozen: list[str] = []
+    for category, count in today_category_counts.items():
+        today_share    = count / today_total
+        baseline_share = baseline.get(category, 0.0)
+
+        # No baseline data for this category — cannot compare, skip freeze
+        if baseline_share <= 0.0:
+            continue
+
+        if today_share > _FREEZE_MULTIPLIER * baseline_share:
+            log.warning(
+                "[D2] Freezing category '%s': today_share=%.3f > %.1f × baseline=%.3f",
+                category, today_share, _FREEZE_MULTIPLIER, baseline_share,
+            )
+            frozen.append(category)
+
+    return frozen
+
+
+# ---------------------------------------------------------------------------
 # Block 9.1 — Per-analyst precision computation
 # ---------------------------------------------------------------------------
 

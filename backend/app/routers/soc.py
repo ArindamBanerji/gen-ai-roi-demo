@@ -2423,3 +2423,40 @@ async def get_volume_baseline():
     baseline = await compute_volume_baseline(neo4j_client)
     baseline["spike_active"] = is_volume_spike_active()
     return baseline
+
+
+# =============================================================================
+# GET /api/soc/frozen-categories — Block 9.3 D2 category freeze
+# =============================================================================
+
+@router.get("/soc/frozen-categories")
+async def get_frozen_categories_endpoint():
+    """
+    Return current frozen categories and 30-day baseline distribution.
+
+    freeze_threshold = 2.0 — category frozen when today_share > 2× baseline.
+    Frozen categories are only set during an active volume spike (D3 coupled).
+
+    Returns
+    -------
+    {
+      "spike_active":       bool,
+      "frozen_categories":  ["lateral_movement"],
+      "category_baseline":  {"credential_access": 0.35, ...},
+      "freeze_threshold":   2.0
+    }
+    """
+    from app.services.learning_health import compute_category_baseline
+    from app.services.gae_state import (
+        is_volume_spike_active,
+        get_frozen_categories,
+    )
+
+    category_baseline = await compute_category_baseline(neo4j_client)
+
+    return {
+        "spike_active":      is_volume_spike_active(),
+        "frozen_categories": sorted(get_frozen_categories()),
+        "category_baseline": category_baseline,
+        "freeze_threshold":  2.0,
+    }
