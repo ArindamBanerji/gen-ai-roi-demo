@@ -278,6 +278,56 @@ def _round_comps(comps: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Block 9.1 — Per-analyst precision computation
+# ---------------------------------------------------------------------------
+
+_MIN_ANALYST_DECISIONS = 10   # exclude analysts with fewer decisions
+_MIN_ANALYSTS_REQUIRED = 2    # return {} if fewer than 2 analysts qualify
+
+
+async def compute_analyst_precision(neo4j_client: Any) -> dict[str, float]:
+    """
+    Compute per-analyst override precision from Decision nodes.
+
+    Only counts live decisions (d.source = "live") where the analyst is known.
+    Excludes analysts with fewer than _MIN_ANALYST_DECISIONS (10) decisions.
+    Returns {} if fewer than _MIN_ANALYSTS_REQUIRED (2) analysts qualify.
+
+    Returns
+    -------
+    dict mapping analyst name → precision (correct / total), e.g.
+      {"analyst_a": 0.82, "analyst_b": 0.71}
+    """
+    try:
+        rows = await neo4j_client.run_query(
+            """
+            MATCH (d:Decision)
+            WHERE d.source = "live" AND d.analyst IS NOT NULL
+            WITH d.analyst AS analyst,
+                 count(d) AS total,
+                 sum(CASE WHEN d.correct = true THEN 1 ELSE 0 END) AS correct
+            WHERE total >= $min_decisions
+            RETURN analyst, toFloat(correct) / toFloat(total) AS precision
+            """,
+            {"min_decisions": _MIN_ANALYST_DECISIONS},
+        )
+    except Exception as exc:
+        log.warning("[D5] compute_analyst_precision query failed: %s", exc)
+        return {}
+
+    result = {
+        r["analyst"]: float(r["precision"])
+        for r in rows
+        if r.get("analyst") and r.get("precision") is not None
+    }
+
+    if len(result) < _MIN_ANALYSTS_REQUIRED:
+        return {}
+
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Block 7.6 — Verification rate health
 # ---------------------------------------------------------------------------
 

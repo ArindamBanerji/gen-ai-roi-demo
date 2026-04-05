@@ -2330,3 +2330,73 @@ async def get_deployment_state():
             detail="DeploymentState not found — server may not have completed startup",
         )
     return result
+
+
+# =============================================================================
+# GET /api/soc/analyst-eta-weights — Block 9.1 D5 per-analyst η weighting
+# =============================================================================
+
+@router.get("/soc/analyst-eta-weights")
+async def get_analyst_eta_weights_endpoint():
+    """
+    Return current per-analyst η weights plus per-analyst precision.
+
+    Before N_min decisions: all weights = 1.0 (conservative/uniform).
+    After N_min decisions: precision-weighted in [0.5, 1.5].
+
+    Returns
+    -------
+    {
+      "calibrated": bool,
+      "n_decisions": int,
+      "n_min": int,
+      "analysts": {
+        "analyst_a": {"precision": 0.82, "eta_weight": 1.15},
+        ...
+      }
+    }
+    """
+    from app.services.learning_health import compute_analyst_precision
+    from app.services.gae_state import get_analyst_eta_weights, apply_analyst_eta_weights
+    from app.domains.soc.config import GateConfig
+    from app.services.gae_state import get_learning_state as _get_ls, get_profile_scorer
+
+    n_decisions = 0
+    try:
+        n_decisions = _get_ls().decision_count
+    except Exception:
+        pass
+
+    # Fetch precision from Neo4j
+    precision = await compute_analyst_precision(neo4j_client)
+
+    # Build GateConfig to compute calibrated weights via the validated formula
+    cfg = GateConfig(
+        n_decisions=n_decisions,
+        V=200.0,
+        alpha=0.25,
+        per_analyst_precision=precision,
+    )
+    weights = cfg.eta_weights
+
+    # Update module-level state so scorer has current weights
+    try:
+        scorer = get_profile_scorer()
+        apply_analyst_eta_weights(scorer, weights)
+    except Exception:
+        pass
+
+    analysts = {
+        analyst: {
+            "precision": round(precision.get(analyst, 0.0), 4),
+            "eta_weight": round(weights.get(analyst, 1.0), 4),
+        }
+        for analyst in set(list(precision.keys()) + list(weights.keys()))
+    }
+
+    return {
+        "calibrated":  cfg.calibrated,
+        "n_decisions": n_decisions,
+        "n_min":       cfg.n_min,
+        "analysts":    analysts,
+    }

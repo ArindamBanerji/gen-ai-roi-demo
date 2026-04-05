@@ -37,6 +37,10 @@ _learning_state: Optional[LearningState] = None
 _bootstrap_metadata: Optional[dict] = None
 _bootstrap_result: Optional[BootstrapResult] = None   # CORR-3: exposed for bootstrap_neo4j writer
 
+# Block 9.1 — Per-analyst η weights (populated by apply_analyst_eta_weights).
+# Keyed by analyst name; values are multiplicative weights in [0.5, 1.5].
+_analyst_eta_weights: dict = {}
+
 _MU_ZERO_PATH = Path(__file__).parent.parent / "data" / "iks_bootstrap_soc.json"
 
 
@@ -419,3 +423,35 @@ def restore_centroid_from_backup(backup_id: str | None = None) -> dict:
     mu_array = np.array(payload["mu"], dtype=np.float64)
     scorer.mu[:] = mu_array
     return payload
+
+
+# =============================================================================
+# Block 9.1 — Per-analyst η weight management
+# =============================================================================
+
+def apply_analyst_eta_weights(scorer, eta_weights: dict) -> None:
+    """
+    Store per-analyst η weights on the module-level singleton and on the scorer.
+
+    Sets module-level _analyst_eta_weights for endpoint reads, and attaches
+    the dict to the scorer as a dynamic attribute so callers that hold a scorer
+    reference can also read it without re-importing gae_state.
+
+    Parameters
+    ----------
+    scorer      : ProfileScorer instance (attached to the live LearningState)
+    eta_weights : dict mapping analyst name → weight in [0.5, 1.5]
+    """
+    global _analyst_eta_weights
+    _analyst_eta_weights = dict(eta_weights)
+    # Attach to scorer for convenient access at update time
+    try:
+        scorer.eta_weights = dict(eta_weights)
+    except Exception as exc:
+        log.debug("[D5] Could not attach eta_weights to scorer: %s", exc)
+    log.info("[D5] Analyst η weights updated: %s", _analyst_eta_weights)
+
+
+def get_analyst_eta_weights() -> dict:
+    """Return the current module-level analyst η weights (may be empty dict)."""
+    return dict(_analyst_eta_weights)
