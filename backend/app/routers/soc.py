@@ -640,7 +640,7 @@ async def get_detection_engineering():
         fp_rate = None
         try:
             rows = await neo4j_client.run_query(
-                "MATCH (d:Decision)-[:DECISION_FOR]->(a:Alert) "
+                "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
                 "WHERE a.category = $cat "
                 "RETURN count(d) AS total, "
                 "sum(CASE WHEN d.correct = false OR d.outcome = 'incorrect' "

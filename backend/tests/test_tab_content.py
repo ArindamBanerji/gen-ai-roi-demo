@@ -1193,3 +1193,17 @@ def test_tab5_categories_calibrated_max_six():
     knows = content["what_system_knows"]
     assert knows["categories_calibrated"] <= 6, \
         f"categories_calibrated={knows['categories_calibrated']} > 6"
+
+
+def test_tab2_noise_map_not_cold_start_at_high_decisions():
+    """Noise map should not show cold-start message at 8k+ decisions (BACKLOG-003)."""
+    content = client.get("/api/soc/tab/2/content").json()["content"]
+    glossary = content["decision_count_glossary"]
+    raw = glossary["verified_decisions"]
+    count = int(raw.split()[0].replace(",", ""))
+    if count >= 100:
+        # If noise_map field exists, it should not show cold-start message
+        noise = content.get("noise_map", {})
+        for category, data in noise.items():
+            assert "needs 10+" not in str(data), \
+                f"Noise map cold-start message despite {count} decisions"
