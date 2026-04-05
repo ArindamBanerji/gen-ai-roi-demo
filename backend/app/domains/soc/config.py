@@ -23,6 +23,7 @@ from app.domains.soc.factors import (
     TravelMatchFactor, AssetCriticalityFactor, ThreatIntelEnrichmentFactor,
     PatternHistoryFactor, PatternHistoryFactorComputer, TimeAnomalyFactor, DeviceTrustFactor,
 )
+from dataclasses import dataclass, field
 from typing import Dict, List
 
 
@@ -749,6 +750,16 @@ soc_config = SOCDomainConfig()
 
 
 # =============================================================================
+# Block 9.5 — η change-rate cap (V-STABILITY F=8.14, UNCONDITIONAL)
+# =============================================================================
+
+# Maximum allowed per-coordinate centroid movement in any single update step.
+# Mirrors MAX_ETA_DELTA in gae.profile_scorer (enforced there at the delta level).
+# Source: V-STABILITY experiment F=8.14 — prevents runaway drift from large η × gradient.
+MAX_ETA_DELTA: float = 0.005
+
+
+# =============================================================================
 # Block 7.2 — per-deployment θ_min formula
 # =============================================================================
 
@@ -783,3 +794,75 @@ def compute_phase3_minimum(V: float, alpha: float) -> int:
     decisions_per_day = V * alpha
     calendar_minimum = int(20 * decisions_per_day)
     return max(1000, calendar_minimum)
+
+
+# =============================================================================
+# Block 7.4 — Self-calibrating GateConfig
+# =============================================================================
+
+@dataclass
+class GateConfig:
+    """
+    Deployment-specific gate configuration.
+    Conservative defaults before N_min decisions.
+    Calibrated values after N_min decisions.
+    """
+    n_decisions: int
+    V: float = 200.0
+    alpha: float = 0.25
+    vol_std: float = 0.0
+    per_analyst_precision: Dict[str, float] = field(default_factory=dict)
+
+    @property
+    def n_min(self) -> int:
+        return compute_phase3_minimum(self.V, self.alpha)
+
+    @property
+    def calibrated(self) -> bool:
+        return self.n_decisions >= self.n_min
+
+    @property
+    def spike_sigma(self) -> float:
+        """Spike detection threshold. Conservative=5.0, Calibrated=3.0"""
+        return 3.0 if self.calibrated else 5.0
+
+    @property
+    def eta_cap(self) -> float:
+        """η change-rate cap. Conservative=2.0, Calibrated=deployment-specific"""
+        if not self.calibrated:
+            return 2.0
+        if self.vol_std <= 0:
+            return 1.5  # default calibrated cap
+        return min(2.0, max(1.0, 1.5 + self.vol_std * 2))
+
+    @property
+    def eta_weights(self) -> Dict[str, float]:
+        """
+        Per-analyst η weights.
+        Conservative: uniform (1.0 for all analysts).
+        Calibrated: precision-weighted, only when each analyst
+        has ≥10 decisions.
+        """
+        if not self.calibrated:
+            return {a: 1.0 for a in self.per_analyst_precision}
+        if not self.per_analyst_precision:
+            return {}
+        if not all(v >= 0 for v in self.per_analyst_precision.values()):
+            return {a: 1.0 for a in self.per_analyst_precision}
+        mean_prec = sum(self.per_analyst_precision.values()) / len(self.per_analyst_precision)
+        if mean_prec <= 0:
+            return {a: 1.0 for a in self.per_analyst_precision}
+        return {
+            analyst: min(1.5, max(0.5, prec / mean_prec))
+            for analyst, prec in self.per_analyst_precision.items()
+        }
+
+    def summary(self) -> dict:
+        return {
+            "n_decisions": self.n_decisions,
+            "n_min": self.n_min,
+            "calibrated": self.calibrated,
+            "spike_sigma": self.spike_sigma,
+            "eta_cap": self.eta_cap,
+            "eta_weights": self.eta_weights,
+        }
