@@ -2079,32 +2079,15 @@ _TAB_NAMES = {
 }
 
 
-# Fix 1.1 — Sentinel alert_type → internal category mapping.
-# a.type holds the raw Sentinel string; a.category holds the canonical name.
-# This mapping is the fallback when a.category is absent on older Alert nodes.
-_SENTINEL_TO_CATEGORY = {
-    "Unfamiliar sign-in properties":                 "credential_access",
-    "Lateral movement involving one account":         "lateral_movement",
-    "Mass download of files from SharePoint":         "data_exfiltration",
-    "Suspicious PowerShell activity":                 "malware_execution",
-    "Sensitive data access outside working hours":    "insider_threat",
-    "New admin role assigned":                        "cloud_infrastructure",
-}
-
-
 def _resolve_category(row: dict) -> str:
-    """Return internal category name, preferring a.category over a.type fallback."""
-    cat = row.get("category")
-    if cat:
-        return cat
-    raw_type = row.get("alert_type") or row.get("type") or ""
-    return _SENTINEL_TO_CATEGORY.get(raw_type, "unknown")
+    """Return internal category name: a.category first, a.alert_type as fallback."""
+    return row.get("category") or row.get("alert_type") or "unknown"
 
 
 async def _tab1_content() -> dict:
     """Tab 1 — Alert Triage: alert_count, top_alert_types, pending_count.
 
-    Fix 1.1: reads a.category (internal canonical name) with Sentinel fallback.
+    Fix 1.1: reads a.category (primary) and a.alert_type (fallback) — both internal names.
     Fix 1.2: adds learning_signal + analyst_insight per top alert type.
     """
     alert_count   = 0
@@ -2128,12 +2111,13 @@ async def _tab1_content() -> dict:
     except Exception:
         pass
 
-    # Fix 1.1: read a.category AND a.type so we can resolve internal names
+    # Fix 1.1 (revised): read a.category (primary) and a.alert_type (fallback).
+    # a.type is always None on live data — ignored.
     raw_top: list = []
     try:
         rows = await neo4j_client.run_query(
             "MATCH (a:Alert) "
-            "RETURN a.category AS category, a.type AS alert_type, count(a) AS n "
+            "RETURN a.category AS category, a.alert_type AS alert_type, count(a) AS n "
             "ORDER BY n DESC LIMIT 3", {}
         )
         raw_top = rows
