@@ -270,11 +270,14 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     - Each query is try/except so a disconnected DB returns zeros gracefully
     """
     # ── 1. verified_decisions ────────────────────────────────────────────────
+    # Align with startup sync (main.py): count ALL Decision nodes, matching
+    # the learning state decision_count shown in Tab 2 / IKS computation.
+    # Previous filter (d.outcome IS NOT NULL AND d.verified_at_epoch IS NOT NULL)
+    # silently excluded 3,204 decisions, producing 5,225 instead of 8,429.
     verified_decisions = 0
     try:
         rows = await neo4j_service.run_query(
-            "MATCH (d:Decision) WHERE d.outcome IS NOT NULL "
-            "AND d.verified_at_epoch IS NOT NULL RETURN count(d) AS cnt"
+            "MATCH (d:Decision) RETURN count(d) AS cnt"
         )
         verified_decisions = int((rows[0].get("cnt") or 0) if rows else 0)
     except Exception:

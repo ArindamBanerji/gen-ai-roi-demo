@@ -2495,6 +2495,9 @@ async def _tab5_content() -> dict:
     what_discovered_raw = narr.get("what_discovered", {})
     what_knows_raw      = narr.get("what_knows", {})
 
+    # Pull verified_decisions from narrative (now aligned to learning state count)
+    verified_decisions = int(what_changed_raw.get("total_verified", 0))
+
     # FIX 2.8 — W2 flywheel: structured fields for CISO audience
     flywheel_edge_count = 0
     try:
@@ -2515,9 +2518,15 @@ async def _tab5_content() -> dict:
             "future alert matches a prior verified pattern, the system "
             "routes with +10.13pp higher accuracy (validated, p=0.0002, "
             "N=30).\n\n"
-            "Current state: 0 pattern edges — flywheel activates as "
+            f"Current state: 0 pattern edges — flywheel activates as "
             "decisions accumulate.\n"
-            "Validated claim: unconditional across SOC and S2P domains."
+            "Validated claim: unconditional across SOC and S2P domains.\n\n"
+            f"Note: Pattern edges are distinct from verified decisions — "
+            "they form when a new alert structurally matches a prior "
+            "verified alert in the graph. "
+            f"{verified_decisions:,} verified decisions are in the ledger; "
+            "pattern-match edges accumulate as new alerts arrive that "
+            "resemble prior verified cases."
         )
     else:
         flywheel_status = "active"
