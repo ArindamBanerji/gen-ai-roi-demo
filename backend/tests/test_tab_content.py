@@ -584,8 +584,11 @@ def test_tab5_flywheel_preactivation_reframe():
     assert wsk["flywheel_status"] == "pre_activation", (
         "0 edges → flywheel_status must be 'pre_activation'"
     )
-    assert "first real alert" in wsk["flywheel_message"], (
-        f"flywheel_message must mention 'first real alert', got: {wsk['flywheel_message']!r}"
+    assert "pre-activation" in wsk["flywheel_message"], (
+        f"flywheel_message must mention 'pre-activation', got: {wsk['flywheel_message']!r}"
+    )
+    assert "p=0.0002" not in wsk["flywheel_message"], (
+        f"flywheel_message must not contain technical stats, got: {wsk['flywheel_message']!r}"
     )
     assert "flywheel_activation_note" in wsk, (
         "flywheel_activation_note must be present in what_system_knows"
@@ -685,4 +688,178 @@ def test_tab5_centroid_summary_business_language():
     )
     assert "institutional" in summary or "calibrated" in summary, (
         f"centroid_summary must use business language, got: {summary!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 16 — FIX 3A: Tab 3 recommendation has rationale field
+# ---------------------------------------------------------------------------
+
+def test_tab3_recommendation_has_rationale():
+    """recommendation must include 'rationale' with override_rate and action."""
+    from app.routers.soc import _tab3_content
+    from app.services.gae_state import init_learning_state
+
+    init_learning_state()
+
+    mock_client = AsyncMock()
+    mock_client.run_query.side_effect = [
+        [{"cnt": 5000}],   # graph node count
+        [],                # no pending alert → centroid fallback
+        [],                # override rate query → falls back to 15.0
+    ]
+
+    with patch("app.routers.soc.neo4j_client", mock_client):
+        content = _run(_tab3_content())
+
+    rec = content["recommendation"]
+    assert "rationale" in rec, "recommendation must include 'rationale' field (FIX 3A)"
+    rationale = rec["rationale"]
+    assert isinstance(rationale, str) and rationale, "rationale must be a non-empty string"
+    assert "threat intel enrichment" in rationale.lower(), (
+        f"rationale must mention threat intel enrichment, got: {rationale!r}"
+    )
+    assert "%" in rationale, (
+        f"rationale must include override_rate percentage, got: {rationale!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 17 — FIX 3B: Tab 5 flywheel_message is plain English (no stats)
+# ---------------------------------------------------------------------------
+
+def test_tab5_flywheel_message_plain_english():
+    """flywheel_message must not contain 'p=0.0002' or 'CLAIM-W2' (moved to flywheel_detail)."""
+    from app.routers.soc import _tab5_content
+
+    mock_narrative = {
+        "headline": "Test.",
+        "what_changed": {"top_shifts": []},
+        "what_discovered": {"attack_chains_detected": 0, "chain_summaries": []},
+        "what_knows": {"iks_current": 65.0, "categories_calibrated": 4, "health_status": "GREEN"},
+    }
+
+    mock_client = AsyncMock()
+    mock_client.run_query.return_value = [{"cnt": 0}]
+
+    with patch(
+        "app.services.executive_narrative.build_executive_narrative_async",
+        new=AsyncMock(return_value=mock_narrative),
+    ):
+        with patch("app.routers.soc.neo4j_client", mock_client):
+            content = _run(_tab5_content())
+
+    wsk = content["what_system_knows"]
+    msg = wsk["flywheel_message"]
+    assert "p=0.0002" not in msg, (
+        f"flywheel_message must not contain 'p=0.0002' (belongs in flywheel_detail), got: {msg!r}"
+    )
+    assert "CLAIM-W2" not in msg, (
+        f"flywheel_message must not contain 'CLAIM-W2', got: {msg!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 18 — FIX 3B: Tab 5 flywheel_detail has technical detail
+# ---------------------------------------------------------------------------
+
+def test_tab5_flywheel_detail_has_technical():
+    """flywheel_detail must contain 'p=0.0002' and 'CLAIM-W2'."""
+    from app.routers.soc import _tab5_content
+
+    mock_narrative = {
+        "headline": "Test.",
+        "what_changed": {"top_shifts": []},
+        "what_discovered": {"attack_chains_detected": 0, "chain_summaries": []},
+        "what_knows": {"iks_current": 65.0, "categories_calibrated": 4, "health_status": "GREEN"},
+    }
+
+    mock_client = AsyncMock()
+    mock_client.run_query.return_value = [{"cnt": 0}]
+
+    with patch(
+        "app.services.executive_narrative.build_executive_narrative_async",
+        new=AsyncMock(return_value=mock_narrative),
+    ):
+        with patch("app.routers.soc.neo4j_client", mock_client):
+            content = _run(_tab5_content())
+
+    wsk = content["what_system_knows"]
+    assert "flywheel_detail" in wsk, "flywheel_detail must be present in what_system_knows"
+    detail = wsk["flywheel_detail"]
+    assert "p=0.0002" in detail, (
+        f"flywheel_detail must contain 'p=0.0002', got: {detail!r}"
+    )
+    assert "CLAIM-W2" in detail, (
+        f"flywheel_detail must contain 'CLAIM-W2', got: {detail!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 19 — FIX 3B addition: Tab 5 what_discovered has mechanism field
+# ---------------------------------------------------------------------------
+
+def test_tab5_what_discovered_has_mechanism():
+    """what_discovered must include 'mechanism' with plain-English explanation."""
+    from app.routers.soc import _tab5_content
+
+    mock_narrative = {
+        "headline": "Test.",
+        "what_changed": {"top_shifts": []},
+        "what_discovered": {"attack_chains_detected": 3, "chain_summaries": ["A", "B"]},
+        "what_knows": {"iks_current": 65.0, "categories_calibrated": 4, "health_status": "GREEN"},
+    }
+
+    mock_client = AsyncMock()
+    mock_client.run_query.return_value = [{"cnt": 0}]
+
+    with patch(
+        "app.services.executive_narrative.build_executive_narrative_async",
+        new=AsyncMock(return_value=mock_narrative),
+    ):
+        with patch("app.routers.soc.neo4j_client", mock_client):
+            content = _run(_tab5_content())
+
+    wd = content["what_discovered"]
+    assert "mechanism" in wd, "what_discovered must include 'mechanism' field (FIX 3B addition)"
+    mech = wd["mechanism"]
+    assert isinstance(mech, str) and mech, "mechanism must be a non-empty string"
+    assert "graph" in mech.lower() or "campaign" in mech.lower(), (
+        f"mechanism must mention graph/campaign context, got: {mech!r}"
+    )
+    assert "3" in mech, (
+        f"mechanism must include campaign_count=3, got: {mech!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 20 — FIX 3C: Tab 2 has calibration_note
+# ---------------------------------------------------------------------------
+
+def test_tab2_has_calibration_note():
+    """Tab 2 content must include calibration_note (FIX 3C)."""
+    from app.routers.soc import _tab2_content
+
+    mock_iks = {
+        "iks_v2": 71.0,
+        "interpretation": "Calibrated",
+        "components": {"trust_coverage": 50.0},
+        "total_decisions": 537,
+    }
+
+    mock_client = AsyncMock()
+    mock_client.run_query.return_value = [{"cnt": 12}]
+
+    with patch("app.services.iks.compute_iks_v2", new=AsyncMock(return_value=mock_iks)):
+        with patch("app.routers.soc.neo4j_client", mock_client):
+            content = _run(_tab2_content())
+
+    assert "calibration_note" in content, "Missing calibration_note (FIX 3C)"
+    note = content["calibration_note"]
+    assert isinstance(note, str) and note, "calibration_note must be a non-empty string"
+    assert "Innovation #9" in note, (
+        f"calibration_note must cite Innovation #9, got: {note!r}"
+    )
+    assert "manual configuration" in note, (
+        f"calibration_note must mention no manual configuration, got: {note!r}"
     )
