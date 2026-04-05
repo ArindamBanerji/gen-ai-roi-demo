@@ -2207,9 +2207,19 @@ async def _tab1_content() -> dict:
                 f"{override_rate}% of the time — review carefully."
             ),
             "analyst_insight": (
-                f"Your team has verified {verified_count} "
-                f"{category.replace('_', ' ')} decisions. "
-                f"System confidence: {calibration_status}."
+                (
+                    f"Your team has verified {verified_count} "
+                    f"{category.replace('_', ' ')} decisions. "
+                    f"System confidence: {calibration_status}. "
+                    f"Microsoft Copilot for Security uses global threat intelligence shared "
+                    f"across all customers. Your {verified_count} verified decisions encode "
+                    f"YOUR environment — your asset patterns, your analyst judgment, your "
+                    f"threat surface. Not reproducible from global data."
+                ) if verified_count > 0 else (
+                    f"Your team has verified {verified_count} "
+                    f"{category.replace('_', ' ')} decisions. "
+                    f"System confidence: {calibration_status}."
+                )
             ),
         })
 
@@ -2429,10 +2439,11 @@ async def _tab3_content() -> dict:
             "confidence": rec_conf,
             "basis":      rec_basis,
         },
-        "kernel_note": (                                 # FIX 2.4
-            "Higher-noise factors are automatically down-weighted. "
+        "kernel_note": (                                 # FIX 2.4 (revised)
+            "Higher-noise factors are automatically down-weighted by the "
+            "DiagonalKernel scoring engine (Innovation #4). "
             f"device_trust (σ=0.28) contributes {_factor_kernel_weight(0.28, all_sigmas)*100:.0f}% "
-            "of its nominal weight."
+            "of its nominal weight — the system trusts your highest-confidence signals most."
         ),
     }
 
@@ -2564,20 +2575,14 @@ async def _tab5_content() -> dict:
     if flywheel_edge_count == 0:
         flywheel_status = "pre_activation"
         flywheel_message = (
-            "Every verified analyst decision you make today creates a "
-            "pattern edge in the institutional knowledge graph. When a "
-            "future alert matches a prior verified pattern, the system "
-            "routes with +10.13pp higher accuracy (validated, p=0.0002, "
-            "N=30).\n\n"
-            f"Current state: 0 pattern edges — flywheel activates as "
-            "decisions accumulate.\n"
-            "Validated claim: unconditional across SOC and S2P domains.\n\n"
-            f"Note: Pattern edges are distinct from verified decisions — "
-            "they form when a new alert structurally matches a prior "
-            "verified alert in the graph. "
-            f"{verified_decisions:,} verified decisions are in the ledger; "
-            "pattern-match edges accumulate as new alerts arrive that "
-            "resemble prior verified cases."
+            "Flywheel activates as alert patterns recur in your environment. "
+            "With synthetic calibration data, pattern edges begin accumulating "
+            "from your first real alert — each time a new alert resembles a "
+            "prior verified case, the system routes with +10.13pp higher accuracy "
+            "(validated, p=0.0002, N=30, unconditional across SOC and S2P domains)."
+            f"\n\nCurrent state: pre-activation — {verified_decisions:,} verified decisions in ledger, "
+            "pattern edges form on first alert recurrence. "
+            "This is the expected state for a newly calibrated deployment."
         )
     else:
         flywheel_status = "active"
@@ -2641,6 +2646,10 @@ async def _tab5_content() -> dict:
             "flywheel_edge_count":    flywheel_edge_count,     # FIX 2.8
             "flywheel_status":        flywheel_status,         # FIX 2.8
             "flywheel_claim":         flywheel_claim,          # FIX 2.8
+            "flywheel_activation_note": (
+                "Flywheel pre-active: +10.13pp accuracy lift unlocks automatically "
+                "as recurring alert patterns are detected (validated, CLAIM-W2)."
+            ) if flywheel_status == "pre_activation" else None,
             "centroid_summary":       centroid_summary,        # FIX 2.9
             "conservation_narrative": conservation_narrative,  # FIX 2.10
         },

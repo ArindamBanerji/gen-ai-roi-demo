@@ -66,6 +66,13 @@ else:
     print(f"[SANITY] Tab 3 action: WARNING — unexpected action: {_tab3_action}")
     warnings += 1
 
+# Tab 3: kernel_note contains DiagonalKernel
+if "DiagonalKernel" in tabs.get("tab_3",{}).get("content",{}).get("kernel_note",""):
+    print("[SANITY] Tab 3 DiagonalKernel: PASS")
+else:
+    print("[SANITY] Tab 3 DiagonalKernel: WARNING — missing")
+    warnings += 1
+
 # Tab 4: roi_methodology present
 if "roi_methodology" in tabs.get("tab_4",{}).get("content",{}):
     print("[SANITY] Tab 4 ROI methodology: PASS")
@@ -82,7 +89,7 @@ else:
     print("[SANITY] Tab 5 W2 flywheel: WARNING — missing")
     warnings += 1
 
-print(f"\n[SANITY] Overall: {'PASS (5/5)' if warnings == 0 else f'WARNING ({warnings}/5 checks failed)'}")
+print(f"\n[SANITY] Overall: {'PASS (6/6)' if warnings == 0 else f'WARNING ({warnings}/6 checks failed)'}")
 if warnings > 0:
     print("Do NOT refresh Drive file — fix backend first.")
 else:

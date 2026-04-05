@@ -276,11 +276,13 @@ def test_tab4_has_roi_methodology():
     assert "source" in meth and meth["source"], "Missing source attribution"
     assert "calculation" in meth, "roi_methodology must include 'calculation' field (FIX 3)"
     calc = meth["calculation"]
-    assert "15 min" in calc,   f"calculation must mention '15 min saved': {calc!r}"
-    assert "$75"    in calc,   f"calculation must mention '$75' hourly rate: {calc!r}"
-    assert "365 days" in calc, f"calculation must mention '365 days': {calc!r}"
-    assert "/day"   in calc,   f"calculation must include daily figure: {calc!r}"
-    assert "annually" in calc, f"calculation must include annual figure: {calc!r}"
+    assert "15 min saved" in calc,        f"calculation must mention '15 min saved': {calc!r}"
+    assert "40% auto-approve rate" in calc, f"calculation must mention '40% auto-approve rate': {calc!r}"
+    assert "31 min gap" in calc,          f"calculation must mention '31 min gap': {calc!r}"
+    assert "$75"         in calc,         f"calculation must mention '$75' hourly rate: {calc!r}"
+    assert "365 days"    in calc,         f"calculation must mention '365 days': {calc!r}"
+    assert "/day"        in calc,         f"calculation must include daily figure: {calc!r}"
+    assert "annually"    in calc,         f"calculation must include annual figure: {calc!r}"
 
     sw = content["switching_cost_dollars"]
     assert "cost_usd"               in sw, "Missing cost_usd"
@@ -474,4 +476,125 @@ def test_tab5_conservation_has_claim():
     # GREEN status → healthy signal
     assert "healthy" in narrative, (
         f"GREEN status must produce 'healthy' signal, got: {narrative!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 11 — FIX 1: Tab 1 analyst_insight gates "YOUR environment" on verified_count
+# ---------------------------------------------------------------------------
+
+def test_tab1_analyst_insight_gates_on_verified_count():
+    """analyst_insight contains 'YOUR environment' only when verified_count > 0."""
+    from app.routers.soc import _tab1_content
+
+    # Case A: verified_count = 50 → "YOUR environment" must appear
+    mock_with_decisions = AsyncMock()
+    mock_with_decisions.run_query.side_effect = [
+        [{"cnt": 120}],
+        [{"cnt": 15}],
+        [{"category": "credential_access", "alert_type": None, "n": 42}],
+        [{"category": "credential_access", "verified": 50, "overrides": 5}],
+    ]
+    with patch("app.routers.soc.neo4j_client", mock_with_decisions):
+        content_a = _run(_tab1_content())
+
+    insight_a = content_a["top_alert_types"][0]["analyst_insight"]
+    assert "YOUR environment" in insight_a, (
+        f"verified_count=50 must produce 'YOUR environment' in analyst_insight, got: {insight_a!r}"
+    )
+
+    # Case B: verified_count = 0 → "YOUR environment" must NOT appear
+    mock_no_decisions = AsyncMock()
+    mock_no_decisions.run_query.side_effect = [
+        [{"cnt": 120}],
+        [{"cnt": 15}],
+        [{"category": "credential_access", "alert_type": None, "n": 42}],
+        [{"category": "credential_access", "verified": 0, "overrides": 0}],
+    ]
+    with patch("app.routers.soc.neo4j_client", mock_no_decisions):
+        content_b = _run(_tab1_content())
+
+    insight_b = content_b["top_alert_types"][0]["analyst_insight"]
+    assert "YOUR environment" not in insight_b, (
+        f"verified_count=0 must NOT produce 'YOUR environment', got: {insight_b!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 12 — FIX 2: Tab 3 kernel_note names DiagonalKernel
+# ---------------------------------------------------------------------------
+
+def test_tab3_kernel_note_names_diagonal_kernel():
+    """kernel_note must contain 'DiagonalKernel' (Innovation #4)."""
+    from app.routers.soc import _tab3_content
+    from app.services.gae_state import init_learning_state
+
+    init_learning_state()
+
+    mock_client = AsyncMock()
+    mock_client.run_query.side_effect = [
+        [{"cnt": 5000}],
+        [],
+    ]
+
+    with patch("app.routers.soc.neo4j_client", mock_client):
+        content = _run(_tab3_content())
+
+    kernel_note = content.get("kernel_note", "")
+    assert "DiagonalKernel" in kernel_note, (
+        f"kernel_note must contain 'DiagonalKernel', got: {kernel_note!r}"
+    )
+    assert "Innovation #4" in kernel_note, (
+        f"kernel_note must reference 'Innovation #4', got: {kernel_note!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 13 — FIX 3: Tab 5 flywheel reframe for pre-activation state
+# ---------------------------------------------------------------------------
+
+def test_tab5_flywheel_preactivation_reframe():
+    """With 0 TRIGGERED_EVOLUTION edges, flywheel_message explains pre-activation
+    and flywheel_activation_note is present."""
+    from app.routers.soc import _tab5_content
+
+    mock_narrative = {
+        "headline": "Test.",
+        "what_changed": {"top_shifts": []},
+        "what_discovered": {"attack_chains_detected": 0, "chain_summaries": []},
+        "what_knows": {
+            "iks_current": 65.0,
+            "categories_calibrated": 4,
+            "health_status": "GREEN",
+        },
+    }
+
+    mock_client = AsyncMock()
+    mock_client.run_query.return_value = [{"cnt": 0}]
+
+    with patch(
+        "app.services.executive_narrative.build_executive_narrative_async",
+        new=AsyncMock(return_value=mock_narrative),
+    ):
+        with patch("app.routers.soc.neo4j_client", mock_client):
+            content = _run(_tab5_content())
+
+    wsk = content["what_system_knows"]
+
+    assert wsk["flywheel_status"] == "pre_activation", (
+        "0 edges → flywheel_status must be 'pre_activation'"
+    )
+    assert "first real alert" in wsk["flywheel_message"], (
+        f"flywheel_message must mention 'first real alert', got: {wsk['flywheel_message']!r}"
+    )
+    assert "flywheel_activation_note" in wsk, (
+        "flywheel_activation_note must be present in what_system_knows"
+    )
+    note = wsk["flywheel_activation_note"]
+    assert note is not None, "flywheel_activation_note must not be None"
+    assert "CLAIM-W2" in note, (
+        f"flywheel_activation_note must cite CLAIM-W2, got: {note!r}"
+    )
+    assert "+10.13pp" in note, (
+        f"flywheel_activation_note must state +10.13pp, got: {note!r}"
     )
