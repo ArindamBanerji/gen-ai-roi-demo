@@ -1244,3 +1244,70 @@ def test_tab5_conservation_has_evidence_ledger():
     narrative = content["what_system_knows"]["conservation_narrative"]
     assert "Evidence Ledger" in narrative
     assert "EU AI Act Art. 13" in narrative
+
+
+# ---------------------------------------------------------------------------
+# Tests 59-60 — Block 3.5: centroid-evolution drift from bootstrap baseline
+# ---------------------------------------------------------------------------
+
+def test_centroid_evolution_returns_data():
+    """centroid-evolution endpoint returns a list."""
+    resp = client.get("/api/soc/centroid-evolution")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data, list) or isinstance(data, dict)
+
+
+def test_centroid_drift_nonzero_at_high_decisions():
+    """Fallback computes non-zero drift when scorer.mu differs from mu_zero.
+
+    Unit test: patches Neo4j to raise (forcing the in-memory fallback),
+    and patches ProfileScorer + _load_mu_zero so mu ≠ mu_zero by a known
+    amount.  Verifies the fallback correctly propagates non-zero drift into
+    the centroid-evolution response.
+    """
+    import numpy as np
+
+    # Build a mock scorer whose mu differs from mu_zero by a known drift.
+    n_categories, n_actions, n_factors = 6, 4, 6
+    mu_zero_val = np.zeros((n_categories, n_actions, n_factors), dtype=np.float64)
+    # Shift category 0 action 0 by 0.10 in factor 0 — drift per category 0 ≈ 0.025
+    mu_t_val = mu_zero_val.copy()
+    mu_t_val[0, 0, 0] = 0.10
+
+    mock_scorer = MagicMock()
+    mock_scorer.mu = mu_t_val
+    mock_scorer.categories = [
+        "credential_access", "lateral_movement", "malware_execution",
+        "data_exfiltration", "privilege_escalation", "reconnaissance",
+    ]
+    mock_scorer.actions = ["escalate", "investigate", "suppress", "monitor"]
+
+    mock_learning_state = MagicMock()
+    mock_learning_state.decision_count = 8000
+
+    async def _raise(*args, **kwargs):
+        raise RuntimeError("forced-fail for fallback test")
+
+    mock_neo4j = AsyncMock()
+    mock_neo4j.run_query.side_effect = _raise
+
+    # Imports inside get_centroid_evolution happen at call time, so patch source modules.
+    with patch("app.routers.framework_router.neo4j_client", mock_neo4j), \
+         patch("app.services.gae_state.get_profile_scorer", return_value=mock_scorer), \
+         patch("app.services.gae_state.get_learning_state", return_value=mock_learning_state), \
+         patch("app.services.iks._load_mu_zero", return_value=mu_zero_val):
+        local_client = TestClient(app)
+        resp = local_client.get("/api/soc/centroid-evolution")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    events = data if isinstance(data, list) else data.get("evolution", [])
+    assert len(events) > 0, "Fallback returned no records despite mocked scorer"
+    drifts = [
+        abs(e.get("drift", e.get("centroid_delta_norm", e.get("magnitude", 0.0))))
+        for e in events if e
+    ]
+    assert max(drifts) > 0.001, (
+        f"Fallback drift values all ≈ 0 despite mu ≠ mu_zero: {drifts}"
+    )
