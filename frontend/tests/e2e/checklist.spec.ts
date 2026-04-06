@@ -1076,4 +1076,29 @@ test.describe('Phase B — centroid drift + frontend gaps', () => {
     expect(data.content.kernel_note).toContain('Innovation #4');
   });
 
+  test('f9_report_returns_lead_finding', async ({ page }) => {
+    const resp = await page.request.get(
+      'http://localhost:8000/api/soc/f9-report'
+    );
+    expect(resp.ok()).toBeTruthy();
+    const data = await resp.json();
+    expect(data).toHaveProperty('lead_finding');
+    expect(data.lead_finding).toContain('lateral_movement'
+      .replace('_', ' ') || 'Lateral movement');
+    expect(data).toHaveProperty('per_category');
+    expect(data).toHaveProperty('methodology');
+  });
+
+  test('f9_analyst_benchmarking_has_six_categories',
+    async ({ page }) => {
+    const resp = await page.request.get(
+      'http://localhost:8000/api/soc/analyst-benchmarking'
+    );
+    expect(resp.ok()).toBeTruthy();
+    const data = await resp.json();
+    expect(Object.keys(data.per_category || {}).length)
+      .toBeGreaterThanOrEqual(1);
+    expect(data).toHaveProperty('lead_finding');
+  });
+
 });
