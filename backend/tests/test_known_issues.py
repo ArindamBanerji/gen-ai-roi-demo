@@ -97,6 +97,27 @@ on April 1, 2026.
 # Dependency: Fix 1.1, Fix 1.2, Blocks 2.1-2.3 (all complete as of Block 2.3).
 # Priority: P0 — pilot sign-off gate.
 
+# BACKLOG-017: conservation_narrative not rendered in frontend
+# Tab 5 "What the System Knows" section — conservation_narrative field exists
+# in GET /api/soc/tab/5/content (content.what_system_knows.conservation_narrative)
+# but no frontend component renders it. The audit trail sentence, CLAIM-OLS-01
+# citation, and Evidence Ledger / EU AI Act Art. 13 sentence are all invisible
+# to the CISO in the browser.
+# File to fix: frontend/src/components/tabs/ExecutiveNarrativeTab.tsx —
+# add conservation_narrative to the "What the System Knows" card.
+# Priority: P1 — blocks EU AI Act Art. 13 claim being demo-visible.
+# Found: Phase A E2E testing, April 5 2026.
+
+# BACKLOG-018: kernel_note (DiagonalKernel) not rendered in frontend
+# Tab 3 factor breakdown — kernel_note field exists in GET /api/soc/tab/3/content
+# (content.kernel_note) containing DiagonalKernel Innovation #4 explanation
+# (device_trust sigma=0.28 → 6% effective weight) but no frontend component
+# renders it. The "show your work" kernel explanation is invisible in the demo.
+# File to fix: frontend component that renders the factor breakdown panel —
+# add kernel_note below the factor weight bars.
+# Priority: P1 — blocks "show your work" kernel explanation being visible in demo.
+# Found: Phase A E2E testing, April 5 2026.
+
 def test_backlog_documented():
     """Placeholder — confirms backlog file is present and parseable."""
     issues = [
@@ -104,5 +125,6 @@ def test_backlog_documented():
         "BACKLOG-004", "BACKLOG-005", "BACKLOG-006", "BACKLOG-007",
         "BACKLOG-008", "BACKLOG-009", "BACKLOG-010", "BACKLOG-011",
         "BACKLOG-012", "BACKLOG-013",
+        "BACKLOG-017", "BACKLOG-018",
     ]
-    assert len(issues) == 13
+    assert len(issues) == 15
