@@ -2240,12 +2240,30 @@ async def _tab2_content() -> dict:
     total_decisions    = 0
     override_learning_status = "inactive"
 
+    # ── IKS primary: drift-based formula 100 × min(D(t)/κ*=0.20, 1.0) ────────
+    # Uses in-memory ProfileScorer centroid drift from μ₀ — no Neo4j required.
+    # Same path as Tab 5 (executive_narrative.py). Avoids event-loop issues that
+    # affect compute_iks_v2 async queries.
+    try:
+        from app.services.iks import compute_iks as _compute_iks_drift, interpret_iks_v2 as _interp_v2
+        from app.services.gae_state import get_profile_scorer as _get_ps
+        _ps = _get_ps()
+        if _ps is not None:
+            _drift_result = _compute_iks_drift(_ps.mu)
+            iks_score = _drift_result["current"]
+            iks_interpretation = _interp_v2(iks_score)
+    except Exception:
+        pass
+
+    # ── IKS v2: component breakdown + total_decisions (informational) ──────────
+    # Also used as fallback for iks_score if drift path gave 0.0.
     try:
         iks_data = await compute_iks_v2(neo4j_client)
-        iks_score          = iks_data.get("iks_v2", 0.0)
-        iks_interpretation = iks_data.get("interpretation", "")
         category_accuracy_summary = iks_data.get("components", {})
-        total_decisions    = iks_data.get("total_decisions", 0)
+        total_decisions            = iks_data.get("total_decisions", 0)
+        if iks_score == 0.0:
+            iks_score          = iks_data.get("iks_v2", 0.0)
+            iks_interpretation = iks_data.get("interpretation", "")
     except Exception:
         pass
 

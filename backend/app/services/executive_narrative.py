@@ -322,14 +322,26 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     except Exception:
         pass
 
-    # ── 5. IKS v2 ────────────────────────────────────────────────────────────
+    # ── 5. IKS — drift-based formula: 100 × min(D(t)/κ*=0.20, 1.0) ──────────
+    # Uses in-memory ProfileScorer centroid drift from μ₀ (bootstrap baseline).
+    # Consistent with Tab 2 iks_score after BACKLOG-004 fix.
     iks_current = 0.0
     try:
-        from app.services.iks import compute_iks_v2
-        iks_data = await compute_iks_v2(neo4j_service)
-        iks_current = float(iks_data.get("iks_v2", 0.0))
+        from app.services.iks import compute_iks as _compute_iks_drift_en
+        from app.services.gae_state import get_profile_scorer as _get_ps_en
+        _ps_en = _get_ps_en()
+        if _ps_en is not None:
+            _drift_en = _compute_iks_drift_en(_ps_en.mu)
+            iks_current = float(_drift_en["current"])
     except Exception:
         pass
+    if iks_current == 0.0:
+        try:
+            from app.services.iks import compute_iks_v2
+            iks_data = await compute_iks_v2(neo4j_service)
+            iks_current = float(iks_data.get("iks_v2", 0.0))
+        except Exception:
+            pass
 
     # ── 6. categories_calibrated (≥10 verified decisions each) ───────────────
     categories_calibrated = 0
@@ -338,8 +350,15 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
             "MATCH (d:Decision) WHERE d.outcome IS NOT NULL "
             "RETURN d.category AS category, count(d) AS n"
         )
+        # Filter to the 6 canonical SOC_CATEGORIES — excludes "unknown" and
+        # any other non-canonical labels that would inflate the count past 6.
+        _SOC_CAT = {
+            "credential_access", "threat_intel_match", "lateral_movement",
+            "data_exfiltration", "insider_threat", "cloud_infrastructure",
+        }
         categories_calibrated = sum(
-            1 for r in rows if int(r.get("n") or 0) >= 10
+            1 for r in rows
+            if int(r.get("n") or 0) >= 10 and r.get("category") in _SOC_CAT
         )
     except Exception:
         pass

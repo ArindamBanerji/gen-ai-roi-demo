@@ -1207,3 +1207,29 @@ def test_tab2_noise_map_not_cold_start_at_high_decisions():
         for category, data in noise.items():
             assert "needs 10+" not in str(data), \
                 f"Noise map cold-start message despite {count} decisions"
+
+
+# ---------------------------------------------------------------------------
+# Test 57 — BACKLOG-004: Tab 2 IKS reflects drift-based formula (≥ 67 at phase 3)
+# ---------------------------------------------------------------------------
+
+def test_tab2_iks_reflects_decision_volume():
+    """
+    BACKLOG-004: Tab 2 iks_score must use the centroid-drift IKS formula.
+    At phase 3 calibration (≥537 decisions, formal switching cost plateau),
+    IKS must be ≥ 67 — the threshold where switching cost justifies lock-in.
+
+    If iks_score < 67 despite high decision volume, the composite v2 formula
+    is underweighting calibrated centroids due to trust_coverage drag.
+    """
+    t2 = client.get("/api/soc/tab/2/content").json()["content"]
+    iks = t2["iks_score"]
+    raw = t2["decision_count_glossary"]["verified_decisions"]
+    decisions = int(raw.split()[0].replace(",", ""))
+
+    if decisions >= 537:
+        assert iks >= 67.0, (
+            f"At {decisions:,} decisions (phase 3+), IKS must be ≥ 67 "
+            f"(switching cost plateau). Got {iks:.1f} — likely using composite v2 "
+            "instead of drift-based formula (BACKLOG-004)."
+        )
