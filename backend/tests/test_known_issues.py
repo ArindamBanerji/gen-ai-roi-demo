@@ -118,6 +118,26 @@ on April 1, 2026.
 # Priority: P1 — blocks "show your work" kernel explanation being visible in demo.
 # Found: Phase A E2E testing, April 5 2026.
 
+# BACKLOG-019: E2E suite triggers live Pulsedive refresh — CancelledError + WinError 10055
+# Root cause: E2E test hits POST /api/graph/threat-intel/refresh which triggers
+# live Pulsedive connector with asyncio.sleep(0.5). Test runner timeout cancels
+# the request mid-sleep. Windows socket buffer exhaustion (WinError 10055) follows
+# from 111 concurrent Playwright connections.
+# Symptom: Tests pass but backend crashes at teardown with CancelledError and
+# WinError 10055 on Windows (uvicorn shutdown).
+# Fix path: mock /api/graph/threat-intel/refresh in E2E test config OR add
+# pytest marker to skip live connector tests in E2E.
+# Priority: P2 — cosmetic, does not affect test results or data.
+# Found: Phase B E2E run, April 5 2026.
+
+# BACKLOG-020: IKS collapses from 76.1 to 2.5 after learning loop E2E test
+# Root cause unknown — may be drift-based IKS resetting when ProfileScorer is
+# re-initialized during E2E learning loop, or mu_zero being overwritten.
+# Symptom: IKS drops from 76.1 → 2.5 after 40 decisions injected by the
+# E2E learning loop test, breaking the IKS stability claim.
+# Priority: P1 — IKS stability under continued learning is a core product claim.
+# Found: Phase B E2E run, April 5 2026.
+
 def test_backlog_documented():
     """Placeholder — confirms backlog file is present and parseable."""
     issues = [
@@ -125,6 +145,6 @@ def test_backlog_documented():
         "BACKLOG-004", "BACKLOG-005", "BACKLOG-006", "BACKLOG-007",
         "BACKLOG-008", "BACKLOG-009", "BACKLOG-010", "BACKLOG-011",
         "BACKLOG-012", "BACKLOG-013",
-        "BACKLOG-017", "BACKLOG-018",
+        "BACKLOG-017", "BACKLOG-018", "BACKLOG-019", "BACKLOG-020",
     ]
-    assert len(issues) == 15
+    assert len(issues) == 17

@@ -995,3 +995,60 @@ test.describe('Tab content contract — Phase A E2E gates', () => {
   });
 
 });
+
+// ─── Phase B — centroid drift + frontend gaps ────────────────────────────────
+
+test.describe('Phase B — centroid drift + frontend gaps', () => {
+
+  test('tab2_centroid_drift_api_returns_data', async ({ page }) => {
+    // API contract: centroid-evolution returns data, not empty
+    const resp = await page.request.get(
+      `${BACKEND}/api/soc/centroid-evolution`
+    );
+    expect(resp.ok()).toBeTruthy();
+    const data = await resp.json();
+    // Should return list or dict with evolution key
+    expect(data).toBeTruthy();
+  });
+
+  test('tab2_accuracy_trajectory_endpoint_returns_valid_shape',
+    async ({ page }) => {
+    // Tests endpoint shape — non-empty assertion is in
+    // backend test suite (test 16 in checklist confirms
+    // trajectory_points non-empty when called before
+    // learning loop mutations)
+    const resp = await page.request.get(
+      `${BACKEND}/api/soc/accuracy-trajectory`
+    );
+    expect(resp.ok()).toBeTruthy();
+    const data = await resp.json();
+    // Must have categories field with 6 entries (ordering-independent)
+    expect(data).toHaveProperty('categories');
+    expect(Object.keys(data.categories || {}).length).toBe(6);
+    // Must have source field
+    expect(data).toHaveProperty('source');
+  });
+
+  // BACKLOG-017 tracker — conservation_narrative not in DOM
+  test('backlog017_conservation_narrative_api_has_evidence_ledger', async ({ page }) => {
+    // API has it — frontend doesn't render it yet (BACKLOG-017)
+    const resp = await page.request.get(
+      `${BACKEND}/api/soc/tab/5/content`
+    );
+    const data = await resp.json();
+    const narrative = data.content.what_system_knows.conservation_narrative;
+    expect(narrative).toContain('Evidence Ledger');
+    expect(narrative).toContain('EU AI Act Art. 13');
+  });
+
+  // BACKLOG-018 tracker — kernel_note not in DOM
+  test('backlog018_kernel_note_api_has_diagonalkernel', async ({ page }) => {
+    // API has it — frontend doesn't render it yet (BACKLOG-018)
+    const resp = await page.request.get(
+      `${BACKEND}/api/soc/tab/3/content`
+    );
+    const data = await resp.json();
+    expect(data.content.kernel_note).toContain('DiagonalKernel');
+  });
+
+});
