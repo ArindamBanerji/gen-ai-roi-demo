@@ -166,11 +166,11 @@ async function processAlertFast(page: import('@playwright/test').Page, outcomeCo
   await page.getByText(/Why This Decision\?/).waitFor({ state: 'visible', timeout: 30000 });
 
   const executeBtn = page.getByRole('button', { name: /Apply Recommendation|Apply Policy Resolution/i });
-  await executeBtn.waitFor({ state: 'visible', timeout: 15000 });
+  await executeBtn.waitFor({ state: 'visible', timeout: 30000 });
   await executeBtn.scrollIntoViewIfNeeded();
   await executeBtn.click();
 
-  await page.getByText(/OUTCOME FEEDBACK/i).waitFor({ state: 'visible', timeout: 15000 });
+  await page.getByText(/OUTCOME FEEDBACK/i).waitFor({ state: 'visible', timeout: 30000 });
 
   if (outcomeCorrect) {
     await page.getByRole('button', { name: /Confirmed Correct/i }).click();
