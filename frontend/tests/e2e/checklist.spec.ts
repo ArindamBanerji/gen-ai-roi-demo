@@ -909,3 +909,89 @@ test.describe('Tab 5 – Executive Narrative (content gate)', () => {
   });
 
 });
+
+// ─── Tab content contract — Phase A E2E gates ────────────────────────────────
+
+test.describe('Tab content contract — Phase A E2E gates', () => {
+
+  test('tab2_iks_score_visible_and_positive', async ({ page }) => {
+    await page.goto(FRONTEND);
+    await page.getByRole('button', { name: /Runtime Evolution/i }).click();
+    await page.waitForLoadState('networkidle');
+    // IKS label must be visible
+    const iksLabel = page.getByText(/Institutional Knowledge Score/i).first();
+    await expect(iksLabel).toBeVisible({ timeout: 10_000 });
+    // IKS numeric value must be > 0 — targets known range post-BACKLOG-004 fix
+    const iksValue = page.locator('.text-3xl, .text-4xl, .text-2xl').filter({
+      hasText: /^\d+(\.\d+)?$/,
+    }).first();
+    await expect(iksValue).toBeVisible({ timeout: 10_000 });
+    const raw = await iksValue.innerText();
+    const num = parseFloat(raw.replace(/[^0-9.]/g, ''));
+    expect(num).toBeGreaterThan(0);
+  });
+
+  test('tab2_categories_calibrated_max_six', async ({ page }) => {
+    await page.goto(FRONTEND);
+    await page.getByRole('button', { name: /Runtime Evolution/i }).click();
+    await page.waitForLoadState('networkidle');
+    // Must not show impossible numbers like "8 of 6" or "7 of 6" (BACKLOG-007)
+    const bodyText = await page.locator('body').textContent();
+    expect(bodyText).not.toContain('8 of 6');
+    expect(bodyText).not.toContain('7 of 6');
+    expect(bodyText).not.toContain('9 of 6');
+  });
+
+  test('tab5_conservation_has_evidence_ledger', async ({ page }) => {
+    // conservation_narrative is an API contract field — not rendered in DOM.
+    // Verify via /api/soc/tab/5/content (same pattern as other API contract tests).
+    const res = await page.request.get(`${BACKEND}/api/soc/tab/5/content`);
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    const narrative = body?.content?.what_system_knows?.conservation_narrative ?? '';
+    expect(narrative).toContain('Evidence Ledger');
+    expect(narrative).toContain('EU AI Act Art. 13');
+  });
+
+  test('tab5_categories_calibrated_shows_six', async ({ page }) => {
+    await page.goto(FRONTEND);
+    await page.getByRole('button', { name: /Executive Narrative/i }).click();
+    await page.waitForLoadState('networkidle');
+    // categories_calibrated must not exceed 6 (BACKLOG-007)
+    const bodyText = await page.locator('body').textContent();
+    expect(bodyText).not.toMatch(/[789] of 6 categories/);
+  });
+
+  test('tab1_no_unknown_category_visible', async ({ page }) => {
+    await page.goto(FRONTEND);
+    await page.getByRole('button', { name: /Alert Triage/i }).click();
+    await page.waitForLoadState('networkidle');
+    // No raw quoted "unknown" category should appear in alert list
+    const alertItems = page.locator('button').filter({ hasText: /ALERT-|alert/i });
+    const count = await alertItems.count();
+    for (let i = 0; i < Math.min(count, 10); i++) {
+      const text = await alertItems.nth(i).textContent();
+      expect(text?.toLowerCase()).not.toContain('"unknown"');
+    }
+  });
+
+  test('tab2_iks_interpretation_not_cold_start', async ({ page }) => {
+    await page.goto(FRONTEND);
+    await page.getByRole('button', { name: /Runtime Evolution/i }).click();
+    await page.waitForLoadState('networkidle');
+    // IKS 76 must NOT show cold-start interpretation (BACKLOG-004)
+    const bodyText = await page.locator('body').textContent();
+    expect(bodyText).not.toContain('Cold start — system is accumulating');
+  });
+
+  test('tab3_diagonalkernel_visible_in_factor_breakdown', async ({ page }) => {
+    // kernel_note containing DiagonalKernel is an API contract field — not rendered in DOM.
+    // Verify via /api/soc/tab/3/content (same pattern as other API contract tests).
+    const res = await page.request.get(`${BACKEND}/api/soc/tab/3/content`);
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    const kernelNote = body?.content?.kernel_note ?? '';
+    expect(kernelNote).toContain('DiagonalKernel');
+  });
+
+});
