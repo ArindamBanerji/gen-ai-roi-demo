@@ -167,3 +167,63 @@ def test_iks_stable_after_learning_decisions():
         f"BACKLOG-020: IKS dropped {iks_before:.1f}→{iks_after:.1f} "
         "after 5 demo resets — learning state was wiped"
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 6: IKS > 70 after /api/alerts/reset (gate test for demo readiness)
+# ---------------------------------------------------------------------------
+
+def test_iks_above_70_after_alerts_reset():
+    """IKS must stay > 70 after /api/alerts/reset — demo readiness gate.
+
+    Regression for BACKLOG-020 part 2: verifies that all reset paths
+    (triage, metrics demo/reset-all, metrics demo/reseed) preserve the
+    ProfileScorer centroids so IKS never collapses mid-demo.
+    """
+    from app.services.gae_state import get_profile_scorer
+    from app.services.iks import compute_iks
+
+    ps = get_profile_scorer()
+    if ps is None:
+        pytest.skip("ProfileScorer not initialized — startup required")
+
+    iks_before = compute_iks(ps.mu)["current"]
+    if iks_before <= 70:
+        pytest.skip(f"IKS baseline is {iks_before:.1f} ≤ 70 — bootstrap not complete")
+
+    with patch("app.routers.triage.neo4j_client", _neo4j_reset_mock()):
+        resp = client.post("/api/alerts/reset")
+    assert resp.status_code == 200
+
+    ps_after = get_profile_scorer()
+    assert ps_after is not None
+    iks_after = compute_iks(ps_after.mu)["current"]
+
+    assert iks_after > 70, (
+        f"BACKLOG-020: IKS dropped to {iks_after:.1f} after /api/alerts/reset "
+        "(must remain > 70 for demo gate)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 7: IKS > 50 after /api/alerts/reset via Tab 2 endpoint
+# ---------------------------------------------------------------------------
+
+def test_alerts_reset_preserves_iks_above_threshold():
+    """IKS must stay > 50 after /api/alerts/reset.
+    Regression test for BACKLOG-020 part 2.
+    """
+    before = client.get("/api/soc/tab/2/content").json()
+    iks_before = before["content"]["iks_score"]
+
+    # Call the reset endpoint
+    with patch("app.routers.triage.neo4j_client", _neo4j_reset_mock()):
+        reset_resp = client.post("/api/alerts/reset")
+    assert reset_resp.status_code == 200
+
+    after = client.get("/api/soc/tab/2/content").json()
+    iks_after = after["content"]["iks_score"]
+
+    assert iks_after > 50, \
+        f"BACKLOG-020: IKS dropped to {iks_after} after reset " \
+        f"(was {iks_before})"

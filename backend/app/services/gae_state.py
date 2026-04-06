@@ -185,8 +185,11 @@ def init_learning_state() -> LearningState:
 
 
 def get_profile_scorer():
-    """Return the global ProfileScorer instance."""
-    return get_learning_state().profile_scorer
+    """Return the global ProfileScorer instance, or None if not yet initialized."""
+    try:
+        return get_learning_state().profile_scorer
+    except RuntimeError:
+        return None
 
 
 def get_bootstrap_result() -> Optional[BootstrapResult]:

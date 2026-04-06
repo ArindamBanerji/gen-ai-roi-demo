@@ -1046,8 +1046,8 @@ test.describe('Phase B — centroid drift + frontend gaps', () => {
     // DOM fix: conservation_narrative now rendered in ExecutiveNarrativeTab
     // under "Conservation & Audit Status" label (BACKLOG-017 resolved)
     await page.goto('http://localhost:5173');
-    await page.getByRole('tab', { name: /executive/i }).click();
-    await page.waitForTimeout(2000);
+    await page.getByRole('button', { name: /Executive Narrative/i }).click();
+    await page.waitForTimeout(3000);
     const bodyText = await page.locator('body').textContent();
     expect(bodyText).toContain('Evidence Ledger');
     expect(bodyText).toContain('Conservation');

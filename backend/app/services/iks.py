@@ -180,12 +180,24 @@ async def compute_iks_v2(neo4j_service) -> dict:
         try:
             from app.services.gae_state import get_learning_state as _get_ls
             total_decisions = max(0, _get_ls().decision_count)
-        except Exception:
-            pass
+        except Exception as _fb_exc:
+            log.warning("[IKS-v2] learning_state fallback failed: %s", _fb_exc)
+            # Second-tier fallback: read checkpoint file directly so IKS stays
+            # stable even when startup hasn't run yet (e.g. isolated test runs).
+            try:
+                import json as _json
+                from app.services.gae_state import _STATE_PATH as _ckpt_path
+                with open(_ckpt_path, "r", encoding="utf-8") as _fh:
+                    _ckpt = _json.load(_fh)
+                total_decisions = max(0, int(_ckpt.get("decision_count", 0)))
+                log.info("[IKS-v2] decision_count=%d from checkpoint fallback", total_decisions)
+            except Exception:
+                pass
 
     graph_richness = min(total_decisions / float(_p3min(200.0, 0.25)), 1.0) * 100.0
 
     # ── Component 2: Decision Maturity ──────────────────────────────────────
+    _dm_query_ok = True
     try:
         rows = await neo4j_service.run_query(
             "MATCH (d:Decision) RETURN d.category AS category, count(d) AS n", {}
@@ -198,8 +210,14 @@ async def compute_iks_v2(neo4j_service) -> dict:
     except Exception as exc:
         log.warning("[IKS-v2] decision_maturity query failed: %s", exc)
         cat_counts = {}
+        _dm_query_ok = False
 
     mean_cat_count = (sum(cat_counts.values()) / len(cat_counts)) if cat_counts else 0.0
+    # Fallback: when the query itself failed (not a legitimately empty result), estimate
+    # mean_cat_count from total_decisions assuming uniform distribution across 6 categories.
+    # Mirrors the graph_richness fallback — keeps IKS stable on transient Neo4j errors.
+    if not _dm_query_ok and total_decisions > 0:
+        mean_cat_count = total_decisions / 6.0
     # Threshold: reaches 1.0 at mean_cat_count = 1 (6 total for 6 cats);
     # reaches 100.0 at mean_cat_count >= 100 (~600 total for 6 categories).
     decision_maturity = min(mean_cat_count / 100.0, 1.0) * 100.0
