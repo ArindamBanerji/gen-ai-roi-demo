@@ -179,6 +179,7 @@ interface DecisionFactors {
   confidence: number
   decision_method: string
   weights_note: string
+  kernel_note?: string
 }
 
 const MITRE_TECHNIQUE_NAMES: Record<string, string> = {
@@ -1128,6 +1129,15 @@ export default function AlertTriageTab() {
                       </div>
                     )
                   })}
+
+                  {decisionFactors.kernel_note && (
+                    <div className="pt-3 border-t border-gray-800">
+                      <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">Scoring Engine</p>
+                      <p className="text-xs text-gray-400 leading-relaxed">
+                        {decisionFactors.kernel_note}
+                      </p>
+                    </div>
+                  )}
 
                   <div className="pt-3 border-t border-gray-800 space-y-1">
                     <p className="text-xs text-gray-400">
