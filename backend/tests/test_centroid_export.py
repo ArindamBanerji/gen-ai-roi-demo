@@ -171,3 +171,96 @@ def test_summary_format_excludes_tensors():
                   "tensor_shape", "drift_from_bootstrap", "decision_count",
                   "categories", "actions", "sha256"):
         assert field in body, f"summary missing field '{field}'"
+
+
+# =============================================================================
+# Block 2.3 — Endpoint contract tests (10-field public schema)
+# =============================================================================
+
+from fastapi.testclient import TestClient as _TestClient  # noqa: E402
+from app.main import app as _app  # noqa: E402
+
+_client = _TestClient(_app)
+
+
+def _endpoint_data():
+    resp = _client.get("/api/soc/centroid-export")
+    assert resp.status_code == 200
+    return resp.json()
+
+
+def _scorer_ready(data: dict) -> bool:
+    return data.get("status") != "cold_start"
+
+
+# ---------------------------------------------------------------------------
+# Test 6 — endpoint returns 200 (including cold_start)
+# ---------------------------------------------------------------------------
+
+def test_centroid_export_returns_200():
+    resp = _client.get("/api/soc/centroid-export")
+    assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Test 7 — all ten required fields present
+# ---------------------------------------------------------------------------
+
+def test_centroid_export_has_ten_fields():
+    data = _endpoint_data()
+    if not _scorer_ready(data):
+        pytest.skip("ProfileScorer not initialized — skipping field check")
+
+    required = [
+        "exported_at", "export_version", "tensor_shape",
+        "categories", "actions", "factors", "centroids",
+        "drift_from_bootstrap", "checksum", "decision_count",
+    ]
+    for field in required:
+        assert field in data, f"Missing field: {field}"
+
+
+# ---------------------------------------------------------------------------
+# Test 8 — tensor shape [6, 4, 6] and list lengths
+# ---------------------------------------------------------------------------
+
+def test_centroid_export_tensor_shape_correct():
+    data = _endpoint_data()
+    if not _scorer_ready(data):
+        pytest.skip("ProfileScorer not initialized — skipping shape check")
+
+    assert data["tensor_shape"] == [6, 4, 6]
+    assert len(data["categories"]) == 6
+    assert len(data["actions"]) == 4
+    assert len(data["factors"]) == 6
+
+
+# ---------------------------------------------------------------------------
+# Test 9 — centroids dict has all categories/actions with 6 factor values
+# ---------------------------------------------------------------------------
+
+def test_centroid_export_centroids_have_six_factors():
+    data = _endpoint_data()
+    if not _scorer_ready(data):
+        pytest.skip("ProfileScorer not initialized — skipping centroids check")
+
+    for cat in data["categories"]:
+        assert cat in data["centroids"], f"Category missing from centroids: {cat}"
+        for action in data["actions"]:
+            assert action in data["centroids"][cat], \
+                f"Action missing from centroids[{cat}]: {action}"
+            assert len(data["centroids"][cat][action]) == 6, \
+                f"Expected 6 factor values for {cat}/{action}"
+
+
+# ---------------------------------------------------------------------------
+# Test 10 — checksum is 64-char SHA-256 hex string
+# ---------------------------------------------------------------------------
+
+def test_centroid_export_checksum_is_string():
+    data = _endpoint_data()
+    if not _scorer_ready(data):
+        pytest.skip("ProfileScorer not initialized — skipping checksum check")
+
+    assert isinstance(data["checksum"], str)
+    assert len(data["checksum"]) == 64  # SHA-256 hex

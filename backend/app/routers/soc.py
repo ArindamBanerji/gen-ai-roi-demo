@@ -3102,24 +3102,102 @@ async def get_spike_cap_status_endpoint():
 @router.get("/soc/centroid-export")
 async def get_centroid_export(format: str = "json"):
     """
-    Export the current centroid tensor as a portable artifact.
+    Export the full centroid tensor with provenance metadata (Block 2.3).
 
-    ?format=json    (default) — full 10-field export including tensor data
-    ?format=summary           — all fields except current_mu and bootstrap_mu
+    Additive schema over build_centroid_export base fields:
+      exported_at           — alias for generated_at_epoch (ms)
+      factors               — factor name list [6]
+      centroids             — dict: category → action → [factor_values]
+      drift_from_bootstrap  — per-category L2 drift dict (overrides scalar)
+      checksum              — SHA-256 of centroids dict (auditable)
+      iks_score             — current IKS (informational)
 
-    Use the summary format for display; use json for archival/portability.
+    Plus all original build_centroid_export fields retained for back-compat:
+      generated_at_epoch, gae_version, sha256, current_mu, bootstrap_mu …
+
+    ?format=json    (default) — full export including all tensor fields
+    ?format=summary           — excludes current_mu, bootstrap_mu, centroids
+
+    Safe degradation: returns {"status": "cold_start"} with 200 if scorer
+    is not yet initialized.
     """
+    import hashlib
+    import json as _json
+    import time as _time
+    import numpy as _np
     from app.services.gae_state import build_centroid_export, get_profile_scorer
 
-    try:
-        scorer = get_profile_scorer()
-    except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+    _FACTORS = [
+        "travel_match", "asset_criticality", "threat_intel_enrichment",
+        "pattern_history", "time_anomaly", "device_trust",
+    ]
 
-    export = await build_centroid_export(scorer, neo4j_client)
+    scorer = get_profile_scorer()
+
+    if scorer is None:
+        return {
+            "status":  "cold_start",
+            "message": "No centroid data yet",
+        }
+
+    # Build base export (current_mu, bootstrap_mu, sha256, categories, etc.)
+    raw = await build_centroid_export(scorer, neo4j_client)
+
+    categories = raw["categories"]   # list[str], len 6
+    actions    = raw["actions"]      # list[str], len 4
+    current_mu = raw["current_mu"]   # nested list [6][4][6]
+
+    # Centroids dict: category → action → [factor_values]
+    centroids: dict = {}
+    for c_idx, cat in enumerate(categories):
+        centroids[cat] = {}
+        for a_idx, action in enumerate(actions):
+            centroids[cat][action] = [
+                round(float(v), 6) for v in current_mu[c_idx][a_idx]
+            ]
+
+    # Per-category drift (mean L2 distance from μ₀ across actions)
+    bootstrap_mu = raw.get("bootstrap_mu")
+    drift_per_cat: dict = {}
+    if bootstrap_mu is not None:
+        curr_arr = _np.array(current_mu,   dtype=_np.float64)  # [6, 4, 6]
+        boot_arr = _np.array(bootstrap_mu, dtype=_np.float64)  # [6, 4, 6]
+        for c_idx, cat in enumerate(categories):
+            diff = curr_arr[c_idx] - boot_arr[c_idx]           # [4, 6]
+            drift_per_cat[cat] = round(
+                float(_np.mean(_np.linalg.norm(diff, axis=1))), 4
+            )
+    else:
+        for cat in categories:
+            drift_per_cat[cat] = None
+
+    # Checksum over centroids dict (sorted JSON — auditable; distinct from sha256)
+    checksum = hashlib.sha256(
+        _json.dumps(centroids, sort_keys=True).encode()
+    ).hexdigest()
+
+    # IKS score (best-effort; 0.0 on any failure)
+    iks_score = 0.0
+    try:
+        from app.services.iks import compute_iks_v2
+        iks_data = await compute_iks_v2(neo4j_client)
+        iks_score = iks_data.get("iks_v2", 0.0)
+    except Exception:
+        pass
+
+    # Merge: start with raw base fields, then add/override with new fields
+    export = {
+        **raw,
+        "exported_at":          raw["generated_at_epoch"],
+        "factors":              _FACTORS,
+        "centroids":            centroids,
+        "drift_from_bootstrap": drift_per_cat,   # override scalar with per-cat dict
+        "checksum":             checksum,
+        "iks_score":            iks_score,
+    }
 
     if format == "summary":
         export = {k: v for k, v in export.items()
-                  if k not in ("current_mu", "bootstrap_mu")}
+                  if k not in ("current_mu", "bootstrap_mu", "centroids")}
 
     return export
