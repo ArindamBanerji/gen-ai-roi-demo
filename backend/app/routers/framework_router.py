@@ -77,10 +77,18 @@ async def get_centroid_evolution(
     category: Optional[str] = Query(default=None),
 ):
     """
-    Return centroid delta history from Decision nodes.
+    Return centroid drift history from Decision nodes.
     Used by Tab-2 Section A/B and Tab-4 Chart A.
-    Returns [] if no Decision nodes have centroid_delta_norm set yet.
+
+    Drift is the cumulative L2 distance from bootstrap baseline μ₀:
+        drift[c] = ‖μ(t)[c,a,:] − μ₀[c,a,:]‖₂  (mean over actions)
+
+    Primary path: Decision nodes with centroid_delta_norm set (live triage).
+    Fallback: when primary returns empty, compute current drift from μ₀ using
+    the in-memory ProfileScorer — no Neo4j required. Returns one record per
+    category (or for the requested category) showing accumulated drift.
     """
+    result = []
     try:
         rows = await neo4j_client.run_query(
             """
@@ -99,7 +107,6 @@ async def get_centroid_evolution(
             """,
             {"category": category, "n": n},
         )
-        result = []
         for i, r in enumerate(rows):
             result.append({
                 "decision_number": i + 1,
@@ -109,12 +116,59 @@ async def get_centroid_evolution(
                 "action": r.get("action") or "unknown",
                 "correct": bool(r.get("correct")),
                 "verified_at": str(r.get("verified_at") or ""),
+                "drift_type": "per_update",
             })
-        print(f"[SOC] centroid-evolution: returned {len(result)} records (n={n}, category={category!r})")
-        return result
     except Exception as exc:
         print(f"[SOC] centroid-evolution query failed: {exc}")
-        return []
+
+    # Fallback: compute cumulative drift from μ₀ using in-memory ProfileScorer.
+    # Triggered when no per-update records exist (bootstrap-only deployment or
+    # first run before any live triage outcomes). Drift formula:
+    #   drift[c] = mean_a( ‖μ(t)[c,a,:] − μ₀[c,a,:]‖₂ )
+    if not result:
+        try:
+            import uuid
+            import numpy as np
+            from app.services.iks import _load_mu_zero
+            from app.services.gae_state import get_profile_scorer, get_learning_state
+
+            mu_zero = _load_mu_zero()
+            scorer  = get_profile_scorer()
+
+            if scorer is not None and mu_zero is not None:
+                categories = scorer.categories if hasattr(scorer, "categories") else []
+                actions    = scorer.actions    if hasattr(scorer, "actions")    else []
+                decision_count = get_learning_state().decision_count
+
+                for c_idx, cat in enumerate(categories):
+                    if category is not None and cat != category:
+                        continue
+                    if c_idx >= scorer.mu.shape[0] or c_idx >= mu_zero.shape[0]:
+                        continue
+                    # Mean L2 drift from μ₀ across all actions for this category
+                    diffs = scorer.mu[c_idx] - mu_zero[c_idx]   # shape (n_actions, n_factors)
+                    drift = float(np.mean([np.linalg.norm(diffs[a]) for a in range(diffs.shape[0])]))
+                    best_action = actions[0] if actions else "unknown"
+                    result.append({
+                        "decision_number": c_idx + 1,
+                        "id": str(uuid.uuid4()),
+                        "centroid_delta_norm": round(drift, 6),
+                        "category": cat,
+                        "action": best_action,
+                        "correct": True,
+                        "verified_at": "",
+                        "drift_type": "cumulative_from_bootstrap",
+                        "decision_count": decision_count,
+                    })
+                print(
+                    f"[SOC] centroid-evolution fallback: {len(result)} categories "
+                    f"(drift-from-bootstrap, decision_count={decision_count})"
+                )
+        except Exception as exc:
+            print(f"[SOC] centroid-evolution fallback failed: {exc}")
+
+    print(f"[SOC] centroid-evolution: returned {len(result)} records (n={n}, category={category!r})")
+    return result
 
 
 # ============================================================================

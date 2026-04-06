@@ -61,3 +61,8 @@ myFolderTree.txt.claude/
 .claude/
 
 backend/app/data/gae_learning_state.json
+
+backend/analyze_cypher_compat.py
+backend/batch_0_2_age_compatibility.json
+backend/ingest_shadow_decisions.py
+frontend/test-results/

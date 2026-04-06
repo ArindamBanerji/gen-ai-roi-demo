@@ -140,7 +140,8 @@ def _make_narrative_neo4j(verified: int, correct: int, campaigns: int, alerts: i
 
     async def run_query(query, params=None):
         q = query.strip()
-        if "d.outcome IS NOT NULL" in q and "d.verified_at_epoch IS NOT NULL" in q and "category" not in q:
+        # Verified decisions: now a simple count of all Decision nodes (no outcome filter)
+        if "MATCH (d:Decision) RETURN count(d) AS cnt" in q:
             return [{"cnt": verified}]
         if "d.correct = true" in q and "category" not in q:
             return [{"cnt": correct}]

@@ -351,13 +351,11 @@ async def reset_all_demo_data():
             neo4j_service=neo4j_client,
             domain_config=get_domain_config(),
         )
-        await sm.hard_reset()
+        await sm.hard_reset(preserve_learning=True)
 
-        # Reset remaining SOC-specific in-memory state (feedback, trust, policy,
-        # evolver, confidence_history).  Learning state and audit are reset again
-        # here (idempotent), which clears the RESET marker — acceptable for this
-        # legacy endpoint whose callers don't inspect the audit chain.
-        state_manager.reset_all()
+        # Reset demo-cycle in-memory state only — preserve learning_state so
+        # ProfileScorer centroids (IKS) survive this reset (BACKLOG-020).
+        state_manager.reset_except(["learning_state"])
 
         print("[DEMO RESET] Comprehensive reset completed successfully")
 
@@ -418,8 +416,8 @@ async def reseed_demo_data():
         except Exception as count_exc:
             print(f"[RESEED] Count query failed (seed still succeeded): {count_exc}")
 
-        # Reset all in-memory state (audit, evolver, feedback, policy)
-        state_manager.reset_all()
+        # Reset demo-cycle in-memory state — preserve learning_state (BACKLOG-020)
+        state_manager.reset_except(["learning_state"])
 
         print(f"[RESEED] Complete — {alert_count} alerts in graph")
         return {"success": True, "alert_count": alert_count}

@@ -53,12 +53,20 @@ class StateManager:
     # Public API
     # ------------------------------------------------------------------
 
-    async def soft_reset(self) -> dict:
+    async def soft_reset(self, preserve_learning: bool = False) -> dict:
         """
         Reset learning state to priors. Clear Decision outcomes. Keep nodes.
 
+        Parameters
+        ----------
+        preserve_learning : bool, default False
+            When True, skip resetting the GAE learning state (W matrix,
+            ProfileScorer centroids).  Use for demo-cycle resets that must
+            not clobber accumulated IKS (BACKLOG-020).
+
         Steps (ordered; no partial state on failure):
-          1. W → priors; history and decision_count cleared.
+          1. W → priors; history and decision_count cleared (skipped when
+             preserve_learning=True).
           2. Neo4j: REMOVE correct/outcome props from Decision nodes (keep nodes).
           3. Audit: clear ledger, write RESET marker, start fresh hash chain.
 
@@ -80,8 +88,9 @@ class StateManager:
         committed: list[str] = []
         try:
             # Step 1+2: reset W → priors, clear history/count
-            self._ls_svc.reset_learning_state()
-            committed.append("learning_state")
+            if not preserve_learning:
+                self._ls_svc.reset_learning_state()
+                committed.append("learning_state")
 
             # Step 3: clear outcomes on Decision nodes; keep nodes
             await self._neo4j.run_query(
@@ -114,12 +123,20 @@ class StateManager:
             "decision_count": new_ls.decision_count,
         }
 
-    async def hard_reset(self) -> dict:
+    async def hard_reset(self, preserve_learning: bool = False) -> dict:
         """
         Full reset. Delete Decision nodes and re-seed graph.
 
+        Parameters
+        ----------
+        preserve_learning : bool, default False
+            When True, skip resetting the GAE learning state (W matrix,
+            ProfileScorer centroids).  Use for demo-cycle resets that must
+            not clobber accumulated IKS (BACKLOG-020).
+
         Steps (ordered; no partial state on failure):
-          1. W → priors; history and decision_count cleared.
+          1. W → priors; history and decision_count cleared (skipped when
+             preserve_learning=True).
           2. Neo4j: DETACH DELETE all Decision (and DecisionContext) nodes.
           3. Audit: clear ledger, write RESET marker, start fresh hash chain.
           4. Re-seed Neo4j from canonical seed script.
@@ -141,8 +158,9 @@ class StateManager:
         committed: list[str] = []
         try:
             # Step 1+2: reset W → priors, clear history/count
-            self._ls_svc.reset_learning_state()
-            committed.append("learning_state")
+            if not preserve_learning:
+                self._ls_svc.reset_learning_state()
+                committed.append("learning_state")
 
             # Step 3: delete Decision nodes (stronger than soft_reset)
             await self._neo4j.run_query(
