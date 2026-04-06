@@ -2690,7 +2690,10 @@ async def _tab5_content() -> dict:
         "Conservation law active — analyst override quality monitored "
         "continuously. 0% quality degradation events missed in validation "
         "(CLAIM-OLS-01, p90 lead time ≥50 decisions). "
-        f"Current signal: {signal}."
+        f"Current signal: {signal}. "
+        "Every system decision is logged in a tamper-evident "
+        "Evidence Ledger — full audit trail available for "
+        "regulatory review (EU AI Act Art. 13 compliant)."
     )
 
     return {

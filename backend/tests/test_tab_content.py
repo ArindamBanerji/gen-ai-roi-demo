@@ -1233,3 +1233,14 @@ def test_tab2_iks_reflects_decision_volume():
             f"(switching cost plateau). Got {iks:.1f} — likely using composite v2 "
             "instead of drift-based formula (BACKLOG-004)."
         )
+
+
+# ---------------------------------------------------------------------------
+# Test 58 — BACKLOG-014: Evidence Ledger in Tab 5 conservation_narrative
+# ---------------------------------------------------------------------------
+
+def test_tab5_conservation_has_evidence_ledger():
+    content = client.get("/api/soc/tab/5/content").json()["content"]
+    narrative = content["what_system_knows"]["conservation_narrative"]
+    assert "Evidence Ledger" in narrative
+    assert "EU AI Act Art. 13" in narrative
