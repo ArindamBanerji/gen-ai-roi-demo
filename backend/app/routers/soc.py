@@ -3201,3 +3201,100 @@ async def get_centroid_export(format: str = "json"):
                   if k not in ("current_mu", "bootstrap_mu", "centroids")}
 
     return export
+
+
+# =============================================================================
+# GET /api/soc/centroid-heatmap — Block 2.4
+# =============================================================================
+
+@router.get("/soc/centroid-heatmap")
+async def get_centroid_heatmap():
+    """
+    Heat map data: factor weight per (category × action).
+
+    Returns categories, actions, factors, kernel_weights,
+    heatmap (cat→action→{mean, factors}), noise_fingerprint,
+    and interpretation string.
+
+    Safe degradation: returns {"status": "cold_start"} with 200 if
+    ProfileScorer is not yet initialized.
+    """
+    import numpy as _np
+    from app.services.gae_state import get_profile_scorer
+
+    _FACTORS = [
+        "travel_match", "asset_criticality", "threat_intel_enrichment",
+        "pattern_history", "time_anomaly", "device_trust",
+    ]
+    _CATEGORIES = [
+        "credential_access", "lateral_movement",
+        "data_exfiltration", "malware_execution",
+        "insider_threat", "cloud_infrastructure",
+    ]
+    _ACTIONS = ["escalate", "investigate", "suppress", "monitor"]
+
+    scorer = get_profile_scorer()
+    if scorer is None:
+        return {
+            "status":  "cold_start",
+            "message": "No centroid data yet",
+        }
+
+    # ── kernel_weights: normalised 1/σ² per factor ─────────────────────
+    all_sigmas = [_FACTOR_SIGMA.get(f, 0.15) for f in _FACTORS]
+    kernel_weights: dict = {
+        f: _factor_kernel_weight(_FACTOR_SIGMA.get(f, 0.15), all_sigmas)
+        for f in _FACTORS
+    }
+
+    # ── heatmap: category → action → {mean, factors} ───────────────────
+    mu = scorer.mu  # shape [n_cat, n_actions, n_factors]
+    n_cat    = min(len(_CATEGORIES), mu.shape[0])
+    n_act    = min(len(_ACTIONS),    mu.shape[1])
+    n_fac    = min(len(_FACTORS),    mu.shape[2])
+
+    heatmap: dict = {}
+    for c_idx in range(n_cat):
+        cat = _CATEGORIES[c_idx]
+        heatmap[cat] = {}
+        for a_idx in range(n_act):
+            action = _ACTIONS[a_idx]
+            vals = [round(float(mu[c_idx, a_idx, f_idx]), 4) for f_idx in range(n_fac)]
+            heatmap[cat][action] = {
+                "mean":    round(float(_np.mean(mu[c_idx, a_idx, :n_fac])), 4),
+                "factors": vals,
+            }
+
+    # ── noise_fingerprint: per-factor sigma + kernel_weight + label ─────
+    noise_fingerprint: dict = {}
+    for f in _FACTORS:
+        sigma = _FACTOR_SIGMA.get(f, 0.15)
+        kw    = kernel_weights[f]
+        if sigma <= 0.10:
+            label = "High confidence"
+        elif sigma <= 0.18:
+            label = "Moderate confidence"
+        else:
+            label = "Auto down-weighted — high noise"
+        noise_fingerprint[f] = {
+            "sigma":         sigma,
+            "kernel_weight": kw,
+            "label":         label,
+        }
+
+    interpretation = (
+        "Higher values = stronger signal for that action. "
+        f"device_trust kernel_weight={kernel_weights.get('device_trust', 0):.4f} "
+        "means the system trusts this factor at "
+        f"{round(kernel_weights.get('device_trust', 0) * 100, 1)}% of its nominal weight."
+    )
+
+    return {
+        "categories":        _CATEGORIES[:n_cat],
+        "actions":           _ACTIONS[:n_act],
+        "factors":           _FACTORS[:n_fac],
+        "kernel_weights":    kernel_weights,
+        "heatmap":           heatmap,
+        "noise_fingerprint": noise_fingerprint,
+        "interpretation":    interpretation,
+    }

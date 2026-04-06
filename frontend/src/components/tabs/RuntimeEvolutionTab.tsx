@@ -327,6 +327,10 @@ export default function RuntimeEvolutionTab() {
   const [activeSection, setActiveSection] = useState<'a' | 'b' | 'c' | 'd'>('a')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [pendingDecisionId, setPendingDecisionId] = useState<string | null>(null)
+  const [heatmapData, setHeatmapData] = useState<{
+    factors: string[]
+    noise_fingerprint: Record<string, { sigma: number; kernel_weight: number; label: string }>
+  } | null>(null)
 
   // Section refs for IntersectionObserver
   const sectionARef = useRef<HTMLDivElement>(null)
@@ -356,6 +360,10 @@ export default function RuntimeEvolutionTab() {
 
   useEffect(() => {
     loadLearningState()
+  }, [])
+
+  useEffect(() => {
+    loadHeatmap()
   }, [])
 
   useEffect(() => {
@@ -480,6 +488,18 @@ export default function RuntimeEvolutionTab() {
       setLearningStateData(data)
     } catch {
       // Non-critical — IKS v2 display falls back to v1
+    }
+  }
+
+  const loadHeatmap = async () => {
+    try {
+      const data = await fetch('/api/soc/centroid-heatmap').then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json()
+      })
+      if (data.status !== 'cold_start') setHeatmapData(data)
+    } catch {
+      // Non-critical — table hidden when null
     }
   }
 
@@ -1552,6 +1572,44 @@ export default function RuntimeEvolutionTab() {
                   </div>
                 )}
               </div>
+
+              {/* F1b. Noise Fingerprint — Block 2.4 */}
+              {heatmapData && (
+                <div className="bg-soc-card rounded-lg border border-gray-800 p-5">
+                  <h4 className="text-sm font-semibold text-gray-200 mb-1">Noise Fingerprint — Factor Trust Levels</h4>
+                  <p className="text-xs text-gray-500 mb-3">
+                    DiagonalKernel automatically weights each factor by its historical reliability (1/σ²). Lower σ = more trust.
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-gray-500 uppercase tracking-wide border-b border-gray-700">
+                          <th className="text-left py-1 pr-3 font-medium">Factor</th>
+                          <th className="text-right py-1 pr-3 font-medium">σ</th>
+                          <th className="text-right py-1 pr-3 font-medium">Kernel Weight</th>
+                          <th className="text-left py-1 font-medium">Trust Level</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(heatmapData.factors ?? []).map(f => {
+                          const fp = heatmapData.noise_fingerprint?.[f]
+                          if (!fp) return null
+                          const kwPct = (fp.kernel_weight * 100).toFixed(1) + '%'
+                          const isLow = fp.kernel_weight < 0.15
+                          return (
+                            <tr key={f} className="border-b border-gray-800/50 last:border-0">
+                              <td className="py-1.5 pr-3 text-gray-300 font-mono">{f.replace(/_/g, ' ')}</td>
+                              <td className="py-1.5 pr-3 text-right text-gray-400">{fp.sigma.toFixed(2)}</td>
+                              <td className={`py-1.5 pr-3 text-right font-semibold ${isLow ? 'text-amber-400' : 'text-gray-200'}`}>{kwPct}</td>
+                              <td className={`py-1.5 text-xs ${fp.label.startsWith('High') ? 'text-green-400' : fp.label.startsWith('Auto') ? 'text-amber-400' : 'text-gray-400'}`}>{fp.label}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {/* F2. Drift Alerts */}
               <div className="bg-soc-card rounded-lg border border-gray-800 p-5">
