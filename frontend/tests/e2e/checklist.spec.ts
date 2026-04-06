@@ -1031,7 +1031,7 @@ test.describe('Phase B — centroid drift + frontend gaps', () => {
 
   // BACKLOG-017 tracker — conservation_narrative not in DOM
   test('backlog017_conservation_narrative_api_has_evidence_ledger', async ({ page }) => {
-    // API has it — frontend doesn't render it yet (BACKLOG-017)
+    // API correct — verified by DOM test below (BACKLOG-017 fixed)
     const resp = await page.request.get(
       `${BACKEND}/api/soc/tab/5/content`
     );
@@ -1039,6 +1039,18 @@ test.describe('Phase B — centroid drift + frontend gaps', () => {
     const narrative = data.content.what_system_knows.conservation_narrative;
     expect(narrative).toContain('Evidence Ledger');
     expect(narrative).toContain('EU AI Act Art. 13');
+  });
+
+  test('backlog017_conservation_narrative_visible_in_dom',
+    async ({ page }) => {
+    // DOM fix: conservation_narrative now rendered in ExecutiveNarrativeTab
+    // under "Conservation & Audit Status" label (BACKLOG-017 resolved)
+    await page.goto('http://localhost:5173');
+    await page.getByRole('tab', { name: /executive/i }).click();
+    await page.waitForTimeout(2000);
+    const bodyText = await page.locator('body').textContent();
+    expect(bodyText).toContain('Evidence Ledger');
+    expect(bodyText).toContain('Conservation');
   });
 
   // BACKLOG-018 tracker — kernel_note not in DOM

@@ -35,6 +35,7 @@ interface WhatKnows {
   categories_calibrated: number
   categories_total: number
   health_status: 'GREEN' | 'AMBER' | 'RED'
+  conservation_narrative?: string
 }
 
 interface Metrics {
@@ -235,6 +236,12 @@ export default function ExecutiveNarrativeTab() {
               {what_knows.categories_calibrated} of {what_knows.categories_total} categories calibrated
             </p>
           </div>
+          {what_knows.conservation_narrative && (
+            <div className="mt-3 bg-gray-800 rounded p-2">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Conservation & Audit Status</p>
+              <p className="text-xs text-gray-300 leading-relaxed">{what_knows.conservation_narrative}</p>
+            </div>
+          )}
         </div>
       </div>
 
