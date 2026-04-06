@@ -35,6 +35,19 @@ class DemoStateManager:
             handler()
         print("[STATE] reset_all() — done")
 
+    def reset_except(self, skip: list) -> None:
+        """Call every registered handler except those named in skip.
+
+        Use this for soft demo-cycle resets that must not disturb
+        long-lived learned state (e.g. 'learning_state').
+        """
+        skip_set = set(skip)
+        names = [n for n in self._handlers if n not in skip_set]
+        print(f"[STATE] reset_except({skip}) — resetting {len(names)} handler(s): {names}")
+        for name in names:
+            self._handlers[name]()
+        print("[STATE] reset_except() — done")
+
     def get_registered(self) -> List[str]:
         """Return the list of registered handler names."""
         return list(self._handlers.keys())
