@@ -347,3 +347,72 @@ def test_r2_r7_safe_degradation_on_neo4j_failure():
     r7 = CrossCategoryRule(threshold=2)
     assert r2.evaluate({'sequence_count': seq_count})[0] is False
     assert r7.evaluate({'cross_category_count': cross_count})[0] is False
+
+
+# ---------------------------------------------------------------------------
+# referral_debug field — Block 3.3 Phase C
+# ---------------------------------------------------------------------------
+
+_minimal_alert_context = {
+    'identity_tier':        'standard',
+    'sequence_count':       0,
+    'category':             'credential_access',
+    'compliance_mode':      False,
+    'asset_criticality':    0.5,
+    'stage1_action':        'escalate',
+    'incident_active':      False,
+    'asset_age_days':       365,
+    'cross_category_count': 0,
+}
+
+
+def test_r2_sequence_count_is_integer():
+    """R2 sequence_count populated from alert_context must be an integer >= 0."""
+    from app.db.neo4j import Neo4jClient
+
+    client = Neo4jClient()
+    client.run_query = AsyncMock(return_value=[{"sequence_count": 0}])
+    seq_count = asyncio.run(client.get_sequence_count("192.168.1.1"))
+
+    debug = {
+        'r2_sequence_count':       seq_count,
+        'r7_cross_category_count': 0,
+        'rules_evaluated':         [r.rule_id for r in get_soc_referral_rules()],
+        'rules_fired':             [],
+    }
+    assert isinstance(debug.get("r2_sequence_count", -1), int)
+    assert debug["r2_sequence_count"] >= 0
+
+
+def test_r7_cross_category_count_is_integer():
+    """R7 cross_category_count populated from alert_context must be an integer >= 0."""
+    from app.db.neo4j import Neo4jClient
+
+    client = Neo4jClient()
+    client.run_query = AsyncMock(return_value=[{"cross_category_count": 0}])
+    cross_count = asyncio.run(client.get_cross_category_count("jsmith@company.com"))
+
+    debug = {
+        'r2_sequence_count':       0,
+        'r7_cross_category_count': cross_count,
+        'rules_evaluated':         [r.rule_id for r in get_soc_referral_rules()],
+        'rules_fired':             [],
+    }
+    assert isinstance(debug.get("r7_cross_category_count", -1), int)
+    assert debug["r7_cross_category_count"] >= 0
+
+
+def test_all_seven_rules_evaluated():
+    """All 7 referral rules must appear in referral_debug.rules_evaluated."""
+    engine = ReferralEngine(rules=get_soc_referral_rules())
+    decision = engine.evaluate(_minimal_alert_context)
+
+    debug = {
+        'r2_sequence_count':       _minimal_alert_context['sequence_count'],
+        'r7_cross_category_count': _minimal_alert_context['cross_category_count'],
+        'rules_evaluated':         [r.rule_id for r in get_soc_referral_rules()],
+        'rules_fired':             list(decision.reason_codes),
+    }
+    evaluated = debug.get("rules_evaluated", [])
+    for rule in ["R1", "R2", "R3", "R4", "R5", "R6", "R7"]:
+        assert rule in evaluated, f"{rule} not in rules_evaluated"

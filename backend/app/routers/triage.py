@@ -464,6 +464,13 @@ async def analyze_alert(request: ProcessAlertRequest):
             'audit_summary': _referral.audit_summary,
         }
 
+        _referral_debug = {
+            'r2_sequence_count':       _sequence_count,
+            'r7_cross_category_count': _cross_category_count,
+            'rules_evaluated':         [r.rule_id for r in get_soc_referral_rules()],
+            'rules_fired':             list(_referral.reason_codes),
+        }
+
         # ====================================================================
         # Build Response — existing structure preserved; gae_scoring added
         # ====================================================================
@@ -523,8 +530,9 @@ async def analyze_alert(request: ProcessAlertRequest):
                 "approval_score": _composite["approval_score"],
                 "reason_codes":   _composite["reason_codes"],
             },
-            "provenance": _provenance_payload,
-            "referral":   _referral_payload,
+            "provenance":      _provenance_payload,
+            "referral":        _referral_payload,
+            "referral_debug":  _referral_debug,
         }
         # ====================================================================
         # NAR-1: Build calibration_context and generate structured narrative
