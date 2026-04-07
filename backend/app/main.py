@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 # Load environment variables from project root
+# Copy ../.env.example to ../.env and fill in credentials before starting
 load_dotenv(dotenv_path="../.env")
 
 app = FastAPI(
