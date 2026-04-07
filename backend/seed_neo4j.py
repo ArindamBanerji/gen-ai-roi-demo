@@ -5,6 +5,7 @@ Run this script to populate the graph with test data for ALERT-7823
 Usage:
     python seed_neo4j.py               # default seed only
     python seed_neo4j.py --realistic   # default seed + SEED-2 (200+ users)
+    python seed_neo4j.py --dry-run     # skip DETACH DELETE and all writes
 """
 import asyncio
 import sys
@@ -22,6 +23,10 @@ async def seed_data():
     print("[OK] Connecting to Neo4j...")
     await neo4j_client.connect()
 
+    _dry_run = "--dry-run" in sys.argv
+    if _dry_run:
+        print("[OK] --dry-run: skipping DETACH DELETE")
+        return
     print("[OK] Clearing existing data...")
     await neo4j_client.run_query("MATCH (n) DETACH DELETE n")
 

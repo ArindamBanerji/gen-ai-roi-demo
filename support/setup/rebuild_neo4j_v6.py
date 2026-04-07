@@ -161,9 +161,12 @@ async def main() -> None:
     await wipe_database(args.dry_run)
 
     # -- Step 2: base seed ----------------------------------------------------
+    _seed_cmd = [python, str(_BACKEND / "seed_neo4j.py")]
+    if args.dry_run:
+        _seed_cmd.append("--dry-run")
     run_step(
         "seed_neo4j.py — base Alert, User, Asset, ThreatIntel nodes",
-        [python, str(_BACKEND / "seed_neo4j.py")],
+        _seed_cmd,
         args.dry_run,
     )
 
