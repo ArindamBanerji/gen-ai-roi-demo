@@ -1,0 +1,122 @@
+"""
+app/services/reconvergence_logger.py — EXP-G1 data collection.
+
+Logs re-convergence events to Neo4j so that the temporal compounding
+exponent (EXP-G1) can be measured when 90 days of pilot data exists.
+
+Design constraints:
+  - NEVER raises — always degrades safely (triage must not be blocked)
+  - Called by re-convergence detection (not yet hooked in — infrastructure only)
+  - Each event stores the 8 fields required by EXP-G1 analysis
+"""
+
+import json
+import logging
+import time
+import uuid
+from typing import Optional
+
+log = logging.getLogger(__name__)
+
+_CREATE_EVENT_QUERY = """
+CREATE (e:ReConvergenceEvent {
+    re_convergence_event_id:          $event_id,
+    convergence_start_decisions:      $start,
+    convergence_end_decisions:        $end,
+    n_reconverge:                     $n_reconverge,
+    graph_entity_count_at_start:      $graph_count,
+    sigma_squared_per_factor_at_start: $sigma_json,
+    trigger_type:                     $trigger_type,
+    domain:                           $domain,
+    logged_at_epoch:                  $now
+})
+RETURN e.re_convergence_event_id AS event_id
+"""
+
+_READ_EVENTS_QUERY = """
+MATCH (e:ReConvergenceEvent)
+RETURN e.re_convergence_event_id          AS re_convergence_event_id,
+       e.convergence_start_decisions      AS convergence_start_decisions,
+       e.convergence_end_decisions        AS convergence_end_decisions,
+       e.n_reconverge                     AS n_reconverge,
+       e.graph_entity_count_at_start      AS graph_entity_count_at_start,
+       e.trigger_type                     AS trigger_type,
+       e.domain                           AS domain,
+       e.logged_at_epoch                  AS logged_at_epoch
+ORDER BY e.logged_at_epoch DESC
+LIMIT $limit
+"""
+
+
+async def log_reconvergence_event(
+    neo4j_client,
+    convergence_start_decisions: int,
+    convergence_end_decisions: int,
+    graph_entity_count_at_start: int,
+    sigma_squared_per_factor_at_start: dict,
+    trigger_type: str,
+    domain: str,
+) -> Optional[str]:
+    """
+    Log a re-convergence event to Neo4j.
+
+    Called when accuracy drops below threshold and begins recovering.
+    Required for EXP-G1 (temporal compounding exponent measurement).
+
+    Parameters
+    ----------
+    neo4j_client                      : async Neo4j client
+    convergence_start_decisions       : decision count when accuracy dropped
+    convergence_end_decisions         : decision count when accuracy recovered
+    graph_entity_count_at_start       : total graph nodes at event start
+    sigma_squared_per_factor_at_start : {factor_name: sigma^2} at event start
+    trigger_type                      : "threat_landscape_shift" |
+                                        "new_category" | "reorganization"
+    domain                            : alert category that triggered event
+
+    Returns
+    -------
+    event_id (str) on success, None on failure.
+    Never raises.
+    """
+    event_id = str(uuid.uuid4())
+    n_reconverge = max(0, convergence_end_decisions - convergence_start_decisions)
+
+    try:
+        await neo4j_client.run_query(
+            _CREATE_EVENT_QUERY,
+            {
+                "event_id":    event_id,
+                "start":       convergence_start_decisions,
+                "end":         convergence_end_decisions,
+                "n_reconverge": n_reconverge,
+                "graph_count": graph_entity_count_at_start,
+                "sigma_json":  json.dumps(sigma_squared_per_factor_at_start,
+                                          sort_keys=True),
+                "trigger_type": trigger_type,
+                "domain":       domain,
+                "now":          int(time.time() * 1000),
+            },
+        )
+        log.info("[EXP-G1] Logged re-convergence event %s (domain=%s, n=%d)",
+                 event_id, domain, n_reconverge)
+        return event_id
+    except Exception as exc:
+        log.warning("[EXP-G1] Failed to log reconvergence event: %s", exc)
+        return None
+
+
+async def read_reconvergence_events(neo4j_client, limit: int = 50) -> list:
+    """
+    Read the last `limit` re-convergence events from Neo4j.
+    Returns [] on any failure (never raises).
+    """
+    try:
+        rows = await neo4j_client.run_query(
+            _READ_EVENTS_QUERY,
+            {"limit": limit},
+        )
+        return [dict(r) for r in (rows or [])]
+    except Exception as exc:
+        log.warning("[EXP-G1] Failed to read reconvergence events: %s", exc)
+        return []

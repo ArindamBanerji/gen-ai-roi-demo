@@ -2232,6 +2232,33 @@ async def get_enrichment_status():
 
 
 # =============================================================================
+# GET /api/soc/reconvergence-log — BACKLOG-015 / EXP-G1
+# =============================================================================
+
+@router.get("/soc/reconvergence-log")
+async def get_reconvergence_log(limit: int = 50):
+    """
+    Return last N re-convergence events for audit / EXP-G1 monitoring.
+
+    EXP-G1 (temporal compounding exponent) requires 90 days of pilot data.
+    This endpoint allows operators to confirm data collection is active
+    from Day 1.  The logger (app/services/reconvergence_logger.py) is
+    called whenever accuracy drops below threshold and recovers — hook-in
+    to triage path is deferred until re-convergence detection is confirmed
+    working in production.
+    """
+    from app.services.reconvergence_logger import read_reconvergence_events
+
+    events = await read_reconvergence_events(neo4j_client, limit=max(1, min(limit, 500)))
+
+    return {
+        "events":       events,
+        "total_events": len(events),
+        "note":         "EXP-G1 data collection active from pilot Day 1",
+    }
+
+
+# =============================================================================
 # GET /api/soc/verification-health — Block 7.6
 # Feeds the Phase 6 verification health dashboard (Tab 2).
 # =============================================================================
