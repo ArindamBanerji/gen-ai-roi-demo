@@ -3610,3 +3610,45 @@ async def get_centroid_support():
         "threshold_sigma":  _THRESHOLD,
         "interpretation":   interpretation,
     }
+
+
+# =============================================================================
+# GET /api/sentinel/alerts — Block 4.2 Real Sentinel Connector
+# =============================================================================
+
+@router.get("/sentinel/alerts")
+async def get_sentinel_alerts(top: int = 50):
+    """
+    Fetch normalized alerts from Microsoft Sentinel Graph Security API.
+
+    Returns SituationAnalyzer schema dicts.
+    Falls back gracefully when credentials are not configured.
+
+    Required env vars:
+      SENTINEL_TENANT_ID, SENTINEL_CLIENT_ID, SENTINEL_CLIENT_SECRET
+    Optional:
+      SENTINEL_WORKSPACE_ID
+    """
+    from app.connectors.sentinel_real import get_sentinel_connector
+
+    connector = get_sentinel_connector()
+
+    if not connector.is_configured():
+        return {
+            "status": "not_configured",
+            "alerts": [],
+            "count":  0,
+            "message": (
+                "Set SENTINEL_TENANT_ID, SENTINEL_CLIENT_ID, "
+                "SENTINEL_CLIENT_SECRET in environment to enable."
+            ),
+            "schema": "SituationAnalyzer v1.0",
+        }
+
+    alerts = await connector.fetch_alerts(top=max(1, min(top, 999)))
+    return {
+        "status": "ok",
+        "alerts": alerts,
+        "count":  len(alerts),
+        "schema": "SituationAnalyzer v1.0",
+    }
