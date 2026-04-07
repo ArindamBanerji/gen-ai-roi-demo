@@ -331,6 +331,20 @@ export default function RuntimeEvolutionTab() {
     factors: string[]
     noise_fingerprint: Record<string, { sigma: number; kernel_weight: number; label: string }>
   } | null>(null)
+  const [enrichmentStatus, setEnrichmentStatus] = useState<{
+    sources: Array<{
+      source_name: string
+      record_count: number
+      trust_level: string
+      status: 'active' | 'stale' | 'unavailable'
+      affects_factor: string
+      staleness_hours?: number
+      last_refreshed_human?: string
+    }>
+    enrichment_health: string
+    health_reason: string
+    total_enrichment_nodes: number
+  } | null>(null)
 
   // Section refs for IntersectionObserver
   const sectionARef = useRef<HTMLDivElement>(null)
@@ -364,6 +378,10 @@ export default function RuntimeEvolutionTab() {
 
   useEffect(() => {
     loadHeatmap()
+  }, [])
+
+  useEffect(() => {
+    loadEnrichmentStatus()
   }, [])
 
   useEffect(() => {
@@ -500,6 +518,18 @@ export default function RuntimeEvolutionTab() {
       if (data.status !== 'cold_start') setHeatmapData(data)
     } catch {
       // Non-critical — table hidden when null
+    }
+  }
+
+  const loadEnrichmentStatus = async () => {
+    try {
+      const data = await fetch('/api/soc/enrichment-status').then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json()
+      })
+      setEnrichmentStatus(data)
+    } catch {
+      // Non-critical — section hidden when null
     }
   }
 
@@ -1608,6 +1638,43 @@ export default function RuntimeEvolutionTab() {
                       </tbody>
                     </table>
                   </div>
+                </div>
+              )}
+
+              {/* F1c. Enrichment Sources — Block 5.2 */}
+              {enrichmentStatus && (
+                <div className="bg-soc-card rounded-lg border border-gray-800 p-5">
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="text-sm font-semibold text-gray-200">Enrichment Sources</h4>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                      enrichmentStatus.enrichment_health === 'GREEN' ? 'bg-green-900/40 text-green-400 border border-green-500/30' :
+                      enrichmentStatus.enrichment_health === 'AMBER' ? 'bg-amber-900/40 text-amber-400 border border-amber-500/30' :
+                      'bg-red-900/40 text-red-400 border border-red-500/30'
+                    }`}>{enrichmentStatus.enrichment_health}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-3">External threat intelligence feeding the knowledge graph</p>
+                  <div className="space-y-2">
+                    {enrichmentStatus.sources.map(src => {
+                      const dot = src.status === 'active' ? '🟢' : src.status === 'stale' ? '🟡' : '🔴'
+                      const staleLabel = src.staleness_hours != null
+                        ? `last updated ${src.staleness_hours < 1 ? '<1h' : Math.round(src.staleness_hours) + 'h'} ago`
+                        : src.last_refreshed_human ?? 'never refreshed'
+                      return (
+                        <div key={src.source_name} className="flex items-center gap-2 text-xs">
+                          <span>{dot}</span>
+                          <span className="text-gray-200 font-medium w-36 flex-shrink-0">{src.source_name}</span>
+                          <span className="text-gray-500">{src.record_count.toLocaleString()} records</span>
+                          <span className="text-gray-600">—</span>
+                          <span className="text-gray-400">{staleLabel}</span>
+                          <span className="text-gray-600">—</span>
+                          <span className={`uppercase font-semibold ${src.trust_level === 'high' ? 'text-green-400' : 'text-gray-400'}`}>
+                            {src.trust_level} trust
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <p className="text-xs text-gray-600 mt-3 italic">{enrichmentStatus.health_reason}</p>
                 </div>
               )}
 

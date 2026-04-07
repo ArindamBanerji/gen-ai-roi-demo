@@ -2062,6 +2062,176 @@ async def get_enrichment_advisor():
 
 
 # =============================================================================
+# GET /api/soc/enrichment-status — Block 5.2
+# =============================================================================
+
+@router.get("/soc/enrichment-status")
+async def get_enrichment_status():
+    """
+    Return current enrichment source status: record count, last refresh
+    timestamp, staleness, trust level, and overall health.
+
+    Sources are the actual connectors in this deployment:
+      - Pulsedive     → ThreatIntel nodes          → threat_intel_enrichment
+      - GreyNoise     → GreyNoiseEnrichment nodes   → threat_intel_enrichment
+      - CrowdStrike   → CrowdStrikeEnrichment nodes → asset_criticality
+
+    Staleness thresholds:
+      active      : last refresh < 48 h
+      stale       : 48 – 168 h
+      unavailable : no data, or > 168 h
+
+    Health:
+      GREEN : all sources active
+      AMBER : ≥1 source stale, or Neo4j unreachable (graceful fallback)
+      RED   : primary source unavailable or all sources stale
+    """
+    import time as _time
+    from datetime import datetime as _dt, timezone as _tz
+
+    now_epoch_ms = int(_time.time() * 1000)
+    now_epoch_s  = now_epoch_ms // 1000
+
+    def _neo4j_dt_to_epoch_s(val) -> int | None:
+        """Convert Neo4j DateTime / Python datetime / epoch-ms int to epoch seconds."""
+        if val is None:
+            return None
+        if isinstance(val, (int, float)):
+            # Might be epoch ms from Cypher timestamp()
+            v = int(val)
+            return v // 1000 if v > 1e11 else v
+        try:
+            # neo4j.time.DateTime — has to_native()
+            native = val.to_native()
+            if native.tzinfo is None:
+                native = native.replace(tzinfo=_tz.utc)
+            return int(native.timestamp())
+        except AttributeError:
+            pass
+        if isinstance(val, _dt):
+            if val.tzinfo is None:
+                val = val.replace(tzinfo=_tz.utc)
+            return int(val.timestamp())
+        return None
+
+    def _staleness(epoch_s: int | None) -> tuple[str, float | None]:
+        """Return (status, staleness_hours) from epoch_s refresh time."""
+        if epoch_s is None:
+            return "unavailable", None
+        hours = (now_epoch_s - epoch_s) / 3600.0
+        if hours < 48:
+            return "active", round(hours, 1)
+        if hours < 168:
+            return "stale", round(hours, 1)
+        return "unavailable", round(hours, 1)
+
+    def _human(epoch_s: int | None) -> str | None:
+        if epoch_s is None:
+            return None
+        return _dt.fromtimestamp(epoch_s, tz=_tz.utc).strftime("%Y-%m-%d %H:%M")
+
+    # ── Source definitions (label, node label, trust, factor) ─────────────
+    _SOURCE_DEFS = [
+        {
+            "source_name":    "Pulsedive",
+            "node_label":     "ThreatIntel",
+            "refresh_prop":   "refreshed_at",
+            "trust_level":    "medium",
+            "affects_factor": "threat_intel_enrichment",
+        },
+        {
+            "source_name":    "GreyNoise",
+            "node_label":     "GreyNoiseEnrichment",
+            "refresh_prop":   "refreshed_at",
+            "trust_level":    "medium",
+            "affects_factor": "threat_intel_enrichment",
+        },
+        {
+            "source_name":    "CrowdStrike EDR",
+            "node_label":     "CrowdStrikeEnrichment",
+            "refresh_prop":   "refreshed_at",
+            "trust_level":    "high",
+            "affects_factor": "asset_criticality",
+        },
+    ]
+
+    sources: list = []
+    total_enrichment_nodes = 0
+    last_graph_update_epoch_ms: int | None = None
+    neo4j_reachable = True
+
+    for defn in _SOURCE_DEFS:
+        label = defn["node_label"]
+        prop  = defn["refresh_prop"]
+        count = 0
+        last_refresh_epoch_s: int | None = None
+
+        try:
+            rows = await neo4j_client.run_query(
+                f"MATCH (n:{label}) "
+                f"RETURN count(n) AS cnt, max(n.{prop}) AS last_refresh",
+                {},
+            )
+            if rows:
+                count = int(rows[0].get("cnt") or 0)
+                last_refresh_epoch_s = _neo4j_dt_to_epoch_s(rows[0].get("last_refresh"))
+        except Exception:
+            neo4j_reachable = False
+
+        total_enrichment_nodes += count
+        status, staleness_h = _staleness(last_refresh_epoch_s)
+        if count == 0:
+            status = "unavailable"
+            staleness_h = None
+
+        epoch_ms = (last_refresh_epoch_s * 1000) if last_refresh_epoch_s else None
+        if epoch_ms and (last_graph_update_epoch_ms is None or epoch_ms > last_graph_update_epoch_ms):
+            last_graph_update_epoch_ms = epoch_ms
+
+        src: dict = {
+            "source_name":          defn["source_name"],
+            "trust_level":          defn["trust_level"],
+            "affects_factor":       defn["affects_factor"],
+            "record_count":         count,
+            "status":               status,
+            "last_refreshed_epoch": epoch_ms,
+            "last_refreshed_human": _human(last_refresh_epoch_s),
+        }
+        if staleness_h is not None:
+            src["staleness_hours"] = staleness_h
+        sources.append(src)
+
+    # ── Enrichment health ─────────────────────────────────────────────────
+    statuses = [s["status"] for s in sources]
+    if not neo4j_reachable:
+        enrichment_health = "AMBER"
+        health_reason = "Neo4j unreachable — enrichment status estimated"
+    elif all(s == "unavailable" for s in statuses):
+        enrichment_health = "RED"
+        health_reason = "All enrichment sources unavailable — run connector refresh"
+    elif all(s == "active" for s in statuses):
+        enrichment_health = "GREEN"
+        health_reason = "All sources active and recent"
+    elif any(s == "unavailable" for s in statuses):
+        enrichment_health = "AMBER"
+        health_reason = "One or more enrichment sources unavailable"
+    elif any(s == "stale" for s in statuses):
+        enrichment_health = "AMBER"
+        health_reason = "One or more sources are stale (>48h since refresh)"
+    else:
+        enrichment_health = "GREEN"
+        health_reason = "All sources active and recent"
+
+    return {
+        "sources":                  sources,
+        "total_enrichment_nodes":   total_enrichment_nodes,
+        "last_graph_update_epoch":  last_graph_update_epoch_ms,
+        "enrichment_health":        enrichment_health,
+        "health_reason":            health_reason,
+    }
+
+
+# =============================================================================
 # GET /api/soc/verification-health — Block 7.6
 # Feeds the Phase 6 verification health dashboard (Tab 2).
 # =============================================================================
