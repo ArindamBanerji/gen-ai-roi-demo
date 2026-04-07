@@ -345,6 +345,12 @@ export default function RuntimeEvolutionTab() {
     health_reason: string
     total_enrichment_nodes: number
   } | null>(null)
+  const [centroidSupport, setCentroidSupport] = useState<{
+    overall_health: string
+    warning_count: number
+    interpretation: string
+    note?: string
+  } | null>(null)
 
   // Section refs for IntersectionObserver
   const sectionARef = useRef<HTMLDivElement>(null)
@@ -382,6 +388,10 @@ export default function RuntimeEvolutionTab() {
 
   useEffect(() => {
     loadEnrichmentStatus()
+  }, [])
+
+  useEffect(() => {
+    loadCentroidSupport()
   }, [])
 
   useEffect(() => {
@@ -530,6 +540,18 @@ export default function RuntimeEvolutionTab() {
       setEnrichmentStatus(data)
     } catch {
       // Non-critical — section hidden when null
+    }
+  }
+
+  const loadCentroidSupport = async () => {
+    try {
+      const data = await fetch('/api/soc/centroid-support').then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json()
+      })
+      setCentroidSupport(data)
+    } catch {
+      // Non-critical — indicator hidden when null
     }
   }
 
@@ -1675,6 +1697,25 @@ export default function RuntimeEvolutionTab() {
                     })}
                   </div>
                   <p className="text-xs text-gray-600 mt-3 italic">{enrichmentStatus.health_reason}</p>
+                </div>
+              )}
+
+              {/* F1d. Centroid Support — Block 3.6 */}
+              {centroidSupport && (
+                <div className="bg-soc-card rounded-lg border border-gray-800 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">
+                      {centroidSupport.overall_health === 'GREEN' ? '🟢' :
+                       centroidSupport.overall_health === 'AMBER' ? '🟡' : '🔴'}
+                    </span>
+                    <span className="text-sm font-semibold text-gray-200">Centroid Support</span>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                      centroidSupport.overall_health === 'GREEN' ? 'bg-green-900/40 text-green-400 border border-green-500/30' :
+                      centroidSupport.overall_health === 'AMBER' ? 'bg-amber-900/40 text-amber-400 border border-amber-500/30' :
+                      'bg-red-900/40 text-red-400 border border-red-500/30'
+                    }`}>{centroidSupport.overall_health}</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1 ml-6">{centroidSupport.interpretation}</p>
                 </div>
               )}
 

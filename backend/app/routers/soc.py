@@ -3495,3 +3495,118 @@ async def get_centroid_heatmap():
         "noise_fingerprint": noise_fingerprint,
         "interpretation":    interpretation,
     }
+
+
+# =============================================================================
+# GET /api/soc/centroid-support — Block 3.6
+# =============================================================================
+
+@router.get("/soc/centroid-support")
+async def get_centroid_support():
+    """
+    Centroid Support Monitoring (Block 3.6).
+
+    Checks whether live centroids have drifted outside the data support
+    region defined by the bootstrap baseline (mu_zero).  A centroid is
+    flagged when ≥2 factor dimensions exceed threshold_sigma × σ_factor.
+
+    Safe degradation: if scorer is None (cold start) or bootstrap is
+    unavailable, returns GREEN with an explanatory note.
+
+    Health:
+      GREEN : warning_count == 0
+      AMBER : 1–3 warnings
+      RED   : 4+ warnings
+    """
+    import numpy as _np
+    from app.services.centroid_support import compute_centroid_support
+    from app.services.gae_state import get_profile_scorer, get_bootstrap_centroids
+
+    _CATEGORIES = [
+        "credential_access", "lateral_movement",
+        "data_exfiltration", "malware_execution",
+        "insider_threat", "cloud_infrastructure",
+    ]
+    _ACTIONS = ["escalate", "investigate", "suppress", "monitor"]
+    _FACTORS = [
+        "travel_match", "asset_criticality", "threat_intel_enrichment",
+        "pattern_history", "time_anomaly", "device_trust",
+    ]
+    _SIGMA = [_FACTOR_SIGMA.get(f, 0.15) for f in _FACTORS]
+    _THRESHOLD = 2.0
+
+    _COLD_START = {
+        "support_summary":  {},
+        "overall_health":   "GREEN",
+        "warning_count":    0,
+        "threshold_sigma":  _THRESHOLD,
+        "interpretation":   "All centroids within data support region.",
+        "note": "Centroid support monitoring active after deployment qualification",
+    }
+
+    scorer = get_profile_scorer()
+    if scorer is None:
+        return _COLD_START
+
+    # Fetch bootstrap baseline
+    try:
+        bootstrap = await get_bootstrap_centroids(neo4j_client)
+    except Exception:
+        bootstrap = None
+
+    if bootstrap is None or bootstrap.get("mu") is None:
+        return _COLD_START
+
+    mu      = scorer.mu                                            # [C, A, D]
+    mu_zero = _np.array(bootstrap["mu"], dtype=_np.float64)
+
+    # Shapes may differ if model was re-sized — use minimum shared dims
+    C = min(mu.shape[0], mu_zero.shape[0], len(_CATEGORIES))
+    A = min(mu.shape[1], mu_zero.shape[1], len(_ACTIONS))
+    D = min(mu.shape[2], mu_zero.shape[2], len(_SIGMA))
+
+    mu_slice      = mu[:C, :A, :D]
+    mu_zero_slice = mu_zero[:C, :A, :D]
+
+    raw = compute_centroid_support(mu_slice, mu_zero_slice, _SIGMA[:D], _THRESHOLD)
+
+    # Build human-readable summary
+    support_summary: dict = {}
+    warning_count = 0
+    for c in range(C):
+        cat = _CATEGORIES[c]
+        support_summary[cat] = {}
+        for a in range(A):
+            action = _ACTIONS[a]
+            entry = raw[(c, a)]
+            if entry["support_status"] == "warning":
+                warning_count += 1
+            support_summary[cat][action] = {
+                "support_status":      entry["support_status"],
+                "n_factors_outside":   entry["n_factors_outside"],
+                "max_deviation_sigma": round(entry["max_deviation_sigma"], 4),
+            }
+
+    if warning_count == 0:
+        overall_health = "GREEN"
+        interpretation = "All centroids within data support region."
+    elif warning_count <= 3:
+        overall_health = "AMBER"
+        interpretation = (
+            f"{warning_count} centroid position(s) outside observed range "
+            f"(>{_THRESHOLD}σ). Learning may be extrapolating."
+        )
+    else:
+        overall_health = "RED"
+        interpretation = (
+            f"WARNING: {warning_count} centroid positions outside observed range. "
+            "Consider re-seeding bootstrap baseline."
+        )
+
+    return {
+        "support_summary":  support_summary,
+        "overall_health":   overall_health,
+        "warning_count":    warning_count,
+        "threshold_sigma":  _THRESHOLD,
+        "interpretation":   interpretation,
+    }
