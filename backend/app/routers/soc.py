@@ -3196,6 +3196,111 @@ async def get_analyst_eta_weights_endpoint():
 
 
 # =============================================================================
+# GET /api/soc/analyst-weights — Block 9.1 D5 per-analyst η weighting (rich)
+# =============================================================================
+
+_ANALYST_DECISION_COUNT_QUERY = """
+MATCH (d:Decision)
+WHERE d.source = "live" AND d.analyst IS NOT NULL
+RETURN d.analyst AS analyst, count(d) AS total
+"""
+
+_ANALYST_WEIGHT_THRESHOLD = 20   # decisions required for "personalized" status
+
+
+@router.get("/soc/analyst-weights")
+async def get_analyst_weights():
+    """
+    Return per-analyst η weight information for the Tab 2 Two-Level Judgment view.
+
+    Weight formula: weight = min(1.5, max(0.5, precision / mean_precision))
+    Analysts with < 20 decisions use default weight (1.0) — not personalized.
+    Validated: D5 Spearman r=0.975–1.000 (V-D5).
+
+    Returns
+    -------
+    {
+      "analyst_weights": {
+        "analyst_001": {
+          "precision": 0.90,
+          "decision_count": 147,
+          "eta_weight": 1.8,
+          "status": "personalized"
+        }, ...
+      },
+      "weight_ratio_high_low": float,
+      "threshold_decisions": 20,
+      "note": "High-precision analysts contribute more ... V-D5"
+    }
+    """
+    from app.services.learning_health import compute_analyst_precision
+    from app.domains.soc.config import GateConfig
+    from app.services.gae_state import get_learning_state as _get_ls
+
+    # -- decision counts per analyst ------------------------------------------
+    decision_counts: dict = {}
+    try:
+        rows = await neo4j_client.run_query(_ANALYST_DECISION_COUNT_QUERY, {})
+        decision_counts = {r["analyst"]: int(r["total"]) for r in (rows or [])}
+    except Exception:
+        pass
+
+    # -- precision + weights --------------------------------------------------
+    n_decisions = 0
+    try:
+        n_decisions = _get_ls().decision_count
+    except Exception:
+        pass
+
+    precision = await compute_analyst_precision(neo4j_client)
+
+    cfg = GateConfig(
+        n_decisions=n_decisions,
+        V=200.0,
+        alpha=0.25,
+        per_analyst_precision=precision,
+    )
+    weights = cfg.eta_weights   # {} when uncalibrated or no precision data
+
+    # -- merge all known analysts ---------------------------------------------
+    all_analysts = set(decision_counts) | set(precision) | set(weights)
+    analyst_weights: dict = {}
+    for analyst in sorted(all_analysts):
+        count   = decision_counts.get(analyst, 0)
+        prec    = precision.get(analyst, 0.0)
+        weight  = weights.get(analyst, 1.0)
+        if count < _ANALYST_WEIGHT_THRESHOLD:
+            status = f"default — insufficient decisions (need {_ANALYST_WEIGHT_THRESHOLD}+)"
+            weight = 1.0   # enforce default regardless of formula
+        else:
+            status = "personalized"
+        analyst_weights[analyst] = {
+            "precision":      round(prec, 4),
+            "decision_count": count,
+            "eta_weight":     round(weight, 4),
+            "status":         status,
+        }
+
+    # -- weight_ratio_high_low ------------------------------------------------
+    if analyst_weights:
+        all_weights = [v["eta_weight"] for v in analyst_weights.values()]
+        weight_ratio = round(max(all_weights) / max(min(all_weights), 1e-6), 4)
+    else:
+        weight_ratio = 1.0
+
+    return {
+        "analyst_weights":       analyst_weights,
+        "weight_ratio_high_low": weight_ratio,
+        "threshold_decisions":   _ANALYST_WEIGHT_THRESHOLD,
+        "note": (
+            "High-precision analysts contribute more to centroid learning. "
+            "Spearman r=0.975-1.000 (V-D5). "
+            "Formula: weight = clip(precision / mean_precision, 0.5, 1.5)."
+        ),
+    }
+
+
+# =============================================================================
 # GET /api/soc/volume-baseline — Block 9.2 D3 spike detector
 # =============================================================================
 
