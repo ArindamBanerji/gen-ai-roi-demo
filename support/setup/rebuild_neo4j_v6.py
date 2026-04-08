@@ -171,30 +171,42 @@ async def main() -> None:
     )
 
     # -- Step 3: realistic alert pool -----------------------------------------
+    _realistic_cmd = [python, str(_BACKEND / "app" / "scripts" / "seed_realistic.py")]
+    if args.dry_run:
+        _realistic_cmd.append("--dry-run")
     run_step(
         "seed_realistic.py — realistic alert pool",
-        [python, str(_BACKEND / "app" / "scripts" / "seed_realistic.py")],
+        _realistic_cmd,
         args.dry_run,
     )
 
     # -- Step 4: shadow decisions ---------------------------------------------
+    _shadow_cmd = [python, str(_BACKEND / "ingest_shadow_decisions.py"), str(shadow_json)]
+    if args.dry_run:
+        _shadow_cmd.append("--dry-run")
     run_step(
         "ingest_shadow_decisions.py — V-SHADOW-SYNTHETIC-v3",
-        [python, str(_BACKEND / "ingest_shadow_decisions.py"), str(shadow_json)],
+        _shadow_cmd,
         args.dry_run,
     )
 
     # -- Step 5: seed verified decisions --------------------------------------
+    _verified_cmd = [python, str(_BACKEND / "scripts" / "seed_verified_decisions.py")]
+    if args.dry_run:
+        _verified_cmd.append("--dry-run")
     run_step(
         "seed_verified_decisions.py — 50 verified seed decisions",
-        [python, str(_BACKEND / "scripts" / "seed_verified_decisions.py")],
+        _verified_cmd,
         args.dry_run,
     )
 
     # -- Step 6: ingest synthetic pilot decisions ------------------------------
+    _pilot_cmd = [python, str(_BACKEND / "scripts" / "ingest_synthetic_decisions.py"), str(pilot_json)]
+    if args.dry_run:
+        _pilot_cmd.append("--dry-run")
     run_step(
         "ingest_synthetic_decisions.py — synthetic pilot decisions",
-        [python, str(_BACKEND / "scripts" / "ingest_synthetic_decisions.py"), str(pilot_json)],
+        _pilot_cmd,
         args.dry_run,
     )
 
