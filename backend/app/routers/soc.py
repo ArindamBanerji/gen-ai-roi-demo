@@ -3613,6 +3613,82 @@ async def get_centroid_support():
 
 
 # =============================================================================
+# GET /api/soc/distance-log — BACKLOG-015 extension: EXP-G1 convergence monitor
+# =============================================================================
+
+def _compute_convergence_trend(distances: list) -> str:
+    """
+    Classify last-10-entry distance trend for EXP-G1 monitoring.
+
+    Returns: "insufficient_data" | "decreasing" | "increasing" | "stable"
+    """
+    if len(distances) < 10:
+        return "insufficient_data"
+    last10 = distances[:10]  # already ordered DESC from query
+    # Reverse so oldest is first for trend direction
+    last10 = list(reversed(last10))
+    monotone_decrease = all(last10[i] >= last10[i + 1] for i in range(len(last10) - 1))
+    if monotone_decrease:
+        return "decreasing"
+    # Count consecutive increases from the end
+    consecutive_increase = 0
+    for i in range(len(last10) - 1, 0, -1):
+        if last10[i] > last10[i - 1]:
+            consecutive_increase += 1
+        else:
+            break
+    if consecutive_increase >= 5:
+        return "increasing"
+    return "stable"
+
+
+@router.get("/soc/distance-log")
+async def get_decision_distance_log(limit: int = 50):
+    """
+    Return last N DecisionDistanceLog entries for EXP-G1 convergence monitoring.
+
+    centroid_distance_to_canonical decreases during healthy model convergence
+    (simulation: 3.0→2.4 over 600 decisions).
+    """
+    from app.services.reconvergence_logger import read_decision_distance_log
+    from app.db.neo4j import neo4j_client
+
+    entries = []
+    try:
+        entries = await read_decision_distance_log(neo4j_client, limit=max(1, min(limit, 500)))
+    except Exception:
+        pass
+
+    # Parse stored JSON category distributions
+    for e in entries:
+        if isinstance(e.get("alert_category_distribution"), str):
+            try:
+                import json as _json
+                e["alert_category_distribution"] = _json.loads(
+                    e["alert_category_distribution"]
+                )
+            except Exception:
+                e["alert_category_distribution"] = {}
+
+    distances = [
+        float(e["centroid_distance_to_canonical"])
+        for e in entries
+        if e.get("centroid_distance_to_canonical") is not None
+    ]
+    trend = _compute_convergence_trend(distances)
+
+    return {
+        "entries":           entries,
+        "total":             len(entries),
+        "convergence_trend": trend,
+        "note": (
+            "EXP-G1 field 1: centroid_distance must decrease during convergence. "
+            "Simulation baseline: 3.0→2.4 over 600 decisions."
+        ),
+    }
+
+
+# =============================================================================
 # GET /api/sentinel/alerts — Block 4.2 Real Sentinel Connector
 # =============================================================================
 

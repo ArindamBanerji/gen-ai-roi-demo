@@ -16,6 +16,8 @@ import time
 import uuid
 from typing import Optional
 
+import numpy as np
+
 log = logging.getLogger(__name__)
 
 _CREATE_EVENT_QUERY = """
@@ -104,6 +106,108 @@ async def log_reconvergence_event(
     except Exception as exc:
         log.warning("[EXP-G1] Failed to log reconvergence event: %s", exc)
         return None
+
+
+_CREATE_DISTANCE_LOG_QUERY = """
+CREATE (d:DecisionDistanceLog {
+    decision_id:                     $decision_id,
+    centroid_distance_to_canonical:  $distance,
+    pattern_history_value:           $ph_value,
+    alert_category_distribution:     $cat_dist,
+    logged_at_epoch:                 $now
+})
+RETURN d.decision_id AS id
+"""
+
+_READ_CATEGORY_DIST_QUERY = """
+MATCH (d:Decision)
+WHERE d.category IS NOT NULL
+RETURN d.category AS category, count(d) AS cnt
+ORDER BY d.timestamp_epoch DESC
+LIMIT 100
+"""
+
+_READ_DISTANCE_LOG_QUERY = """
+MATCH (d:DecisionDistanceLog)
+RETURN d.decision_id                    AS decision_id,
+       d.centroid_distance_to_canonical AS centroid_distance_to_canonical,
+       d.pattern_history_value          AS pattern_history_value,
+       d.alert_category_distribution    AS alert_category_distribution,
+       d.logged_at_epoch                AS logged_at_epoch
+ORDER BY d.logged_at_epoch DESC
+LIMIT $limit
+"""
+
+
+async def log_decision_distance(
+    neo4j_client,
+    decision_id: str,
+    mu: np.ndarray,
+    mu_zero: np.ndarray,
+    pattern_history_value: float,
+    alert_category_distribution: dict,
+) -> Optional[str]:
+    """
+    Log per-decision EXP-G1 fields to a DecisionDistanceLog Neo4j node.
+
+    Fields logged:
+      centroid_distance_to_canonical — L2 norm(mu - mu_zero), primary γ metric
+      pattern_history_value          — factor_vector[4], W2 enrichment signal
+      alert_category_distribution    — rolling 100-decision category mix
+
+    Never raises — degrades safely. Returns decision_id on success, None on failure.
+    """
+    try:
+        centroid_distance = float(np.linalg.norm(mu.flatten() - mu_zero.flatten()))
+
+        await neo4j_client.run_query(
+            _CREATE_DISTANCE_LOG_QUERY,
+            {
+                "decision_id": decision_id,
+                "distance":    centroid_distance,
+                "ph_value":    float(pattern_history_value),
+                "cat_dist":    json.dumps(alert_category_distribution, sort_keys=True),
+                "now":         int(time.time() * 1000),
+            },
+        )
+        log.info(
+            "[EXP-G1] DecisionDistanceLog written: id=%s dist=%.4f ph=%.4f",
+            decision_id, centroid_distance, pattern_history_value,
+        )
+        return decision_id
+    except Exception as exc:
+        log.warning("[EXP-G1] DecisionDistanceLog failed: %s", exc)
+        return None
+
+
+async def read_decision_distance_log(neo4j_client, limit: int = 50) -> list:
+    """
+    Return the last `limit` DecisionDistanceLog entries. Returns [] on failure.
+    """
+    try:
+        rows = await neo4j_client.run_query(_READ_DISTANCE_LOG_QUERY, {"limit": limit})
+        return [dict(r) for r in (rows or [])]
+    except Exception as exc:
+        log.warning("[EXP-G1] Failed to read DecisionDistanceLog: %s", exc)
+        return []
+
+
+async def fetch_category_distribution(neo4j_client) -> dict:
+    """
+    Query Neo4j for the last 100 decisions and return category mix as dict.
+    Returns {} on failure. Values sum to 1.0.
+    """
+    try:
+        rows = await neo4j_client.run_query(_READ_CATEGORY_DIST_QUERY, {})
+        if not rows:
+            return {}
+        total = sum(int(r["cnt"]) for r in rows)
+        if total == 0:
+            return {}
+        return {r["category"]: round(int(r["cnt"]) / total, 4) for r in rows}
+    except Exception as exc:
+        log.warning("[EXP-G1] Failed to fetch category distribution: %s", exc)
+        return {}
 
 
 async def read_reconvergence_events(neo4j_client, limit: int = 50) -> list:
