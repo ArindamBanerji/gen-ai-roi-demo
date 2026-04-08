@@ -358,3 +358,27 @@ class Neo4jClient:
 
 # Global client instance
 neo4j_client = Neo4jClient()
+
+# ── Block 8.5: AGE backend switcher ─────────────────────────────────────────
+# Set GRAPH_BACKEND=age in .env to activate PostgreSQL+AGE.
+# Default is neo4j — zero behaviour change unless env var is set.
+# All 290 call sites (neo4j_client.run_query etc) are unchanged.
+import os as _os
+
+_GRAPH_BACKEND = _os.getenv("GRAPH_BACKEND", "neo4j").lower()
+
+if _GRAPH_BACKEND == "age":
+    try:
+        from ci_platform.graph import get_graph_client as _age_factory
+        neo4j_client = _age_factory()  # type: ignore[assignment]
+        import logging as _log
+        _log.getLogger(__name__).info(
+            "Block 8.5: GRAPH_BACKEND=age — using AGE/PostgreSQL"
+        )
+    except ImportError as _e:
+        raise ImportError(
+            "GRAPH_BACKEND=age requires ci-platform[graph] installed. "
+            "Run: pip install 'ci-platform[graph]'\n"
+            f"Original error: {_e}"
+        )
+# ─────────────────────────────────────────────────────────────────────────────
