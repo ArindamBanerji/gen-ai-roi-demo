@@ -3652,3 +3652,48 @@ async def get_sentinel_alerts(top: int = 50):
         "count":  len(alerts),
         "schema": "SituationAnalyzer v1.0",
     }
+
+
+# =============================================================================
+# POST /api/sentinel/writeback-test — Block 7.1 Sentinel Write-Back (Outward)
+# =============================================================================
+
+class _WritebackTestRequest(BaseModel):
+    incident_id: str = "INC-TEST-001"
+    action:      str = "escalate"
+    confidence:  float = 0.90
+    decision_id: str = "test-decision-001"
+    campaign_id: Optional[str] = None
+
+
+@router.post("/sentinel/writeback-test")
+async def sentinel_writeback_test(req: _WritebackTestRequest):
+    """
+    Exercise the Sentinel write-back path without triggering a real triage.
+
+    Always calls push_incident_update() and returns the result so callers
+    can verify the outward connector is wired correctly.
+
+    When Sentinel credentials are not configured the connector returns
+    success=False with error='not_configured' — this is the expected
+    no-op result in demo / CI environments.
+    """
+    from app.connectors.sentinel_real import get_sentinel_connector
+
+    connector = get_sentinel_connector()
+    result = await connector.push_incident_update(
+        incident_id=req.incident_id,
+        action=req.action,
+        confidence=req.confidence,
+        decision_id=req.decision_id,
+        campaign_id=req.campaign_id,
+    )
+    return {
+        "writeback_result": result,
+        "incident_id":      req.incident_id,
+        "action":           req.action,
+        "confidence":       req.confidence,
+        "decision_id":      req.decision_id,
+        "campaign_id":      req.campaign_id,
+        "connector_configured": connector.is_configured(),
+    }

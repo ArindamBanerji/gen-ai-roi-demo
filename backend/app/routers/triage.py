@@ -291,6 +291,38 @@ async def analyze_alert(request: ProcessAlertRequest):
             logger.warning("[TRIAGE] Campaign wiring failed for %s: %s", alert_id, _camp_exc)
 
         # ====================================================================
+        # Step 5c: Sentinel write-back (Block 7.1) — fire-and-forget
+        #
+        # Triggered when:
+        #   - confidence >= 0.85
+        #   - action is escalate or investigate
+        #   - alert_data contains incident_id (i.e., alert originated from Sentinel)
+        # Never blocks triage response.
+        # ====================================================================
+        _incident_id = alert_data.get("incident_id", "")
+        if (
+            confidence >= 0.85
+            and selected_action in ("escalate", "investigate")
+            and _incident_id
+        ):
+            from app.connectors.sentinel_real import get_sentinel_connector as _get_sentinel
+            import asyncio as _asyncio
+            _sentinel_connector = _get_sentinel()
+            _asyncio.create_task(
+                _sentinel_connector.push_incident_update(
+                    incident_id=_incident_id,
+                    action=selected_action,
+                    confidence=confidence,
+                    decision_id=decision_id,
+                    campaign_id=locals().get("_campaign_id"),
+                )
+            )
+            logger.info(
+                "[Sentinel-WB] fire-and-forget scheduled — incident=%s action=%s conf=%.3f",
+                _incident_id, selected_action, confidence,
+            )
+
+        # ====================================================================
         # Step 6: Emit events (every graph mutation MUST emit events)
         # ====================================================================
         await event_bus.emit(DecisionMade(

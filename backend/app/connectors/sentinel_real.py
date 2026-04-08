@@ -254,6 +254,88 @@ class SentinelRealConnector:
             logger.error("[Sentinel] Token acquisition failed: %s", exc)
             return None
 
+    async def push_incident_update(
+        self,
+        incident_id: str,
+        action: str,
+        confidence: float,
+        decision_id: str,
+        campaign_id: Optional[str] = None,
+    ) -> dict:
+        """
+        Write-back a triage decision to a Sentinel incident via Graph Security API.
+
+        PATCH /security/incidents/{incident_id}
+
+        Payload:
+          - classification: maps action → Sentinel enum
+          - determination:  always "unknown" (Copilot does not set determination)
+          - customProperties: action, confidence, decision_id, campaign_id, source
+
+        Returns dict with keys: success (bool), status_code (int|None), error (str|None).
+        Never raises — callers fire-and-forget without awaiting result.
+        """
+        if not self.is_configured():
+            logger.warning("[Sentinel-WB] Not configured — write-back skipped for %s", incident_id)
+            return {"success": False, "status_code": None, "error": "not_configured"}
+
+        token = await self.get_token()
+        if not token:
+            return {"success": False, "status_code": None, "error": "no_token"}
+
+        try:
+            import httpx
+        except ImportError:
+            logger.error("[Sentinel-WB] httpx not installed")
+            return {"success": False, "status_code": None, "error": "httpx_missing"}
+
+        # Map internal action → Sentinel classification enum
+        _CLASSIFICATION_MAP = {
+            "escalate":   "truePositive",
+            "investigate": "truePositive",
+            "suppress":   "falsePositive",
+            "monitor":    "benignPositive",
+        }
+        classification = _CLASSIFICATION_MAP.get(action, "unknown")
+
+        payload = {
+            "classification": classification,
+            "determination":  "unknown",
+            "customProperties": {
+                "copilot_action":      action,
+                "copilot_confidence":  str(round(confidence, 4)),
+                "copilot_decision_id": decision_id,
+                "copilot_campaign_id": campaign_id or "",
+                "copilot_source":      "soc-copilot-v5",
+            },
+        }
+
+        try:
+            url = f"https://graph.microsoft.com/v1.0/security/incidents/{incident_id}"
+            async with httpx.AsyncClient(timeout=15.0) as http:
+                resp = await http.patch(
+                    url,
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        "Content-Type":  "application/json",
+                    },
+                    json=payload,
+                )
+            if resp.status_code in (200, 204):
+                logger.info(
+                    "[Sentinel-WB] incident=%s patched — action=%s conf=%.3f",
+                    incident_id, action, confidence,
+                )
+                return {"success": True, "status_code": resp.status_code, "error": None}
+            logger.error(
+                "[Sentinel-WB] PATCH %s failed — status=%d body=%s",
+                incident_id, resp.status_code, resp.text[:200],
+            )
+            return {"success": False, "status_code": resp.status_code, "error": resp.text[:200]}
+        except Exception as exc:
+            logger.error("[Sentinel-WB] PATCH exception for incident=%s: %s", incident_id, exc)
+            return {"success": False, "status_code": None, "error": str(exc)}
+
     async def fetch_alerts(self, top: int = 50) -> List[dict]:
         """
         Fetch latest alerts from Graph Security API (alerts_v2).
