@@ -282,6 +282,26 @@ class Neo4jClient:
     # Deployment Queries
     # ========================================================================
 
+    async def count_verified_decisions(self) -> int:
+        """
+        Count Decision nodes that have received outcome feedback (verified).
+
+        BACKLOG-020 Phase 1: used on startup to sync LearningState.decision_count
+        from the graph so the count survives server restarts.
+
+        Uses d.outcome IS NOT NULL as the verified predicate — this is the field
+        set by both the triage outcome endpoint and all ingest scripts.
+        Falls back gracefully to 0 on any error.
+        """
+        try:
+            results = await self.run_query(
+                "MATCH (d:Decision) WHERE d.outcome IS NOT NULL "
+                "RETURN count(d) AS cnt"
+            )
+            return int(results[0]["cnt"]) if results else 0
+        except (TypeError, ValueError, KeyError):
+            return 0
+
     async def get_pattern_count(self) -> int:
         """Get total learned pattern count"""
         query = "MATCH (p:AttackPattern) RETURN count(p) as count"

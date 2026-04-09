@@ -123,6 +123,19 @@ async def startup_event():
     except Exception as _sync_exc:
         print(f"[STARTUP] decision_count sync failed (non-blocking): {_sync_exc}")
 
+    # BACKLOG-020 Phase 1: prefer verified count over total count.
+    # count_verified_decisions() counts only decisions with outcome feedback.
+    # Runs after the total-count sync so it takes precedence when > 0.
+    # Safe fallback: if result is 0 (empty DB / error), existing count preserved.
+    try:
+        _verified_count = await neo4j_client.count_verified_decisions()
+        if _verified_count > 0:
+            from app.services.gae_state import get_learning_state as _get_ls_v
+            _get_ls_v().decision_count = _verified_count
+            print(f"[STARTUP] Verified decision_count from graph: {_verified_count}")
+    except Exception as _vd_exc:
+        print(f"[STARTUP] count_verified_decisions failed (non-blocking): {_vd_exc}")
+
     # Warm up all domain config properties.
     # Iterates every registered domain and touches all @property accessors so
     # Python initialises any lazy sub-modules now, not on the first API request.
