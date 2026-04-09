@@ -64,7 +64,8 @@ async def startup_event():
     # AGEClient uses per-query connections (no persistent connect/close).
     if hasattr(neo4j_client, "connect"):
         await neo4j_client.connect()
-        print("[OK] Connected to Neo4j")
+        import os as _os
+        print(f"[OK] Connected to graph backend ({_os.getenv('GRAPH_BACKEND', 'neo4j').upper()})")
     else:
         print("[OK] AGE backend: per-query connections, no persistent connect needed")
 
@@ -121,7 +122,7 @@ async def startup_event():
         _ls = _get_ls()
         if _ls.decision_count < _historical_count:
             _ls.decision_count = _historical_count
-            print(f"[STARTUP] Synced decision_count from Neo4j: {_historical_count}")
+            print(f"[STARTUP] Synced decision_count from graph: {_historical_count}")
         else:
             print(f"[STARTUP] decision_count already current ({_ls.decision_count}), skipping Neo4j sync")
     except Exception as _sync_exc:
