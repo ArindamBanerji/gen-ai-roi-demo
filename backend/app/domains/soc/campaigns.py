@@ -511,14 +511,13 @@ class CampaignRepository:
         try:
             results = await self.neo4j.run_query("""
                 MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
-                WHERE NOT (a)-[:MEMBER_OF]->(:Campaign)
-                RETURN a.id AS alert_id,
+                RETURN COALESCE(a.alert_id, a.id) AS alert_id,
                        d.category AS category,
                        a.source_entity_id AS source_entity_id,
                        a.technique_id AS technique_id,
                        d.timestamp_epoch AS ts,
                        COALESCE(a.severity, 'MEDIUM') AS severity,
-                       d.id AS decision_id
+                       COALESCE(d.decision_id, d.id) AS decision_id
                 ORDER BY d.timestamp_epoch
             """, {})
             return [{**dict(r), "ts": _to_python_dt(r["ts"])} for r in results] if results else []
@@ -535,15 +534,14 @@ class CampaignRepository:
         try:
             results = await self.neo4j.run_query("""
                 MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
-                WHERE NOT (a)-[:MEMBER_OF]->(:Campaign)
-                  AND d.timestamp_epoch > $cutoff_epoch
-                RETURN a.id AS alert_id,
+                WHERE d.timestamp_epoch > $cutoff_epoch
+                RETURN COALESCE(a.alert_id, a.id) AS alert_id,
                        d.category AS category,
                        a.source_entity_id AS source_entity_id,
                        a.technique_id AS technique_id,
                        d.timestamp_epoch AS ts,
                        COALESCE(a.severity, 'MEDIUM') AS severity,
-                       d.id AS decision_id
+                       COALESCE(d.decision_id, d.id) AS decision_id
                 ORDER BY d.timestamp_epoch
             """, {"cutoff_epoch": int((datetime.utcnow().timestamp() - window_hours * 3600) * 1000)})
             return [{**dict(r), "ts": _to_python_dt(r["ts"])} for r in results] if results else []
@@ -637,7 +635,7 @@ class CampaignRepository:
                 MATCH (c:Campaign)
                 {where_clause}
                 OPTIONAL MATCH (a:Alert)-[:MEMBER_OF]->(c)
-                RETURN c, collect(a.id) AS alert_ids
+                RETURN c, collect(COALESCE(a.alert_id, a.id)) AS alert_ids
                 ORDER BY c.last_seen DESC
                 LIMIT $limit
             """, {"min_confidence": min_confidence, "trigger_rule": trigger_rule, "limit": limit})
@@ -655,7 +653,7 @@ class CampaignRepository:
                 OPTIONAL MATCH (d:Decision)-[:DECIDED_ON]->(a)
                 RETURN c,
                        collect({
-                           alert_id: a.id,
+                           alert_id: COALESCE(a.alert_id, a.id),
                            alert_type: a.alert_type,
                            technique_id: a.technique_id,
                            category: d.category,

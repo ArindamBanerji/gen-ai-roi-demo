@@ -19,6 +19,17 @@ import asyncio
 import pathlib
 import pytest
 
+# Load .env BEFORE reading GRAPH_BACKEND so that values set only in .env
+# (not exported to the shell) are visible to the policy check below.
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    for _env_path in ["../.env", ".env"]:
+        if pathlib.Path(_env_path).exists():
+            _load_dotenv(_env_path, override=False)  # shell env takes precedence
+            break
+except ImportError:
+    pass
+
 # Block 8.5: psycopg async requires WindowsSelectorEventLoopPolicy on Windows.
 # ProactorEventLoop (Windows default) is incompatible with psycopg async mode.
 # This fix applies only when GRAPH_BACKEND=age is active.

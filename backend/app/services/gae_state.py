@@ -422,9 +422,16 @@ async def get_bootstrap_centroids(neo4j_client) -> dict | None:
         if not rows or rows[0].get("bootstrap_mu") is None:
             return None
         r = rows[0]
+        # AGE stores nested lists as JSON strings — parse back to Python list.
+        mu = r["bootstrap_mu"]
+        if isinstance(mu, str):
+            mu = json.loads(mu)
+        shape = r["bootstrap_shape"]
+        if isinstance(shape, str):
+            shape = json.loads(shape)
         return {
-            "mu":         r["bootstrap_mu"],
-            "shape":      r["bootstrap_shape"],
+            "mu":         mu,
+            "shape":      shape,
             "stored_at":  r["stored_at"],
             "gae_version": r.get("gae_version", "unknown"),
         }

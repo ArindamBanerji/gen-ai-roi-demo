@@ -2,9 +2,13 @@
 SOC Copilot Demo - FastAPI Backend
 Main application entry point with CORS and router registration.
 """
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 # Load environment variables from project root
 # Copy ../.env.example to ../.env and fill in credentials before starting
@@ -72,6 +76,32 @@ async def startup_event():
         _dsn = _os.getenv("DATABASE_URL", "not set")
         _dsn_masked = _re.sub(r":([^:@]+)@", ":***@", _dsn)
         print(f"[OK] Connected to graph backend (AGE) — {_dsn_masked}")
+
+    if _backend == "AGE":
+        try:
+            verify = await neo4j_client.run_query(
+                "MATCH (n) RETURN count(n) AS total"
+            )
+            total_nodes = int(verify[0]["total"]) if verify else 0
+
+            label_counts = await neo4j_client.run_query(
+                """
+                MATCH (n)
+                WHERE head(labels(n)) IN ['Decision','Alert','Campaign','ShadowDecision']
+                RETURN head(labels(n)) AS label, count(n) AS cnt
+                ORDER BY cnt DESC
+                """
+            )
+            label_summary = ", ".join(
+                f"{r['label']}={r['cnt']}" for r in label_counts
+            )
+            logger.info(
+                f"[AGE] PostgreSQL+AGE verified — "
+                f"{total_nodes} total nodes "
+                f"({label_summary})"
+            )
+        except Exception as e:
+            logger.warning(f"[AGE] Bootstrap verification failed: {e}")
 
     # Load analyst correct-override examples into OverrideDetector.
     # Activates automatically when >= 50 examples are found in Neo4j.
