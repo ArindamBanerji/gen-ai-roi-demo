@@ -309,6 +309,80 @@ class Neo4jClient:
         except (TypeError, ValueError, KeyError):
             return 0
 
+    async def count_decisions_by_category(self) -> dict:
+        """
+        Returns {category: count} for all verified decisions.
+
+        Used by GraphSnapshot.from_graph() on startup.
+        Uses d.outcome IS NOT NULL as the verified predicate — same as
+        count_verified_decisions().  Returns {} on any error.
+        """
+        try:
+            results = await self.run_query(
+                "MATCH (d:Decision) "
+                "WHERE d.outcome IS NOT NULL AND d.category IS NOT NULL "
+                "RETURN d.category AS category, count(d) AS cnt"
+            )
+            return {
+                r["category"]: int(r["cnt"])
+                for r in results
+                if r.get("category")
+            }
+        except Exception:
+            return {}
+
+    async def compute_outcome_stats(self) -> dict:
+        """
+        Returns override_rate and override_quality from verified Decision nodes.
+
+        was_override is stored as d.was_override (bool) by the outcome endpoint.
+        quality_signal is stored as d.quality_signal (float).
+        Both fields may be absent in bootstrap/ingest decisions — CASE guards handle nulls.
+        Returns {"override_rate": 0.0, "override_quality": 0.0} on any error.
+        """
+        try:
+            results = await self.run_query(
+                """
+                MATCH (d:Decision)
+                WHERE d.outcome IS NOT NULL
+                RETURN
+                    count(d) AS total,
+                    sum(CASE WHEN d.was_override = true THEN 1 ELSE 0 END) AS overrides,
+                    avg(CASE WHEN d.was_override = true
+                        THEN d.quality_signal ELSE null END) AS avg_quality
+                """
+            )
+            if not results:
+                return {"override_rate": 0.0, "override_quality": 0.0}
+            row     = results[0]
+            total   = int(row.get("total") or 0)
+            overrides = int(row.get("overrides") or 0)
+            avg_q   = float(row.get("avg_quality") or 0.0)
+            return {
+                "override_rate":    overrides / total if total > 0 else 0.0,
+                "override_quality": avg_q,
+            }
+        except Exception:
+            return {"override_rate": 0.0, "override_quality": 0.0}
+
+    async def compute_iks(self) -> float:
+        """
+        Compute current IKS from the in-memory ProfileScorer centroid tensor.
+
+        Delegates to app.services.iks.compute_iks(mu) — no graph query needed.
+        Returns 0.0 if ProfileScorer not yet initialized or on any error.
+        """
+        try:
+            from app.services.gae_state import get_profile_scorer
+            from app.services.iks import compute_iks as _compute_iks
+            scorer = get_profile_scorer()
+            if scorer is None:
+                return 0.0
+            result = _compute_iks(scorer.mu)
+            return float(result.get("current", 0.0))
+        except Exception:
+            return 0.0
+
     async def get_pattern_count(self) -> int:
         """Get total learned pattern count"""
         query = "MATCH (p:AttackPattern) RETURN count(p) as count"

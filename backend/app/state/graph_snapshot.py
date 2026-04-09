@@ -124,3 +124,31 @@ class GraphSnapshot:
         if n <= 0:
             return new_val
         return current + (new_val - current) / n
+
+
+# =============================================================================
+# Module-level singleton — set once at startup, read everywhere.
+# Pattern mirrors gae_state._learning_state for test patchability.
+# =============================================================================
+
+_snapshot: Optional["GraphSnapshot"] = None
+
+
+def set_snapshot(snap: "GraphSnapshot") -> None:
+    """Called once in startup_event() after from_graph() completes."""
+    global _snapshot
+    _snapshot = snap
+
+
+def get_snapshot() -> "GraphSnapshot":
+    """
+    Return the live GraphSnapshot.
+
+    Raises RuntimeError if called before startup_event() completes.
+    All endpoint callers should guard with try/except RuntimeError.
+    """
+    if _snapshot is None:
+        raise RuntimeError(
+            "GraphSnapshot not initialized — startup_event() has not run yet."
+        )
+    return _snapshot

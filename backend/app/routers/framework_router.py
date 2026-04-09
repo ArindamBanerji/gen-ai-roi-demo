@@ -138,7 +138,13 @@ async def get_centroid_evolution(
             if scorer is not None and mu_zero is not None:
                 categories = scorer.categories if hasattr(scorer, "categories") else []
                 actions    = scorer.actions    if hasattr(scorer, "actions")    else []
-                decision_count = get_learning_state().decision_count
+                # BACKLOG-020 Phase 7: use snapshot.verified_decisions for display;
+                # fall back to learning_state.decision_count if snapshot not ready.
+                try:
+                    from app.state.graph_snapshot import get_snapshot as _get_snap_ce
+                    decision_count = _get_snap_ce().verified_decisions
+                except Exception:
+                    decision_count = get_learning_state().decision_count
 
                 for c_idx, cat in enumerate(categories):
                     if category is not None and cat != category:

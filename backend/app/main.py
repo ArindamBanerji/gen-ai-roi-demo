@@ -136,6 +136,23 @@ async def startup_event():
     except Exception as _vd_exc:
         print(f"[STARTUP] count_verified_decisions failed (non-blocking): {_vd_exc}")
 
+    # BACKLOG-020 Phase 7: Initialize GraphSnapshot — single source of truth for
+    # all display-layer statistics that have a graph equivalent.
+    # Must run AFTER count_verified_decisions sync (above) so IKS reflects
+    # the current ProfileScorer state, not a stale bootstrap value.
+    try:
+        from app.state.graph_snapshot import GraphSnapshot, set_snapshot as _set_snapshot
+        _snap = await GraphSnapshot.from_graph(neo4j_client)
+        _set_snapshot(_snap)
+        print(
+            f"[SNAPSHOT] GraphSnapshot initialized: "
+            f"{_snap.verified_decisions} verified decisions, "
+            f"IKS={_snap.iks_score:.1f}, "
+            f"override_rate={_snap.override_rate:.3f}"
+        )
+    except Exception as _snap_exc:
+        print(f"[SNAPSHOT] GraphSnapshot init failed (non-blocking): {_snap_exc}")
+
     # Warm up all domain config properties.
     # Iterates every registered domain and touches all @property accessors so
     # Python initialises any lazy sub-modules now, not on the first API request.

@@ -983,17 +983,26 @@ async def get_learning_state_endpoint():
     except Exception as exc:
         print(f"[SOC] learning-state iks_v2 failed: {exc}")
 
+    # BACKLOG-020 Phase 7: expose verified_decisions from snapshot
+    verified_decisions = 0
+    try:
+        from app.state.graph_snapshot import get_snapshot as _get_snap_ls
+        verified_decisions = _get_snap_ls().verified_decisions
+    except Exception:
+        pass
+
     from app.domains.soc.config import BOOTSTRAP_CATEGORY_WEIGHTS
     return {
-        "frozen":            frozen,
-        "decision_count":    decision_count,
-        "last_verified_at":  last_verified_at,
-        "checkpoint_id":     None,
-        "iks_v2":            iks_v2_data.get("iks_v2", 0.0),
-        "iks_components":    iks_v2_data.get("components", {}),
-        "iks_interpretation": iks_v2_data.get("interpretation", ""),
-        "total_decisions":   iks_v2_data.get("total_decisions", 0),
-        "categories_active": iks_v2_data.get("categories_active", 0),
+        "frozen":              frozen,
+        "decision_count":      decision_count,
+        "verified_decisions":  verified_decisions,
+        "last_verified_at":    last_verified_at,
+        "checkpoint_id":       None,
+        "iks_v2":              iks_v2_data.get("iks_v2", 0.0),
+        "iks_components":      iks_v2_data.get("components", {}),
+        "iks_interpretation":  iks_v2_data.get("interpretation", ""),
+        "total_decisions":     iks_v2_data.get("total_decisions", 0),
+        "categories_active":   iks_v2_data.get("categories_active", 0),
         "bootstrap_category_weights": BOOTSTRAP_CATEGORY_WEIGHTS,
     }
 
@@ -2600,7 +2609,16 @@ async def _tab2_content() -> dict:
     )
 
     # FIX 2.1 — Three-number glossary
-    verified_decisions = total_decisions   # best live proxy
+    # BACKLOG-020 Phase 7: read verified_decisions from GraphSnapshot (authoritative)
+    # rather than total_decisions (all Decision nodes including bootstrap).
+    # Falls back to total_decisions when snapshot not yet initialized.
+    verified_decisions = total_decisions
+    try:
+        from app.state.graph_snapshot import get_snapshot as _get_snap_t2
+        verified_decisions = _get_snap_t2().verified_decisions
+    except Exception:
+        pass
+
     decision_count_glossary = {
         "verified_decisions": (
             f"{verified_decisions:,} — analyst decisions confirmed correct or incorrect "
@@ -2878,7 +2896,13 @@ async def _tab4_content() -> dict:
     }
 
     # FIX 2.7 — Switching cost in dollars
-    verified_decisions  = total_decisions   # closest live proxy
+    # BACKLOG-020 Phase 7: use snapshot.verified_decisions (analyst-confirmed only).
+    verified_decisions = total_decisions
+    try:
+        from app.state.graph_snapshot import get_snapshot as _get_snap_t4
+        verified_decisions = _get_snap_t4().verified_decisions
+    except Exception:
+        pass  # falls back to total_decisions
     analyst_days        = max(1, verified_decisions // 10)
     switching_cost_usd  = analyst_days * 800
     switching_cost_dollars = {
