@@ -119,8 +119,9 @@ NODE_TIERS = {
 }
 
 REL_TIERS = {
-    "p0": ["DECIDED_ON", "PART_OF"],
-    "p1": ["INVOLVES", "DETECTED_ON", "MATCHES",
+    "p0": ["PART_OF"],           # DECIDED_ON moved to p1 — requires Alert nodes (p1)
+    "p1": ["DECIDED_ON",         # Decision→Alert; Alert nodes must exist first
+           "INVOLVES", "DETECTED_ON", "MATCHES",
            "ASSOCIATED_WITH", "MEMBER_OF", "HAS_TRAVEL",
            "CLASSIFIED_AS"],
     "p2": ["IN_CATEGORY", "BY_ANALYST", "HAD_CONTEXT",
@@ -280,30 +281,32 @@ async def import_relationship_to_age(
     src_props = rel.get("src_props") or {}
     tgt_props = rel.get("tgt_props") or {}
 
-    # Resolve source key/id
+    # Resolve source AGE key (used in MATCH) and id value (read from Aura props).
+    # src_age_key  — field name in AGE (may differ from Aura, e.g. alert_id).
+    # src_aura_key — field name in Aura (original, before remapping).
     src_composite = COMPOSITE_KEYS.get(src_label)
     if src_composite:
-        src_key = "composite_key"
+        src_age_key = "composite_key"
         src_id = "_".join(str(src_props.get(f) or "") for f in src_composite)
     else:
-        src_key = KEY_FIELDS.get(src_label, "id")
-        src_aura_key = AURA_KEY_FIELDS.get(src_label, src_key)
+        src_age_key = KEY_FIELDS.get(src_label, "id")
+        src_aura_key = AURA_KEY_FIELDS.get(src_label, src_age_key)
         src_id = src_props.get(src_aura_key)
 
-    # Resolve target key/id
+    # Resolve target AGE key and id value.
     tgt_composite = COMPOSITE_KEYS.get(tgt_label)
     if tgt_composite:
-        tgt_key = "composite_key"
+        tgt_age_key = "composite_key"
         tgt_id = "_".join(str(tgt_props.get(f) or "") for f in tgt_composite)
     else:
-        tgt_key = KEY_FIELDS.get(tgt_label, "id")
-        tgt_aura_key = AURA_KEY_FIELDS.get(tgt_label, tgt_key)
+        tgt_age_key = KEY_FIELDS.get(tgt_label, "id")
+        tgt_aura_key = AURA_KEY_FIELDS.get(tgt_label, tgt_age_key)
         tgt_id = tgt_props.get(tgt_aura_key)
 
     if not src_id or not tgt_id:
         logger.debug(
-            f"Skipping {rel_type}: {src_label}.{src_key}={src_id!r} "
-            f"-> {tgt_label}.{tgt_key}={tgt_id!r}"
+            f"Skipping {rel_type}: {src_label}.{src_age_key}={src_id!r} "
+            f"-> {tgt_label}.{tgt_age_key}={tgt_id!r}"
         )
         return False
 
@@ -320,8 +323,8 @@ async def import_relationship_to_age(
     try:
         await age_client.run_query(
             f"""
-            MATCH (a:{src_label} {{{src_key}: '{src_escaped}'}})
-            MATCH (b:{tgt_label} {{{tgt_key}: '{tgt_escaped}'}})
+            MATCH (a:{src_label} {{{src_age_key}: '{src_escaped}'}})
+            MATCH (b:{tgt_label} {{{tgt_age_key}: '{tgt_escaped}'}})
             MERGE (a)-[r:{rel_type}{rel_props}]->(b)
             RETURN count(r) AS cnt
             """
