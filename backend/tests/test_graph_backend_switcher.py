@@ -49,6 +49,7 @@ def test_interface_parity_neo4j_vs_age():
         "get_pattern_count", "get_sequence_count",
         "get_cross_category_count", "create_decision_trace",
         "create_evolution_event", "get_recent_evolution_events",
+        "connect", "close",
     ]
     for method in required:
         assert hasattr(Neo4jClient, method), f"Neo4jClient missing: {method}"
