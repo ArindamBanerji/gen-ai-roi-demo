@@ -62,12 +62,16 @@ async def startup_event():
     """Initialize connections on startup"""
     from app.db.neo4j import neo4j_client
     # AGEClient uses per-query connections (no persistent connect/close).
+    import os as _os, re as _re
+    _backend = _os.getenv("GRAPH_BACKEND", "neo4j").upper()
     if hasattr(neo4j_client, "connect"):
         await neo4j_client.connect()
-        import os as _os
-        print(f"[OK] Connected to graph backend ({_os.getenv('GRAPH_BACKEND', 'neo4j').upper()})")
+        _uri = _os.getenv("NEO4J_URI", "not set")
+        print(f"[OK] Connected to graph backend (NEO4J) — {_uri}")
     else:
-        print("[OK] AGE backend: per-query connections, no persistent connect needed")
+        _dsn = _os.getenv("DATABASE_URL", "not set")
+        _dsn_masked = _re.sub(r":([^:@]+)@", ":***@", _dsn)
+        print(f"[OK] Connected to graph backend (AGE) — {_dsn_masked}")
 
     # Load analyst correct-override examples into OverrideDetector.
     # Activates automatically when >= 50 examples are found in Neo4j.
