@@ -989,6 +989,80 @@ async def report_decision_outcome(request: OutcomeRequest):
                         "action_index":        cu.action_index,
                         "correct":             correct_bool,
                     }
+
+                # ============================================================
+                # BACKLOG-020 Phase 7: Update GraphSnapshot after graph write.
+                # Called AFTER the graph write succeeds — snapshot stays
+                # consistent if the write raises before this point.
+                # ============================================================
+                try:
+                    from app.state.graph_snapshot import get_snapshot as _get_snap
+                    from app.domains.soc.config import resolve_alert_category as _resolve_cat
+                    _snap = _get_snap()
+                    _cat_snap = _resolve_cat(alert_type_for_cat)
+                    _was_override = bool(
+                        request.analyst_action
+                        and request.analyst_action != action_name
+                    )
+                    _snap.on_verified_decision(
+                        category=_cat_snap,
+                        was_override=_was_override,
+                        quality_signal=1.0 if correct_bool else 0.0,
+                    )
+                    # Recompute IKS after centroid update (if centroid changed).
+                    if wu and wu.centroid_update is not None:
+                        from app.services.gae_state import get_profile_scorer as _get_ps_snap
+                        from app.services.iks import compute_iks as _compute_iks_snap
+                        _ps_snap = _get_ps_snap()
+                        if _ps_snap is not None:
+                            _iks_result = _compute_iks_snap(_ps_snap.mu)
+                            _snap.on_iks_recalculated(
+                                float(_iks_result.get("current", 0.0))
+                            )
+                except Exception as _snap_exc:
+                    logger.warning(
+                        "[SNAPSHOT] Snapshot update failed (non-blocking): %s",
+                        _snap_exc,
+                    )
+
+                # ============================================================
+                # EXP-G1 (BACKLOG-015 extension): log per-decision distance
+                # fields to DecisionDistanceLog node.  Fire-and-forget —
+                # never blocks the outcome response.
+                # Requires: mu from ProfileScorer, mu_zero from bootstrap JSON.
+                # PatternHistory is factor index 4 in SOC_FACTORS.
+                # ============================================================
+                try:
+                    import asyncio as _asyncio
+                    from app.services.reconvergence_logger import (
+                        log_decision_distance as _log_dist,
+                        fetch_category_distribution as _fetch_cat_dist,
+                    )
+                    from app.services.gae_state import get_mu_zero as _get_mu_zero, get_profile_scorer as _get_ps
+                    _mu_zero = _get_mu_zero()
+                    _ps_dist = _get_ps()
+                    if _mu_zero is not None and _ps_dist is not None:
+                        _ph_value = float(fv[4]) if len(fv) > 4 else 0.0
+
+                        async def _g1_task():
+                            _cat_dist = await _fetch_cat_dist(neo4j_client)
+                            await _log_dist(
+                                neo4j_client=neo4j_client,
+                                decision_id=request.decision_id,
+                                mu=_ps_dist.mu,
+                                mu_zero=_mu_zero,
+                                pattern_history_value=_ph_value,
+                                alert_category_distribution=_cat_dist,
+                            )
+
+                        _asyncio.create_task(_g1_task())
+                        logger.info(
+                            "[EXP-G1] DecisionDistanceLog task queued: id=%s",
+                            request.decision_id,
+                        )
+                except Exception as _g1_exc:
+                    logger.warning("[EXP-G1] Distance log scheduling failed: %s", _g1_exc)
+
         else:
             print(
                 f"[GAE] Decision node {request.decision_id!r} not found "

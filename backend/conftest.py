@@ -15,8 +15,16 @@ those tests are automatically skipped.  Locally, with NEO4J_URI set in
 your .env, they run as normal.
 """
 import os
+import asyncio
 import pathlib
 import pytest
+
+# Block 8.5: psycopg async requires WindowsSelectorEventLoopPolicy on Windows.
+# ProactorEventLoop (Windows default) is incompatible with psycopg async mode.
+# This fix applies only when GRAPH_BACKEND=age is active.
+if os.getenv("GRAPH_BACKEND", "neo4j").lower() == "age":
+    if hasattr(asyncio, "WindowsSelectorEventLoopPolicy"):
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 os.chdir(pathlib.Path(__file__).parent)
 

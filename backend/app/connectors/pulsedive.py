@@ -18,6 +18,7 @@ After enrichment:
 import asyncio
 import logging
 import os
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -303,6 +304,7 @@ class PulsediveConnector(UCLConnector):
         # Step 2 — MERGE :ThreatIntel nodes (idempotent)
         # ---------------------------------------------------------------
         indicators_ingested = 0
+        _now_epoch = int(time.time() * 1000)
         merge_query = """
         MERGE (ti:ThreatIntel {value: $value})
         SET ti.type         = $type,
@@ -312,7 +314,7 @@ class PulsediveConnector(UCLConnector):
             ti.first_seen   = $first_seen,
             ti.last_updated = $last_updated,
             ti.context      = $context,
-            ti.refreshed_at = datetime()
+            ti.refreshed_at = $now_epoch
         RETURN ti.value AS value
         """
 
@@ -327,6 +329,7 @@ class PulsediveConnector(UCLConnector):
                     "first_seen":   ioc.get("first_seen", ""),
                     "last_updated": ioc.get("last_updated", ""),
                     "context":      ioc.get("context", ""),
+                    "now_epoch":    _now_epoch,
                 })
                 indicators_ingested += 1
             except Exception as exc:
@@ -340,7 +343,7 @@ class PulsediveConnector(UCLConnector):
         MATCH (ti:ThreatIntel {value: $ioc_value})
         MATCH (alert:Alert {id: $alert_id})
         MERGE (ti)-[r:ASSOCIATED_WITH]->(alert)
-        SET r.linked_at = datetime()
+        SET r.linked_at = $now_epoch
         RETURN ti.value AS ioc, alert.id AS alert_id
         """
 
@@ -350,6 +353,7 @@ class PulsediveConnector(UCLConnector):
                     result = await neo4j_client.run_query(assoc_query, {
                         "ioc_value": ioc_value,
                         "alert_id":  alert_id,
+                        "now_epoch": _now_epoch,
                     })
                     if result:
                         relationships_created += 1

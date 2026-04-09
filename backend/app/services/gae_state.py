@@ -192,6 +192,29 @@ def get_profile_scorer():
         return None
 
 
+def get_mu_zero():
+    """
+    Return μ₀ (bootstrap baseline centroid tensor) as a numpy ndarray.
+
+    Reads from the persisted JSON file written at bootstrap time.
+    Returns None if the file does not exist or cannot be parsed.
+    Never raises.
+    """
+    import json as _json
+    import numpy as _np
+    try:
+        if not _MU_ZERO_PATH.exists():
+            log.warning("[GAE] μ₀ file not found at %s", _MU_ZERO_PATH)
+            return None
+        with open(_MU_ZERO_PATH, "r", encoding="utf-8") as _fh:
+            data = _json.load(_fh)
+        arr = _np.array(data["mu_zero"], dtype=_np.float64)
+        return arr
+    except Exception as exc:
+        log.warning("[GAE] Could not load μ₀ from %s: %s", _MU_ZERO_PATH, exc)
+        return None
+
+
 def get_bootstrap_result() -> Optional[BootstrapResult]:
     """
     Return the BootstrapResult from the last bootstrap run, or None.

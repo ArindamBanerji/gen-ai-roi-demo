@@ -14,6 +14,7 @@ AWS-PROD-ACCOUNT is intentionally absent — cloud accounts do not run the
 Falcon sensor.
 """
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Dict, List
 
@@ -92,6 +93,7 @@ class CrowdStrikeMockConnector(UCLConnector):
         # Step 1 — MERGE :CrowdStrikeEnrichment nodes (idempotent)
         # -------------------------------------------------------------------
         indicators_ingested = 0
+        _now_epoch = int(time.time() * 1000)
         merge_node_query = """
         MERGE (cs:CrowdStrikeEnrichment {device_id: $device_id})
         SET cs.hostname          = $hostname,
@@ -99,7 +101,7 @@ class CrowdStrikeMockConnector(UCLConnector):
             cs.last_seen         = $last_seen,
             cs.prevention_status = $prevention_status,
             cs.sensor_version    = $sensor_version,
-            cs.refreshed_at      = datetime()
+            cs.refreshed_at      = $now_epoch
         RETURN cs.device_id AS device_id
         """
 
@@ -112,6 +114,7 @@ class CrowdStrikeMockConnector(UCLConnector):
                     "last_seen":         device["last_seen"],
                     "prevention_status": device["prevention_status"],
                     "sensor_version":    device["sensor_version"],
+                    "now_epoch":         _now_epoch,
                 })
                 indicators_ingested += 1
                 print(
@@ -129,7 +132,7 @@ class CrowdStrikeMockConnector(UCLConnector):
         MATCH (asset:Asset {hostname: $hostname})
         MATCH (cs:CrowdStrikeEnrichment {device_id: $device_id})
         MERGE (asset)-[r:EDR_MANAGED_BY]->(cs)
-        SET r.linked_at = datetime()
+        SET r.linked_at = $now_epoch
         RETURN asset.hostname AS hostname
         """
 
@@ -138,6 +141,7 @@ class CrowdStrikeMockConnector(UCLConnector):
                 result = await neo4j_client.run_query(link_query, {
                     "hostname":  device["hostname"],
                     "device_id": device["device_id"],
+                    "now_epoch": _now_epoch,
                 })
                 if result:
                     relationships_created += 1

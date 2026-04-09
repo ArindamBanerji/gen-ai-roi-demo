@@ -22,6 +22,7 @@ After enrichment:
 import asyncio
 import logging
 import os
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -228,6 +229,7 @@ class GreyNoiseConnector(UCLConnector):
         # Step 2 — MERGE :GreyNoiseEnrichment nodes (idempotent)
         # -------------------------------------------------------------------
         indicators_ingested = 0
+        _now_epoch = int(time.time() * 1000)
         merge_query = """
         MERGE (gn:GreyNoiseEnrichment {ip: $ip})
         SET gn.classification = $classification,
@@ -237,7 +239,7 @@ class GreyNoiseConnector(UCLConnector):
             gn.link           = $link,
             gn.last_seen      = $last_seen,
             gn.source         = $source,
-            gn.refreshed_at   = datetime()
+            gn.refreshed_at   = $now_epoch
         RETURN gn.ip AS ip
         """
 
@@ -252,6 +254,7 @@ class GreyNoiseConnector(UCLConnector):
                     "link":           entry.get("link", ""),
                     "last_seen":      entry.get("last_seen", ""),
                     "source":         entry.get("source", source),
+                    "now_epoch":      _now_epoch,
                 })
                 indicators_ingested += 1
             except Exception as exc:
@@ -265,13 +268,13 @@ class GreyNoiseConnector(UCLConnector):
         MATCH (ti:ThreatIntel {value: $ip})
         MATCH (gn:GreyNoiseEnrichment {ip: $ip})
         MERGE (ti)-[r:ENRICHED_BY]->(gn)
-        SET r.linked_at = datetime()
+        SET r.linked_at = $now_epoch
         RETURN ti.value AS ioc, gn.ip AS gn_ip
         """
 
         for entry in enriched:
             try:
-                result = await neo4j_client.run_query(link_query, {"ip": entry["ip"]})
+                result = await neo4j_client.run_query(link_query, {"ip": entry["ip"], "now_epoch": _now_epoch})
                 if result:
                     relationships_created += 1
                     print(f"[GREYNOISE] Linked ThreatIntel({entry['ip']}) -[:ENRICHED_BY]-> GreyNoiseEnrichment")
