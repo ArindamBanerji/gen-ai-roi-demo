@@ -161,6 +161,9 @@ class Neo4jClient:
         Create a Decision node with DecisionContext in Neo4j.
         Returns decision_id.
         """
+        # AGE-compatible: split FOREACH into a separate conditional query.
+        # FOREACH is not supported in Apache AGE — the relationship is created
+        # in a follow-up query only when playbook_id is provided.
         query = """
         MATCH (alert:Alert {id: $alert_id})
 
@@ -186,12 +189,6 @@ class Neo4jClient:
         CREATE (decision)-[:HAD_CONTEXT]->(context)
         CREATE (decision)-[:FOR_ALERT]->(alert)
 
-        WITH decision, alert
-        OPTIONAL MATCH (playbook:Playbook {id: $playbook_id})
-        FOREACH (p IN CASE WHEN playbook IS NOT NULL THEN [playbook] ELSE [] END |
-            CREATE (decision)-[:APPLIED_PLAYBOOK]->(p)
-        )
-
         RETURN decision.id as decision_id
         """
 
@@ -201,13 +198,23 @@ class Neo4jClient:
             "action":         action,
             "confidence":     confidence,
             "reasoning":      reasoning,
-            "playbook_id":    playbook_id,
             "nodes_consulted": nodes_consulted,
             "user_snapshot":  str(context_snapshot.get("user", {})),
             "asset_snapshot": str(context_snapshot.get("asset", {})),
             "patterns_matched": [pattern_id] if pattern_id else [],
             "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
         })
+
+        # Link playbook if provided (AGE-safe replacement for FOREACH).
+        if playbook_id:
+            await self.run_query(
+                """
+                MATCH (d:Decision {id: $decision_id})
+                MATCH (p:Playbook {id: $playbook_id})
+                CREATE (d)-[:APPLIED_PLAYBOOK]->(p)
+                """,
+                {"decision_id": decision_id, "playbook_id": playbook_id},
+            )
 
         return result[0]["decision_id"] if result else decision_id
 
@@ -271,7 +278,7 @@ class Neo4jClient:
         query = """
         MATCH (event:EvolutionEvent)
         RETURN event
-        ORDER BY event.timestamp DESC
+        ORDER BY event.timestamp_epoch DESC
         LIMIT $limit
         """
 

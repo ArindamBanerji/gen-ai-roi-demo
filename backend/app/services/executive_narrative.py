@@ -93,16 +93,6 @@ class ExecutiveNarrative:
         RETURN count(c) AS chains,
                collect(c.summary)[0..3] AS summaries
         """
-        entity_query = """
-        MATCH (u:User) RETURN count(u) AS users
-        UNION ALL
-        MATCH (a:Asset) RETURN count(a) AS users
-        UNION ALL
-        MATCH (t:ThreatIndicator) RETURN count(t) AS users
-        """
-        graph_query = """
-        MATCH (n) RETURN count(n) AS nodes
-        """
 
         chains_detected = 0
         chain_summaries = []
@@ -115,6 +105,19 @@ class ExecutiveNarrative:
                 chains_detected = int(chain_records[0].get('chains') or 0)
                 raw_summaries = chain_records[0].get('summaries') or []
                 chain_summaries = [s for s in raw_summaries if s]
+        except Exception:
+            pass
+
+        # AGE-compatible: three separate queries instead of UNION ALL.
+        try:
+            u_r = self.db.run_query("MATCH (u:User) RETURN count(u) AS cnt")
+            a_r = self.db.run_query("MATCH (a:Asset) RETURN count(a) AS cnt")
+            t_r = self.db.run_query("MATCH (t:ThreatIndicator) RETURN count(t) AS cnt")
+            new_entities = {
+                'users':             int((u_r[0].get('cnt') or 0) if u_r else 0),
+                'assets':            int((a_r[0].get('cnt') or 0) if a_r else 0),
+                'threat_indicators': int((t_r[0].get('cnt') or 0) if t_r else 0),
+            }
         except Exception:
             pass
 

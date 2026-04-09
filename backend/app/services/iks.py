@@ -112,7 +112,7 @@ async def get_iks_trend() -> list[dict]:
             MATCH (ps:ProfileSnapshot)
             RETURN ps.decision_count AS decision_count,
                    ps.mu             AS mu,
-                   toString(ps.timestamp) AS timestamp
+                   ps.timestamp      AS timestamp
             ORDER BY ps.decision_count ASC
             """,
             {},

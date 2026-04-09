@@ -157,7 +157,7 @@ class GraphExplorerService:
             if node_type:
                 query = (
                     f"MATCH (n:{node_type})-[r]-() "
-                    "RETURN n.id AS id, labels(n)[0] AS type, "
+                    "RETURN n.id AS id, head(labels(n)) AS type,"
                     "coalesce(n.name, n.hostname, n.id) AS display_name, "
                     "count(r) AS connections "
                     "ORDER BY connections DESC LIMIT $limit"
@@ -166,7 +166,7 @@ class GraphExplorerService:
                 query = (
                     "MATCH (n)-[r]-() "
                     "WHERE NOT n:Decision AND NOT n:Checkpoint "
-                    "RETURN n.id AS id, labels(n)[0] AS type, "
+                    "RETURN n.id AS id, head(labels(n)) AS type,"
                     "coalesce(n.name, n.hostname, n.id) AS display_name, "
                     "count(r) AS connections "
                     "ORDER BY connections DESC LIMIT $limit"
@@ -227,7 +227,7 @@ class GraphExplorerService:
             counts = await neo4j_service.run_query(
                 """
                 MATCH (n)
-                RETURN labels(n)[0] AS label, count(n) AS count
+                RETURN head(labels(n)) AS label, count(n) AS count
                 ORDER BY count DESC
                 """
             )

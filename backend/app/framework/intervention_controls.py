@@ -288,7 +288,7 @@ class InterventionControls:
                           i.type         AS type,
                           i.initiated_by AS initiated_by,
                           i.reason       AS reason,
-                          toString(i.timestamp) AS timestamp,
+                          i.timestamp    AS timestamp,
                           i.details      AS details
                    ORDER BY i.timestamp DESC
                    LIMIT $limit""",
