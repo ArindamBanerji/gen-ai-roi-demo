@@ -61,8 +61,12 @@ app.include_router(simulation.router, prefix="/api", tags=["Simulation"])
 async def startup_event():
     """Initialize connections on startup"""
     from app.db.neo4j import neo4j_client
-    await neo4j_client.connect()
-    print("[OK] Connected to Neo4j")
+    # AGEClient uses per-query connections (no persistent connect/close).
+    if hasattr(neo4j_client, "connect"):
+        await neo4j_client.connect()
+        print("[OK] Connected to Neo4j")
+    else:
+        print("[OK] AGE backend: per-query connections, no persistent connect needed")
 
     # Load analyst correct-override examples into OverrideDetector.
     # Activates automatically when >= 50 examples are found in Neo4j.
@@ -245,5 +249,6 @@ async def startup_event():
 async def shutdown_event():
     """Close connections on shutdown"""
     from app.db.neo4j import neo4j_client
-    await neo4j_client.close()
-    print("[OK] Disconnected from Neo4j")
+    if hasattr(neo4j_client, "close"):
+        await neo4j_client.close()
+        print("[OK] Disconnected from Neo4j")
