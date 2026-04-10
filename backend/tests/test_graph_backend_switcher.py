@@ -7,12 +7,24 @@ import importlib
 
 
 def test_default_backend_is_neo4j():
-    """Default GRAPH_BACKEND produces Neo4jClient — no behaviour change."""
-    os.environ.pop("GRAPH_BACKEND", None)
-    import app.db.neo4j as db_mod
-    importlib.reload(db_mod)
-    from app.db.neo4j import neo4j_client, Neo4jClient
-    assert isinstance(neo4j_client, Neo4jClient)
+    """Default GRAPH_BACKEND produces Neo4jClient — no behaviour change.
+
+    Explicitly sets GRAPH_BACKEND=neo4j in the shell environment so that
+    load_dotenv(override=False) inside neo4j.py cannot override it with the
+    GRAPH_BACKEND=age that may be present in the project .env file.
+    """
+    prev = os.environ.get("GRAPH_BACKEND")
+    os.environ["GRAPH_BACKEND"] = "neo4j"
+    try:
+        import app.db.neo4j as db_mod
+        importlib.reload(db_mod)
+        from app.db.neo4j import neo4j_client, Neo4jClient
+        assert isinstance(neo4j_client, Neo4jClient)
+    finally:
+        if prev is None:
+            os.environ.pop("GRAPH_BACKEND", None)
+        else:
+            os.environ["GRAPH_BACKEND"] = prev
 
 
 def test_age_backend_import_error_without_ci_platform():

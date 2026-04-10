@@ -465,6 +465,25 @@ neo4j_client = Neo4jClient()
 # Default is neo4j — zero behaviour change unless env var is set.
 # All 290 call sites (neo4j_client.run_query etc) are unchanged.
 import os as _os
+import pathlib as _pathlib
+
+# Load .env from repo root before reading GRAPH_BACKEND.
+# This module is imported at FastAPI startup (via router imports) before
+# main.py's load_dotenv() has a chance to run.  Loading here ensures
+# GRAPH_BACKEND is visible to the switcher regardless of import order.
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    _env_path = _pathlib.Path(__file__).parents[3] / ".env"
+    _load_dotenv(_env_path, override=False)  # shell env takes precedence
+    import logging as _log
+    _log.getLogger(__name__).debug(
+        "[SWITCHER] GRAPH_BACKEND=%s, .env path=%s, exists=%s",
+        _os.getenv("GRAPH_BACKEND"),
+        _env_path,
+        _env_path.exists(),
+    )
+except ImportError:
+    pass
 
 _GRAPH_BACKEND = _os.getenv("GRAPH_BACKEND", "neo4j").lower()
 
