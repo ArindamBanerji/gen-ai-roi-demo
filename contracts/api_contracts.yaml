@@ -17,15 +17,17 @@ endpoints:
 
   - path: /api/alert/analyze
     method: POST
-    body: {"alert_id": "SIM-001"}
+    body: {"alert_id": "__FROM_QUEUE__"}
     required_fields: [alert_id, context, recommendation]
     consumed_by: [AlertTriageTab]
+    depends_on: /api/alerts/queue
 
   - path: /api/action/execute
     method: POST
-    body: {"alert_id": "SIM-001", "action": "investigate"}
+    body: {"alert_id": "__FROM_QUEUE__", "action": "investigate"}
     required_fields: [alert_id]
     consumed_by: [AlertTriageTab]
+    depends_on: /api/alerts/queue
 
   - path: /api/alerts/reset
     method: POST
@@ -57,7 +59,7 @@ endpoints:
   # ── SOCAnalyticsTab ─────────────────────────────────────────
   - path: /api/soc/query
     method: POST
-    body: {"question": "What is the current alert volume?"}
+    body: {"question": "What is the MTTR by severity?"}
     required_fields: [metric, data]
     consumed_by: [SOCAnalyticsTab]
 
@@ -238,7 +240,7 @@ endpoints:
 
   - path: /api/soc/judgment/explain
     method: POST
-    body: {"category": "credential_access", "factors": {"user_risk": 0.7, "asset_criticality": 0.5, "pattern_novelty": 0.3, "time_pressure": 0.6, "behavioral_deviation": 0.4, "data_sensitivity": 0.8}, "alert_id": "SIM-001"}
+    body: {"category": "credential_access", "factors": {"travel_match": 0.7, "asset_criticality": 0.5, "threat_intel_enrichment": 0.3, "pattern_history": 0.6, "time_anomaly": 0.4, "device_trust": 0.8}, "alert_id": "SIM-001"}
     required_fields: [action, confidence]
     consumed_by: []
 

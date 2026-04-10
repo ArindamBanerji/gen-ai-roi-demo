@@ -25,6 +25,30 @@ def load_contracts(path: Path) -> list:
     return data.get("endpoints", [])
 
 
+def _resolve_queue_alert_id(base_url: str) -> str:
+    """GET /api/alerts/queue and return the first alert's id, or 'SIM-001' fallback."""
+    try:
+        req = urllib.request.Request(f"{base_url}/api/alerts/queue", method="GET")
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        alerts = data.get("alerts", [])
+        if alerts:
+            return alerts[0].get("id", "SIM-001")
+    except Exception:
+        pass
+    return "SIM-001"
+
+
+# Cache so we only fetch once per run
+_cached_alert_id = {}
+
+
+def _get_queue_alert_id(base_url: str) -> str:
+    if "id" not in _cached_alert_id:
+        _cached_alert_id["id"] = _resolve_queue_alert_id(base_url)
+    return _cached_alert_id["id"]
+
+
 def validate_endpoint(base_url: str, ep: dict, verbose: bool) -> dict:
     """Hit one endpoint and check status + required fields."""
     path = ep["path"]
@@ -32,6 +56,11 @@ def validate_endpoint(base_url: str, ep: dict, verbose: bool) -> dict:
     body = ep.get("body")
     required = ep.get("required_fields", [])
     url = f"{base_url}{path}"
+
+    # Resolve __FROM_QUEUE__ placeholders with a real alert_id
+    if body and "__FROM_QUEUE__" in json.dumps(body):
+        real_id = _get_queue_alert_id(base_url)
+        body = json.loads(json.dumps(body).replace("__FROM_QUEUE__", real_id))
 
     result = {
         "path": path,
