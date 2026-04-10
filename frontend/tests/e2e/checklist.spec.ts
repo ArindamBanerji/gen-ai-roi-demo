@@ -5,9 +5,15 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
-const FRONTEND = `http://localhost:${process.env.FRONTEND_PORT ?? '5173'}`;
-const BACKEND  = `http://localhost:${process.env.BACKEND_PORT ?? '8001'}`;
+// Ports flow from root .env (loaded by playwright.config.ts) — no hardcoded fallbacks.
+const FRONTEND_PORT = process.env.FRONTEND_PORT || '5173';
+const BACKEND_PORT  = process.env.BACKEND_PORT  || '8001';
+const FRONTEND = `http://localhost:${FRONTEND_PORT}`;
+const BACKEND  = `http://localhost:${BACKEND_PORT}`;
 const SCREENSHOTS = path.join(__dirname, 'screenshots');
+
+// Alert card selector — matches both SIM-* and ALERT-* IDs rendered by AlertTriageTab
+const ALERT_CARD_RE = /^(SIM-|ALERT-)/;
 
 async function screenshot(page: Page, name: string) {
   await page.screenshot({ path: path.join(SCREENSHOTS, `${name}.png`), fullPage: false });
@@ -26,14 +32,14 @@ test.describe('Tab 1 – Alert Triage', () => {
 
   test('alerts load – at least 1 alert card visible', async ({ page }) => {
     // Alert list items are buttons inside the queue sidebar
-    const alertItems = page.locator('button').filter({ hasText: /ALERT-|alert/i });
+    const alertItems = page.locator('button').filter({ hasText: ALERT_CARD_RE });
     await expect(alertItems.first()).toBeVisible({ timeout: 10_000 });
     const count = await alertItems.count();
     expect(count).toBeGreaterThanOrEqual(1);
   });
 
   test('NL explanation text non-empty', async ({ page }) => {
-    const firstAlert = page.locator('button').filter({ hasText: /ALERT-|alert/i }).first();
+    const firstAlert = page.locator('button').filter({ hasText: ALERT_CARD_RE }).first();
     await firstAlert.click();
     await page.waitForLoadState('networkidle');
 
@@ -102,7 +108,7 @@ test.describe('Tab 3 – Alert Detail', () => {
     await page.getByRole('button', { name: /Alert Triage/i }).click();
     await page.waitForLoadState('networkidle');
 
-    const firstAlert = page.locator('button').filter({ hasText: /ALERT-|alert/i }).first();
+    const firstAlert = page.locator('button').filter({ hasText: ALERT_CARD_RE }).first();
     await firstAlert.click();
     await page.waitForLoadState('networkidle');
 
@@ -237,7 +243,7 @@ async function openFirstAlert(page: Page) {
   await page.goto(FRONTEND);
   await page.getByRole('button', { name: /Alert Triage/i }).click();
   await page.waitForLoadState('networkidle');
-  const firstAlert = page.locator('button').filter({ hasText: /ALERT-/i }).first();
+  const firstAlert = page.locator('button').filter({ hasText: ALERT_CARD_RE }).first();
   await firstAlert.click();
   await page.waitForLoadState('networkidle');
 }
@@ -268,7 +274,7 @@ test.describe('Tab 1 – Alert Triage (detail panel)', () => {
     await page.getByRole('button', { name: /Alert Triage/i }).click();
     await page.waitForLoadState('networkidle');
 
-    const alertButtons = page.locator('button').filter({ hasText: /ALERT-/i });
+    const alertButtons = page.locator('button').filter({ hasText: ALERT_CARD_RE });
     const count = await alertButtons.count();
     if (count < 2) test.skip(); // need at least 2 alerts
 
@@ -821,11 +827,9 @@ test.describe('Error and edge cases', () => {
     }
   });
 
-  test('backend health: GET /api/health or root returns 200', async ({ request }) => {
-    const res = await request.get(`${BACKEND}/api/health`).catch(() =>
-      request.get(`${BACKEND}/`)
-    );
-    expect(res.status()).toBeLessThan(500);
+  test('backend health: GET /health returns 200', async ({ request }) => {
+    const res = await request.get(`${BACKEND}/health`);
+    expect(res.status()).toBe(200);
   });
 
   test('SOC Analytics tab reachable without crash', async ({ page }) => {
@@ -967,7 +971,7 @@ test.describe('Tab content contract — Phase A E2E gates', () => {
     await page.getByRole('button', { name: /Alert Triage/i }).click();
     await page.waitForLoadState('networkidle');
     // No raw quoted "unknown" category should appear in alert list
-    const alertItems = page.locator('button').filter({ hasText: /ALERT-|alert/i });
+    const alertItems = page.locator('button').filter({ hasText: ALERT_CARD_RE });
     const count = await alertItems.count();
     for (let i = 0; i < Math.min(count, 10); i++) {
       const text = await alertItems.nth(i).textContent();
@@ -1045,7 +1049,7 @@ test.describe('Phase B — centroid drift + frontend gaps', () => {
     async ({ page }) => {
     // DOM fix: conservation_narrative now rendered in ExecutiveNarrativeTab
     // under "Conservation & Audit Status" label (BACKLOG-017 resolved)
-    await page.goto('http://localhost:5173');
+    await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Executive Narrative/i }).click();
     await page.waitForTimeout(3000);
     const bodyText = await page.locator('body').textContent();

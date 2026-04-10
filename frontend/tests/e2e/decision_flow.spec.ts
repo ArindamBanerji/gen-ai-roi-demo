@@ -3,8 +3,11 @@
 
 import { test, expect, request } from '@playwright/test';
 
-const FRONTEND = `http://localhost:${process.env.FRONTEND_PORT ?? '5173'}`;
-const BACKEND  = `http://localhost:${process.env.BACKEND_PORT ?? '8001'}`;
+// Ports flow from root .env (loaded by playwright.config.ts) — no hardcoded fallbacks.
+const FRONTEND_PORT = process.env.FRONTEND_PORT || '5173';
+const BACKEND_PORT  = process.env.BACKEND_PORT  || '8001';
+const FRONTEND = `http://localhost:${FRONTEND_PORT}`;
+const BACKEND  = `http://localhost:${BACKEND_PORT}`;
 
 // ── Reset alerts before each test so the SIM- pool is never exhausted ────────
 test.beforeEach(async ({ page }) => {

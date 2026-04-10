@@ -19,6 +19,11 @@ if (existsSync(envPath)) {
 const BACKEND_PORT  = process.env.BACKEND_PORT  ?? '8001';
 const FRONTEND_PORT = process.env.FRONTEND_PORT ?? '5173';
 
+// Fail loudly if BACKEND_PORT is missing (no silent wrong-port tests)
+if (!process.env.BACKEND_PORT) {
+  console.warn('[playwright] BACKEND_PORT not found in .env — using default 8001');
+}
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
