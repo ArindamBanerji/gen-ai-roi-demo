@@ -700,11 +700,14 @@ async def execute_action(request: ProcessAlertRequest):
         # ====================================================================
         decision_id = f"DEC-{uuid.uuid4().hex[:4].upper()}"
 
+        from app.domains.soc.config import resolve_alert_category as _resolve_cat_exec
+        _exec_category = _resolve_cat_exec(alert_type) if alert_type else "unknown"
         await neo4j_client.create_decision_trace(
             decision_id=decision_id,
             alert_id=alert_id,
             action=decision.action,
             confidence=decision.confidence,
+            category=_exec_category,
             reasoning=reasoning,
             pattern_id=decision.pattern_id,
             playbook_id=decision.playbook_id,

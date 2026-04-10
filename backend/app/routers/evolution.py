@@ -409,11 +409,14 @@ async def process_alert_blocked(request: ProcessAlertRequest):
         # Create decision trace (even though it will be blocked)
         decision_id = f"DEC-{uuid.uuid4().hex[:4].upper()}"
 
+        from app.domains.soc.config import resolve_alert_category as _resolve_cat_evo
+        _evo_category = _resolve_cat_evo(alert_type) if alert_type else "unknown"
         await neo4j_client.create_decision_trace(
             decision_id=decision_id,
             alert_id=request.alert_id,
             action=decision.action,
             confidence=decision.confidence,
+            category=_evo_category,
             reasoning=reasoning,
             pattern_id=decision.pattern_id,
             playbook_id=decision.playbook_id,

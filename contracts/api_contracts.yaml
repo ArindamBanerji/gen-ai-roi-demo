@@ -18,7 +18,7 @@ endpoints:
   - path: /api/alert/analyze
     method: POST
     body: {"alert_id": "__FROM_QUEUE__"}
-    required_fields: [alert_id, context, recommendation]
+    required_fields: [alert, context, recommendation]
     consumed_by: [AlertTriageTab]
     depends_on: /api/alerts/queue
 
@@ -60,7 +60,7 @@ endpoints:
   - path: /api/soc/query
     method: POST
     body: {"question": "What is the MTTR by severity?"}
-    required_fields: [metric, data]
+    required_fields: [matched_metric, result]
     consumed_by: [SOCAnalyticsTab]
 
   - path: /api/soc/threat-landscape

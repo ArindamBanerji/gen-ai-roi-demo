@@ -71,7 +71,7 @@ def build_judgment_response(
         mu=scorer.mu,
         category_index=category_index,
         factor_names=SOC_FACTORS,
-        actions=SOC_ACTIONS,
+        actions=scorer.actions,
     )
     return {
         "alert_id": alert_id,
@@ -120,6 +120,9 @@ async def explain_decision_post(request: JudgmentRequest):
     try:
         scorer = get_profile_scorer()
     except Exception:
+        scorer = None
+
+    if scorer is None:
         raise HTTPException(
             status_code=503,
             detail={"error": "ProfileScorer not available"},
@@ -186,6 +189,9 @@ async def explain_decision_get(alert_id: str):
     try:
         scorer = get_profile_scorer()
     except Exception:
+        scorer = None
+
+    if scorer is None:
         raise HTTPException(
             status_code=503,
             detail={"error": "ProfileScorer not available"},
