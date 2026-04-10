@@ -25,7 +25,7 @@ endpoints:
   - path: /api/action/execute
     method: POST
     body: {"alert_id": "__FROM_QUEUE__", "action": "investigate"}
-    required_fields: [alert_id]
+    required_fields: [receipt, verification, evidence, kpi_impact]
     consumed_by: [AlertTriageTab]
     depends_on: /api/alerts/queue
 
