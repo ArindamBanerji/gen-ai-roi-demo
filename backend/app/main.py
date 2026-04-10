@@ -103,6 +103,35 @@ async def startup_event():
         except Exception as e:
             logger.warning(f"[AGE] Bootstrap verification failed: {e}")
 
+    # ── Database bootstrap confirmation ───────────────────────
+    try:
+        if _os.getenv("GRAPH_BACKEND", "neo4j").lower() == "age":
+            import psycopg
+            _db_dsn = _os.getenv("DATABASE_URL")
+            _conn = await psycopg.AsyncConnection.connect(_db_dsn, autocommit=True)
+            await _conn.execute("LOAD 'age'")
+            await _conn.execute("SET search_path = ag_catalog, '$user', public")
+            _cur = await _conn.execute("SELECT version()")
+            _row = await _cur.fetchone()
+            _pg_version = _row[0].split(",")[0] if _row else "unknown"
+            _cur2 = await _conn.execute(
+                "SELECT * FROM cypher('soc_graph', $$ MATCH (n) RETURN count(n) AS cnt $$) AS (cnt agtype)"
+            )
+            _row2 = await _cur2.fetchone()
+            _node_count = _row2[0] if _row2 else 0
+            await _conn.close()
+            logger.info(
+                f"[DB] ✓ PostgreSQL+AGE confirmed — "
+                f"{_pg_version} | "
+                f"soc_graph: {_node_count} nodes"
+            )
+        else:
+            _result = await neo4j_client.run_query("RETURN 1 AS n")
+            logger.info("[DB] ✓ Neo4j/Aura confirmed — connection live")
+    except Exception as _e:
+        logger.warning(f"[DB] Bootstrap DB confirmation failed: {_e}")
+    # ──────────────────────────────────────────────────────────
+
     # Load analyst correct-override examples into OverrideDetector.
     # Activates automatically when >= 50 examples are found in Neo4j.
     from app.services.override_detector import load_from_neo4j as _load_od
