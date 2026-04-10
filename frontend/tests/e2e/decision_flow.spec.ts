@@ -3,8 +3,8 @@
 
 import { test, expect, request } from '@playwright/test';
 
-const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:5173';
-const BACKEND  = process.env.BACKEND_URL  || 'http://localhost:8000';
+const FRONTEND = `http://localhost:${process.env.FRONTEND_PORT ?? '5173'}`;
+const BACKEND  = `http://localhost:${process.env.BACKEND_PORT ?? '8001'}`;
 
 // ── Reset alerts before each test so the SIM- pool is never exhausted ────────
 test.beforeEach(async ({ page }) => {

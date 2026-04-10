@@ -5,8 +5,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
-const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:5173';
-const BACKEND  = 'http://localhost:8000';
+const FRONTEND = `http://localhost:${process.env.FRONTEND_PORT ?? '5173'}`;
+const BACKEND  = `http://localhost:${process.env.BACKEND_PORT ?? '8001'}`;
 const SCREENSHOTS = path.join(__dirname, 'screenshots');
 
 async function screenshot(page: Page, name: string) {
@@ -1069,7 +1069,7 @@ test.describe('Phase B — centroid drift + frontend gaps', () => {
     // (AlertTriageTab.tsx line 1133, "Scoring Engine" label)
     // API contract confirmed — field present in alert detail response
     const resp = await page.request.get(
-      'http://localhost:8000/api/soc/tab/3/content'
+      `${BACKEND}/api/soc/tab/3/content`
     );
     const data = await resp.json();
     expect(data.content.kernel_note).toContain('DiagonalKernel');
@@ -1078,7 +1078,7 @@ test.describe('Phase B — centroid drift + frontend gaps', () => {
 
   test('f9_report_returns_lead_finding', async ({ page }) => {
     const resp = await page.request.get(
-      'http://localhost:8000/api/soc/f9-report'
+      `${BACKEND}/api/soc/f9-report`
     );
     expect(resp.ok()).toBeTruthy();
     const data = await resp.json();
@@ -1092,7 +1092,7 @@ test.describe('Phase B — centroid drift + frontend gaps', () => {
   test('f9_analyst_benchmarking_has_six_categories',
     async ({ page }) => {
     const resp = await page.request.get(
-      'http://localhost:8000/api/soc/analyst-benchmarking'
+      `${BACKEND}/api/soc/analyst-benchmarking`
     );
     expect(resp.ok()).toBeTruthy();
     const data = await resp.json();

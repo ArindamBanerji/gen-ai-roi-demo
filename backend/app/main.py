@@ -2,11 +2,6 @@
 SOC Copilot Demo - FastAPI Backend
 Main application entry point with CORS and router registration.
 """
-import sys
-if sys.platform == "win32":
-    import asyncio
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
 import logging
 
 from fastapi import FastAPI
@@ -70,71 +65,48 @@ app.include_router(simulation.router, prefix="/api", tags=["Simulation"])
 async def startup_event():
     """Initialize connections on startup"""
     from app.db.neo4j import neo4j_client
-    # AGEClient uses per-query connections (no persistent connect/close).
-    import os as _os, re as _re
-    _backend = _os.getenv("GRAPH_BACKEND", "neo4j").upper()
-    if _os.getenv("GRAPH_BACKEND", "neo4j").lower() == "neo4j":
+    import os as _os
+    import pathlib as _pathlib
+
+    # Write actual port to root .env so Playwright and other tools
+    # discover it automatically without manual configuration.
+    _port = _os.getenv("PORT", "8001")
+    _env_path = _pathlib.Path(__file__).parents[2] / ".env"
+    if _env_path.exists():
+        _lines = _env_path.read_text(encoding="utf-8").splitlines()
+        _lines = [l for l in _lines if not l.startswith("BACKEND_PORT=")]
+        _lines.append(f"BACKEND_PORT={_port}")
+        _env_path.write_text("\n".join(_lines) + "\n", encoding="utf-8")
+        print(f"[STARTUP] BACKEND_PORT={_port} written to .env")
+
+    _backend = _os.getenv("GRAPH_BACKEND", "neo4j").lower()
+
+    # Neo4j needs an explicit connect(); AGEClient.connect() is a no-op.
+    if _backend == "neo4j":
         await neo4j_client.connect()
-        _uri = _os.getenv("NEO4J_URI", "not set")
-        logger.info(f"[OK] Connected to graph backend (NEO4J) — {_uri}")
-    else:
-        _dsn = _os.getenv("DATABASE_URL", "not set")
-        _dsn_masked = _re.sub(r":([^:@]+)@", ":***@", _dsn)
-        logger.info(f"[OK] Connected to graph backend (AGE) — {_dsn_masked}")
 
-    if _backend == "AGE":
-        try:
-            verify = await neo4j_client.run_query(
-                "MATCH (n) RETURN count(n) AS total"
-            )
-            total_nodes = int(verify[0]["total"]) if verify else 0
-
-            label_counts = await neo4j_client.run_query(
-                """
-                MATCH (n)
-                WHERE head(labels(n)) IN ['Decision','Alert','Campaign','ShadowDecision']
-                RETURN head(labels(n)) AS label, count(n) AS cnt
-                ORDER BY cnt DESC
-                """
-            )
-            label_summary = ", ".join(
-                f"{r['label']}={r['cnt']}" for r in label_counts
-            )
-            logger.info(
-                f"[AGE] PostgreSQL+AGE verified — "
-                f"{total_nodes} total nodes "
-                f"({label_summary})"
-            )
-        except Exception as e:
-            logger.warning(f"[AGE] Bootstrap verification failed: {e}")
-
-    # ── Database bootstrap confirmation ───────────────────────
+    # ── Bootstrap verification — MANDATORY, fail-fast ─────────
     try:
-        if _os.getenv("GRAPH_BACKEND", "neo4j").lower() == "age":
-            import psycopg
-            _db_dsn = _os.getenv("DATABASE_URL")
-            _conn = await psycopg.AsyncConnection.connect(_db_dsn, autocommit=True)
-            await _conn.execute("LOAD 'age'")
-            await _conn.execute("SET search_path = ag_catalog, '$user', public")
-            _cur = await _conn.execute("SELECT version()")
-            _row = await _cur.fetchone()
-            _pg_version = _row[0].split(",")[0] if _row else "unknown"
-            _cur2 = await _conn.execute(
-                "SELECT * FROM cypher('soc_graph', $$ MATCH (n) RETURN count(n) AS cnt $$) AS (cnt agtype)"
-            )
-            _row2 = await _cur2.fetchone()
-            _node_count = _row2[0] if _row2 else 0
-            await _conn.close()
-            logger.info(
-                f"[DB] ✓ PostgreSQL+AGE confirmed — "
-                f"{_pg_version} | "
-                f"soc_graph: {_node_count} nodes"
-            )
-        else:
-            _result = await neo4j_client.run_query("RETURN 1 AS n")
-            logger.info("[DB] ✓ Neo4j/Aura confirmed — connection live")
+        _verify = await neo4j_client.run_query(
+            "MATCH (n) RETURN count(n) AS total"
+        )
+        _node_count = _verify[0]["total"] if _verify else 0
+        print(
+            f"[STARTUP] Backend={_backend.upper()} | "
+            f"Client={type(neo4j_client).__name__} | "
+            f"Nodes={_node_count} | "
+            f"Status=VERIFIED"
+        )
     except Exception as _e:
-        logger.warning(f"[DB] Bootstrap DB confirmation failed: {_e}")
+        print(
+            f"[STARTUP] Backend={_backend.upper()} "
+            f"verification FAILED: {_e}"
+        )
+        if _backend == "age":
+            raise SystemExit(
+                f"FATAL: AGE verification failed: {_e}"
+            ) from _e
+        raise
     # ──────────────────────────────────────────────────────────
 
     # Load analyst correct-override examples into OverrideDetector.
