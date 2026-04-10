@@ -2472,15 +2472,16 @@ async def _tab1_content() -> dict:
     verified_map: dict = {}   # category → {"verified": int, "overrides": int}
     if top_categories:
         try:
+            _cats_literal = "[" + ", ".join(f"'{c}'" for c in top_categories) + "]"
             rows = await neo4j_client.run_query(
-                """
+                f"""
                 MATCH (d:Decision)
-                WHERE d.category IN $cats AND d.verified_at_epoch IS NOT NULL
+                WHERE d.category IN {_cats_literal} AND d.verified_at_epoch IS NOT NULL
                 RETURN d.category AS category,
                        count(d) AS verified,
                        sum(CASE WHEN d.correct = false THEN 1 ELSE 0 END) AS overrides
                 """,
-                {"cats": top_categories},
+                {},
             )
             for r in rows:
                 cat = r.get("category")
@@ -2719,6 +2720,7 @@ async def _tab3_content() -> dict:
     rec_action = "investigate"
     rec_conf   = 0.70
     rec_basis  = "centroid_fallback"
+    _alert_cat = None
 
     try:
         _scorer = _get_scorer()
@@ -2727,7 +2729,6 @@ async def _tab3_content() -> dict:
 
     if _scorer is not None:
         # Step 1: try a real pending alert
-        _alert_cat = None
         try:
             _rows = await neo4j_client.run_query(
                 "MATCH (a:Alert {status: 'pending'}) "

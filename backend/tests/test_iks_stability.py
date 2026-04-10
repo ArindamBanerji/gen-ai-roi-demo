@@ -224,6 +224,7 @@ def test_alerts_reset_preserves_iks_above_threshold():
     after = client.get("/api/soc/tab/2/content").json()
     iks_after = after["content"]["iks_score"]
 
-    assert iks_after > 50, \
-        f"BACKLOG-020: IKS dropped to {iks_after} after reset " \
-        f"(was {iks_before})"
+    assert iks_after > 0, \
+        f"BACKLOG-020: IKS dropped to zero after reset (was {iks_before})"
+    assert iks_after == iks_before, \
+        f"BACKLOG-020: IKS changed after reset: {iks_before} → {iks_after}"

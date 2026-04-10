@@ -227,8 +227,8 @@ class GraphExplorerService:
             counts = await neo4j_service.run_query(
                 """
                 MATCH (n)
-                RETURN head(labels(n)) AS label, count(n) AS count
-                ORDER BY count DESC
+                RETURN head(labels(n)) AS label, count(n) AS cnt
+                ORDER BY cnt DESC
                 """
             )
         except Exception as exc:
@@ -239,22 +239,22 @@ class GraphExplorerService:
             rel_counts = await neo4j_service.run_query(
                 """
                 MATCH ()-[r]->()
-                RETURN type(r) AS type, count(r) AS count
-                ORDER BY count DESC
+                RETURN type(r) AS type, count(r) AS cnt
+                ORDER BY cnt DESC
                 """
             )
         except Exception as exc:
             log.warning("[GRAPH-EXPLORER] get_graph_summary rel count failed: %s", exc)
             rel_counts = []
 
-        total_nodes = sum(int(r.get("count") or 0) for r in counts)
-        total_rels  = sum(int(r.get("count") or 0) for r in rel_counts)
+        total_nodes = sum(int(r.get("cnt") or 0) for r in counts)
+        total_rels  = sum(int(r.get("cnt") or 0) for r in rel_counts)
 
         return {
             "total_nodes":         total_nodes,
             "total_relationships": total_rels,
-            "node_types":          {r["label"]: r["count"] for r in counts if r.get("label")},
-            "relationship_types":  {r["type"]:  r["count"] for r in rel_counts if r.get("type")},
+            "node_types":          {r["label"]: r["cnt"] for r in counts if r.get("label")},
+            "relationship_types":  {r["type"]:  r["cnt"] for r in rel_counts if r.get("type")},
         }
 
     @staticmethod

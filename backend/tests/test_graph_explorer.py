@@ -30,15 +30,15 @@ def _fake_neo4j_for_summary():
         if "labels(n)" in query:
             # node-count query
             return [
-                {"label": "Alert",   "count": 6},
-                {"label": "User",    "count": 4},
-                {"label": "Asset",   "count": 5},
+                {"label": "Alert",   "cnt": 6},
+                {"label": "User",    "cnt": 4},
+                {"label": "Asset",   "cnt": 5},
             ]
         if "type(r)" in query:
             # relationship-count query
             return [
-                {"type": "INVOLVES",    "count": 6},
-                {"type": "DECIDED_ON",  "count": 3},
+                {"type": "INVOLVES",    "cnt": 6},
+                {"type": "DECIDED_ON",  "cnt": 3},
             ]
         return []
 
@@ -134,9 +134,9 @@ def test_graph_summary():
     async def fake_run_query(query, params=None):
         call_index[0] += 1
         if "labels(n)" in query:
-            return [{"label": "Alert", "count": 6}, {"label": "User", "count": 4}]
+            return [{"label": "Alert", "cnt": 6}, {"label": "User", "cnt": 4}]
         if "type(r)" in query:
-            return [{"type": "INVOLVES", "count": 6}]
+            return [{"type": "INVOLVES", "cnt": 6}]
         return []
 
     with patch("app.routers.framework_router.neo4j_client") as mock_neo4j:
