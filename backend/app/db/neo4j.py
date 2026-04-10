@@ -1,13 +1,32 @@
 """
 Neo4j Aura client for Security Graph
 Handles all graph queries for the SOC Copilot Demo
+
+Block 8.5: GRAPH_BACKEND switcher.
+Set GRAPH_BACKEND=age in .env to activate PostgreSQL+AGE.
+Default is neo4j — zero behaviour change unless env var is set.
 """
 import logging
 import os
 from datetime import datetime
 from typing import Optional, Dict, Any, List
-from neo4j import AsyncGraphDatabase, AsyncDriver
 from contextlib import asynccontextmanager
+import pathlib as _pathlib
+
+# ── Block 8.5: load .env BEFORE reading GRAPH_BACKEND ────────────────────────
+# This module is imported before main.py's load_dotenv() runs (Python import
+# order).  Loading .env here ensures GRAPH_BACKEND is visible to the switcher
+# regardless of how the server is started.
+# override=False: an explicit shell env var always takes precedence over .env.
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    _env_path = _pathlib.Path(__file__).parents[3] / ".env"
+    _load_dotenv(_env_path, override=False)
+except ImportError:
+    pass
+
+_GRAPH_BACKEND = os.getenv("GRAPH_BACKEND", "neo4j").lower()
+# ─────────────────────────────────────────────────────────────────────────────
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +38,15 @@ class Neo4jClient:
         self.uri = os.getenv("NEO4J_URI")
         self.user = os.getenv("NEO4J_USER", "neo4j")
         self.password = os.getenv("NEO4J_PASSWORD")
-        self._driver: Optional[AsyncDriver] = None
+        self._driver: Optional[Any] = None  # AsyncDriver when connected
 
     async def connect(self):
         """Initialize connection pool"""
         if not self._driver:
+            # Lazy import: neo4j driver only loads when the Neo4j path is active.
+            # When GRAPH_BACKEND=age this method is never called, so the neo4j
+            # package is never imported.
+            from neo4j import AsyncGraphDatabase  # noqa: PLC0415
             self._driver = AsyncGraphDatabase.driver(
                 self.uri,
                 auth=(self.user, self.password)
@@ -457,43 +480,17 @@ class Neo4jClient:
             return 0
 
 
-# Global client instance
-neo4j_client = Neo4jClient()
-
-# ── Block 8.5: AGE backend switcher ─────────────────────────────────────────
-# Set GRAPH_BACKEND=age in .env to activate PostgreSQL+AGE.
-# Default is neo4j — zero behaviour change unless env var is set.
-# All 290 call sites (neo4j_client.run_query etc) are unchanged.
-import os as _os
-import pathlib as _pathlib
-
-# Load .env from repo root before reading GRAPH_BACKEND.
-# This module is imported at FastAPI startup (via router imports) before
-# main.py's load_dotenv() has a chance to run.  Loading here ensures
-# GRAPH_BACKEND is visible to the switcher regardless of import order.
-try:
-    from dotenv import load_dotenv as _load_dotenv
-    _env_path = _pathlib.Path(__file__).parents[3] / ".env"
-    _load_dotenv(_env_path, override=False)  # shell env takes precedence
-    import logging as _log
-    _log.getLogger(__name__).debug(
-        "[SWITCHER] GRAPH_BACKEND=%s, .env path=%s, exists=%s",
-        _os.getenv("GRAPH_BACKEND"),
-        _env_path,
-        _env_path.exists(),
-    )
-except ImportError:
-    pass
-
-_GRAPH_BACKEND = _os.getenv("GRAPH_BACKEND", "neo4j").lower()
-
+# ── Block 8.5: set global neo4j_client based on GRAPH_BACKEND ────────────────
+# Neo4jClient class is always defined above (needed for interface-parity tests
+# and the Neo4j path).  The neo4j driver package is NEVER imported at module
+# level — it is lazy-imported inside Neo4jClient.connect() only when needed.
 if _GRAPH_BACKEND == "age":
     try:
         from ci_platform.graph import get_graph_client as _age_factory
         neo4j_client = _age_factory()  # type: ignore[assignment]
-        import logging as _log
-        _log.getLogger(__name__).info(
-            "Block 8.5: GRAPH_BACKEND=age — using AGE/PostgreSQL"
+        logger.info(
+            "[OK] Graph backend: AGE/PostgreSQL — %s",
+            os.getenv("DATABASE_URL", "not set").split("@")[-1],
         )
     except ImportError as _e:
         raise ImportError(
@@ -501,4 +498,6 @@ if _GRAPH_BACKEND == "age":
             "Run: pip install 'ci-platform[graph]'\n"
             f"Original error: {_e}"
         )
+else:
+    neo4j_client = Neo4jClient()
 # ─────────────────────────────────────────────────────────────────────────────
