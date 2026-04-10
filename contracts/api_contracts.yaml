@@ -1,0 +1,380 @@
+# contracts/api_contracts.yaml — API endpoint contracts
+# Every endpoint that the frontend or E2E tests depend on.
+# validate_contracts.py checks: status 200 + required fields present.
+#
+# consumed_by: which frontend tab or test hits this endpoint
+# required_fields: top-level keys that MUST be present in the JSON response
+# method: GET or POST
+# body: request body for POST endpoints (optional)
+
+endpoints:
+
+  # ── AlertTriageTab ──────────────────────────────────────────
+  - path: /api/alerts/queue
+    method: GET
+    required_fields: [alerts]
+    consumed_by: [AlertTriageTab]
+
+  - path: /api/alert/analyze
+    method: POST
+    body: {"alert_id": "SIM-001"}
+    required_fields: [alert_id, context, recommendation]
+    consumed_by: [AlertTriageTab]
+
+  - path: /api/action/execute
+    method: POST
+    body: {"alert_id": "SIM-001", "action": "investigate"}
+    required_fields: [alert_id]
+    consumed_by: [AlertTriageTab]
+
+  - path: /api/alerts/reset
+    method: POST
+    body: {}
+    required_fields: [status]
+    consumed_by: [AlertTriageTab, CompoundingTab]
+
+  - path: /api/triage/decision-factors/SIM-001
+    method: GET
+    required_fields: [alert_id, factors]
+    consumed_by: [AlertTriageTab]
+
+  - path: /api/alert/policy-check?alert_id=SIM-001
+    method: GET
+    required_fields: [alert_id]
+    consumed_by: [AlertTriageTab]
+
+  - path: /api/graph/threat-intel/refresh
+    method: POST
+    body: {"source": "pulsedive"}
+    required_fields: [source, indicators_ingested]
+    consumed_by: [AlertTriageTab]
+
+  - path: /api/graph/enrichment/by-alert/SIM-001
+    method: GET
+    required_fields: [alert_id]
+    consumed_by: [AlertTriageTab]
+
+  # ── SOCAnalyticsTab ─────────────────────────────────────────
+  - path: /api/soc/query
+    method: POST
+    body: {"question": "What is the current alert volume?"}
+    required_fields: [metric, data]
+    consumed_by: [SOCAnalyticsTab]
+
+  - path: /api/soc/threat-landscape
+    method: GET
+    required_fields: []
+    consumed_by: [SOCAnalyticsTab]
+
+  - path: /api/soc/attack-tactic-breakdown
+    method: GET
+    required_fields: [breakdown]
+    consumed_by: [SOCAnalyticsTab]
+
+  - path: /api/soc/detection-engineering
+    method: GET
+    required_fields: [overall_quality_score, noise_map]
+    consumed_by: [SOCAnalyticsTab]
+
+  # ── RuntimeEvolutionTab ─────────────────────────────────────
+  - path: /api/deployments
+    method: GET
+    required_fields: [deployments]
+    consumed_by: [RuntimeEvolutionTab]
+
+  - path: /api/rl/reward-summary
+    method: GET
+    required_fields: [total_decisions, cumulative_r_t]
+    consumed_by: [RuntimeEvolutionTab]
+
+  - path: /api/soc/profile
+    method: GET
+    required_fields: []
+    consumed_by: [RuntimeEvolutionTab, CompoundingTab]
+
+  - path: /api/soc/accuracy-trajectory
+    method: GET
+    required_fields: []
+    consumed_by: [RuntimeEvolutionTab]
+
+  - path: /api/soc/graph-stats
+    method: GET
+    required_fields: [nodes_traversed, relationships_analyzed, historical_decisions]
+    consumed_by: [RuntimeEvolutionTab]
+
+  - path: /api/soc/centroid-evolution
+    method: GET
+    required_fields: []
+    consumed_by: [RuntimeEvolutionTab, CompoundingTab]
+
+  - path: /api/soc/learning-state
+    method: GET
+    required_fields: []
+    consumed_by: [RuntimeEvolutionTab]
+
+  - path: /api/soc/centroid-heatmap
+    method: GET
+    required_fields: []
+    consumed_by: [RuntimeEvolutionTab]
+
+  - path: /api/soc/enrichment-status
+    method: GET
+    required_fields: []
+    consumed_by: [RuntimeEvolutionTab]
+
+  - path: /api/soc/centroid-support
+    method: GET
+    required_fields: []
+    consumed_by: [RuntimeEvolutionTab]
+
+  - path: /api/evolution/recent
+    method: GET
+    required_fields: [events]
+    consumed_by: [RuntimeEvolutionTab]
+
+  - path: /api/evolution/weight-history
+    method: GET
+    required_fields: [history]
+    consumed_by: [RuntimeEvolutionTab]
+
+  - path: /api/evolution/trust-scores
+    method: GET
+    required_fields: [trust_scores]
+    consumed_by: [RuntimeEvolutionTab]
+
+  # ── CompoundingTab ──────────────────────────────────────────
+  - path: /api/metrics/compounding
+    method: GET
+    required_fields: [period, headline, weekly_trend, evolution_events, business_impact]
+    consumed_by: [CompoundingTab]
+
+  - path: /api/metrics/evolution-events
+    method: GET
+    required_fields: []
+    consumed_by: [CompoundingTab]
+
+  - path: /api/metrics/decision-economics
+    method: GET
+    required_fields: []
+    consumed_by: [CompoundingTab]
+
+  - path: /api/audit/decisions
+    method: GET
+    required_fields: [decisions]
+    consumed_by: [CompoundingTab]
+
+  - path: /api/audit/verify
+    method: GET
+    required_fields: [chain_length, verified]
+    consumed_by: [CompoundingTab]
+
+  - path: /api/gae/convergence
+    method: GET
+    required_fields: [stability, accuracy, converged]
+    consumed_by: [CompoundingTab]
+
+  - path: /api/gae/confidence-trajectory
+    method: GET
+    required_fields: [trajectories]
+    consumed_by: [CompoundingTab]
+
+  - path: /api/gae/trust-curve
+    method: GET
+    required_fields: [curves, review_threshold]
+    consumed_by: [CompoundingTab]
+
+  - path: /api/gae/before-after
+    method: GET
+    required_fields: [ready]
+    consumed_by: [CompoundingTab]
+
+  - path: /api/soc/operational-metrics
+    method: GET
+    required_fields: []
+    consumed_by: [CompoundingTab]
+
+  - path: /api/soc/board-export
+    method: GET
+    required_fields: []
+    consumed_by: [CompoundingTab]
+
+  - path: /api/soc/economics
+    method: GET
+    required_fields: []
+    consumed_by: [CompoundingTab]
+
+  # ── ExecutiveNarrativeTab ───────────────────────────────────
+  - path: /api/soc/executive-narrative
+    method: GET
+    required_fields: []
+    consumed_by: [ExecutiveNarrativeTab]
+
+  # ── GAE / Learning endpoints ────────────────────────────────
+  - path: /api/gae/weights
+    method: GET
+    required_fields: [W, factor_names, action_names, decision_count]
+    consumed_by: []
+
+  - path: /api/gae/history
+    method: GET
+    required_fields: [history]
+    consumed_by: []
+
+  - path: /api/gae/weight-evolution
+    method: GET
+    required_fields: [evolution]
+    consumed_by: []
+
+  # ── Evaluation / Judgment ───────────────────────────────────
+  - path: /api/soc/evaluation/run
+    method: GET
+    required_fields: [accuracy, n_scenarios]
+    consumed_by: []
+
+  - path: /api/soc/evaluation/summary
+    method: GET
+    required_fields: [accuracy, n_scenarios]
+    consumed_by: []
+
+  - path: /api/soc/judgment/explain
+    method: POST
+    body: {"category": "credential_access", "factors": {"user_risk": 0.7, "asset_criticality": 0.5, "pattern_novelty": 0.3, "time_pressure": 0.6, "behavioral_deviation": 0.4, "data_sensitivity": 0.8}, "alert_id": "SIM-001"}
+    required_fields: [action, confidence]
+    consumed_by: []
+
+  # ── ROI ─────────────────────────────────────────────────────
+  - path: /api/roi/defaults
+    method: GET
+    required_fields: [status, defaults]
+    consumed_by: []
+
+  - path: /api/roi/calculate
+    method: POST
+    body: {"alerts_per_day": 500, "analysts": 8, "avg_salary": 95000}
+    required_fields: [inputs_echo, projected, savings]
+    consumed_by: []
+
+  # ── Admin / Demo ────────────────────────────────────────────
+  - path: /api/admin/reset
+    method: POST
+    body: {"mode": "soft"}
+    required_fields: [status]
+    consumed_by: []
+
+  - path: /api/demo/domains
+    method: GET
+    required_fields: [active_domain, registered_domains]
+    consumed_by: []
+
+  # ── Framework / Advanced ────────────────────────────────────
+  - path: /api/soc/convergence-calendar
+    method: GET
+    required_fields: []
+    consumed_by: []
+
+  - path: /api/soc/ols-status
+    method: GET
+    required_fields: [status]
+    consumed_by: []
+
+  - path: /api/soc/iks-trend
+    method: GET
+    required_fields: []
+    consumed_by: []
+
+  - path: /api/soc/learning-health
+    method: GET
+    required_fields: [status]
+    consumed_by: []
+
+  - path: /api/soc/auto-approve-stats
+    method: GET
+    required_fields: [total_decisions]
+    consumed_by: []
+
+  - path: /api/soc/campaigns
+    method: GET
+    required_fields: [campaigns]
+    consumed_by: []
+
+  - path: /api/soc/tab/1/content
+    method: GET
+    required_fields: [content]
+    consumed_by: []
+
+  - path: /api/soc/tab/2/content
+    method: GET
+    required_fields: [content]
+    consumed_by: []
+
+  - path: /api/soc/tab/3/content
+    method: GET
+    required_fields: [content]
+    consumed_by: []
+
+  - path: /api/soc/tab/4/content
+    method: GET
+    required_fields: [content]
+    consumed_by: []
+
+  - path: /api/soc/tab/5/content
+    method: GET
+    required_fields: [content]
+    consumed_by: []
+
+  - path: /api/soc/f9-report
+    method: GET
+    required_fields: [lead_finding, per_category]
+    consumed_by: []
+
+  - path: /api/soc/analyst-benchmarking
+    method: GET
+    required_fields: []
+    consumed_by: []
+
+  - path: /api/soc/enrichment-advisor
+    method: GET
+    required_fields: []
+    consumed_by: []
+
+  - path: /api/soc/gate-config
+    method: GET
+    required_fields: []
+    consumed_by: []
+
+  - path: /api/soc/three-claims
+    method: GET
+    required_fields: []
+    consumed_by: []
+
+  - path: /api/soc/compliance
+    method: GET
+    required_fields: []
+    consumed_by: []
+
+  - path: /api/soc/transparency
+    method: GET
+    required_fields: []
+    consumed_by: []
+
+  # ── Graph Intelligence ──────────────────────────────────────
+  - path: /api/graph/connectors
+    method: GET
+    required_fields: [connectors, count]
+    consumed_by: []
+
+  - path: /api/graph/enrichment/summary
+    method: GET
+    required_fields: [indicators, total]
+    consumed_by: []
+
+  - path: /api/soc/graph/summary
+    method: GET
+    required_fields: [total_nodes, total_relationships]
+    consumed_by: []
+
+  # ── Health ──────────────────────────────────────────────────
+  - path: /health
+    method: GET
+    required_fields: [status]
+    consumed_by: [E2E]

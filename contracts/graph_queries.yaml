@@ -1,0 +1,172 @@
+# contracts/graph_queries.yaml — Graph Cypher query contracts
+# Every Cypher query used by AGEClient (ci_platform/graph/age_client.py).
+# Queries must work on BOTH Neo4j and Apache AGE.
+#
+# source: method name in AGEClient
+# cypher: the exact query (verbatim from code)
+# params: parameter names
+# returns: column names from RETURN clause
+# notes: AGE-specific constraints or workarounds
+
+queries:
+
+  # ── Security Context (8-way traversal) ──────────────────────
+  - name: get_security_context
+    source: AGEClient.get_security_context
+    cypher: |
+      MATCH (alert:Alert {alert_id: $alert_id})
+      OPTIONAL MATCH (alert)-[:INVOLVES]->(asset:Asset)
+      OPTIONAL MATCH (alert)-[:INVOLVES]->(user:User)
+      OPTIONAL MATCH (alert)-[:ORIGINATES_FROM]->(location:Location)
+      OPTIONAL MATCH (alert)-[:MATCHES]->(pattern:AttackPattern)
+      OPTIONAL MATCH (alert)-[:PART_OF]->(campaign:Campaign)
+      OPTIONAL MATCH (alert)-[:HAS_INDICATOR]->(indicator:ThreatIndicator)
+      OPTIONAL MATCH (user)-[:HAS_HISTORY]->(history:BehaviorHistory)
+      RETURN alert, asset, user, location, pattern,
+             campaign, indicator, history,
+             47 AS nodes_consulted
+    params: [alert_id]
+    returns: [alert, asset, user, location, pattern, campaign, indicator, history, nodes_consulted]
+
+  # ── Alert lookup ────────────────────────────────────────────
+  - name: get_alert
+    source: AGEClient.get_alert
+    cypher: |
+      MATCH (alert:Alert {alert_id: $alert_id}) RETURN alert
+    params: [alert_id]
+    returns: [alert]
+
+  # ── Pattern count ───────────────────────────────────────────
+  - name: get_pattern_count
+    source: AGEClient.get_pattern_count
+    cypher: |
+      MATCH (:Alert)-[r:TRIGGERED_EVOLUTION {action: $action}]->
+            (:Entity {entity_id: $eid})
+      RETURN count(r) AS cnt
+    params: [eid, action]
+    returns: [cnt]
+
+  # ── Sequence count (R2 referral rule) ───────────────────────
+  - name: get_sequence_count
+    source: AGEClient.get_sequence_count
+    cypher: |
+      MATCH (a:Alert)-[:INVOLVES]->(e:Entity {entity_id: $eid})
+      WHERE a.timestamp >= $cutoff
+      RETURN count(a) AS cnt
+    params: [eid, cutoff]
+    returns: [cnt]
+    notes: Cutoff computed in Python with timedelta (AGE has no duration())
+
+  # ── Cross-category count (R7 referral rule) ─────────────────
+  - name: get_cross_category_count
+    source: AGEClient.get_cross_category_count
+    cypher: |
+      MATCH (a:Alert)-[:INVOLVES]->(e:Entity {entity_id: $eid})
+      WHERE a.timestamp >= $cutoff
+      RETURN count(DISTINCT a.category) AS cnt
+    params: [eid, cutoff]
+    returns: [cnt]
+    notes: Cutoff computed in Python with timedelta (AGE has no duration())
+
+  # ── Count verified decisions ────────────────────────────────
+  - name: count_verified_decisions
+    source: AGEClient.count_verified_decisions
+    cypher: |
+      MATCH (d:Decision) RETURN count(d) AS cnt
+    params: []
+    returns: [cnt]
+    notes: AGE counts ALL Decision nodes (no 'outcome' field on migrated data)
+
+  # ── Count decisions by category ─────────────────────────────
+  - name: count_decisions_by_category
+    source: AGEClient.count_decisions_by_category
+    cypher: |
+      MATCH (d:Decision)
+      WHERE d.category IS NOT NULL
+      RETURN d.category AS category, count(d) AS cnt
+    params: []
+    returns: [category, cnt]
+
+  # ── Outcome stats (override rate) ───────────────────────────
+  - name: compute_outcome_stats
+    source: AGEClient.compute_outcome_stats
+    cypher: |
+      MATCH (d:Decision)
+      RETURN
+          count(d) AS total,
+          sum(CASE WHEN d.was_override = true THEN 1 ELSE 0 END)
+              AS overrides,
+          avg(CASE WHEN d.was_override = true
+              THEN d.quality_signal ELSE null END)
+              AS avg_quality
+    params: []
+    returns: [total, overrides, avg_quality]
+    notes: Boolean comparison uses = true (not = 'true') — AGE stores native booleans
+
+  # ── Create decision trace ───────────────────────────────────
+  - name: create_decision_trace
+    source: AGEClient.create_decision_trace
+    cypher: |
+      MERGE (d:Decision {decision_id: $did})
+      SET d.alert_id    = $alert_id,
+          d.action      = $action,
+          d.confidence  = $confidence,
+          d.category    = $category,
+          d.timestamp_epoch = $ts_epoch,
+          d.created_at  = $ts,
+          d.patterns_matched = $patterns
+      RETURN d
+    params: [did, alert_id, action, confidence, category, ts_epoch, ts, patterns]
+    returns: [d]
+    notes: String concat ($id + '-ctx') computed in Python, not Cypher
+
+  # ── Create decision context (conditional) ───────────────────
+  - name: create_decision_context
+    source: AGEClient.create_decision_trace (conditional)
+    cypher: |
+      MERGE (ctx:DecisionContext {context_id: $ctx_id})
+      SET ctx.decision_id = $did,
+          ctx.created_at  = $ts
+    params: [ctx_id, did, ts]
+    returns: []
+    notes: Only runs when patterns_matched is non-empty
+
+  # ── Create evolution event ──────────────────────────────────
+  - name: create_evolution_event
+    source: AGEClient.create_evolution_event
+    cypher: |
+      MATCH (a:Alert   {alert_id:   $aid})
+      MATCH (e:Entity  {entity_id:  $eid})
+      MERGE (a)-[r:TRIGGERED_EVOLUTION {action: $action}]->(e)
+      SET r.verified_correct  = $vc,
+          r.impact            = $impact,
+          r.magnitude         = $magnitude,
+          r.timestamp_epoch   = $ts_epoch,
+          r.created_at        = $ts
+      RETURN count(r) AS cnt
+    params: [aid, eid, action, vc, impact, magnitude, ts_epoch, ts]
+    returns: [cnt]
+
+  # ── Recent evolution events ─────────────────────────────────
+  - name: get_recent_evolution_events
+    source: AGEClient.get_recent_evolution_events
+    cypher: |
+      MATCH (a:Alert)-[r:TRIGGERED_EVOLUTION]->(e:Entity)
+      RETURN a, r, e
+      ORDER BY r.timestamp_epoch DESC
+      LIMIT $limit
+    params: [limit]
+    returns: [a, r, e]
+
+  # ── Decision distance log ───────────────────────────────────
+  - name: log_decision_distance
+    source: AGEClient.log_decision_distance
+    cypher: |
+      MERGE (d:DecisionDistanceLog {decision_id: $did})
+      SET d.centroid_distance_to_canonical = $dist,
+          d.pattern_history_value          = $phv,
+          d.alert_category_distribution    = $acd,
+          d.timestamp                      = $ts
+      RETURN d
+    params: [did, dist, phv, acd, ts]
+    returns: [d]

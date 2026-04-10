@@ -90,6 +90,9 @@ async def run_evaluation_endpoint():
     try:
         scorer = get_profile_scorer()
     except Exception:
+        scorer = None
+
+    if scorer is None:
         raise HTTPException(
             status_code=503,
             detail={"error": "ProfileScorer not available", "status": "unavailable"},
@@ -142,6 +145,9 @@ async def get_evaluation_summary():
     try:
         scorer = get_profile_scorer()
     except Exception:
+        scorer = None
+
+    if scorer is None:
         raise HTTPException(
             status_code=503,
             detail={"error": "ProfileScorer not available", "status": "unavailable"},

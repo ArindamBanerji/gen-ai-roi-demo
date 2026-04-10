@@ -18,6 +18,11 @@ from app.services.policy import detect_policy_conflicts, get_conflict_history
 from app.services.triage import get_decision_factors, append_confidence_snapshot
 from app.services.audit import record_decision
 from app.services.event_bus import event_bus, DecisionMade, OutcomeVerified, GraphMutated
+
+
+def _node_id(entity: dict, prefix: str = "") -> str:
+    """Get node ID from entity dict — AGE uses alert_id/user_id/etc, Neo4j uses id."""
+    return entity.get("id") or entity.get(f"{prefix}_id") or entity.get(f"{prefix}id") or "unknown"
 from app.services.gae_state import get_learning_state, save_learning_state, get_profile_scorer
 import dataclasses
 import numpy as np
@@ -71,13 +76,13 @@ async def get_alert_queue():
         for record in results:
             alert = record["alert"]
             alerts.append({
-                "id": alert["id"],
-                "alert_type": alert["alert_type"],
-                "severity": alert["severity"],
-                "asset_hostname": record["asset_hostname"],
-                "user_name": record["user_name"],
+                "id": _node_id(alert, "alert"),
+                "alert_type": alert.get("alert_type", "unknown"),
+                "severity": alert.get("severity", "medium"),
+                "asset_hostname": record.get("asset_hostname", "unknown"),
+                "user_name": record.get("user_name", "unknown"),
                 "timestamp": alert.get("timestamp_epoch", alert.get("timestamp", 0)),
-                "status": alert["status"],
+                "status": alert.get("status", "pending"),
                 "source_location": alert.get("source_location", "Unknown")
             })
 
@@ -112,7 +117,13 @@ async def analyze_alert(request: ProcessAlertRequest):
     """
 
     # Guard: ProfileScorer must be attached before any scoring attempt
-    from app.services.gae_state import get_profile_scorer as _get_scorer
+    from app.services.gae_state import get_profile_scorer as _get_scorer, init_learning_state as _init_ls
+    if _get_scorer() is None:
+        # Try to lazily initialize if startup didn't complete
+        try:
+            _init_ls()
+        except Exception:
+            pass
     if _get_scorer() is None:
         raise HTTPException(
             status_code=503,
@@ -1253,6 +1264,36 @@ async def get_profile_state():
     from app.domains.soc.config import SOC_CATEGORIES, SCORER_ACTIONS
     from app.services.iks import compute_iks, interpret, _compute_delta_7d
 
+    if scorer is None:
+        import numpy as _np
+        n_cats = len(SOC_CATEGORIES)
+        n_actions = len(SCORER_ACTIONS)
+        return {
+            "categories": SOC_CATEGORIES,
+            "actions": SCORER_ACTIONS,
+            "centroids": _np.zeros((n_cats, n_actions, 6)).tolist(),
+            "counts": _np.zeros((n_cats, n_actions), dtype=int).tolist(),
+            "decision_count": 0,
+            "iks": {
+                "current": 0.0,
+                "delta_7d": 0.0,
+                "interpretation": "No decisions recorded yet.",
+                "decision_count": 0,
+                "estimated": 0.0,
+                "trend": [],
+                "switching_cost": {
+                    "decisions_accumulated": 0,
+                    "equivalent_calendar": "0 decisions accumulated",
+                    "common_categories_days": 14,
+                    "rare_categories_note": "Rare categories take longer — all context lost on switch.",
+                    "competitor_iks": 0,
+                    "decisions_per_day": 0.0,
+                    "qualifies_one_quarter": False,
+                    "interpretation": "No decisions recorded yet. A competitor starting fresh starts at IKS=0.",
+                },
+            },
+        }
+
     # Use scorer.counts.shape[1] as source of truth — not len(SOC_ACTIONS).
     # SOC_ACTIONS has 5 elements (includes refer_to_analyst for referral policy);
     # ProfileScorer uses A=4 only (SCORER_ACTIONS). Iterating range(5) on a
@@ -1445,10 +1486,11 @@ async def get_graph_data(alert_id: str) -> Dict[str, Any]:
 
         # Add alert node
         alert = record.get("alert")
+        alert_id = _node_id(alert, "alert") if alert else "unknown"
         if alert:
             nodes.append({
-                "id": alert["id"],
-                "label": alert["id"],
+                "id": alert_id,
+                "label": alert_id,
                 "type": "Alert",
                 "properties": {
                     "alert_type": alert.get("alert_type"),
@@ -1458,10 +1500,11 @@ async def get_graph_data(alert_id: str) -> Dict[str, Any]:
 
         # Add user node
         user = record.get("user")
+        user_id = _node_id(user, "user") if user else "unknown"
         if user:
             nodes.append({
-                "id": user["id"],
-                "label": user["name"],
+                "id": user_id,
+                "label": user.get("name", user_id),
                 "type": "User",
                 "properties": {
                     "title": user.get("title"),
@@ -1469,51 +1512,54 @@ async def get_graph_data(alert_id: str) -> Dict[str, Any]:
                 }
             })
             relationships.append({
-                "source": alert["id"],
-                "target": user["id"],
+                "source": alert_id,
+                "target": user_id,
                 "type": "INVOLVES"
             })
 
         # Add asset node
         asset = record.get("asset")
+        asset_id = _node_id(asset, "asset") if asset else "unknown"
         if asset:
             nodes.append({
-                "id": asset["id"],
-                "label": asset["hostname"],
+                "id": asset_id,
+                "label": asset.get("hostname", asset_id),
                 "type": "Asset",
                 "properties": {
                     "criticality": asset.get("criticality")
                 }
             })
             relationships.append({
-                "source": alert["id"],
-                "target": asset["id"],
+                "source": alert_id,
+                "target": asset_id,
                 "type": "DETECTED_ON"
             })
 
         # Add travel node
         travel = record.get("travel")
+        travel_id = _node_id(travel, "travel") if travel else "unknown"
         if travel:
             nodes.append({
-                "id": travel["id"],
-                "label": travel["destination"],
+                "id": travel_id,
+                "label": travel.get("destination", travel_id),
                 "type": "TravelContext",
                 "properties": {
                     "destination": travel.get("destination")
                 }
             })
             relationships.append({
-                "source": user["id"],
-                "target": travel["id"],
+                "source": user_id,
+                "target": travel_id,
                 "type": "HAS_TRAVEL"
             })
 
         # Add pattern node
         pattern = record.get("pattern")
+        pattern_id = _node_id(pattern, "pattern") if pattern else "unknown"
         if pattern:
             nodes.append({
-                "id": pattern["id"],
-                "label": pattern["name"],
+                "id": pattern_id,
+                "label": pattern.get("name", pattern_id),
                 "type": "AttackPattern",
                 "properties": {
                     "occurrence_count": pattern.get("occurrence_count"),
@@ -1521,18 +1567,19 @@ async def get_graph_data(alert_id: str) -> Dict[str, Any]:
                 }
             })
             relationships.append({
-                "source": alert["id"],
-                "target": pattern["id"],
+                "source": alert_id,
+                "target": pattern_id,
                 "type": "MATCHES"
             })
 
         # Add playbook node
         playbook = record.get("playbook")
+        playbook_id = _node_id(playbook, "playbook") if playbook else "unknown"
         if playbook:
             alertType = record.get("alertType")
             nodes.append({
-                "id": playbook["id"],
-                "label": playbook["name"],
+                "id": playbook_id,
+                "label": playbook.get("name", playbook_id),
                 "type": "Playbook",
                 "properties": {
                     "sla_minutes": playbook.get("sla_minutes")
@@ -1540,8 +1587,8 @@ async def get_graph_data(alert_id: str) -> Dict[str, Any]:
             })
             if alertType:
                 relationships.append({
-                    "source": alertType["id"],
-                    "target": playbook["id"],
+                    "source": _node_id(alertType, "alert_type"),
+                    "target": playbook_id,
                     "type": "HANDLED_BY"
                 })
 
