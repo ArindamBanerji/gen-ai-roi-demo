@@ -2,6 +2,11 @@
 SOC Copilot Demo - FastAPI Backend
 Main application entry point with CORS and router registration.
 """
+import sys
+if sys.platform == "win32":
+    import asyncio
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 import logging
 
 from fastapi import FastAPI
@@ -68,14 +73,14 @@ async def startup_event():
     # AGEClient uses per-query connections (no persistent connect/close).
     import os as _os, re as _re
     _backend = _os.getenv("GRAPH_BACKEND", "neo4j").upper()
-    if hasattr(neo4j_client, "connect"):
+    if _os.getenv("GRAPH_BACKEND", "neo4j").lower() == "neo4j":
         await neo4j_client.connect()
         _uri = _os.getenv("NEO4J_URI", "not set")
-        print(f"[OK] Connected to graph backend (NEO4J) — {_uri}")
+        logger.info(f"[OK] Connected to graph backend (NEO4J) — {_uri}")
     else:
         _dsn = _os.getenv("DATABASE_URL", "not set")
         _dsn_masked = _re.sub(r":([^:@]+)@", ":***@", _dsn)
-        print(f"[OK] Connected to graph backend (AGE) — {_dsn_masked}")
+        logger.info(f"[OK] Connected to graph backend (AGE) — {_dsn_masked}")
 
     if _backend == "AGE":
         try:
