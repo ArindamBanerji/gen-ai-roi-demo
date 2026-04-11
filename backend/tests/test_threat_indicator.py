@@ -35,9 +35,19 @@ _SAMPLE_INDICATOR = {
 
 
 def _upsert_neo4j(returned_id: str = "ti-fake-001"):
-    """FakeNeo4j that returns a fixed ID for MERGE queries."""
+    """FakeNeo4j that returns a fixed ID for upsert (MATCH-then-CREATE) queries."""
+    _created = {}  # track created IOCs to simulate idempotent upsert
+
     async def run_query(query, params=None):
-        if "MERGE" in query and "ThreatIndicator" in query:
+        key = (params or {}).get("ioc_value", "")
+        # Step A — MATCH existing node
+        if "MATCH" in query and "ThreatIndicator" in query and "CREATE" not in query:
+            if key in _created:
+                return [{"id": returned_id}]
+            return []
+        # Step B — CREATE new node
+        if "CREATE" in query and "ThreatIndicator" in query:
+            _created[key] = returned_id
             return [{"id": returned_id}]
         return []
     class _FakeNeo4j:

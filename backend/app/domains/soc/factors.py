@@ -131,7 +131,7 @@ class AssetCriticalityFactor:
         try:
             results = await neo4j.run_query(
                 """
-                MATCH (a:Alert {id: $alert})-[:DETECTED_ON]->(asset:Asset)
+                MATCH (a:Alert {alert_id: $alert})-[:DETECTED_ON]->(asset:Asset)
                 OPTIONAL MATCH (asset)-[:STORES]->(dc:DataClass)
                 RETURN asset.criticality AS criticality,
                        dc.sensitivity AS sensitivity
@@ -190,7 +190,7 @@ class ThreatIntelEnrichmentFactor:
         try:
             results = await neo4j.run_query(
                 """
-                MATCH (ti:ThreatIntel)-[:ASSOCIATED_WITH]->(a:Alert {id: $alert})
+                MATCH (ti:ThreatIntel)-[:ASSOCIATED_WITH]->(a:Alert {alert_id: $alert})
                 RETURN ti.severity AS severity, ti.source AS source
                 """,
                 {"alert": alert_id},
@@ -234,7 +234,7 @@ class ThreatIntelEnrichmentFactor:
         """
         try:
             results = await neo4j.run_query("""
-                MATCH (a:Alert {id: $alert_id})-[:MEMBER_OF]->(c:Campaign)
+                MATCH (a:Alert {alert_id: $alert_id})-[:MEMBER_OF]->(c:Campaign)
                 RETURN c.confidence AS confidence,
                        c.severity AS severity,
                        c.id AS campaign_id,

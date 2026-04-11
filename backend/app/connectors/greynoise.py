@@ -258,7 +258,7 @@ class GreyNoiseConnector(UCLConnector):
                 })
                 indicators_ingested += 1
             except Exception as exc:
-                print(f"[GREYNOISE] Failed to write {entry['ip']} to Neo4j: {exc}")
+                print(f"[GREYNOISE] Failed to write {entry['ip']} to AGE: {exc}")
 
         # -------------------------------------------------------------------
         # Step 3 — MERGE :ENRICHED_BY from :ThreatIntel to :GreyNoiseEnrichment

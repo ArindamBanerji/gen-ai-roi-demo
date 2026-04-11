@@ -83,11 +83,11 @@ def update_trust(
     TRUST_HISTORY.append(snap)
 
     print(
-        f"[TRUST] {situation_type}: {old_trust:.3f} → {new_trust:.3f} "
+        f"[TRUST] {situation_type}: {old_trust:.3f} -> {new_trust:.3f} "
         f"(delta={delta:+.2f}, outcome={outcome})"
     )
     if LOW_TRUST_FLAGS[situation_type]:
-        print(f"[TRUST] ⚠ {situation_type} trust={new_trust:.2f} < 0.30 — human review required")
+        print(f"[TRUST] WARNING: {situation_type} trust={new_trust:.2f} < 0.30 -- human review required")
 
     return snap
 

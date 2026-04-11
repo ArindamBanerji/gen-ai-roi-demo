@@ -508,7 +508,7 @@ async def seed_simulation_alerts() -> None:
     for (aid, uid, asset_id, src_ip, location,
          mfa, fingerprint, weekend, technique) in ca_alerts:
         await neo4j_client.run_query("""
-            MERGE (alert:Alert {id: $id})
+            MERGE (alert:Alert {alert_id: $id})
             SET alert.alert_type             = 'anomalous_login',
                 alert.severity               = 'high',
                 alert.source_ip              = $source_ip,
@@ -550,7 +550,7 @@ async def seed_simulation_alerts() -> None:
     ]
     for (aid, mfa, fingerprint, weekend) in ti_alerts:
         await neo4j_client.run_query("""
-            MERGE (alert:Alert {id: $id})
+            MERGE (alert:Alert {alert_id: $id})
             SET alert.alert_type             = 'threat_intel_match',
                 alert.severity               = 'critical',
                 alert.source_ip              = '198.51.100.77',
@@ -587,7 +587,7 @@ async def seed_simulation_alerts() -> None:
     ]
     for (aid, mfa, fingerprint, weekend) in lm_alerts:
         await neo4j_client.run_query("""
-            MERGE (alert:Alert {id: $id})
+            MERGE (alert:Alert {alert_id: $id})
             SET alert.alert_type             = 'privilege_escalation',
                 alert.severity               = 'critical',
                 alert.source_ip              = '10.0.5.99',
@@ -624,7 +624,7 @@ async def seed_simulation_alerts() -> None:
     ]
     for (aid, mfa, fingerprint, weekend) in de_alerts:
         await neo4j_client.run_query("""
-            MERGE (alert:Alert {id: $id})
+            MERGE (alert:Alert {alert_id: $id})
             SET alert.alert_type             = 'data_exfil',
                 alert.severity               = 'critical',
                 alert.source_ip              = '10.0.4.33',
@@ -656,7 +656,7 @@ async def seed_simulation_alerts() -> None:
     # -----------------------------------------------------------------------
     for i in range(1, 5):
         await neo4j_client.run_query("""
-            MERGE (alert:Alert {id: $id})
+            MERGE (alert:Alert {alert_id: $id})
             SET alert.alert_type             = 'insider_threat',
                 alert.severity               = 'high',
                 alert.source_ip              = '10.0.2.55',
@@ -718,7 +718,7 @@ async def seed_simulation_alerts() -> None:
     for (aid, at, sev, src_ip, loc, biz_hrs, weekend, mfa, fp, vpn, desc, mitre_t, mitre_tac) in ci_alerts:
         uid = ci_user_map[aid]
         await neo4j_client.run_query("""
-            MERGE (alert:Alert {id: $id})
+            MERGE (alert:Alert {alert_id: $id})
             SET alert.alert_type             = $alert_type,
                 alert.severity               = $sev,
                 alert.source_ip              = $source_ip,
@@ -756,7 +756,7 @@ async def seed_simulation_alerts() -> None:
     # users and assets already seeded above.
     # -----------------------------------------------------------------------
     await neo4j_client.run_query("""
-        MERGE (alert:Alert {id: 'SIM-CA-REF-001'})
+        MERGE (alert:Alert {alert_id: 'SIM-CA-REF-001'})
         SET alert.alert_type             = 'ambiguous_login_location',
             alert.severity               = 'medium',
             alert.source_ip              = '185.10.20.30',
@@ -781,7 +781,7 @@ async def seed_simulation_alerts() -> None:
         MERGE (alert)-[:INVOLVES]->(user)
     """, {"timestamp_epoch": int(datetime.utcnow().timestamp() * 1000)})
     await neo4j_client.run_query("""
-        MERGE (alert:Alert {id: 'SIM-LM-REF-001'})
+        MERGE (alert:Alert {alert_id: 'SIM-LM-REF-001'})
         SET alert.alert_type             = 'internal_scan_ambiguous',
             alert.severity               = 'medium',
             alert.source_ip              = '10.0.5.99',
@@ -850,7 +850,7 @@ async def seed_simulation_alerts() -> None:
                 ti.ioc_type  = 'domain',
                 ti.ioc_value = 'sim-apt-domain.evil'
             WITH ti
-            MATCH (a:Alert {id: $alert_id})
+            MATCH (a:Alert {alert_id: $alert_id})
             MERGE (ti)-[:ASSOCIATED_WITH]->(a)
         """, {"ti1_id": ti1_id, "alert_id": alert_id})
         await neo4j_client.run_query("""
@@ -861,7 +861,7 @@ async def seed_simulation_alerts() -> None:
                 ti.ioc_type  = 'ip',
                 ti.ioc_value = '198.51.100.77'
             WITH ti
-            MATCH (a:Alert {id: $alert_id})
+            MATCH (a:Alert {alert_id: $alert_id})
             MERGE (ti)-[:ASSOCIATED_WITH]->(a)
         """, {"ti2_id": ti2_id, "alert_id": alert_id})
     await neo4j_client.run_query(
@@ -996,7 +996,7 @@ async def seed_simulation_alerts() -> None:
             MATCH (at:AlertType {id: $type_id})
             WITH at
             UNWIND $ids AS aid
-            MATCH (alert:Alert {id: aid})
+            MATCH (alert:Alert {alert_id: aid})
             MERGE (alert)-[:CLASSIFIED_AS]->(at)
         """, {"type_id": type_id, "ids": ids})
     print("  [CORR-1b] [:CLASSIFIED_AS] edges merged for all 27 SIM alerts (20 base + 5 CI + 2 refer)")

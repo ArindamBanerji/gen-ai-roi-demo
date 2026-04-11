@@ -170,13 +170,13 @@ async def _build_threat_intel_factor(alert_id: str) -> Dict[str, Any]:
     """
     from app.domains.soc.factors import _contribution
     query = """
-    MATCH (t:ThreatIntel)-[:ASSOCIATED_WITH]->(a:Alert {id: $alert_id})
+    MATCH (t:ThreatIntel)-[:ASSOCIATED_WITH]->(a:Alert {alert_id: $alert_id})
     RETURN t.value AS ioc_value, t.severity AS severity, t.source AS source
     """
     try:
         results = await neo4j_client.run_query(query, {"alert_id": alert_id})
     except Exception as exc:
-        print(f"[TRIAGE] Neo4j threat-intel query failed for {alert_id}: {exc}")
+        print(f"[TRIAGE] AGE threat-intel query failed for {alert_id}: {exc}")
         results = []
 
     if not results:
@@ -226,7 +226,7 @@ async def _get_alert_type(alert_id: str) -> str:
     Query Neo4j for the alert_type property of the given alert_id.
     Returns "" on miss or error (compute_soc_factors falls back to _default).
     """
-    query = "MATCH (a:Alert {id: $alert_id}) RETURN a.alert_type AS alert_type LIMIT 1"
+    query = "MATCH (a:Alert {alert_id: $alert_id}) RETURN a.alert_type AS alert_type LIMIT 1"
     try:
         results = await neo4j_client.run_query(query, {"alert_id": alert_id})
         if results:

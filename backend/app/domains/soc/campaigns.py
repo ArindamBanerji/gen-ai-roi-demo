@@ -28,11 +28,15 @@ log = logging.getLogger(__name__)
 
 
 def _to_python_dt(value):
-    """Convert neo4j DateTime to Python datetime; pass through if already datetime."""
+    """Convert neo4j DateTime / epoch int to Python datetime; pass through if already datetime."""
     if isinstance(value, datetime):
         return value
     if hasattr(value, "to_native"):
         return value.to_native()
+    # AGE stores timestamps as epoch-millisecond integers
+    if isinstance(value, (int, float)) and value > 1e9:
+        divisor = 1000 if value > 1e12 else 1  # ms vs s
+        return datetime.utcfromtimestamp(value / divisor)
     return value
 
 
@@ -518,7 +522,7 @@ class CampaignRepository:
                        d.timestamp_epoch AS ts,
                        COALESCE(a.severity, 'MEDIUM') AS severity,
                        COALESCE(d.decision_id, d.id) AS decision_id
-                ORDER BY d.timestamp_epoch
+                ORDER BY ts
             """, {})
             return [{**dict(r), "ts": _to_python_dt(r["ts"])} for r in results] if results else []
         except Exception as e:
@@ -542,7 +546,7 @@ class CampaignRepository:
                        d.timestamp_epoch AS ts,
                        COALESCE(a.severity, 'MEDIUM') AS severity,
                        COALESCE(d.decision_id, d.id) AS decision_id
-                ORDER BY d.timestamp_epoch
+                ORDER BY ts
             """, {"cutoff_epoch": int((datetime.utcnow().timestamp() - window_hours * 3600) * 1000)})
             return [{**dict(r), "ts": _to_python_dt(r["ts"])} for r in results] if results else []
         except Exception as e:
@@ -553,7 +557,7 @@ class CampaignRepository:
         """Fetch one alert event by ID."""
         try:
             results = await self.neo4j.run_query("""
-                MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert {id: $alert_id})
+                MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert {alert_id: $alert_id})
                 RETURN a.id AS alert_id,
                        d.category AS category,
                        a.source_entity_id AS source_entity_id,
@@ -612,7 +616,7 @@ class CampaignRepository:
             # Write :MEMBER_OF edges
             for alert_id in campaign.member_alert_ids:
                 await self.neo4j.run_query("""
-                    MATCH (a:Alert {id: $alert_id})
+                    MATCH (a:Alert {alert_id: $alert_id})
                     MATCH (c:Campaign {id: $campaign_id})
                     MERGE (a)-[:MEMBER_OF]->(c)
                 """, {"alert_id": alert_id, "campaign_id": campaign.campaign_id})
@@ -737,7 +741,7 @@ class CampaignMatcher:
         """Find existing open campaign this alert should join."""
         try:
             results = await self.neo4j.run_query("""
-                MATCH (a_new:Alert {id: $alert_id})
+                MATCH (a_new:Alert {alert_id: $alert_id})
                 MATCH (a_existing:Alert)-[:MEMBER_OF]->(c:Campaign)
                 WHERE a_existing.source_entity_id IS NOT NULL
                   AND a_existing.source_entity_id = a_new.source_entity_id
@@ -757,7 +761,7 @@ class CampaignMatcher:
         """Add alert to existing campaign, update last_seen + alert_count."""
         try:
             await self.neo4j.run_query("""
-                MATCH (a:Alert {id: $alert_id})
+                MATCH (a:Alert {alert_id: $alert_id})
                 MATCH (c:Campaign {id: $campaign_id})
                 MERGE (a)-[:MEMBER_OF]->(c)
                 SET c.last_seen_epoch = $last_seen_epoch,

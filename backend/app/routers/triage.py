@@ -68,9 +68,9 @@ async def get_alert_queue():
         LIMIT 50
         """
 
-        print("[TRIAGE] Querying Neo4j for pending alerts...")
+        print("[TRIAGE] Querying AGE for pending alerts...")
         results = await neo4j_client.run_query(query)
-        print(f"[TRIAGE] Neo4j returned {len(results)} results")
+        print(f"[TRIAGE] AGE returned {len(results)} results")
 
         alerts = []
         for record in results:
@@ -86,7 +86,7 @@ async def get_alert_queue():
                 "source_location": alert.get("source_location", "Unknown")
             })
 
-        print(f"[TRIAGE] Returning {len(alerts)} alerts from Neo4j")
+        print(f"[TRIAGE] Returning {len(alerts)} alerts from AGE")
         response = {"alerts": alerts}
         print(f"[TRIAGE] Response structure: {response}")
         return response
@@ -170,7 +170,8 @@ async def analyze_alert(request: ProcessAlertRequest):
         # W       = get_learning_state().W
         # scoring = score_alert(f_2d, W, actions, tau)
 
-        actions = SOCDomainConfig.get_actions()      # full 5-action API list (incl. refer_to_analyst for response)
+        from app.domains.soc.config import SCORER_ACTIONS
+        scorer_actions = list(SCORER_ACTIONS)  # A=4 classification actions (ProfileScorer axis-1)
         tau     = SOCDomainConfig.get_temperature()  # τ=0.1 (V3B validated, ECE=0.036)
 
         # v5.0: ProfileScorer centroid-proximity scoring (EXP-E1 validated L2, τ=0.1)
@@ -250,9 +251,9 @@ async def analyze_alert(request: ProcessAlertRequest):
         decision_id = str(uuid.uuid4())
         await neo4j_client.run_query(
             """
-            MATCH (a:Alert {id: $alert_id})
+            MATCH (a:Alert {alert_id: $alert_id})
             CREATE (d:Decision {
-                id:              $decision_id,
+                decision_id:     $decision_id,
                 action:          $action,
                 confidence:      $confidence,
                 factor_vector:   $fv,
@@ -294,7 +295,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             _campaign_id = await _camp_matcher.check_alert(alert_id)
             if _campaign_id:
                 await neo4j_client.run_query(
-                    "MATCH (d:Decision {id: $decision_id}) "
+                    "MATCH (d:Decision {decision_id: $decision_id}) "
                     "SET d.campaign_id = $campaign_id",
                     {"decision_id": decision_id, "campaign_id": _campaign_id},
                 )
@@ -362,7 +363,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             )
             if _composite["auto_approve"] and not ShadowModeService.SHADOW_ENABLED:
                 await neo4j_client.run_query(
-                    "MATCH (d:Decision {id: $id}) SET d.auto_approved = true",
+                    "MATCH (d:Decision {decision_id: $id}) SET d.auto_approved = true",
                     {"id": decision_id},
                 )
         except Exception as _cg_exc:
@@ -436,7 +437,7 @@ async def analyze_alert(request: ProcessAlertRequest):
 
         # Build action_probabilities dict for verification + frontend display
         probs_flat = _scoring_result.probabilities.tolist()
-        action_probabilities = {a: round(p, 6) for a, p in zip(actions, probs_flat)}
+        action_probabilities = {a: round(p, 6) for a, p in zip(scorer_actions, probs_flat)}
 
         # Scoring quality flags
         max_prob = max(probs_flat)
@@ -738,7 +739,7 @@ async def execute_action(request: ProcessAlertRequest):
 
         # Update alert status in Neo4j
         await neo4j_client.run_query(
-            "MATCH (alert:Alert {id: $alert_id}) SET alert.status = 'resolved'",
+            "MATCH (alert:Alert {alert_id: $alert_id}) SET alert.status = 'resolved'",
             {"alert_id": alert_id}
         )
         await event_bus.emit(GraphMutated(
@@ -876,7 +877,7 @@ async def report_decision_outcome(request: OutcomeRequest):
 
         gae_result = await neo4j_client.run_query(
             """
-            MATCH (d:Decision {id: $decision_id})
+            MATCH (d:Decision {decision_id: $decision_id})
             OPTIONAL MATCH (d)-[:DECIDED_ON]->(a:Alert)
             SET d.outcome           = $outcome_label,
                 d.correct           = $correct,
@@ -896,7 +897,7 @@ async def report_decision_outcome(request: OutcomeRequest):
             },
         )
 
-        print(f"[GAE] Outcome lookup: decision_id={request.decision_id!r} → {len(gae_result) if gae_result else 0} result(s)")
+        print(f"[GAE] Outcome lookup: decision_id={request.decision_id!r} -> {len(gae_result) if gae_result else 0} result(s)")
         if gae_result:
             record      = gae_result[0]
             fv          = record.get("factor_vector")
@@ -917,33 +918,43 @@ async def report_decision_outcome(request: OutcomeRequest):
 
             if fv is not None:
                 f = np.array(fv, dtype=np.float64).reshape(1, -1)
-                actions      = SOCDomainConfig.get_actions()
-                action_index = actions.index(action_name) if action_name in actions else 0
+                from app.domains.soc.config import SCORER_ACTIONS
 
-                learning_state = get_learning_state()
-                wu = learning_state.update(
-                    action_index=action_index,
-                    action_name=action_name,
-                    outcome=outcome_int,
-                    f=f,
-                    confidence_at_decision=confidence_at_decision,
-                )
-                save_learning_state()
+                # refer_to_analyst is a routing decision, not a classification
+                # action.  ProfileScorer has A=4 (SCORER_ACTIONS); skip learning.
+                if action_name not in SCORER_ACTIONS:
+                    print(
+                        f"[GAE] Skipping learning update for routing action "
+                        f"{action_name!r} (not in SCORER_ACTIONS)"
+                    )
+                    wu = None
+                else:
+                    action_index = list(SCORER_ACTIONS).index(action_name)
+                    learning_state = get_learning_state()
+                    wu = learning_state.update(
+                        action_index=action_index,
+                        action_name=action_name,
+                        outcome=outcome_int,
+                        f=f,
+                        confidence_at_decision=confidence_at_decision,
+                    )
+                    save_learning_state()
 
                 # CORR-2 fix: ProfileScorer.update() — gated by LEARNING_ENABLED (default False).
                 # gt_action_index = analyst's actual chosen action when provided;
                 # falls back to predicted action_index only when analyst_action is absent.
                 # is_correct is re-derived from the comparison so it stays consistent.
-                if LEARNING_ENABLED:
+                if LEARNING_ENABLED and action_name in SCORER_ACTIONS:
                     from app.domains.soc.config import resolve_alert_category, SOCDomainConfig as _SDC_out
                     _cat_name_out = resolve_alert_category(alert_type_for_cat)
                     _cat_idx_out  = _SDC_out().get_category_index(_cat_name_out)
                     _ps_out = get_profile_scorer()
 
                     _analyst_action = request.analyst_action
-                    if _analyst_action and _analyst_action in actions:
+                    _scorer_acts = list(SCORER_ACTIONS)
+                    if _analyst_action and _analyst_action in _scorer_acts:
                         # Analyst supplied their action — authoritative GT
-                        _gt_idx  = actions.index(_analyst_action)
+                        _gt_idx  = _scorer_acts.index(_analyst_action)
                         _correct = (action_index == _gt_idx)
                     else:
                         # No analyst action: use outcome flag; GT = predicted (correct)
@@ -966,15 +977,16 @@ async def report_decision_outcome(request: OutcomeRequest):
                     )
 
                 # Change 5: ProfileSnapshot every 50 decisions
-                from app.services.snapshots import maybe_write_profile_snapshot
-                await maybe_write_profile_snapshot(learning_state.decision_count)
+                if wu is not None:
+                    from app.services.snapshots import maybe_write_profile_snapshot
+                    await maybe_write_profile_snapshot(learning_state.decision_count)
 
                 if wu and wu.centroid_update is not None:
                     cu = wu.centroid_update
                     # Write centroid_delta_norm back to the Decision node
                     await neo4j_client.run_query(
                         """
-                        MATCH (d:Decision {id: $decision_id})
+                        MATCH (d:Decision {decision_id: $decision_id})
                         SET d.centroid_delta_norm = $centroid_delta_norm,
                             d.category            = $category,
                             d.correct             = $correct,
@@ -1464,7 +1476,7 @@ async def get_graph_data(alert_id: str) -> Dict[str, Any]:
     """
 
     query = """
-    MATCH (alert:Alert {id: $alert_id})
+    MATCH (alert:Alert {alert_id: $alert_id})
     MATCH (alert)-[:DETECTED_ON]->(asset:Asset)
     MATCH (alert)-[:INVOLVES]->(user:User)
     OPTIONAL MATCH (alert)-[:CLASSIFIED_AS]->(alertType:AlertType)

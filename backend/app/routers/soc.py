@@ -539,7 +539,7 @@ async def query_soc_metrics(request: SOCQueryRequest):
                 else:
                     data = [MetricDataPoint(label="No threat-intel associations found in graph", value=0.0)]
             except Exception as qe:
-                print(f"[SOC] cross-context Neo4j query failed: {qe}")
+                print(f"[SOC] cross-context AGE query failed: {qe}")
                 data = get_metric_data(metric_id)
         else:
             data = get_metric_data(metric_id)
@@ -735,13 +735,18 @@ async def get_threat_landscape():
 
         # Alert counts — total and open (no Decision yet)
         alert_res = await neo4j_client.run_query(
+            "MATCH (a:Alert) RETURN count(a) AS total",
+        )
+        # Open alerts — separate query (AGE does not support NOT pattern in CASE)
+        open_res_tl = await neo4j_client.run_query(
             "MATCH (a:Alert) "
-            "RETURN count(a) AS total, "
-            "count(CASE WHEN NOT (a)<-[:FOR_ALERT]-(:Decision) THEN 1 END) AS open_count",
+            "WHERE NOT exists((a)<-[:FOR_ALERT]-()) "
+            "RETURN count(a) AS open_count",
         )
         if alert_res:
             alerts_total = int(alert_res[0].get("total") or 0)
-            open_alerts = int(alert_res[0].get("open_count") or 0)
+        if open_res_tl:
+            open_alerts = int(open_res_tl[0].get("open_count") or 0)
 
         # Decision count
         dec_res = await neo4j_client.run_query(
@@ -767,9 +772,9 @@ async def get_threat_landscape():
         if pat_res:
             patterns_count = int(pat_res[0].get("c") or 0)
 
-        source = "neo4j"
+        source = "age"
     except Exception as exc:
-        print(f"[SOC] threat-landscape Neo4j query failed (using zero fallback): {exc}")
+        print(f"[SOC] threat-landscape AGE query failed (using zero fallback): {exc}")
 
     return {
         "threat_intel": {
@@ -820,13 +825,13 @@ async def get_attack_tactic_breakdown():
             """
             MATCH (a:Alert)
             WHERE a.mitre_tactic IS NOT NULL AND a.mitre_tactic <> ''
-            RETURN a.mitre_tactic AS tactic, count(a) AS count
-            ORDER BY count DESC
+            RETURN a.mitre_tactic AS tactic, count(a) AS cnt
+            ORDER BY cnt DESC
             """,
             {},
         )
         breakdown = [
-            {"tactic": r["tactic"], "count": int(r["count"])}
+            {"tactic": r["tactic"], "count": int(r["cnt"])}
             for r in results
         ]
     except Exception as exc:
@@ -859,7 +864,7 @@ async def get_soc_analytics():
         # Metric 2 — Open alerts (no Decision yet)
         open_res = await neo4j_client.run_query(
             "MATCH (a:Alert) "
-            "WHERE NOT (a)<-[:FOR_ALERT]-(:Decision) "
+            "WHERE NOT exists((a)<-[:FOR_ALERT]-()) "
             "RETURN count(a) AS open_alerts"
         )
         open_alerts = int(open_res[0]["open_alerts"]) if open_res else 0
@@ -881,11 +886,11 @@ async def get_soc_analytics():
         # Metric 5 — Category breakdown
         cat_res = await neo4j_client.run_query(
             "MATCH (a:Alert) "
-            "RETURN a.category AS category, count(a) AS count "
-            "ORDER BY count DESC"
+            "RETURN a.category AS category, count(a) AS cnt "
+            "ORDER BY cnt DESC"
         )
         category_breakdown = [
-            {"category": r["category"] or "unknown", "count": int(r["count"])}
+            {"category": r["category"] or "unknown", "count": int(r["cnt"])}
             for r in cat_res
         ]
 
@@ -910,7 +915,7 @@ async def get_soc_analytics():
             ],
         }
     except Exception as e:
-        print(f"[SOC] analytics Neo4j query failed: {e}")
+        print(f"[SOC] analytics AGE query failed: {e}")
         return {
             "total_alerts": 0,
             "open_alerts": 0,
@@ -1049,7 +1054,7 @@ async def explain_decision(decision_id: str):
     try:
         rows = await neo4j_client.run_query(
             """
-            MATCH (d:Decision {id: $decision_id})
+            MATCH (d:Decision {decision_id: $decision_id})
             OPTIONAL MATCH (d)-[:DECIDED_ON]->(a:Alert)
             OPTIONAL MATCH (a)-[:INVOLVES]->(u:User)
             OPTIONAL MATCH (a)-[:DETECTED_ON]->(asset:Asset)
@@ -1129,7 +1134,7 @@ async def explain_decision(decision_id: str):
     try:
         ti_rows = await neo4j_client.run_query(
             """
-            MATCH (d:Decision {id: $decision_id})-[:DECIDED_ON]->(a:Alert)
+            MATCH (d:Decision {decision_id: $decision_id})-[:DECIDED_ON]->(a:Alert)
             -[:HAS_INDICATOR]->(ti:ThreatIndicator)
             RETURN ti.source AS source LIMIT 1
             """,

@@ -12,6 +12,7 @@ Reference: docs/soc_copilot_design_v1.md §14 (GAE pipeline).
 """
 
 import asyncio
+import json
 import random
 import time
 import uuid
@@ -225,7 +226,9 @@ class SimulationOrchestrator:
         self.experiment_log = []
 
         computers = SOCDomainConfig.get_factor_computers()
-        actions   = SOCDomainConfig.get_actions()
+        actions   = SOCDomainConfig.get_actions()       # A=5 for W-matrix scoring
+        from app.domains.soc.config import SCORER_ACTIONS
+        scorer_actions = list(SCORER_ACTIONS)            # A=4 for learning updates
         tau       = SOCDomainConfig.get_temperature()
 
         correct_total = 0
@@ -304,9 +307,9 @@ class SimulationOrchestrator:
             decision_id = str(uuid.uuid4())
             await neo4j_client.run_query(
                 """
-                MATCH (a:Alert {id: $alert_id})
+                MATCH (a:Alert {alert_id: $alert_id})
                 CREATE (d:Decision {
-                    id:              $decision_id,
+                    decision_id:     $decision_id,
                     action:          $action,
                     confidence:      $confidence,
                     factor_vector:   $fv,
@@ -354,7 +357,7 @@ class SimulationOrchestrator:
             # ------------------------------------------------------------------
             gae_result = await neo4j_client.run_query(
                 """
-                MATCH (d:Decision {id: $decision_id})
+                MATCH (d:Decision {decision_id: $decision_id})
                 SET d.outcome           = $outcome_label,
                     d.correct           = $correct,
                     d.verified_at_epoch = $verified_at_epoch
@@ -373,8 +376,11 @@ class SimulationOrchestrator:
             # Read f from graph result; fall back to locally-computed vector
             # (fallback is only taken for synthetic alerts with no Decision node)
             if gae_result and gae_result[0].get("factor_vector") is not None:
+                _fv_raw = gae_result[0]["factor_vector"]
+                if isinstance(_fv_raw, str):
+                    _fv_raw = json.loads(_fv_raw)
                 f_for_update = np.array(
-                    gae_result[0]["factor_vector"], dtype=np.float64
+                    _fv_raw, dtype=np.float64
                 ).reshape(1, -1)
             else:
                 f_for_update = f_2d
@@ -382,36 +388,34 @@ class SimulationOrchestrator:
             # ------------------------------------------------------------------
             # Step 10: Weight update
             # (same as POST /api/alert/outcome → learning_state.update)
+            # Skip routing actions (refer_to_analyst) — ProfileScorer is A=4.
             # ------------------------------------------------------------------
-            action_index = (
-                actions.index(scoring.selected_action)
-                if scoring.selected_action in actions
-                else 0
-            )
-            learning_state = get_learning_state()
-            learning_state.update(
-                action_index           = action_index,
-                action_name            = scoring.selected_action,
-                outcome                = outcome_int,
-                f                      = f_for_update,
-                confidence_at_decision = scoring.confidence,
-            )
-            save_learning_state()
-
-            # CORR-2: ProfileScorer.update() — gated by LEARNING_ENABLED (default False).
-            # gt_action_index derived from ground_truth_action (always available in simulation).
-            if LEARNING_ENABLED:
-                from app.domains.soc.config import resolve_alert_category, SOCDomainConfig as _SDC_sim
-                _cat_name_sim = resolve_alert_category(category)
-                _cat_idx_sim  = _SDC_sim().get_category_index(_cat_name_sim)
-                _gt_idx_sim   = actions.index(ground_truth_action) if ground_truth_action in actions else action_index
-                get_profile_scorer().update(
-                    f=f_for_update.flatten(),
-                    category_index=_cat_idx_sim,
-                    action_index=action_index,
-                    correct=correct,
-                    gt_action_index=_gt_idx_sim,
+            if scoring.selected_action in scorer_actions:
+                action_index = scorer_actions.index(scoring.selected_action)
+                learning_state = get_learning_state()
+                learning_state.update(
+                    action_index           = action_index,
+                    action_name            = scoring.selected_action,
+                    outcome                = outcome_int,
+                    f                      = f_for_update,
+                    confidence_at_decision = scoring.confidence,
                 )
+                save_learning_state()
+
+                # CORR-2: ProfileScorer.update() — gated by LEARNING_ENABLED (default False).
+                # gt_action_index derived from ground_truth_action (always available in simulation).
+                if LEARNING_ENABLED and ground_truth_action in scorer_actions:
+                    from app.domains.soc.config import resolve_alert_category, SOCDomainConfig as _SDC_sim
+                    _cat_name_sim = resolve_alert_category(category)
+                    _cat_idx_sim  = _SDC_sim().get_category_index(_cat_name_sim)
+                    _gt_idx_sim   = scorer_actions.index(ground_truth_action)
+                    get_profile_scorer().update(
+                        f=f_for_update.flatten(),
+                        category_index=_cat_idx_sim,
+                        action_index=action_index,
+                        correct=correct,
+                        gt_action_index=_gt_idx_sim,
+                    )
 
             # ------------------------------------------------------------------
             # Step 11: Emit OutcomeVerified + GraphMutated

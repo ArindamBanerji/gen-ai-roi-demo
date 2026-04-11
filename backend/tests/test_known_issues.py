@@ -138,6 +138,54 @@ on April 1, 2026.
 # Priority: P1 — IKS stability under continued learning is a core product claim.
 # Found: Phase B E2E run, April 5 2026.
 
+# BACKLOG-031: Investigate and fix 5 conditionally-skipped tests in SOC backend
+# Priority: P2 — must resolve before VPS deployment (Block 8.2)
+# Status: PARKED — awaiting answers from roadmap session
+# Discovered: April 10, 2026
+# Current state: 566 passed, 5 skipped (pre-existing, not regressions)
+#
+# The 5 skipped tests:
+#   1. tests/test_analyst_benchmarking_f9.py::test_analyst_benchmarking_per_category_f9_fields
+#   2. tests/test_analyst_benchmarking_f9.py::test_f9_report_total_matches_benchmarking
+#   3. tests/test_analyst_benchmarking_f9.py::test_analyst_benchmarking_override_precision_valid
+#   4. tests/test_campaign_frontend.py::test_campaign_detail_returns_attack_progression
+#   5. tests/test_iks_stability.py::test_iks_above_70_after_alerts_reset
+#
+# Root cause (environmental, not code bugs):
+#   Tests 1-3: Require ShadowDecision nodes in AGE. Two candidate data files exist:
+#     experiments/v_shadow_synthetic/v_shadow_synthetic_results.json
+#     experiments/v_shadow_synthetic_v3/v_shadow_synthetic_results.json
+#   Unknown: whether these are experiment results or loadable node data,
+#   whether a loader script exists, and whether 1,500 ShadowDecision nodes
+#   from the Aura migration are sufficient or correctly structured.
+#
+#   Test 4: Requires campaign nodes with attack progression relationships.
+#   Unknown: whether these were in Aura, whether they migrated correctly
+#   to AGE, and whether this test was always intended to be conditional.
+#
+#   Test 5: Requires IKS > 70, which requires a bootstrapped ProfileScorer
+#   with sufficient verified decisions. Unknown: whether this is achievable
+#   in a fresh AGE environment without a fixture, or whether it only passed
+#   in Aura due to accumulated real decisions.
+#
+# Questions outstanding (to be answered by roadmap session):
+#   1.  v_shadow_synthetic_results.json vs v3 — results only or loadable data?
+#   2.  Is v3 a superset of v1?
+#   3.  Was there a loader/seed script for ShadowDecision nodes in Aura?
+#   4.  What does _shadow_data_loaded() check exactly?
+#   5.  Minimum dataset for tests 1-3 to pass?
+#   6.  Was test 4 always intended to be conditional?
+#   7.  What node labels and relationships does test 4 require?
+#   8.  Were campaign+attack_progression nodes in Aura and migrated to AGE?
+#   9.  What drives IKS above 70 — decision count, verified ratio, other?
+#   10. Is there a fixture/seed script for IKS bootstrap?
+#   11. Did test 5 only pass in Aura due to accumulated real decisions?
+#   12. Is there a single full-data seed script for Aura, and does an
+#       AGE equivalent exist or need to be created?
+#
+# Unblocks: Full 571/571 test run (currently 566/571 passing)
+# Must resolve before: VPS deployment (Block 8.2)
+
 def test_backlog_documented():
     """Placeholder — confirms backlog file is present and parseable."""
     issues = [
@@ -146,5 +194,6 @@ def test_backlog_documented():
         "BACKLOG-008", "BACKLOG-009", "BACKLOG-010", "BACKLOG-011",
         "BACKLOG-012", "BACKLOG-013",
         "BACKLOG-017", "BACKLOG-018", "BACKLOG-019", "BACKLOG-020",
+        "BACKLOG-031",
     ]
-    assert len(issues) == 17
+    assert len(issues) == 18

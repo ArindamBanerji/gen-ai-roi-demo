@@ -16,6 +16,7 @@ After enrichment:
   d. MERGE :ASSOCIATED_WITH relationships to relevant :Alert nodes.
 """
 import asyncio
+import json
 import logging
 import os
 import time
@@ -325,7 +326,7 @@ class PulsediveConnector(UCLConnector):
                     "type":         ioc.get("type", "unknown"),
                     "severity":     ioc.get("severity", "medium"),
                     "source":       ioc.get("source", source),
-                    "risk_factors": ioc.get("risk_factors", []),
+                    "risk_factors": json.dumps(ioc.get("risk_factors", []), sort_keys=True),
                     "first_seen":   ioc.get("first_seen", ""),
                     "last_updated": ioc.get("last_updated", ""),
                     "context":      ioc.get("context", ""),
@@ -333,7 +334,7 @@ class PulsediveConnector(UCLConnector):
                 })
                 indicators_ingested += 1
             except Exception as exc:
-                print(f"[PULSEDIVE] Failed to write {ioc['value']} to Neo4j: {exc}")
+                print(f"[PULSEDIVE] Failed to write {ioc['value']} to AGE: {exc}")
 
         # ---------------------------------------------------------------
         # Step 3 — MERGE :ASSOCIATED_WITH relationships to :Alert nodes
@@ -341,7 +342,7 @@ class PulsediveConnector(UCLConnector):
         relationships_created = 0
         assoc_query = """
         MATCH (ti:ThreatIntel {value: $ioc_value})
-        MATCH (alert:Alert {id: $alert_id})
+        MATCH (alert:Alert {alert_id: $alert_id})
         MERGE (ti)-[r:ASSOCIATED_WITH]->(alert)
         SET r.linked_at = $now_epoch
         RETURN ti.value AS ioc, alert.id AS alert_id

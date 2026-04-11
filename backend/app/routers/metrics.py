@@ -231,10 +231,10 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
                     "make decisions to populate"
                 )
         except Exception as exc:
-            print(f"[COMPOUNDING] weekly-trend Neo4j query failed: {exc}")
+            print(f"[COMPOUNDING] weekly-trend AGE query failed: {exc}")
             response["weekly_trend"] = []
             weekly_trend_estimated = True
-            weekly_trend_note = "Weekly trends unavailable — Neo4j unreachable"
+            weekly_trend_note = "Weekly trends unavailable — AGE unreachable"
 
         response["weekly_trend_estimated"] = weekly_trend_estimated
         response["weekly_trend_note"] = weekly_trend_note
@@ -267,7 +267,7 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
             else:
                 response["evolution_events"] = []
         except Exception as exc:
-            print(f"[COMPOUNDING] evolution_events Neo4j query failed: {exc}")
+            print(f"[COMPOUNDING] evolution_events AGE query failed: {exc}")
             # fall back to projected mock events so the panel isn't completely broken
             response["evolution_events"] = projected.model_dump()["evolution_events"]
 
@@ -290,12 +290,12 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
 @router.post("/demo/seed")
 async def seed_neo4j():
     """
-    Seed Neo4j database with canonical test data.
+    Seed AGE database with canonical test data.
     Clears existing data and creates all nodes and relationships from scratch.
     """
     from app.services.seed_neo4j import seed_neo4j_database, verify_neo4j_seed
 
-    print("[DEMO] Seeding Neo4j database...")
+    print("[DEMO] Seeding AGE database...")
 
     try:
         # Seed the database
@@ -487,7 +487,7 @@ async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
     evolution event record so the Tab 4 panel shows real decision history.
     Returns estimated=False with a note when no decisions exist yet.
     """
-    print(f"[EVOLUTION EVENTS] Fetching {limit} recent Decision nodes from Neo4j")
+    print(f"[EVOLUTION EVENTS] Fetching {limit} recent Decision nodes from AGE")
     try:
         results = await neo4j_client.run_query(
             "MATCH (d:Decision) "
@@ -569,7 +569,7 @@ async def get_weekly_trends():
         return {"data": data, "estimated": False, "note": None}
 
     except Exception as e:
-        print(f"[METRICS] weekly-trends Neo4j query failed: {e}")
+        print(f"[METRICS] weekly-trends AGE query failed: {e}")
         return {
             "data": [],
             "estimated": True,
@@ -620,7 +620,7 @@ async def get_decision_economics():
         }
 
     except Exception as e:
-        print(f"[METRICS] decision-economics Neo4j query failed: {e}")
+        print(f"[METRICS] decision-economics AGE query failed: {e}")
         return {
             "decisions_made": 0,
             "correct_rate": 0.0,
@@ -807,7 +807,7 @@ async def get_board_export():
         if fp_res and fp_res[0]["total"] > 0:
             fp_count_val = int(fp_res[0]["fp_count"] or 0)
     except Exception as exc:
-        print(f"[METRICS] board-export Neo4j query failed: {exc}")
+        print(f"[METRICS] board-export AGE query failed: {exc}")
 
     correct_rate = correct / total if total > 0 else 0.0
     fp_rate_pct = round(fp_count_val / total * 100, 1) if total > 0 else None

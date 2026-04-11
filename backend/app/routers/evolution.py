@@ -190,9 +190,9 @@ async def process_alert(request: ProcessAlertRequest):
 
         await neo4j_client.run_query(
             """
-            MATCH (a:Alert {id: $alert_id})
+            MATCH (a:Alert {alert_id: $alert_id})
             CREATE (d:Decision {
-                id:              $decision_id,
+                decision_id:     $decision_id,
                 action:          $action,
                 confidence:      $confidence,
                 factor_vector:   $fv,

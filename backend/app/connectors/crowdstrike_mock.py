@@ -122,7 +122,7 @@ class CrowdStrikeMockConnector(UCLConnector):
                     f"device_id={device['device_id']} hostname={device['hostname']}"
                 )
             except Exception as exc:
-                print(f"[CROWDSTRIKE] Failed to write {device['device_id']} to Neo4j: {exc}")
+                print(f"[CROWDSTRIKE] Failed to write {device['device_id']} to AGE: {exc}")
 
         # -------------------------------------------------------------------
         # Step 2 — MERGE (Asset)-[:EDR_MANAGED_BY]->(CrowdStrikeEnrichment)

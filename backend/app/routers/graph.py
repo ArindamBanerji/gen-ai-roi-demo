@@ -143,7 +143,7 @@ ORDER BY ti.value
 # C4b — alert-keyed enrichment: traverse (ThreatIntel)-[:ASSOCIATED_WITH]->(Alert)
 # OPTIONAL MATCH means: if no ThreatIntel is linked the query returns one row of NULLs
 _ENRICHMENT_QUERY_BY_ALERT = """
-MATCH (alert:Alert {id: $alert_id})
+MATCH (alert:Alert {alert_id: $alert_id})
 OPTIONAL MATCH (ti:ThreatIntel)-[:ASSOCIATED_WITH]->(alert)
 OPTIONAL MATCH (ti)-[:ENRICHED_BY]->(gn:GreyNoiseEnrichment)
 OPTIONAL MATCH (alert)-[:DETECTED_ON]->(asset:Asset)-[:EDR_MANAGED_BY]->(cs:CrowdStrikeEnrichment)

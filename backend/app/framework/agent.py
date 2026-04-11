@@ -361,7 +361,7 @@ class SOCAgent:
                     "pattern_id": decision.pattern_id,
                     "before": {"fp_rate": old_fp_rate, "confidence": 0.91},
                     "after": {"fp_rate": new_fp_rate, "confidence": 0.94},
-                    "description": f"Pattern {decision.pattern_id} confidence increased: 91% → 94% (+3 pts)",
+                    "description": f"Pattern {decision.pattern_id} confidence increased: 91% -> 94% (+3 pts)",
                     "impact": "medium",
                     "magnitude": 0.03,
                 }

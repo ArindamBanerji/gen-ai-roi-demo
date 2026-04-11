@@ -50,28 +50,43 @@ class ThreatIndicatorService:
         Returns the node ID (UUID).  Returns "" if the write fails.
         """
         try:
+            params = {
+                "ioc_value":  ioc_value,
+                "ioc_type":   ioc_type,
+                "source":     source,
+                "severity":   severity,
+                "name":       name,
+                "now_epoch":  int(datetime.utcnow().timestamp() * 1000),
+            }
+            # Step A — try MATCH (update existing node)
             result = await neo4j_service.run_query(
                 """
-                MERGE (ti:ThreatIndicator {ioc_value: $ioc_value, ioc_type: $ioc_type})
-                ON CREATE SET ti.id              = randomUUID(),
-                              ti.name            = $name,
-                              ti.source          = $source,
-                              ti.severity        = $severity,
-                              ti.created_at_epoch = $now_epoch,
-                              ti.last_seen_epoch  = $now_epoch
-                ON MATCH SET  ti.last_seen_epoch  = $now_epoch,
-                              ti.source           = $source,
-                              ti.severity         = $severity
+                MATCH (ti:ThreatIndicator {ioc_value: $ioc_value, ioc_type: $ioc_type})
+                SET ti.last_seen_epoch = $now_epoch,
+                    ti.source          = $source,
+                    ti.severity        = $severity
                 RETURN ti.id AS id
                 """,
-                {
-                    "ioc_value":  ioc_value,
-                    "ioc_type":   ioc_type,
-                    "source":     source,
-                    "severity":   severity,
-                    "name":       name,
-                    "now_epoch":  int(datetime.utcnow().timestamp() * 1000),
-                },
+                params,
+            )
+            if result:
+                return result[0]["id"]
+            # Step B — CREATE (node does not exist yet)
+            result = await neo4j_service.run_query(
+                """
+                CREATE (ti:ThreatIndicator {
+                    id: randomUUID(),
+                    ioc_value: $ioc_value,
+                    ioc_type: $ioc_type,
+                    name: $name,
+                    source: $source,
+                    severity: $severity,
+                    created_at_epoch: $now_epoch,
+                    last_seen_epoch: $now_epoch
+                })
+                RETURN ti.id AS id
+                """,
+                params,
             )
             return result[0]["id"] if result else ""
         except Exception as exc:
@@ -92,7 +107,7 @@ class ThreatIndicatorService:
             await neo4j_service.run_query(
                 """
                 MATCH (ti:ThreatIndicator {ioc_value: $ioc_value, ioc_type: $ioc_type})
-                MATCH (a:Alert {id: $alert_id})
+                MATCH (a:Alert {alert_id: $alert_id})
                 MERGE (ti)-[:ASSOCIATED_WITH]->(a)
                 """,
                 {"ioc_value": ioc_value, "ioc_type": ioc_type, "alert_id": alert_id},
@@ -109,7 +124,7 @@ class ThreatIndicatorService:
         try:
             result = await neo4j_service.run_query(
                 """
-                MATCH (ti:ThreatIndicator)-[:ASSOCIATED_WITH]->(a:Alert {id: $id})
+                MATCH (ti:ThreatIndicator)-[:ASSOCIATED_WITH]->(a:Alert {alert_id: $id})
                 RETURN ti.id        AS id,
                        ti.name      AS name,
                        ti.ioc_type  AS ioc_type,

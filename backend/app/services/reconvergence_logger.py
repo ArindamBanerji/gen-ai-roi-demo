@@ -123,7 +123,7 @@ _READ_CATEGORY_DIST_QUERY = """
 MATCH (d:Decision)
 WHERE d.category IS NOT NULL
 RETURN d.category AS category, count(d) AS cnt
-ORDER BY d.timestamp_epoch DESC
+ORDER BY cnt DESC
 LIMIT 100
 """
 

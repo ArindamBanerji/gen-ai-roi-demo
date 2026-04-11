@@ -164,7 +164,7 @@ async def startup_event():
             _ls.decision_count = _historical_count
             print(f"[STARTUP] Synced decision_count from graph: {_historical_count}")
         else:
-            print(f"[STARTUP] decision_count already current ({_ls.decision_count}), skipping Neo4j sync")
+            print(f"[STARTUP] decision_count already current ({_ls.decision_count}), skipping AGE sync")
     except Exception as _sync_exc:
         print(f"[STARTUP] decision_count sync failed (non-blocking): {_sync_exc}")
 
@@ -292,4 +292,4 @@ async def shutdown_event():
     from app.db.neo4j import neo4j_client
     if hasattr(neo4j_client, "close"):
         await neo4j_client.close()
-        print("[OK] Disconnected from Neo4j")
+        print("[OK] Disconnected from AGE")

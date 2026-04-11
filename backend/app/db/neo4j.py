@@ -84,7 +84,7 @@ class Neo4jClient:
         This is the "47 nodes consulted" query.
         """
         query = """
-        MATCH (alert:Alert {id: $alert_id})
+        MATCH (alert:Alert {alert_id: $alert_id})
         MATCH (alert)-[:DETECTED_ON]->(asset:Asset)
         MATCH (alert)-[:INVOLVES]->(user:User)
         OPTIONAL MATCH (alert)-[:CLASSIFIED_AS]->(alertType:AlertType)
@@ -188,10 +188,10 @@ class Neo4jClient:
         # FOREACH is not supported in Apache AGE — the relationship is created
         # in a follow-up query only when playbook_id is provided.
         query = """
-        MATCH (alert:Alert {id: $alert_id})
+        MATCH (alert:Alert {alert_id: $alert_id})
 
         CREATE (decision:Decision {
-            id: $decision_id,
+            decision_id: $decision_id,
             type: $action,
             reasoning: $reasoning,
             confidence: $confidence,
@@ -232,7 +232,7 @@ class Neo4jClient:
         if playbook_id:
             await self.run_query(
                 """
-                MATCH (d:Decision {id: $decision_id})
+                MATCH (d:Decision {decision_id: $decision_id})
                 MATCH (p:Playbook {id: $playbook_id})
                 CREATE (d)-[:APPLIED_PLAYBOOK]->(p)
                 """,
@@ -261,7 +261,7 @@ class Neo4jClient:
         This creates the TRIGGERED_EVOLUTION relationship - THE KEY DIFFERENTIATOR.
         """
         query = """
-        MATCH (decision:Decision {id: $triggered_by})
+        MATCH (decision:Decision {decision_id: $triggered_by})
 
         CREATE (event:EvolutionEvent {
             id: $event_id,
@@ -414,7 +414,7 @@ class Neo4jClient:
 
     async def get_alert(self, alert_id: str) -> Optional[Dict[str, Any]]:
         """Get alert by ID"""
-        query = "MATCH (alert:Alert {id: $alert_id}) RETURN alert"
+        query = "MATCH (alert:Alert {alert_id: $alert_id}) RETURN alert"
         result = await self.run_query(query, {"alert_id": alert_id})
         return result[0]["alert"] if result else None
 
@@ -484,20 +484,27 @@ class Neo4jClient:
 # Neo4jClient class is always defined above (needed for interface-parity tests
 # and the Neo4j path).  The neo4j driver package is NEVER imported at module
 # level — it is lazy-imported inside Neo4jClient.connect() only when needed.
+import logging as _logging
+
 if _GRAPH_BACKEND == "age":
     try:
         from ci_platform.graph import get_graph_client as _age_factory
+        import ci_platform.graph.age_client as _age_mod
+        _age_mod._client = None
         neo4j_client = _age_factory()  # type: ignore[assignment]
-        logger.info(
-            "[OK] Graph backend: AGE/PostgreSQL — %s",
-            os.getenv("DATABASE_URL", "not set").split("@")[-1],
+        print(
+            f"[BACKEND] GRAPH_BACKEND=age — "
+            f"Client={type(neo4j_client).__name__} "
+            f"DSN={str(neo4j_client._dsn)[:40]}... "
+            f"Graph={neo4j_client._graph}"
         )
-    except ImportError as _e:
-        raise ImportError(
-            "GRAPH_BACKEND=age requires ci-platform[graph] installed. "
-            "Run: pip install 'ci-platform[graph]'\n"
-            f"Original error: {_e}"
+    except Exception as _exc:
+        print(
+            f"[BACKEND] GRAPH_BACKEND=age but AGEClient FAILED: {_exc}"
         )
+        raise SystemExit(
+            f"FATAL: GRAPH_BACKEND=age but AGEClient init failed: {_exc}"
+        ) from _exc
 else:
     neo4j_client = Neo4jClient()
 # ─────────────────────────────────────────────────────────────────────────────

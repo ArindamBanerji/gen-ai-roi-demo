@@ -8,7 +8,6 @@
 import { useState, useEffect } from 'react'
 import { FileText, Download, TrendingUp, Search, Brain, Activity } from 'lucide-react'
 
-const API = 'http://localhost:8000'
 
 interface Shift {
   label: string
@@ -76,7 +75,7 @@ export default function ExecutiveNarrativeTab() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch(`${API}/api/soc/executive-narrative`)
+    fetch('/api/soc/executive-narrative')
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()
@@ -118,7 +117,7 @@ export default function ExecutiveNarrativeTab() {
         </div>
         {data.pdf_available && (
           <a
-            href={`${API}/api/soc/executive-narrative/pdf`}
+            href="/api/soc/executive-narrative/pdf"
             download="executive_narrative.pdf"
             className="flex items-center gap-2 px-4 py-2 bg-soc-primary/10 text-soc-primary border border-soc-primary/30 rounded-lg text-sm hover:bg-soc-primary/20 transition-colors shrink-0"
           >

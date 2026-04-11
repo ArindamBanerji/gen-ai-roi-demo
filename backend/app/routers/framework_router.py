@@ -390,7 +390,7 @@ async def get_flywheel_comparison(alert_id: str = "ALERT-001", category: str = "
         )
 
     except Exception as exc:
-        print(f"[flywheel-comparison] Neo4j error: {exc}")
+        print(f"[flywheel-comparison] AGE error: {exc}")
         return {"suppressed": True, "reason": "data_unavailable"}
 
 
