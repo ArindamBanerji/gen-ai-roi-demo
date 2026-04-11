@@ -68,3 +68,8 @@ backend/ingest_shadow_decisions.py
 frontend/test-results/
 
 frontend/tests/e2e/screenshots/
+backend/check_age.py
+backend/check_env.py
+backend/test_results_final.txt
+backend/test_results_soc.txt
+frontend/e2e_results.txt

@@ -35,8 +35,12 @@ const CampaignIntelligencePanel: React.FC = () => {
     LOW: '#2563eb',
   }
 
-  const formatChain = (cats: string[]) =>
-    cats.map(c => c.replace(/_/g, ' ')).join(' → ')
+  const formatChain = (cats: string[] | string) => {
+    const parsed = typeof cats === 'string'
+      ? (() => { try { return JSON.parse(cats) } catch { return [] } })()
+      : Array.isArray(cats) ? cats : []
+    return parsed.map((c: string) => c.replace(/_/g, ' ')).join(' \u2192 ')
+  }
 
   if (loading) return <div className="text-gray-500 text-xs px-4 py-2">Loading campaigns...</div>
 
@@ -73,13 +77,13 @@ const CampaignIntelligencePanel: React.FC = () => {
                 </span>
               </div>
 
-              {c.category_sequence.length > 0 && (
+              {Array.isArray(c.category_sequence) && c.category_sequence.length > 0 && (
                 <div className="text-xs text-indigo-300 font-mono mb-1">
                   {formatChain(c.category_sequence)}
                 </div>
               )}
 
-              {c.shared_entities.length > 0 && (
+              {Array.isArray(c.shared_entities) && c.shared_entities.length > 0 && (
                 <div className="text-xs text-gray-500">
                   shared: <span className="text-gray-400">{c.shared_entities[0]}</span>
                 </div>

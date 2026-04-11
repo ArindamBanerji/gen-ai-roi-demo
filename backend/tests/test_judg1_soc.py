@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # SOC_FACTORS is defined in judgment.py (not in config.py)
 from app.routers.judgment import build_judgment_response, SOC_FACTORS, SOC_ACTIONS
+from app.domains.soc.config import SCORER_ACTIONS  # A=4; excludes refer_to_analyst
 
 
 # ============================================================================
@@ -58,7 +59,7 @@ def test_judgment_response_shape():
 
     scorer = ProfileScorer(
         mu=np.array(SOC_PROFILE_CENTROIDS),
-        actions=SOC_ACTIONS,
+        actions=SCORER_ACTIONS,
     )
     factors = {
         "travel_match": 0.9, "asset_criticality": 0.8,
@@ -93,7 +94,7 @@ def test_judgment_action_is_valid_soc_action():
 
     scorer = ProfileScorer(
         mu=np.array(SOC_PROFILE_CENTROIDS),
-        actions=SOC_ACTIONS,
+        actions=SCORER_ACTIONS,
     )
     factors = {f: 0.5 for f in SOC_FACTORS}
     response = build_judgment_response(
@@ -116,7 +117,7 @@ def test_judgment_confidence_in_range():
 
     scorer = ProfileScorer(
         mu=np.array(SOC_PROFILE_CENTROIDS),
-        actions=SOC_ACTIONS,
+        actions=SCORER_ACTIONS,
     )
     factors = {f: 0.5 for f in SOC_FACTORS}
     response = build_judgment_response(
@@ -139,7 +140,7 @@ def test_judgment_dominant_factors_are_soc_factors():
 
     scorer = ProfileScorer(
         mu=np.array(SOC_PROFILE_CENTROIDS),
-        actions=SOC_ACTIONS,
+        actions=SCORER_ACTIONS,
     )
     factors = {f: 0.5 for f in SOC_FACTORS}
     response = build_judgment_response(
@@ -163,7 +164,7 @@ def test_judgment_rationale_mentions_action():
 
     scorer = ProfileScorer(
         mu=np.array(SOC_PROFILE_CENTROIDS),
-        actions=SOC_ACTIONS,
+        actions=SCORER_ACTIONS,
     )
     factors = {f: 0.5 for f in SOC_FACTORS}
     response = build_judgment_response(
@@ -187,13 +188,13 @@ def test_judgment_all_action_scores_present():
 
     scorer = ProfileScorer(
         mu=np.array(SOC_PROFILE_CENTROIDS),
-        actions=SOC_ACTIONS,
+        actions=SCORER_ACTIONS,
     )
     factors = {f: 0.5 for f in SOC_FACTORS}
     response = build_judgment_response(
         category="cloud_infrastructure", factors=factors, scorer=scorer
     )
-    for action in SOC_ACTIONS:
+    for action in SCORER_ACTIONS:
         assert action in response["action_scores"], (
             f"action {action!r} missing from action_scores. "
             f"Present: {list(response['action_scores'].keys())}"

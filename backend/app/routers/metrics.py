@@ -243,7 +243,7 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
         try:
             evo_rows = await neo4j_client.run_query(
                 "MATCH (d:Decision) "
-                "RETURN d.id AS id, d.type AS action, d.confidence AS confidence, "
+                "RETURN d.decision_id AS id, d.type AS action, d.confidence AS confidence, "
                 "d.timestamp AS ts, d.alert_id AS alert_id "
                 "ORDER BY d.timestamp DESC LIMIT 20"
             )
@@ -491,7 +491,7 @@ async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
     try:
         results = await neo4j_client.run_query(
             "MATCH (d:Decision) "
-            "RETURN d.id AS id, d.type AS action, d.confidence AS confidence, "
+            "RETURN d.decision_id AS id, d.type AS action, d.confidence AS confidence, "
             "d.timestamp AS ts, d.alert_id AS alert_id "
             "ORDER BY d.timestamp DESC LIMIT $limit",
             {"limit": limit},

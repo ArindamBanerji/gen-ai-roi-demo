@@ -185,6 +185,6 @@ def test_config_soc_actions_shape():
     """SOC_ACTIONS must be length 5 with refer_to_analyst at index 4."""
     assert len(SOC_ACTIONS) == 5, f"Expected 5 actions, got {len(SOC_ACTIONS)}"
     assert SOC_ACTIONS[4] == "refer_to_analyst"
-    # Tensor must be (6, 5, 6)
+    # Tensor must be (6, 4, 6) — SCORER_ACTIONS only, refer_to_analyst excluded
     tensor = np.array(SOC_PROFILE_CENTROIDS)
-    assert tensor.shape == (6, 5, 6), f"Expected (6,5,6), got {tensor.shape}"
+    assert tensor.shape == (6, 4, 6), f"Expected (6,4,6), got {tensor.shape}"

@@ -388,7 +388,11 @@ class SimulationOrchestrator:
             # ------------------------------------------------------------------
             # Step 10: Weight update
             # (same as POST /api/alert/outcome → learning_state.update)
-            # Skip routing actions (refer_to_analyst) — ProfileScorer is A=4.
+            # BACKLOG-042 guard (Part B): skip W_matrix update entirely when
+            # the predicted action is a routing action (refer_to_analyst).
+            # refer_to_analyst is not in SCORER_ACTIONS (A=4); updating W for
+            # a routing prediction propagates no useful gradient and can lock
+            # W into a refer_to_analyst attractor where no update ever fires.
             # ------------------------------------------------------------------
             if scoring.selected_action in scorer_actions:
                 action_index = scorer_actions.index(scoring.selected_action)

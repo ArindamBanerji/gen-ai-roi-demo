@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from pydantic import BaseModel
+import json
 import re
 
 from app.db.neo4j import neo4j_client
@@ -607,7 +608,7 @@ async def get_detection_engineering():
     overall_quality = None
     try:
         scorer = get_profile_scorer()
-        baseline = SOC_PROFILE_CENTROIDS  # shape (6, 4, 6)
+        baseline = SOC_PROFILE_CENTROIDS  # shape (6, 4, 6) — matches scorer.mu exactly
         current = scorer.mu               # shape (6, 4, 6)
 
         for i, cat in enumerate(SOC_CATEGORIES):
@@ -1622,13 +1623,28 @@ def _format_campaign(raw: dict) -> dict:
     c = raw.get("c", raw)  # handle both wrapped and unwrapped
     if hasattr(c, "data"):   # Neo4j Node object
         c = dict(c)
+    # AGE serializes list properties as JSON strings — parse defensively.
+    _cats = c.get("category_sequence", [])
+    if isinstance(_cats, str):
+        try:
+            _cats = json.loads(_cats)
+        except Exception:
+            _cats = []
+
+    _ents = c.get("shared_entities", [])
+    if isinstance(_ents, str):
+        try:
+            _ents = json.loads(_ents)
+        except Exception:
+            _ents = []
+
     return {
         "campaign_id": c.get("id", ""),
         "first_seen": str(c.get("first_seen", "")),
         "last_seen": str(c.get("last_seen", "")),
         "alert_count": c.get("alert_count", 0),
-        "category_sequence": c.get("category_sequence", []),
-        "shared_entities": c.get("shared_entities", []),
+        "category_sequence": _cats,
+        "shared_entities": _ents,
         "confidence": c.get("confidence", 0.0),
         "trigger_rule": c.get("trigger_rule", ""),
         "severity": c.get("severity", "LOW"),

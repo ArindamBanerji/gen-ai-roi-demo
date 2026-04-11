@@ -1405,8 +1405,8 @@ export default function CompoundingTab() {
           const emptyNote = evolutionEventsReal?.note ?? 'No decisions recorded yet — process alerts in Tab 3'
           return displayEvents.length > 0 ? (
             <div className="space-y-2">
-              {displayEvents.map(event => (
-                <div key={event.id} className="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-200 hover:bg-purple-100 transition-colors">
+              {displayEvents.map((event, idx) => (
+                <div key={event.id || `event-${idx}`} className="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-200 hover:bg-purple-100 transition-colors">
                   <div className="flex items-center gap-4 flex-1">
                     <div className="text-sm font-mono text-purple-700 font-semibold">{event.id}</div>
                     <div className="text-sm text-gray-600">{formatEventType(event.event_type)}</div>

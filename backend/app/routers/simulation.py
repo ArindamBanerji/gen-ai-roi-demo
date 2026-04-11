@@ -40,10 +40,17 @@ class StartSimulationRequest(BaseModel):
 
 async def _load_alert_pool():
     """
-    Return the canonical SIM-3a alert pool (20 alerts, 5 categories).
+    Return the simulation alert pool — scored actions only (BACKLOG-042).
 
     Imports get_alert_pool() from app.data.alert_pool — a deterministic,
     pre-defined pool whose graph entities are seeded by seed_simulation_alerts().
+
+    Referral alerts (ground_truth_action='refer_to_analyst') are excluded here:
+    they are routing decisions handled by the confidence gate in triage.py, not
+    scored actions.  Keeping them in the simulation pool causes a W_matrix
+    refer_to_analyst attractor: the scorer picks refer_to_analyst, the guard at
+    simulation.py:393 skips the W_matrix update, and W freezes permanently.
+    Pool size: 27 total → 24 after excluding the 3 referral alerts.
 
     Falls back to the minimal _FALLBACK_POOL if the import fails (e.g. during
     unit tests that run without the full package installed).
@@ -51,8 +58,14 @@ async def _load_alert_pool():
     try:
         from app.data.alert_pool import get_alert_pool
         pool = get_alert_pool()
-        print(f"[SIM] Alert pool loaded from alert_pool module: {len(pool)} alerts")
-        return pool
+        # Exclude refer_to_analyst routing alerts — simulation scores only
+        # escalate / investigate / suppress / monitor (SCORER_ACTIONS, A=4).
+        sim_pool = [a for a in pool if a.get("ground_truth_action") != "refer_to_analyst"]
+        print(
+            f"[SIM] Alert pool loaded: {len(pool)} total, "
+            f"{len(sim_pool)} for simulation (refer_to_analyst excluded)"
+        )
+        return sim_pool
     except Exception as exc:
         print(f"[SIM] Could not load alert pool from module ({exc}); using fallback")
 

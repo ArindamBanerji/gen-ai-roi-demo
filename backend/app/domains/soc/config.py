@@ -101,6 +101,9 @@ SOC_BOOTSTRAP_SEED = 42
 SOC_PROFILE_CENTROIDS = np.array([
 
   # ── Category 0: credential_access ──────────────────────────────
+  # Axis-1: [escalate, investigate, suppress, monitor] — SCORER_ACTIONS only.
+  # refer_to_analyst is a routing action handled by the confidence gate in
+  # triage.py; it has no centroid geometry and is excluded from this tensor.
   [
     # escalate: travel anomaly + high asset + high threat_intel + low device_trust
     [0.72, 0.85, 0.80, 0.60, 0.65, 0.15],
@@ -110,9 +113,6 @@ SOC_PROFILE_CENTROIDS = np.array([
     [0.20, 0.25, 0.15, 0.20, 0.25, 0.85],
     # monitor: moderate asset, low threat, normal pattern
     [0.30, 0.45, 0.25, 0.35, 0.35, 0.65],
-    # refer_to_analyst: moderate travel, moderate asset, weak TI, moderate pattern/time,
-    # somewhat trusted device. "Might be VPN login ambiguity — quick analyst glance."
-    [0.35, 0.52, 0.35, 0.43, 0.42, 0.55],
   ],
 
   # ── Category 1: threat_intel_match ─────────────────────────────
@@ -125,10 +125,6 @@ SOC_PROFILE_CENTROIDS = np.array([
     [0.20, 0.20, 0.20, 0.15, 0.20, 0.90],
     # monitor: low-confidence intel match
     [0.25, 0.40, 0.45, 0.30, 0.35, 0.70],
-    # refer_to_analyst: TI signal present but not strong, weak corroboration,
-    # moderate device trust. "IOC correlation exists but context is mixed — analyst validates."
-    # NOTE: Activation policy overrides if threat_intel_enrichment > 0.50.
-    [0.27, 0.47, 0.53, 0.38, 0.42, 0.58],
   ],
 
   # ── Category 2: lateral_movement ───────────────────────────────
@@ -141,9 +137,6 @@ SOC_PROFILE_CENTROIDS = np.array([
     [0.85, 0.25, 0.15, 0.20, 0.25, 0.80],
     # monitor: single hop, low asset, normal hours
     [0.40, 0.40, 0.30, 0.40, 0.35, 0.65],
-    # refer_to_analyst: moderate internal traversal, moderate pattern, weak TI,
-    # somewhat trusted. "Some east-west movement but no strong indicators — check it."
-    [0.43, 0.48, 0.38, 0.50, 0.43, 0.55],
   ],
 
   # ── Category 3: data_exfiltration ──────────────────────────────
@@ -156,10 +149,6 @@ SOC_PROFILE_CENTROIDS = np.array([
     [0.20, 0.30, 0.10, 0.15, 0.20, 0.90],
     # monitor: low-value asset, no threat intel
     [0.25, 0.40, 0.25, 0.30, 0.35, 0.70],
-    # refer_to_analyst: conservative placement — exfil is highest-consequence category.
-    # Moderate asset, low TI, moderate timing. Largest escalate distance (0.810).
-    # NOTE: Activation policy overrides if asset_criticality > 0.70 AND time_anomaly > 0.60.
-    [0.28, 0.55, 0.35, 0.40, 0.45, 0.55],
   ],
 
   # ── Category 4: insider_threat ─────────────────────────────────
@@ -172,10 +161,6 @@ SOC_PROFILE_CENTROIDS = np.array([
     [0.30, 0.25, 0.15, 0.20, 0.20, 0.85],
     # monitor: weak signals, normal hours
     [0.35, 0.40, 0.30, 0.45, 0.35, 0.65],
-    # refer_to_analyst: pattern moderately elevated (insider's defining factor),
-    # moderate time anomaly. "Behavioral deviation but not conclusive — human judgment."
-    # NOTE: Activation policy overrides if pattern_history > 0.70 AND time_anomaly > 0.70.
-    [0.38, 0.48, 0.38, 0.55, 0.45, 0.55],
   ],
 
   # ── Category 5: cloud_infrastructure ───────────────────────────
@@ -188,17 +173,15 @@ SOC_PROFILE_CENTROIDS = np.array([
     [0.20, 0.25, 0.10, 0.15, 0.20, 0.90],
     # monitor: low-risk cloud activity
     [0.25, 0.45, 0.30, 0.30, 0.35, 0.70],
-    # refer_to_analyst: cloud misconfig with moderate asset, moderate TI,
-    # trusted-ish device. "Posture finding on known service account — analyst sanity check."
-    [0.27, 0.53, 0.40, 0.38, 0.43, 0.58],
   ],
 
 ], dtype=np.float64)
+# Shape: (6 categories, 4 scorer actions, 6 factors) = (6, 4, 6).
+# Axis-1 order matches SCORER_ACTIONS: [escalate, investigate, suppress, monitor].
 
-# Phase 0b: scorer centroid tensor — drops refer_to_analyst row (axis-1 index 4).
-# Shape: (6 categories, 4 scorer actions, 6 factors).
-# SOC_PROFILE_CENTROIDS kept at (6, 5, 6) for provenance; scorer uses this slice.
-SCORER_PROFILE_CENTROIDS = SOC_PROFILE_CENTROIDS[:, :4, :]
+# SCORER_PROFILE_CENTROIDS is identical to SOC_PROFILE_CENTROIDS now that
+# refer_to_analyst has been removed. Kept for backward-compat with call sites.
+SCORER_PROFILE_CENTROIDS = SOC_PROFILE_CENTROIDS
 
 # Auto-approve thresholds (Finding II: monitor excluded permanently)
 # escalate:          100.0% accuracy in band — safe at 0.90

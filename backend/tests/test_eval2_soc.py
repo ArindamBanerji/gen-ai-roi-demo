@@ -70,13 +70,13 @@ def test_scenarios_load_correctly():
 def test_evaluation_report_shape():
     """run_evaluation returns report with expected fields."""
     from app.routers.evaluation import load_soc_scenarios, run_soc_evaluation
-    from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SOC_ACTIONS
+    from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SCORER_ACTIONS
     from gae import ProfileScorer
     import numpy as np
 
     scorer = ProfileScorer(
         mu=np.array(SOC_PROFILE_CENTROIDS),
-        actions=SOC_ACTIONS,
+        actions=SCORER_ACTIONS,
     )
     scenarios = load_soc_scenarios()
     report = run_soc_evaluation(scorer, scenarios)
@@ -99,13 +99,13 @@ def test_evaluation_report_shape():
 def test_evaluation_accuracy_above_floor():
     """Baseline centroids should score above random (>25% for 4 actions)."""
     from app.routers.evaluation import load_soc_scenarios, run_soc_evaluation
-    from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SOC_ACTIONS
+    from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SCORER_ACTIONS
     from gae import ProfileScorer
     import numpy as np
 
     scorer = ProfileScorer(
         mu=np.array(SOC_PROFILE_CENTROIDS),
-        actions=SOC_ACTIONS,
+        actions=SCORER_ACTIONS,
     )
     scenarios = load_soc_scenarios()
     report = run_soc_evaluation(scorer, scenarios)
@@ -123,13 +123,13 @@ def test_by_category_all_6_present():
     """EvaluationReport.by_category must contain all 6 SOC categories."""
     from app.domains.soc.config import SOC_CATEGORIES
     from app.routers.evaluation import load_soc_scenarios, run_soc_evaluation
-    from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SOC_ACTIONS
+    from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SCORER_ACTIONS
     from gae import ProfileScorer
     import numpy as np
 
     scorer = ProfileScorer(
         mu=np.array(SOC_PROFILE_CENTROIDS),
-        actions=SOC_ACTIONS,
+        actions=SCORER_ACTIONS,
     )
     scenarios = load_soc_scenarios()
     report = run_soc_evaluation(scorer, scenarios)
@@ -148,14 +148,14 @@ def test_by_category_all_6_present():
 def test_evaluation_does_not_modify_scorer():
     """learn=False — scorer mu must not change after evaluation."""
     from app.routers.evaluation import load_soc_scenarios, run_soc_evaluation
-    from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SOC_ACTIONS
+    from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SCORER_ACTIONS
     from gae import ProfileScorer
     import numpy as np
 
     mu_original = np.array(SOC_PROFILE_CENTROIDS).copy()
     scorer = ProfileScorer(
         mu=np.array(SOC_PROFILE_CENTROIDS),
-        actions=SOC_ACTIONS,
+        actions=SCORER_ACTIONS,
     )
     scenarios = load_soc_scenarios()
     run_soc_evaluation(scorer, scenarios)
@@ -173,13 +173,13 @@ def test_evaluation_does_not_modify_scorer():
 def test_summary_has_required_fields():
     """EvaluationReport dataclass must expose required summary fields."""
     from app.routers.evaluation import load_soc_scenarios, run_soc_evaluation
-    from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SOC_ACTIONS
+    from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SCORER_ACTIONS
     from gae import ProfileScorer, EvaluationReport
     import numpy as np
 
     scorer = ProfileScorer(
         mu=np.array(SOC_PROFILE_CENTROIDS),
-        actions=SOC_ACTIONS,
+        actions=SCORER_ACTIONS,
     )
     scenarios = load_soc_scenarios()
     report = run_soc_evaluation(scorer, scenarios)
