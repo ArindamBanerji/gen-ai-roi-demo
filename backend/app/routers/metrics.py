@@ -600,8 +600,7 @@ async def get_decision_economics():
         total = int(dec_res[0]["total_decisions"]) if dec_res else 0
 
         correct_res = await neo4j_client.run_query(
-            "MATCH (d:Decision) "
-            "WHERE d.outcome = 'correct' OR d.correct = true "
+            "MATCH (d:Decision) WHERE d.correct = true "
             "RETURN count(d) AS correct_decisions"
         )
         correct = int(correct_res[0]["correct_decisions"]) if correct_res else 0
@@ -794,7 +793,7 @@ async def get_board_export():
         total = int(dec_res[0]["total"]) if dec_res else 0
 
         correct_res = await neo4j_client.run_query(
-            "MATCH (d:Decision) WHERE d.outcome = 'correct' OR d.correct = true "
+            "MATCH (d:Decision) WHERE d.correct = true "
             "RETURN count(d) AS correct"
         )
         correct = int(correct_res[0]["correct"]) if correct_res else 0

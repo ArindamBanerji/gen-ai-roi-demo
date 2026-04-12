@@ -16,6 +16,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { getAlerts, analyzeAlert, executeAction, resetAlerts, checkPolicyConflict, refreshThreatIntel, getDecisionFactors, getAlertEnrichment } from '../../lib/api'
+import { ensureArray, ensureObject } from '../../lib/guards'
 import { domainConfig } from '../../lib/domain'
 import OutcomeFeedback from '../OutcomeFeedback'
 import PolicyConflict from '../PolicyConflict'
@@ -704,7 +705,7 @@ export default function AlertTriageTab() {
               {/* Expandable per-source detail panel */}
               {enrichmentExpanded && alertEnrichment && (
                 <div className="bg-soc-card/50 rounded-b-lg px-4 py-3 border border-t-0 border-gray-700 space-y-3 text-xs">
-                  {Object.entries(alertEnrichment.sources).map(([sourceName, data]) => (
+                  {Object.entries(ensureObject(alertEnrichment.sources)).map(([sourceName, data]) => (
                     <div key={sourceName}>
                       <div className="font-semibold text-gray-300 uppercase tracking-wide mb-1">
                         {sourceName === 'pulsedive'
@@ -795,7 +796,7 @@ export default function AlertTriageTab() {
                   </h3>
                   <div className="flex gap-3 text-xs text-gray-400">
                     <span>[{analysis.context.nodes_count} nodes]</span>
-                    <span>[{analysis.context.subgraphs_traversed.length} subgraphs]</span>
+                    <span>[{ensureArray<string>(analysis.context.subgraphs_traversed).length} subgraphs]</span>
                     <span>[{analysis.context.patterns_matched} patterns]</span>
                   </div>
                 </div>
@@ -805,7 +806,7 @@ export default function AlertTriageTab() {
               {/* Simple Graph Visualization */}
               <div className="p-6 bg-soc-bg/50">
                 <div className="flex flex-wrap items-center justify-center gap-4">
-                  {analysis.graph_data.nodes.map((node) => (
+                  {ensureArray<GraphNode>(analysis.graph_data.nodes).map((node) => (
                     <div
                       key={node.id}
                       className={`px-4 py-3 rounded-lg border-2 ${
@@ -842,7 +843,7 @@ export default function AlertTriageTab() {
                 {/* Key Facts */}
                 <div className="mt-4 space-y-2">
                   <h4 className="text-sm font-semibold text-gray-400">Key Facts:</h4>
-                  {analysis.context.key_facts.map((fact, idx) => (
+                  {ensureArray<{ source: string; fact: string }>(analysis.context.key_facts).map((fact, idx) => (
                     <div
                       key={idx}
                       className="text-sm bg-soc-card/50 rounded p-2 border border-gray-800"
@@ -920,7 +921,7 @@ export default function AlertTriageTab() {
                 <div>
                   <h4 className="text-sm font-semibold text-gray-400 mb-3">Factors Detected:</h4>
                   <div className="space-y-2">
-                    {analysis.situation_analysis.factors_detected.map((factor, idx) => (
+                    {ensureArray<string>(analysis.situation_analysis.factors_detected).map((factor, idx) => (
                       <div key={idx} className="flex items-start gap-2">
                         <CheckCircle className="w-4 h-4 text-soc-success mt-0.5 flex-shrink-0" />
                         <span className="text-sm text-gray-300">{factor}</span>
@@ -933,7 +934,7 @@ export default function AlertTriageTab() {
                 <div>
                   <h4 className="text-sm font-semibold text-gray-400 mb-3">Options Evaluated:</h4>
                   <div className="space-y-3">
-                    {analysis.situation_analysis.options_evaluated.map((option, idx) => {
+                    {ensureArray<{ action: string; score: number; factors: string[]; estimated_resolution_time: string; estimated_analyst_cost: number; risk_if_wrong: string }>(analysis.situation_analysis.options_evaluated).map((option, idx) => {
                       const isSelected = option.action === analysis.situation_analysis?.selected_option
                       const percentage = (option.score * 100).toFixed(0)
                       const widthPercentage = option.score * 100
@@ -1067,7 +1068,7 @@ export default function AlertTriageTab() {
 
               {!decisionFactorsCollapsed && decisionFactors && (
                 <div className="p-6 space-y-4">
-                  {decisionFactors.factors.map((factor) => {
+                  {ensureArray<DecisionFactor>(decisionFactors.factors).map((factor) => {
                     const barWidth = Math.round(factor.value * factor.weight * 100)
                     const isThreatIntel = factor.name === 'threat_intel_enrichment'
                     const isPulsedive = isThreatIntel && factor.explanation.includes('Pulsedive')
@@ -1310,7 +1311,7 @@ export default function AlertTriageTab() {
                     </div>
                     <div className="px-3 py-2 space-y-1.5">
                       <ul className="space-y-1">
-                        {analysis.referral.reasons.map((code) => (
+                        {ensureArray<string>(analysis.referral.reasons).map((code) => (
                           <li key={code} className="flex items-start gap-1.5 text-xs text-orange-100">
                             <span className="text-orange-400 font-mono shrink-0">{code}</span>
                             <span className="text-gray-400">—</span>

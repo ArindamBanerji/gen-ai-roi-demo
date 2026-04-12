@@ -332,6 +332,23 @@ class Neo4jClient:
         except (TypeError, ValueError, KeyError):
             return 0
 
+    async def count_correct_decisions(self) -> int:
+        """
+        Count Decision nodes marked as correct.
+
+        Matches the query used by /api/soc/analytics and
+        /api/metrics/decision-economics so the snapshot stays consistent.
+        Falls back gracefully to 0 on any error.
+        """
+        try:
+            results = await self.run_query(
+                "MATCH (d:Decision) WHERE d.correct = true "
+                "RETURN count(d) AS cnt"
+            )
+            return int(results[0]["cnt"]) if results else 0
+        except (TypeError, ValueError, KeyError):
+            return 0
+
     async def count_decisions_by_category(self) -> dict:
         """
         Returns {category: count} for all verified decisions.
@@ -498,6 +515,28 @@ if _GRAPH_BACKEND == "age":
             f"DSN={str(neo4j_client._dsn)[:40]}... "
             f"Graph={neo4j_client._graph}"
         )
+
+        # Shim: bind methods that live on Neo4jClient but are not yet on AGEClient.
+        # Added here rather than in ci_platform so we don't violate the
+        # "do not modify ci_platform" constraint.  Uses types.MethodType so
+        # `self` resolves correctly inside each method body.
+        import types as _types
+
+        if not hasattr(neo4j_client, "count_correct_decisions"):
+            async def _count_correct_decisions(self) -> int:
+                """Count Decision nodes with correct=true (matches bootstrap query)."""
+                try:
+                    results = await self.run_query(
+                        "MATCH (d:Decision) WHERE d.correct = true "
+                        "RETURN count(d) AS cnt"
+                    )
+                    return int(results[0]["cnt"]) if results else 0
+                except (TypeError, ValueError, KeyError):
+                    return 0
+            neo4j_client.count_correct_decisions = _types.MethodType(
+                _count_correct_decisions, neo4j_client
+            )
+
     except Exception as _exc:
         print(
             f"[BACKEND] GRAPH_BACKEND=age but AGEClient FAILED: {_exc}"

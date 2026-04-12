@@ -49,6 +49,12 @@ SOC_ACTIONS = ["escalate", "investigate", "suppress", "monitor", "refer_to_analy
 # Cross-experiment validation: A=4 static accuracy = 90.6% ± 0.6% (was 80.6% at A=5).
 SCORER_ACTIONS = ["escalate", "investigate", "suppress", "monitor"]
 
+# Single source of truth for the action-space split.
+# Use these names everywhere in simulation, scoring, and triage paths.
+SOC_SCORING_ACTIONS = SCORER_ACTIONS                               # A=4 scorer list
+SOC_ROUTING_ACTIONS = list(SCORER_ACTIONS) + ["refer_to_analyst"]  # A=5 full list
+SOC_N_ACT           = len(SCORER_ACTIONS)                          # 4
+
 # Controls whether ProfileScorer.update() is called after verified outcomes.
 # Default False (frozen scorer). Set True per-customer after shadow mode
 # validates that learning improves outcomes.
@@ -76,8 +82,8 @@ BOOTSTRAP_CATEGORY_WEIGHTS = {
     "threat_intel_match":   0.10,
 }
 
-# Shape: (6 categories, 5 actions, 6 factors) = 180 values
-# Action index: 0=escalate, 1=investigate, 2=suppress, 3=monitor, 4=refer_to_analyst
+# Shape: (6 categories, 4 scorer actions, 6 factors) = 144 values
+# Action index: 0=escalate, 1=investigate, 2=suppress, 3=monitor  (SCORER_ACTIONS)
 # Factor index: 0=travel_match, 1=asset_criticality, 2=threat_intel_enrichment,
 #               3=pattern_history, 4=time_anomaly, 5=device_trust
 SOC_FACTORS = [
@@ -659,9 +665,8 @@ class SOCDomainConfig(DomainConfig):
     @staticmethod
     def get_actions() -> List[str]:
         """
-        Five GAE action names in W-matrix row order (v5.5).
-        Row 0=escalate, 1=investigate, 2=suppress, 3=monitor, 4=refer_to_analyst.
-        Must stay in sync with get_initial_W() row order and SOC_PROFILE_CENTROIDS axis 1.
+        Five SOC action names — full routing list (v5.5).
+        For scoring use SCORER_ACTIONS (A=4); for NL/routing use this full list (A=5).
         """
         return list(SOC_ACTIONS)
 
@@ -693,7 +698,10 @@ class SOCDomainConfig(DomainConfig):
 
     @staticmethod
     def get_initial_W():
-        """Initial weight matrix (5 actions x 6 factors). Security expert priors (v5.5)."""
+        """Initial weight matrix (4 scorer actions × 6 factors). Security expert priors (v5.5).
+        Row order matches SCORER_ACTIONS: [escalate, investigate, suppress, monitor].
+        refer_to_analyst is a routing decision handled by the confidence gate — no W row.
+        """
         import numpy as np
         return np.array([
             # travel  asset  threat  pattern  time  device
@@ -701,7 +709,6 @@ class SOCDomainConfig(DomainConfig):
             [ 0.5,   0.5,    0.7,    0.5,    0.6,   0.5],   # investigate
             [-0.3,  -0.2,   -0.5,    0.7,   -0.3,  -0.2],   # suppress
             [ 0.2,   0.3,    0.4,    0.4,    0.3,   0.4],   # monitor
-            [ 0.1,   0.4,    0.3,    0.4,    0.3,   0.4],   # refer_to_analyst: conservative moderate
         ], dtype=np.float64)
 
     # τ=0.1 (V3B validated, ECE=0.036). NEVER return 0.25.

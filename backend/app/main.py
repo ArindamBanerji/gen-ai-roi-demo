@@ -109,6 +109,36 @@ async def startup_event():
         raise
     # ──────────────────────────────────────────────────────────
 
+    # Bootstrap correct_decisions from graph — non-blocking.
+    # Mirrors support/setup/bootstrap_learning_loop.py but runs automatically
+    # on every restart so correct_decisions is never stale after a reboot.
+    # The separate script is still useful for bulk historical migrations.
+    try:
+        _total_res = await neo4j_client.run_query(
+            "MATCH (d:Decision) WHERE d.outcome IS NOT NULL "
+            "RETURN count(d) AS total"
+        )
+        _correct_res = await neo4j_client.run_query(
+            "MATCH (d:Decision) WHERE d.correct = true "
+            "RETURN count(d) AS correct"
+        )
+        _cd_total   = int(_total_res[0]["total"])   if _total_res   else 0
+        _cd_correct = int(_correct_res[0]["correct"]) if _correct_res else 0
+        _cd_pct = round(_cd_correct / _cd_total * 100, 1) if _cd_total > 0 else 0.0
+        print(
+            f"[STARTUP] correct_decisions={_cd_correct}, "
+            f"verified={_cd_total}, "
+            f"accuracy={_cd_pct}%"
+        )
+        if _cd_correct == 0 and _backend == "age":
+            print(
+                "[STARTUP] WARNING: correct_decisions=0 — historical Decision nodes "
+                "may lack outcome/correct fields. Run "
+                "support/setup/bootstrap_learning_loop.py --live to backfill."
+            )
+    except Exception as _cd_exc:
+        print(f"[STARTUP] correct_decisions bootstrap failed (non-blocking): {_cd_exc}")
+
     # Load analyst correct-override examples into OverrideDetector.
     # Activates automatically when >= 50 examples are found in Neo4j.
     from app.services.override_detector import load_from_neo4j as _load_od
@@ -192,6 +222,7 @@ async def startup_event():
         print(
             f"[SNAPSHOT] GraphSnapshot initialized: "
             f"{_snap.verified_decisions} verified decisions, "
+            f"correct={_snap.correct_decisions}, "
             f"IKS={_snap.iks_score:.1f}, "
             f"override_rate={_snap.override_rate:.3f}"
         )

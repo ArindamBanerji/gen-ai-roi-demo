@@ -302,36 +302,60 @@ class PulsediveConnector(UCLConnector):
         self._last_live_succeeded = live_succeeded
 
         # ---------------------------------------------------------------
-        # Step 2 — MERGE :ThreatIntel nodes (idempotent)
+        # Step 2 — Write :ThreatIntel nodes (AGE two-step upsert)
+        # AGE does not support MERGE + SET on the same node; use
+        # MATCH+SET (update) then CREATE (insert) instead.
         # ---------------------------------------------------------------
         indicators_ingested = 0
         _now_epoch = int(time.time() * 1000)
-        merge_query = """
-        MERGE (ti:ThreatIntel {value: $value})
-        SET ti.type         = $type,
-            ti.severity     = $severity,
-            ti.source       = $source,
-            ti.risk_factors = $risk_factors,
-            ti.first_seen   = $first_seen,
-            ti.last_updated = $last_updated,
-            ti.context      = $context,
-            ti.refreshed_at = $now_epoch
-        RETURN ti.value AS value
-        """
 
         for ioc in enriched:
+            _params = {
+                "value":        ioc["value"],
+                "type":         ioc.get("type", "unknown"),
+                "severity":     ioc.get("severity", "medium"),
+                "source":       ioc.get("source", source),
+                "risk_factors": json.dumps(ioc.get("risk_factors", []), sort_keys=True),
+                "first_seen":   ioc.get("first_seen", ""),
+                "last_updated": ioc.get("last_updated", ""),
+                "context":      ioc.get("context", ""),
+                "now_epoch":    _now_epoch,
+            }
             try:
-                await neo4j_client.run_query(merge_query, {
-                    "value":        ioc["value"],
-                    "type":         ioc.get("type", "unknown"),
-                    "severity":     ioc.get("severity", "medium"),
-                    "source":       ioc.get("source", source),
-                    "risk_factors": json.dumps(ioc.get("risk_factors", []), sort_keys=True),
-                    "first_seen":   ioc.get("first_seen", ""),
-                    "last_updated": ioc.get("last_updated", ""),
-                    "context":      ioc.get("context", ""),
-                    "now_epoch":    _now_epoch,
-                })
+                # Step A — update existing node
+                _match_result = await neo4j_client.run_query(
+                    """
+                    MATCH (ti:ThreatIntel {value: $value})
+                    SET ti.type         = $type,
+                        ti.severity     = $severity,
+                        ti.source       = $source,
+                        ti.risk_factors = $risk_factors,
+                        ti.first_seen   = $first_seen,
+                        ti.last_updated = $last_updated,
+                        ti.context      = $context,
+                        ti.refreshed_at = $now_epoch
+                    RETURN ti.value AS value
+                    """,
+                    _params,
+                )
+                if not _match_result:
+                    # Step B — node does not exist yet; create it
+                    await neo4j_client.run_query(
+                        """
+                        CREATE (ti:ThreatIntel {
+                            value:        $value,
+                            type:         $type,
+                            severity:     $severity,
+                            source:       $source,
+                            risk_factors: $risk_factors,
+                            first_seen:   $first_seen,
+                            last_updated: $last_updated,
+                            context:      $context,
+                            refreshed_at: $now_epoch
+                        })
+                        """,
+                        _params,
+                    )
                 indicators_ingested += 1
             except Exception as exc:
                 print(f"[PULSEDIVE] Failed to write {ioc['value']} to AGE: {exc}")

@@ -28,6 +28,7 @@ import dataclasses
 import numpy as np
 from app.core.state_manager import state_manager
 from app.db.neo4j import neo4j_client
+from app.models.responses import AlertQueueResponse, DecisionFactorsResponse, ProfileResponse
 from app.models.schemas import ProcessAlertRequest, OutcomeRequest
 from app.domains.soc.config import (
     SOCDomainConfig,
@@ -49,7 +50,7 @@ router = APIRouter()
 # GET /api/alerts/queue - Alert Queue
 # ============================================================================
 
-@router.get("/alerts/queue")
+@router.get("/alerts/queue", response_model=AlertQueueResponse)
 async def get_alert_queue():
     """
     Get list of pending alerts for triage.
@@ -874,6 +875,7 @@ async def report_decision_outcome(request: OutcomeRequest):
         outcome_label = request.outcome   # "correct" | "incorrect"
 
         centroid_update_payload = None  # populated below if wu.centroid_update is present
+        _resolved_category = ""  # BACKLOG-047: category for process_outcome()
 
         gae_result = await neo4j_client.run_query(
             """
@@ -912,6 +914,8 @@ async def report_decision_outcome(request: OutcomeRequest):
             action_name = record.get("action", "")
             alert_type_for_cat = record.get("alert_type", "unknown")
             confidence_at_decision = float(record.get("confidence") or 0.0)
+            from app.domains.soc.config import resolve_alert_category as _resolve_cat_po
+            _resolved_category = _resolve_cat_po(alert_type_for_cat)
 
             if fv is None:
                 print(f"[GAE] Decision node found but factor_vector is NULL — skipping weight update")
@@ -1116,6 +1120,7 @@ async def report_decision_outcome(request: OutcomeRequest):
             alert_id=request.alert_id,
             decision_id=request.decision_id,
             outcome=request.outcome,
+            alert_category=_resolved_category,
         )
 
         print(f"[FEEDBACK] Processed {request.outcome} outcome for {request.alert_id}")
@@ -1268,7 +1273,7 @@ async def get_policy_history():
 # GET /api/soc/profile - ProfileScorer state for Tab 2 centroid heatmap
 # ============================================================================
 
-@router.get("/soc/profile")
+@router.get("/soc/profile", response_model=ProfileResponse)
 async def get_profile_state():
     """
     Return current ProfileScorer state for frontend display.
@@ -1415,7 +1420,7 @@ async def rl_reward_summary():
 # GET /api/triage/decision-factors/{alert_id} - Decision Factor Breakdown (v3.0)
 # ============================================================================
 
-@router.get("/triage/decision-factors/{alert_id}")
+@router.get("/triage/decision-factors/{alert_id}", response_model=DecisionFactorsResponse)
 async def decision_factors(alert_id: str):
     """
     Return the 6-factor explainability matrix for an agent decision.

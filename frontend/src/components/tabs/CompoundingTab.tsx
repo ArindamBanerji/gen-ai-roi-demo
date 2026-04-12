@@ -29,6 +29,7 @@ import {
   getEvolutionEvents, getCentroidEvolution, getProfileState,
 } from '../../lib/api'
 import { domainConfig } from '../../lib/domain'
+import { ensureArray } from '../../lib/guards'
 import {
   TrendingUp, Database, Activity, RefreshCw, Clock, DollarSign,
   TrendingDown, CheckCircle, Calculator, Shield, Download,
@@ -931,11 +932,11 @@ export default function CompoundingTab() {
             </div>
 
             {/* Weight snapshots sparkline */}
-            {convergenceData.weight_snapshots.length > 1 && (
+            {ensureArray<number>(convergenceData.weight_snapshots).length > 1 && (
               <div className="mb-4">
-                <p className="text-xs text-gray-500 mb-2">‖W‖_F last {convergenceData.weight_snapshots.length} updates</p>
+                <p className="text-xs text-gray-500 mb-2">‖W‖_F last {ensureArray<number>(convergenceData.weight_snapshots).length} updates</p>
                 <ResponsiveContainer width="100%" height={60}>
-                  <LineChart data={convergenceData.weight_snapshots.map((v, i) => ({ i: i + 1, norm: v }))} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
+                  <LineChart data={ensureArray<number>(convergenceData.weight_snapshots).map((v, i) => ({ i: i + 1, norm: v }))} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
                     <Line type="monotone" dataKey="norm" stroke="#60a5fa" strokeWidth={1.5} dot={false} />
                     <Tooltip formatter={(v: any) => Number(v).toFixed(4)} labelFormatter={(l) => `Update ${l}`} />
                     <YAxis domain={['dataMin - 0.05', 'dataMax + 0.05']} hide />
@@ -1240,10 +1241,10 @@ export default function CompoundingTab() {
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg border shadow p-6">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Weekly Trend</h3>
-          {weekly_trend.length > 0 ? (
+          {ensureArray<WeeklyMetric>(weekly_trend).length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={weekly_trend}>
+                <LineChart data={ensureArray<WeeklyMetric>(weekly_trend)}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="week" label={{ value: 'Week', position: 'insideBottom', offset: -5 }} />
                   <YAxis />
@@ -1255,7 +1256,7 @@ export default function CompoundingTab() {
                 </LineChart>
               </ResponsiveContainer>
               <div className="mt-4 grid grid-cols-4 gap-2 text-center text-sm">
-                {weekly_trend.map(w => (
+                {ensureArray<WeeklyMetric>(weekly_trend).map(w => (
                   <div key={w.week} className="bg-gray-50 rounded p-2">
                     <div className="font-semibold text-gray-900">Week {w.week}</div>
                     <div className="text-xs text-gray-600">{w.pattern_count} patterns</div>
@@ -1359,7 +1360,7 @@ export default function CompoundingTab() {
               <Database className="w-5 h-5 text-purple-600" />
               Recent Evolution Events
             </h3>
-            {evolutionEventsReal && evolutionEventsReal.events.length > 0 ? (
+            {evolutionEventsReal && ensureArray<EvolutionEvent>(evolutionEventsReal.events).length > 0 ? (
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 border border-green-200">
                 live
               </span>
@@ -1399,9 +1400,9 @@ export default function CompoundingTab() {
 
         {/* Use real events from dedicated endpoint (H7-FIX-4); fall back to compounding data */}
         {(() => {
-          const displayEvents = (evolutionEventsReal?.events?.length ?? 0) > 0
-            ? evolutionEventsReal!.events
-            : evolution_events
+          const displayEvents = (ensureArray<EvolutionEvent>(evolutionEventsReal?.events).length) > 0
+            ? ensureArray<EvolutionEvent>(evolutionEventsReal!.events)
+            : ensureArray<EvolutionEvent>(evolution_events)
           const emptyNote = evolutionEventsReal?.note ?? 'No decisions recorded yet — process alerts in Tab 3'
           return displayEvents.length > 0 ? (
             <div className="space-y-2">

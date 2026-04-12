@@ -225,11 +225,10 @@ class SimulationOrchestrator:
         start_ts = time.perf_counter()
         self.experiment_log = []
 
-        computers = SOCDomainConfig.get_factor_computers()
-        actions   = SOCDomainConfig.get_actions()       # A=5 for W-matrix scoring
+        computers      = SOCDomainConfig.get_factor_computers()
         from app.domains.soc.config import SCORER_ACTIONS
-        scorer_actions = list(SCORER_ACTIONS)            # A=4 for learning updates
-        tau       = SOCDomainConfig.get_temperature()
+        scorer_actions = list(SCORER_ACTIONS)            # A=4: escalate/investigate/suppress/monitor
+        tau            = SOCDomainConfig.get_temperature()
 
         correct_total = 0
         correct_by_category: Dict[str, int] = {}
@@ -292,7 +291,7 @@ class SimulationOrchestrator:
             # ------------------------------------------------------------------
             W          = get_learning_state().W
             W_snapshot = W.tolist()          # capture before weight update
-            scoring    = score_alert(f_2d, W, actions, tau)
+            scoring    = score_alert(f_2d, W, scorer_actions, tau)
 
             # Ground-truth comparison: deterministic, independent of Bernoulli oracle.
             correct_vs_ground_truth = (scoring.selected_action == ground_truth_action)

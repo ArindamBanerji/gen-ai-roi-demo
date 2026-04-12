@@ -10,7 +10,14 @@ import json
 import re
 
 from app.db.neo4j import neo4j_client
-
+from app.models.responses import (
+    AnalyticsResponse,
+    CampaignsResponse,
+    CentroidSupportResponse,
+    DetectionEngineeringResponse,
+    ExecutiveNarrativeResponse,
+    LearningStateResponse,
+)
 
 router = APIRouter()
 
@@ -592,7 +599,7 @@ async def query_soc_metrics(request: SOCQueryRequest):
 # GET /api/soc/detection-engineering — F2-DESIGN: Rule Quality Score + Noise Map
 # ============================================================================
 
-@router.get("/soc/detection-engineering")
+@router.get("/soc/detection-engineering", response_model=DetectionEngineeringResponse)
 async def get_detection_engineering():
     """
     Detection Engineering Feedback (F2).
@@ -845,7 +852,7 @@ async def get_attack_tactic_breakdown():
 # GET /api/soc/analytics — Real Neo4j SOC metrics for Tab 1 (H7-FIX-3)
 # ============================================================================
 
-@router.get("/soc/analytics")
+@router.get("/soc/analytics", response_model=AnalyticsResponse)
 async def get_soc_analytics():
     """
     Return real Neo4j aggregations for the five core Tab 1 SOC metrics.
@@ -878,8 +885,7 @@ async def get_soc_analytics():
 
         # Metric 4 — Correct decisions
         correct_res = await neo4j_client.run_query(
-            "MATCH (d:Decision) "
-            "WHERE d.outcome = 'correct' OR d.correct = true "
+            "MATCH (d:Decision) WHERE d.correct = true "
             "RETURN count(d) AS correct_decisions"
         )
         correct_decisions = int(correct_res[0]["correct_decisions"]) if correct_res else 0
@@ -942,7 +948,7 @@ async def get_soc_analytics():
 # GET /api/soc/learning-state — Expose LearningState for Tab-2 Section D
 # ============================================================================
 
-@router.get("/soc/learning-state")
+@router.get("/soc/learning-state", response_model=LearningStateResponse)
 async def get_learning_state_endpoint():
     """Expose learning state for Tab-2 Section D rollback status."""
     from app.services.gae_state import get_learning_state as _get_ls
@@ -1481,7 +1487,7 @@ async def benchmarking_report(
 # GET /api/soc/executive-narrative — P18 Executive Learning Narrative (L-05)
 # ============================================================================
 
-@router.get("/soc/executive-narrative")
+@router.get("/soc/executive-narrative", response_model=ExecutiveNarrativeResponse)
 async def executive_narrative():
     """F12: Executive narrative digest consumed by Tab 5."""
     from app.services.executive_narrative import build_executive_narrative_async
@@ -1689,7 +1695,7 @@ def _format_campaign_detail(raw: dict) -> dict:
 # GET /api/soc/campaigns — F6 Campaign list
 # ============================================================================
 
-@router.get("/soc/campaigns")
+@router.get("/soc/campaigns", response_model=CampaignsResponse)
 async def get_campaigns(
     limit: int = 50,
     min_confidence: float = 0.0,
@@ -3652,7 +3658,7 @@ async def get_centroid_heatmap():
 # GET /api/soc/centroid-support — Block 3.6
 # =============================================================================
 
-@router.get("/soc/centroid-support")
+@router.get("/soc/centroid-support", response_model=CentroidSupportResponse)
 async def get_centroid_support():
     """
     Centroid Support Monitoring (Block 3.6).

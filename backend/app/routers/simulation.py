@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from app.services.simulation import SimulationOrchestrator, _FALLBACK_POOL
 from app.services.state_manager import StateManager, ResetError
+from app.models.responses import SimulationProgressResponse
 
 router = APIRouter()
 
@@ -199,7 +200,7 @@ async def start_simulation(
     return {"simulation_id": sim_id, "status": "running"}
 
 
-@router.get("/simulation/progress/{simulation_id}")
+@router.get("/simulation/progress/{simulation_id}", response_model=SimulationProgressResponse)
 async def get_simulation_progress(simulation_id: str):
     """
     Return live progress for a running or completed simulation.

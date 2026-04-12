@@ -49,6 +49,13 @@ class ThreatIndicatorService:
 
         Returns the node ID (UUID).  Returns "" if the write fails.
         """
+        if not ioc_value:
+            log.warning(
+                "[THREAT-INDICATOR] upsert skipped: ioc_value is empty or None "
+                "(source=%r, type=%r)",
+                source, ioc_type,
+            )
+            return ""
         try:
             params = {
                 "ioc_value":  ioc_value,

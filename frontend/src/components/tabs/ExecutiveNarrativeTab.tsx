@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from 'react'
 import { FileText, Download, TrendingUp, Search, Brain, Activity } from 'lucide-react'
+import { ensureArray } from '../../lib/guards'
 
 
 interface Shift {
@@ -154,17 +155,17 @@ export default function ExecutiveNarrativeTab() {
               <span className="text-gray-200 font-mono">{what_changed.total_centroid_updates}</span>
             </div>
           </div>
-          {what_changed.top_shifts.length > 0 && (
+          {ensureArray<Shift>(what_changed.top_shifts).length > 0 && (
             <div className="mt-3 space-y-2">
               <p className="text-xs text-gray-500 uppercase tracking-wide">Top shifts</p>
-              {what_changed.top_shifts.map((s, i) => (
+              {ensureArray<Shift>(what_changed.top_shifts).map((s, i) => (
                 <div key={i} className="bg-gray-800 rounded p-2 text-xs text-gray-300">
                   {s.description}
                 </div>
               ))}
             </div>
           )}
-          {what_changed.top_shifts.length === 0 && (
+          {ensureArray<Shift>(what_changed.top_shifts).length === 0 && (
             <p className="mt-3 text-xs text-gray-600 italic">No centroid shifts recorded yet.</p>
           )}
         </div>
@@ -185,15 +186,15 @@ export default function ExecutiveNarrativeTab() {
               <span className="text-gray-200 font-mono">{what_discovered.graph_growth.nodes_added}</span>
             </div>
           </div>
-          {what_discovered.chain_summaries.length > 0 && (
+          {ensureArray<string>(what_discovered.chain_summaries).length > 0 && (
             <div className="mt-3 space-y-2">
               <p className="text-xs text-gray-500 uppercase tracking-wide">Chain summaries</p>
-              {what_discovered.chain_summaries.map((s, i) => (
+              {ensureArray<string>(what_discovered.chain_summaries).map((s, i) => (
                 <div key={i} className="bg-gray-800 rounded p-2 text-xs text-gray-300">{s}</div>
               ))}
             </div>
           )}
-          {what_discovered.chain_summaries.length === 0 && (
+          {ensureArray<string>(what_discovered.chain_summaries).length === 0 && (
             <p className="mt-3 text-xs text-gray-600 italic">No chains detected yet.</p>
           )}
         </div>

@@ -148,3 +148,118 @@ if isinstance(value, (int, float)) and value > 1e9:
 - `app/routers/soc.py` (4 — 3 print + 1 source string)
 - `app/routers/metrics.py` (9 — 7 print + 1 note string + 1 docstring)
 - `app/services/triage.py` (1)
+
+---
+
+## BACKLOG-041 — simulation factor_vector string crash + metrics.py d.id second call site
+
+**Status:** DONE (April 11, 2026)
+
+**Fix 1:** simulation.py: json.loads() guard for factor_vector string→list (AGE serialization)
+**Fix 2:** metrics.py:246 inline /compounding evolution events Cypher: d.id AS id → d.decision_id AS id
+  (second call site — /metrics/evolution-events at line 494 was fixed in a prior pass)
+  Caught by test_compounding_evolution_uses_correct_property in test_age_contracts.py
+
+---
+
+## BACKLOG-042 — Simulation W_matrix attractor state
+
+**Status:** DONE (April 11, 2026)
+
+**Root cause:** Three referral alerts (SIM-CA-REF-001, SIM-LM-REF-001, SIM-CI-REF-001) appeared
+consecutively at steps 24-26 in the simulation pool. The W_matrix took a large negative update
+from oracle_outcome=-1 on refer_to_analyst predictions, pushing the matrix into a region where
+refer_to_analyst scored highest for every factor_vector. Because refer_to_analyst is not in
+SCORER_ACTIONS, no corrective centroid signal could pull the matrix out. W_matrix frozen from
+step 26 onward, all 73 remaining steps predicted refer_to_analyst.
+
+**Fix:** app/routers/simulation.py: filter refer_to_analyst alerts from simulation pool before
+running. Pool 27→24 alerts. get_alert_pool() itself unchanged. Referral alerts remain in
+production triage pool.
+
+**Remaining latent issue:** simulation.py:295 still calls get_actions() (A=5) for the scoring
+path — refer_to_analyst can still be selected by centroid geometry even without the referral
+alerts. Should be changed to SCORER_ACTIONS (A=4). Low priority after pool filter fix.
+
+---
+
+## BACKLOG-043 — A=5 dual representation audit
+
+**Status:** ABSORBED into Boundary Hardening Plan Phase 4 (BACKLOG-044)
+
+---
+
+## BACKLOG-044 — Boundary Hardening Plan (6 workstreams)
+
+**Status:** OPEN — P1 before VPS
+**Effort:** ~13.5 hours across 3-4 sessions
+**Document:** systemic_fix_plan_april11.md
+
+**Root cause diagnosis:** Every bug found April 8-11 was the same class — unvalidated data
+crossing a layer boundary. Three boundaries, three fixes.
+
+**Workstreams:**
+- WS-1: ci-platform AGEClient _normalize_value + serialize_for_age + 25 tests (2h)
+- WS-2: SOC backend Pydantic response models for 10 endpoints (3h)
+- WS-3: SOC frontend guards.ts: ensureArray, ensureNumber, safeKey (1.5h)
+- WS-4: Dual representation cleanup — single source for action space (2h)
+- WS-5: GAE API_CONTRACT.md + TEST_CATEGORIES.md + 20 contract tests (3h)
+- WS-6: S2P domain isolation + copilot-sdk discipline tests (2h)
+
+**Gate before VPS:** All 6 workstreams complete, browser F12 console zero red errors.
+
+---
+
+## BACKLOG-045 — Audit chain breaks on E2E reset
+
+**Status:** OPEN — P3, before VPS
+**Discovered:** April 11, 2026
+
+**Root cause:** decision_flow.spec.ts calls POST /api/alerts/reset in beforeEach (line 15).
+Reset clears the in-memory audit ledger and starts a new hash chain from a fresh genesis hash.
+Any session that runs E2E tests will show verify_chain → verified=False because decisions
+before and after reset form disconnected chains with non-linking hashes.
+
+**NOT a production bug.** POST /api/alerts/reset is a dev/test operation only. In production
+the reset endpoint is never called mid-session.
+
+**Test documenting behavior:** backend/tests/test_audit_chain.py
+  test_audit_chain_breaks_after_reset: asserts verified=False after reset — documents the
+  known failure mode, not asserts correctness.
+
+**Architectural fix (two parts):**
+Part 1 — On reset: archive+epoch rather than clear. Each epoch independently verifiable.
+Part 2 — On startup: rebuild hash chain from AGE Decision nodes ordered by timestamp.
+  After rebuild, in-memory chain is consistent with AGE and verify_chain returns True.
+  Also fixes session restart survival (IKS and decision counts survive WSL2 reboot).
+Effort: ~1 day. Must complete before VPS deployment.
+
+---
+
+## BACKLOG-046 — internal_scan_ambiguous has no category mapping
+
+**Status:** OPEN — P1
+**Discovered:** April 11, 2026
+
+**Symptom:** Backend log: [MITRE] Unrecognized alert_type='internal_scan_ambiguous' — no technique mapped
+  [H7-FIX-1] Could not determine category for alert SIM-LM-REF-001, using default pattern
+  [TRIAGE] Confidence snapshot: unknown confidence=78.46%
+
+**Fix:** Map alert_type='internal_scan_ambiguous' → category='lateral_movement' in the
+alert_type→category mapping table used by H7-FIX-1 and the MITRE technique mapper.
+File: find with Select-String -Pattern "internal_scan_ambiguous|alert_type.*category"
+
+---
+
+## BACKLOG-047 — Trust signal reads alert_type not category
+
+**Status:** OPEN — P2
+**Discovered:** April 11, 2026
+
+**Symptom:** Backend log: [TRUST] travel_login_anomaly: 0.230 -> 0.260 firing for
+  SIM-LM-REF-001 (a lateral_movement alert, not a travel_login alert).
+  Trust system reads alert.alert_type instead of alert.category.
+
+**Fix:** Find trust signal update path. Change field read from alert_type to category.
+  Trust updates should be keyed on threat category (credential_access, lateral_movement, etc.)
+  not on the raw alert_type string.

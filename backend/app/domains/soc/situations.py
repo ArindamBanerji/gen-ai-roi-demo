@@ -169,6 +169,15 @@ MITRE_ATTACK_MAP: Dict[str, Dict[str, str]] = {
     "anomalous_network_behavior":    {"technique": "T1071", "tactic": "Command and Control"},
     "insider_threat_detected":       {"technique": "T1048", "tactic": "Exfiltration"},
     "cloud_misconfiguration":        {"technique": "T1578", "tactic": "Defense Evasion"},
+
+    # BACKLOG-046: new alert_type variants unmapped in original corpus
+    "ambiguous_login_location":      {"technique": "T1078", "tactic": "Initial Access"},
+    "internal_scan_ambiguous":       {"technique": "T1046", "tactic": "Discovery"},
+    "cloud_config_drift":            {"technique": "T1562", "tactic": "Defense Evasion"},
+    "cloud_unused_resource_anomaly": {"technique": "T1578", "tactic": "Defense Evasion"},
+    "cloud_iam_privilege_escalation": {"technique": "T1548", "tactic": "Privilege Escalation"},
+    "cloud_storage_public_exposure": {"technique": "T1530", "tactic": "Collection"},
+    "cloud_permission_change_review": {"technique": "T1098", "tactic": "Persistence"},
 }
 
 
@@ -407,6 +416,32 @@ def classify_soc_situation(
     # ====================================================================
     if alert_type == "ransomware_detected":
         return "malware_on_critical_asset", 0.97, ["T1486", "Data Encrypted for Impact"]
+
+    # ====================================================================
+    # BACKLOG-046: additional alert_type variants
+    # ====================================================================
+    if alert_type == "ambiguous_login_location":
+        factors = ["ambiguous_login_signal", "location_mismatch", "unconfirmed_travel_context"]
+        if not context.get("mfa_completed", True):
+            factors.append("mfa_not_completed")
+        return "travel_login_anomaly", 0.65, factors
+
+    if alert_type == "internal_scan_ambiguous":
+        factors = ["internal_scan_detected", "ambiguous_source", "lateral_movement_possible"]
+        if context.get("asset_criticality") == "critical":
+            factors.append("critical_asset_targeted")
+        return "anomalous_network_behavior", 0.78, factors
+
+    if alert_type in ("cloud_config_drift", "cloud_unused_resource_anomaly",
+                      "cloud_storage_public_exposure", "cloud_permission_change_review"):
+        factors = ["cloud_resource_misconfiguration", f"alert_type_{alert_type}"]
+        return "cloud_misconfiguration", 0.84, factors
+
+    if alert_type == "cloud_iam_privilege_escalation":
+        factors = ["iam_privilege_escalation", "cloud_account_affected"]
+        if context.get("asset_criticality") == "critical":
+            factors.append("critical_asset_targeted")
+        return "privilege_escalation_detected", 0.88, factors
 
     # ====================================================================
     # Default: Unknown Situation

@@ -22,6 +22,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { queryMetric, getThreatLandscape, getAttackTacticBreakdown } from '../../lib/api'
+import { ensureArray } from '../../lib/guards'
 import { domainConfig } from '../../lib/domain'
 
 interface MetricContract {
@@ -396,7 +397,7 @@ export default function SOCAnalyticsTab() {
                   </tr>
                 </thead>
                 <tbody>
-                  {detEng.category_scores.map((s) => (
+                  {ensureArray<CategoryScore>(detEng.category_scores).map((s) => (
                     <tr key={s.category} className="border-b border-gray-800/50">
                       <td className="py-1.5 text-gray-300 font-mono">{s.category}</td>
                       <td className="py-1.5 text-right text-gray-200">
@@ -432,7 +433,7 @@ export default function SOCAnalyticsTab() {
               </div>
 
               <div className="space-y-2">
-                {detEng.noise_map.map((entry) => {
+                {ensureArray<NoiseMapEntry>(detEng.noise_map).map((entry) => {
                   const pct = entry.fp_rate !== null ? entry.fp_rate * 100 : null
                   const color =
                     pct === null
@@ -589,7 +590,7 @@ export default function SOCAnalyticsTab() {
               {result.result.chart_type === 'table' ? (
                 /* Cross-context graph intelligence — narrative table rows */
                 <div className="space-y-3">
-                  {result.result.data.map((row, idx) => {
+                  {ensureArray<DataPoint>(result.result.data).map((row, idx) => {
                     const fields = row.label.split(' | ')
                     return (
                       <div
@@ -616,7 +617,7 @@ export default function SOCAnalyticsTab() {
                   <div className="h-80 mb-4">
                     {result.result.chart_type === 'bar' ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={result.result.data}>
+                        <BarChart data={ensureArray<DataPoint>(result.result.data)}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                           <XAxis
                             dataKey="label"
@@ -640,7 +641,7 @@ export default function SOCAnalyticsTab() {
                       </ResponsiveContainer>
                     ) : (
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={result.result.data}>
+                        <LineChart data={ensureArray<DataPoint>(result.result.data)}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                           <XAxis
                             dataKey="label"
@@ -675,7 +676,7 @@ export default function SOCAnalyticsTab() {
                   <div className="text-xs text-gray-500">
                     <div className="font-semibold mb-2">Data Points:</div>
                     <div className="grid grid-cols-2 gap-2">
-                      {result.result.data.map((point, idx) => (
+                      {ensureArray<DataPoint>(result.result.data).map((point, idx) => (
                         <div
                           key={idx}
                           className="flex justify-between p-2 bg-soc-bg rounded"
@@ -748,7 +749,7 @@ export default function SOCAnalyticsTab() {
                 <div>
                   <div className="text-gray-500 text-xs mb-1">Sources</div>
                   <div className="space-y-1">
-                    {result.provenance.sources.map((source, idx) => (
+                    {ensureArray<string>(result.provenance.sources).map((source, idx) => (
                       <div
                         key={idx}
                         className="text-xs bg-soc-bg px-2 py-1 rounded"

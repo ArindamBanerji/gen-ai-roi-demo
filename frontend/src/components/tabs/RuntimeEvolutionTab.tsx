@@ -25,6 +25,7 @@ import {
 } from 'recharts'
 import * as api from '@/lib/api'
 import { domainConfig } from '@/lib/domain'
+import { ensureArray, ensureObject } from '@/lib/guards'
 
 // ── suppress unused-import lint warnings for icons used only via JSX ──
 void BarChart2; void Database; void ArrowUp; void ArrowDown; void Minus
@@ -403,7 +404,7 @@ export default function RuntimeEvolutionTab() {
   useEffect(() => {
     if (result) {
       setVisibleChecks([])
-      result.eval_gate.checks.forEach((_, index) => {
+      ensureArray<EvalCheck>(result.eval_gate.checks).forEach((_, index) => {
         setTimeout(() => {
           setVisibleChecks(prev => [...prev, index])
         }, index * 800)
@@ -947,7 +948,7 @@ export default function RuntimeEvolutionTab() {
                     </div>
                   </div>
                   <div className="p-5 space-y-3">
-                    {result.eval_gate.checks.map((check, index) => {
+                    {ensureArray<EvalCheck>(result.eval_gate.checks).map((check, index) => {
                       const isVisible = visibleChecks.includes(index)
                       return (
                         <div
@@ -1012,7 +1013,7 @@ export default function RuntimeEvolutionTab() {
                     </div>
                     <div className="p-5">
                       <div className="space-y-1.5 mb-4">
-                        {result.gae_scoring.factor_names.map((name, i) => (
+                        {ensureArray<string>(result.gae_scoring.factor_names).map((name, i) => (
                           <div key={name} className="flex items-center gap-2 text-xs">
                             <div className="w-32 text-gray-400 truncate capitalize">{name.replace(/_/g, ' ')}</div>
                             <div className="flex-1 bg-gray-800 rounded-full h-1.5">
@@ -1023,7 +1024,7 @@ export default function RuntimeEvolutionTab() {
                         ))}
                       </div>
                       <div className="flex gap-2 flex-wrap">
-                        {Object.entries(result.gae_scoring.action_probabilities).sort(([, a], [, b]) => b - a).map(([action, prob]) => (
+                        {Object.entries(ensureObject<Record<string, number>>(result.gae_scoring.action_probabilities)).sort(([, a], [, b]) => b - a).map(([action, prob]) => (
                           <span
                             key={action}
                             className={`px-2 py-0.5 rounded text-xs font-mono ${action === result.decision_trace.action_taken ? 'bg-soc-secondary/30 text-soc-secondary font-bold ring-1 ring-soc-secondary/50' : 'bg-gray-800 text-gray-400'}`}
@@ -1293,16 +1294,16 @@ export default function RuntimeEvolutionTab() {
                         <thead>
                           <tr>
                             <th style={{ width: 160, textAlign: 'left', padding: '4px 8px', fontSize: 11, color: '#9ca3af', fontWeight: 500 }}>Category</th>
-                            {profileState.actions.map(action => (
+                            {ensureArray<string>(profileState.actions).map(action => (
                               <th key={action} style={{ width: 80, textAlign: 'center', padding: '4px 8px', fontSize: 11, color: '#9ca3af', fontWeight: 500, textTransform: 'capitalize' }}>{action}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody>
-                          {profileState.categories.map((cat, cIdx) => (
+                          {ensureArray<string>(profileState.categories).map((cat, cIdx) => (
                             <tr key={cat}>
                               <td style={{ padding: '4px 8px', fontSize: 11, color: '#d1d5db', whiteSpace: 'nowrap' }}>{cat.replace(/_/g, ' ')}</td>
-                              {profileState.actions.map((_, aIdx) => {
+                              {ensureArray<string>(profileState.actions).map((_, aIdx) => {
                                 const factors = profileState.centroids[cIdx][aIdx]
                                 const meanVal = factors.reduce((s, v) => s + v, 0) / factors.length
                                 const count = profileState.counts[cIdx][aIdx]
@@ -1440,7 +1441,7 @@ export default function RuntimeEvolutionTab() {
                         </div>
                         {result.gae_summary.has_real_data && (
                           <div className="flex gap-3 flex-shrink-0">
-                            {Object.entries(result.gae_summary.w_norms).map(([action, norm]) => (
+                            {Object.entries(ensureObject<Record<string, number>>(result.gae_summary.w_norms)).map(([action, norm]) => (
                               <div key={action} className="text-center">
                                 <div className="text-xs font-mono text-purple-300">{norm.toFixed(2)}</div>
                                 <div className="text-xs text-gray-600 capitalize">{action.slice(0, 3)}</div>
@@ -1676,7 +1677,7 @@ export default function RuntimeEvolutionTab() {
                   </div>
                   <p className="text-xs text-gray-500 mb-3">External threat intelligence feeding the knowledge graph</p>
                   <div className="space-y-2">
-                    {enrichmentStatus.sources.map(src => {
+                    {ensureArray<{ source_name: string; record_count: number; trust_level: string; status: 'active' | 'stale' | 'unavailable'; affects_factor: string; staleness_hours?: number; last_refreshed_human?: string }>(enrichmentStatus.sources).map(src => {
                       const dot = src.status === 'active' ? '🟢' : src.status === 'stale' ? '🟡' : '🔴'
                       const staleLabel = src.staleness_hours != null
                         ? `last updated ${src.staleness_hours < 1 ? '<1h' : Math.round(src.staleness_hours) + 'h'} ago`

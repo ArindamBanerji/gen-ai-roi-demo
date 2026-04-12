@@ -1,0 +1,12 @@
+import psycopg
+conn = psycopg.connect('host=localhost port=5433 dbname=soc_copilot user=postgres password=postgres', autocommit=True)
+cur = conn.cursor()
+cur.execute("LOAD 'age'")
+cur.execute("SET search_path = ag_catalog, public")
+cur.execute("SELECT * FROM cypher('soc_graph', $$MATCH (d:Decision) WHERE d.correct = true RETURN count(d) AS cnt$$) AS (cnt agtype)")
+print('boolean true:', cur.fetchone()[0])
+cur.execute("SELECT * FROM cypher('soc_graph', $$MATCH (d:Decision) RETURN count(d) AS cnt$$) AS (cnt agtype)")
+print('total decisions:', cur.fetchone()[0])
+cur.execute("SELECT * FROM cypher('soc_graph', $$MATCH (d:Decision) WHERE d.outcome = 'correct' RETURN count(d) AS cnt$$) AS (cnt agtype)")
+print('outcome=correct:', cur.fetchone()[0])
+conn.close()

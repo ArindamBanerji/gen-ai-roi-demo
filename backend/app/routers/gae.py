@@ -52,16 +52,16 @@ async def gae_weights() -> Dict[str, Any]:
     Return the live W matrix, factor names, action names, and decision count.
 
     W is a nested list (n_actions × n_factors) so it is JSON-serializable.
-    Rows correspond to SOCDomainConfig.get_actions() order:
+    Rows correspond to SCORER_ACTIONS order (A=4):
         [0] escalate  [1] investigate  [2] suppress  [3] monitor
     """
     try:
         state = get_learning_state()
-        from app.domains.soc.config import SOCDomainConfig
+        from app.domains.soc.config import SCORER_ACTIONS
         return {
             "W":             state.W.tolist(),
             "factor_names":  state.factor_names,
-            "action_names":  SOCDomainConfig.get_actions(),
+            "action_names":  list(SCORER_ACTIONS),
             "decision_count": state.decision_count,
             "shape":         list(state.W.shape),
         }

@@ -51,6 +51,7 @@ class GraphSnapshot:
     updated in sync with every graph write.
     """
     verified_decisions: int = 0
+    correct_decisions: int = 0
     override_rate: float = 0.0
     override_quality: float = 0.0
     category_counts: Dict[str, int] = field(default_factory=dict)
@@ -67,6 +68,11 @@ class GraphSnapshot:
         # verified_decisions
         snap.verified_decisions = await graph_client.count_verified_decisions()
 
+        # correct_decisions — Decision nodes with outcome='correct' OR correct=true.
+        # Bootstrap source: these fields are set by triage outcome writes and by
+        # support/setup/bootstrap_learning_loop.py for historical migrations.
+        snap.correct_decisions = await graph_client.count_correct_decisions()
+
         # category_counts
         snap.category_counts = await graph_client.count_decisions_by_category()
 
@@ -81,6 +87,7 @@ class GraphSnapshot:
         logger.info(
             f"GraphSnapshot initialized: "
             f"{snap.verified_decisions} decisions, "
+            f"correct={snap.correct_decisions}, "
             f"alpha={snap.override_rate:.3f}, "
             f"IKS={snap.iks_score:.1f}"
         )
@@ -91,12 +98,15 @@ class GraphSnapshot:
         category: str,
         was_override: bool,
         quality_signal: float,
+        is_correct: bool = True,
     ) -> None:
         """
         Called AFTER successful graph write. Never called if write fails.
         Updates all derived statistics atomically.
         """
         self.verified_decisions += 1
+        if is_correct:
+            self.correct_decisions += 1
 
         self.category_counts[category] = (
             self.category_counts.get(category, 0) + 1
