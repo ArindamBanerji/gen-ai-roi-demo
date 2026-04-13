@@ -81,3 +81,12 @@ python backend/seed_neo4j.py
 - **Boundary 3 (API→React):** Never call .map() on API data without ensureArray() from src/lib/guards.ts. Use safeKey() for React keys.
 - **F12 Console rule:** When frontend crashes, open DevTools F12 → Console. Read the JS error. Never fix backend to resolve a frontend crash without seeing the JS error first.
 - **Graph schema:** Every Decision node MUST have a DECIDED_ON edge. Edgeless = orphan = delete.
+
+### No Silent Failure on Displayed Metrics
+- If a try/except computes a NUMBER shown in the UI: the except block
+  must set a flag (estimated=True, source="fallback") — never bare pass
+- If a try/except computes OPTIONAL enrichment: bare pass is acceptable
+- NEVER hardcode a number that looks like a computed metric (0.89, 23, 127)
+  without a comment explaining why it's a constant and not computed
+- The test: if the graph is empty, does the UI show zeros or plausible-looking
+  fake numbers? If fake numbers: it's a mockup, not a fallback.

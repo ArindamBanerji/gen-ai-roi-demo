@@ -21,8 +21,10 @@ _args = set(sys.argv[1:])
 DRY_RUN = "--dry-run" in _args
 LIVE = "--live" in _args
 CLEAN = "--clean" in _args
-if not DRY_RUN and not LIVE:
+BACKFILL = "--backfill" in _args
+if not DRY_RUN and not LIVE and not BACKFILL:
     print("Usage: --dry-run or --live [--clean] [--file=path]")
+    print("       --backfill  (SET correct/outcome on existing zero_day_synthetic nodes)")
     sys.exit(1)
 
 _file_arg = [a for a in sys.argv[1:] if a.startswith("--file=")]
@@ -159,6 +161,76 @@ async def run_live():
     print("\n[OK] Done. Restart uvicorn.")
 
 
+async def run_backfill():
+    """
+    SET correct and outcome on existing zero_day_synthetic Decision nodes that
+    were created by an older version of this script before those properties were added.
+
+    Reads the correct/outcome values from zero_day_decisions.json (the canonical source)
+    and applies them in batches of 200 using inline decision_id literals.
+    """
+    from ci_platform.graph.age_client import AGEClient
+    client = AGEClient()
+    await client.ensure_graph()
+
+    rows = await client.run_query(
+        "MATCH (d:Decision {origin: 'zero_day_synthetic'}) "
+        "WHERE d.correct IS NULL "
+        "RETURN count(d) AS cnt"
+    )
+    need = int(rows[0]["cnt"]) if rows else 0
+    print(f"[BACKFILL] {need} zero_day_synthetic nodes missing correct/outcome.")
+    if need == 0:
+        print("[BACKFILL] Nothing to do.")
+        return
+
+    correct_ids   = [d["decision_id"] for d in decisions if d["correct"]]
+    incorrect_ids = [d["decision_id"] for d in decisions if not d["correct"]]
+    print(f"[BACKFILL] From JSON: {len(correct_ids)} correct, {len(incorrect_ids)} incorrect.")
+
+    BATCH = 200
+    updated = 0
+
+    for i in range(0, len(correct_ids), BATCH):
+        batch = correct_ids[i : i + BATCH]
+        id_lit = ", ".join(f"'{did}'" for did in batch)
+        await client.run_query(
+            f"MATCH (d:Decision) WHERE d.decision_id IN [{id_lit}] "
+            f"SET d.correct = true, d.outcome = 'correct'"
+        )
+        updated += len(batch)
+        if updated % 1000 < BATCH:
+            print(f"  {updated} updated...")
+
+    for i in range(0, len(incorrect_ids), BATCH):
+        batch = incorrect_ids[i : i + BATCH]
+        id_lit = ", ".join(f"'{did}'" for did in batch)
+        await client.run_query(
+            f"MATCH (d:Decision) WHERE d.decision_id IN [{id_lit}] "
+            f"SET d.correct = false, d.outcome = 'incorrect'"
+        )
+        updated += len(batch)
+        if updated % 1000 < BATCH:
+            print(f"  {updated} updated...")
+
+    print(f"[BACKFILL] SET complete: {updated} nodes processed.")
+
+    # Verification
+    r1 = await client.run_query(
+        "MATCH (d:Decision) WHERE d.correct = true RETURN count(d) AS cnt"
+    )
+    r2 = await client.run_query(
+        "MATCH (d:Decision {origin: 'zero_day_synthetic'}) WHERE d.correct = true RETURN count(d) AS cnt"
+    )
+    r3 = await client.run_query(
+        "MATCH (d:Decision) WHERE d.outcome IS NOT NULL RETURN count(d) AS cnt"
+    )
+    print(f"[VERIFY] correct=true (all origins):    {r1[0]['cnt']}")
+    print(f"[VERIFY] correct=true (zero_day only):  {r2[0]['cnt']}")
+    print(f"[VERIFY] outcome IS NOT NULL:            {r3[0]['cnt']}")
+    print("[OK] Backfill complete. Restart uvicorn.")
+
+
 if __name__ == "__main__":
     if DRY_RUN:
         print_plan()
@@ -166,3 +238,7 @@ if __name__ == "__main__":
         if sys.platform == "win32":
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         asyncio.run(run_live())
+    elif BACKFILL:
+        if sys.platform == "win32":
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        asyncio.run(run_backfill())
