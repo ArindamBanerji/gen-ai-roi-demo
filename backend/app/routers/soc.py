@@ -748,7 +748,7 @@ async def get_threat_landscape():
         # Open alerts — separate query (AGE does not support NOT pattern in CASE)
         open_res_tl = await neo4j_client.run_query(
             "MATCH (a:Alert) "
-            "WHERE NOT exists((a)<-[:FOR_ALERT]-()) "
+            "WHERE NOT exists((a)<-[:DECIDED_ON]-()) "
             "RETURN count(a) AS open_count",
         )
         if alert_res:
@@ -872,7 +872,7 @@ async def get_soc_analytics():
         # Metric 2 — Open alerts (no Decision yet)
         open_res = await neo4j_client.run_query(
             "MATCH (a:Alert) "
-            "WHERE NOT exists((a)<-[:FOR_ALERT]-()) "
+            "WHERE NOT exists((a)<-[:DECIDED_ON]-()) "
             "RETURN count(a) AS open_alerts"
         )
         open_alerts = int(open_res[0]["open_alerts"]) if open_res else 0

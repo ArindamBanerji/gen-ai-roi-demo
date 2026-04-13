@@ -676,7 +676,7 @@ async def get_operational_metrics():
     # MTTD: alert creation → decision
     try:
         mttd_result = await neo4j_client.run_query(
-            "MATCH (d:Decision)-[:FOR_ALERT]->(a:Alert) "
+            "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
             "WHERE d.created_at_epoch IS NOT NULL AND a.created_at_epoch IS NOT NULL "
             "RETURN avg((d.created_at_epoch - a.created_at_epoch) / 1000.0)"
             " AS avg_mttd_seconds, count(d) AS sample_size"

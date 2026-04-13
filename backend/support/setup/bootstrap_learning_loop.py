@@ -117,7 +117,7 @@ async def run_live():
 
     # Step 1 — Count Decision nodes without outcome
     rows = await client.run_query(
-        "MATCH (d:Decision) WHERE d.outcome IS NULL RETURN count(d) AS cnt"
+        "MATCH (d:Decision)-[:DECIDED_ON]->() WHERE d.outcome IS NULL RETURN count(d) AS cnt"
     )
     null_count = int(rows[0]["cnt"]) if rows else 0
     print(f"[STEP 1] Decision nodes with outcome=NULL: {null_count}")
@@ -129,7 +129,7 @@ async def run_live():
     # Step 2 — Get all Decision nodes grouped by category+action, with IDs
     # AGE doesn't support collect(), so we fetch individual nodes
     rows = await client.run_query(
-        "MATCH (d:Decision) WHERE d.outcome IS NULL "
+        "MATCH (d:Decision)-[:DECIDED_ON]->() WHERE d.outcome IS NULL "
         "RETURN d.decision_id AS decision_id, "
         "       d.category AS category, "
         "       d.action AS action"

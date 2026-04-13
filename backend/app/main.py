@@ -172,14 +172,9 @@ async def startup_event():
     # Skipped (get_bootstrap_result() is None) when loading an existing checkpoint.
     _bs_result = get_bootstrap_result()
     if _bs_result is not None:
-        from app.services.bootstrap_neo4j import write_bootstrap_decisions
-        from app.domains.soc.config import SOC_CATEGORIES
-        await write_bootstrap_decisions(
-            neo4j_client=neo4j_client,
-            scorer=get_profile_scorer(),
-            categories=list(SOC_CATEGORIES),
-            decisions_per_category=_bs_result.decisions_per_category,
-        )
+        # RETIRED: orphan creator, replaced by support/setup/seed_zero_day.py
+        # from app.services.bootstrap_neo4j import write_bootstrap_decisions
+        pass  # seed_zero_day.py handles Decision seeding outside the startup path
 
     # Sync decision_count from Neo4j so IKS reflects historical decisions
     # on every server restart (fixes cold-start IKS = 1.7/100 regression).
