@@ -1,11 +1,11 @@
 # scripts/collect_tab_content.py
 # Run from repo root: python scripts/collect_tab_content.py
-# Requires: backend running at localhost:8000
+# Requires: backend running at localhost:8001
 
 import requests, json, sys
 from pathlib import Path
 
-BASE = "http://localhost:8000"
+BASE = "http://localhost:8001"
 DRIVE_PATH = Path(r"G:\My Drive\public-files\gen-ai-roi\experiments\tab_content.json")
 
 tabs = {}
