@@ -161,15 +161,17 @@ def test_compounding_evolution_uses_correct_property():
 
 def test_alert_id_property_in_evolution_events_query():
     """
-    The evolution-events Cypher must select d.alert_id (not d.alert or d.alert_id).
-    AGE Alert nodes reference is stored in Decision.alert_id.
+    The evolution-events Cypher must traverse DECIDED_ON and select a.alert_id.
+    alert_id is a property of Alert nodes, not Decision nodes.
+    Decision nodes carry no denormalized alert_id field — the relationship is
+    the canonical reference: (d:Decision)-[:DECIDED_ON]->(a:Alert).
     """
     import pathlib
 
     src = pathlib.Path("app/routers/metrics.py").read_text(encoding="utf-8")
-    assert "d.alert_id AS alert_id" in src, (
-        "metrics.py evolution-events query must select d.alert_id AS alert_id. "
-        "AGE Decision nodes store the alert reference in alert_id, not alert."
+    assert "a.alert_id AS alert_id" in src, (
+        "metrics.py evolution-events query must select a.alert_id AS alert_id "
+        "via DECIDED_ON relationship. Decision nodes do not store alert_id directly."
     )
 
 

@@ -242,9 +242,9 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
         # --- EVOLUTION EVENTS: Decision nodes from Neo4j (H7-FIX-4) ---
         try:
             evo_rows = await neo4j_client.run_query(
-                "MATCH (d:Decision) "
+                "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
                 "RETURN d.decision_id AS id, d.action AS action, d.confidence AS confidence, "
-                "d.timestamp_epoch AS ts, d.alert_id AS alert_id "
+                "d.timestamp_epoch AS ts, a.alert_id AS alert_id "
                 "ORDER BY d.timestamp_epoch DESC LIMIT 20"
             )
             if evo_rows:
@@ -490,9 +490,9 @@ async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
     print(f"[EVOLUTION EVENTS] Fetching {limit} recent Decision nodes from AGE")
     try:
         results = await neo4j_client.run_query(
-            "MATCH (d:Decision) "
+            "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
             "RETURN d.decision_id AS id, d.action AS action, d.confidence AS confidence, "
-            "d.timestamp_epoch AS ts, d.alert_id AS alert_id "
+            "d.timestamp_epoch AS ts, a.alert_id AS alert_id "
             "ORDER BY d.timestamp_epoch DESC LIMIT $limit",
             {"limit": limit},
         )
