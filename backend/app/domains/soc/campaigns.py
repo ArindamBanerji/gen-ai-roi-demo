@@ -510,15 +510,17 @@ class CampaignRepository:
     async def fetch_all_events(self) -> List[dict]:
         """
         Fetch triage alert events for retroactive correlation.
-        Only includes decisions made by the triage path (source_id IS NOT NULL).
-        Simulation artifacts (source_id IS NULL) are excluded — they lack campaign
-        semantics and cause temporal clusters of thousands of null-category events.
+        Only includes decisions made by the live triage path:
+          - source_id IS NOT NULL  (excludes simulation artifacts)
+          - source_id <> 'synthetic'  (excludes seed/zero-day artifacts with SYN-DEC-* ids)
+        Both populations lack campaign semantics and cause temporal clusters of
+        thousands of events that overwhelm write_campaign.
         Returns list of event dicts compatible with CampaignCorrelationEngine.
         """
         try:
             results = await self.neo4j.run_query("""
                 MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
-                WHERE d.source_id IS NOT NULL
+                WHERE d.source_id IS NOT NULL AND d.source_id <> 'synthetic'
                 RETURN COALESCE(a.alert_id, a.id) AS alert_id,
                        d.category AS category,
                        a.source_entity_id AS source_entity_id,

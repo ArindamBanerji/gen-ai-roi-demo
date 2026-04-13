@@ -209,9 +209,9 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
         weekly_trend_note = None
         try:
             dec_rows = await neo4j_client.run_query(
-                "MATCH (d:Decision) WHERE d.timestamp IS NOT NULL "
-                "RETURN d.timestamp AS ts, d.type AS action, d.confidence AS confidence "
-                "ORDER BY d.timestamp"
+                "MATCH (d:Decision) WHERE d.timestamp_epoch IS NOT NULL "
+                "RETURN d.timestamp_epoch AS ts, d.action AS action, d.confidence AS confidence "
+                "ORDER BY d.timestamp_epoch"
             )
             if dec_rows:
                 # Return raw decision points; chart will be empty but real data is available
@@ -243,9 +243,9 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
         try:
             evo_rows = await neo4j_client.run_query(
                 "MATCH (d:Decision) "
-                "RETURN d.decision_id AS id, d.type AS action, d.confidence AS confidence, "
-                "d.timestamp AS ts, d.alert_id AS alert_id "
-                "ORDER BY d.timestamp DESC LIMIT 20"
+                "RETURN d.decision_id AS id, d.action AS action, d.confidence AS confidence, "
+                "d.timestamp_epoch AS ts, d.alert_id AS alert_id "
+                "ORDER BY d.timestamp_epoch DESC LIMIT 20"
             )
             if evo_rows:
                 _evo_events = []
@@ -491,9 +491,9 @@ async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
     try:
         results = await neo4j_client.run_query(
             "MATCH (d:Decision) "
-            "RETURN d.decision_id AS id, d.type AS action, d.confidence AS confidence, "
-            "d.timestamp AS ts, d.alert_id AS alert_id "
-            "ORDER BY d.timestamp DESC LIMIT $limit",
+            "RETURN d.decision_id AS id, d.action AS action, d.confidence AS confidence, "
+            "d.timestamp_epoch AS ts, d.alert_id AS alert_id "
+            "ORDER BY d.timestamp_epoch DESC LIMIT $limit",
             {"limit": limit},
         )
         if not results:
@@ -545,9 +545,9 @@ async def get_weekly_trends():
     """
     try:
         results = await neo4j_client.run_query(
-            "MATCH (d:Decision) WHERE d.timestamp IS NOT NULL "
-            "RETURN d.timestamp AS ts, d.type AS action, d.confidence AS confidence "
-            "ORDER BY d.timestamp"
+            "MATCH (d:Decision) WHERE d.timestamp_epoch IS NOT NULL "
+            "RETURN d.timestamp_epoch AS ts, d.action AS action, d.confidence AS confidence "
+            "ORDER BY d.timestamp_epoch"
         )
         if not results:
             return {

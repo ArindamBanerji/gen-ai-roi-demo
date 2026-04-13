@@ -158,7 +158,7 @@ class BenchmarkingEngine:
         query = """
         MATCH (d:Decision)
         WHERE d.verified = true
-        RETURN d.id AS id, d.action AS system_action,
+        RETURN d.decision_id AS id, d.action AS system_action,
                d.analyst_action AS analyst_action,
                d.gt_action AS gt_action,
                d.category AS category,

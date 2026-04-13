@@ -96,13 +96,13 @@ async def get_centroid_evolution(
             WHERE d.centroid_delta_norm IS NOT NULL
               AND d.centroid_delta_norm > 0
               AND ($category IS NULL OR d.category = $category)
-            RETURN d.id AS id,
+            RETURN d.decision_id AS id,
                    d.centroid_delta_norm AS centroid_delta_norm,
                    d.category AS category,
                    d.action AS action,
                    d.correct AS correct,
-                   d.verified_at AS verified_at
-            ORDER BY d.verified_at ASC
+                   d.verified_at_epoch AS verified_at
+            ORDER BY d.verified_at_epoch ASC
             LIMIT $n
             """,
             {"category": category, "n": n},

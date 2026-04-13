@@ -976,9 +976,9 @@ async def get_learning_state_endpoint():
         rows = await neo4j_client.run_query(
             """
             MATCH (d:Decision)
-            WHERE d.verified_at IS NOT NULL
-            RETURN d.verified_at AS verified_at
-            ORDER BY d.verified_at DESC
+            WHERE d.verified_at_epoch IS NOT NULL
+            RETURN d.verified_at_epoch AS verified_at
+            ORDER BY d.verified_at_epoch DESC
             LIMIT 1
             """,
         )
@@ -1069,7 +1069,7 @@ async def explain_decision(decision_id: str):
                    d.category           AS category,
                    d.action             AS action,
                    d.confidence         AS confidence,
-                   d.timestamp          AS timestamp,
+                   d.timestamp_epoch    AS timestamp,
                    a.source_location    AS source_location,
                    a.source_ip          AS source_ip,
                    a.destination_ip     AS destination_ip,
@@ -2759,7 +2759,7 @@ async def _tab3_content() -> dict:
         try:
             _rows = await neo4j_client.run_query(
                 "MATCH (a:Alert {status: 'pending'}) "
-                "RETURN a.id AS alert_id, a.category AS category, a.alert_type AS alert_type "
+                "RETURN a.alert_id AS alert_id, a.category AS category, a.alert_type AS alert_type "
                 "LIMIT 1",
                 {},
             )

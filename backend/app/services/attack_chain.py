@@ -102,15 +102,15 @@ class AttackChainService:
         OPTIONAL MATCH (a)-[:DETECTED_ON]->(asset:Asset)
         OPTIONAL MATCH (a)-[:CLASSIFIED_AS]->(at:AlertType)
         OPTIONAL MATCH (ti:ThreatIndicator)-[:ASSOCIATED_WITH]->(a)
-        RETURN a.id             AS alert_id,
+        RETURN a.alert_id       AS alert_id,
                a.severity       AS severity,
-               a.timestamp      AS timestamp,
+               a.timestamp_epoch AS timestamp,
                a.source_location AS source_location,
                at.name          AS alert_type,
                collect(DISTINCT u.email)    AS users,
                collect(DISTINCT asset.hostname) AS assets,
                collect(DISTINCT ti.ioc_value)   AS iocs
-        ORDER BY a.timestamp DESC
+        ORDER BY a.timestamp_epoch DESC
         """
         try:
             records = await self.db.run_query(query, {})

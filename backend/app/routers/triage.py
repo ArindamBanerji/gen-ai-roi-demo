@@ -888,6 +888,7 @@ async def report_decision_outcome(request: OutcomeRequest):
             RETURN d.factor_vector AS factor_vector,
                    d.action        AS action,
                    d.confidence    AS confidence,
+                   a.category      AS category,
                    coalesce(a.alert_type, 'unknown') AS alert_type
             """,
             {
@@ -915,7 +916,13 @@ async def report_decision_outcome(request: OutcomeRequest):
             alert_type_for_cat = record.get("alert_type", "unknown")
             confidence_at_decision = float(record.get("confidence") or 0.0)
             from app.domains.soc.config import resolve_alert_category as _resolve_cat_po
-            _resolved_category = _resolve_cat_po(alert_type_for_cat)
+            # BACKLOG-047b: prefer a.category (already canonical); only fall back to
+            # resolve_alert_category(alert_type) when category is absent, avoiding
+            # the H7-FIX-1 mapping on every outcome submission.
+            _resolved_category = (
+                record.get("category")
+                or _resolve_cat_po(alert_type_for_cat)
+            )
 
             if fv is None:
                 print(f"[GAE] Decision node found but factor_vector is NULL — skipping weight update")

@@ -51,7 +51,7 @@ PREBUILT_QUERIES = {
         "description": "Alerts with linked threat intelligence indicators",
         "cypher": (
             "MATCH (ti:ThreatIndicator)-[:ASSOCIATED_WITH]->(a:Alert) "
-            "RETURN a.id AS alert_id, ti.name AS indicator, "
+            "RETURN a.alert_id AS alert_id, ti.name AS indicator, "
             "ti.severity AS severity, ti.ioc_type AS type "
             "ORDER BY ti.severity"
         ),
@@ -61,9 +61,9 @@ PREBUILT_QUERIES = {
         "description": "Latest triage decisions with outcomes",
         "cypher": (
             "MATCH (d:Decision) "
-            "RETURN d.id AS id, d.category AS category, d.action AS action, "
+            "RETURN d.decision_id AS id, d.category AS category, d.action AS action, "
             "d.confidence AS confidence, d.auto_approved AS auto_approved "
-            "ORDER BY d.timestamp DESC LIMIT 20"
+            "ORDER BY d.timestamp_epoch DESC LIMIT 20"
         ),
     },
     "attack_patterns": {
