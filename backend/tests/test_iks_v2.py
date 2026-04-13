@@ -99,7 +99,7 @@ def test_compute_iks_v2_grows_with_decisions():
         cat_counts={
             "credential_access": 50, "lateral_movement": 40,
             "data_exfiltration": 35, "insider_threat": 30,
-            "threat_intel_match": 25, "cloud_infrastructure": 20,
+            "malware_execution": 25, "cloud_infrastructure": 20,
         },
         high_conf=160,
         accuracies=[0.90, 0.88, 0.85, 0.87, 0.92, 0.83],

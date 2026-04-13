@@ -35,11 +35,9 @@ on April 1, 2026.
 # Current: shows 75.7 — expected ~87 at this decision count.
 # Priority: P2 — visual only, CLAIM-SC-01 still valid
 
-# BACKLOG-005: threat_intel_match category name in simulation
-# Root cause: simulation uses "threat_intel_match" but canonical
-# SOC_FACTORS name is "threat_intel_enrichment".
-# File to fix: app/data/alert_pool.py or simulation category mapping.
-# Priority: P2 — cosmetic only
+# BACKLOG-005: threat_intel_match → malware_execution rename
+# Status: RESOLVED (BACKLOG-066, April 2026).
+# SOC_CATEGORIES[1] is now "malware_execution"; alert_type "threat_intel_match" maps to it.
 
 # BACKLOG-006: ProfileScorer None after POST /api/alerts/reset
 # Root cause: reset_all() clears GAE learning state including scorer.

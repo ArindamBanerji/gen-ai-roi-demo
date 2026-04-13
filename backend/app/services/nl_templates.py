@@ -298,7 +298,7 @@ class NLTemplateEngine:
 
     _L1_MAP: dict[str, str] = {
         "credential_access":    L1_CREDENTIAL_ACCESS,
-        "threat_intel_match":   L1_THREAT_INTEL_MATCH,
+        "malware_execution":    L1_THREAT_INTEL_MATCH,
         "lateral_movement":     L1_LATERAL_MOVEMENT,
         "data_exfiltration":    L1_DATA_EXFILTRATION,
         "insider_threat":       L1_INSIDER_THREAT,

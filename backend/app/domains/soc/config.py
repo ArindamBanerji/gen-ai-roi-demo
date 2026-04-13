@@ -62,7 +62,7 @@ LEARNING_ENABLED = False
 
 SOC_CATEGORIES = [
     "credential_access",
-    "threat_intel_match",
+    "malware_execution",
     "lateral_movement",
     "data_exfiltration",
     "insider_threat",
@@ -71,7 +71,7 @@ SOC_CATEGORIES = [
 
 # Bootstrap category weights — reflects realistic SOC alert distribution.
 # credential_access and lateral_movement are most frequent.
-# cloud_infrastructure and threat_intel_match are least frequent.
+# cloud_infrastructure and malware_execution are least frequent.
 # Weights must sum to 1.0.
 BOOTSTRAP_CATEGORY_WEIGHTS = {
     "credential_access":    0.30,
@@ -79,7 +79,7 @@ BOOTSTRAP_CATEGORY_WEIGHTS = {
     "data_exfiltration":    0.15,
     "insider_threat":       0.15,
     "cloud_infrastructure": 0.10,
-    "threat_intel_match":   0.10,
+    "malware_execution":     0.10,
 }
 
 # Shape: (6 categories, 4 scorer actions, 6 factors) = 144 values
@@ -121,7 +121,7 @@ SOC_PROFILE_CENTROIDS = np.array([
     [0.30, 0.45, 0.25, 0.35, 0.35, 0.65],
   ],
 
-  # ── Category 1: threat_intel_match ─────────────────────────────
+  # ── Category 1: malware_execution (formerly threat_intel_match) ──
   [
     # escalate: high threat_intel + high asset_criticality
     [0.35, 0.80, 0.90, 0.55, 0.60, 0.20],
@@ -210,12 +210,12 @@ SOC_CATEGORY_CONFIDENCE_FLOORS = {
 
 # Elevated agent zone categories (62% + 34% of dangerous errors)
 SOC_AGENT_ZONE_ELEVATED = {
-    "threat_intel_match":   True,
+    "malware_execution":    True,
     "cloud_infrastructure": True,
 }
 
-# All 19 known alert_types mapped to their correct SOC category.
-# Source: CORR-1 diagnostic, March 14, 2026.
+# All known alert_types mapped to their correct SOC category.
+# Source: CORR-1 diagnostic, March 14, 2026. Updated BACKLOG-055 (April 2026).
 # When adding new alert_types: add them HERE, not inline.
 ALERT_TYPE_CATEGORY_MAP: dict = {
     # credential_access
@@ -223,19 +223,23 @@ ALERT_TYPE_CATEGORY_MAP: dict = {
     "ambiguous_login_location":     "credential_access",
     "brute_force":                  "credential_access",
     "credential_stuffing":          "credential_access",
+    "credential_access":            "credential_access",   # category name used as alert_type
 
-    # threat_intel_match
-    "threat_intel_match":           "threat_intel_match",
-    "phishing":                     "threat_intel_match",
-    "malware_detection":            "threat_intel_match",
-    "c2_beacon":                    "threat_intel_match",
+    # malware_execution (formerly threat_intel_match)
+    "threat_intel_match":           "malware_execution",   # alert_type kept; maps to new category name
+    "phishing":                     "malware_execution",
+    "malware_detection":            "malware_execution",
+    "malware_execution":            "malware_execution",   # category name used as alert_type
+    "c2_beacon":                    "malware_execution",
 
     # lateral_movement
     "privilege_escalation":         "lateral_movement",
     "internal_scan_ambiguous":      "lateral_movement",
+    "lateral_movement":             "lateral_movement",    # category name used as alert_type
 
     # data_exfiltration
     "data_exfil":                   "data_exfiltration",
+    "data_exfiltration":            "data_exfiltration",   # category name used as alert_type
 
     # insider_threat
     "insider_threat":               "insider_threat",
@@ -248,6 +252,7 @@ ALERT_TYPE_CATEGORY_MAP: dict = {
     "cloud_config_drift":                "cloud_infrastructure",
     "cloud_unused_resource_anomaly":     "cloud_infrastructure",
     "cloud_permission_change_review":    "cloud_infrastructure",
+    "cloud_infrastructure":              "cloud_infrastructure",   # category name used as alert_type
 }
 
 DEFAULT_CATEGORY = "credential_access"  # emergency fallback only
@@ -282,7 +287,7 @@ def resolve_alert_category(alert_type: str) -> str:
 # These are the patterns seeded in the graph (seed_neo4j.py)
 CATEGORY_PATTERN_MAP = {
     "credential_access":    "PAT-CRED-001",
-    "threat_intel_match":   "PAT-THREAT-001",
+    "malware_execution":    "PAT-THREAT-001",
     "lateral_movement":     "PAT-LATERAL-001",
     "data_exfiltration":    "PAT-EXFIL-001",
     "insider_threat":       "PAT-INSIDER-001",

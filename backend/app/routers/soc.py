@@ -1136,7 +1136,7 @@ async def explain_decision(decision_id: str):
     except Exception:
         calibration_count = 0
 
-    # ── Step 2b: ThreatIndicator source (for threat_intel_match template) ───
+    # ── Step 2b: ThreatIndicator source (for malware_execution template) ────
     ti_source = "threat intelligence feed"
     try:
         ti_rows = await neo4j_client.run_query(
@@ -2419,7 +2419,7 @@ SENTINEL_TO_INTERNAL = {
     "unusual_outbound":             "data_exfiltration",
     "credential_access_via_lsass":  "credential_access",
     "unusual_database_query":       "insider_threat",
-    "threat_intel_match":           "threat_intel_match",
+    "threat_intel_match":           "malware_execution",
     "privilege_escalation":         "credential_access",
     "lateral_movement":             "lateral_movement",
     "data_exfiltration":            "data_exfiltration",
@@ -2434,9 +2434,8 @@ SENTINEL_TO_INTERNAL = {
 }
 
 VALID_CATEGORIES = {
-    "credential_access", "threat_intel_match", "lateral_movement",
+    "credential_access", "malware_execution", "lateral_movement",
     "data_exfiltration", "insider_threat", "cloud_infrastructure",
-    "malware_execution",
 }
 
 

@@ -213,7 +213,7 @@ async def analyze_alert(request: ProcessAlertRequest):
         elif selected_action == "monitor":
             routing_zone = "agent_zone"   # monitor never auto-approved
         elif _elevated:
-            routing_zone = "agent_zone"   # threat_intel_match + cloud_infra elevated
+            routing_zone = "agent_zone"   # malware_execution + cloud_infra elevated
         elif _effective_threshold and confidence >= _effective_threshold:
             routing_zone = "auto_approve"
         elif confidence >= 0.60:

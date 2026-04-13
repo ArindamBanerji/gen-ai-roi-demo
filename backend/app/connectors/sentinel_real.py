@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 VALID_CATEGORIES = {
-    "credential_access", "threat_intel_match", "lateral_movement",
+    "credential_access", "malware_execution", "lateral_movement",
     "data_exfiltration", "insider_threat", "cloud_infrastructure",
 }
 
@@ -48,10 +48,10 @@ SENTINEL_CATEGORY_MAP = {
     "Exfiltration":       "data_exfiltration",
     "exfiltration":       "data_exfiltration",
     "DataExfiltration":   "data_exfiltration",
-    # Threat intel
-    "ThreatIntelligence":  "threat_intel_match",
-    "threat-intelligence": "threat_intel_match",
-    "MaliciousIP":         "threat_intel_match",
+    # Malware / Threat intel
+    "ThreatIntelligence":  "malware_execution",
+    "threat-intelligence": "malware_execution",
+    "MaliciousIP":         "malware_execution",
     # Insider
     "InsiderRisk":        "insider_threat",
     "insider-risk":       "insider_threat",
@@ -78,7 +78,7 @@ def _map_sentinel_category(raw_category: str) -> str:
     if "exfil" in raw_lower or "data" in raw_lower:
         return "data_exfiltration"
     if "threat" in raw_lower or "intel" in raw_lower or "malicious" in raw_lower:
-        return "threat_intel_match"
+        return "malware_execution"
     if "insider" in raw_lower:
         return "insider_threat"
     if "cloud" in raw_lower or "azure" in raw_lower or "aws" in raw_lower:

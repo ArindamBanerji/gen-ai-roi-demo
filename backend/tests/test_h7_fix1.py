@@ -46,7 +46,7 @@ def test_pat_travel_001_not_returned_for_non_travel():
     cfg = SOCDomainConfig()
     non_travel = [
         "credential_access",
-        "threat_intel_match",
+        "malware_execution",
         "data_exfiltration",
         "insider_threat",
         "cloud_infrastructure",

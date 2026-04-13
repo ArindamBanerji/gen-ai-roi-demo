@@ -7,7 +7,7 @@ metric. They serve different purposes and must not be conflated.
 
 Per-category θ thresholds from PROD-3 (March 14, 2026):
   lateral_movement    0.809   cloud_infrastructure 0.744
-  insider_threat      0.792   threat_intel_match   0.745
+  insider_threat      0.792   malware_execution    0.745
   credential_access   0.787   data_exfiltration    0.772
 
 Category filter is non-negotiable — cross-category retrieval produces
@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 
 SIMILAR_CASES_THETA: Dict[str, float] = {
     "credential_access":    0.787,
-    "threat_intel_match":   0.745,
+    "malware_execution":    0.745,
     "lateral_movement":     0.809,
     "data_exfiltration":    0.772,
     "insider_threat":       0.792,

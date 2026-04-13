@@ -420,7 +420,7 @@ def test_tab1_alert_types_are_valid_categories():
         [{"cnt": 18}],                                           # pending_count
         [                                                        # top alert types — raw values
             {"category": "anomalous_login",  "alert_type": None, "n": 80},
-            {"category": "threat_intel_match", "alert_type": None, "n": 60},
+            {"category": "malware_execution", "alert_type": None, "n": 60},
             {"category": "data_exfil",       "alert_type": "data_exfiltration", "n": 40},
         ],
         [],                                                      # per-category verified (empty ok)
@@ -611,20 +611,20 @@ def test_tab1_microsoft_only_above_threshold():
     """Microsoft Copilot comparison appears only for categories with ≥100 verified decisions."""
     from app.routers.soc import _tab1_content
 
-    # threat_intel_match with 12 decisions — must NOT mention Microsoft Copilot
+    # malware_execution with 12 decisions — must NOT mention Microsoft Copilot
     mock_low = AsyncMock()
     mock_low.run_query.side_effect = [
         [{"cnt": 500}],
         [{"cnt": 20}],
-        [{"category": "threat_intel_match", "alert_type": None, "n": 30}],
-        [{"category": "threat_intel_match", "verified": 12, "overrides": 1}],
+        [{"category": "malware_execution", "alert_type": None, "n": 30}],
+        [{"category": "malware_execution", "verified": 12, "overrides": 1}],
     ]
     with patch("app.routers.soc.neo4j_client", mock_low):
         content_low = _run(_tab1_content())
 
     insight_low = content_low["top_alert_types"][0]["analyst_insight"]
     assert "Microsoft Copilot" not in insight_low, (
-        f"threat_intel_match (12 decisions) must NOT mention Microsoft Copilot, got: {insight_low!r}"
+        f"malware_execution (12 decisions) must NOT mention Microsoft Copilot, got: {insight_low!r}"
     )
     assert "learning" in insight_low, (
         f"Low-count insight must mention 'learning', got: {insight_low!r}"
@@ -871,9 +871,8 @@ def test_tab2_has_calibration_note():
 # ===========================================================================
 
 VALID_CATEGORIES = {
-    "credential_access", "threat_intel_match", "lateral_movement",
+    "credential_access", "malware_execution", "lateral_movement",
     "data_exfiltration", "insider_threat", "cloud_infrastructure",
-    "malware_execution",
 }
 
 # ---------------------------------------------------------------------------

@@ -108,7 +108,7 @@ def test_refer_blocked_large_margin():
 
 
 # ---------------------------------------------------------------------------
-# Test 6: Condition 4 — threat_intel_match single-factor override → False
+# Test 6: Condition 4 — malware_execution single-factor override → False
 # ---------------------------------------------------------------------------
 
 def test_refer_blocked_threat_intel_override():
@@ -116,11 +116,11 @@ def test_refer_blocked_threat_intel_override():
     probs = _probs(refer=0.32, escalate=0.25, investigate=0.20, suppress=0.13, monitor=0.10)
     conf = 0.50
     factors = _factors(threat_intel_enrichment=0.60)  # above threshold 0.50
-    assert should_refer_to_analyst(probs, conf, REFER_ACTION_INDEX, "threat_intel_match", factors) is False
+    assert should_refer_to_analyst(probs, conf, REFER_ACTION_INDEX, "malware_execution", factors) is False
 
 
 # ---------------------------------------------------------------------------
-# Test 7: Condition 4 — threat_intel_match, enrichment BELOW threshold → not blocked
+# Test 7: Condition 4 — malware_execution, enrichment BELOW threshold → not blocked
 # ---------------------------------------------------------------------------
 
 def test_refer_allowed_threat_intel_below_threshold():
@@ -128,7 +128,7 @@ def test_refer_allowed_threat_intel_below_threshold():
     probs = _probs(refer=0.32, escalate=0.25, investigate=0.20, suppress=0.13, monitor=0.10)
     conf = 0.50
     factors = _factors(threat_intel_enrichment=0.40)  # below threshold 0.50
-    assert should_refer_to_analyst(probs, conf, REFER_ACTION_INDEX, "threat_intel_match", factors) is True
+    assert should_refer_to_analyst(probs, conf, REFER_ACTION_INDEX, "malware_execution", factors) is True
 
 
 # ---------------------------------------------------------------------------

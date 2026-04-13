@@ -356,7 +356,7 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
         # Filter to the 6 canonical SOC_CATEGORIES — excludes "unknown" and
         # any other non-canonical labels that would inflate the count past 6.
         _SOC_CAT = {
-            "credential_access", "threat_intel_match", "lateral_movement",
+            "credential_access", "malware_execution", "lateral_movement",
             "data_exfiltration", "insider_threat", "cloud_infrastructure",
         }
         categories_calibrated = sum(

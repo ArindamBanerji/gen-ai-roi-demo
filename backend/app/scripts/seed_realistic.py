@@ -33,7 +33,7 @@ assert sum(DEPARTMENT_DISTRIBUTION.values()) == 200, \
 
 ALERT_CATEGORY_DISTRIBUTION: Dict[str, int] = {
     "credential_access": 17,
-    "threat_intel_match": 17,
+    "malware_execution": 17,
     "lateral_movement": 17,
     "data_exfiltration": 17,
     "insider_threat": 16,
@@ -45,7 +45,7 @@ assert sum(ALERT_CATEGORY_DISTRIBUTION.values()) == 100, \
 # Short codes used in alert IDs — "REAL-CA-001", etc.
 CATEGORY_CODES: Dict[str, str] = {
     "credential_access": "CA",
-    "threat_intel_match": "TI",
+    "malware_execution":  "TI",
     "lateral_movement": "LM",
     "data_exfiltration": "DE",
     "insider_threat": "IT",
@@ -301,12 +301,12 @@ async def seed_realistic(neo4j_client: Any) -> None:
         {"nodes": ti_nodes},
     )
 
-    # Link threat_intel_match alerts AND planted-user alerts to ThreatIntel
+    # Link malware_execution alerts AND planted-user alerts to ThreatIntel
     planted_ids = {f"REAL-USR-{n:04d}" for n in range(1, 6)}
     ti_pairs: List[Dict[str, str]] = []
     seen: set = set()
     for r in alert_records:
-        if r["category"] == "threat_intel_match" or r["user_id"] in planted_ids:
+        if r["category"] == "malware_execution" or r["user_id"] in planted_ids:
             ti_id = f"REAL-TI-{(r['global_n'] % 20) + 1:03d}"
             key = (r["alert_id"], ti_id)
             if key not in seen:

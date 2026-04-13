@@ -72,7 +72,7 @@ _CHECKS = [
         "op":       "==",
         "expected": 5,
         "note":     (
-            "representative IDs: CA=credential_access, TI=threat_intel_match, "
+            "representative IDs: CA=credential_access, TI=malware_execution, "
             "LM=lateral_movement, DE=data_exfiltration, IT=insider_threat"
         ),
     },

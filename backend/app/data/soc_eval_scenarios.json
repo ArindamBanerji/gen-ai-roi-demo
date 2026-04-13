@@ -16,7 +16,11 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "High-value credential theft attempt with active IOC match on untrusted device.",
-    "dominant_factors": ["asset_criticality", "threat_intel_enrichment", "device_trust"]
+    "dominant_factors": [
+      "asset_criticality",
+      "threat_intel_enrichment",
+      "device_trust"
+    ]
   },
   {
     "scenario_id": "SOC-CA-02",
@@ -34,8 +38,12 @@
     "expected_action": "escalate",
     "expected_action_index": 0,
     "confidence_tier": "high",
-    "description": "Privileged frequent traveler with IOC match — suspicious despite travel context.",
-    "dominant_factors": ["travel_match", "asset_criticality", "threat_intel_enrichment"]
+    "description": "Privileged frequent traveler with IOC match \u00e2\u20ac\u201d suspicious despite travel context.",
+    "dominant_factors": [
+      "travel_match",
+      "asset_criticality",
+      "threat_intel_enrichment"
+    ]
   },
   {
     "scenario_id": "SOC-CA-03",
@@ -54,7 +62,10 @@
     "expected_action_index": 1,
     "confidence_tier": "medium",
     "description": "Ambiguous credential access with moderate threat signals requiring analyst review.",
-    "dominant_factors": ["asset_criticality", "threat_intel_enrichment"]
+    "dominant_factors": [
+      "asset_criticality",
+      "threat_intel_enrichment"
+    ]
   },
   {
     "scenario_id": "SOC-CA-04",
@@ -73,7 +84,9 @@
     "expected_action_index": 2,
     "confidence_tier": "medium",
     "description": "Low-risk credential event from managed corporate device with no threat intel signals.",
-    "dominant_factors": ["device_trust"]
+    "dominant_factors": [
+      "device_trust"
+    ]
   },
   {
     "scenario_id": "SOC-CA-05",
@@ -92,7 +105,9 @@
     "expected_action_index": 2,
     "confidence_tier": "medium",
     "description": "Routine credential access from trusted enrolled device during business hours.",
-    "dominant_factors": ["device_trust"]
+    "dominant_factors": [
+      "device_trust"
+    ]
   },
   {
     "scenario_id": "SOC-CA-06",
@@ -110,13 +125,16 @@
     "expected_action": "monitor",
     "expected_action_index": 3,
     "confidence_tier": "medium",
-    "description": "Mid-tier asset credential event with no strong anomaly signals — watch for pattern.",
-    "dominant_factors": ["asset_criticality", "device_trust"]
+    "description": "Mid-tier asset credential event with no strong anomaly signals \u00e2\u20ac\u201d watch for pattern.",
+    "dominant_factors": [
+      "asset_criticality",
+      "device_trust"
+    ]
   },
   {
     "scenario_id": "SOC-TI-01",
     "domain": "soc",
-    "category": "threat_intel_match",
+    "category": "malware_execution",
     "category_index": 1,
     "factors": {
       "travel_match": 0.3,
@@ -130,12 +148,15 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "Critical asset with high-confidence IOC match requiring immediate escalation.",
-    "dominant_factors": ["threat_intel_enrichment", "asset_criticality"]
+    "dominant_factors": [
+      "threat_intel_enrichment",
+      "asset_criticality"
+    ]
   },
   {
     "scenario_id": "SOC-TI-02",
     "domain": "soc",
-    "category": "threat_intel_match",
+    "category": "malware_execution",
     "category_index": 1,
     "factors": {
       "travel_match": 0.9,
@@ -148,13 +169,17 @@
     "expected_action": "escalate",
     "expected_action_index": 0,
     "confidence_tier": "high",
-    "description": "Privileged frequent traveler with critical IOC match — escalate despite travel record.",
-    "dominant_factors": ["threat_intel_enrichment", "asset_criticality", "travel_match"]
+    "description": "Privileged frequent traveler with critical IOC match \u00e2\u20ac\u201d escalate despite travel record.",
+    "dominant_factors": [
+      "threat_intel_enrichment",
+      "asset_criticality",
+      "travel_match"
+    ]
   },
   {
     "scenario_id": "SOC-TI-03",
     "domain": "soc",
-    "category": "threat_intel_match",
+    "category": "malware_execution",
     "category_index": 1,
     "factors": {
       "travel_match": 0.3,
@@ -167,13 +192,15 @@
     "expected_action": "investigate",
     "expected_action_index": 1,
     "confidence_tier": "medium",
-    "description": "Confirmed IOC match on lower-criticality asset — investigate before escalating.",
-    "dominant_factors": ["threat_intel_enrichment"]
+    "description": "Confirmed IOC match on lower-criticality asset \u00e2\u20ac\u201d investigate before escalating.",
+    "dominant_factors": [
+      "threat_intel_enrichment"
+    ]
   },
   {
     "scenario_id": "SOC-TI-04",
     "domain": "soc",
-    "category": "threat_intel_match",
+    "category": "malware_execution",
     "category_index": 1,
     "factors": {
       "travel_match": 0.2,
@@ -187,12 +214,15 @@
     "expected_action_index": 2,
     "confidence_tier": "high",
     "description": "Stale IOC false positive on trusted managed device with low asset criticality.",
-    "dominant_factors": ["device_trust", "threat_intel_enrichment"]
+    "dominant_factors": [
+      "device_trust",
+      "threat_intel_enrichment"
+    ]
   },
   {
     "scenario_id": "SOC-TI-05",
     "domain": "soc",
-    "category": "threat_intel_match",
+    "category": "malware_execution",
     "category_index": 1,
     "factors": {
       "travel_match": 0.2,
@@ -206,12 +236,14 @@
     "expected_action_index": 2,
     "confidence_tier": "high",
     "description": "IOC feed noise on non-critical asset from enrolled corporate device.",
-    "dominant_factors": ["device_trust"]
+    "dominant_factors": [
+      "device_trust"
+    ]
   },
   {
     "scenario_id": "SOC-TI-06",
     "domain": "soc",
-    "category": "threat_intel_match",
+    "category": "malware_execution",
     "category_index": 1,
     "factors": {
       "travel_match": 0.2,
@@ -224,8 +256,10 @@
     "expected_action": "monitor",
     "expected_action_index": 3,
     "confidence_tier": "medium",
-    "description": "Low-confidence IOC match on medium-criticality asset — monitor for recurrence.",
-    "dominant_factors": ["threat_intel_enrichment"]
+    "description": "Low-confidence IOC match on medium-criticality asset \u00e2\u20ac\u201d monitor for recurrence.",
+    "dominant_factors": [
+      "threat_intel_enrichment"
+    ]
   },
   {
     "scenario_id": "SOC-LM-01",
@@ -244,7 +278,10 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "Repeated lateral movement pattern on critical asset with matching threat intel.",
-    "dominant_factors": ["pattern_history", "asset_criticality"]
+    "dominant_factors": [
+      "pattern_history",
+      "asset_criticality"
+    ]
   },
   {
     "scenario_id": "SOC-LM-02",
@@ -263,7 +300,11 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "High-confidence lateral movement with IOC match and strong behavioral history.",
-    "dominant_factors": ["asset_criticality", "threat_intel_enrichment", "pattern_history"]
+    "dominant_factors": [
+      "asset_criticality",
+      "threat_intel_enrichment",
+      "pattern_history"
+    ]
   },
   {
     "scenario_id": "SOC-LM-03",
@@ -281,8 +322,11 @@
     "expected_action": "investigate",
     "expected_action_index": 1,
     "confidence_tier": "medium",
-    "description": "Lateral movement indicators with moderate signals — analyst review needed.",
-    "dominant_factors": ["pattern_history", "asset_criticality"]
+    "description": "Lateral movement indicators with moderate signals \u00e2\u20ac\u201d analyst review needed.",
+    "dominant_factors": [
+      "pattern_history",
+      "asset_criticality"
+    ]
   },
   {
     "scenario_id": "SOC-LM-04",
@@ -301,7 +345,10 @@
     "expected_action_index": 2,
     "confidence_tier": "high",
     "description": "Confirmed travel-explained movement on non-critical asset from trusted device.",
-    "dominant_factors": ["travel_match", "device_trust"]
+    "dominant_factors": [
+      "travel_match",
+      "device_trust"
+    ]
   },
   {
     "scenario_id": "SOC-LM-05",
@@ -320,7 +367,10 @@
     "expected_action_index": 2,
     "confidence_tier": "high",
     "description": "VPN-confirmed travel explains lateral access; non-critical target, managed device.",
-    "dominant_factors": ["travel_match", "device_trust"]
+    "dominant_factors": [
+      "travel_match",
+      "device_trust"
+    ]
   },
   {
     "scenario_id": "SOC-LM-06",
@@ -339,7 +389,9 @@
     "expected_action_index": 3,
     "confidence_tier": "medium",
     "description": "Single-hop lateral movement to low-risk asset with no threat intelligence signal.",
-    "dominant_factors": ["pattern_history"]
+    "dominant_factors": [
+      "pattern_history"
+    ]
   },
   {
     "scenario_id": "SOC-DE-01",
@@ -358,7 +410,11 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "Large-volume exfiltration from critical repo at 3 AM with known bad destination IP.",
-    "dominant_factors": ["asset_criticality", "time_anomaly", "threat_intel_enrichment"]
+    "dominant_factors": [
+      "asset_criticality",
+      "time_anomaly",
+      "threat_intel_enrichment"
+    ]
   },
   {
     "scenario_id": "SOC-DE-02",
@@ -377,7 +433,10 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "Recurring exfiltration pattern on critical asset with elevated threat intel match.",
-    "dominant_factors": ["asset_criticality", "pattern_history"]
+    "dominant_factors": [
+      "asset_criticality",
+      "pattern_history"
+    ]
   },
   {
     "scenario_id": "SOC-DE-03",
@@ -395,8 +454,11 @@
     "expected_action": "investigate",
     "expected_action_index": 1,
     "confidence_tier": "medium",
-    "description": "Unusual data transfer volume from high-criticality asset — intent unclear.",
-    "dominant_factors": ["asset_criticality", "time_anomaly"]
+    "description": "Unusual data transfer volume from high-criticality asset \u00e2\u20ac\u201d intent unclear.",
+    "dominant_factors": [
+      "asset_criticality",
+      "time_anomaly"
+    ]
   },
   {
     "scenario_id": "SOC-DE-04",
@@ -415,7 +477,9 @@
     "expected_action_index": 2,
     "confidence_tier": "high",
     "description": "Authorized backup transfer from low-criticality asset on fully trusted device.",
-    "dominant_factors": ["device_trust"]
+    "dominant_factors": [
+      "device_trust"
+    ]
   },
   {
     "scenario_id": "SOC-DE-05",
@@ -434,7 +498,9 @@
     "expected_action_index": 2,
     "confidence_tier": "high",
     "description": "Routine scheduled export from non-critical data store on managed device.",
-    "dominant_factors": ["device_trust"]
+    "dominant_factors": [
+      "device_trust"
+    ]
   },
   {
     "scenario_id": "SOC-DE-06",
@@ -452,8 +518,10 @@
     "expected_action": "monitor",
     "expected_action_index": 3,
     "confidence_tier": "medium",
-    "description": "Moderate data transfer on medium-criticality asset — no IOC, monitor for volume increase.",
-    "dominant_factors": ["asset_criticality"]
+    "description": "Moderate data transfer on medium-criticality asset \u00e2\u20ac\u201d no IOC, monitor for volume increase.",
+    "dominant_factors": [
+      "asset_criticality"
+    ]
   },
   {
     "scenario_id": "SOC-IT-01",
@@ -472,7 +540,11 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "Repeated after-hours access pattern with IOC match and unmanaged personal device.",
-    "dominant_factors": ["pattern_history", "time_anomaly", "device_trust"]
+    "dominant_factors": [
+      "pattern_history",
+      "time_anomaly",
+      "device_trust"
+    ]
   },
   {
     "scenario_id": "SOC-IT-02",
@@ -491,7 +563,11 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "Behavioral anomaly with financial system access after resignation notice flagged.",
-    "dominant_factors": ["asset_criticality", "pattern_history", "time_anomaly"]
+    "dominant_factors": [
+      "asset_criticality",
+      "pattern_history",
+      "time_anomaly"
+    ]
   },
   {
     "scenario_id": "SOC-IT-03",
@@ -509,8 +585,11 @@
     "expected_action": "investigate",
     "expected_action_index": 1,
     "confidence_tier": "medium",
-    "description": "Moderate behavioral signals — analyst review needed to determine intent.",
-    "dominant_factors": ["pattern_history", "asset_criticality"]
+    "description": "Moderate behavioral signals \u00e2\u20ac\u201d analyst review needed to determine intent.",
+    "dominant_factors": [
+      "pattern_history",
+      "asset_criticality"
+    ]
   },
   {
     "scenario_id": "SOC-IT-04",
@@ -528,8 +607,10 @@
     "expected_action": "suppress",
     "expected_action_index": 2,
     "confidence_tier": "high",
-    "description": "Explainable after-hours access — manager-approved project on trusted device.",
-    "dominant_factors": ["device_trust"]
+    "description": "Explainable after-hours access \u00e2\u20ac\u201d manager-approved project on trusted device.",
+    "dominant_factors": [
+      "device_trust"
+    ]
   },
   {
     "scenario_id": "SOC-IT-05",
@@ -548,7 +629,9 @@
     "expected_action_index": 2,
     "confidence_tier": "high",
     "description": "Low-risk access pattern from enrolled device with no historical anomalies.",
-    "dominant_factors": ["device_trust"]
+    "dominant_factors": [
+      "device_trust"
+    ]
   },
   {
     "scenario_id": "SOC-IT-06",
@@ -566,8 +649,10 @@
     "expected_action": "monitor",
     "expected_action_index": 3,
     "confidence_tier": "medium",
-    "description": "Weak insider behavioral signals on medium-value asset — monitor for escalation.",
-    "dominant_factors": ["pattern_history"]
+    "description": "Weak insider behavioral signals on medium-value asset \u00e2\u20ac\u201d monitor for escalation.",
+    "dominant_factors": [
+      "pattern_history"
+    ]
   },
   {
     "scenario_id": "SOC-CI-01",
@@ -586,7 +671,11 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "Critical cloud workload accessed from known-bad IP at anomalous hour.",
-    "dominant_factors": ["asset_criticality", "threat_intel_enrichment", "time_anomaly"]
+    "dominant_factors": [
+      "asset_criticality",
+      "threat_intel_enrichment",
+      "time_anomaly"
+    ]
   },
   {
     "scenario_id": "SOC-CI-02",
@@ -605,7 +694,10 @@
     "expected_action_index": 0,
     "confidence_tier": "high",
     "description": "Production cloud infrastructure targeted with matching threat actor TTP.",
-    "dominant_factors": ["asset_criticality", "threat_intel_enrichment"]
+    "dominant_factors": [
+      "asset_criticality",
+      "threat_intel_enrichment"
+    ]
   },
   {
     "scenario_id": "SOC-CI-03",
@@ -623,8 +715,11 @@
     "expected_action": "investigate",
     "expected_action_index": 1,
     "confidence_tier": "medium",
-    "description": "Unusual cloud API call pattern on medium-criticality workload — investigate source.",
-    "dominant_factors": ["asset_criticality", "time_anomaly"]
+    "description": "Unusual cloud API call pattern on medium-criticality workload \u00e2\u20ac\u201d investigate source.",
+    "dominant_factors": [
+      "asset_criticality",
+      "time_anomaly"
+    ]
   },
   {
     "scenario_id": "SOC-CI-04",
@@ -643,7 +738,9 @@
     "expected_action_index": 2,
     "confidence_tier": "high",
     "description": "Scheduled maintenance window activity from trusted CI/CD pipeline service account.",
-    "dominant_factors": ["device_trust"]
+    "dominant_factors": [
+      "device_trust"
+    ]
   },
   {
     "scenario_id": "SOC-CI-05",
@@ -662,7 +759,9 @@
     "expected_action_index": 2,
     "confidence_tier": "high",
     "description": "Routine cloud resource scaling event from compliant deployment pipeline.",
-    "dominant_factors": ["device_trust"]
+    "dominant_factors": [
+      "device_trust"
+    ]
   },
   {
     "scenario_id": "SOC-CI-06",
@@ -680,7 +779,9 @@
     "expected_action": "monitor",
     "expected_action_index": 3,
     "confidence_tier": "medium",
-    "description": "Low-risk cloud configuration change on non-critical resource — monitor for drift.",
-    "dominant_factors": ["asset_criticality"]
+    "description": "Low-risk cloud configuration change on non-critical resource \u00e2\u20ac\u201d monitor for drift.",
+    "dominant_factors": [
+      "asset_criticality"
+    ]
   }
 ]

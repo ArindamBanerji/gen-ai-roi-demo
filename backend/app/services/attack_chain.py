@@ -172,7 +172,7 @@ class AttackChainService:
             "data_exfiltration":    "exfiltration",
             "insider_threat":       "collection",
             "cloud_infrastructure": "initial_access",
-            "threat_intel_match":   "command_and_control",
+            "malware_execution":    "command_and_control",
         }
         tactic_to_idx = {t: i for i, t in enumerate(self.TACTIC_ORDER)}
 

@@ -28,8 +28,8 @@ ALERT_CATEGORIES: Dict[str, Dict[str, Any]] = {
         # Credential access with confirmed travel context → suppress (travel FP).
         "ground_truth_action": "suppress",
     },
-    "threat_intel_match": {
-        "display":             "Threat Intelligence Match",
+    "malware_execution": {
+        "display":             "Malware Execution",
         "oracle_success_rate": 0.85,
         "attack_technique":    "T1588 - Obtain Capabilities",
         "alert_type":          "threat_intel_match",
@@ -135,7 +135,7 @@ _TI: List[Dict[str, Any]] = [
     # threat_intel_match: ThreatIntel nodes + ASSOCIATED_WITH seeded in Neo4j
     {
         "alert_id": "SIM-TI-001", "id": "SIM-TI-001",
-        "alert_type": "threat_intel_match", "category": "threat_intel_match",
+        "alert_type": "threat_intel_match", "category": "malware_execution",
         "user_id": "sim-ti-user@company.com", "source_location": "External",
         "business_hours_login": True,  "weekend_login": False,
         "mfa_completed": True,  "device_fingerprint_match": True,
@@ -143,7 +143,7 @@ _TI: List[Dict[str, Any]] = [
     },
     {
         "alert_id": "SIM-TI-002", "id": "SIM-TI-002",
-        "alert_type": "threat_intel_match", "category": "threat_intel_match",
+        "alert_type": "threat_intel_match", "category": "malware_execution",
         "user_id": "sim-ti-user@company.com", "source_location": "External",
         "business_hours_login": True,  "weekend_login": False,
         "mfa_completed": False, "device_fingerprint_match": True,
@@ -151,7 +151,7 @@ _TI: List[Dict[str, Any]] = [
     },
     {
         "alert_id": "SIM-TI-003", "id": "SIM-TI-003",
-        "alert_type": "threat_intel_match", "category": "threat_intel_match",
+        "alert_type": "threat_intel_match", "category": "malware_execution",
         "user_id": "sim-ti-user@company.com", "source_location": "External",
         "business_hours_login": True,  "weekend_login": False,
         "mfa_completed": True,  "device_fingerprint_match": True,
@@ -159,7 +159,7 @@ _TI: List[Dict[str, Any]] = [
     },
     {
         "alert_id": "SIM-TI-004", "id": "SIM-TI-004",
-        "alert_type": "threat_intel_match", "category": "threat_intel_match",
+        "alert_type": "threat_intel_match", "category": "malware_execution",
         "user_id": "sim-ti-user@company.com", "source_location": "External",
         "business_hours_login": False, "weekend_login": True,
         "mfa_completed": True,  "device_fingerprint_match": True,
@@ -353,7 +353,7 @@ _CI: List[Dict[str, Any]] = [
 # Each alert is enriched with ground_truth_action from ALERT_CATEGORIES if not set.
 _CATEGORY_ORDER = [
     ("credential_access",     _CA),
-    ("threat_intel_match",    _TI),
+    ("malware_execution",     _TI),
     ("lateral_movement",      _LM),
     ("data_exfiltration",     _DE),
     ("insider_threat",        _IT),

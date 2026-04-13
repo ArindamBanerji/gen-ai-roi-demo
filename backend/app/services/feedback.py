@@ -76,7 +76,7 @@ PRECEDENT_COUNTS = {
 # H7-FIX-1: SOC category → graph edge key
 _CATEGORY_EDGE_MAP: Dict[str, str] = {
     "credential_access":    "User->CredentialStore",
-    "threat_intel_match":   "Alert->ThreatFeed",
+    "malware_execution":    "Alert->ThreatFeed",
     "lateral_movement":     "User->LateralHost",
     "data_exfiltration":    "Asset->ExternalEndpoint",
     "insider_threat":       "User->SensitiveAsset",
@@ -148,8 +148,8 @@ def process_outcome(
             # ALERT-7823 is a credential-access / travel-login demo alert
             alert_category = "credential_access"
         elif "7824" in alert_id:
-            # ALERT-7824 is a threat-intel-match / phishing demo alert
-            alert_category = "threat_intel_match"
+            # ALERT-7824 is a malware-execution / phishing demo alert
+            alert_category = "malware_execution"
         else:
             logger.warning(
                 "[H7-FIX-1] Could not determine category for alert %s, "

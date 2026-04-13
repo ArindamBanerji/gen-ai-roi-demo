@@ -46,7 +46,7 @@ def generate_three_claims() -> Dict:
                 'metric': (
                     'N_half = 13.51 decisions. '
                     'Onboarding calendar: credential_access Week 1, '
-                    'threat_intel_match Week 2-3. '
+                    'malware_execution Week 2-3. '
                     'Steady-state tracking error: 0.038 per factor component.'
                 ),
                 'evidence': (

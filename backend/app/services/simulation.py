@@ -36,9 +36,9 @@ from gae.scoring import score_alert
 
 _ORACLE_SUCCESS_RATES: Dict[str, float] = {
     # SIM-3a canonical categories — chosen to make learning curves diverge naturally.
-    # threat_intel easiest (clear TI signal), insider hardest (all signals benign).
+    # malware_execution easiest (clear TI signal), insider hardest (all signals benign).
     "credential_access":  0.75,
-    "threat_intel_match": 0.85,
+    "malware_execution":  0.85,
     "lateral_movement":   0.65,
     "data_exfiltration":  0.70,
     "insider_threat":     0.55,
@@ -60,7 +60,7 @@ _ORACLE_SUCCESS_RATES: Dict[str, float] = {
 _ATTACK_TECHNIQUES: Dict[str, str] = {
     # SIM-3a canonical categories
     "credential_access":    "T1078 - Valid Accounts",
-    "threat_intel_match":   "T1588 - Obtain Capabilities",
+    "malware_execution":    "T1588 - Obtain Capabilities",
     "lateral_movement":     "T1021 - Remote Services",
     "data_exfiltration":    "T1048 - Exfiltration Over Alternative Protocol",
     "insider_threat":       "T1078.004 - Valid Accounts: Cloud Accounts",
@@ -103,7 +103,7 @@ _FALLBACK_POOL: List[Dict[str, Any]] = [
     },
     {
         "alert_id": "FB-TI-001", "id": "FB-TI-001",
-        "alert_type": "threat_intel_match", "category": "threat_intel_match",
+        "alert_type": "threat_intel_match", "category": "malware_execution",
         "ground_truth_action": "escalate",
         "user_id": "sim-ti-user@company.com", "source_location": "External",
         "business_hours_login": True, "weekend_login": False,

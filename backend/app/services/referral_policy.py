@@ -35,7 +35,7 @@ MARGIN_THRESHOLD = 0.20
 # Factor indices: 1=asset_criticality, 2=threat_intel_enrichment,
 #                 3=pattern_history, 4=time_anomaly
 CATEGORY_OVERRIDES = {
-    "threat_intel_match": {
+    "malware_execution": {
         "condition": "threat_intel_enrichment > threshold",
         "factor_index": 2,
         "threshold": 0.50,

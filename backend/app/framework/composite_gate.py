@@ -47,7 +47,7 @@ class CompositeDiscriminant:
         "credential_access":    0.62,
         "data_exfiltration":    0.67,
         "lateral_movement":     0.62,
-        "threat_intel_match":   0.69,
+        "malware_execution":    0.69,
         "cloud_infrastructure": 0.65,
         "insider_threat":       0.70,
     }

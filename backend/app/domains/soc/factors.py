@@ -625,7 +625,7 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
         ],
     },
 
-    "threat_intel_match": {
+    "malware_execution": {
         "recommended_action": "escalate_incident",
         "confidence": 0.93,
         "factors": [
