@@ -281,9 +281,18 @@ export async function checkPolicyConflict(alertId: string) {
 // Graph Intelligence (v3.0)
 // ============================================================================
 
+// Module-level in-flight tracker: React.StrictMode double-invokes useEffect(fn,[])
+// in development. If a refresh is already in flight, callers share the same promise
+// so exactly one HTTP POST is sent. Resets to null after completion so manual
+// button refreshes always work.
+let _threatIntelInFlight: Promise<unknown> | null = null
+
 export async function refreshThreatIntel() {
+  if (_threatIntelInFlight) return _threatIntelInFlight
   console.log('[API] Calling POST /api/graph/threat-intel/refresh')
-  const response = await fetchJSON('/graph/threat-intel/refresh', { method: 'POST' })
+  _threatIntelInFlight = fetchJSON('/graph/threat-intel/refresh', { method: 'POST' })
+    .finally(() => { _threatIntelInFlight = null })
+  const response = await _threatIntelInFlight
   console.log('[API] POST /api/graph/threat-intel/refresh response:', response)
   return response
 }
