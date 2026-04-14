@@ -24,7 +24,7 @@ from gae import bootstrap_calibration, BootstrapResult
 from app.domains.soc.config import (
     SOC_BOOTSTRAP_ROUNDS, SOC_BOOTSTRAP_SAMPLES_PER_ACTION,
     SOC_BOOTSTRAP_SIGMA, SOC_BOOTSTRAP_CONVERGENCE_TOL, SOC_BOOTSTRAP_SEED,
-    SOC_CATEGORIES,
+    SOC_CATEGORIES, SCORER_ACTIONS,
 )
 import app.framework.learning_state as _fw
 
@@ -445,7 +445,7 @@ _EXPORT_CATEGORIES = [
     "data_exfiltration", "malware_execution",
     "insider_threat", "cloud_infrastructure",
 ]
-_EXPORT_ACTIONS = ["escalate", "investigate", "suppress", "monitor"]
+_EXPORT_ACTIONS = list(SCORER_ACTIONS)
 _EXPORT_VERSION = "1.0"
 _EXPORT_GAE_VERSION = "0.7.21"
 

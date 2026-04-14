@@ -3610,7 +3610,8 @@ async def get_centroid_heatmap():
         "data_exfiltration", "malware_execution",
         "insider_threat", "cloud_infrastructure",
     ]
-    _ACTIONS = ["escalate", "investigate", "suppress", "monitor"]
+    from app.domains.soc.config import SCORER_ACTIONS
+    _ACTIONS = list(SCORER_ACTIONS)
 
     scorer = get_profile_scorer()
     if scorer is None:
@@ -3709,7 +3710,8 @@ async def get_centroid_support():
         "data_exfiltration", "malware_execution",
         "insider_threat", "cloud_infrastructure",
     ]
-    _ACTIONS = ["escalate", "investigate", "suppress", "monitor"]
+    from app.domains.soc.config import SCORER_ACTIONS as _sc_actions
+    _ACTIONS = list(_sc_actions)
     _FACTORS = [
         "travel_match", "asset_criticality", "threat_intel_enrichment",
         "pattern_history", "time_anomaly", "device_trust",
