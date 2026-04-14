@@ -1020,8 +1020,8 @@ async def get_learning_state_endpoint():
     try:
         from app.state.graph_snapshot import get_snapshot as _get_snap_ls
         verified_decisions = _get_snap_ls().verified_decisions
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] learning-state verified_decisions query failed: {_exc}")
 
     from app.domains.soc.config import BOOTSTRAP_CATEGORY_WEIGHTS
     return {
@@ -1153,7 +1153,8 @@ async def explain_decision(decision_id: str):
             {"category": category},
         )
         calibration_count = int((cal_rows[0].get("cnt") or 0) if cal_rows else 0)
-    except Exception:
+    except Exception as _exc:
+        print(f"[SOC] calibration_count query failed: {_exc}")
         calibration_count = 0
 
     # ── Step 2b: ThreatIndicator source (for malware_execution template) ────
@@ -2415,8 +2416,8 @@ async def get_gate_config():
     n_decisions = 0
     try:
         n_decisions = get_learning_state().decision_count
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] gate-config n_decisions query failed: {_exc}")
 
     cfg = GateConfig(n_decisions=n_decisions, V=200.0, alpha=0.25)
     return cfg.summary()
@@ -2491,8 +2492,8 @@ async def _tab1_content() -> dict:
             "MATCH (a:Alert) RETURN count(a) AS cnt", {}
         )
         alert_count = int((rows[0].get("cnt") or 0) if rows else 0)
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] tab2 alert_count query failed: {_exc}")
 
     try:
         rows = await neo4j_client.run_query(
@@ -2500,8 +2501,8 @@ async def _tab1_content() -> dict:
             "RETURN count(a) AS cnt", {}
         )
         pending_count = int((rows[0].get("cnt") or 0) if rows else 0)
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] tab2 pending_count query failed: {_exc}")
 
     # Fix 1.1 (revised): read a.category (primary) and a.alert_type (fallback).
     # a.type is always None on live data — ignored.
@@ -2513,8 +2514,8 @@ async def _tab1_content() -> dict:
             "ORDER BY n DESC LIMIT 3", {}
         )
         raw_top = rows
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] tab2 raw_top categories query failed: {_exc}")
 
     # Fix 1.2: fetch per-category verified decisions + override counts in one query
     top_categories = [_resolve_category(r) for r in raw_top]
@@ -2539,8 +2540,8 @@ async def _tab1_content() -> dict:
                         "verified":  int(r.get("verified")  or 0),
                         "overrides": int(r.get("overrides") or 0),
                     }
-        except Exception:
-            pass
+        except Exception as _exc:
+            print(f"[SOC] tab2 per-category verified_map query failed: {_exc}")
 
     for r in raw_top:
         category = _resolve_category(r)
@@ -2608,8 +2609,8 @@ async def _tab2_content() -> dict:
             _drift_result = _compute_iks_drift(_ps.mu)
             iks_score = _drift_result["current"]
             iks_interpretation = _interp_v2(iks_score)
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] tab2 iks drift query failed: {_exc}")
 
     # ── IKS v2: component breakdown + total_decisions (informational) ──────────
     # Also used as fallback for iks_score if drift path gave 0.0.
@@ -2620,8 +2621,8 @@ async def _tab2_content() -> dict:
         if iks_score == 0.0:
             iks_score          = iks_data.get("iks_v2", 0.0)
             iks_interpretation = iks_data.get("interpretation", "")
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] tab2 iks_v2 query failed: {_exc}")
 
     try:
         rows = await neo4j_client.run_query(
@@ -2629,8 +2630,8 @@ async def _tab2_content() -> dict:
             "RETURN count(d) AS cnt", {}
         )
         drift_alert_count = int((rows[0].get("cnt") or 0) if rows else 0)
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] tab2 drift_alert_count query failed: {_exc}")
 
     try:
         from app.services.override_detector import override_detector as _od
@@ -2638,8 +2639,8 @@ async def _tab2_content() -> dict:
             override_learning_status = f"active ({_od.example_count} examples)"
         else:
             override_learning_status = f"inactive ({_od.example_count} examples)"
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] tab2 override_detector query failed: {_exc}")
 
     # FIX 2.2 — Drift translation
     drift_pct = round((drift_alert_count / total_decisions * 100) if total_decisions > 0 else 0.0, 1)
@@ -2666,8 +2667,8 @@ async def _tab2_content() -> dict:
     try:
         from app.state.graph_snapshot import get_snapshot as _get_snap_t2
         verified_decisions = _get_snap_t2().verified_decisions
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] tab2 verified_decisions snapshot failed: {_exc}")
 
     decision_count_glossary = {
         "verified_decisions": (
@@ -2728,16 +2729,16 @@ async def _tab3_content() -> dict:
 
     try:
         factor_names = [c.name for c in SOCDomainConfig.get_factor_computers()]
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] tab3 factor_names query failed: {_exc}")
 
     try:
         rows = await neo4j_client.run_query(
             "MATCH (n) RETURN count(n) AS cnt", {}
         )
         graph_node_count = int((rows[0].get("cnt") or 0) if rows else 0)
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] tab3 graph_node_count query failed: {_exc}")
 
     # FIX 2.4 — factor breakdown with sigma, kernel_weight, interpretation
     all_sigmas = [_FACTOR_SIGMA.get(f, 0.15) for f in factor_names]
@@ -2789,14 +2790,15 @@ async def _tab3_content() -> dict:
                 _alert_cat = _rows[0].get("category") or resolve_alert_category(
                     _rows[0].get("alert_type") or ""
                 )
-        except Exception:
-            pass
+        except Exception as _exc:
+            print(f"[SOC] tab3 pending alert query failed: {_exc}")
 
         # Step 2: resolve category index (default: credential_access = 0)
         _cfg = _SDC()
         try:
             _cat_idx = _cfg.get_category_index(_alert_cat) if _alert_cat else 0
-        except Exception:
+        except Exception as _exc:
+            print(f"[SOC] tab3 category_index lookup failed: {_exc}")
             _cat_idx = 0
 
         # Step 3: score with neutral factor vector
@@ -2806,8 +2808,8 @@ async def _tab3_content() -> dict:
             rec_action = _result.action_name
             rec_conf   = round(float(_result.confidence), 3)
             rec_basis  = "live_scoring" if _alert_cat else "centroid_fallback"
-        except Exception:
-            pass
+        except Exception as _exc:
+            print(f"[SOC] tab3 live scoring failed: {_exc}")
 
     # Step 4: get override_rate for rationale (query or safe default)
     rec_category = _alert_cat or "credential_access"
@@ -2825,8 +2827,8 @@ async def _tab3_content() -> dict:
             _o = int(_ov_rows[0].get("overrides") or 0)
             if _v > 0:
                 override_rate = round(_o / _v * 100, 1)
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] tab3 override_rate query failed: {_exc}")
 
     # FIX 2.5 — graph context translation
     graph_context = (
@@ -2878,8 +2880,8 @@ async def _tab4_content() -> dict:
             "MATCH (d:Decision) RETURN count(d) AS cnt", {}
         )
         total_decisions = int((rows[0].get("cnt") or 0) if rows else 0)
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] tab4 total_decisions query failed: {_exc}")
 
     # Floor: when Neo4j returns 0, fall back to in-memory learning state
     # (same pattern as compute_iks_v2) so Tab 4 stays consistent with Tab 2.
@@ -2887,8 +2889,8 @@ async def _tab4_content() -> dict:
         try:
             from app.services.gae_state import get_learning_state as _get_ls_t4
             total_decisions = max(0, _get_ls_t4().decision_count)
-        except Exception:
-            pass
+        except Exception as _exc:
+            print(f"[SOC] tab4 decision_count fallback failed: {_exc}")
 
     try:
         # Estimate decisions/day from timestamp spread of Decision nodes
@@ -2906,16 +2908,16 @@ async def _tab4_content() -> dict:
             n     = int(rows[0].get("n") or 0)
             span_days = max((t_max - t_min) / 86_400_000.0, 1.0)
             decisions_per_day = round(n / span_days, 1)
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] tab4 decisions_per_day query failed: {_exc}")
 
     try:
         rows = await neo4j_client.run_query(
             "MATCH (d:Decision) WHERE d.correct = true RETURN count(d) AS cnt", {}
         )
         evolution_events_count = int((rows[0].get("cnt") or 0) if rows else 0)
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] tab4 evolution_events_count query failed: {_exc}")
 
     # ROI: 0.25 analyst-hours saved per auto-closed decision, $75/hr loaded cost
     roi_annual_usd = round(decisions_per_day * 365 * 0.25 * 75.0, 2)
@@ -2951,8 +2953,9 @@ async def _tab4_content() -> dict:
     try:
         from app.state.graph_snapshot import get_snapshot as _get_snap_t4
         verified_decisions = _get_snap_t4().verified_decisions
-    except Exception:
-        pass  # falls back to total_decisions
+    except Exception as _exc:
+        print(f"[SOC] tab4 verified_decisions snapshot failed: {_exc}")
+        # falls back to total_decisions
     analyst_days        = max(1, verified_decisions // 10)
     switching_cost_usd  = analyst_days * 800
     switching_cost_dollars = {
@@ -2998,8 +3001,8 @@ async def _tab5_content() -> dict:
             "MATCH ()-[r:TRIGGERED_EVOLUTION]->() RETURN count(r) AS cnt", {}
         )
         flywheel_edge_count = int((rows[0].get("cnt") or 0) if rows else 0)
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] tab5 flywheel_edge_count query failed: {_exc}")
 
     flywheel_claim = "+10.13pp accuracy on pattern-matched alerts (validated, p=0.0002, N=30)"
 
@@ -3231,8 +3234,8 @@ async def get_analyst_eta_weights_endpoint():
     n_decisions = 0
     try:
         n_decisions = _get_ls().decision_count
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] analyst-eta n_decisions query failed: {_exc}")
 
     # Fetch precision from Neo4j
     precision = await compute_analyst_precision(neo4j_client)
@@ -3250,8 +3253,8 @@ async def get_analyst_eta_weights_endpoint():
     try:
         scorer = get_profile_scorer()
         apply_analyst_eta_weights(scorer, weights)
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] analyst-eta apply_weights failed: {_exc}")
 
     analysts = {
         analyst: {
@@ -3316,15 +3319,15 @@ async def get_analyst_weights():
     try:
         rows = await neo4j_client.run_query(_ANALYST_DECISION_COUNT_QUERY, {})
         decision_counts = {r["analyst"]: int(r["total"]) for r in (rows or [])}
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] analyst-detail decision_counts query failed: {_exc}")
 
     # -- precision + weights --------------------------------------------------
     n_decisions = 0
     try:
         n_decisions = _get_ls().decision_count
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] analyst-detail n_decisions query failed: {_exc}")
 
     precision = await compute_analyst_precision(neo4j_client)
 
@@ -3464,8 +3467,8 @@ async def get_spike_cap_status_endpoint():
     try:
         baseline = await compute_volume_baseline(neo4j_client)
         baseline_daily = baseline.get("daily_mean", 0.0)
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] learning-health baseline_daily query failed: {_exc}")
 
     status["baseline_daily"] = baseline_daily
     return status
@@ -3558,8 +3561,8 @@ async def get_centroid_export(format: str = "json"):
         from app.services.iks import compute_iks_v2
         iks_data = await compute_iks_v2(neo4j_client)
         iks_score = iks_data.get("iks_v2", 0.0)
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] centroid-export iks_score query failed: {_exc}")
 
     # Merge: start with raw base fields, then add/override with new fields
     export = {
@@ -3730,7 +3733,8 @@ async def get_centroid_support():
     # Fetch bootstrap baseline
     try:
         bootstrap = await get_bootstrap_centroids(neo4j_client)
-    except Exception:
+    except Exception as _exc:
+        print(f"[SOC] centroid-evolution bootstrap query failed: {_exc}")
         bootstrap = None
 
     if bootstrap is None or bootstrap.get("mu") is None:
@@ -3835,8 +3839,8 @@ async def get_decision_distance_log(limit: int = 50):
     entries = []
     try:
         entries = await read_decision_distance_log(neo4j_client, limit=max(1, min(limit, 500)))
-    except Exception:
-        pass
+    except Exception as _exc:
+        print(f"[SOC] reconvergence-log entries query failed: {_exc}")
 
     # Parse stored JSON category distributions
     for e in entries:
