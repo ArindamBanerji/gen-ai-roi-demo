@@ -14,7 +14,6 @@ import os
 import sys
 from unittest.mock import AsyncMock, patch
 
-import numpy as np
 import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -42,20 +41,19 @@ def _neo4j_reset_mock():
 
 def test_alerts_reset_preserves_profile_scorer():
     """ProfileScorer must still be attached after a demo reset — BACKLOG-020."""
-    from app.services.gae_state import get_profile_scorer
-
-    ps_before = get_profile_scorer()
-    if ps_before is None:
-        pytest.skip("ProfileScorer not initialized — startup required")
+    ls_before = client.get("/api/soc/learning-state").json()
+    iks_before = ls_before.get("iks_v2", 0.0)
+    if iks_before == 0.0:
+        pytest.skip("ProfileScorer not initialized — no IKS data")
 
     with patch("app.routers.triage.neo4j_client", _neo4j_reset_mock()):
         resp = client.post("/api/alerts/reset")
     assert resp.status_code == 200
 
-    ps_after = get_profile_scorer()
-    assert ps_after is not None, (
-        "BACKLOG-020: ProfileScorer was None after /api/alerts/reset — "
-        "learning state was wiped"
+    ls_after = client.get("/api/soc/learning-state").json()
+    assert ls_after.get("iks_v2", 0.0) > 0.0, (
+        "BACKLOG-020: ProfileScorer was reset after /api/alerts/reset — "
+        "IKS dropped to zero (learning state wiped)"
     )
 
 
@@ -65,22 +63,17 @@ def test_alerts_reset_preserves_profile_scorer():
 
 def test_alerts_reset_does_not_collapse_iks():
     """IKS must not drop to near-zero after POST /api/alerts/reset — BACKLOG-020."""
-    from app.services.gae_state import get_profile_scorer
-    from app.services.iks import compute_iks
-
-    ps = get_profile_scorer()
-    if ps is None:
-        pytest.skip("ProfileScorer not initialized — startup required")
-
-    iks_before = compute_iks(ps.mu)["current"]
+    ls_before = client.get("/api/soc/learning-state").json()
+    iks_before = ls_before.get("iks_v2", 0.0)
+    if iks_before == 0.0:
+        pytest.skip("ProfileScorer not initialized — no IKS data")
 
     with patch("app.routers.triage.neo4j_client", _neo4j_reset_mock()):
         resp = client.post("/api/alerts/reset")
     assert resp.status_code == 200
 
-    ps_after = get_profile_scorer()
-    assert ps_after is not None
-    iks_after = compute_iks(ps_after.mu)["current"]
+    ls_after = client.get("/api/soc/learning-state").json()
+    iks_after = ls_after.get("iks_v2", 0.0)
 
     assert iks_after >= iks_before - 5.0, (
         f"BACKLOG-020: IKS collapsed {iks_before:.1f}→{iks_after:.1f} "
@@ -142,14 +135,10 @@ def test_iks_stable_after_learning_decisions():
     E2E learning loop triggers via beforeEach) must not clobber the
     ProfileScorer, so IKS remains at its pre-test level.
     """
-    from app.services.gae_state import get_profile_scorer
-    from app.services.iks import compute_iks
-
-    ps = get_profile_scorer()
-    if ps is None:
-        pytest.skip("ProfileScorer not initialized — startup required")
-
-    iks_before = compute_iks(ps.mu)["current"]
+    ls_before = client.get("/api/soc/learning-state").json()
+    iks_before = ls_before.get("iks_v2", 0.0)
+    if iks_before == 0.0:
+        pytest.skip("ProfileScorer not initialized — no IKS data")
     assert iks_before >= 0, f"IKS must be non-negative before test: {iks_before}"
 
     # Simulate 5 demo-cycle resets (what beforeEach + explicit reset trigger)
@@ -159,9 +148,8 @@ def test_iks_stable_after_learning_decisions():
             resp = client.post("/api/alerts/reset")
         assert resp.status_code == 200
 
-    ps_after = get_profile_scorer()
-    assert ps_after is not None
-    iks_after = compute_iks(ps_after.mu)["current"]
+    ls_after = client.get("/api/soc/learning-state").json()
+    iks_after = ls_after.get("iks_v2", 0.0)
 
     assert iks_after >= iks_before - 10, (
         f"BACKLOG-020: IKS dropped {iks_before:.1f}→{iks_after:.1f} "
@@ -180,14 +168,8 @@ def test_iks_above_70_after_alerts_reset():
     (triage, metrics demo/reset-all, metrics demo/reseed) preserve the
     ProfileScorer centroids so IKS never collapses mid-demo.
     """
-    from app.services.gae_state import get_profile_scorer
-    from app.services.iks import compute_iks
-
-    ps = get_profile_scorer()
-    if ps is None:
-        pytest.skip("ProfileScorer not initialized — startup required")
-
-    iks_before = compute_iks(ps.mu)["current"]
+    ls_before = client.get("/api/soc/learning-state").json()
+    iks_before = ls_before.get("iks_v2", 0.0)
     if iks_before <= 70:
         pytest.skip(f"IKS baseline is {iks_before:.1f} ≤ 70 — bootstrap not complete")
 
@@ -195,9 +177,8 @@ def test_iks_above_70_after_alerts_reset():
         resp = client.post("/api/alerts/reset")
     assert resp.status_code == 200
 
-    ps_after = get_profile_scorer()
-    assert ps_after is not None
-    iks_after = compute_iks(ps_after.mu)["current"]
+    ls_after = client.get("/api/soc/learning-state").json()
+    iks_after = ls_after.get("iks_v2", 0.0)
 
     assert iks_after > 70, (
         f"BACKLOG-020: IKS dropped to {iks_after:.1f} after /api/alerts/reset "
