@@ -37,11 +37,14 @@ async def get_deployments():
     This demonstrates A/B testing and gradual rollout.
     """
 
-    # Get pattern count from Neo4j
+    # Get decision count from AGE (proxy for learned pattern coverage)
     try:
-        pattern_count = await neo4j_client.get_pattern_count()
+        _rows = await neo4j_client.run_query(
+            "MATCH (d:Decision)-[:DECIDED_ON]->() RETURN count(d) AS n"
+        )
+        pattern_count = int(_rows[0]["n"]) if _rows else 0
     except Exception:
-        pattern_count = 127  # Fallback
+        pattern_count = 0
 
     deployments = [
         {
@@ -582,38 +585,39 @@ async def simulate_failure():
 
 @router.get("/evolution/recent")
 async def get_recent_evolution():
-    """Get recent evolution events for display"""
-
+    """Get recent evolution events from real Decision graph data."""
     try:
-        events = await neo4j_client.get_recent_evolution_events(limit=10)
+        rows = await neo4j_client.run_query(
+            "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
+            "RETURN d.decision_id AS did, d.action AS action, "
+            "a.alert_id AS aid, d.confidence AS conf, "
+            "d.timestamp_epoch AS ts "
+            "ORDER BY d.timestamp_epoch DESC LIMIT 10"
+        )
+        events = []
+        for r in rows:
+            did = r.get("did") or "DEC-unknown"
+            aid = r.get("aid") or "ALT-unknown"
+            action = r.get("action") or "unknown"
+            conf = r.get("conf")
+            ts_epoch = r.get("ts")
+            conf_str = f"{float(conf):.0%}" if conf is not None else "?"
+            if ts_epoch is not None:
+                ts_iso = datetime.utcfromtimestamp(float(ts_epoch)).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
+            else:
+                ts_iso = "unknown"
+            events.append({
+                "id": did,
+                "event_type": "decision_recorded",
+                "description": f"{did}: {action} on {aid} (conf {conf_str})",
+                "timestamp": ts_iso,
+                "triggered_by": aid,
+            })
         return {"events": events}
-    except Exception as e:
-        # Fallback mock data
-        return {
-            "events": [
-                {
-                    "id": "EVO-0891",
-                    "event_type": "pattern_confidence",
-                    "description": "PAT-TRAVEL-001 confidence: 91% → 94% (+3 pts)",
-                    "timestamp": "2026-02-06T10:23:00Z",
-                    "triggered_by": "DEC-7823"
-                },
-                {
-                    "id": "EVO-0890",
-                    "event_type": "threshold_adjustment",
-                    "description": "Auto-close threshold for travel alerts: 88% → 90%",
-                    "timestamp": "2026-02-05T14:12:00Z",
-                    "triggered_by": "DEC-7801"
-                },
-                {
-                    "id": "EVO-0889",
-                    "event_type": "pattern_learned",
-                    "description": "New pattern identified: PAT-PHISH-Q4-CAMPAIGN",
-                    "timestamp": "2026-02-04T09:45:00Z",
-                    "triggered_by": "DEC-7789"
-                }
-            ]
-        }
+    except Exception:
+        return {"events": []}
 
 
 # ============================================================================

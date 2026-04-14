@@ -704,26 +704,36 @@ async def execute_action(request: ProcessAlertRequest):
 
         from app.domains.soc.config import resolve_alert_category as _resolve_cat_exec
         _exec_category = _resolve_cat_exec(alert_type) if alert_type else "unknown"
-        await neo4j_client.create_decision_trace(
-            decision_id=decision_id,
-            alert_id=alert_id,
-            action=decision.action,
-            confidence=decision.confidence,
-            category=_exec_category,
-            reasoning=reasoning,
-            pattern_id=decision.pattern_id,
-            playbook_id=decision.playbook_id,
-            nodes_consulted=context.get("nodes_consulted", 47),
-            context_snapshot={
-                "user": {
-                    "name": context.get("user_name"),
-                    "risk_score": context.get("user_risk_score")
-                },
-                "asset": {
-                    "hostname": context.get("asset_hostname"),
-                    "criticality": context.get("asset_criticality")
-                }
-            }
+        # Atomic MATCH+CREATE: Decision node linked to Alert via DECIDED_ON.
+        # Replaces create_decision_trace() which used FOR_ALERT (wrong schema)
+        # and had a signature mismatch (category kwarg) that caused TypeError.
+        await neo4j_client.run_query(
+            """
+            MATCH (a:Alert {alert_id: $alert_id})
+            CREATE (d:Decision {
+                decision_id:     $decision_id,
+                action:          $action,
+                confidence:      $confidence,
+                factor_vector:   $fv,
+                category:        $category,
+                source_id:       $source_id,
+                user_id:         $user_id,
+                timestamp_epoch: $timestamp_epoch,
+                outcome:         null
+            })
+            CREATE (d)-[:DECIDED_ON]->(a)
+            """,
+            {
+                "alert_id":        alert_id,
+                "decision_id":     decision_id,
+                "action":          decision.action,
+                "confidence":      decision.confidence,
+                "fv":              [],
+                "category":        _exec_category,
+                "source_id":       context.get("source_location", ""),
+                "user_id":         context.get("user_id", ""),
+                "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
+            },
         )
 
         # Emit events — every graph write MUST emit events (TD-020)
