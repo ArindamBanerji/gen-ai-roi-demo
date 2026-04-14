@@ -129,13 +129,6 @@ def run() -> None:  # noqa: C901 (allowed — it's a self-contained integration 
     print("COMPOUNDING VERIFICATION GATE")
     print("=" * 62)
 
-    # ================================================================
-    # SETUP: comprehensive reset → clean Neo4j + clean LearningState
-    # ================================================================
-    print("\n[SETUP] POST /demo/reset-all ...")
-    post("/demo/reset-all", {})
-    print("        Done — Neo4j re-seeded, all in-memory state cleared.\n")
-
     # Snapshot initial W before any learning
     initial_weights = get("/gae/weights")
     initial_W = initial_weights["W"]

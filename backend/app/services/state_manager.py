@@ -163,8 +163,19 @@ class StateManager:
                 committed.append("learning_state")
 
             # Step 3: delete Decision nodes (stronger than soft_reset)
+            # Preserve zero_day_pipeline_v4 synthetic decisions — they are
+            # seeded once and expensive to regenerate; hard_reset() targets
+            # only decisions produced during live demo cycling.
+            preserved_rows = await self._neo4j.run_query(
+                "MATCH (d:Decision) WHERE d.source = 'zero_day_pipeline_v4' "
+                "RETURN count(d) AS n"
+            )
+            preserved_n = int(preserved_rows[0]["n"]) if preserved_rows else 0
+            log.info("[HARD RESET] Preserved %d zero-day decisions", preserved_n)
+
             await self._neo4j.run_query(
                 "MATCH (d:Decision) "
+                "WHERE d.source IS NULL OR d.source <> 'zero_day_pipeline_v4' "
                 "OPTIONAL MATCH (d)-[:HAD_CONTEXT]->(ctx:DecisionContext) "
                 "DETACH DELETE d, ctx"
             )

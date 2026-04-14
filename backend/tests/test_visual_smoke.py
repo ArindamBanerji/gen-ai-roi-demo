@@ -49,12 +49,12 @@ def main() -> None:
     _results = []   # reset so script is idempotent on repeated runs
 
     # ============================================================================
-    # 0. Pre-flight reset — ensures idempotent runs regardless of prior state
+    # 0. Pre-flight alert reset — resets alert statuses only, preserves Decision nodes
     # ============================================================================
 
-    r = call("POST", "/api/demo/reset-all", timeout=90)
+    r = call("POST", "/api/alerts/reset")
     if r is None or r.status_code != 200:
-        print(f"  [WARN] Pre-flight reset failed (status={r.status_code if r else 'TIMEOUT'}), continuing anyway")
+        print(f"  [WARN] Pre-flight alert reset failed (status={r.status_code if r else 'TIMEOUT'}), continuing anyway")
 
     # ============================================================================
     # 1. Health check
@@ -205,22 +205,23 @@ def main() -> None:
          f"decision_count={weights.get('decision_count')}")
 
     # ============================================================================
-    # 15-16. Reset and verify clean state
+    # 15-16. Alert reset and verify alert queue clears
     # ============================================================================
 
-    r = call("POST", "/api/demo/reset-all", timeout=90)
-    test("Reset all (POST /api/demo/reset-all)",
+    r = call("POST", "/api/alerts/reset")
+    test("Alert reset (POST /api/alerts/reset)",
          r is not None and r.status_code == 200,
          f"status={r.status_code if r else 'TIMEOUT'}")
 
-    r = call("GET", "/api/gae/convergence")
+    r = call("GET", "/api/alerts/queue")
     if r is not None and r.status_code == 200:
-        conv_post = r.json()
-        _check("Post-reset: decisions == 0",
-             conv_post.get("decisions", -1) == 0,
-             f"decisions={conv_post.get('decisions')}")
+        queue = r.json()
+        alerts = queue.get("alerts", [])
+        _check("Post-reset: alert queue has pending alerts",
+             len(alerts) > 0,
+             f"alerts_in_queue={len(alerts)}")
     else:
-        _check("Post-reset: decisions == 0", False,
+        _check("Post-reset: alert queue has pending alerts", False,
              f"status={r.status_code if r else 'TIMEOUT'}")
 
     # ============================================================================

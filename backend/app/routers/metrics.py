@@ -195,51 +195,59 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
     Get compounding metrics showing week-over-week improvement.
 
     Headline and business_impact are projected (labeled "Projected at Scale" in UI).
-    weekly_trend and evolution_events are served from Neo4j (H7-FIX-4).
+    weekly_trend and evolution_events are computed from real AGE Decision data.
     """
     try:
-        print(f"[COMPOUNDING] Generating {weeks} weeks of data")
-
         # Headline / business_impact stay as projected (already labeled in UI)
         projected = generate_compounding_data(weeks)
         response = projected.model_dump()
 
-        # --- WEEKLY TREND: real Decision timeline from Neo4j (H7-FIX-4) ---
-        weekly_trend_estimated = False
-        weekly_trend_note = None
+        # --- WEEKLY TREND: per-week decision counts from AGE ---
+        # Each week = 604800000 ms; work backwards from now.
+        # Week 1 = oldest, week N = most recent.
+        WEEK_MS = 7 * 24 * 60 * 60 * 1000
+        now_ms = int(datetime.utcnow().timestamp() * 1000)
+
+        weekly_trend = []
         try:
-            dec_rows = await neo4j_client.run_query(
-                "MATCH (d:Decision) WHERE d.timestamp_epoch IS NOT NULL "
-                "RETURN d.timestamp_epoch AS ts, d.action AS action, d.confidence AS confidence "
-                "ORDER BY d.timestamp_epoch"
-            )
-            if dec_rows:
-                # Return raw decision points; chart will be empty but real data is available
-                # via /api/metrics/weekly-trends.  Compounding chart needs WeeklyMetric shape,
-                # which requires proper metrics history — so we return [] with a note.
-                response["weekly_trend"] = []
-                weekly_trend_estimated = True
-                weekly_trend_note = (
-                    "Weekly trends require cumulative metrics history — "
-                    "real decision timeline available at /api/metrics/weekly-trends"
+            for i in range(weeks, 0, -1):
+                week_end   = now_ms - (i - 1) * WEEK_MS
+                week_start = now_ms - i * WEEK_MS
+                week_num   = weeks - i + 1  # 1-based, oldest first
+
+                total_rows = await neo4j_client.run_query(
+                    f"MATCH (d:Decision)-[:DECIDED_ON]->() "
+                    f"WHERE d.timestamp_epoch > {week_start} "
+                    f"AND d.timestamp_epoch <= {week_end} "
+                    f"RETURN count(d) AS n"
                 )
-            else:
-                response["weekly_trend"] = []
-                weekly_trend_estimated = True
-                weekly_trend_note = (
-                    "Weekly trends require decision history — "
-                    "make decisions to populate"
+                total = int(total_rows[0]["n"]) if total_rows else 0
+
+                correct_rows = await neo4j_client.run_query(
+                    f"MATCH (d:Decision)-[:DECIDED_ON]->() "
+                    f"WHERE d.timestamp_epoch > {week_start} "
+                    f"AND d.timestamp_epoch <= {week_end} "
+                    f"AND d.correct = true "
+                    f"RETURN count(d) AS n"
                 )
+                correct = int(correct_rows[0]["n"]) if correct_rows else 0
+
+                accuracy_pct = round(correct / total * 100, 1) if total > 0 else 0.0
+
+                weekly_trend.append({
+                    "week":            week_num,
+                    "auto_close_rate": accuracy_pct,
+                    "mttr_minutes":    0.0,
+                    "fp_rate":         0.0,
+                    "pattern_count":   total,
+                })
         except Exception as exc:
             print(f"[COMPOUNDING] weekly-trend AGE query failed: {exc}")
-            response["weekly_trend"] = []
-            weekly_trend_estimated = True
-            weekly_trend_note = "Weekly trends unavailable — AGE unreachable"
+            weekly_trend = []
 
-        response["weekly_trend_estimated"] = weekly_trend_estimated
-        response["weekly_trend_note"] = weekly_trend_note
+        response["weekly_trend"] = weekly_trend
 
-        # --- EVOLUTION EVENTS: Decision nodes from Neo4j (H7-FIX-4) ---
+        # --- EVOLUTION EVENTS: Decision nodes from AGE via DECIDED_ON ---
         try:
             evo_rows = await neo4j_client.run_query(
                 "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
@@ -247,31 +255,28 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
                 "d.timestamp_epoch AS ts, a.alert_id AS alert_id "
                 "ORDER BY d.timestamp_epoch DESC LIMIT 20"
             )
-            if evo_rows:
-                _evo_events = []
-                for r in evo_rows:
-                    _rid = str(r.get('id', ''))
-                    _display_id = _rid if _rid.upper().startswith('DEC-') else f"DEC-{_rid[:8]}"
-                    _evo_events.append({
-                        "id": _display_id,
-                        "event_type": str(r.get("action", "decision")),
-                        "description": (
-                            f"{str(r.get('action', '?')).upper()} on "
-                            f"{str(r.get('alert_id', '?'))} — "
-                            f"conf: {float(r.get('confidence') or 0):.0%}"
-                        ),
-                        "timestamp": str(r.get("ts", datetime.now().isoformat())),
-                        "triggered_by": str(r.get("alert_id", "?")),
-                    })
-                response["evolution_events"] = _evo_events
-            else:
-                response["evolution_events"] = []
+            _evo_events = []
+            for r in evo_rows:
+                _rid = str(r.get("id", ""))
+                _display_id = _rid if _rid.upper().startswith("DEC-") else f"DEC-{_rid[:8]}"
+                _evo_events.append({
+                    "id": _display_id,
+                    "event_type": str(r.get("action", "decision")),
+                    "description": (
+                        f"{str(r.get('action', '?')).upper()} on "
+                        f"{str(r.get('alert_id', '?'))} — "
+                        f"conf: {float(r.get('confidence') or 0):.0%}"
+                    ),
+                    "timestamp": str(r.get("ts", datetime.now().isoformat())),
+                    "triggered_by": str(r.get("alert_id", "?")),
+                })
+            response["evolution_events"] = _evo_events
         except Exception as exc:
             print(f"[COMPOUNDING] evolution_events AGE query failed: {exc}")
-            # fall back to projected mock events so the panel isn't completely broken
-            response["evolution_events"] = projected.model_dump()["evolution_events"]
+            response["evolution_events"] = []
 
-        print(f"[COMPOUNDING] weekly_trend_estimated={weekly_trend_estimated}, "
+        print(f"[COMPOUNDING] Queried {weeks} weeks of data from AGE: "
+              f"weekly_trend={len(weekly_trend)} weeks, "
               f"evolution_events={len(response['evolution_events'])}")
         return response
 
