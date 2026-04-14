@@ -6,6 +6,9 @@
 # required_fields: top-level keys that MUST be present in the JSON response
 # method: GET or POST
 # body: request body for POST endpoints (optional)
+#
+# Destructive endpoints excluded: admin/reset, demo/reset-all, demo/reseed,
+# demo/seed, demo/reset — these trigger state resets, not API contracts.
 
 endpoints:
 
@@ -257,12 +260,6 @@ endpoints:
     consumed_by: []
 
   # ── Admin / Demo ────────────────────────────────────────────
-  - path: /api/admin/reset
-    method: POST
-    body: {"mode": "soft"}
-    required_fields: [status]
-    consumed_by: []
-
   - path: /api/demo/domains
     method: GET
     required_fields: [active_domain, registered_domains]

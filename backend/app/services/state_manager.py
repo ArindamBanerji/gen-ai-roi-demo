@@ -43,11 +43,49 @@ class StateManager:
         Active domain configuration (used to report metadata in responses).
     """
 
+    # Filter that selects session/demo decisions and excludes persistent training data.
+    # Any source that starts with 'zero_day_' is protected across all reset paths.
+    PERSISTENT_FILTER = "WHERE d.source IS NULL OR NOT d.source STARTS WITH 'zero_day_'"
+
     def __init__(self, learning_state_service, audit_store, neo4j_service, domain_config):
         self._ls_svc = learning_state_service
         self._audit  = audit_store
         self._neo4j  = neo4j_service
         self._domain_config = domain_config
+
+    # ------------------------------------------------------------------
+    # Training data protection — all destructive Decision ops route here
+    # ------------------------------------------------------------------
+
+    async def clear_session_decisions(self) -> int:
+        """REMOVE correct/outcome from session decisions only. Training data preserved."""
+        result = await self._neo4j.run_query(
+            f"MATCH (d:Decision) {self.PERSISTENT_FILTER} "
+            "REMOVE d.correct, d.outcome "
+            "RETURN count(d) AS cleared"
+        )
+        cleared = int(result[0]["cleared"]) if result else 0
+        total_rows = await self._neo4j.run_query(
+            "MATCH (d:Decision) RETURN count(d) AS total"
+        )
+        total = int(total_rows[0]["total"]) if total_rows else 0
+        preserved = total - cleared
+        print(f"[STATE] Cleared {cleared} session decisions. Preserved {preserved} persistent.")
+        return cleared
+
+    async def delete_session_decisions(self) -> None:
+        """DETACH DELETE session decisions only. Training data preserved."""
+        preserved_rows = await self._neo4j.run_query(
+            "MATCH (d:Decision) WHERE d.source STARTS WITH 'zero_day_' "
+            "RETURN count(d) AS n"
+        )
+        preserved_n = int(preserved_rows[0]["n"]) if preserved_rows else 0
+        await self._neo4j.run_query(
+            f"MATCH (d:Decision) {self.PERSISTENT_FILTER} "
+            "OPTIONAL MATCH (d)-[:HAD_CONTEXT]->(ctx:DecisionContext) "
+            "DETACH DELETE d, ctx"
+        )
+        print(f"[STATE] Deleted session decisions. Preserved {preserved_n} persistent.")
 
     # ------------------------------------------------------------------
     # Public API
@@ -92,12 +130,8 @@ class StateManager:
                 self._ls_svc.reset_learning_state()
                 committed.append("learning_state")
 
-            # Step 3: clear outcomes on Decision nodes; keep nodes
-            await self._neo4j.run_query(
-                "MATCH (d:Decision) "
-                "REMOVE d.correct, d.outcome "
-                "RETURN count(d) AS cleared"
-            )
+            # Step 3: clear outcomes on session Decision nodes; keep nodes + training data
+            await self.clear_session_decisions()
             committed.append("neo4j_outcomes")
 
             # Step 4: audit — clear ledger, anchor fresh chain with RESET marker
@@ -162,23 +196,8 @@ class StateManager:
                 self._ls_svc.reset_learning_state()
                 committed.append("learning_state")
 
-            # Step 3: delete Decision nodes (stronger than soft_reset)
-            # Preserve zero_day_pipeline_v4 synthetic decisions — they are
-            # seeded once and expensive to regenerate; hard_reset() targets
-            # only decisions produced during live demo cycling.
-            preserved_rows = await self._neo4j.run_query(
-                "MATCH (d:Decision) WHERE d.source = 'zero_day_pipeline_v4' "
-                "RETURN count(d) AS n"
-            )
-            preserved_n = int(preserved_rows[0]["n"]) if preserved_rows else 0
-            log.info("[HARD RESET] Preserved %d zero-day decisions", preserved_n)
-
-            await self._neo4j.run_query(
-                "MATCH (d:Decision) "
-                "WHERE d.source IS NULL OR d.source <> 'zero_day_pipeline_v4' "
-                "OPTIONAL MATCH (d)-[:HAD_CONTEXT]->(ctx:DecisionContext) "
-                "DETACH DELETE d, ctx"
-            )
+            # Step 3: delete session Decision nodes; training data preserved
+            await self.delete_session_decisions()
             committed.append("neo4j_delete")
 
             # Step 4: audit reset + RESET marker

@@ -453,13 +453,6 @@ async def reset_demo_data():
     try:
         print("[DEMO RESET] Resetting to Week 1 state")
 
-        # In production:
-        # await neo4j_client.run("""
-        #     MATCH (e:EvolutionEvent)
-        #     WHERE e.timestamp > $cutoff_date
-        #     DETACH DELETE e
-        # """)
-
         return {
             "status": "success",
             "message": "Demo data reset to Week 1 state",

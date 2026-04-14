@@ -108,3 +108,22 @@ python backend/seed_neo4j.py
    - ALWAYS: `MATCH (a:Alert) CREATE (d:Decision {...})-[:DECIDED_ON]->(a)`
    - NEVER: CREATE Decision as one query, then edge as a second
    - If MATCH finds no Alert, no Decision is created (proven atomic)
+
+### Decision Data Protection — Four Invariants
+
+Zero-day training data (`source STARTS WITH 'zero_day_'`) must survive ALL resets.
+
+**Rule:** All destructive Cypher on Decision nodes routes through `StateManager` only.
+- `soft_reset()` → `clear_session_decisions()` — REMOVE correct/outcome, training data kept
+- `hard_reset()` → `delete_session_decisions()` — DETACH DELETE, training data kept
+- `PERSISTENT_FILTER = "WHERE d.source IS NULL OR NOT d.source STARTS WITH 'zero_day_'"`
+
+**Enforcement (build-time):** `tests/test_no_destructive_decision_queries.py`
+- Scans all `app/**/*.py` for `MATCH (:Decision)...DETACH DELETE` / `REMOVE d.correct` / `REMOVE d.outcome`
+- Only `app/services/state_manager.py` is in the allow-list
+- Do NOT add files to the allow-list — fix violations by routing through StateManager
+
+**Do NOT:**
+- Write `MATCH (d:Decision)...DETACH DELETE` anywhere outside state_manager.py
+- Write `MATCH (d:Decision)...REMOVE d.correct` anywhere outside state_manager.py
+- Leave `DETACH DELETE` in commented-out code — the static analysis regex uses re.DOTALL and will fire

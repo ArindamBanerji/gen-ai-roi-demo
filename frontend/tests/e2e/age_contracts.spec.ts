@@ -120,7 +120,81 @@ test.describe('AGE serialization contracts', () => {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BLOCK 2 — Tab render contracts (browser-level)
+// BLOCK 2 — Session integrity contracts (BACKLOG-068)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('Session integrity contracts', () => {
+
+  test('audit chain verified on startup', async ({ request }) => {
+    const res = await request.get(`${BACKEND}/api/audit/verify`);
+    expect(res.status()).toBe(200);
+    const data = await res.json();
+    expect(data.verified).toBe(true);
+    expect(data.chain_length).toBeGreaterThan(0);
+  });
+
+  test('audit epochs endpoint returns data', async ({ request }) => {
+    const res = await request.get(`${BACKEND}/api/audit/epochs`);
+    expect(res.status()).toBe(200);
+    const data = await res.json();
+    expect(data.epochs.length).toBeGreaterThan(0);
+    expect(data.total_entries).toBeGreaterThan(0);
+    // Active epoch exists
+    const active = data.epochs.find((e: any) => e.active === true);
+    expect(active).toBeTruthy();
+  });
+
+  test('threat-landscape last_refreshed not hardcoded 23', async ({ request }) => {
+    const res = await request.get(`${BACKEND}/api/soc/threat-landscape`);
+    expect(res.status()).toBe(200);
+    const data = await res.json();
+    // Can be null (no refresh yet) or a real number, but never exactly 23
+    const val = data.threat_intel?.last_refreshed_minutes_ago;
+    if (val !== null && val !== undefined) {
+      expect(val).not.toBe(23);
+    }
+  });
+
+  test('threat-landscape avg_confidence not hardcoded 0.89', async ({ request }) => {
+    const res = await request.get(`${BACKEND}/api/soc/threat-landscape`);
+    expect(res.status()).toBe(200);
+    const data = await res.json();
+    const conf = data.governance?.avg_confidence;
+    expect(conf).not.toBe(0.89);
+    // Should be a real number between 0 and 1
+    expect(typeof conf).toBe('number');
+    expect(conf).toBeGreaterThanOrEqual(0);
+    expect(conf).toBeLessThanOrEqual(1);
+  });
+
+  test('analytics has no threat_intel_match category', async ({ request }) => {
+    const res = await request.get(`${BACKEND}/api/soc/analytics`);
+    expect(res.status()).toBe(200);
+    const data = await res.json();
+    const categories: any[] = data.category_breakdown ?? [];
+    const catNames = categories.map((c: any) => c.category);
+    expect(catNames).not.toContain('threat_intel_match');
+    // Should have malware_execution instead
+    expect(catNames).toContain('malware_execution');
+  });
+
+  test('compounding weekly data has real counts', async ({ request }) => {
+    const res = await request.get(`${BACKEND}/api/metrics/compounding?weeks=4`);
+    expect(res.status()).toBe(200);
+    const data = await res.json();
+    // At least one week should have decisions > 0 (pattern_count is total decisions that week)
+    const weeks: any[] = data.weekly_trend ?? data.weekly_data ?? [];
+    const hasData = weeks.some((w: any) => (w.pattern_count ?? w.total ?? w.decisions ?? 0) > 0);
+    expect(hasData).toBe(true);
+    // No "estimated" flag (BACKLOG-060 removed it)
+    expect(data.weekly_trend_estimated).not.toBe(true);
+  });
+
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BLOCK 3 — Tab render contracts (browser-level)
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('Tab render contracts', () => {
