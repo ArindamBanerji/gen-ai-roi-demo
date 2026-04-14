@@ -144,3 +144,51 @@ async def verify_audit_chain():
             status_code=500,
             detail=f"Chain verification failed: {str(exc)}",
         )
+
+
+@router.get("/audit/epochs")
+async def get_audit_epochs():
+    """
+    Return a summary of all audit epochs (archived + current active).
+
+    Each demo reset creates a new epoch; archived epochs are preserved
+    for compliance history. The active epoch is the current in-memory ledger.
+
+    Returns:
+        {
+          "epochs": [
+            {
+              "epoch": int,
+              "entries": int,
+              "first_record": ISO timestamp | null,
+              "last_record":  ISO timestamp | null,
+              "active": bool   (only on current epoch)
+            }
+          ],
+          "total_entries": int
+        }
+    """
+    from app.framework.audit import _ARCHIVED_EPOCHS, _LEDGER  # noqa: PLC0415
+
+    epochs = []
+    for i, entries in enumerate(_ARCHIVED_EPOCHS):
+        epochs.append({
+            "epoch":        i + 1,
+            "entries":      len(entries),
+            "first_record": entries[0].timestamp if entries else None,
+            "last_record":  entries[-1].timestamp if entries else None,
+        })
+
+    current = _LEDGER.entries()
+    epochs.append({
+        "epoch":        len(_ARCHIVED_EPOCHS) + 1,
+        "entries":      len(current),
+        "first_record": current[0].timestamp if current else None,
+        "last_record":  current[-1].timestamp if current else None,
+        "active":       True,
+    })
+
+    return {
+        "epochs":        epochs,
+        "total_entries": sum(e["entries"] for e in epochs),
+    }

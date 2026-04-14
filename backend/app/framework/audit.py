@@ -27,6 +27,10 @@ _LEDGER: EvidenceLedger = EvidenceLedger()
 # situation_type is SOC-specific (not in LedgerEntry); stored in parallel
 _SITUATION_TYPES: Dict[str, str] = {}   # decision_id → situation_type
 
+# Epoch archive: each hard-reset snapshot is preserved here so audit history
+# survives demo cycling. Indexed by epoch (0 = oldest).
+_ARCHIVED_EPOCHS: List[List[LedgerEntry]] = []
+
 
 # ── SOC demo defaults (used by reconstruct_from_memory) ──────────────────────
 
@@ -206,8 +210,75 @@ def reconstruct_from_memory() -> int:
     return added
 
 
+async def rebuild_from_age() -> int:
+    """Rebuild the audit ledger from Decision nodes in AGE.
+
+    Called once during startup to restore the hash chain after restart.
+    Skipped (returns 0) if the ledger already has entries (hot reload).
+    """
+    if len(_LEDGER._entries) > 0:
+        return 0
+
+    from app.db.neo4j import neo4j_client  # noqa: PLC0415
+
+    rows = await neo4j_client.run_query(
+        "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
+        "WHERE d.timestamp_epoch IS NOT NULL "
+        "RETURN d.decision_id AS decision_id, "
+        "d.action AS action, "
+        "d.confidence AS confidence, "
+        "d.timestamp_epoch AS ts, "
+        "a.alert_id AS alert_id, "
+        "d.correct AS correct, "
+        "d.outcome AS outcome "
+        "ORDER BY d.timestamp_epoch ASC"
+    )
+
+    n = 0
+    for row in rows:
+        correct = row.get("correct")
+        outcome_raw = row.get("outcome")
+        if correct is True:
+            outcome = "correct"
+        elif correct is False:
+            outcome = "incorrect"
+        elif outcome_raw:
+            outcome = str(outcome_raw)
+        else:
+            outcome = "pending"
+
+        ts_ms = row.get("ts")
+        ts_iso = (
+            datetime.fromtimestamp(float(ts_ms) / 1000, tz=timezone.utc).isoformat()
+            if ts_ms is not None
+            else datetime.now(timezone.utc).isoformat()
+        )
+
+        _LEDGER.append(
+            decision_id=str(row.get("decision_id") or ""),
+            alert_id=str(row.get("alert_id") or ""),
+            factor_breakdown={},
+            action=str(row.get("action") or ""),
+            confidence=float(row.get("confidence") or 0.0),
+            outcome=outcome,
+            analyst_override=False,
+            centroid_state_hash="",
+            timestamp=ts_iso,
+        )
+        n += 1
+
+    print(f"[AUDIT] Rebuilt {n} entries from AGE")
+    return n
+
+
 def reset_audit_state() -> None:
-    """Clear all decision records (demo reset)."""
+    """Archive current epoch then start fresh."""
+    if _LEDGER._entries:
+        _ARCHIVED_EPOCHS.append(list(_LEDGER._entries))
+        print(
+            f"[AUDIT] Archived epoch {len(_ARCHIVED_EPOCHS)} "
+            f"({len(_ARCHIVED_EPOCHS[-1])} entries)"
+        )
     _LEDGER._entries.clear()
     _SITUATION_TYPES.clear()
     print("[AUDIT] Decision ledger cleared")
@@ -252,7 +323,12 @@ def verify_chain() -> Dict[str, Any]:
     chain_len = len(entries)
 
     if chain_len == 0:
-        return {"chain_length": 0, "verified": True, "first_record": None, "last_record": None}
+        return {
+            "chain_length": 0, "verified": True,
+            "first_record": None, "last_record": None,
+            "epoch": len(_ARCHIVED_EPOCHS) + 1,
+            "archived_epochs": len(_ARCHIVED_EPOCHS),
+        }
 
     verified = _LEDGER.verify_chain()
     result: Dict[str, Any] = {
@@ -260,6 +336,8 @@ def verify_chain() -> Dict[str, Any]:
         "verified":     verified,
         "first_record": entries[0].timestamp,
         "last_record":  entries[-1].timestamp,
+        "epoch":            len(_ARCHIVED_EPOCHS) + 1,
+        "archived_epochs":  len(_ARCHIVED_EPOCHS),
     }
 
     if not verified:

@@ -6,4 +6,4 @@ copilot_sdk.audit directly.
 """
 from app.framework.audit import *  # noqa: F401, F403
 # Private module-level objects accessed by tests via `import app.services.audit as m`
-from app.framework.audit import _LEDGER, _SITUATION_TYPES  # noqa: F401
+from app.framework.audit import _LEDGER, _SITUATION_TYPES, _ARCHIVED_EPOCHS  # noqa: F401

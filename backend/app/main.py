@@ -224,6 +224,15 @@ async def startup_event():
     except Exception as _snap_exc:
         print(f"[SNAPSHOT] GraphSnapshot init failed (non-blocking): {_snap_exc}")
 
+    # Rebuild audit chain from AGE Decision nodes so verify_chain is non-empty
+    # after restart (BACKLOG-045). Skipped on hot reload if ledger already has entries.
+    try:
+        from app.framework.audit import rebuild_from_age
+        _rebuilt = await rebuild_from_age()
+        print(f"[STARTUP] Audit ledger rebuilt: {_rebuilt} entries")
+    except Exception as _audit_exc:
+        print(f"[STARTUP] Audit ledger rebuild failed (non-blocking): {_audit_exc}")
+
     # Warm up all domain config properties.
     # Iterates every registered domain and touches all @property accessors so
     # Python initialises any lazy sub-modules now, not on the first API request.
