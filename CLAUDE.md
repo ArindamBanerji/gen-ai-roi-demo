@@ -111,12 +111,14 @@ python backend/seed_neo4j.py
 
 ### Decision Data Protection — Four Invariants
 
-Zero-day training data (`source STARTS WITH 'zero_day_'`) must survive ALL resets.
+Zero-day training data (`origin = 'zero_day_synthetic'`) must survive ALL resets.
+- `origin = 'zero_day_synthetic'` → persistent training data (4,860 nodes from seed_zero_day.py)
+- `origin IS NULL` → session/demo data (safe to clear/delete on reset)
 
 **Rule:** All destructive Cypher on Decision nodes routes through `StateManager` only.
 - `soft_reset()` → `clear_session_decisions()` — REMOVE correct/outcome, training data kept
 - `hard_reset()` → `delete_session_decisions()` — DETACH DELETE, training data kept
-- `PERSISTENT_FILTER = "WHERE d.source IS NULL OR NOT d.source STARTS WITH 'zero_day_'"`
+- `PERSISTENT_FILTER = "WHERE d.origin IS NULL OR d.origin <> 'zero_day_synthetic'"`
 
 **Enforcement (build-time):** `tests/test_no_destructive_decision_queries.py`
 - Scans all `app/**/*.py` for `MATCH (:Decision)...DETACH DELETE` / `REMOVE d.correct` / `REMOVE d.outcome`

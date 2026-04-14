@@ -2,8 +2,6 @@
 Compounding Metrics API - Tab 4
 Shows week-over-week improvement proving the compounding moat
 """
-import os
-import sys
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
@@ -13,18 +11,6 @@ from app.db.neo4j import neo4j_client
 
 
 router = APIRouter()
-
-
-def _ensure_backend_on_path() -> None:
-    """Ensure backend/ directory is on sys.path so `import seed_neo4j` works
-    regardless of the working directory uvicorn was launched from."""
-    # __file__ is  backend/app/routers/metrics.py
-    # backend/  is three levels up
-    backend_dir = os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    )
-    if backend_dir not in sys.path:
-        sys.path.insert(0, backend_dir)
 
 
 # ============================================================================
@@ -295,36 +281,18 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
 @router.post("/demo/seed")
 async def seed_neo4j():
     """
-    Seed AGE database with canonical test data.
-    Clears existing data and creates all nodes and relationships from scratch.
+    Legacy seed endpoint — blocked on AGE backend.
+    seed_neo4j.py wipes the entire graph (all nodes, all labels). Use seed_zero_day.py.
     """
-    from app.services.seed_neo4j import seed_neo4j_database, verify_neo4j_seed
-
-    print("[DEMO] Seeding AGE database...")
-
-    try:
-        # Seed the database
-        summary = await seed_neo4j_database()
-
-        # Verify the seed
-        verification = await verify_neo4j_seed()
-
-        return {
-            "status": "success",
-            "message": "Neo4j database seeded successfully",
-            "timestamp": datetime.now().isoformat(),
-            "summary": summary,
-            "verification": verification
-        }
-
-    except Exception as e:
-        print(f"[ERROR] Failed to seed database: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to seed database: {str(e)}"
-        )
+    print("[DEMO] /demo/seed blocked — seed_neo4j.py is LEGACY on AGE backend.")
+    return {
+        "status": "disabled",
+        "message": (
+            "seed_neo4j.py is LEGACY and blocked on the AGE backend. "
+            "Re-seed manually: python backend/support/setup/seed_zero_day.py"
+        ),
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
 # ============================================================================
@@ -400,38 +368,14 @@ async def reseed_demo_data():
     Returns {success, alert_count} for minimal, actionable feedback.
     Never raises HTTPException — caller inspects the success flag instead.
     """
-    _ensure_backend_on_path()
-    import seed_neo4j                          # backend/seed_neo4j.py (20 alerts, canonical)
-    from app.db.neo4j import neo4j_client
-    from app.core.state_manager import state_manager
-
-    print("[RESEED] POST /api/demo/reseed called")
-    try:
-        await seed_neo4j.seed_data()
-
-        # seed_data() closes the neo4j connection at the end; the count query
-        # requires a reconnect which may transiently fail.  Wrap it separately
-        # so a count failure never masks a successful seed.
-        alert_count = 20  # canonical dataset default
-        try:
-            results = await neo4j_client.run_query(
-                "MATCH (a:Alert) RETURN count(a) AS alert_count"
-            )
-            alert_count = int(results[0]["alert_count"]) if results else 20
-        except Exception as count_exc:
-            print(f"[RESEED] Count query failed (seed still succeeded): {count_exc}")
-
-        # Reset demo-cycle in-memory state — preserve learning_state (BACKLOG-020)
-        state_manager.reset_except(["learning_state"])
-
-        print(f"[RESEED] Complete — {alert_count} alerts in graph")
-        return {"success": True, "alert_count": alert_count}
-
-    except Exception as exc:
-        print(f"[ERROR] Re-seed failed: {exc}")
-        import traceback
-        traceback.print_exc()
-        return {"success": False, "error": str(exc)}
+    print("[RESEED] /demo/reseed blocked — seed_neo4j.py is LEGACY on AGE backend.")
+    return {
+        "success": False,
+        "message": (
+            "seed_neo4j.py is LEGACY and blocked on the AGE backend. "
+            "Re-seed manually: python backend/support/setup/seed_zero_day.py"
+        ),
+    }
 
 
 # ============================================================================

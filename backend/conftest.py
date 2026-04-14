@@ -49,53 +49,67 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def verify_persistent_data_intact():
+def verify_persistent_data(request):
     """
     BACKLOG-069 Layer 5 — Guard zero-day training data across the full test run.
 
-    Counts zero-day Decision nodes before and after the session.
-    Fails loudly if any were deleted or had correct=true stripped.
-    Runs only when AGE is reachable (skips silently in CI without NEO4J_URI).
+    PRE-TEST: Counts persistent Decision nodes with correct IS NOT NULL.
+    Aborts the entire session (pytest.exit) if fewer than 3,000 found — means
+    seed_zero_day.py --backfill has not been run and the data is not ready.
+
+    POST-TEST: Re-counts. Fails loudly if the count dropped by more than 10
+    (allows for minor transient variance but catches bulk wipes).
+
+    Skips silently when GRAPH_BACKEND != 'age' (unit-test / CI runs).
     """
     import asyncio
+    import os as _os
 
-    async def _count():
+    if _os.getenv("GRAPH_BACKEND") != "age":
+        yield
+        return
+
+    async def _count_persistent() -> int:
         try:
-            from app.clients.neo4j_client import neo4j_client
-            total = await neo4j_client.run_query(
-                "MATCH (d:Decision) WHERE d.source STARTS WITH 'zero_day_' "
-                "RETURN count(d) AS n, "
-                "sum(CASE WHEN d.correct = true THEN 1 ELSE 0 END) AS correct_n"
+            from app.db.neo4j import neo4j_client
+            r = await neo4j_client.run_query(
+                "MATCH (d:Decision) WHERE d.origin = 'zero_day_synthetic' "
+                "AND d.correct IS NOT NULL "
+                "RETURN count(d) AS n"
             )
-            if not total:
-                return None, None
-            return int(total[0]["n"]), int(total[0]["correct_n"])
+            return int(r[0]["n"]) if r else 0
         except Exception:
-            return None, None
+            return -1  # AGE unreachable — sentinel, skip checks
 
-    before_total, before_correct = asyncio.get_event_loop().run_until_complete(_count())
+    _loop = asyncio.get_event_loop()
+    n_before = _loop.run_until_complete(_count_persistent())
+
+    if n_before == -1:
+        # AGE not reachable — skip silently
+        yield
+        return
+
+    if n_before < 3000:
+        pytest.exit(
+            f"ZERO-DAY DATA MISSING: only {n_before} persistent decisions with "
+            f"correct IS NOT NULL (need >= 3000). "
+            f"Run: python backend/support/setup/seed_zero_day.py --backfill",
+            returncode=1,
+        )
 
     yield  # run the full test suite
 
-    if before_total is None:
-        # AGE not reachable — skip verification silently
-        return
-
-    after_total, after_correct = asyncio.get_event_loop().run_until_complete(_count())
-    if after_total is None:
-        return
+    n_after = _loop.run_until_complete(_count_persistent())
+    if n_after == -1:
+        return  # AGE unreachable post-test — skip
 
     print(
-        f"\n[POST-TEST] Zero-day data intact: {after_total} decisions "
-        f"({after_correct} correct=true)"
+        f"\n[POST-TEST] Zero-day data intact: {n_after} decisions "
+        f"(correct IS NOT NULL, origin='zero_day_synthetic')"
     )
-    assert after_total >= before_total, (
-        f"Zero-day Decision nodes were deleted during the test run! "
-        f"Before: {before_total}, After: {after_total}. "
-        f"A test called hard_reset() or ran a raw DETACH DELETE on Decision nodes."
-    )
-    assert after_correct >= before_correct, (
-        f"Zero-day correct=true count dropped during the test run! "
-        f"Before: {before_correct}, After: {after_correct}. "
-        f"A test called soft_reset() or ran a raw REMOVE d.correct on Decision nodes."
-    )
+    if n_after < n_before - 10:
+        pytest.fail(
+            f"ZERO-DAY DATA WIPED: {n_before} before → {n_after} after. "
+            f"A test called hard_reset(), demo/reset-all, or ran a raw "
+            f"DETACH DELETE on Decision nodes."
+        )

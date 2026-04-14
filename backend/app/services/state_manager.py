@@ -16,14 +16,16 @@ Usage (see routers/admin.py):
 """
 
 import logging
-import os
-import sys
 
 log = logging.getLogger(__name__)
 
 
 class ResetError(Exception):
     """Raised when a reset operation fails; carries the step that failed."""
+
+
+class DataProtectionError(Exception):
+    """Raised when a destructive operation would affect persistent training data."""
 
 
 class StateManager:
@@ -43,9 +45,12 @@ class StateManager:
         Active domain configuration (used to report metadata in responses).
     """
 
-    # Filter that selects session/demo decisions and excludes persistent training data.
-    # Any source that starts with 'zero_day_' is protected across all reset paths.
-    PERSISTENT_FILTER = "WHERE d.source IS NULL OR NOT d.source STARTS WITH 'zero_day_'"
+    # Persistent training data identifier — nodes with this origin survive all resets.
+    PERSISTENT_ORIGIN = "zero_day_synthetic"
+
+    # Session filter: selects session/demo decisions, excludes persistent training data.
+    PERSISTENT_FILTER = "WHERE d.origin IS NULL OR d.origin <> 'zero_day_synthetic'"
+    SESSION_FILTER    = PERSISTENT_FILTER  # alias used in _verify_deletion_safety calls
 
     def __init__(self, learning_state_service, audit_store, neo4j_service, domain_config):
         self._ls_svc = learning_state_service
@@ -57,8 +62,35 @@ class StateManager:
     # Training data protection — all destructive Decision ops route here
     # ------------------------------------------------------------------
 
+    async def _verify_deletion_safety(self, filter_clause: str) -> int:
+        """Count nodes matched by filter_clause. Abort if any are persistent.
+
+        Uses a CASE WHEN count so a single query handles both checks —
+        avoids a separate WHERE clause that would be invalid Cypher when
+        filter_clause already contains WHERE.
+
+        Returns the total number of session nodes that would be affected.
+        Raises DataProtectionError if any persistent node is in the set.
+        """
+        check = await self._neo4j.run_query(
+            f"MATCH (d:Decision) {filter_clause} "
+            f"RETURN count(CASE WHEN d.origin = '{self.PERSISTENT_ORIGIN}' "
+            f"THEN 1 ELSE null END) AS n"
+        )
+        n_persistent = int(check[0]["n"]) if check else 0
+        if n_persistent > 0:
+            raise DataProtectionError(
+                f"ABORT: {n_persistent} persistent nodes would be affected. "
+                f"Filter: {filter_clause}"
+            )
+        count = await self._neo4j.run_query(
+            f"MATCH (d:Decision) {filter_clause} RETURN count(d) AS n"
+        )
+        return int(count[0]["n"]) if count else 0
+
     async def clear_session_decisions(self) -> int:
         """REMOVE correct/outcome from session decisions only. Training data preserved."""
+        await self._verify_deletion_safety(self.SESSION_FILTER)
         result = await self._neo4j.run_query(
             f"MATCH (d:Decision) {self.PERSISTENT_FILTER} "
             "REMOVE d.correct, d.outcome "
@@ -75,8 +107,9 @@ class StateManager:
 
     async def delete_session_decisions(self) -> None:
         """DETACH DELETE session decisions only. Training data preserved."""
+        await self._verify_deletion_safety(self.SESSION_FILTER)
         preserved_rows = await self._neo4j.run_query(
-            "MATCH (d:Decision) WHERE d.source STARTS WITH 'zero_day_' "
+            "MATCH (d:Decision) WHERE d.origin = 'zero_day_synthetic' "
             "RETURN count(d) AS n"
         )
         preserved_n = int(preserved_rows[0]["n"]) if preserved_rows else 0
@@ -171,9 +204,8 @@ class StateManager:
         Steps (ordered; no partial state on failure):
           1. W → priors; history and decision_count cleared (skipped when
              preserve_learning=True).
-          2. Neo4j: DETACH DELETE all Decision (and DecisionContext) nodes.
+          2. Neo4j: DETACH DELETE session Decision nodes (training data preserved).
           3. Audit: clear ledger, write RESET marker, start fresh hash chain.
-          4. Re-seed Neo4j from canonical seed script.
 
         Returns
         -------
@@ -205,11 +237,10 @@ class StateManager:
             self._audit.record_reset_marker("hard")
             committed.append("audit")
 
-            # Step 5: re-seed Neo4j from canonical dataset
-            self._ensure_backend_on_path()
-            import seed_neo4j  # backend/seed_neo4j.py
-            await seed_neo4j.seed_data()
-            committed.append("seed")
+            log.info(
+                "[StateManager] hard_reset complete — session decisions deleted. "
+                "Run seed_zero_day.py to re-seed if needed."
+            )
 
         except Exception as exc:
             log.error(
@@ -254,12 +285,3 @@ class StateManager:
                 rb_exc,
             )
 
-    @staticmethod
-    def _ensure_backend_on_path() -> None:
-        """Add backend/ to sys.path so `import seed_neo4j` resolves."""
-        # __file__ = backend/app/services/state_manager.py  →  backend/ is 3 levels up
-        backend_dir = os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        )
-        if backend_dir not in sys.path:
-            sys.path.insert(0, backend_dir)

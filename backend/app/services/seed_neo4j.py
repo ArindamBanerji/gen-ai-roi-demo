@@ -1,4 +1,10 @@
 """Wrapper for seed_neo4j standalone script."""
+import os as _os
+if _os.getenv("GRAPH_BACKEND") == "age":
+    raise RuntimeError(
+        "seed_neo4j.py wrapper blocked on AGE backend. "
+        "Use seed_zero_day.py instead."
+    )
 import sys
 from pathlib import Path
 

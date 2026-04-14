@@ -7,6 +7,13 @@ Usage:
     python seed_neo4j.py --realistic   # default seed + SEED-2 (200+ users)
     python seed_neo4j.py --dry-run     # skip DETACH DELETE and all writes
 """
+import os as _os
+if _os.getenv("GRAPH_BACKEND") == "age":
+    raise RuntimeError(
+        "seed_neo4j.py is a LEGACY Neo4j script. It runs "
+        "MATCH (n) DETACH DELETE n which wipes the entire graph. "
+        "Use seed_zero_day.py instead."
+    )
 import asyncio
 import sys
 from dotenv import load_dotenv
