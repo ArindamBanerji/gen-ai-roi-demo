@@ -728,6 +728,8 @@ async def get_threat_landscape():
     rels_count = 0
     alert_types_count = 0
     patterns_count = 0
+    last_refreshed_minutes_ago = None
+    avg_confidence = 0.0
     source = "unavailable"
 
     try:
@@ -780,6 +782,24 @@ async def get_threat_landscape():
         if pat_res:
             patterns_count = int(pat_res[0].get("c") or 0)
 
+        # BACKLOG-061: last_refreshed_minutes_ago — most recent ThreatIndicator.last_seen
+        ti_ts_res = await neo4j_client.run_query(
+            "MATCH (t:ThreatIndicator) WHERE t.last_seen IS NOT NULL "
+            "RETURN max(t.last_seen) AS latest"
+        )
+        if ti_ts_res and ti_ts_res[0].get("latest") is not None:
+            latest_ms = float(ti_ts_res[0]["latest"])
+            now_ms = datetime.now().timestamp() * 1000
+            last_refreshed_minutes_ago = round((now_ms - latest_ms) / 60000, 1)
+
+        # BACKLOG-062: avg_confidence — mean confidence across all Decision nodes
+        conf_res = await neo4j_client.run_query(
+            "MATCH (d:Decision) WHERE d.confidence IS NOT NULL "
+            "RETURN avg(d.confidence) AS avg_conf"
+        )
+        if conf_res and conf_res[0].get("avg_conf") is not None:
+            avg_confidence = round(float(conf_res[0]["avg_conf"]), 2)
+
         source = "age"
     except Exception as exc:
         print(f"[SOC] threat-landscape AGE query failed (using zero fallback): {exc}")
@@ -789,7 +809,7 @@ async def get_threat_landscape():
             "indicators_loaded": ti_loaded,
             "sources": ["Pulsedive", "GreyNoise"],
             "high_severity_iocs": high_severity_iocs,
-            "last_refreshed_minutes_ago": 23,
+            "last_refreshed_minutes_ago": last_refreshed_minutes_ago,
         },
         "active_alerts": {
             "in_queue": open_alerts,
@@ -801,7 +821,7 @@ async def get_threat_landscape():
             "policy_conflicts_detected": 3,
             "decisions_today": decisions_total,
             "audit_chain_verified": True,
-            "avg_confidence": 0.89,
+            "avg_confidence": avg_confidence,
         },
         "graph_coverage": {
             "nodes": nodes_count,
@@ -1589,7 +1609,10 @@ async def three_claims():
 
 @router.get("/soc/benchmarking-level2")
 async def benchmarking_level2():
-    """P32: Level 2 benchmarking section (mock data for validation)."""
+    """P32: Level 2 benchmarking section (mock data for validation).
+
+    # BACKLOG-063: mock data, not called by frontend — remove when L2 benchmarking is implemented.
+    """
     from app.services.benchmarking_level2 import Level2BenchmarkingSection
     section = Level2BenchmarkingSection()
     # Mock data from P29 synthetic A/B results
