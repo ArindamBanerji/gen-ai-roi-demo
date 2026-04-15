@@ -113,3 +113,52 @@ def verify_persistent_data(request):
             f"A test called hard_reset(), demo/reset-all, or ran a raw "
             f"DETACH DELETE on Decision nodes."
         )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def report_graph_contract(request):
+    """
+    BACKLOG-070b — Post-session graph contract health report.
+
+    Runs verify_graph() after the full test suite and prints a summary.
+    Non-blocking: prints issues as warnings, does NOT fail the suite.
+    Lets the operator know if backbone nodes (User/Asset/Campaign) are missing.
+
+    Skips when GRAPH_BACKEND != 'age'.
+    """
+    yield  # let the full suite run first
+
+    import os as _os
+    if _os.getenv("GRAPH_BACKEND") != "age":
+        return
+
+    import asyncio
+
+    async def _check():
+        try:
+            from app.graph_schema import verify_graph
+            return await verify_graph()
+        except Exception as exc:
+            return {"healthy": None, "issues": [str(exc)], "counts": {}}
+
+    report = asyncio.run(_check())
+
+    if report.get("healthy") is None:
+        print("\n[GRAPH CONTRACT] Could not run: " + str(report["issues"]))
+        return
+
+    counts = report.get("counts", {})
+    print(
+        f"\n[GRAPH CONTRACT] "
+        f"Alert={counts.get('Alert', '?')} "
+        f"Decision={counts.get('Decision', '?')} "
+        f"User={counts.get('User', '?')} "
+        f"Asset={counts.get('Asset', '?')} "
+        f"Campaign={counts.get('Campaign', '?')}"
+    )
+    if report["healthy"]:
+        print("[GRAPH CONTRACT] All contract checks passed.")
+    else:
+        print(f"[GRAPH CONTRACT] {len(report['issues'])} issue(s) — run seed_graph() to fix:")
+        for issue in report["issues"]:
+            print(f"  WARNING: {issue}")

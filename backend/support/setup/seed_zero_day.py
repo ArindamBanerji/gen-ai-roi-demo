@@ -22,9 +22,11 @@ DRY_RUN = "--dry-run" in _args
 LIVE = "--live" in _args
 CLEAN = "--clean" in _args
 BACKFILL = "--backfill" in _args
-if not DRY_RUN and not LIVE and not BACKFILL:
+BACKBONE = "--backbone" in _args
+if not DRY_RUN and not LIVE and not BACKFILL and not BACKBONE:
     print("Usage: --dry-run or --live [--clean] [--file=path]")
     print("       --backfill  (SET correct/outcome on existing zero_day_synthetic nodes)")
+    print("       --backbone  (seed Users, Assets, demo Alerts, Campaigns for Tab 1 queue)")
     sys.exit(1)
 
 _file_arg = [a for a in sys.argv[1:] if a.startswith("--file=")]
@@ -231,6 +233,256 @@ async def run_backfill():
     print("[OK] Backfill complete. Restart uvicorn.")
 
 
+# ── Backbone demo data ────────────────────────────────────────────────────────
+# 20 interactive demo alerts (origin='demo_backbone', status='pending').
+# These populate Tab 1 queue. Users and Assets are MERGED idempotently.
+# Campaigns group related alerts for Tab 6.
+
+_BACKBONE_BASE_MS = 1744502400000  # 2026-04-12 12:00:00 UTC
+
+DEMO_USERS = [
+    {"user_id": "USR-001", "name": "Jane Smith",    "department": "Finance"},
+    {"user_id": "USR-002", "name": "Alex Garcia",   "department": "IT"},
+    {"user_id": "USR-003", "name": "Michael Lee",   "department": "HR"},
+    {"user_id": "USR-004", "name": "Rachel Chen",   "department": "Security"},
+    {"user_id": "USR-005", "name": "Dev Kumar",     "department": "Engineering"},
+    {"user_id": "USR-006", "name": "Lisa Wilson",   "department": "Executive"},
+]
+
+DEMO_ASSETS = [
+    {"asset_id": "AST-001", "hostname": "ws-finance-01.corp",    "asset_type": "workstation", "os": "Windows 11"},
+    {"asset_id": "AST-002", "hostname": "srv-db-01.corp",        "asset_type": "server",      "os": "Ubuntu 22.04"},
+    {"asset_id": "AST-003", "hostname": "srv-web-02.corp",       "asset_type": "server",      "os": "Ubuntu 22.04"},
+    {"asset_id": "AST-004", "hostname": "ws-hr-03.corp",         "asset_type": "workstation", "os": "Windows 11"},
+    {"asset_id": "AST-005", "hostname": "srv-vpn-01.corp",       "asset_type": "server",      "os": "CentOS 7"},
+    {"asset_id": "AST-006", "hostname": "laptop-exec-01.corp",   "asset_type": "laptop",      "os": "macOS 14"},
+    {"asset_id": "AST-007", "hostname": "srv-cloud-aws-01.corp", "asset_type": "cloud",       "os": "Amazon Linux 2"},
+    {"asset_id": "AST-008", "hostname": "srv-email-01.corp",     "asset_type": "server",      "os": "Ubuntu 20.04"},
+]
+
+# (alert_id, category, severity, user_id, asset_id, ts_offset_ms)
+_DEMO_ALERT_ROWS = [
+    ("DEMO-CA-001", "credential_access",    "high",     "USR-001", "AST-001",         0),
+    ("DEMO-LM-001", "lateral_movement",     "high",     "USR-001", "AST-002",   600_000),
+    ("DEMO-DE-001", "data_exfiltration",    "critical", "USR-001", "AST-002", 1_200_000),
+    ("DEMO-CA-002", "credential_access",    "medium",   "USR-002", "AST-005", 2_000_000),
+    ("DEMO-ME-001", "malware_execution",    "critical", "USR-003", "AST-004", 2_600_000),
+    ("DEMO-IT-001", "insider_threat",       "high",     "USR-004", "AST-008", 3_200_000),
+    ("DEMO-CI-001", "cloud_infrastructure", "high",     "USR-005", "AST-007", 3_800_000),
+    ("DEMO-LM-002", "lateral_movement",     "medium",   "USR-001", "AST-003", 4_400_000),
+    ("DEMO-CA-003", "credential_access",    "low",      "USR-006", "AST-006", 5_000_000),
+    ("DEMO-DE-002", "data_exfiltration",    "high",     "USR-005", "AST-007", 5_600_000),
+    ("DEMO-ME-002", "malware_execution",    "high",     "USR-002", "AST-001", 6_200_000),
+    ("DEMO-IT-002", "insider_threat",       "critical", "USR-004", "AST-002", 6_800_000),
+    ("DEMO-CI-002", "cloud_infrastructure", "medium",   "USR-006", "AST-007", 7_400_000),
+    ("DEMO-CA-004", "credential_access",    "high",     "USR-003", "AST-005", 8_000_000),
+    ("DEMO-LM-003", "lateral_movement",     "critical", "USR-002", "AST-002", 8_600_000),
+    ("DEMO-DE-003", "data_exfiltration",    "medium",   "USR-001", "AST-008", 9_200_000),
+    ("DEMO-ME-003", "malware_execution",    "medium",   "USR-005", "AST-004", 9_800_000),
+    ("DEMO-IT-003", "insider_threat",       "high",     "USR-004", "AST-006", 10_400_000),
+    ("DEMO-CI-003", "cloud_infrastructure", "critical", "USR-003", "AST-007", 11_000_000),
+    ("DEMO-CA-005", "credential_access",    "medium",   "USR-006", "AST-008", 11_600_000),
+]
+
+DEMO_ALERTS = [
+    {
+        "alert_id":        aid,
+        "category":        cat,
+        "severity":        sev,
+        "alert_type":      cat,
+        "user_id":         uid,
+        "asset_id":        asid,
+        "timestamp_epoch": _BACKBONE_BASE_MS + ts_off,
+        "origin":          "demo_backbone",
+        "source_location": "corp-network",
+        "status":          "pending",
+    }
+    for aid, cat, sev, uid, asid, ts_off in _DEMO_ALERT_ROWS
+]
+
+DEMO_CAMPAIGNS = [
+    {
+        "campaign_id":             "CAMP-APT29-2026",
+        "severity":                "HIGH",
+        "confidence":              0.87,
+        "trigger_rule":            "sequential_category",
+        "category_sequence":       ["credential_access", "lateral_movement", "data_exfiltration"],
+        "shared_entities":         [],
+        "technique_sequence":      [],
+        "nl_summary":              "Nation-state APT29 campaign: credential theft to lateral movement to data exfiltration chain.",
+        "member_alert_ids":        ["DEMO-CA-001", "DEMO-LM-001", "DEMO-DE-001", "DEMO-LM-002", "DEMO-LM-003"],
+        "correlation_window_hours": 24,
+        "first_seen":              "2026-04-12T12:00:00",
+        "last_seen":               "2026-04-12T14:13:20",
+    },
+    {
+        "campaign_id":             "CAMP-INSIDER-Q1",
+        "severity":                "HIGH",
+        "confidence":              0.78,
+        "trigger_rule":            "shared_user",
+        "category_sequence":       ["insider_threat", "data_exfiltration"],
+        "shared_entities":         ["USR-004"],
+        "technique_sequence":      [],
+        "nl_summary":              "Insider threat Q1: repeated policy violations by same user across email and database assets.",
+        "member_alert_ids":        ["DEMO-IT-001", "DEMO-IT-002", "DEMO-IT-003", "DEMO-DE-003"],
+        "correlation_window_hours": 168,
+        "first_seen":              "2026-04-12T12:53:20",
+        "last_seen":               "2026-04-12T14:33:20",
+    },
+    {
+        "campaign_id":             "CAMP-CLOUD-BREACH",
+        "severity":                "CRITICAL",
+        "confidence":              0.91,
+        "trigger_rule":            "shared_asset",
+        "category_sequence":       ["cloud_infrastructure", "data_exfiltration"],
+        "shared_entities":         ["AST-007"],
+        "technique_sequence":      [],
+        "nl_summary":              "Cloud infrastructure breach: repeated access to cloud asset followed by data exfiltration.",
+        "member_alert_ids":        ["DEMO-CI-001", "DEMO-CI-002", "DEMO-CI-003", "DEMO-DE-002"],
+        "correlation_window_hours": 72,
+        "first_seen":              "2026-04-12T13:03:20",
+        "last_seen":               "2026-04-12T15:03:20",
+    },
+]
+
+
+async def seed_graph_backbone():
+    """
+    Seed the interactive demo graph backbone:
+      - 6 User nodes (MERGE, idempotent)
+      - 8 Asset nodes (MERGE, idempotent)
+      - 20 Alert nodes (origin='demo_backbone', status='pending') (MERGE)
+      - INVOLVES edges: Alert → User
+      - DETECTED_ON edges: Alert → Asset
+      - 3 Campaign nodes + MEMBER_OF edges: Alert → Campaign
+
+    Use --clean to wipe existing backbone nodes before re-seeding.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from ci_platform.graph.age_client import AGEClient
+    client = AGEClient()
+    S = AGEClient.serialize_for_age
+
+    try:
+        await client.ensure_graph()
+        print("[OK] AGE connected.\n")
+    except Exception as e:
+        print(f"[ERROR] Cannot connect: {e}")
+        sys.exit(1)
+
+    if CLEAN:
+        print("[CLEAN] Removing existing backbone nodes...")
+        await client.run_query("MATCH (a:Alert {origin: 'demo_backbone'}) DETACH DELETE a")
+        await client.run_query(
+            "MATCH (u:User) WHERE u.user_id STARTS WITH 'USR-' DETACH DELETE u"
+        )
+        await client.run_query(
+            "MATCH (a:Asset) WHERE a.asset_id STARTS WITH 'AST-' DETACH DELETE a"
+        )
+        await client.run_query(
+            "MATCH (c:Campaign) WHERE c.campaign_id STARTS WITH 'CAMP-' DETACH DELETE c"
+        )
+        print("[CLEAN] Done.\n")
+
+    # Step 1: MERGE User nodes
+    print(f"[STEP 1] Merging {len(DEMO_USERS)} User nodes...")
+    for u in DEMO_USERS:
+        await client.run_query(
+            f"MERGE (u:User {{user_id: {S(u['user_id'])}}}) "
+            f"SET u.name = {S(u['name'])}, u.department = {S(u['department'])}"
+        )
+    print("  Done.")
+
+    # Step 2: MERGE Asset nodes
+    print(f"[STEP 2] Merging {len(DEMO_ASSETS)} Asset nodes...")
+    for a in DEMO_ASSETS:
+        await client.run_query(
+            f"MERGE (a:Asset {{asset_id: {S(a['asset_id'])}}}) "
+            f"SET a.hostname = {S(a['hostname'])}, "
+            f"a.asset_type = {S(a['asset_type'])}, a.os = {S(a['os'])}"
+        )
+    print("  Done.")
+
+    # Step 3: MERGE demo Alert nodes
+    print(f"[STEP 3] Merging {len(DEMO_ALERTS)} demo Alert nodes (origin='demo_backbone')...")
+    for al in DEMO_ALERTS:
+        await client.run_query(
+            f"MERGE (alert:Alert {{alert_id: {S(al['alert_id'])}}}) "
+            f"SET alert.category = {S(al['category'])}, "
+            f"alert.severity = {S(al['severity'])}, "
+            f"alert.alert_type = {S(al['alert_type'])}, "
+            f"alert.status = 'pending', "
+            f"alert.origin = 'demo_backbone', "
+            f"alert.timestamp_epoch = {al['timestamp_epoch']}, "
+            f"alert.source_location = {S(al['source_location'])}, "
+            f"alert.user_id = {S(al['user_id'])}"
+        )
+    print("  Done.")
+
+    # Step 4: MERGE INVOLVES edges (Alert → User)
+    print(f"[STEP 4] Merging INVOLVES edges (Alert->User)...")
+    for al in DEMO_ALERTS:
+        await client.run_query(
+            f"MATCH (alert:Alert {{alert_id: {S(al['alert_id'])}}}) "
+            f"MATCH (u:User {{user_id: {S(al['user_id'])}}}) "
+            f"MERGE (alert)-[:INVOLVES]->(u)"
+        )
+    print("  Done.")
+
+    # Step 5: MERGE DETECTED_ON edges (Alert → Asset)
+    print(f"[STEP 5] Merging DETECTED_ON edges (Alert->Asset)...")
+    for al in DEMO_ALERTS:
+        await client.run_query(
+            f"MATCH (alert:Alert {{alert_id: {S(al['alert_id'])}}}) "
+            f"MATCH (a:Asset {{asset_id: {S(al['asset_id'])}}}) "
+            f"MERGE (alert)-[:DETECTED_ON]->(a)"
+        )
+    print("  Done.")
+
+    # Step 6: MERGE Campaign nodes + MEMBER_OF edges (Alert → Campaign)
+    print(f"[STEP 6] Merging {len(DEMO_CAMPAIGNS)} Campaign nodes + MEMBER_OF edges...")
+    for c in DEMO_CAMPAIGNS:
+        await client.run_query(
+            f"MERGE (camp:Campaign {{campaign_id: {S(c['campaign_id'])}}}) "
+            f"SET camp.id = {S(c['campaign_id'])}, "
+            f"camp.severity = {S(c['severity'])}, "
+            f"camp.confidence = {c['confidence']}, "
+            f"camp.trigger_rule = {S(c['trigger_rule'])}, "
+            f"camp.category_sequence = {S(json.dumps(c['category_sequence']))}, "
+            f"camp.shared_entities = {S(json.dumps(c['shared_entities']))}, "
+            f"camp.technique_sequence = {S(json.dumps(c['technique_sequence']))}, "
+            f"camp.nl_summary = {S(c['nl_summary'])}, "
+            f"camp.alert_count = {len(c['member_alert_ids'])}, "
+            f"camp.member_alert_ids = {S(json.dumps(c['member_alert_ids']))}, "
+            f"camp.correlation_window_hours = {c['correlation_window_hours']}, "
+            f"camp.first_seen = {S(c['first_seen'])}, "
+            f"camp.last_seen = {S(c['last_seen'])}"
+        )
+        for aid in c["member_alert_ids"]:
+            await client.run_query(
+                f"MATCH (alert:Alert {{alert_id: {S(aid)}}}) "
+                f"MATCH (camp:Campaign {{campaign_id: {S(c['campaign_id'])}}}) "
+                f"MERGE (alert)-[:MEMBER_OF]->(camp)"
+            )
+    print("  Done.")
+
+    # Step 7: Verification
+    print("\n[STEP 7] Verification:")
+    checks = [
+        ("Users (USR-*)",     "MATCH (u:User) WHERE u.user_id STARTS WITH 'USR-' RETURN count(u) AS cnt"),
+        ("Assets (AST-*)",    "MATCH (a:Asset) WHERE a.asset_id STARTS WITH 'AST-' RETURN count(a) AS cnt"),
+        ("Demo alerts",       "MATCH (a:Alert {origin: 'demo_backbone'}) RETURN count(a) AS cnt"),
+        ("INVOLVES edges",    "MATCH (a:Alert {origin: 'demo_backbone'})-[:INVOLVES]->(:User) RETURN count(a) AS cnt"),
+        ("DETECTED_ON edges", "MATCH (a:Alert {origin: 'demo_backbone'})-[:DETECTED_ON]->(:Asset) RETURN count(a) AS cnt"),
+        ("Campaigns",         "MATCH (c:Campaign) WHERE c.campaign_id STARTS WITH 'CAMP-' RETURN count(c) AS cnt"),
+        ("MEMBER_OF edges",   "MATCH (:Alert)-[:MEMBER_OF]->(:Campaign) RETURN count(*) AS cnt"),
+    ]
+    for lbl, q in checks:
+        r = await client.run_query(q)
+        print(f"  {lbl}: {r[0]['cnt']}")
+    print("\n[OK] Backbone seeded. Restart uvicorn and test GET /api/alerts/queue.")
+
+
 if __name__ == "__main__":
     if DRY_RUN:
         print_plan()
@@ -242,3 +494,7 @@ if __name__ == "__main__":
         if sys.platform == "win32":
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         asyncio.run(run_backfill())
+    elif BACKBONE:
+        if sys.platform == "win32":
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        asyncio.run(seed_graph_backbone())

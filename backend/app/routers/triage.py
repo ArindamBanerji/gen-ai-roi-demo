@@ -810,18 +810,19 @@ async def reset_demo_alerts():
     print("[TRIAGE] POST /alerts/reset called - resetting all demo state")
 
     try:
-        # Reset all alerts to pending status in Neo4j
+        # Reset only demo_backbone alerts — zero_day_synthetic training data is never touched
         query = """
         MATCH (alert:Alert)
+        WHERE alert.origin = 'demo_backbone'
         SET alert.status = 'pending'
         RETURN count(alert) as reset_count
         """
 
-        print("[TRIAGE] Running Cypher query to reset alert statuses...")
+        print("[TRIAGE] Running Cypher query to reset demo_backbone alert statuses...")
         result = await neo4j_client.run_query(query)
         reset_count = result[0]["reset_count"] if result else 0
 
-        print(f"[TRIAGE] Reset {reset_count} alerts to 'pending' status")
+        print(f"[TRIAGE] Reset {reset_count} demo_backbone alerts to 'pending' status")
 
         # Reset demo-cycle state only — deliberately skip 'learning_state' so
         # ProfileScorer centroids (IKS) survive demo resets (BACKLOG-020).

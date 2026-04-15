@@ -1,0 +1,20 @@
+  Tab 1: OK ù 1095 chars
+  Tab 2: OK ù 1374 chars
+  Tab 3: OK ù 1929 chars
+  Tab 4: OK ù 1005 chars
+  Tab 5: OK ù 2576 chars
+
+Saved: G:\My Drive\public-files\gen-ai-roi\experiments\tab_content.json
+Total tabs: 5/5
+Colab can now load: G:\My Drive\public-files\gen-ai-roi\experiments	ab_content.json
+
+--- SANITY CHECK ---
+[SANITY] Tab 1 alert types: PASS ù ['insider_threat', 'lateral_movement', 'cloud_infrastructure']
+[SANITY] Tab 2 glossary: PASS
+[SANITY] Tab 3 action: PASS ù investigate
+[SANITY] Tab 3 DiagonalKernel: PASS
+[SANITY] Tab 4 ROI methodology: PASS
+[SANITY] Tab 5 W2 flywheel: PASS
+
+[SANITY] Overall: PASS (6/6)
+Drive file refreshed. Colab Batch E can run.

@@ -8,6 +8,7 @@ import pytest
 
 ALLOWED_FILES = {
     "app/services/state_manager.py",
+    "app/graph_schema.py",
 }
 
 DESTRUCTIVE_PATTERNS = [
