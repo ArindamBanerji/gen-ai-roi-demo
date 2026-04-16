@@ -589,9 +589,7 @@ export default function RuntimeEvolutionTab() {
   const iks = profileStateFull?.iks ?? null
   // IKS v1 (centroid-drift) is 0 until centroids drift from bootstrap.
   // Prefer IKS v2 (Neo4j composite) which reflects actual decision volume.
-  const iksCurrentDisplay: number | null = (iks?.current !== null && iks?.current !== undefined && iks.current > 0)
-    ? iks.current
-    : (learningStateData?.iks_v2 ?? iks?.current ?? null)
+  const iksCurrentDisplay: number | null = learningStateData?.iks_v2 ?? iks?.current ?? null
   const decisionCount = iks?.decision_count ?? profileState?.decision_count ?? 0
 
   const categoryStats = (() => {
@@ -782,13 +780,13 @@ export default function RuntimeEvolutionTab() {
           </span>
           <div className="flex items-center gap-2 text-sm">
             <span className="text-gray-400">IKS:</span>
-            {iks?.current === null || iks?.current === undefined ? (
+            {iksCurrentDisplay === null ? (
               <span className="text-gray-500 italic">&mdash; (baseline not established)</span>
             ) : (
               <>
-                <span className="font-bold text-soc-secondary">{iks.current.toFixed(1)}</span>
+                <span className="font-bold text-soc-secondary">{iksCurrentDisplay.toFixed(1)}</span>
                 <span className="text-gray-400">{iksArrow}</span>
-                <span className={`text-xs ${iks.delta_7d !== null && iks.delta_7d !== undefined && iks.delta_7d > 0 ? 'text-green-400' : 'text-gray-500'}`}>
+                <span className={`text-xs ${iks?.delta_7d !== null && iks?.delta_7d !== undefined && iks?.delta_7d > 0 ? 'text-green-400' : 'text-gray-500'}`}>
                   {iksDeltaLabel}
                 </span>
               </>

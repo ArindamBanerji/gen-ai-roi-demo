@@ -139,6 +139,19 @@ async def startup_event():
     except Exception as _cd_exc:
         print(f"[STARTUP] correct_decisions bootstrap failed (non-blocking): {_cd_exc}")
 
+    # Rebuild audit hash-chain from synthetic Decision nodes in AGE.
+    # Must run early so verify_chain() returns non-zero chain_length immediately
+    # after restart.  Uses rebuild_chain_from_graph() which preserves existing
+    # decision_ids (not record_decision() which generates new UUIDs) and queries
+    # in ASC chronological order so the hash chain stays valid.
+    try:
+        from app.framework.audit import rebuild_chain_from_graph as _rebuild_chain
+        _chain_n = await _rebuild_chain(neo4j_client)
+        if _chain_n > 0:
+            print(f"[STARTUP] Audit chain rebuilt: {_chain_n} entries (ascending)")
+    except Exception as _chain_exc:
+        print(f"[STARTUP] Audit chain rebuild failed (non-blocking): {_chain_exc}")
+
     # Load analyst correct-override examples into OverrideDetector.
     # Activates automatically when >= 50 examples are found in Neo4j.
     from app.services.override_detector import load_from_neo4j as _load_od

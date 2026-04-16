@@ -174,6 +174,7 @@ class Neo4jClient:
         alert_id: str,
         action: str,
         confidence: float,
+        category: str,
         reasoning: str,
         pattern_id: Optional[str],
         playbook_id: Optional[str],
@@ -181,65 +182,57 @@ class Neo4jClient:
         context_snapshot: Dict[str, Any]
     ) -> str:
         """
-        Create a Decision node with DecisionContext in Neo4j.
+        Create a Decision node atomically with DECIDED_ON edge to Alert.
+
+        AGE-compatible: uses inline literals (no $param substitution).
+        Atomic MATCH+CREATE — if Alert is not found, no Decision is created.
         Returns decision_id.
         """
-        # AGE-compatible: split FOREACH into a separate conditional query.
-        # FOREACH is not supported in Apache AGE — the relationship is created
-        # in a follow-up query only when playbook_id is provided.
-        query = """
-        MATCH (alert:Alert {alert_id: $alert_id})
+        import json as _json
 
-        CREATE (decision:Decision {
-            decision_id: $decision_id,
-            type: $action,
-            reasoning: $reasoning,
-            confidence: $confidence,
-            timestamp_epoch: $timestamp_epoch,
-            alert_id: $alert_id,
-            action_taken: $action
-        })
+        def _S(v: Any) -> str:
+            """Serialize a value to an AGE-safe inline Cypher literal."""
+            if v is None:
+                return 'null'
+            if isinstance(v, bool):
+                return 'true' if v else 'false'
+            if isinstance(v, (int, float)):
+                return str(v)
+            return "'" + str(v).replace("\\", "\\\\").replace("'", "\\'") + "'"
 
-        CREATE (context:DecisionContext {
-            id: $decision_id + '-ctx',
-            decision_id: $decision_id,
-            user_snapshot: $user_snapshot,
-            asset_snapshot: $asset_snapshot,
-            patterns_matched: $patterns_matched,
-            nodes_consulted: $nodes_consulted
-        })
+        ts = int(datetime.utcnow().timestamp() * 1000)
+        user_snap = _json.dumps(context_snapshot.get("user", {}))
+        asset_snap = _json.dumps(context_snapshot.get("asset", {}))
+        patterns_list = [pattern_id] if pattern_id else []
 
-        CREATE (decision)-[:HAD_CONTEXT]->(context)
-        CREATE (decision)-[:FOR_ALERT]->(alert)
+        query = (
+            f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})\n"
+            f"CREATE (d:Decision {{\n"
+            f"    decision_id:      {_S(decision_id)},\n"
+            f"    action:           {_S(action)},\n"
+            f"    confidence:       {_S(confidence)},\n"
+            f"    category:         {_S(category)},\n"
+            f"    reasoning:        {_S(reasoning)},\n"
+            f"    timestamp_epoch:  {ts},\n"
+            f"    alert_id:         {_S(alert_id)},\n"
+            f"    nodes_consulted:  {nodes_consulted},\n"
+            f"    patterns_matched: {_S(_json.dumps(patterns_list))},\n"
+            f"    user_snapshot:    {_S(user_snap)},\n"
+            f"    asset_snapshot:   {_S(asset_snap)}\n"
+            f"}})\n"
+            f"CREATE (d)-[:DECIDED_ON]->(a)"
+        )
+        await self.run_query(query)
 
-        RETURN decision.id as decision_id
-        """
-
-        result = await self.run_query(query, {
-            "decision_id":    decision_id,
-            "alert_id":       alert_id,
-            "action":         action,
-            "confidence":     confidence,
-            "reasoning":      reasoning,
-            "nodes_consulted": nodes_consulted,
-            "user_snapshot":  str(context_snapshot.get("user", {})),
-            "asset_snapshot": str(context_snapshot.get("asset", {})),
-            "patterns_matched": [pattern_id] if pattern_id else [],
-            "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
-        })
-
-        # Link playbook if provided (AGE-safe replacement for FOREACH).
         if playbook_id:
-            await self.run_query(
-                """
-                MATCH (d:Decision {decision_id: $decision_id})
-                MATCH (p:Playbook {id: $playbook_id})
-                CREATE (d)-[:APPLIED_PLAYBOOK]->(p)
-                """,
-                {"decision_id": decision_id, "playbook_id": playbook_id},
+            pb_query = (
+                f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}})\n"
+                f"MATCH (p:Playbook {{id: {_S(playbook_id)}}})\n"
+                f"CREATE (d)-[:APPLIED_PLAYBOOK]->(p)"
             )
+            await self.run_query(pb_query)
 
-        return result[0]["decision_id"] if result else decision_id
+        return decision_id
 
     # ========================================================================
     # Evolution Queries (THE KEY DIFFERENTIATOR)
@@ -535,6 +528,12 @@ if _GRAPH_BACKEND == "age":
                     return 0
             neo4j_client.count_correct_decisions = _types.MethodType(
                 _count_correct_decisions, neo4j_client
+            )
+
+        if not hasattr(neo4j_client, "create_decision_trace"):
+            # Bind the updated Neo4jClient method (inline literals — AGE-safe).
+            neo4j_client.create_decision_trace = _types.MethodType(
+                Neo4jClient.create_decision_trace, neo4j_client
             )
 
     except Exception as _exc:

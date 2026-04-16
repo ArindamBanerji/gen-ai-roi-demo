@@ -22,15 +22,21 @@ verify_graph() is NOT used by:
 
 IMPORTANT: This file must be listed in ALLOWED_FILES in
 test_no_destructive_decision_queries.py because the clean phase
-runs DETACH DELETE on Decision nodes (scoped to origin='zero_day_synthetic').
+runs DETACH DELETE on Decision/Alert nodes (scoped to origin='zero_day_synthetic'
+and origin='zero_day_demo').
 """
 
 import json as _json
 import logging
+import math
 import os
 import sys
 
 log = logging.getLogger(__name__)
+
+# Origin values for seeded data
+SYNTHETIC_ORIGIN = "zero_day_synthetic"  # Training data (protected by StateManager)
+DEMO_ORIGIN = "zero_day_demo"            # Demo alerts (ephemeral, reset by /api/alerts/reset)
 
 
 # ---------------------------------------------------------------------------
@@ -44,12 +50,16 @@ def _S(val):
     Lists are stored as JSON strings (AGE has no array property type).
     Strings are single-quoted with escaping.
     Booleans are lowercase true/false.
+
+    Raises ValueError on NaN/Inf (AGE cannot store these).
     """
     if val is None:
         return "null"
     if isinstance(val, bool):
         return "true" if val else "false"
     if isinstance(val, (int, float)):
+        if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
+            raise ValueError("AGE cannot store NaN/Inf: " + repr(val))
         return str(val)
     if isinstance(val, (list, tuple)):
         return "'" + _json.dumps(val).replace("'", "\\'") + "'"
@@ -114,7 +124,7 @@ GRAPH_CONTRACT = {
         },
         {
             "name": "no_missing_outcomes",
-            "query": "MATCH (d:Decision {origin: 'zero_day_synthetic'}) "
+            "query": "MATCH (d:Decision {origin: '" + SYNTHETIC_ORIGIN + "'}) "
                      "WHERE d.correct IS NULL RETURN count(d) AS n",
             "expected": 0,
         },
@@ -131,24 +141,32 @@ GRAPH_CONTRACT = {
         },
         {
             "name": "alerts_have_users",
-            "query": "MATCH (a:Alert {origin: 'zero_day_synthetic'}) "
-                     "WHERE NOT EXISTS((a)-[:INVOLVES]->()) "
+            "query": "MATCH (a:Alert) "
+                     "WHERE (a.origin = '" + SYNTHETIC_ORIGIN + "' "
+                     "OR a.origin = '" + DEMO_ORIGIN + "') "
+                     "AND NOT EXISTS((a)-[:INVOLVES]->()) "
                      "RETURN count(a) AS n",
             "expected": 0,
         },
         {
             "name": "alerts_have_assets",
-            "query": "MATCH (a:Alert {origin: 'zero_day_synthetic'}) "
-                     "WHERE NOT EXISTS((a)-[:DETECTED_ON]->()) "
+            "query": "MATCH (a:Alert) "
+                     "WHERE (a.origin = '" + SYNTHETIC_ORIGIN + "' "
+                     "OR a.origin = '" + DEMO_ORIGIN + "') "
+                     "AND NOT EXISTS((a)-[:DETECTED_ON]->()) "
                      "RETURN count(a) AS n",
             "expected": 0,
         },
     ],
 }
 
-# Labels used in the clean phase (looped, not literal in DELETE queries)
-_ALL_LABELS = ["Decision", "Alert", "User", "Asset",
-               "Campaign", "ThreatIndicator", "AttackPattern"]
+# Clean phase: backbone labels delete ALL nodes (we fully own these).
+# Data labels delete both origins: zero_day_synthetic + zero_day_demo.
+# Session decisions (origin=NULL) survive a clean.
+_BACKBONE_LABELS = ["User", "Asset", "Campaign",
+                    "ThreatIndicator", "AttackPattern"]
+_DATA_LABELS = ["Decision", "Alert"]
+_DATA_ORIGINS = [SYNTHETIC_ORIGIN, DEMO_ORIGIN]
 
 
 # ---------------------------------------------------------------------------
@@ -172,9 +190,9 @@ async def verify_graph(client=None):
     for label, spec in GRAPH_CONTRACT["nodes"].items():
         try:
             r = await client.run_query(
-                "MATCH (n:" + label + ") RETURN count(n) AS n"
+                "MATCH (n:" + label + ") RETURN count(n) AS cnt"
             )
-            count = int(r[0]["n"]) if r else 0
+            count = int(r[0]["cnt"]) if r else 0
         except Exception as exc:
             count = -1
             report["healthy"] = False
@@ -189,11 +207,14 @@ async def verify_graph(client=None):
                 str(spec["min_count"]) + ")"
             )
 
-        # Sample one node for field presence
+        # Sample a seeded node for field presence. Filter by SYNTHETIC_ORIGIN
+        # (training data) since it's always present and has the same fields as
+        # DEMO_ORIGIN alerts. Unfiltered sampling risks hitting orphan nodes.
         if count > 0:
             try:
                 sample = await client.run_query(
-                    "MATCH (n:" + label + ") RETURN n LIMIT 1"
+                    "MATCH (n:" + label + " {origin: " +
+                    _S(SYNTHETIC_ORIGIN) + "}) RETURN n LIMIT 1"
                 )
                 if sample:
                     node = sample[0].get("n", sample[0])
@@ -202,9 +223,19 @@ async def verify_graph(client=None):
                             if field not in node or node[field] is None:
                                 report["healthy"] = False
                                 report["issues"].append(
-                                    label + ": missing '" + field + "' on sample"
+                                    label + ": missing '" + field +
+                                    "' on sample"
                                 )
+                else:
+                    # Nodes exist but none have our origin — hard failure
+                    report["healthy"] = False
+                    report["issues"].append(
+                        label + ": " + str(count) +
+                        " nodes but none with origin='" +
+                        SYNTHETIC_ORIGIN + "'"
+                    )
             except Exception as exc:
+                report["healthy"] = False
                 report["issues"].append(
                     label + ": sample check failed - " + str(exc)
                 )
@@ -213,13 +244,15 @@ async def verify_graph(client=None):
     for rel_type, spec in GRAPH_CONTRACT["edges"].items():
         try:
             r = await client.run_query(
-                "MATCH ()-[r:" + rel_type + "]->() RETURN count(r) AS n"
+                "MATCH ()-[r:" + rel_type + "]->() RETURN count(r) AS cnt"
             )
-            count = int(r[0]["n"]) if r else 0
+            count = int(r[0]["cnt"]) if r else 0
         except Exception as exc:
             count = -1
             report["healthy"] = False
-            report["issues"].append(rel_type + ": edge query failed - " + str(exc))
+            report["issues"].append(
+                rel_type + ": edge query failed - " + str(exc)
+            )
 
         report["counts"][rel_type] = count
 
@@ -259,13 +292,72 @@ async def verify_graph(client=None):
 
 
 # ---------------------------------------------------------------------------
+# JSON validation
+# ---------------------------------------------------------------------------
+
+def _validate_json(data):
+    """Validate v5 JSON structure before seeding. Raises ValueError on errors."""
+    errors = []
+
+    required_keys = ["alerts", "demo_alerts", "decisions", "users", "assets",
+                     "attack_patterns", "threat_indicators", "campaigns"]
+    for key in required_keys:
+        if key not in data:
+            errors.append("Missing top-level key: " + key)
+
+    if errors:
+        raise ValueError("JSON validation failed:\n  " + "\n  ".join(errors))
+
+    # Check required fields on first 3 items in each section
+    for section, fields in [
+        ("alerts", ["alert_id", "category", "severity", "timestamp_epoch"]),
+        ("demo_alerts", ["alert_id", "category", "severity", "timestamp_epoch"]),
+        ("decisions", ["decision_id", "alert_id", "category", "action",
+                       "factor_vector", "confidence", "correct", "outcome",
+                       "timestamp_epoch"]),
+        ("users", ["user_id", "name"]),
+        ("assets", ["asset_id", "hostname", "criticality"]),
+        ("attack_patterns", ["pattern_id", "name", "mitre_id"]),
+        ("threat_indicators", ["indicator", "indicator_type", "severity"]),
+        ("campaigns", ["campaign_id"]),
+    ]:
+        items = data.get(section, [])
+        for i, item in enumerate(items[:3]):
+            for field in fields:
+                if field not in item:
+                    errors.append(
+                        section + "[" + str(i) + "]: missing '" + field + "'"
+                    )
+
+    # Check referential integrity
+    alert_ids = {a["alert_id"] for a in data.get("alerts", [])}
+    orphan_decisions = [d["decision_id"] for d in data.get("decisions", [])
+                        if d.get("alert_id") not in alert_ids]
+    if orphan_decisions:
+        errors.append(str(len(orphan_decisions)) +
+                      " decisions reference missing alerts (e.g. " +
+                      str(orphan_decisions[:3]) + ")")
+
+    for c in data.get("campaigns", []):
+        for aid in c.get("alert_ids", []):
+            if aid not in alert_ids:
+                errors.append("Campaign " + c.get("campaign_id", "?") +
+                              " references missing alert: " + aid)
+
+    if errors:
+        raise ValueError("JSON validation failed:\n  " + "\n  ".join(errors))
+
+
+# ---------------------------------------------------------------------------
 # seed_graph()
 # ---------------------------------------------------------------------------
 
 async def seed_graph(json_path, clean=False, client=None):
     """Create complete graph from zero_day_decisions_v5.json.
 
-    clean=True:  delete all origin='zero_day_synthetic' nodes first, then CREATE.
+    clean=True:  delete backbone nodes (ALL) + seeded Decision/Alert nodes
+                 (both zero_day_synthetic and zero_day_demo origins),
+                 then CREATE everything fresh. Session decisions survive.
     clean=False: CREATE without deleting. Will duplicate if run twice.
                  Use --clean unless you know the graph is empty.
 
@@ -279,6 +371,11 @@ async def seed_graph(json_path, clean=False, client=None):
     print("[SEED] Loading " + json_path + "...")
     with open(json_path, encoding="utf-8") as fh:
         data = _json.load(fh)
+
+    # Validate JSON before touching the graph
+    print("[SEED] Validating JSON structure...")
+    _validate_json(data)
+    print("[SEED] JSON valid.")
 
     users       = data.get("users", [])
     assets      = data.get("assets", [])
@@ -302,13 +399,47 @@ async def seed_graph(json_path, clean=False, client=None):
     await client.ensure_graph()
 
     # ── Phase 1: CLEAN ────────────────────────────────────────────────
+    # Backbone labels (User, Asset, Campaign, etc.): delete ALL nodes.
+    # We fully control these and recreate from JSON. Old nodes without
+    # origin fields (from seed_neo4j.py or campaign correlation engine)
+    # must not survive.
+    # Decision + Alert: delete both zero_day_synthetic and zero_day_demo.
+    # Session decisions (origin=NULL) survive a clean.
     if clean:
-        print("[1/9] Cleaning all origin='zero_day_synthetic' nodes...")
-        for label in _ALL_LABELS:
-            await client.run_query(
-                "MATCH (n:" + label + " {origin: 'zero_day_synthetic'}) "
-                "DETACH DELETE n"
+        print("[1/9] Cleaning graph for re-seed...")
+        for label in _BACKBONE_LABELS:
+            before = await client.run_query(
+                "MATCH (n:" + label + ") RETURN count(n) AS cnt"
             )
+            await client.run_query(
+                "MATCH (n:" + label + ") DETACH DELETE n"
+            )
+            deleted = int(before[0]["cnt"]) if before else 0
+            print("  " + label + ": deleted " + str(deleted))
+        for label in _DATA_LABELS:
+            for origin in _DATA_ORIGINS:
+                before = await client.run_query(
+                    "MATCH (n:" + label + " {origin: " +
+                    _S(origin) + "}) RETURN count(n) AS cnt"
+                )
+                await client.run_query(
+                    "MATCH (n:" + label + " {origin: " +
+                    _S(origin) + "}) DETACH DELETE n"
+                )
+                deleted = int(before[0]["cnt"]) if before else 0
+                if deleted > 0:
+                    print("  " + label + " (" + origin + "): deleted " +
+                          str(deleted))
+
+        # Verify backbone is empty
+        for label in _BACKBONE_LABELS:
+            remaining = await client.run_query(
+                "MATCH (n:" + label + ") RETURN count(n) AS cnt"
+            )
+            cnt = int(remaining[0]["cnt"]) if remaining else 0
+            if cnt > 0:
+                print("  [WARN] " + label + ": " + str(cnt) +
+                      " nodes survived clean (no origin field?)")
         print("  Done.")
     else:
         print("[1/9] Skipped (no --clean).")
@@ -322,7 +453,7 @@ async def seed_graph(json_path, clean=False, client=None):
             "name: " + _S(u["name"]) + ", "
             "department: " + _S(u.get("department", "")) + ", "
             "risk_level: " + _S(u.get("risk_level", "standard")) + ", "
-            "origin: 'zero_day_synthetic'"
+            "origin: " + _S(SYNTHETIC_ORIGIN) +
             "})"
         )
 
@@ -338,7 +469,7 @@ async def seed_graph(json_path, clean=False, client=None):
             "hostname: " + _S(a["hostname"]) + ", "
             "criticality: " + _S(a["criticality"]) + ", "
             "asset_type: " + _S(a.get("asset_type", "")) + ", "
-            "origin: 'zero_day_synthetic'"
+            "origin: " + _S(SYNTHETIC_ORIGIN) +
             "})"
         )
 
@@ -350,7 +481,7 @@ async def seed_graph(json_path, clean=False, client=None):
             "mitre_id: " + _S(p["mitre_id"]) + ", "
             "tactic: " + _S(p.get("tactic", "")) + ", "
             "category: " + _S(p.get("category", "")) + ", "
-            "origin: 'zero_day_synthetic'"
+            "origin: " + _S(SYNTHETIC_ORIGIN) +
             "})"
         )
 
@@ -361,7 +492,7 @@ async def seed_graph(json_path, clean=False, client=None):
             "indicator_type: " + _S(t["indicator_type"]) + ", "
             "severity: " + _S(t["severity"]) + ", "
             "source: " + _S(t["source"]) + ", "
-            "origin: 'zero_day_synthetic'"
+            "origin: " + _S(SYNTHETIC_ORIGIN) +
             "})"
         )
 
@@ -377,7 +508,7 @@ async def seed_graph(json_path, clean=False, client=None):
             "last_seen: " + _S(c.get("last_seen", 0)) + ", "
             "severity: " + _S(c.get("severity", "medium")) + ", "
             "alert_count: " + _S(len(c.get("alert_ids", []))) + ", "
-            "origin: 'zero_day_synthetic'"
+            "origin: " + _S(SYNTHETIC_ORIGIN) +
             "})"
         )
 
@@ -391,12 +522,12 @@ async def seed_graph(json_path, clean=False, client=None):
             "severity: " + _S(a["severity"]) + ", "
             "alert_type: " + _S(a.get("alert_type", a["category"])) + ", "
             "status: " + _S(a.get("status", "decided")) + ", "
-            "origin: " + _S(a.get("origin", "zero_day_synthetic")) + ", "
+            "origin: " + _S(a.get("origin", SYNTHETIC_ORIGIN)) + ", "
             "timestamp_epoch: " + _S(a["timestamp_epoch"]) + ", "
             "source_location: " + _S(a.get("source_location", "synthetic")) + ", "
             "user_id: " + _S(a.get("user_id", "")) + ", "
             "asset_id: " + _S(a.get("asset_id", "")) + ", "
-            "attack_pattern_id: " + _S(a.get("attack_pattern_id", ""))+
+            "attack_pattern_id: " + _S(a.get("attack_pattern_id", "")) +
             "})"
         )
         if (i + 1) % 100 == 0:
@@ -412,7 +543,7 @@ async def seed_graph(json_path, clean=False, client=None):
             "severity: " + _S(a["severity"]) + ", "
             "alert_type: " + _S(a.get("alert_type", a["category"])) + ", "
             "status: 'pending', "
-            "origin: " + _S(a.get("origin", "zero_day_synthetic")) + ", "
+            "origin: " + _S(a.get("origin", DEMO_ORIGIN)) + ", "
             "timestamp_epoch: " + _S(a["timestamp_epoch"]) + ", "
             "source_location: " + _S(a.get("source_location", "corp-network")) + ", "
             "user_id: " + _S(a.get("user_id", "")) + ", "
@@ -421,19 +552,22 @@ async def seed_graph(json_path, clean=False, client=None):
             "})"
         )
 
-    # ── Phase 7: All edges (INVOLVES, DETECTED_ON, CLASSIFIED_AS, HAS_INDICATOR, MEMBER_OF)
+    # ── Phase 7: All edges ────────────────────────────────────────────
     all_alerts = alerts + demo_alerts
     print("[7/9] Creating edges for " + str(len(all_alerts)) + " alerts...")
 
-    involves_ok, detected_ok, classified_ok, indicator_ok = 0, 0, 0, 0
+    involves_ok, involves_fail = 0, 0
+    detected_ok, detected_fail = 0, 0
+    classified_ok, classified_fail = 0, 0
+    indicator_ok, indicator_fail = 0, 0
 
     for a in all_alerts:
         aid = a["alert_id"]
-        uid = a.get("user_id", "")
-        asid = a.get("asset_id", "")
-        apid = a.get("attack_pattern_id", "")
+        uid = a.get("user_id") or ""
+        asid = a.get("asset_id") or ""
+        apid = a.get("attack_pattern_id") or ""
 
-        # INVOLVES (Alert → User)
+        # INVOLVES (Alert -> User)
         if uid:
             try:
                 await client.run_query(
@@ -443,10 +577,11 @@ async def seed_graph(json_path, clean=False, client=None):
                 )
                 involves_ok += 1
             except Exception as exc:
-                if involves_ok == 0:
+                involves_fail += 1
+                if involves_fail <= 3:
                     log.warning("[7/9] INVOLVES failed for %s: %s", aid, exc)
 
-        # DETECTED_ON (Alert → Asset)
+        # DETECTED_ON (Alert -> Asset)
         if asid:
             try:
                 await client.run_query(
@@ -456,10 +591,11 @@ async def seed_graph(json_path, clean=False, client=None):
                 )
                 detected_ok += 1
             except Exception as exc:
-                if detected_ok == 0:
+                detected_fail += 1
+                if detected_fail <= 3:
                     log.warning("[7/9] DETECTED_ON failed for %s: %s", aid, exc)
 
-        # CLASSIFIED_AS (Alert → AttackPattern)
+        # CLASSIFIED_AS (Alert -> AttackPattern)
         if apid:
             try:
                 await client.run_query(
@@ -469,10 +605,12 @@ async def seed_graph(json_path, clean=False, client=None):
                 )
                 classified_ok += 1
             except Exception as exc:
-                if classified_ok == 0:
-                    log.warning("[7/9] CLASSIFIED_AS failed for %s: %s", aid, exc)
+                classified_fail += 1
+                if classified_fail <= 3:
+                    log.warning("[7/9] CLASSIFIED_AS failed for %s: %s",
+                                aid, exc)
 
-        # HAS_INDICATOR (Alert → ThreatIndicator)
+        # HAS_INDICATOR (Alert -> ThreatIndicator)
         for ind_val in a.get("indicator_ids", []):
             try:
                 await client.run_query(
@@ -482,11 +620,13 @@ async def seed_graph(json_path, clean=False, client=None):
                 )
                 indicator_ok += 1
             except Exception as exc:
-                if indicator_ok == 0:
-                    log.warning("[7/9] HAS_INDICATOR failed for %s: %s", aid, exc)
+                indicator_fail += 1
+                if indicator_fail <= 3:
+                    log.warning("[7/9] HAS_INDICATOR failed for %s: %s",
+                                aid, exc)
 
-    # MEMBER_OF (Alert → Campaign)
-    member_ok = 0
+    # MEMBER_OF (Alert -> Campaign)
+    member_ok, member_fail = 0, 0
     for c in campaigns:
         cid = c["campaign_id"]
         for aid in c.get("alert_ids", []):
@@ -498,17 +638,30 @@ async def seed_graph(json_path, clean=False, client=None):
                 )
                 member_ok += 1
             except Exception as exc:
-                if member_ok == 0:
-                    log.warning("[7/9] MEMBER_OF failed for %s->%s: %s", aid, cid, exc)
+                member_fail += 1
+                if member_fail <= 3:
+                    log.warning("[7/9] MEMBER_OF failed %s->%s: %s",
+                                aid, cid, exc)
 
-    print("  INVOLVES: " + str(involves_ok) +
-          ", DETECTED_ON: " + str(detected_ok) +
-          ", CLASSIFIED_AS: " + str(classified_ok) +
-          ", HAS_INDICATOR: " + str(indicator_ok) +
-          ", MEMBER_OF: " + str(member_ok))
+    print("  INVOLVES: " + str(involves_ok) + " ok, " +
+          str(involves_fail) + " fail")
+    print("  DETECTED_ON: " + str(detected_ok) + " ok, " +
+          str(detected_fail) + " fail")
+    print("  CLASSIFIED_AS: " + str(classified_ok) + " ok, " +
+          str(classified_fail) + " fail")
+    print("  HAS_INDICATOR: " + str(indicator_ok) + " ok, " +
+          str(indicator_fail) + " fail")
+    print("  MEMBER_OF: " + str(member_ok) + " ok, " +
+          str(member_fail) + " fail")
+
+    total_fail = (involves_fail + detected_fail + classified_fail +
+                  indicator_fail + member_fail)
+    if total_fail > 0:
+        print("  [WARN] " + str(total_fail) + " total edge failures")
 
     # ── Phase 8: Decisions + DECIDED_ON (atomic) ──────────────────────
-    print("[8/9] Creating " + str(len(decisions)) + " Decisions + DECIDED_ON edges...")
+    print("[8/9] Creating " + str(len(decisions)) +
+          " Decisions + DECIDED_ON edges...")
     ok, fail = 0, 0
     for d in decisions:
         try:
@@ -523,7 +676,7 @@ async def seed_graph(json_path, clean=False, client=None):
                 "correct: " + _S(d["correct"]) + ", "
                 "outcome: " + _S(d["outcome"]) + ", "
                 "timestamp_epoch: " + _S(d["timestamp_epoch"]) + ", "
-                "origin: 'zero_day_synthetic', "
+                "origin: " + _S(SYNTHETIC_ORIGIN) + ", "
                 "source_id: " + _S(d.get("source_id", "synthetic")) + ", "
                 "user_id: " + _S(d.get("user_id", "")) +
                 "})-[:DECIDED_ON]->(a)"
@@ -537,6 +690,9 @@ async def seed_graph(json_path, clean=False, client=None):
         if (ok + fail) % 1000 == 0:
             print("  " + str(ok) + " ok, " + str(fail) + " fail...")
     print("  Done: " + str(ok) + " ok, " + str(fail) + " fail.")
+
+    if fail > 0:
+        print("  [ERROR] " + str(fail) + " decisions failed to create")
 
     # ── Phase 9: Verify ───────────────────────────────────────────────
     print("[9/9] Verifying graph contract...")
@@ -593,4 +749,6 @@ if __name__ == "__main__":
         if not os.path.exists(json_path):
             print("[ERROR] Not found: " + json_path)
             sys.exit(1)
-        asyncio.run(seed_graph(json_path, clean=do_clean))
+        report = asyncio.run(seed_graph(json_path, clean=do_clean))
+        if not report["healthy"]:
+            sys.exit(1)

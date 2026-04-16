@@ -25,7 +25,7 @@ async function processAlert(page: import('@playwright/test').Page, outcomeCorrec
   await page.getByRole('button', { name: /Alert Triage/i }).click();
 
   // Wait for the alert queue — skip networkidle (background polls prevent it from settling)
-  const alertCard = page.locator('button').filter({ hasText: /SIM-/ }).first();
+  const alertCard = page.locator('button').filter({ hasText: /ALERT-|SIM-/ }).first();
   await alertCard.waitFor({ state: 'visible', timeout: 20000 });
   await alertCard.click();
 
@@ -162,7 +162,7 @@ async function processAlertFast(page: import('@playwright/test').Page, outcomeCo
   await page.getByRole('button', { name: /Alert Triage/i }).click();
 
   // Wait only for the alert queue to appear (not networkidle)
-  const alertCard = page.locator('button').filter({ hasText: /SIM-/ }).first();
+  const alertCard = page.locator('button').filter({ hasText: /ALERT-|SIM-/ }).first();
   await alertCard.waitFor({ state: 'visible', timeout: 30000 });
   await alertCard.click();
 

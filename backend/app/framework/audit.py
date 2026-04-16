@@ -210,6 +210,52 @@ def reconstruct_from_memory() -> int:
     return added
 
 
+async def rebuild_chain_from_graph(client: Any) -> int:
+    """
+    Rehydrate the audit hash-chain from persistent Decision nodes in AGE.
+
+    Called once at startup to restore the chain after a server restart.
+    Idempotent: returns 0 immediately if the ledger already has entries.
+
+    Uses _LEDGER.append() DIRECTLY (not record_decision) so existing
+    decision_ids are preserved and chronological order is maintained.
+    ORDER BY ASC is critical — each append() hashes the previous entry.
+    """
+    if len(_LEDGER._entries) > 0:
+        return 0
+
+    rows = await client.run_query(
+        "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
+        "WHERE d.origin = 'zero_day_synthetic' "
+        "RETURN d.decision_id AS decision_id, "
+        "       a.alert_id    AS alert_id, "
+        "       d.category    AS category, "
+        "       d.action      AS action, "
+        "       d.confidence  AS confidence, "
+        "       d.correct     AS correct, "
+        "       d.timestamp_epoch AS ts "
+        "ORDER BY d.timestamp_epoch ASC "
+        "LIMIT 50"
+    )
+
+    n = 0
+    for row in rows:
+        _LEDGER.append(
+            decision_id=str(row.get("decision_id") or ""),
+            alert_id=str(row.get("alert_id") or ""),
+            factor_breakdown={row.get("category", "unknown"): 1.0},
+            action=str(row.get("action") or ""),
+            confidence=float(row.get("confidence") or 0.0),
+            outcome=row.get("correct", "unknown"),
+            analyst_override=False,
+            centroid_state_hash="",
+        )
+        n += 1
+
+    print(f"[STARTUP] Audit chain rebuilt: {n} entries (ascending)")
+    return n
+
+
 async def rebuild_from_age() -> int:
     """Rebuild the audit ledger from Decision nodes in AGE.
 

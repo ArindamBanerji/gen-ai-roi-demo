@@ -8227,12 +8227,12 @@
   ],
   "demo_alerts": [
     {
-      "alert_id": "DEMO-CA-001",
+      "alert_id": "ALERT-CA-001",
       "category": "credential_access",
       "severity": "critical",
       "alert_type": "anomalous_login",
       "timestamp_epoch": 1748217600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "10.0.1.54",
       "user_id": "USR-004",
       "asset_id": "AST-001",
@@ -8243,12 +8243,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-CA-002",
+      "alert_id": "ALERT-CA-002",
       "category": "credential_access",
       "severity": "high",
       "alert_type": "anomalous_login",
       "timestamp_epoch": 1748307600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "vpn-gw.corp.local",
       "user_id": "USR-013",
       "asset_id": "AST-002",
@@ -8259,12 +8259,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-CA-003",
+      "alert_id": "ALERT-CA-003",
       "category": "credential_access",
       "severity": "high",
       "alert_type": "anomalous_login",
       "timestamp_epoch": 1748397600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "aws-prod-eu-west-1",
       "user_id": "USR-017",
       "asset_id": "AST-011",
@@ -8275,12 +8275,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-CA-004",
+      "alert_id": "ALERT-CA-004",
       "category": "credential_access",
       "severity": "medium",
       "alert_type": "anomalous_login",
       "timestamp_epoch": 1748487600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "192.168.100.23",
       "user_id": "USR-012",
       "asset_id": "AST-008",
@@ -8291,12 +8291,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-CA-005",
+      "alert_id": "ALERT-CA-005",
       "category": "credential_access",
       "severity": "low",
       "alert_type": "anomalous_login",
       "timestamp_epoch": 1748577600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "citrix-gateway.corp",
       "user_id": "USR-001",
       "asset_id": "AST-009",
@@ -8307,12 +8307,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-LM-001",
+      "alert_id": "ALERT-LM-001",
       "category": "lateral_movement",
       "severity": "critical",
       "alert_type": "privilege_escalation",
       "timestamp_epoch": 1748217600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "10.10.5.128",
       "user_id": "USR-014",
       "asset_id": "AST-003",
@@ -8323,12 +8323,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-LM-002",
+      "alert_id": "ALERT-LM-002",
       "category": "lateral_movement",
       "severity": "high",
       "alert_type": "privilege_escalation",
       "timestamp_epoch": 1748307600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "srv-proxy-01.corp.local",
       "user_id": "USR-006",
       "asset_id": "AST-004",
@@ -8339,12 +8339,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-LM-003",
+      "alert_id": "ALERT-LM-003",
       "category": "lateral_movement",
       "severity": "high",
       "alert_type": "privilege_escalation",
       "timestamp_epoch": 1748397600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "edge-fw-02.corp",
       "user_id": "USR-010",
       "asset_id": "AST-005",
@@ -8355,12 +8355,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-LM-004",
+      "alert_id": "ALERT-LM-004",
       "category": "lateral_movement",
       "severity": "medium",
       "alert_type": "privilege_escalation",
       "timestamp_epoch": 1748487600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "172.16.8.201",
       "user_id": "USR-018",
       "asset_id": "AST-006",
@@ -8371,12 +8371,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-LM-005",
+      "alert_id": "ALERT-LM-005",
       "category": "lateral_movement",
       "severity": "low",
       "alert_type": "privilege_escalation",
       "timestamp_epoch": 1748577600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "remote.vpn.corp.local",
       "user_id": "USR-011",
       "asset_id": "AST-007",
@@ -8387,12 +8387,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-DE-001",
+      "alert_id": "ALERT-DE-001",
       "category": "data_exfiltration",
       "severity": "critical",
       "alert_type": "data_exfil",
       "timestamp_epoch": 1748217600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "10.0.1.54",
       "user_id": "USR-002",
       "asset_id": "AST-008",
@@ -8403,12 +8403,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-DE-002",
+      "alert_id": "ALERT-DE-002",
       "category": "data_exfiltration",
       "severity": "high",
       "alert_type": "data_exfil",
       "timestamp_epoch": 1748307600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "vpn-gw.corp.local",
       "user_id": "USR-007",
       "asset_id": "AST-009",
@@ -8419,12 +8419,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-DE-003",
+      "alert_id": "ALERT-DE-003",
       "category": "data_exfiltration",
       "severity": "high",
       "alert_type": "data_exfil",
       "timestamp_epoch": 1748397600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "aws-prod-eu-west-1",
       "user_id": "USR-012",
       "asset_id": "AST-014",
@@ -8435,12 +8435,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-DE-004",
+      "alert_id": "ALERT-DE-004",
       "category": "data_exfiltration",
       "severity": "medium",
       "alert_type": "data_exfil",
       "timestamp_epoch": 1748487600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "192.168.100.23",
       "user_id": "USR-017",
       "asset_id": "AST-011",
@@ -8451,12 +8451,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-DE-005",
+      "alert_id": "ALERT-DE-005",
       "category": "data_exfiltration",
       "severity": "low",
       "alert_type": "data_exfil",
       "timestamp_epoch": 1748577600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "citrix-gateway.corp",
       "user_id": "USR-008",
       "asset_id": "AST-013",
@@ -8467,12 +8467,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-ME-001",
+      "alert_id": "ALERT-ME-001",
       "category": "malware_execution",
       "severity": "critical",
       "alert_type": "malware_detection",
       "timestamp_epoch": 1748217600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "10.10.5.128",
       "user_id": "USR-001",
       "asset_id": "AST-008",
@@ -8483,12 +8483,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-ME-002",
+      "alert_id": "ALERT-ME-002",
       "category": "malware_execution",
       "severity": "high",
       "alert_type": "malware_detection",
       "timestamp_epoch": 1748307600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "srv-proxy-01.corp.local",
       "user_id": "USR-005",
       "asset_id": "AST-013",
@@ -8499,12 +8499,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-ME-003",
+      "alert_id": "ALERT-ME-003",
       "category": "malware_execution",
       "severity": "high",
       "alert_type": "malware_detection",
       "timestamp_epoch": 1748397600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "edge-fw-02.corp",
       "user_id": "USR-008",
       "asset_id": "AST-003",
@@ -8515,12 +8515,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-ME-004",
+      "alert_id": "ALERT-ME-004",
       "category": "malware_execution",
       "severity": "medium",
       "alert_type": "malware_detection",
       "timestamp_epoch": 1748487600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "172.16.8.201",
       "user_id": "USR-011",
       "asset_id": "AST-004",
@@ -8531,12 +8531,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-ME-005",
+      "alert_id": "ALERT-ME-005",
       "category": "malware_execution",
       "severity": "low",
       "alert_type": "malware_detection",
       "timestamp_epoch": 1748577600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "remote.vpn.corp.local",
       "user_id": "USR-015",
       "asset_id": "AST-012",
@@ -8547,12 +8547,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-IT-001",
+      "alert_id": "ALERT-IT-001",
       "category": "insider_threat",
       "severity": "critical",
       "alert_type": "insider_threat",
       "timestamp_epoch": 1748217600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "10.0.1.54",
       "user_id": "USR-003",
       "asset_id": "AST-003",
@@ -8563,12 +8563,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-IT-002",
+      "alert_id": "ALERT-IT-002",
       "category": "insider_threat",
       "severity": "high",
       "alert_type": "insider_threat",
       "timestamp_epoch": 1748307600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "vpn-gw.corp.local",
       "user_id": "USR-009",
       "asset_id": "AST-005",
@@ -8579,12 +8579,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-IT-003",
+      "alert_id": "ALERT-IT-003",
       "category": "insider_threat",
       "severity": "high",
       "alert_type": "insider_threat",
       "timestamp_epoch": 1748397600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "aws-prod-eu-west-1",
       "user_id": "USR-016",
       "asset_id": "AST-010",
@@ -8595,12 +8595,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-IT-004",
+      "alert_id": "ALERT-IT-004",
       "category": "insider_threat",
       "severity": "medium",
       "alert_type": "insider_threat",
       "timestamp_epoch": 1748487600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "192.168.100.23",
       "user_id": "USR-014",
       "asset_id": "AST-006",
@@ -8611,12 +8611,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-IT-005",
+      "alert_id": "ALERT-IT-005",
       "category": "insider_threat",
       "severity": "low",
       "alert_type": "insider_threat",
       "timestamp_epoch": 1748577600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "citrix-gateway.corp",
       "user_id": "USR-006",
       "asset_id": "AST-007",
@@ -8627,12 +8627,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-CI-001",
+      "alert_id": "ALERT-CI-001",
       "category": "cloud_infrastructure",
       "severity": "critical",
       "alert_type": "cloud_config",
       "timestamp_epoch": 1748217600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "10.10.5.128",
       "user_id": "USR-019",
       "asset_id": "AST-015",
@@ -8643,12 +8643,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-CI-002",
+      "alert_id": "ALERT-CI-002",
       "category": "cloud_infrastructure",
       "severity": "high",
       "alert_type": "cloud_config",
       "timestamp_epoch": 1748307600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "srv-proxy-01.corp.local",
       "user_id": "USR-020",
       "asset_id": "AST-014",
@@ -8659,12 +8659,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-CI-003",
+      "alert_id": "ALERT-CI-003",
       "category": "cloud_infrastructure",
       "severity": "high",
       "alert_type": "cloud_config",
       "timestamp_epoch": 1748397600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "edge-fw-02.corp",
       "user_id": "USR-006",
       "asset_id": "AST-012",
@@ -8675,12 +8675,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-CI-004",
+      "alert_id": "ALERT-CI-004",
       "category": "cloud_infrastructure",
       "severity": "medium",
       "alert_type": "cloud_config",
       "timestamp_epoch": 1748487600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "172.16.8.201",
       "user_id": "USR-010",
       "asset_id": "AST-006",
@@ -8691,12 +8691,12 @@
       "status": "pending"
     },
     {
-      "alert_id": "DEMO-CI-005",
+      "alert_id": "ALERT-CI-005",
       "category": "cloud_infrastructure",
       "severity": "low",
       "alert_type": "cloud_config",
       "timestamp_epoch": 1748577600000,
-      "origin": "zero_day_synthetic",
+      "origin": "zero_day_demo",
       "source_location": "remote.vpn.corp.local",
       "user_id": "USR-014",
       "asset_id": "AST-004",

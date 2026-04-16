@@ -238,14 +238,32 @@ test.describe('API checks', () => {
 
 // ─── Tab 1: Alert Triage (extended) ──────────────────────────────────────────
 
-// Helper: navigate to Alert Triage, click first alert, wait for detail panel
+// Helper: navigate to Alert Triage, click first alert, wait for detail panel.
+// Prefers malware detection alerts: they return the full standard 6-factor set
+// (travel_match, asset_criticality, threat_intel_enrichment, pattern_history,
+//  time_anomaly, device_trust).  Data-exfil and other alert types have different
+// domain-specific factors (transfer_volume, destination_risk, etc.) that cause
+// the factor-name tests to fail even when the panel is fully loaded.
 async function openFirstAlert(page: Page) {
   await page.goto(FRONTEND);
   await page.getByRole('button', { name: /Alert Triage/i }).click();
   await page.waitForLoadState('networkidle');
-  const firstAlert = page.locator('button').filter({ hasText: ALERT_CARD_RE }).first();
-  await firstAlert.click();
+  const malwareAlert = page.locator('button').filter({ hasText: ALERT_CARD_RE }).filter({ hasText: /malware/i }).first();
+  const fallback     = page.locator('button').filter({ hasText: ALERT_CARD_RE }).first();
+  const target = (await malwareAlert.count()) > 0 ? malwareAlert : fallback;
+  await target.click();
   await page.waitForLoadState('networkidle');
+}
+
+// Helper: wait for the factor panel to be fully loaded.
+// The "Why This Decision?" heading renders immediately from the analysis response,
+// but factor rows arrive from a separate getDecisionFactors() fetch.
+// Signal: "Factor analysis loading…" placeholder (AlertTriageTab.tsx:1065) is
+// rendered while decisionFactors===null and removed from DOM when the fetch
+// completes. Waiting for it to disappear is the exact gate for the race condition.
+async function waitForFactorPanel(page: Page) {
+  await expect(page.getByText('Why This Decision?')).toBeVisible({ timeout: 12_000 });
+  await expect(page.getByText(/Factor analysis loading/i)).not.toBeVisible({ timeout: 12_000 });
 }
 
 test.describe('Tab 1 – Alert Triage (factor names)', () => {
@@ -259,7 +277,7 @@ test.describe('Tab 1 – Alert Triage (factor names)', () => {
   ]) {
     test(`factor "${displayName}" visible after clicking alert`, async ({ page }) => {
       await openFirstAlert(page);
-      await expect(page.getByText('Why This Decision?')).toBeVisible({ timeout: 12_000 });
+      await waitForFactorPanel(page);
       // Factor names are formatted as Title Case; also accept raw snake_case as fallback
       const factor = page.getByText(new RegExp(displayName, 'i'))
         .or(page.getByText(new RegExp(factorName, 'i')));
@@ -449,7 +467,7 @@ test.describe('Tab 3 – Alert Detail (extended)', () => {
   });
 
   test('all 6 factor display names visible in breakdown', async ({ page }) => {
-    await expect(page.getByText(/Why This Decision/i)).toBeVisible({ timeout: 12_000 });
+    await waitForFactorPanel(page);
     const factorDisplayNames = [
       'Travel Match',
       'Asset Criticality',

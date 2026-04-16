@@ -81,8 +81,7 @@ def verify_persistent_data(request):
         except Exception:
             return -1  # AGE unreachable — sentinel, skip checks
 
-    _loop = asyncio.get_event_loop()
-    n_before = _loop.run_until_complete(_count_persistent())
+    n_before = asyncio.run(_count_persistent())
 
     if n_before == -1:
         # AGE not reachable — skip silently
@@ -99,7 +98,7 @@ def verify_persistent_data(request):
 
     yield  # run the full test suite
 
-    n_after = _loop.run_until_complete(_count_persistent())
+    n_after = asyncio.run(_count_persistent())
     if n_after == -1:
         return  # AGE unreachable post-test — skip
 

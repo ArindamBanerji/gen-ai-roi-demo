@@ -851,9 +851,9 @@ async def get_attack_tactic_breakdown():
     try:
         results = await neo4j_client.run_query(
             """
-            MATCH (a:Alert)
-            WHERE a.mitre_tactic IS NOT NULL AND a.mitre_tactic <> ''
-            RETURN a.mitre_tactic AS tactic, count(a) AS cnt
+            MATCH (a:Alert)-[:CLASSIFIED_AS]->(ap:AttackPattern)
+            WHERE ap.tactic IS NOT NULL AND ap.tactic <> ''
+            RETURN ap.tactic AS tactic, count(a) AS cnt
             ORDER BY cnt DESC
             """,
             {},

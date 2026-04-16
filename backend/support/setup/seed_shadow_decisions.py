@@ -11,6 +11,7 @@ Usage:
 
 import asyncio
 import json
+import math
 import os
 import sys
 import pathlib
@@ -31,8 +32,25 @@ SOURCE_JSON = (
 )
 
 SOURCE_TAG = "v_shadow_synthetic_v3"
-BATCH_SIZE = 50
 PROGRESS_EVERY = 100
+
+
+# ── serializer (same as graph_schema.py) ─────────────────────────────────────
+
+def _S(val):
+    """Serialize a Python value for inline use in AGE Cypher."""
+    if val is None:
+        return "null"
+    if isinstance(val, bool):
+        return "true" if val else "false"
+    if isinstance(val, (int, float)):
+        if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
+            raise ValueError("AGE cannot store NaN/Inf: " + repr(val))
+        return str(val)
+    if isinstance(val, (list, tuple)):
+        return "'" + json.dumps(val).replace("'", "\\'") + "'"
+    s = str(val).replace("\\", "\\\\").replace("'", "\\'")
+    return "'" + s + "'"
 
 
 # ── main ─────────────────────────────────────────────────────────────────────
@@ -40,7 +58,7 @@ PROGRESS_EVERY = 100
 async def main() -> None:
     # 1. Load JSON
     if not SOURCE_JSON.exists():
-        print(f"[ERROR] Source file not found: {SOURCE_JSON}")
+        print("[ERROR] Source file not found: " + str(SOURCE_JSON))
         sys.exit(1)
 
     with open(SOURCE_JSON, "r", encoding="utf-8") as f:
@@ -51,110 +69,104 @@ async def main() -> None:
         print("[ERROR] No 'decisions' array in source file.")
         sys.exit(1)
 
-    print(f"Loaded {len(decisions)} records from {SOURCE_JSON.name}")
+    print("Loaded " + str(len(decisions)) + " records from " + SOURCE_JSON.name)
 
     # 2. Connect to AGE
+    os.environ.setdefault("GRAPH_BACKEND", "age")
+    sys.path.insert(0, str(BACKEND_DIR))
     from ci_platform.graph import get_graph_client
 
     client = get_graph_client()
-    print(f"Connected to AGE: {type(client).__name__}")
+    await client.ensure_graph()
+    print("Connected to AGE: " + type(client).__name__)
 
     # 3. Check existing count
     try:
         rows = await client.run_query(
-            "MATCH (sd:ShadowDecision {source: $source}) RETURN count(sd) AS cnt",
-            {"source": SOURCE_TAG},
+            "MATCH (sd:ShadowDecision {source: " + _S(SOURCE_TAG) +
+            "}) RETURN count(sd) AS cnt"
         )
         existing = int(rows[0]["cnt"]) if rows else 0
     except Exception as exc:
-        print(f"[WARN] Count query failed: {exc}")
+        print("[WARN] Count query failed: " + str(exc))
         existing = 0
 
-    print(f"Current ShadowDecision count: {existing}")
+    print("Current ShadowDecision count: " + str(existing))
 
     if existing >= len(decisions):
-        print(f"Already have {existing} nodes (>= {len(decisions)}). Nothing to load.")
+        print("Already have " + str(existing) + " nodes (>= " +
+              str(len(decisions)) + "). Nothing to load.")
         return
 
     if existing > 0:
-        print(f"[WARN] {existing} nodes already exist. Skipping load to avoid duplicates.")
-        print("       Delete existing ShadowDecision nodes first if you want to reload.")
-        return
+        print("[WARN] " + str(existing) + " nodes already exist. Deleting first...")
+        await client.run_query(
+            "MATCH (sd:ShadowDecision {source: " + _S(SOURCE_TAG) +
+            "}) DETACH DELETE sd"
+        )
+        print("  Deleted.")
 
-    # 4. Load records in batches
-    print(f"Loading {len(decisions)} records in batches of {BATCH_SIZE}...")
+    # 4. Load records one at a time (AGE has no batch CREATE)
+    print("Loading " + str(len(decisions)) + " records...")
     loaded = 0
     errors = []
 
     for i, record in enumerate(decisions):
-        decision_id = f"shadow-{i:04d}"
+        decision_id = "shadow-" + str(i).zfill(4)
 
         try:
             await client.run_query(
-                """
-                CREATE (s:ShadowDecision {
-                    decision_id:      $decision_id,
-                    source:           $source,
-                    category:         $category,
-                    agreed:           $agreed,
-                    analyst_correct:  $analyst_correct,
-                    analyst:          $analyst,
-                    day:              $day,
-                    ai_action:        $ai_action,
-                    ai_confidence:    $ai_confidence,
-                    analyst_action:   $analyst_action,
-                    ai_correct:       $ai_correct,
-                    reasoning:        $reasoning
-                })
-                """,
-                {
-                    "decision_id":     decision_id,
-                    "source":          SOURCE_TAG,
-                    "category":        record["category"],
-                    "agreed":          record["agreed"],
-                    "analyst_correct": record["analyst_correct"],
-                    "analyst":         record["analyst"],
-                    "day":             record["day"],
-                    "ai_action":       record["ai_action"],
-                    "ai_confidence":   record["ai_confidence"],
-                    "analyst_action":  record["analyst_action"],
-                    "ai_correct":      record["ai_correct"],
-                    "reasoning":       record.get("reasoning", ""),
-                },
+                "CREATE (s:ShadowDecision {"
+                "decision_id: " + _S(decision_id) + ", "
+                "source: " + _S(SOURCE_TAG) + ", "
+                "category: " + _S(record["category"]) + ", "
+                "agreed: " + _S(record["agreed"]) + ", "
+                "analyst_correct: " + _S(record["analyst_correct"]) + ", "
+                "analyst: " + _S(record["analyst"]) + ", "
+                "day: " + _S(record["day"]) + ", "
+                "ai_action: " + _S(record["ai_action"]) + ", "
+                "ai_confidence: " + _S(record["ai_confidence"]) + ", "
+                "analyst_action: " + _S(record["analyst_action"]) + ", "
+                "ai_correct: " + _S(record["ai_correct"]) + ", "
+                "reasoning: " + _S(record.get("reasoning", "")) +
+                "})"
             )
             loaded += 1
         except Exception as exc:
             errors.append((i, decision_id, str(exc)))
 
         if (i + 1) % PROGRESS_EVERY == 0:
-            print(f"Loaded {i + 1}/{len(decisions)}...")
-
-    print(f"Loaded {len(decisions)}/{len(decisions)}...")
+            print("  " + str(i + 1) + "/" + str(len(decisions)) + "...")
 
     # 5. Report errors
     if errors:
-        print(f"\n[WARN] {len(errors)} records failed:")
+        print("\n[WARN] " + str(len(errors)) + " records failed:")
         for idx, did, err in errors[:10]:
-            print(f"  Record {idx} ({did}): {err}")
+            print("  Record " + str(idx) + " (" + did + "): " + err)
         if len(errors) > 10:
-            print(f"  ... and {len(errors) - 10} more")
+            print("  ... and " + str(len(errors) - 10) + " more")
 
     # 6. Verify final count
     try:
         rows = await client.run_query(
-            "MATCH (sd:ShadowDecision {source: $source}) RETURN count(sd) AS cnt",
-            {"source": SOURCE_TAG},
+            "MATCH (sd:ShadowDecision {source: " + _S(SOURCE_TAG) +
+            "}) RETURN count(sd) AS cnt"
         )
         final_count = int(rows[0]["cnt"]) if rows else 0
     except Exception as exc:
-        print(f"[WARN] Final count query failed: {exc}")
+        print("[WARN] Final count query failed: " + str(exc))
         final_count = -1
 
-    print(f"\nRecords attempted: {len(decisions)}")
-    print(f"Records loaded:    {loaded}")
-    print(f"Records failed:    {len(errors)}")
-    print(f"Final AGE count:   {final_count} ShadowDecision nodes")
-    print("Done.")
+    print("\nRecords attempted: " + str(len(decisions)))
+    print("Records loaded:    " + str(loaded))
+    print("Records failed:    " + str(len(errors)))
+    print("Final AGE count:   " + str(final_count) + " ShadowDecision nodes")
+
+    if errors:
+        print("[ERROR] " + str(len(errors)) + " failures")
+        sys.exit(1)
+    else:
+        print("[OK] Done.")
 
 
 # ── entry point ──────────────────────────────────────────────────────────────

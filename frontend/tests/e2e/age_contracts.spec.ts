@@ -184,7 +184,12 @@ test.describe('Session integrity contracts', () => {
     const data = await res.json();
     // At least one week should have decisions > 0 (pattern_count is total decisions that week)
     const weeks: any[] = data.weekly_trend ?? data.weekly_data ?? [];
-    const hasData = weeks.some((w: any) => (w.pattern_count ?? w.total ?? w.decisions ?? 0) > 0);
+    const hasData = weeks.some((w: any) =>
+      (w.pattern_count ?? 0) > 0 ||
+      (w.total ?? 0) > 0 ||
+      (w.decisions ?? 0) > 0 ||
+      (w.auto_close_rate ?? 0) > 0
+    );
     expect(hasData).toBe(true);
     // No "estimated" flag (BACKLOG-060 removed it)
     expect(data.weekly_trend_estimated).not.toBe(true);

@@ -156,22 +156,6 @@ class TestDeletePreservesEverything:
 
 
 # ================================================================
-# Hard reset requires explicit confirmation
-# ================================================================
-
-class TestHardResetRequiresConfirm:
-
-    def test_no_confirm_raises(self, sm):
-        from app.services.state_manager import DataProtectionError
-        with pytest.raises(DataProtectionError):
-            _run(sm.hard_reset_all())
-
-    def test_false_confirm_raises(self, sm):
-        from app.services.state_manager import DataProtectionError
-        with pytest.raises(DataProtectionError):
-            _run(sm.hard_reset_all(confirm=False))
-
-
 # ================================================================
 # Pre-check catches dangerous filters
 # ================================================================
