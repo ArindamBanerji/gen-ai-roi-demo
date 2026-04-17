@@ -2437,24 +2437,38 @@ _TAB_NAMES = {
 
 
 SENTINEL_TO_INTERNAL = {
+    # credential_access
     "anomalous_login":              "credential_access",
     "unusual_login":                "credential_access",
     "unfamiliar_sign_in":           "credential_access",
-    "unusual_outbound":             "data_exfiltration",
     "credential_access_via_lsass":  "credential_access",
     "unusual_database_query":       "insider_threat",
+    "brute_force":                  "credential_access",
+    # malware_execution — aligned with ALERT_TYPE_CATEGORY_MAP (authority)
     "threat_intel_match":           "malware_execution",
-    "privilege_escalation":         "credential_access",
-    "lateral_movement":             "lateral_movement",
-    "data_exfiltration":            "data_exfiltration",
-    "insider_threat":               "insider_threat",
-    "cloud_infrastructure":         "cloud_infrastructure",
     "malware_execution":            "malware_execution",
     "malware_detection":            "malware_execution",
-    "brute_force":                  "credential_access",
-    "c2_beacon":                    "lateral_movement",
-    "phishing":                     "credential_access",
+    "c2_beacon":                    "malware_execution",   # was lateral_movement (drift fixed)
+    "phishing":                     "malware_execution",   # was credential_access (drift fixed)
+    # lateral_movement — aligned with ALERT_TYPE_CATEGORY_MAP
+    "privilege_escalation":         "lateral_movement",    # was credential_access (drift fixed)
+    "lateral_movement":             "lateral_movement",
+    "internal_scan_ambiguous":      "lateral_movement",
+    # data_exfiltration
+    "unusual_outbound":             "data_exfiltration",
+    "data_exfiltration":            "data_exfiltration",
+    "data_exfil":                   "data_exfiltration",   # was missing
+    # insider_threat
+    "insider_threat":               "insider_threat",
+    "anomalous_behavior":           "insider_threat",      # was missing
+    # cloud_infrastructure
+    "cloud_infrastructure":         "cloud_infrastructure",
     "cloud_config":                 "cloud_infrastructure",
+    "cloud_iam_privilege_escalation":  "cloud_infrastructure",   # was missing
+    "cloud_storage_public_exposure":   "cloud_infrastructure",   # was missing
+    "cloud_config_drift":              "cloud_infrastructure",   # was missing
+    "cloud_unused_resource_anomaly":   "cloud_infrastructure",   # was missing
+    "cloud_permission_change_review":  "cloud_infrastructure",   # was missing
 }
 
 VALID_CATEGORIES = {

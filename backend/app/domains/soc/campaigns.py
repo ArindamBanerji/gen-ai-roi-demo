@@ -21,10 +21,24 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional
+import json as _json
 import logging
 import uuid
 
 log = logging.getLogger(__name__)
+
+
+def _S(val) -> str:
+    """Serialize a Python value to an AGE-safe inline Cypher literal."""
+    if val is None:
+        return "null"
+    if isinstance(val, bool):
+        return "true" if val else "false"
+    if isinstance(val, (int, float)):
+        return str(val)
+    if isinstance(val, (list, tuple)):
+        return "'" + _json.dumps(val).replace("'", "\\'") + "'"
+    return "'" + str(val).replace("\\", "\\\\").replace("'", "\\'") + "'"
 
 
 def _to_python_dt(value):
@@ -585,47 +599,62 @@ class CampaignRepository:
     async def write_campaign(self, campaign: Campaign) -> bool:
         """
         Write Campaign node and :MEMBER_OF edges to Neo4j.
-        Idempotent — MERGE on campaign_id.
+        Idempotent — MATCH-then-CREATE (AGE has no MERGE).
         Returns True on success.
         """
         try:
-            await self.neo4j.run_query("""
-                MERGE (c:Campaign {id: $campaign_id})
-                SET c.first_seen = $first_seen,
-                    c.last_seen = $last_seen,
-                    c.alert_count = $alert_count,
-                    c.category_sequence = $category_sequence,
-                    c.shared_entities = $shared_entities,
-                    c.technique_sequence = $technique_sequence,
-                    c.confidence = $confidence,
-                    c.trigger_rule = $trigger_rule,
-                    c.severity = $severity,
-                    c.correlation_window_hours = $correlation_window_hours,
-                    c.nl_summary = $nl_summary,
-                    c.updated_at_epoch = $updated_at_epoch
-            """, {
-                "campaign_id": campaign.campaign_id,
-                "first_seen": campaign.first_seen.isoformat(),
-                "last_seen": campaign.last_seen.isoformat(),
-                "alert_count": campaign.alert_count,
-                "category_sequence": campaign.category_sequence,
-                "shared_entities": campaign.shared_entities,
-                "technique_sequence": campaign.technique_sequence,
-                "confidence": campaign.confidence,
-                "trigger_rule": campaign.trigger_rule,
-                "severity": campaign.severity,
-                "correlation_window_hours": campaign.correlation_window_hours,
-                "nl_summary": campaign.nl_summary,
-                "updated_at_epoch": int(datetime.utcnow().timestamp() * 1000),
-            })
+            cid = _S(campaign.campaign_id)
+            ts = _S(int(datetime.utcnow().timestamp() * 1000))
+            existing = await self.neo4j.run_query(
+                f"MATCH (c:Campaign {{id: {cid}}}) RETURN c"
+            )
+            if existing:
+                await self.neo4j.run_query(
+                    f"MATCH (c:Campaign {{id: {cid}}})"
+                    f" SET c.first_seen = {_S(campaign.first_seen.isoformat())},"
+                    f"     c.last_seen = {_S(campaign.last_seen.isoformat())},"
+                    f"     c.alert_count = {_S(campaign.alert_count)},"
+                    f"     c.category_sequence = {_S(campaign.category_sequence)},"
+                    f"     c.shared_entities = {_S(campaign.shared_entities)},"
+                    f"     c.technique_sequence = {_S(campaign.technique_sequence)},"
+                    f"     c.confidence = {_S(campaign.confidence)},"
+                    f"     c.trigger_rule = {_S(campaign.trigger_rule)},"
+                    f"     c.severity = {_S(campaign.severity)},"
+                    f"     c.correlation_window_hours = {_S(campaign.correlation_window_hours)},"
+                    f"     c.nl_summary = {_S(campaign.nl_summary)},"
+                    f"     c.updated_at_epoch = {ts}"
+                )
+            else:
+                await self.neo4j.run_query(
+                    f"CREATE (c:Campaign {{"
+                    f" id: {cid},"
+                    f" first_seen: {_S(campaign.first_seen.isoformat())},"
+                    f" last_seen: {_S(campaign.last_seen.isoformat())},"
+                    f" alert_count: {_S(campaign.alert_count)},"
+                    f" category_sequence: {_S(campaign.category_sequence)},"
+                    f" shared_entities: {_S(campaign.shared_entities)},"
+                    f" technique_sequence: {_S(campaign.technique_sequence)},"
+                    f" confidence: {_S(campaign.confidence)},"
+                    f" trigger_rule: {_S(campaign.trigger_rule)},"
+                    f" severity: {_S(campaign.severity)},"
+                    f" correlation_window_hours: {_S(campaign.correlation_window_hours)},"
+                    f" nl_summary: {_S(campaign.nl_summary)},"
+                    f" updated_at_epoch: {ts}"
+                    f"}})"
+                )
 
-            # Write :MEMBER_OF edges
+            # Write :MEMBER_OF edges (skip if edge already exists)
             for alert_id in campaign.member_alert_ids:
-                await self.neo4j.run_query("""
-                    MATCH (a:Alert {alert_id: $alert_id})
-                    MATCH (c:Campaign {id: $campaign_id})
-                    MERGE (a)-[:MEMBER_OF]->(c)
-                """, {"alert_id": alert_id, "campaign_id": campaign.campaign_id})
+                edge_exists = await self.neo4j.run_query(
+                    f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})"
+                    f"-[:MEMBER_OF]->(c:Campaign {{id: {cid}}}) RETURN a"
+                )
+                if not edge_exists:
+                    await self.neo4j.run_query(
+                        f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})"
+                        f" MATCH (c:Campaign {{id: {cid}}})"
+                        f" CREATE (a)-[:MEMBER_OF]->(c)"
+                    )
             return True
         except Exception as e:
             log.error(f"write_campaign failed for {campaign.campaign_id}: {e}")
@@ -766,13 +795,22 @@ class CampaignMatcher:
     ) -> None:
         """Add alert to existing campaign, update last_seen + alert_count."""
         try:
-            await self.neo4j.run_query("""
-                MATCH (a:Alert {alert_id: $alert_id})
-                MATCH (c:Campaign {id: $campaign_id})
-                MERGE (a)-[:MEMBER_OF]->(c)
-                SET c.last_seen_epoch = $last_seen_epoch,
-                    c.alert_count = c.alert_count + 1
-            """, {"alert_id": alert_id, "campaign_id": campaign_id,
-                  "last_seen_epoch": int(datetime.utcnow().timestamp() * 1000)})
+            epoch = _S(int(datetime.utcnow().timestamp() * 1000))
+            cid = _S(campaign_id)
+            aid = _S(alert_id)
+            await self.neo4j.run_query(
+                f"MATCH (c:Campaign {{id: {cid}}})"
+                f" SET c.last_seen_epoch = {epoch}, c.alert_count = c.alert_count + 1"
+            )
+            edge_exists = await self.neo4j.run_query(
+                f"MATCH (a:Alert {{alert_id: {aid}}})"
+                f"-[:MEMBER_OF]->(c:Campaign {{id: {cid}}}) RETURN a"
+            )
+            if not edge_exists:
+                await self.neo4j.run_query(
+                    f"MATCH (a:Alert {{alert_id: {aid}}})"
+                    f" MATCH (c:Campaign {{id: {cid}}})"
+                    f" CREATE (a)-[:MEMBER_OF]->(c)"
+                )
         except Exception as e:
             log.warning(f"_add_alert_to_campaign failed: {e}")

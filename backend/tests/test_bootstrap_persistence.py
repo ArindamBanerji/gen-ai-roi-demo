@@ -37,25 +37,26 @@ def _run(coro):
 
 
 # ---------------------------------------------------------------------------
-# Test 1 — write_bootstrap_state calls run_query with correct params
+# Test 1 — write_bootstrap_state calls run_query with correct inline values
+# (AGE has no MERGE — queries use _S() inline literals, no params dict)
 # ---------------------------------------------------------------------------
 
 def test_write_bootstrap_state_calls_run_query():
     mock_client = AsyncMock()
+    # Simulate existing node so the SET branch is taken
     mock_client.run_query.return_value = [{"ds": {}}]
 
     result = _run(write_bootstrap_state(mock_client, _SCORER))
 
     assert mock_client.run_query.called, "run_query should have been called"
-    call_args = mock_client.run_query.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
+    all_calls = mock_client.run_query.call_args_list
+    all_queries = " ".join(c[0][0] for c in all_calls if c[0])
 
-    assert "MERGE (ds:DeploymentState" in query
-    assert "bootstrap_mu" in params
-    assert "bootstrap_shape" in params
-    assert "timestamp_epoch" in params
-    assert params["gae_version"] == _GAE_VERSION
+    assert "DeploymentState" in all_queries
+    assert "bootstrap_mu" in all_queries
+    assert "bootstrap_shape" in all_queries
+    assert "bootstrap_stored_at" in all_queries
+    assert _GAE_VERSION in all_queries
 
 
 # ---------------------------------------------------------------------------

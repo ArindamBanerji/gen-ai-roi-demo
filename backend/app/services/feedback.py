@@ -274,10 +274,10 @@ def process_outcome(
         "graph_updates": [u.model_dump() for u in graph_updates]
     }
 
-    # F6a: Update per-situation-type trust score (asymmetric 20:1)
-    _SIT_MAP = {"7823": "travel_login_anomaly", "7824": "known_phishing_campaign"}
-    sit_type = next((v for k, v in _SIT_MAP.items() if k in alert_id), "travel_login_anomaly")
-    update_trust(sit_type, outcome)
+    # F6a: Update per-category trust score (asymmetric 20:1)
+    # alert_category is already resolved above — key trust on threat category,
+    # not on alert_type or hardcoded alert_id substrings (BACKLOG-047).
+    update_trust(alert_category, outcome)
 
     return OutcomeResponse(
         alert_id=alert_id,

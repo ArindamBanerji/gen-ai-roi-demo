@@ -32,6 +32,19 @@ from app.db.neo4j import neo4j_client
 logger = logging.getLogger(__name__)
 
 
+def _S(val) -> str:
+    """Serialize a Python value to an AGE-safe inline Cypher literal."""
+    if val is None:
+        return "null"
+    if isinstance(val, bool):
+        return "true" if val else "false"
+    if isinstance(val, (int, float)):
+        return str(val)
+    if isinstance(val, (list, tuple)):
+        return "'" + json.dumps(val).replace("'", "\\'") + "'"
+    return "'" + str(val).replace("\\", "\\\\").replace("'", "\\'") + "'"
+
+
 # ============================================================================
 # Configuration
 # ============================================================================
@@ -361,28 +374,26 @@ class PulsediveConnector(UCLConnector):
                 print(f"[PULSEDIVE] Failed to write {ioc['value']} to AGE: {exc}")
 
         # ---------------------------------------------------------------
-        # Step 3 — MERGE :ASSOCIATED_WITH relationships to :Alert nodes
+        # Step 3 — Write :ASSOCIATED_WITH relationships to :Alert nodes
+        # AGE has no MERGE — check edge existence then CREATE if absent.
         # ---------------------------------------------------------------
         relationships_created = 0
-        assoc_query = """
-        MATCH (ti:ThreatIntel {value: $ioc_value})
-        MATCH (alert:Alert {alert_id: $alert_id})
-        MERGE (ti)-[r:ASSOCIATED_WITH]->(alert)
-        SET r.linked_at = $now_epoch
-        RETURN ti.value AS ioc, alert.id AS alert_id
-        """
-
         for alert_id, ioc_values in ALERT_IOC_MAP.items():
             for ioc_value in ioc_values:
                 try:
-                    result = await neo4j_client.run_query(assoc_query, {
-                        "ioc_value": ioc_value,
-                        "alert_id":  alert_id,
-                        "now_epoch": _now_epoch,
-                    })
-                    if result:
-                        relationships_created += 1
-                        print(f"[PULSEDIVE] Linked {ioc_value} → {alert_id}")
+                    edge_check = await neo4j_client.run_query(
+                        f"MATCH (ti:ThreatIntel {{value: {_S(ioc_value)}}})"
+                        f"-[:ASSOCIATED_WITH]->(a:Alert {{alert_id: {_S(alert_id)}}})"
+                        f" RETURN ti"
+                    )
+                    if not edge_check:
+                        await neo4j_client.run_query(
+                            f"MATCH (ti:ThreatIntel {{value: {_S(ioc_value)}}})"
+                            f" MATCH (a:Alert {{alert_id: {_S(alert_id)}}})"
+                            f" CREATE (ti)-[:ASSOCIATED_WITH {{linked_at: {_S(_now_epoch)}}}]->(a)"
+                        )
+                    relationships_created += 1
+                    print(f"[PULSEDIVE] Linked {ioc_value} → {alert_id}")
                 except Exception as exc:
                     print(f"[PULSEDIVE] Failed to link {ioc_value} → {alert_id}: {exc}")
 

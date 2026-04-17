@@ -16,10 +16,22 @@ Reference: docs/project_status_and_plan_v3_part2.md Phase 7
 from __future__ import annotations
 
 import logging
+import uuid as _uuid
 from datetime import datetime
 from typing import Any
 
 log = logging.getLogger(__name__)
+
+
+def _S(val) -> str:
+    """Serialize a Python value to an AGE-safe inline Cypher literal."""
+    if val is None:
+        return "null"
+    if isinstance(val, bool):
+        return "true" if val else "false"
+    if isinstance(val, (int, float)):
+        return str(val)
+    return "'" + str(val).replace("\\", "\\\\").replace("'", "\\'") + "'"
 
 
 def _group_by(items: list, key: str) -> dict:
@@ -57,45 +69,37 @@ class ThreatIndicatorService:
             )
             return ""
         try:
-            params = {
-                "ioc_value":  ioc_value,
-                "ioc_type":   ioc_type,
-                "source":     source,
-                "severity":   severity,
-                "name":       name,
-                "now_epoch":  int(datetime.utcnow().timestamp() * 1000),
-            }
+            now_s  = _S(int(datetime.utcnow().timestamp() * 1000))
+            val_s  = _S(ioc_value)
+            type_s = _S(ioc_type)
+            src_s  = _S(source)
+            sev_s  = _S(severity)
+            name_s = _S(name)
             # Step A — try MATCH (update existing node)
             result = await neo4j_service.run_query(
-                """
-                MATCH (ti:ThreatIndicator {ioc_value: $ioc_value, ioc_type: $ioc_type})
-                SET ti.last_seen_epoch = $now_epoch,
-                    ti.source          = $source,
-                    ti.severity        = $severity
-                RETURN ti.id AS id
-                """,
-                params,
+                f"MATCH (ti:ThreatIndicator {{ioc_value: {val_s}, ioc_type: {type_s}}})"
+                f" SET ti.last_seen = {now_s},"
+                f"     ti.source = {src_s},"
+                f"     ti.severity = {sev_s}"
+                f" RETURN ti.id AS id"
             )
             if result:
                 return result[0]["id"]
             # Step B — CREATE (node does not exist yet)
+            node_id = str(_uuid.uuid4())
             result = await neo4j_service.run_query(
-                """
-                CREATE (ti:ThreatIndicator {
-                    id: randomUUID(),
-                    ioc_value: $ioc_value,
-                    ioc_type: $ioc_type,
-                    name: $name,
-                    source: $source,
-                    severity: $severity,
-                    created_at_epoch: $now_epoch,
-                    last_seen_epoch: $now_epoch
-                })
-                RETURN ti.id AS id
-                """,
-                params,
+                f"CREATE (ti:ThreatIndicator {{"
+                f" id: {_S(node_id)},"
+                f" ioc_value: {val_s},"
+                f" ioc_type: {type_s},"
+                f" name: {name_s},"
+                f" source: {src_s},"
+                f" severity: {sev_s},"
+                f" created_at: {now_s},"
+                f" last_seen: {now_s}"
+                f"}}) RETURN ti.id AS id"
             )
-            return result[0]["id"] if result else ""
+            return result[0]["id"] if result else node_id
         except Exception as exc:
             log.warning(
                 "[THREAT-INDICATOR] upsert failed ioc_value=%r: %s", ioc_value, exc
@@ -111,14 +115,19 @@ class ThreatIndicatorService:
     ) -> None:
         """Create [:ASSOCIATED_WITH] edge between ThreatIndicator and Alert."""
         try:
-            await neo4j_service.run_query(
-                """
-                MATCH (ti:ThreatIndicator {ioc_value: $ioc_value, ioc_type: $ioc_type})
-                MATCH (a:Alert {alert_id: $alert_id})
-                MERGE (ti)-[:ASSOCIATED_WITH]->(a)
-                """,
-                {"ioc_value": ioc_value, "ioc_type": ioc_type, "alert_id": alert_id},
+            val_s  = _S(ioc_value)
+            type_s = _S(ioc_type)
+            aid_s  = _S(alert_id)
+            edge_check = await neo4j_service.run_query(
+                f"MATCH (ti:ThreatIndicator {{ioc_value: {val_s}, ioc_type: {type_s}}})"
+                f"-[:ASSOCIATED_WITH]->(a:Alert {{alert_id: {aid_s}}}) RETURN ti"
             )
+            if not edge_check:
+                await neo4j_service.run_query(
+                    f"MATCH (ti:ThreatIndicator {{ioc_value: {val_s}, ioc_type: {type_s}}})"
+                    f" MATCH (a:Alert {{alert_id: {aid_s}}})"
+                    f" CREATE (ti)-[:ASSOCIATED_WITH]->(a)"
+                )
         except Exception as exc:
             log.warning(
                 "[THREAT-INDICATOR] link_to_alert failed ioc_value=%r alert=%r: %s",
@@ -130,17 +139,10 @@ class ThreatIndicatorService:
         """Get all ThreatIndicators linked to an alert via [:ASSOCIATED_WITH]."""
         try:
             result = await neo4j_service.run_query(
-                """
-                MATCH (ti:ThreatIndicator)-[:ASSOCIATED_WITH]->(a:Alert {alert_id: $id})
-                RETURN ti.id        AS id,
-                       ti.name      AS name,
-                       ti.ioc_type  AS ioc_type,
-                       ti.ioc_value AS ioc_value,
-                       ti.source    AS source,
-                       ti.severity  AS severity,
-                       ti.last_seen AS last_seen
-                """,
-                {"id": alert_id},
+                f"MATCH (ti:ThreatIndicator)-[:ASSOCIATED_WITH]->(a:Alert {{alert_id: {_S(alert_id)}}})"
+                f" RETURN ti.id AS id, ti.name AS name, ti.ioc_type AS ioc_type,"
+                f"        ti.ioc_value AS ioc_value, ti.source AS source,"
+                f"        ti.severity AS severity, ti.last_seen AS last_seen"
             )
             return [dict(r) for r in result]
         except Exception as exc:
@@ -194,15 +196,12 @@ class ThreatIndicatorService:
     async def cleanup_expired(neo4j_service: Any) -> int:
         """Remove ThreatIndicator nodes older than TTL_HOURS. Returns count removed."""
         try:
+            cutoff = int((datetime.utcnow().timestamp() - ThreatIndicatorService.TTL_HOURS * 3600) * 1000)
             result = await neo4j_service.run_query(
-                """
-                MATCH (ti:ThreatIndicator)
-                WHERE ti.last_seen_epoch < $cutoff_epoch
-                WITH ti
-                DETACH DELETE ti
-                RETURN count(ti) AS removed
-                """,
-                {"cutoff_epoch": int((datetime.utcnow().timestamp() - ThreatIndicatorService.TTL_HOURS * 3600) * 1000)},
+                f"MATCH (ti:ThreatIndicator)"
+                f" WHERE ti.last_seen < {_S(cutoff)}"
+                f" WITH ti DETACH DELETE ti"
+                f" RETURN count(ti) AS removed"
             )
             return int(result[0]["removed"]) if result else 0
         except Exception as exc:

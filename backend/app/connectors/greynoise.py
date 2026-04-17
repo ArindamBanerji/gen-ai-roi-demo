@@ -20,6 +20,7 @@ After enrichment:
   d. MERGE :ENRICHED_BY relationships from :ThreatIntel to :GreyNoiseEnrichment.
 """
 import asyncio
+import json as _json
 import logging
 import os
 import time
@@ -33,6 +34,19 @@ from app.db.neo4j import neo4j_client
 
 
 logger = logging.getLogger(__name__)
+
+
+def _S(val) -> str:
+    """Serialize a Python value to an AGE-safe inline Cypher literal."""
+    if val is None:
+        return "null"
+    if isinstance(val, bool):
+        return "true" if val else "false"
+    if isinstance(val, (int, float)):
+        return str(val)
+    if isinstance(val, (list, tuple)):
+        return "'" + _json.dumps(val).replace("'", "\\'") + "'"
+    return "'" + str(val).replace("\\", "\\\\").replace("'", "\\'") + "'"
 
 
 # ============================================================================
@@ -226,58 +240,68 @@ class GreyNoiseConnector(UCLConnector):
         )
 
         # -------------------------------------------------------------------
-        # Step 2 — MERGE :GreyNoiseEnrichment nodes (idempotent)
+        # Step 2 — Write :GreyNoiseEnrichment nodes (idempotent)
+        # AGE has no MERGE — MATCH first, SET if found, CREATE if absent.
         # -------------------------------------------------------------------
         indicators_ingested = 0
         _now_epoch = int(time.time() * 1000)
-        merge_query = """
-        MERGE (gn:GreyNoiseEnrichment {ip: $ip})
-        SET gn.classification = $classification,
-            gn.noise          = $noise,
-            gn.riot           = $riot,
-            gn.name           = $name,
-            gn.link           = $link,
-            gn.last_seen      = $last_seen,
-            gn.source         = $source,
-            gn.refreshed_at   = $now_epoch
-        RETURN gn.ip AS ip
-        """
 
         for entry in enriched:
             try:
-                await neo4j_client.run_query(merge_query, {
-                    "ip":             entry["ip"],
-                    "classification": entry.get("classification", "unknown"),
-                    "noise":          entry.get("noise", False),
-                    "riot":           entry.get("riot", False),
-                    "name":           entry.get("name", "Unknown"),
-                    "link":           entry.get("link", ""),
-                    "last_seen":      entry.get("last_seen", ""),
-                    "source":         entry.get("source", source),
-                    "now_epoch":      _now_epoch,
-                })
+                _ip = _S(entry["ip"])
+                existing = await neo4j_client.run_query(
+                    f"MATCH (gn:GreyNoiseEnrichment {{ip: {_ip}}}) RETURN gn"
+                )
+                if existing:
+                    await neo4j_client.run_query(
+                        f"MATCH (gn:GreyNoiseEnrichment {{ip: {_ip}}})"
+                        f" SET gn.classification = {_S(entry.get('classification', 'unknown'))},"
+                        f"     gn.noise = {_S(entry.get('noise', False))},"
+                        f"     gn.riot = {_S(entry.get('riot', False))},"
+                        f"     gn.name = {_S(entry.get('name', 'Unknown'))},"
+                        f"     gn.link = {_S(entry.get('link', ''))},"
+                        f"     gn.last_seen = {_S(entry.get('last_seen', ''))},"
+                        f"     gn.source = {_S(entry.get('source', source))},"
+                        f"     gn.refreshed_at = {_S(_now_epoch)}"
+                    )
+                else:
+                    await neo4j_client.run_query(
+                        f"CREATE (gn:GreyNoiseEnrichment {{"
+                        f" ip: {_ip},"
+                        f" classification: {_S(entry.get('classification', 'unknown'))},"
+                        f" noise: {_S(entry.get('noise', False))},"
+                        f" riot: {_S(entry.get('riot', False))},"
+                        f" name: {_S(entry.get('name', 'Unknown'))},"
+                        f" link: {_S(entry.get('link', ''))},"
+                        f" last_seen: {_S(entry.get('last_seen', ''))},"
+                        f" source: {_S(entry.get('source', source))},"
+                        f" refreshed_at: {_S(_now_epoch)}"
+                        f"}})"
+                    )
                 indicators_ingested += 1
             except Exception as exc:
                 print(f"[GREYNOISE] Failed to write {entry['ip']} to AGE: {exc}")
 
         # -------------------------------------------------------------------
-        # Step 3 — MERGE :ENRICHED_BY from :ThreatIntel to :GreyNoiseEnrichment
+        # Step 3 — Write :ENRICHED_BY from :ThreatIntel to :GreyNoiseEnrichment
+        # AGE has no MERGE — check edge existence then CREATE if absent.
         # -------------------------------------------------------------------
         relationships_created = 0
-        link_query = """
-        MATCH (ti:ThreatIntel {value: $ip})
-        MATCH (gn:GreyNoiseEnrichment {ip: $ip})
-        MERGE (ti)-[r:ENRICHED_BY]->(gn)
-        SET r.linked_at = $now_epoch
-        RETURN ti.value AS ioc, gn.ip AS gn_ip
-        """
-
         for entry in enriched:
             try:
-                result = await neo4j_client.run_query(link_query, {"ip": entry["ip"], "now_epoch": _now_epoch})
-                if result:
-                    relationships_created += 1
-                    print(f"[GREYNOISE] Linked ThreatIntel({entry['ip']}) -[:ENRICHED_BY]-> GreyNoiseEnrichment")
+                _ip = _S(entry["ip"])
+                edge_check = await neo4j_client.run_query(
+                    f"MATCH (ti:ThreatIntel {{value: {_ip}}})"
+                    f"-[:ENRICHED_BY]->(gn:GreyNoiseEnrichment {{ip: {_ip}}}) RETURN ti"
+                )
+                if not edge_check:
+                    await neo4j_client.run_query(
+                        f"MATCH (ti:ThreatIntel {{value: {_ip}}})"
+                        f" MATCH (gn:GreyNoiseEnrichment {{ip: {_ip}}})"
+                        f" CREATE (ti)-[:ENRICHED_BY {{linked_at: {_S(_now_epoch)}}}]->(gn)"
+                    )
+                relationships_created += 1
+                print(f"[GREYNOISE] Linked ThreatIntel({entry['ip']}) -[:ENRICHED_BY]-> GreyNoiseEnrichment")
             except Exception as exc:
                 print(f"[GREYNOISE] Failed to link {entry['ip']}: {exc}")
 

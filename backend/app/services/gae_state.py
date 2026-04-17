@@ -30,6 +30,19 @@ import app.framework.learning_state as _fw
 
 log = logging.getLogger(__name__)
 
+
+def _S(val) -> str:
+    """Serialize a Python value to an AGE-safe inline Cypher literal."""
+    if val is None:
+        return "null"
+    if isinstance(val, bool):
+        return "true" if val else "false"
+    if isinstance(val, (int, float)):
+        return str(val)
+    if isinstance(val, (list, tuple)):
+        return "'" + json.dumps(val).replace("'", "\\'") + "'"
+    return "'" + str(val).replace("\\", "\\\\").replace("'", "\\'") + "'"
+
 # ── Module-level singleton state (owned here for test-patchability) ──────────
 
 _STATE_PATH = Path(__file__).parent.parent / "data" / "gae_learning_state.json"
@@ -361,14 +374,9 @@ def load_centroid_backup(backup_id: str | None = None) -> dict:
 
 _GAE_VERSION = "0.7.20"
 
-WRITE_DEPLOYMENT_STATE = """
-MERGE (ds:DeploymentState {id: "current"})
-SET ds.bootstrap_mu           = $bootstrap_mu,
-    ds.bootstrap_shape        = $bootstrap_shape,
-    ds.bootstrap_stored_at    = $timestamp_epoch,
-    ds.gae_version            = $gae_version
-RETURN ds
-"""
+# Removed: WRITE_DEPLOYMENT_STATE used MERGE which is unsupported in AGE.
+# write_bootstrap_state() now builds inline _S() queries directly.
+WRITE_DEPLOYMENT_STATE = ""  # kept for import backward-compat only
 
 READ_DEPLOYMENT_STATE = """
 MATCH (ds:DeploymentState {id: "current"})
@@ -390,25 +398,42 @@ async def write_bootstrap_state(neo4j_client, scorer) -> dict:
     Returns the stored payload.
     """
     import time as _time
-    ts = int(_time.time() * 1000)
+    ts      = int(_time.time() * 1000)
     mu_list = scorer.mu.tolist()
     shape   = list(scorer.mu.shape)
 
-    await neo4j_client.run_query(
-        WRITE_DEPLOYMENT_STATE,
-        {
-            "bootstrap_mu":    mu_list,
-            "bootstrap_shape": shape,
-            "timestamp_epoch": ts,
-            "gae_version":     _GAE_VERSION,
-        },
+    _mu_s    = _S(json.dumps(mu_list))
+    _shape_s = _S(json.dumps(shape))
+    _ts_s    = _S(ts)
+    _ver_s   = _S(_GAE_VERSION)
+
+    existing = await neo4j_client.run_query(
+        "MATCH (ds:DeploymentState {id: 'current'}) RETURN ds"
     )
+    if existing:
+        await neo4j_client.run_query(
+            f"MATCH (ds:DeploymentState {{id: 'current'}})"
+            f" SET ds.bootstrap_mu = {_mu_s},"
+            f"     ds.bootstrap_shape = {_shape_s},"
+            f"     ds.bootstrap_stored_at = {_ts_s},"
+            f"     ds.gae_version = {_ver_s}"
+        )
+    else:
+        await neo4j_client.run_query(
+            f"CREATE (ds:DeploymentState {{"
+            f" id: 'current',"
+            f" bootstrap_mu: {_mu_s},"
+            f" bootstrap_shape: {_shape_s},"
+            f" bootstrap_stored_at: {_ts_s},"
+            f" gae_version: {_ver_s}"
+            f"}})"
+        )
     log.info("[GAE] DeploymentState written — shape=%s gae_version=%s", shape, _GAE_VERSION)
     return {
-        "bootstrap_mu":       mu_list,
-        "bootstrap_shape":    shape,
+        "bootstrap_mu":        mu_list,
+        "bootstrap_shape":     shape,
         "bootstrap_stored_at": ts,
-        "gae_version":        _GAE_VERSION,
+        "gae_version":         _GAE_VERSION,
     }
 
 

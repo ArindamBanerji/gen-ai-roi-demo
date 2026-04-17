@@ -13,6 +13,7 @@ Behaviour:
 AWS-PROD-ACCOUNT is intentionally absent — cloud accounts do not run the
 Falcon sensor.
 """
+import json as _json
 import logging
 import time
 from datetime import datetime, timezone
@@ -23,6 +24,19 @@ from app.db.neo4j import neo4j_client
 
 
 logger = logging.getLogger(__name__)
+
+
+def _S(val) -> str:
+    """Serialize a Python value to an AGE-safe inline Cypher literal."""
+    if val is None:
+        return "null"
+    if isinstance(val, bool):
+        return "true" if val else "false"
+    if isinstance(val, (int, float)):
+        return str(val)
+    if isinstance(val, (list, tuple)):
+        return "'" + _json.dumps(val).replace("'", "\\'") + "'"
+    return "'" + str(val).replace("\\", "\\\\").replace("'", "\\'") + "'"
 
 
 # ============================================================================
@@ -90,70 +104,86 @@ class CrowdStrikeMockConnector(UCLConnector):
         """
 
         # -------------------------------------------------------------------
-        # Step 1 — MERGE :CrowdStrikeEnrichment nodes (idempotent)
+        # Step 1 — Write :CrowdStrikeEnrichment nodes (idempotent)
+        # AGE has no MERGE — MATCH first, SET if found, CREATE if absent.
         # -------------------------------------------------------------------
         indicators_ingested = 0
         _now_epoch = int(time.time() * 1000)
-        merge_node_query = """
-        MERGE (cs:CrowdStrikeEnrichment {device_id: $device_id})
-        SET cs.hostname          = $hostname,
-            cs.os                = $os,
-            cs.last_seen         = $last_seen,
-            cs.prevention_status = $prevention_status,
-            cs.sensor_version    = $sensor_version,
-            cs.refreshed_at      = $now_epoch
-        RETURN cs.device_id AS device_id
-        """
 
         for device in EDR_DEVICES:
             try:
-                await neo4j_client.run_query(merge_node_query, {
-                    "device_id":         device["device_id"],
-                    "hostname":          device["hostname"],
-                    "os":                device["os"],
-                    "last_seen":         device["last_seen"],
-                    "prevention_status": device["prevention_status"],
-                    "sensor_version":    device["sensor_version"],
-                    "now_epoch":         _now_epoch,
-                })
+                _did = _S(device["device_id"])
+                existing = await neo4j_client.run_query(
+                    f"MATCH (cs:CrowdStrikeEnrichment {{device_id: {_did}}}) RETURN cs"
+                )
+                if existing:
+                    await neo4j_client.run_query(
+                        f"MATCH (cs:CrowdStrikeEnrichment {{device_id: {_did}}})"
+                        f" SET cs.hostname = {_S(device['hostname'])},"
+                        f"     cs.os = {_S(device['os'])},"
+                        f"     cs.last_seen = {_S(device['last_seen'])},"
+                        f"     cs.prevention_status = {_S(device['prevention_status'])},"
+                        f"     cs.sensor_version = {_S(device['sensor_version'])},"
+                        f"     cs.refreshed_at = {_S(_now_epoch)}"
+                    )
+                else:
+                    await neo4j_client.run_query(
+                        f"CREATE (cs:CrowdStrikeEnrichment {{"
+                        f" device_id: {_did},"
+                        f" hostname: {_S(device['hostname'])},"
+                        f" os: {_S(device['os'])},"
+                        f" last_seen: {_S(device['last_seen'])},"
+                        f" prevention_status: {_S(device['prevention_status'])},"
+                        f" sensor_version: {_S(device['sensor_version'])},"
+                        f" refreshed_at: {_S(_now_epoch)}"
+                        f"}})"
+                    )
                 indicators_ingested += 1
                 print(
-                    f"[CROWDSTRIKE] MERGE CrowdStrikeEnrichment "
+                    f"[CROWDSTRIKE] Wrote CrowdStrikeEnrichment "
                     f"device_id={device['device_id']} hostname={device['hostname']}"
                 )
             except Exception as exc:
                 print(f"[CROWDSTRIKE] Failed to write {device['device_id']} to AGE: {exc}")
 
         # -------------------------------------------------------------------
-        # Step 2 — MERGE (Asset)-[:EDR_MANAGED_BY]->(CrowdStrikeEnrichment)
+        # Step 2 — Write (Asset)-[:EDR_MANAGED_BY]->(CrowdStrikeEnrichment)
+        # AGE has no MERGE — check edge existence then CREATE if absent.
         # -------------------------------------------------------------------
         relationships_created = 0
-        link_query = """
-        MATCH (asset:Asset {hostname: $hostname})
-        MATCH (cs:CrowdStrikeEnrichment {device_id: $device_id})
-        MERGE (asset)-[r:EDR_MANAGED_BY]->(cs)
-        SET r.linked_at = $now_epoch
-        RETURN asset.hostname AS hostname
-        """
-
         for device in EDR_DEVICES:
             try:
-                result = await neo4j_client.run_query(link_query, {
-                    "hostname":  device["hostname"],
-                    "device_id": device["device_id"],
-                    "now_epoch": _now_epoch,
-                })
-                if result:
+                _host = _S(device["hostname"])
+                _did = _S(device["device_id"])
+                edge_check = await neo4j_client.run_query(
+                    f"MATCH (asset:Asset {{hostname: {_host}}})"
+                    f"-[:EDR_MANAGED_BY]->(cs:CrowdStrikeEnrichment {{device_id: {_did}}})"
+                    f" RETURN asset"
+                )
+                if edge_check:
                     relationships_created += 1
                     print(
                         f"[CROWDSTRIKE] Linked Asset({device['hostname']}) "
                         f"-[:EDR_MANAGED_BY]-> CrowdStrikeEnrichment({device['device_id']})"
                     )
                 else:
-                    print(
-                        f"[CROWDSTRIKE] No Asset found for hostname={device['hostname']} "
-                        f"— skipping EDR_MANAGED_BY edge"
+                    result = await neo4j_client.run_query(
+                        f"MATCH (asset:Asset {{hostname: {_host}}})"
+                        f" MATCH (cs:CrowdStrikeEnrichment {{device_id: {_did}}})"
+                        f" CREATE (asset)-[:EDR_MANAGED_BY {{linked_at: {_S(_now_epoch)}}}]->(cs)"
+                        f" RETURN asset"
                     )
+                    if result:
+                        relationships_created += 1
+                        print(
+                            f"[CROWDSTRIKE] Linked Asset({device['hostname']}) "
+                            f"-[:EDR_MANAGED_BY]-> CrowdStrikeEnrichment({device['device_id']})"
+                        )
+                    else:
+                        print(
+                            f"[CROWDSTRIKE] No Asset found for hostname={device['hostname']} "
+                            f"— skipping EDR_MANAGED_BY edge"
+                        )
             except Exception as exc:
                 print(f"[CROWDSTRIKE] Failed to link {device['hostname']}: {exc}")
 
