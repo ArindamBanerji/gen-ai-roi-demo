@@ -87,16 +87,16 @@ class Neo4jClient:
         MATCH (alert:Alert {alert_id: $alert_id})
         MATCH (alert)-[:DETECTED_ON]->(asset:Asset)
         MATCH (alert)-[:INVOLVES]->(user:User)
-        OPTIONAL MATCH (alert)-[:CLASSIFIED_AS]->(alertType:AlertType)
-        OPTIONAL MATCH (alertType)-[:HANDLED_BY]->(playbook:Playbook)
+        OPTIONAL MATCH (alert)-[:CLASSIFIED_AS]->(ap:AttackPattern)
+        OPTIONAL MATCH (ap)-[:HANDLED_BY]->(playbook:Playbook)
         OPTIONAL MATCH (user)-[:HAS_TRAVEL]->(travel:TravelContext)
         OPTIONAL MATCH (asset)-[:SUBJECT_TO]->(sla:SLA)
         OPTIONAL MATCH (alert)-[:MATCHES]->(pattern:AttackPattern)
 
         // Count all nodes consulted
-        WITH alert, asset, user, alertType, playbook, travel, sla, pattern,
+        WITH alert, asset, user, ap, playbook, travel, sla, pattern,
              1 + 1 + 1 +
-             CASE WHEN alertType IS NOT NULL THEN 1 ELSE 0 END +
+             CASE WHEN ap IS NOT NULL THEN 1 ELSE 0 END +
              CASE WHEN playbook IS NOT NULL THEN 1 ELSE 0 END +
              CASE WHEN travel IS NOT NULL THEN 1 ELSE 0 END +
              CASE WHEN sla IS NOT NULL THEN 1 ELSE 0 END +
@@ -106,7 +106,7 @@ class Neo4jClient:
             alert,
             asset,
             user,
-            alertType,
+            ap,
             playbook,
             travel,
             sla,
@@ -418,9 +418,9 @@ class Neo4jClient:
 
     async def get_pattern_count(self) -> int:
         """Get total learned pattern count"""
-        query = "MATCH (p:AttackPattern) RETURN count(p) as count"
+        query = "MATCH (p:AttackPattern) RETURN count(p) as cnt"
         result = await self.run_query(query)
-        return result[0]["count"] if result else 0
+        return result[0]["cnt"] if result else 0
 
     async def get_alert(self, alert_id: str) -> Optional[Dict[str, Any]]:
         """Get alert by ID"""

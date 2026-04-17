@@ -39,7 +39,7 @@ class DecisionHistoryService:
                 """
                 MATCH (d:Decision)
                 WHERE d.category = $cat
-                WITH d ORDER BY d.timestamp DESC LIMIT 100
+                WITH d ORDER BY d.timestamp_epoch DESC LIMIT 100
                 RETURN count(d) AS cat_count,
                        sum(CASE WHEN d.outcome = 'correct' THEN 1 ELSE 0 END) AS correct_count,
                        sum(CASE WHEN d.outcome IS NOT NULL THEN 1 ELSE 0 END) AS verified_count

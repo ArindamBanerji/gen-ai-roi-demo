@@ -532,9 +532,9 @@ async def query_soc_metrics(request: SOCQueryRequest):
         if metric_id in CROSS_CONTEXT_METRIC_IDS:
             try:
                 rows = await neo4j_client.run_query(
-                    "MATCH (a:Alert)-[:ASSOCIATED_WITH]->(t:ThreatIntel) "
-                    "RETURN a.alert_id AS alert_id, t.source AS source, "
-                    "t.ioc_type AS ioc_type LIMIT 10",
+                    "MATCH (a:Alert)-[:HAS_INDICATOR]->(ti:ThreatIndicator) "
+                    "RETURN a.alert_id AS alert_id, ti.source AS source, "
+                    "ti.indicator_type AS ioc_type LIMIT 10",
                 )
                 if rows:
                     data = [
@@ -1669,7 +1669,7 @@ def _format_campaign(raw: dict) -> dict:
             _ents = []
 
     return {
-        "campaign_id": c.get("id", ""),
+        "campaign_id": c.get("campaign_id", ""),
         "first_seen": str(c.get("first_seen", "")),
         "last_seen": str(c.get("last_seen", "")),
         "alert_count": c.get("alert_count", 0),
@@ -2830,7 +2830,7 @@ async def _tab3_content() -> dict:
     override_rate = 15.0
     try:
         _ov_rows = await neo4j_client.run_query(
-            "MATCH (a:Alert)-[:TRIGGERED]->(d:Decision) "
+            "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
             "WHERE a.category = $cat AND d.outcome IS NOT NULL "
             "RETURN count(d) AS verified, "
             "sum(CASE WHEN d.overridden = true THEN 1 ELSE 0 END) AS overrides",

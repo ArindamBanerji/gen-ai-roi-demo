@@ -78,42 +78,64 @@ GRAPH_CONTRACT = {
         "Alert": {
             "min_count": 570,
             "required_fields": ["alert_id", "category", "severity",
-                                "status", "origin", "timestamp_epoch"],
+                                "status", "origin", "timestamp_epoch",
+                                "user_id", "asset_id", "alert_type",
+                                "source_location", "attack_pattern_id"],
         },
         "Decision": {
             "min_count": 4860,
             "required_fields": ["decision_id", "category", "action",
                                 "factor_vector", "confidence", "correct",
-                                "outcome", "origin"],
+                                "outcome", "origin", "timestamp_epoch"],
+            "optional_fields": [
+                "source_id", "user_id", "reasoning", "alert_id",
+                "nodes_consulted", "patterns_matched", "user_snapshot",
+                "asset_snapshot", "campaign_id", "auto_approved",
+                "verified_at_epoch", "override_comment",
+                "centroid_delta_norm", "pattern_id", "playbook_id",
+                "shadow_mode", "analyst_action", "agreement",
+            ],
         },
         "User": {
             "min_count": 20,
-            "required_fields": ["user_id", "name"],
+            "required_fields": ["user_id", "name", "origin",
+                                "department", "risk_level"],
         },
         "Asset": {
             "min_count": 15,
-            "required_fields": ["asset_id", "hostname", "criticality"],
+            "required_fields": ["asset_id", "hostname", "criticality",
+                                "origin", "asset_type"],
         },
         "Campaign": {
             "min_count": 3,
-            "required_fields": ["campaign_id", "category_sequence"],
+            "required_fields": ["campaign_id", "category_sequence",
+                                "name", "origin", "severity",
+                                "last_seen", "first_seen", "alert_count"],
+            "optional_fields": [
+                "shared_entities", "technique_sequence", "confidence",
+                "trigger_rule", "correlation_window_hours", "nl_summary",
+                "updated_at_epoch",
+            ],
         },
         "ThreatIndicator": {
             "min_count": 5,
-            "required_fields": ["indicator", "indicator_type", "severity"],
+            "required_fields": ["indicator", "indicator_type", "severity",
+                                "origin", "source"],
         },
         "AttackPattern": {
             "min_count": 6,
-            "required_fields": ["pattern_id", "name", "mitre_id"],
+            "required_fields": ["pattern_id", "name", "mitre_id",
+                                "origin", "tactic", "category"],
         },
     },
     "edges": {
-        "DECIDED_ON":    {"min_count": 4860},
-        "INVOLVES":      {"min_count": 540},
-        "DETECTED_ON":   {"min_count": 540},
-        "MEMBER_OF":     {"min_count": 12},
-        "CLASSIFIED_AS": {"min_count": 540},
-        "HAS_INDICATOR": {"min_count": 10},
+        "DECIDED_ON":         {"min_count": 4860, "from": "Decision",  "to": "Alert"},
+        "INVOLVES":           {"min_count": 540,  "from": "Alert",     "to": "User"},
+        "DETECTED_ON":        {"min_count": 540,  "from": "Alert",     "to": "Asset"},
+        "MEMBER_OF":          {"min_count": 12,   "from": "Alert",     "to": "Campaign"},
+        "CLASSIFIED_AS":      {"min_count": 540,  "from": "Alert",     "to": "AttackPattern"},
+        "HAS_INDICATOR":      {"min_count": 10,   "from": "Alert",     "to": "ThreatIndicator"},
+        "TRIGGERED_EVOLUTION":{"min_count": 0,    "from": "Decision",  "to": "EvolutionEvent"},
     },
     "invariants": [
         {
@@ -176,7 +198,7 @@ _DATA_ORIGINS = [SYNTHETIC_ORIGIN, DEMO_ORIGIN]
 async def verify_graph(client=None):
     """Check current graph against GRAPH_CONTRACT.
 
-    Returns {"healthy": bool, "issues": [...], "counts": {...}}
+    Returns {"healthy": bool, "issues": [...], "warnings": [...], "counts": {...}}
     counts is ALWAYS populated, even when healthy.
     """
     if client is None:
@@ -184,7 +206,7 @@ async def verify_graph(client=None):
         from ci_platform.graph import get_graph_client
         client = get_graph_client()
 
-    report = {"healthy": True, "issues": [], "counts": {}}
+    report = {"healthy": True, "issues": [], "warnings": [], "counts": {}}
 
     # -- Node counts + sample field check --
     for label, spec in GRAPH_CONTRACT["nodes"].items():
@@ -226,6 +248,16 @@ async def verify_graph(client=None):
                                     label + ": missing '" + field +
                                     "' on sample"
                                 )
+                        known = (set(spec["required_fields"]) |
+                                 set(spec.get("optional_fields", [])))
+                        for field in node:
+                            if field.startswith("_age_"):
+                                continue  # AGE internal field — always skip
+                            if field not in known:
+                                report["warnings"].append(
+                                    label + ": unexpected field '" +
+                                    field + "' on sample node"
+                                )
                 else:
                     # Nodes exist but none have our origin — hard failure
                     report["healthy"] = False
@@ -262,6 +294,27 @@ async def verify_graph(client=None):
                 rel_type + ": " + str(count) + " edges (need >= " +
                 str(spec["min_count"]) + ")"
             )
+
+        # Verify from/to endpoint labels when declared and edges exist
+        if count > 0 and "from" in spec and "to" in spec:
+            from_label = spec["from"]
+            to_label = spec["to"]
+            try:
+                lr = await client.run_query(
+                    "MATCH (src:" + from_label + ")-[r:" + rel_type +
+                    "]->(dst:" + to_label + ") RETURN count(r) AS cnt LIMIT 1"
+                )
+                matched = int(lr[0]["cnt"]) if lr else 0
+                if matched == 0:
+                    report["healthy"] = False
+                    report["issues"].append(
+                        rel_type + ": expected " + from_label +
+                        "->" + to_label + ", found wrong labels"
+                    )
+            except Exception as exc:
+                report["warnings"].append(
+                    rel_type + ": label check failed - " + str(exc)
+                )
 
     # -- Invariants --
     for inv in GRAPH_CONTRACT["invariants"]:

@@ -105,62 +105,62 @@ class Campaign:
 SHARED_ENTITY_QUERY = """
 MATCH (d1:Decision)-[:INVOLVES]->(e:Entity)<-[:INVOLVES]-(d2:Decision)
 WHERE d1.alert_id <> d2.alert_id
-  AND d1.created_at >= $window_start
-  AND d2.created_at >= $window_start
+  AND d1.timestamp_epoch >= $window_start
+  AND d2.timestamp_epoch >= $window_start
 WITH e, collect(DISTINCT d1) + collect(DISTINCT d2) AS decisions
 WHERE size(decisions) >= 2
 RETURN
-    e.id                                       AS shared_entity,
-    e.type                                     AS entity_type,
-    [d IN decisions | d.alert_id]              AS alert_ids,
-    [d IN decisions | d.id]                    AS decision_ids,
-    [d IN decisions | d.category]              AS categories,
-    [d IN decisions | d.severity]              AS severities,
-    [d IN decisions | d.created_at]            AS timestamps
+    e.id                                            AS shared_entity,
+    e.type                                          AS entity_type,
+    [d IN decisions | d.alert_id]                   AS alert_ids,
+    [d IN decisions | d.decision_id]                AS decision_ids,
+    [d IN decisions | d.category]                   AS categories,
+    [d IN decisions | d.severity]                   AS severities,
+    [d IN decisions | d.timestamp_epoch]            AS timestamps
 ORDER BY size(decisions) DESC
 LIMIT $limit
 """
 
 TECHNIQUE_SEQUENCE_QUERY = """
 MATCH path = (d1:Decision)-[:TRIGGERED_EVOLUTION*1..5]->(d2:Decision)
-WHERE d1.created_at >= $window_start
-  AND d2.created_at >= $window_start
+WHERE d1.timestamp_epoch >= $window_start
+  AND d2.timestamp_epoch >= $window_start
   AND d1.alert_id <> d2.alert_id
 WITH
     [node IN nodes(path) WHERE node:Decision | node] AS chain_nodes
 WHERE size(chain_nodes) >= 2
 RETURN
-    [n IN chain_nodes | n.alert_id]   AS alert_ids,
-    [n IN chain_nodes | n.id]         AS decision_ids,
-    [n IN chain_nodes | n.category]   AS categories,
-    [n IN chain_nodes | n.severity]   AS severities,
-    [n IN chain_nodes | n.created_at] AS timestamps
+    [n IN chain_nodes | n.alert_id]         AS alert_ids,
+    [n IN chain_nodes | n.decision_id]      AS decision_ids,
+    [n IN chain_nodes | n.category]         AS categories,
+    [n IN chain_nodes | n.severity]         AS severities,
+    [n IN chain_nodes | n.timestamp_epoch]  AS timestamps
 LIMIT $limit
 """
 
 TEMPORAL_QUERY = """
 MATCH (d:Decision)
-WHERE d.created_at >= $window_start
-  AND d.created_at <= $window_end
-WITH d ORDER BY d.created_at ASC
+WHERE d.timestamp_epoch >= $window_start
+  AND d.timestamp_epoch <= $window_end
+WITH d ORDER BY d.timestamp_epoch ASC
 WITH collect(d) AS decisions
 UNWIND range(0, size(decisions) - 2) AS i
 WITH decisions[i] AS d1, decisions[i+1] AS d2
-WHERE duration.inSeconds(d1.created_at, d2.created_at).seconds <= $window_seconds
+WHERE (d2.timestamp_epoch - d1.timestamp_epoch) / 1000 <= $window_seconds
   AND d1.category = d2.category
 RETURN
-    d1.category                          AS category,
-    [d1.alert_id, d2.alert_id]           AS alert_ids,
-    [d1.id, d2.id]                       AS decision_ids,
-    [d1.severity, d2.severity]           AS severities,
-    [d1.created_at, d2.created_at]       AS timestamps
+    d1.category                                       AS category,
+    [d1.alert_id, d2.alert_id]                        AS alert_ids,
+    [d1.decision_id, d2.decision_id]                  AS decision_ids,
+    [d1.severity, d2.severity]                        AS severities,
+    [d1.timestamp_epoch, d2.timestamp_epoch]          AS timestamps
 LIMIT $limit
 """
 
 GET_CAMPAIGNS_QUERY = """
 MATCH (c:Campaign)
-OPTIONAL MATCH (c)-[:CONTAINS]->(d:Decision)
-WITH c, collect(d.id) AS decision_ids
+OPTIONAL MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)-[:MEMBER_OF]->(c)
+WITH c, collect(d.decision_id) AS decision_ids
 RETURN
     c.campaign_id              AS campaign_id,
     c.first_seen               AS first_seen,
@@ -182,7 +182,7 @@ LIMIT $limit
 
 GET_CAMPAIGN_DETAIL_QUERY = """
 MATCH (c:Campaign {campaign_id: $campaign_id})
-OPTIONAL MATCH (c)-[:CONTAINS]->(d:Decision)
+OPTIONAL MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)-[:MEMBER_OF]->(c)
 WITH c, collect(d) AS decisions
 RETURN
     c.campaign_id              AS campaign_id,
@@ -196,16 +196,16 @@ RETURN
     c.trigger_rule             AS trigger_rule,
     c.severity                 AS severity,
     c.member_alert_ids         AS member_alert_ids,
-    [d IN decisions | d.id]    AS member_decision_ids,
-    c.correlation_window_hours AS correlation_window_hours,
-    c.nl_summary               AS nl_summary,
+    [d IN decisions | d.decision_id]  AS member_decision_ids,
+    c.correlation_window_hours        AS correlation_window_hours,
+    c.nl_summary                      AS nl_summary,
     [d IN decisions | {
-        id: d.id,
+        id: d.decision_id,
         alert_id: d.alert_id,
         category: d.category,
         action: d.action,
         confidence: d.confidence,
-        created_at: d.created_at
+        created_at: d.timestamp_epoch
     }] AS decision_details
 """
 
@@ -535,13 +535,13 @@ class CampaignRepository:
             results = await self.neo4j.run_query("""
                 MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
                 WHERE d.source_id IS NOT NULL AND d.source_id <> 'synthetic'
-                RETURN COALESCE(a.alert_id, a.id) AS alert_id,
+                RETURN a.alert_id AS alert_id,
                        d.category AS category,
                        a.source_entity_id AS source_entity_id,
                        a.technique_id AS technique_id,
                        d.timestamp_epoch AS ts,
                        COALESCE(a.severity, 'MEDIUM') AS severity,
-                       COALESCE(d.decision_id, d.id) AS decision_id
+                       d.decision_id AS decision_id
                 ORDER BY ts
             """, {})
             return [{**dict(r), "ts": _to_python_dt(r["ts"])} for r in results] if results else []
@@ -559,13 +559,13 @@ class CampaignRepository:
             results = await self.neo4j.run_query("""
                 MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
                 WHERE d.timestamp_epoch > $cutoff_epoch
-                RETURN COALESCE(a.alert_id, a.id) AS alert_id,
+                RETURN a.alert_id AS alert_id,
                        d.category AS category,
                        a.source_entity_id AS source_entity_id,
                        a.technique_id AS technique_id,
                        d.timestamp_epoch AS ts,
                        COALESCE(a.severity, 'MEDIUM') AS severity,
-                       COALESCE(d.decision_id, d.id) AS decision_id
+                       d.decision_id AS decision_id
                 ORDER BY ts
             """, {"cutoff_epoch": int((datetime.utcnow().timestamp() - window_hours * 3600) * 1000)})
             return [{**dict(r), "ts": _to_python_dt(r["ts"])} for r in results] if results else []
@@ -578,13 +578,13 @@ class CampaignRepository:
         try:
             results = await self.neo4j.run_query("""
                 MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert {alert_id: $alert_id})
-                RETURN a.id AS alert_id,
+                RETURN a.alert_id AS alert_id,
                        d.category AS category,
                        a.source_entity_id AS source_entity_id,
                        a.technique_id AS technique_id,
                        d.timestamp_epoch AS ts,
                        COALESCE(a.severity, 'MEDIUM') AS severity,
-                       d.id AS decision_id
+                       d.decision_id AS decision_id
                 LIMIT 1
             """, {"alert_id": alert_id})
             if results:
@@ -606,11 +606,11 @@ class CampaignRepository:
             cid = _S(campaign.campaign_id)
             ts = _S(int(datetime.utcnow().timestamp() * 1000))
             existing = await self.neo4j.run_query(
-                f"MATCH (c:Campaign {{id: {cid}}}) RETURN c"
+                f"MATCH (c:Campaign {{campaign_id: {cid}}}) RETURN c"
             )
             if existing:
                 await self.neo4j.run_query(
-                    f"MATCH (c:Campaign {{id: {cid}}})"
+                    f"MATCH (c:Campaign {{campaign_id: {cid}}})"
                     f" SET c.first_seen = {_S(campaign.first_seen.isoformat())},"
                     f"     c.last_seen = {_S(campaign.last_seen.isoformat())},"
                     f"     c.alert_count = {_S(campaign.alert_count)},"
@@ -627,7 +627,7 @@ class CampaignRepository:
             else:
                 await self.neo4j.run_query(
                     f"CREATE (c:Campaign {{"
-                    f" id: {cid},"
+                    f" campaign_id: {cid},"
                     f" first_seen: {_S(campaign.first_seen.isoformat())},"
                     f" last_seen: {_S(campaign.last_seen.isoformat())},"
                     f" alert_count: {_S(campaign.alert_count)},"
@@ -647,12 +647,12 @@ class CampaignRepository:
             for alert_id in campaign.member_alert_ids:
                 edge_exists = await self.neo4j.run_query(
                     f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})"
-                    f"-[:MEMBER_OF]->(c:Campaign {{id: {cid}}}) RETURN a"
+                    f"-[:MEMBER_OF]->(c:Campaign {{campaign_id: {cid}}}) RETURN a"
                 )
                 if not edge_exists:
                     await self.neo4j.run_query(
                         f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})"
-                        f" MATCH (c:Campaign {{id: {cid}}})"
+                        f" MATCH (c:Campaign {{campaign_id: {cid}}})"
                         f" CREATE (a)-[:MEMBER_OF]->(c)"
                     )
             return True
@@ -674,7 +674,7 @@ class CampaignRepository:
                 MATCH (c:Campaign)
                 {where_clause}
                 OPTIONAL MATCH (a:Alert)-[:MEMBER_OF]->(c)
-                RETURN c, collect(COALESCE(a.alert_id, a.id)) AS alert_ids
+                RETURN c, collect(a.alert_id) AS alert_ids
                 ORDER BY c.last_seen DESC
                 LIMIT $limit
             """, {"min_confidence": min_confidence, "trigger_rule": trigger_rule, "limit": limit})
@@ -687,18 +687,18 @@ class CampaignRepository:
         """Fetch full campaign detail for GET /api/soc/campaigns/{id}."""
         try:
             results = await self.neo4j.run_query("""
-                MATCH (c:Campaign {id: $campaign_id})
+                MATCH (c:Campaign {campaign_id: $campaign_id})
                 MATCH (a:Alert)-[:MEMBER_OF]->(c)
                 OPTIONAL MATCH (d:Decision)-[:DECIDED_ON]->(a)
                 RETURN c,
                        collect({
-                           alert_id: COALESCE(a.alert_id, a.id),
+                           alert_id: a.alert_id,
                            alert_type: a.alert_type,
                            technique_id: a.technique_id,
                            category: d.category,
                            action: d.action,
                            confidence: d.confidence,
-                           timestamp: d.timestamp
+                           timestamp: d.timestamp_epoch
                        }) AS decisions
             """, {"campaign_id": campaign_id})
             return dict(results[0]) if results else None
@@ -780,9 +780,9 @@ class CampaignMatcher:
                 MATCH (a_existing:Alert)-[:MEMBER_OF]->(c:Campaign)
                 WHERE a_existing.source_entity_id IS NOT NULL
                   AND a_existing.source_entity_id = a_new.source_entity_id
-                  AND c.last_seen_epoch > $cutoff_epoch
-                RETURN c.id AS campaign_id
-                ORDER BY c.last_seen_epoch DESC LIMIT 1
+                  AND c.last_seen > $cutoff_epoch
+                RETURN c.campaign_id AS campaign_id
+                ORDER BY c.last_seen DESC LIMIT 1
             """, {"alert_id": alert_id,
                   "cutoff_epoch": int((datetime.utcnow().timestamp() - self.config["correlation_window_hours"] * 3600) * 1000)})
             return results[0]["campaign_id"] if results else None
@@ -799,17 +799,17 @@ class CampaignMatcher:
             cid = _S(campaign_id)
             aid = _S(alert_id)
             await self.neo4j.run_query(
-                f"MATCH (c:Campaign {{id: {cid}}})"
-                f" SET c.last_seen_epoch = {epoch}, c.alert_count = c.alert_count + 1"
+                f"MATCH (c:Campaign {{campaign_id: {cid}}})"
+                f" SET c.last_seen = {epoch}, c.alert_count = c.alert_count + 1"
             )
             edge_exists = await self.neo4j.run_query(
                 f"MATCH (a:Alert {{alert_id: {aid}}})"
-                f"-[:MEMBER_OF]->(c:Campaign {{id: {cid}}}) RETURN a"
+                f"-[:MEMBER_OF]->(c:Campaign {{campaign_id: {cid}}}) RETURN a"
             )
             if not edge_exists:
                 await self.neo4j.run_query(
                     f"MATCH (a:Alert {{alert_id: {aid}}})"
-                    f" MATCH (c:Campaign {{id: {cid}}})"
+                    f" MATCH (c:Campaign {{campaign_id: {cid}}})"
                     f" CREATE (a)-[:MEMBER_OF]->(c)"
                 )
         except Exception as e:

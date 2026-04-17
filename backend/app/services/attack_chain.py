@@ -100,16 +100,16 @@ class AttackChainService:
         MATCH (a:Alert)
         OPTIONAL MATCH (a)-[:INVOLVES]->(u:User)
         OPTIONAL MATCH (a)-[:DETECTED_ON]->(asset:Asset)
-        OPTIONAL MATCH (a)-[:CLASSIFIED_AS]->(at:AlertType)
-        OPTIONAL MATCH (ti:ThreatIndicator)-[:ASSOCIATED_WITH]->(a)
+        OPTIONAL MATCH (a)-[:CLASSIFIED_AS]->(ap:AttackPattern)
+        OPTIONAL MATCH (a)-[:HAS_INDICATOR]->(ti:ThreatIndicator)
         RETURN a.alert_id       AS alert_id,
                a.severity       AS severity,
                a.timestamp_epoch AS timestamp,
                a.source_location AS source_location,
-               at.name          AS alert_type,
+               ap.name          AS alert_type,
                collect(DISTINCT u.email)    AS users,
                collect(DISTINCT asset.hostname) AS assets,
-               collect(DISTINCT ti.ioc_value)   AS iocs
+               collect(DISTINCT ti.indicator)   AS iocs
         ORDER BY a.timestamp_epoch DESC
         """
         try:

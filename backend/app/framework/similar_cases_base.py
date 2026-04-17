@@ -78,13 +78,13 @@ class SimilarCasesBase(abc.ABC):
                 WHERE d.category = $category
                   AND d.factor_vector IS NOT NULL
                   AND d.outcome IS NOT NULL
-                RETURN d.id            AS decision_id,
-                       d.action        AS action,
-                       d.confidence    AS confidence,
-                       d.outcome       AS outcome,
-                       d.factor_vector AS factor_vector,
-                       d.timestamp     AS timestamp
-                ORDER BY d.timestamp DESC
+                RETURN d.decision_id    AS decision_id,
+                       d.action         AS action,
+                       d.confidence     AS confidence,
+                       d.outcome        AS outcome,
+                       d.factor_vector  AS factor_vector,
+                       d.timestamp_epoch AS timestamp
+                ORDER BY d.timestamp_epoch DESC
                 LIMIT $limit
                 """,
                 {"category": category, "limit": limit},

@@ -65,7 +65,7 @@ async def get_alert_queue():
         MATCH (alert)-[:INVOLVES]->(user:User)
         MATCH (alert)-[:DETECTED_ON]->(asset:Asset)
         RETURN alert, user.name as user_name, asset.hostname as asset_hostname
-        ORDER BY alert.timestamp DESC
+        ORDER BY alert.timestamp_epoch DESC
         LIMIT 50
         """
 

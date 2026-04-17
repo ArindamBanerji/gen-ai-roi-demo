@@ -30,6 +30,17 @@ def _get(obj: Any, key: str, default: Any = None) -> Any:
     return getattr(obj, key, default)
 
 
+def _S(val) -> str:
+    """Serialize a Python value to an AGE-safe inline Cypher literal."""
+    if val is None:
+        return "null"
+    if isinstance(val, bool):
+        return "true" if val else "false"
+    if isinstance(val, (int, float)):
+        return str(val)
+    return "'" + str(val).replace("\\", "\\\\").replace("'", "\\'") + "'"
+
+
 # ===========================================================================
 # GAE FactorComputer implementations
 # ===========================================================================
@@ -189,11 +200,9 @@ class ThreatIntelEnrichmentFactor:
         pass1_value = 0.0
         try:
             results = await neo4j.run_query(
-                """
-                MATCH (ti:ThreatIntel)-[:ASSOCIATED_WITH]->(a:Alert {alert_id: $alert})
-                RETURN ti.severity AS severity, ti.source AS source
-                """,
-                {"alert": alert_id},
+                f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})"
+                f"-[:HAS_INDICATOR]->(ti:ThreatIndicator)"
+                f" RETURN ti.severity AS severity, ti.source AS source"
             )
             if results:
                 max_score = 0.0
@@ -237,7 +246,7 @@ class ThreatIntelEnrichmentFactor:
                 MATCH (a:Alert {alert_id: $alert_id})-[:MEMBER_OF]->(c:Campaign)
                 RETURN c.confidence AS confidence,
                        c.severity AS severity,
-                       c.id AS campaign_id,
+                       c.campaign_id AS campaign_id,
                        c.nl_summary AS summary,
                        c.trigger_rule AS trigger_rule
                 LIMIT 1
