@@ -183,6 +183,8 @@ async def analyze_alert(request: ProcessAlertRequest):
         alert_category = resolve_alert_category(alert_type)
         _cat_idx = _cfg.get_category_index(alert_category)
         _scoring_result = _scorer.score(f.flatten(), category_index=_cat_idx)
+        triage_entropy = _scoring_result.entropy if hasattr(_scoring_result, 'entropy') else None
+        triage_confidence_gap = _scoring_result.confidence_gap if hasattr(_scoring_result, 'confidence_gap') else None
 
         # Phase 0b gate: scorer outputs A=4 (escalate/investigate/suppress/monitor).
         # refer_to_analyst is NOT a scorer action — the gate adds it when confidence
@@ -246,28 +248,32 @@ async def analyze_alert(request: ProcessAlertRequest):
             """
             MATCH (a:Alert {alert_id: $alert_id})
             CREATE (d:Decision {
-                decision_id:     $decision_id,
-                action:          $action,
-                confidence:      $confidence,
-                factor_vector:   $fv,
-                category:        $category,
-                source_id:       $source_id,
-                user_id:         $user_id,
-                timestamp_epoch: $timestamp_epoch,
-                outcome:         null
+                decision_id:           $decision_id,
+                action:                $action,
+                confidence:            $confidence,
+                factor_vector:         $fv,
+                category:              $category,
+                source_id:             $source_id,
+                user_id:               $user_id,
+                timestamp_epoch:       $timestamp_epoch,
+                outcome:               null,
+                triage_entropy:        $triage_entropy,
+                triage_confidence_gap: $triage_confidence_gap
             })
             CREATE (d)-[:DECIDED_ON]->(a)
             """,
             {
-                "alert_id":        alert_id,
-                "decision_id":     decision_id,
-                "action":          selected_action,
-                "confidence":      confidence,
-                "fv":              fv_list,
-                "category":        alert_category,
-                "source_id":       alert_data.get("source_location", ""),
-                "user_id":         context.get("user_id", ""),
-                "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
+                "alert_id":              alert_id,
+                "decision_id":           decision_id,
+                "action":                selected_action,
+                "confidence":            confidence,
+                "fv":                    fv_list,
+                "category":              alert_category,
+                "source_id":             alert_data.get("source_location", ""),
+                "user_id":               context.get("user_id", ""),
+                "timestamp_epoch":       int(datetime.utcnow().timestamp() * 1000),
+                "triage_entropy":        triage_entropy,
+                "triage_confidence_gap": triage_confidence_gap,
             },
         )
         print(f"[GAE] Decision node written: id={decision_id} [:DECIDED_ON] {alert_id}")
