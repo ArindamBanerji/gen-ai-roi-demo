@@ -49,25 +49,41 @@ class LearningHealthMonitor:
     # -------------------------------------------------------------------------
 
     @staticmethod
-    def _extract_components(history: list, window: int = WINDOW_DECISIONS) -> dict:
-        """Extract alpha, q, V from the last `window` WeightUpdate entries.
+    def _extract_components(
+        history: list, window: int = WINDOW_DECISIONS, q_window: int = 400
+    ) -> dict:
+        """Extract alpha, q, V from verified WeightUpdate history.
 
         Returns
         -------
         dict with keys: alpha (float), q (float), V (float), n (int)
-            alpha — mean effective learning rate
-            q     — mean confidence at decision time (signal quality proxy)
-            V     — decisions per day (volume); falls back to raw count
+            alpha — mean effective learning rate over the last `window`
+                    verified decisions (responsive)
+            q     — fraction of the last `q_window` verified decisions with
+                    outcome == +1 (stable rolling verified accuracy)
+            V     — decisions per day over the last `window` verified
+                    decisions; falls back to raw count
+
+        Notes
+        -----
+        History is verified-only in the backend paths that populate it:
+        triage and simulation both pass outcome as +1 or -1 into
+        learning_state.update(), and LearningState.update() asserts
+        outcome in (+1, -1). For q_window=400, binomial sampling error is
+        on the order of ~2-3 percentage points depending on true accuracy.
         """
         if not history:
             return {"alpha": 0.0, "q": 0.0, "V": 0.0, "n": 0}
 
         recent = history[-window:]
         alphas = [wu.alpha_effective for wu in recent if hasattr(wu, "alpha_effective")]
-        confs  = [wu.confidence_at_decision for wu in recent if hasattr(wu, "confidence_at_decision")]
+        q_recent = history[-q_window:]
 
         alpha = float(np.mean(alphas)) if alphas else 0.0
-        q     = float(np.mean(confs))  if confs  else 0.0
+        if q_recent:
+            q = float(sum(1 for wu in q_recent if wu.outcome == 1) / len(q_recent))
+        else:
+            q = 0.0
 
         # V: decisions per day estimated from timestamp spread
         V = float(len(recent))  # fallback: raw count
@@ -111,7 +127,9 @@ class LearningHealthMonitor:
         for i in range(0, len(cal_window), 10):
             chunk = cal_window[max(0, i - WINDOW_DECISIONS) : i + 1]
             if chunk:
-                c = LearningHealthMonitor._extract_components(chunk, window=len(chunk))
+                c = LearningHealthMonitor._extract_components(
+                    chunk, window=len(chunk), q_window=len(chunk)
+                )
                 signals.append(LearningHealthMonitor._compute_signal(c["alpha"], c["q"], c["V"]))
 
         if not signals:
