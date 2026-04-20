@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from pydantic import BaseModel
 
 from app.db.neo4j import neo4j_client
+from app.graph_schema import _S
 
 
 router = APIRouter()
@@ -203,16 +204,16 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
 
                 total_rows = await neo4j_client.run_query(
                     f"MATCH (d:Decision)-[:DECIDED_ON]->() "
-                    f"WHERE d.timestamp_epoch > {week_start} "
-                    f"AND d.timestamp_epoch <= {week_end} "
+                    f"WHERE d.timestamp_epoch > {_S(week_start)} "
+                    f"AND d.timestamp_epoch <= {_S(week_end)} "
                     f"RETURN count(d) AS n"
                 )
                 total = int(total_rows[0]["n"]) if total_rows else 0
 
                 correct_rows = await neo4j_client.run_query(
                     f"MATCH (d:Decision)-[:DECIDED_ON]->() "
-                    f"WHERE d.timestamp_epoch > {week_start} "
-                    f"AND d.timestamp_epoch <= {week_end} "
+                    f"WHERE d.timestamp_epoch > {_S(week_start)} "
+                    f"AND d.timestamp_epoch <= {_S(week_end)} "
                     f"AND d.correct = true "
                     f"RETURN count(d) AS n"
                 )

@@ -153,6 +153,14 @@ class GraphExplorerService:
 
         Excludes :Decision and :Checkpoint nodes (internal bookkeeping).
         """
+        _ALLOWED_NODE_TYPES = {
+            "Alert", "Decision", "User", "Asset", "Campaign",
+            "ThreatIndicator", "AttackPattern", "GreyNoiseEnrichment",
+            "CrowdStrikeEnrichment", "DeploymentState", "ProfileSnapshot",
+        }
+        if node_type and node_type not in _ALLOWED_NODE_TYPES:
+            raise ValueError(f"Unknown node type: {node_type}")
+
         try:
             if node_type:
                 query = (

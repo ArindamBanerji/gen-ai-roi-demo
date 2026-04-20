@@ -72,6 +72,11 @@ class StateManager:
         Returns the total number of session nodes that would be affected.
         Raises DataProtectionError if any persistent node is in the set.
         """
+        # Guard against Cypher injection via statement terminators / comments.
+        # Single/double quotes are allowed (present in the PERSISTENT_FILTER constant itself).
+        assert isinstance(filter_clause, str) and ";" not in filter_clause and "--" not in filter_clause, (
+            f"Unsafe filter_clause: {filter_clause}"
+        )
         check = await self._neo4j.run_query(
             f"MATCH (d:Decision) {filter_clause} "
             f"RETURN count(CASE WHEN d.origin = '{self.PERSISTENT_ORIGIN}' "
