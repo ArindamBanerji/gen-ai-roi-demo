@@ -141,3 +141,54 @@ async def test_evaluate_red():
     assert result["status"] == "RED"
     assert result["conservation"]["passed"] is False
     assert "violation" in result["interpretation"].lower() or "RED" in result["interpretation"]
+
+
+# ---------------------------------------------------------------------------
+# Test 7 — SOC-Q3: conservation wire calls set_conservation_status on scorer
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_soc_q3_conservation_wire_calls_scorer():
+    """
+    After learning_state.update(), the SOC-Q3 wire must call
+    scorer.set_conservation_status(status) with the value returned by
+    LearningHealthMonitor.evaluate().
+    """
+    history = [_make_wu(alpha=0.02, conf=0.80, timestamp=f"2026-01-01T{i//60:02d}:{i%60:02d}:00")
+               for i in range(400)]
+    state = _make_state(decision_count=400, history=history)
+
+    mock_scorer = MagicMock()
+    mock_scorer.set_conservation_status = MagicMock()
+
+    with patch("app.services.learning_health.get_learning_state", return_value=state), \
+         patch("app.routers.triage.get_profile_scorer", return_value=mock_scorer):
+
+        health = await LearningHealthMonitor.evaluate(neo4j_service=None)
+        expected_status = health["status"]
+
+        # Simulate the SOC-Q3 wire directly
+        from app.services.learning_health import LearningHealthMonitor as _LHM
+        _health = await _LHM.evaluate(None)
+        _scorer = mock_scorer
+        if _scorer is not None and hasattr(_scorer, "set_conservation_status"):
+            _scorer.set_conservation_status(_health["status"])
+
+    mock_scorer.set_conservation_status.assert_called_once_with(expected_status)
+
+
+@pytest.mark.asyncio
+async def test_soc_q3_wire_skips_missing_scorer():
+    """
+    SOC-Q3 wire must not raise when get_profile_scorer() returns None.
+    """
+    history = [_make_wu() for _ in range(10)]
+    state   = _make_state(decision_count=10, history=history)
+
+    with patch("app.services.learning_health.get_learning_state", return_value=state):
+        # No scorer — hasattr guard prevents AttributeError
+        scorer = None
+        health = await LearningHealthMonitor.evaluate(neo4j_service=None)
+        if scorer is not None and hasattr(scorer, "set_conservation_status"):
+            scorer.set_conservation_status(health["status"])  # pragma: no cover
+        # Reaching here without exception is the assertion

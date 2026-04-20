@@ -979,7 +979,7 @@ async def get_learning_state_endpoint():
 
     try:
         ls = _get_ls()
-        decision_count = ls.decision_count
+        decision_count = ls.decision_count  # SOURCE: in-memory LearningState (resets on restart)
 
         # frozen comes from ProfileScorer._frozen (if scorer is attached)
         scorer = getattr(ls, "profile_scorer", None)
@@ -1011,7 +1011,7 @@ async def get_learning_state_endpoint():
     iks_v2_data = {}
     try:
         from app.services.iks import compute_iks_v2
-        iks_v2_data = await compute_iks_v2(neo4j_client)
+        iks_v2_data = await compute_iks_v2(neo4j_client)  # SOURCE: computed from graph (Decision nodes + centroids)
     except Exception as exc:
         print(f"[SOC] learning-state iks_v2 failed: {exc}")
 
@@ -1019,7 +1019,7 @@ async def get_learning_state_endpoint():
     verified_decisions = 0
     try:
         from app.state.graph_snapshot import get_snapshot as _get_snap_ls
-        verified_decisions = _get_snap_ls().verified_decisions
+        verified_decisions = _get_snap_ls().verified_decisions  # SOURCE: GraphSnapshot (graph-backed, survives restart)
     except Exception as _exc:
         print(f"[SOC] learning-state verified_decisions query failed: {_exc}")
 
@@ -1333,7 +1333,7 @@ async def get_threat_intel_for_alert(alert_id: str):
     {
         "alert_id":      str,
         "indicators":    [
-            {"name": str, "ioc_type": str, "ioc_value": str, "severity": str,
+            {"name": str, "indicator_type": str, "indicator": str, "severity": str,
              "source": str, "last_seen": str},
             ...
         ],
@@ -2415,7 +2415,7 @@ async def get_gate_config():
 
     n_decisions = 0
     try:
-        n_decisions = get_learning_state().decision_count
+        n_decisions = get_learning_state().decision_count  # SOURCE: in-memory LearningState (resets on restart)
     except Exception as _exc:
         print(f"[SOC] gate-config n_decisions query failed: {_exc}")
 
@@ -2902,7 +2902,7 @@ async def _tab4_content() -> dict:
     if total_decisions == 0:
         try:
             from app.services.gae_state import get_learning_state as _get_ls_t4
-            total_decisions = max(0, _get_ls_t4().decision_count)
+            total_decisions = max(0, _get_ls_t4().decision_count)  # SOURCE: in-memory LearningState (resets on restart)
         except Exception as _exc:
             print(f"[SOC] tab4 decision_count fallback failed: {_exc}")
 
@@ -2966,7 +2966,7 @@ async def _tab4_content() -> dict:
     verified_decisions = total_decisions
     try:
         from app.state.graph_snapshot import get_snapshot as _get_snap_t4
-        verified_decisions = _get_snap_t4().verified_decisions
+        verified_decisions = _get_snap_t4().verified_decisions  # SOURCE: GraphSnapshot (graph-backed, survives restart)
     except Exception as _exc:
         print(f"[SOC] tab4 verified_decisions snapshot failed: {_exc}")
         # falls back to total_decisions
@@ -3247,7 +3247,7 @@ async def get_analyst_eta_weights_endpoint():
 
     n_decisions = 0
     try:
-        n_decisions = _get_ls().decision_count
+        n_decisions = _get_ls().decision_count  # SOURCE: in-memory LearningState (resets on restart)
     except Exception as _exc:
         print(f"[SOC] analyst-eta n_decisions query failed: {_exc}")
 
@@ -3339,7 +3339,7 @@ async def get_analyst_weights():
     # -- precision + weights --------------------------------------------------
     n_decisions = 0
     try:
-        n_decisions = _get_ls().decision_count
+        n_decisions = _get_ls().decision_count  # SOURCE: in-memory LearningState (resets on restart)
     except Exception as _exc:
         print(f"[SOC] analyst-detail n_decisions query failed: {_exc}")
 

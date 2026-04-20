@@ -62,9 +62,9 @@ def test_interface_parity_neo4j_vs_age():
 
     required = [
         "run_query", "get_security_context", "get_alert",
-        "get_pattern_count", "get_sequence_count",
+        "get_sequence_count",
         "get_cross_category_count", "create_decision_trace",
-        "create_evolution_event", "get_recent_evolution_events",
+        "create_evolution_event",
         "count_verified_decisions",
         "count_decisions_by_category",
         "compute_outcome_stats",

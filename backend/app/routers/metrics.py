@@ -836,7 +836,7 @@ async def get_economics():
             "sum(CASE WHEN d.action = 'investigate' THEN 1 ELSE 0 END) AS investigations, "
             "sum(CASE WHEN d.action = 'monitor'     THEN 1 ELSE 0 END) AS monitors"
         )
-        if dec_result:
+        if dec_result:  # SOURCE: direct graph query (graph-backed, survives restart)
             total         = int(dec_result[0]["total"]          or 0)
             correct       = int(dec_result[0]["correct_count"]  or 0)
             escalations   = int(dec_result[0]["escalations"]    or 0)

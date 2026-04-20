@@ -665,6 +665,7 @@ class SOCDomainConfig(DomainConfig):
             actions=list(SCORER_ACTIONS),
             kernel=KernelType.L2,
             categories=list(SOC_CATEGORIES),
+            eta_override=0.01,  # P0 fix: attenuate override learning 5x
         )
 
     @staticmethod

@@ -142,9 +142,9 @@ async def get_centroid_evolution(
                 # fall back to learning_state.decision_count if snapshot not ready.
                 try:
                     from app.state.graph_snapshot import get_snapshot as _get_snap_ce
-                    decision_count = _get_snap_ce().verified_decisions
+                    decision_count = _get_snap_ce().verified_decisions  # SOURCE: GraphSnapshot (graph-backed, survives restart)
                 except Exception:
-                    decision_count = get_learning_state().decision_count
+                    decision_count = get_learning_state().decision_count  # SOURCE: in-memory LearningState (resets on restart)
 
                 for c_idx, cat in enumerate(categories):
                     if category is not None and cat != category:
@@ -227,7 +227,7 @@ async def get_convergence_calendar():
             print(f"[convergence-calendar] decisions query failed: {exc}")
 
         # Overall decision count as fallback for factors not tagged
-        total = getattr(ls, "decision_count", 0)
+        total = getattr(ls, "decision_count", 0)  # SOURCE: in-memory LearningState (resets on restart)
         if total and all(v == 0 for v in decisions_per_factor.values()):
             # Distribute evenly across factors when primary_factor tagging absent
             per = total // len(SOC_FACTORS)
@@ -416,7 +416,7 @@ async def get_iks_trend_endpoint():
     from app.services.iks import compute_iks_v2
 
     try:
-        current = await compute_iks_v2(neo4j_client)
+        current = await compute_iks_v2(neo4j_client)  # SOURCE: computed from graph (Decision nodes + centroids)
     except Exception as exc:
         print(f"[SOC] iks-trend compute failed: {exc}")
         current = {

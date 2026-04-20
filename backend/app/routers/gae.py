@@ -62,7 +62,7 @@ async def gae_weights() -> Dict[str, Any]:
             "W":             state.W.tolist(),
             "factor_names":  state.factor_names,
             "action_names":  list(SCORER_ACTIONS),
-            "decision_count": state.decision_count,
+            "decision_count": state.decision_count,  # SOURCE: in-memory LearningState (resets on restart)
             "shape":         list(state.W.shape),
         }
     except RuntimeError as exc:
@@ -90,7 +90,7 @@ async def gae_history(limit: int = Query(50, ge=1, le=200)) -> Dict[str, Any]:
     try:
         state = get_learning_state()
 
-        if state.decision_count < 3:
+        if state.decision_count < 3:  # SOURCE: in-memory LearningState (resets on restart)
             return {
                 "history": [],
                 "total":   0,
@@ -153,7 +153,7 @@ async def gae_convergence() -> Dict[str, Any]:
         state = get_learning_state()
         metrics = get_convergence_metrics(state)
 
-        if state.decision_count < 3:
+        if state.decision_count < 3:  # SOURCE: in-memory LearningState (resets on restart)
             message = _NO_DATA_MSG
         elif state.decision_count < _MIN_CONVERGENCE_DECISIONS:
             message = _CONVERGENCE_MIN_MSG
@@ -327,7 +327,7 @@ async def gae_before_after() -> Dict[str, Any]:
                 "timestamp":       _wu_timestamp(latest),
             },
             "improvement_pp":       improvement_pp,
-            "total_decisions":      state.decision_count,
+            "total_decisions":      state.decision_count,  # SOURCE: in-memory LearningState (resets on restart)
             "situation_types_seen": actions_seen,
             "message":              None,
         }

@@ -352,10 +352,10 @@ async def process_alert(request: ProcessAlertRequest):
                 ),
             },
             "gae_summary": {
-                "decision_count": _ls.decision_count,
+                "decision_count": _ls.decision_count,  # SOURCE: in-memory LearningState (resets on restart)
                 "w_norms":        _w_norms,
                 "factor_names":   _ls.factor_names,
-                "has_real_data":  _ls.decision_count > 0,
+                "has_real_data":  _ls.decision_count > 0,  # SOURCE: in-memory LearningState (resets on restart)
             },
             "triggered_evolution": triggered_evolution,
             "execution_time_ms": execution_time,

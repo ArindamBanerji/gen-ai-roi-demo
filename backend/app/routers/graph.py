@@ -217,11 +217,11 @@ async def refresh_threat_intel_endpoint():
         )
         for row in ti_rows:
             await ThreatIndicatorService.upsert_indicator(
-                ioc_type  = row.get("ioc_type")  or "unknown",
-                ioc_value = row.get("ioc_value") or "",
-                source    = row.get("source")    or "unknown",
-                severity  = row.get("severity")  or "unknown",
-                name      = row.get("name")      or "",
+                indicator_type  = row.get("ioc_type")  or "unknown",
+                indicator_value = row.get("ioc_value") or "",
+                source          = row.get("source")    or "unknown",
+                severity        = row.get("severity")  or "unknown",
+                name            = row.get("name")      or "",
                 neo4j_service=neo4j_client,
             )
             indicators_persisted += 1

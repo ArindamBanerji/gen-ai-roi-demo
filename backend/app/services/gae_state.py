@@ -122,6 +122,11 @@ def init_learning_state() -> LearningState:
     from app.domains.soc.config import SOCDomainConfig
     _soc_cfg = SOCDomainConfig()
     _profile_scorer = _soc_cfg.build_profile_scorer()
+    assert _profile_scorer.eta_override is not None, (
+        "ProfileScorer constructed without eta_override. "
+        "SOC requires eta_override=0.01 (P0 fix — prevents "
+        "13-27pp centroid degradation from noisy overrides)."
+    )
 
     needs_bootstrap = False
 
@@ -373,10 +378,6 @@ def load_centroid_backup(backup_id: str | None = None) -> dict:
 # =============================================================================
 
 _GAE_VERSION = "0.7.20"
-
-# Removed: WRITE_DEPLOYMENT_STATE used MERGE which is unsupported in AGE.
-# write_bootstrap_state() now builds inline _S() queries directly.
-WRITE_DEPLOYMENT_STATE = ""  # kept for import backward-compat only
 
 READ_DEPLOYMENT_STATE = """
 MATCH (ds:DeploymentState {id: "current"})

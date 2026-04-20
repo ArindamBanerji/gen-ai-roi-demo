@@ -233,14 +233,6 @@ async def analyze_alert(request: ProcessAlertRequest):
         # Generate reasoning using GAE-selected action
         reasoning = await narrator.generate_reasoning(alert_type, selected_action, context)
 
-        # F4b: Record confidence snapshot for trajectory tracking
-        append_confidence_snapshot(
-            alert_id       = alert_id,
-            alert_type     = alert_type,
-            situation_type = situation_analysis.situation_type,
-            confidence     = confidence,
-        )
-
         # ====================================================================
         # Step 5: Write Decision node to Neo4j (R4 — f(t) stored in graph)
         #
@@ -279,6 +271,15 @@ async def analyze_alert(request: ProcessAlertRequest):
             },
         )
         print(f"[GAE] Decision node written: id={decision_id} [:DECIDED_ON] {alert_id}")
+
+        # F4b: Record confidence snapshot for trajectory tracking
+        # Placed AFTER successful graph write — prevents phantom entries on failure.
+        append_confidence_snapshot(
+            alert_id       = alert_id,
+            alert_type     = alert_type,
+            situation_type = situation_analysis.situation_type,
+            confidence     = confidence,
+        )
 
         # ====================================================================
         # Step 5b: Campaign correlation (F6) — non-blocking
@@ -597,8 +598,8 @@ async def analyze_alert(request: ProcessAlertRequest):
             if _factors_for_narr else {}
         )
         calibration_context = {
-            "decision_count": _ls.decision_count,
-            "category_count": _ls.decision_count,   # per-category not tracked yet
+            "decision_count": _ls.decision_count,  # SOURCE: in-memory LearningState (resets on restart)
+            "category_count": _ls.decision_count,  # SOURCE: in-memory LearningState (resets on restart)
             "category":       alert_category,
             "top_factor":     _top_f,
             "bottom_factor":  _bot_f,
@@ -962,6 +963,16 @@ async def report_decision_outcome(request: OutcomeRequest):
                     )
                     save_learning_state()
 
+                    # SOC-Q3: Wire conservation status → scorer auto-pause
+                    try:
+                        from app.services.learning_health import LearningHealthMonitor
+                        _health = await LearningHealthMonitor.evaluate(neo4j_client)
+                        _scorer = get_profile_scorer()
+                        if _scorer is not None and hasattr(_scorer, "set_conservation_status"):
+                            _scorer.set_conservation_status(_health["status"])
+                    except Exception as _cse:
+                        logger.warning("Conservation status update failed: %s", _cse)
+
                 # CORR-2 fix: ProfileScorer.update() — gated by LEARNING_ENABLED (default False).
                 # gt_action_index = analyst's actual chosen action when provided;
                 # falls back to predicted action_index only when analyst_action is absent.
@@ -1052,20 +1063,32 @@ async def report_decision_outcome(request: OutcomeRequest):
                         request.analyst_action
                         and request.analyst_action != action_name
                     )
-                    _snap.on_verified_decision(
-                        category=_cat_snap,
-                        was_override=_was_override,
-                        quality_signal=1.0 if correct_bool else 0.0,
-                    )
+                    try:
+                        _snap.on_verified_decision(
+                            category=_cat_snap,
+                            was_override=_was_override,
+                            quality_signal=1.0 if correct_bool else 0.0,
+                        )
+                    except Exception as _snap_exc:
+                        logger.warning(
+                            "[SNAPSHOT] verified_decisions increment failed: %s",
+                            _snap_exc,
+                        )
                     # Recompute IKS after centroid update (if centroid changed).
                     if wu and wu.centroid_update is not None:
-                        from app.services.gae_state import get_profile_scorer as _get_ps_snap
-                        from app.services.iks import compute_iks as _compute_iks_snap
-                        _ps_snap = _get_ps_snap()
-                        if _ps_snap is not None:
-                            _iks_result = _compute_iks_snap(_ps_snap.mu)
-                            _snap.on_iks_recalculated(
-                                float(_iks_result.get("current", 0.0))
+                        try:
+                            from app.services.gae_state import get_profile_scorer as _get_ps_snap
+                            from app.services.iks import compute_iks as _compute_iks_snap
+                            _ps_snap = _get_ps_snap()
+                            if _ps_snap is not None:
+                                _iks_result = _compute_iks_snap(_ps_snap.mu)
+                                _snap.on_iks_recalculated(
+                                    float(_iks_result.get("current", 0.0))
+                                )
+                        except Exception as _snap_exc:
+                            logger.warning(
+                                "[SNAPSHOT] IKS recalculation failed: %s",
+                                _snap_exc,
                             )
                 except Exception as _snap_exc:
                     logger.warning(
@@ -1337,13 +1360,13 @@ async def get_profile_state():
     # ProfileScorer uses A=4 only (SCORER_ACTIONS). Iterating range(5) on a
     # (6,4) array causes IndexError at index 4.
     n_cats, n_actions = scorer.counts.shape
-    decision_count = int(sum(
+    decision_count = int(sum(  # SOURCE: in-memory ProfileScorer counts (resets on restart)
         scorer.counts[c, a]
         for c in range(n_cats)
         for a in range(n_actions)
     ))
 
-    iks_result = compute_iks(scorer.mu)
+    iks_result = compute_iks(scorer.mu)  # SOURCE: computed from in-memory centroids (resets on restart)
     delta_7d = await _compute_delta_7d(iks_result["current"])
     trend = []  # populated lazily via /api/soc/profile/iks-trend if needed
 
@@ -1502,12 +1525,12 @@ async def get_graph_data(alert_id: str) -> Dict[str, Any]:
     MATCH (alert:Alert {alert_id: $alert_id})
     MATCH (alert)-[:DETECTED_ON]->(asset:Asset)
     MATCH (alert)-[:INVOLVES]->(user:User)
-    OPTIONAL MATCH (alert)-[:CLASSIFIED_AS]->(alertType:AlertType)
+    OPTIONAL MATCH (alert)-[:CLASSIFIED_AS]->(ap:AttackPattern)
     OPTIONAL MATCH (user)-[:HAS_TRAVEL]->(travel:TravelContext)
     OPTIONAL MATCH (alert)-[:MATCHES]->(pattern:AttackPattern)
-    OPTIONAL MATCH (alertType)-[:HANDLED_BY]->(playbook:Playbook)
+    OPTIONAL MATCH (ap)-[:HANDLED_BY]->(playbook:Playbook)
 
-    RETURN alert, asset, user, alertType, travel, pattern, playbook
+    RETURN alert, asset, user, ap, travel, pattern, playbook
     """
 
     try:
@@ -1614,7 +1637,7 @@ async def get_graph_data(alert_id: str) -> Dict[str, Any]:
         playbook = record.get("playbook")
         playbook_id = _node_id(playbook, "playbook") if playbook else "unknown"
         if playbook:
-            alertType = record.get("alertType")
+            ap = record.get("ap")
             nodes.append({
                 "id": playbook_id,
                 "label": playbook.get("name", playbook_id),
@@ -1623,9 +1646,9 @@ async def get_graph_data(alert_id: str) -> Dict[str, Any]:
                     "sla_minutes": playbook.get("sla_minutes")
                 }
             })
-            if alertType:
+            if ap:
                 relationships.append({
-                    "source": _node_id(alertType, "alert_type"),
+                    "source": _node_id(ap, "ap"),
                     "target": playbook_id,
                     "type": "HANDLED_BY"
                 })

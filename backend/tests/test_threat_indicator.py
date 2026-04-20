@@ -76,8 +76,8 @@ def test_upsert_creates_indicator():
 
     result_id = asyncio.run(
         ThreatIndicatorService.upsert_indicator(
-            ioc_type="domain",
-            ioc_value="microsofft-support.com",
+            indicator_type="domain",
+            indicator_value="microsofft-support.com",
             source="pulsedive",
             severity="high",
             name="DarkHook Phishing Campaign",
@@ -98,14 +98,14 @@ def test_upsert_idempotent():
 
     id_first  = asyncio.run(
         ThreatIndicatorService.upsert_indicator(
-            ioc_type="ip", ioc_value="10.0.3.15",
+            indicator_type="ip", indicator_value="10.0.3.15",
             source="greynoise", severity="critical",
             name="Known C2 IP", neo4j_service=neo4j,
         )
     )
     id_second = asyncio.run(
         ThreatIndicatorService.upsert_indicator(
-            ioc_type="ip", ioc_value="10.0.3.15",
+            indicator_type="ip", indicator_value="10.0.3.15",
             source="greynoise", severity="critical",
             name="Known C2 IP", neo4j_service=neo4j,
         )
@@ -139,11 +139,11 @@ def test_get_indicators_for_alert():
 def test_get_all_indicators():
     """get_all_indicators returns total, by_type, by_severity dicts."""
     rows = [
-        {**_SAMPLE_INDICATOR, "ioc_type": "domain", "severity": "high"},
-        {**_SAMPLE_INDICATOR, "id": "ti-002", "ioc_value": "evil.com",
-         "ioc_type": "domain", "severity": "critical"},
-        {**_SAMPLE_INDICATOR, "id": "ti-003", "ioc_value": "10.0.0.1",
-         "ioc_type": "ip", "severity": "high"},
+        {**_SAMPLE_INDICATOR, "indicator_type": "domain", "severity": "high"},
+        {**_SAMPLE_INDICATOR, "id": "ti-002", "indicator": "evil.com",
+         "indicator_type": "domain", "severity": "critical"},
+        {**_SAMPLE_INDICATOR, "id": "ti-003", "indicator": "10.0.0.1",
+         "indicator_type": "ip", "severity": "high"},
     ]
     neo4j = _query_neo4j(rows)
 

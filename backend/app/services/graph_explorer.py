@@ -32,7 +32,7 @@ PREBUILT_QUERIES = {
         "description": "Users with highest risk scores",
         "cypher": (
             "MATCH (u:User) "
-            "RETURN u.name AS name, u.department AS dept, u.risk_score AS risk "
+            "RETURN u.name AS name, u.department AS dept, u.risk_level AS risk "
             "ORDER BY risk DESC LIMIT 10"
         ),
     },
@@ -42,7 +42,7 @@ PREBUILT_QUERIES = {
         "cypher": (
             "MATCH (a:Asset) "
             "WHERE a.criticality IN ['critical', 'high'] "
-            "RETURN a.hostname AS hostname, a.type AS type, "
+            "RETURN a.hostname AS hostname, a.asset_type AS type, "
             "a.criticality AS criticality, a.business_unit AS unit"
         ),
     },
@@ -50,9 +50,9 @@ PREBUILT_QUERIES = {
         "name":        "Threat Intel Matches",
         "description": "Alerts with linked threat intelligence indicators",
         "cypher": (
-            "MATCH (ti:ThreatIndicator)-[:ASSOCIATED_WITH]->(a:Alert) "
-            "RETURN a.alert_id AS alert_id, ti.name AS indicator, "
-            "ti.severity AS severity, ti.ioc_type AS type "
+            "MATCH (a:Alert)-[:HAS_INDICATOR]->(ti:ThreatIndicator) "
+            "RETURN a.alert_id AS alert_id, ti.indicator AS indicator, "
+            "ti.severity AS severity, ti.indicator_type AS type "
             "ORDER BY ti.severity"
         ),
     },

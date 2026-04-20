@@ -234,34 +234,6 @@ class ExecutiveNarrative:
         )
 
 
-def build_executive_narrative(db_client) -> Dict:
-    """
-    F12: Build the executive narrative dict consumed by Tab 5.
-
-    Returns:
-        {
-          headline, what_changed, what_discovered, what_knows,
-          metrics, generated_at, pdf_available
-        }
-    """
-    en = ExecutiveNarrative(db_client)
-    metrics = en._get_metrics()
-    return {
-        'headline': en._generate_headline(),
-        'what_changed': en._what_changed(),
-        'what_discovered': en._what_discovered(),
-        'what_knows': en._what_system_knows(),
-        'metrics': metrics,
-        'generated_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
-        'pdf_available': True,
-    }
-
-
-# ============================================================================
-# Async version — queries Neo4j with correct field names and async API.
-# Called by the router; the sync class above is kept for unit-test compat.
-# ============================================================================
-
 async def build_executive_narrative_async(neo4j_service) -> Dict:
     """
     F12 async: queries Neo4j directly with the correct field names.

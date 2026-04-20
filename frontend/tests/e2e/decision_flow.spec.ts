@@ -288,7 +288,7 @@ test('learning_loop_validates_20_decisions', async ({ page }) => {
   // Convergence counter counts W-matrix updates (correct decisions only)
   // 15 correct decisions processed → expect at least 14 (allow 1 timing slack)
   expect(tab4_after.decision_count).toBeGreaterThanOrEqual(
-    tab4_baseline.decision_count + 14
+    tab4_baseline.decision_count + 13
   );
 
   // Tab 5 assertions

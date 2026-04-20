@@ -18,7 +18,6 @@ from app.services.gae_state import (
     get_profile_scorer,
     write_bootstrap_state,
     get_bootstrap_centroids,
-    WRITE_DEPLOYMENT_STATE,
     READ_DEPLOYMENT_STATE,
     _GAE_VERSION,
 )

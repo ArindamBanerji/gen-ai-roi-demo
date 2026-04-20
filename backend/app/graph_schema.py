@@ -105,6 +105,7 @@ GRAPH_CONTRACT = {
             "min_count": 15,
             "required_fields": ["asset_id", "hostname", "criticality",
                                 "origin", "asset_type"],
+            "optional_fields": ["type", "business_unit", "os", "owner_id"],
         },
         "Campaign": {
             "min_count": 3,
@@ -121,6 +122,13 @@ GRAPH_CONTRACT = {
             "min_count": 5,
             "required_fields": ["indicator", "indicator_type", "severity",
                                 "origin", "source"],
+            "optional_fields": [
+                "id",
+                "name",
+                "created_at_epoch",
+                "last_seen_epoch",
+                "risk_factors",
+            ],
         },
         "AttackPattern": {
             "min_count": 6,

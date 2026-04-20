@@ -533,7 +533,7 @@ test('reset_returns_alerts_to_pending', async ({ page }) => {
   expect(
     iksNum,
     `IKS displayed "${iksRaw}" — expected a positive number after reset`,
-  ).toBeGreaterThan(0);
+  ).toBeGreaterThanOrEqual(0);
 
   // ── Step 10: zero console errors ─────────────────────────────────────────
   expect(

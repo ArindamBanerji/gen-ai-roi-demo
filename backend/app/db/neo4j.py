@@ -58,15 +58,6 @@ class Neo4jClient:
             await self._driver.close()
             self._driver = None
 
-    @asynccontextmanager
-    async def session(self):
-        """Context manager for Neo4j sessions"""
-        if not self._driver:
-            await self.connect()
-
-        async with self._driver.session() as session:
-            yield session
-
     async def run_query(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Run a Cypher query and return results"""
         async with self.session() as session:
@@ -143,11 +134,11 @@ class Neo4jClient:
         return {
             "alert_id": alert_id,
             "alert_type": alert.get("alert_type"),
-            "user_id": user.get("id"),
+            "user_id": user.get("user_id"),
             "user_name": user.get("name"),
             "user_title": user.get("title"),
             "user_risk_score": user.get("risk_score", 0.0),
-            "asset_id": asset.get("id"),
+            "asset_id": asset.get("asset_id"),
             "asset_hostname": asset.get("hostname"),
             "asset_criticality": asset.get("criticality", "medium"),
             "user_traveling": travel is not None,
@@ -289,18 +280,6 @@ class Neo4jClient:
 
         return result[0]["event_id"] if result else event_id
 
-    async def get_recent_evolution_events(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get recent evolution events for display"""
-        query = """
-        MATCH (event:EvolutionEvent)
-        RETURN event
-        ORDER BY event.timestamp_epoch DESC
-        LIMIT $limit
-        """
-
-        results = await self.run_query(query, {"limit": limit})
-        return [record["event"] for record in results]
-
     # ========================================================================
     # Deployment Queries
     # ========================================================================
@@ -415,12 +394,6 @@ class Neo4jClient:
             return float(result.get("current", 0.0))
         except Exception:
             return 0.0
-
-    async def get_pattern_count(self) -> int:
-        """Get total learned pattern count"""
-        query = "MATCH (p:AttackPattern) RETURN count(p) as cnt"
-        result = await self.run_query(query)
-        return result[0]["cnt"] if result else 0
 
     async def get_alert(self, alert_id: str) -> Optional[Dict[str, Any]]:
         """Get alert by ID"""

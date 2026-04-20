@@ -5,7 +5,7 @@ Distinct from the legacy :ThreatIntel nodes (written by connectors/pulsedive.py)
 :ThreatIndicator nodes are managed exclusively by this service and support:
   - MERGE (idempotent upsert) with last_seen refresh
   - TTL cleanup (24h default)
-  - Alert linkage via [:ASSOCIATED_WITH]
+  - Alert linkage via [:HAS_INDICATOR]
   - Grouped summary (by_type, by_severity)
 
 CISO Q5 answer: "Why not Security Copilot?" → firm-specific threat graph + IOC count.
@@ -50,8 +50,8 @@ class ThreatIndicatorService:
 
     @staticmethod
     async def upsert_indicator(
-        ioc_type: str,
-        ioc_value: str,
+        indicator_type: str,
+        indicator_value: str,
         source: str,
         severity: str,
         name: str,
@@ -61,23 +61,23 @@ class ThreatIndicatorService:
 
         Returns the node ID (UUID).  Returns "" if the write fails.
         """
-        if not ioc_value:
+        if not indicator_value:
             log.warning(
-                "[THREAT-INDICATOR] upsert skipped: ioc_value is empty or None "
+                "[THREAT-INDICATOR] upsert skipped: indicator_value is empty or None "
                 "(source=%r, type=%r)",
-                source, ioc_type,
+                source, indicator_type,
             )
             return ""
         try:
             now_s  = _S(int(datetime.utcnow().timestamp() * 1000))
-            val_s  = _S(ioc_value)
-            type_s = _S(ioc_type)
+            val_s  = _S(indicator_value)
+            type_s = _S(indicator_type)
             src_s  = _S(source)
             sev_s  = _S(severity)
             name_s = _S(name)
             # Step A — try MATCH (update existing node)
             result = await neo4j_service.run_query(
-                f"MATCH (ti:ThreatIndicator {{ioc_value: {val_s}, ioc_type: {type_s}}})"
+                f"MATCH (ti:ThreatIndicator {{indicator: {val_s}, indicator_type: {type_s}}})"
                 f" SET ti.last_seen = {now_s},"
                 f"     ti.source = {src_s},"
                 f"     ti.severity = {sev_s}"
@@ -90,8 +90,8 @@ class ThreatIndicatorService:
             result = await neo4j_service.run_query(
                 f"CREATE (ti:ThreatIndicator {{"
                 f" id: {_S(node_id)},"
-                f" ioc_value: {val_s},"
-                f" ioc_type: {type_s},"
+                f" indicator: {val_s},"
+                f" indicator_type: {type_s},"
                 f" name: {name_s},"
                 f" source: {src_s},"
                 f" severity: {sev_s},"
@@ -102,46 +102,49 @@ class ThreatIndicatorService:
             return result[0]["id"] if result else node_id
         except Exception as exc:
             log.warning(
-                "[THREAT-INDICATOR] upsert failed ioc_value=%r: %s", ioc_value, exc
+                "[THREAT-INDICATOR] upsert failed indicator_value=%r: %s",
+                indicator_value, exc,
             )
             return ""
 
     @staticmethod
     async def link_to_alert(
-        ioc_value: str,
-        ioc_type: str,
+        indicator_value: str,
+        indicator_type: str,
         alert_id: str,
         neo4j_service: Any,
     ) -> None:
-        """Create [:ASSOCIATED_WITH] edge between ThreatIndicator and Alert."""
+        """Create [:HAS_INDICATOR] edge between Alert and ThreatIndicator."""
         try:
-            val_s  = _S(ioc_value)
-            type_s = _S(ioc_type)
+            val_s  = _S(indicator_value)
+            type_s = _S(indicator_type)
             aid_s  = _S(alert_id)
             edge_check = await neo4j_service.run_query(
-                f"MATCH (ti:ThreatIndicator {{ioc_value: {val_s}, ioc_type: {type_s}}})"
-                f"-[:ASSOCIATED_WITH]->(a:Alert {{alert_id: {aid_s}}}) RETURN ti"
+                f"MATCH (a:Alert {{alert_id: {aid_s}}})"
+                f"-[:HAS_INDICATOR]->(ti:ThreatIndicator {{indicator: {val_s}, indicator_type: {type_s}}}) RETURN ti"
             )
             if not edge_check:
                 await neo4j_service.run_query(
-                    f"MATCH (ti:ThreatIndicator {{ioc_value: {val_s}, ioc_type: {type_s}}})"
-                    f" MATCH (a:Alert {{alert_id: {aid_s}}})"
-                    f" CREATE (ti)-[:ASSOCIATED_WITH]->(a)"
+                    f"MATCH (a:Alert {{alert_id: {aid_s}}})"
+                    f" MATCH (ti:ThreatIndicator {{indicator: {val_s}, indicator_type: {type_s}}})"
+                    f" CREATE (a)-[:HAS_INDICATOR]->(ti)"
                 )
         except Exception as exc:
             log.warning(
-                "[THREAT-INDICATOR] link_to_alert failed ioc_value=%r alert=%r: %s",
-                ioc_value, alert_id, exc,
+                "[THREAT-INDICATOR] link_to_alert failed indicator_value=%r alert=%r: %s",
+                indicator_value, alert_id, exc,
             )
 
     @staticmethod
     async def get_indicators_for_alert(alert_id: str, neo4j_service: Any) -> list:
-        """Get all ThreatIndicators linked to an alert via [:ASSOCIATED_WITH]."""
+        """Get all ThreatIndicators linked to an alert via [:HAS_INDICATOR]."""
         try:
             result = await neo4j_service.run_query(
-                f"MATCH (ti:ThreatIndicator)-[:ASSOCIATED_WITH]->(a:Alert {{alert_id: {_S(alert_id)}}})"
-                f" RETURN ti.id AS id, ti.name AS name, ti.ioc_type AS ioc_type,"
-                f"        ti.ioc_value AS ioc_value, ti.source AS source,"
+                f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})"
+                f"-[:HAS_INDICATOR]->(ti:ThreatIndicator)"
+                f" RETURN ti.id AS id, ti.name AS name,"
+                f"        ti.indicator_type AS indicator_type,"
+                f"        ti.indicator AS indicator, ti.source AS source,"
                 f"        ti.severity AS severity, ti.last_seen AS last_seen"
             )
             return [dict(r) for r in result]
@@ -169,14 +172,14 @@ class ThreatIndicatorService:
             result = await neo4j_service.run_query(
                 """
                 MATCH (ti:ThreatIndicator)
-                RETURN ti.id         AS id,
-                       ti.name       AS name,
-                       ti.ioc_type   AS ioc_type,
-                       ti.ioc_value  AS ioc_value,
-                       ti.source     AS source,
-                       ti.severity   AS severity,
-                       ti.last_seen  AS last_seen,
-                       ti.created_at AS created_at
+                RETURN ti.id             AS id,
+                       ti.name           AS name,
+                       ti.indicator_type AS indicator_type,
+                       ti.indicator      AS indicator,
+                       ti.source         AS source,
+                       ti.severity       AS severity,
+                       ti.last_seen      AS last_seen,
+                       ti.created_at     AS created_at
                 ORDER BY ti.last_seen DESC
                 """,
             )
@@ -188,7 +191,7 @@ class ThreatIndicatorService:
         return {
             "total":       len(indicators),
             "indicators":  indicators,
-            "by_type":     _group_by(indicators, "ioc_type"),
+            "by_type":     _group_by(indicators, "indicator_type"),
             "by_severity": _group_by(indicators, "severity"),
         }
 
