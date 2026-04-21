@@ -170,7 +170,8 @@ class Neo4jClient:
         pattern_id: Optional[str],
         playbook_id: Optional[str],
         nodes_consulted: int,
-        context_snapshot: Dict[str, Any]
+        context_snapshot: Dict[str, Any],
+        entry_hash: Optional[str] = None,
     ) -> str:
         """
         Create a Decision node atomically with DECIDED_ON edge to Alert.
@@ -209,9 +210,10 @@ class Neo4jClient:
             f"    nodes_consulted:  {nodes_consulted},\n"
             f"    patterns_matched: {_S(_json.dumps(patterns_list))},\n"
             f"    user_snapshot:    {_S(user_snap)},\n"
-            f"    asset_snapshot:   {_S(asset_snap)}\n"
-            f"}})\n"
-            f"CREATE (d)-[:DECIDED_ON]->(a)"
+            f"    asset_snapshot:   {_S(asset_snap)}"
+            + (f",\n    entry_hash:       {_S(entry_hash)}" if entry_hash else "")
+            + "\n})\n"
+            "CREATE (d)-[:DECIDED_ON]->(a)"
         )
         await self.run_query(query)
 

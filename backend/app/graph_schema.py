@@ -94,7 +94,7 @@ GRAPH_CONTRACT = {
                 "verified_at_epoch", "override_comment",
                 "centroid_delta_norm", "pattern_id", "playbook_id",
                 "shadow_mode", "analyst_action", "agreement",
-                "triage_entropy", "triage_confidence_gap",
+                "triage_entropy", "triage_confidence_gap", "entry_hash",
             ],
         },
         "User": {

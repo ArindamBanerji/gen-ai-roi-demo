@@ -459,7 +459,7 @@ class SimulationOrchestrator:
             # triage.py so simulation decisions appear in the Evidence Ledger
             # (Tab 4 / GET /api/audit/decisions).
             # ------------------------------------------------------------------
-            audit_record_decision(
+            _sim_audit_rec = audit_record_decision(
                 alert_id           = alert_id,
                 situation_type     = situation_type,
                 action_taken       = scoring.selected_action,
@@ -469,6 +469,13 @@ class SimulationOrchestrator:
                 noise_zone         = "unknown",
                 conservation_status= "unknown",
             )
+            _sim_entry_hash = _sim_audit_rec.get("hash", "")
+            if _sim_entry_hash:
+                await neo4j_client.run_query(
+                    "MATCH (d:Decision {decision_id: $decision_id}) "
+                    "SET d.entry_hash = $entry_hash",
+                    {"decision_id": decision_id, "entry_hash": _sim_entry_hash},
+                )
 
             # ------------------------------------------------------------------
             # Step 13: Log structured experiment record

@@ -243,6 +243,18 @@ async def analyze_alert(request: ProcessAlertRequest):
         #                     timestamp: datetime(), outcome: null})
         # CREATE (d)-[:DECIDED_ON]->(a)
         # ====================================================================
+        _audit_rec_analyze = record_decision(
+            alert_id=alert_id,
+            situation_type=situation_analysis.situation_type,
+            action_taken=selected_action,
+            factors=[c.name for c in computers],
+            confidence=confidence,
+            kernel_type="unknown",
+            noise_zone="unknown",
+            conservation_status="unknown",
+        )
+        _entry_hash_analyze = _audit_rec_analyze.get("hash", "")
+
         decision_id = str(uuid.uuid4())
         await neo4j_client.run_query(
             """
@@ -258,7 +270,8 @@ async def analyze_alert(request: ProcessAlertRequest):
                 timestamp_epoch:       $timestamp_epoch,
                 outcome:               null,
                 triage_entropy:        $triage_entropy,
-                triage_confidence_gap: $triage_confidence_gap
+                triage_confidence_gap: $triage_confidence_gap,
+                entry_hash:            $entry_hash
             })
             CREATE (d)-[:DECIDED_ON]->(a)
             """,
@@ -274,6 +287,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                 "timestamp_epoch":       int(datetime.utcnow().timestamp() * 1000),
                 "triage_entropy":        triage_entropy,
                 "triage_confidence_gap": triage_confidence_gap,
+                "entry_hash":            _entry_hash_analyze,
             },
         )
         print(f"[GAE] Decision node written: id={decision_id} [:DECIDED_ON] {alert_id}")
@@ -680,7 +694,7 @@ async def execute_action(request: ProcessAlertRequest):
         # Record decision in the in-memory audit ledger (Evidence Ledger — Tab 4)
         # EU AI Act Art. 15 epistemic fields: supply "unknown" when not yet available
         # rather than None — documented absence is compliant; null is not (SOC-2).
-        record_decision(
+        _audit_rec_execute = record_decision(
             alert_id=alert_id,
             situation_type=situation_type_str,
             action_taken=decision.action,
@@ -690,6 +704,7 @@ async def execute_action(request: ProcessAlertRequest):
             noise_zone="unknown",
             conservation_status="unknown",
         )
+        _entry_hash_execute = _audit_rec_execute.get("hash", "")
 
         # ====================================================================
         # Step 1: EXECUTED - Take action in target system
@@ -726,7 +741,8 @@ async def execute_action(request: ProcessAlertRequest):
                 source_id:       $source_id,
                 user_id:         $user_id,
                 timestamp_epoch: $timestamp_epoch,
-                outcome:         null
+                outcome:         null,
+                entry_hash:      $entry_hash
             })
             CREATE (d)-[:DECIDED_ON]->(a)
             """,
@@ -740,6 +756,7 @@ async def execute_action(request: ProcessAlertRequest):
                 "source_id":       context.get("source_location", ""),
                 "user_id":         context.get("user_id", ""),
                 "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
+                "entry_hash":      _entry_hash_execute,
             },
         )
 

@@ -191,6 +191,19 @@ async def process_alert(request: ProcessAlertRequest):
         # Step 5: Write Decision Node to Neo4j (R4 — factor_vector stored in graph)
         # ====================================================================
 
+        from app.services.audit import record_decision as _audit_record_evo
+        _evo_audit_rec = _audit_record_evo(
+            alert_id=request.alert_id,
+            situation_type=situation_analysis.situation_type,
+            action_taken=selected_action,
+            factors=[c.name for c in computers],
+            confidence=confidence,
+            kernel_type="unknown",
+            noise_zone="unknown",
+            conservation_status="unknown",
+        )
+        _entry_hash_evo = _evo_audit_rec.get("hash", "")
+
         decision_id = f"DEC-{uuid.uuid4().hex[:4].upper()}"
 
         await neo4j_client.run_query(
@@ -207,7 +220,8 @@ async def process_alert(request: ProcessAlertRequest):
                 nodes_consulted: $nodes_consulted,
                 category:        $category,
                 timestamp_epoch: $timestamp_epoch,
-                outcome:         null
+                outcome:         null,
+                entry_hash:      $entry_hash
             })
             CREATE (d)-[:DECIDED_ON]->(a)
             """,
@@ -223,6 +237,7 @@ async def process_alert(request: ProcessAlertRequest):
                 "nodes_consulted": context.get("nodes_consulted", 47),
                 "category":        _cat_name,
                 "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
+                "entry_hash":      _entry_hash_evo,
             },
         )
         print(f"[GAE][TAB2] Decision node written: {decision_id} [:DECIDED_ON] {request.alert_id}")
