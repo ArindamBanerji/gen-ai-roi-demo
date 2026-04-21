@@ -41,6 +41,13 @@ async def auth_middleware(request: Request, call_next):
         return JSONResponse(
             status_code=e.status_code,
             content={"detail": e.detail})
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception(
+            "Auth middleware unexpected error")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"})
     return await call_next(request)
 
 

@@ -31,7 +31,15 @@ async def require_auth(request: Request) -> Optional[dict]:
     if not config.saml_enabled:
         return None
 
+    # Normalize path to prevent traversal bypass
+    from urllib.parse import unquote
     path = request.url.path
+    path = unquote(path)
+    # Collapse double slashes and resolve dot segments
+    while "//" in path:
+        path = path.replace("//", "/")
+    if "/.." in path or "/../" in path:
+        path = "/" + path.split("/")[-1]
     if any(path.startswith(p) for p in EXEMPT_PREFIXES):
         return None
 
