@@ -1256,16 +1256,16 @@ def test_centroid_evolution_returns_data():
 
 
 def test_centroid_drift_nonzero_at_high_decisions():
-    """Fallback computes non-zero drift when scorer.mu differs from mu_zero.
+    """Fallback computes non-zero drift when scorer.centroids differs from mu_zero.
 
     Unit test: patches Neo4j to raise (forcing the in-memory fallback),
-    and patches ProfileScorer + _load_mu_zero so mu ≠ mu_zero by a known
+    and patches ProfileScorer + _load_mu_zero so centroids ≠ mu_zero by a known
     amount.  Verifies the fallback correctly propagates non-zero drift into
     the centroid-evolution response.
     """
     import numpy as np
 
-    # Build a mock scorer whose mu differs from mu_zero by a known drift.
+    # Build a mock scorer whose centroids differ from mu_zero by a known drift.
     n_categories, n_actions, n_factors = 6, 4, 6
     mu_zero_val = np.zeros((n_categories, n_actions, n_factors), dtype=np.float64)
     # Shift category 0 action 0 by 0.10 in factor 0 — drift per category 0 ≈ 0.025
@@ -1273,7 +1273,7 @@ def test_centroid_drift_nonzero_at_high_decisions():
     mu_t_val[0, 0, 0] = 0.10
 
     mock_scorer = MagicMock()
-    mock_scorer.mu = mu_t_val
+    mock_scorer.centroids = mu_t_val
     mock_scorer.categories = [
         "credential_access", "lateral_movement", "malware_execution",
         "data_exfiltration", "privilege_escalation", "reconnaissance",
@@ -1306,5 +1306,5 @@ def test_centroid_drift_nonzero_at_high_decisions():
         for e in events if e
     ]
     assert max(drifts) > 0.001, (
-        f"Fallback drift values all ≈ 0 despite mu ≠ mu_zero: {drifts}"
+        f"Fallback drift values all ≈ 0 despite centroids ≠ mu_zero: {drifts}"
     )

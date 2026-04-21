@@ -41,7 +41,7 @@ async def _write_profile_snapshot(decision_count: int) -> None:
         from app.services.gae_state import get_profile_scorer
 
         scorer = get_profile_scorer()
-        mu_list = scorer.mu.tolist()   # shape (n_categories, n_actions, n_factors)
+        mu_list = scorer.centroids.tolist()   # shape (n_categories, n_actions, n_factors)
         counts_list = scorer.counts.tolist()
 
         await neo4j_client.run_query(
@@ -63,7 +63,7 @@ async def _write_profile_snapshot(decision_count: int) -> None:
         log.info(
             "[GAE] ProfileSnapshot written at decision_count=%d (mu shape=%s)",
             decision_count,
-            list(scorer.mu.shape),
+            list(scorer.centroids.shape),
         )
     except Exception as exc:
         log.warning("[GAE] ProfileSnapshot write failed at step=%d: %s", decision_count, exc)

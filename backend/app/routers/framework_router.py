@@ -149,10 +149,10 @@ async def get_centroid_evolution(
                 for c_idx, cat in enumerate(categories):
                     if category is not None and cat != category:
                         continue
-                    if c_idx >= scorer.mu.shape[0] or c_idx >= mu_zero.shape[0]:
+                    if c_idx >= scorer.centroids.shape[0] or c_idx >= mu_zero.shape[0]:
                         continue
                     # Mean L2 drift from μ₀ across all actions for this category
-                    diffs = scorer.mu[c_idx] - mu_zero[c_idx]   # shape (n_actions, n_factors)
+                    diffs = scorer.centroids[c_idx] - mu_zero[c_idx]   # shape (n_actions, n_factors)
                     drift = float(np.mean([np.linalg.norm(diffs[a]) for a in range(diffs.shape[0])]))
                     best_action = actions[0] if actions else "unknown"
                     result.append({

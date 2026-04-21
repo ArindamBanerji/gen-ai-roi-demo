@@ -615,8 +615,8 @@ async def get_detection_engineering():
     overall_quality = None
     try:
         scorer = get_profile_scorer()
-        baseline = SOC_PROFILE_CENTROIDS  # shape (6, 4, 6) — matches scorer.mu exactly
-        current = scorer.mu               # shape (6, 4, 6)
+        baseline = SOC_PROFILE_CENTROIDS  # shape (6, 4, 6) — matches scorer.centroids exactly
+        current = scorer.centroids        # shape (6, 4, 6)
 
         for i, cat in enumerate(SOC_CATEGORIES):
             drift = float(np.mean(np.abs(current[i] - baseline[i])))
@@ -2620,7 +2620,7 @@ async def _tab2_content() -> dict:
         from app.services.gae_state import get_profile_scorer as _get_ps
         _ps = _get_ps()
         if _ps is not None:
-            _drift_result = _compute_iks_drift(_ps.mu)
+            _drift_result = _compute_iks_drift(_ps.centroids)
             iks_score = _drift_result["current"]
             iks_interpretation = _interp_v2(iks_score)
     except Exception as _exc:
@@ -3055,7 +3055,7 @@ async def _tab5_content() -> dict:
         scorer = get_profile_scorer()
     except Exception:
         scorer = None
-    mu = scorer.mu if scorer is not None else None
+    mu = scorer.centroids if scorer is not None else None
     if mu is not None:
         shape = list(mu.shape)
         mu_mean = float(mu.mean())
@@ -3642,7 +3642,7 @@ async def get_centroid_heatmap():
     }
 
     # ── heatmap: category → action → {mean, factors} ───────────────────
-    mu = scorer.mu  # shape [n_cat, n_actions, n_factors]
+    mu = scorer.centroids  # shape [n_cat, n_actions, n_factors]
     n_cat    = min(len(_CATEGORIES), mu.shape[0])
     n_act    = min(len(_ACTIONS),    mu.shape[1])
     n_fac    = min(len(_FACTORS),    mu.shape[2])
@@ -3756,7 +3756,7 @@ async def get_centroid_support():
     if bootstrap is None or bootstrap.get("mu") is None:
         return _COLD_START
 
-    mu      = scorer.mu                                            # [C, A, D]
+    mu      = scorer.centroids                                     # [C, A, D]
     mu_zero = _np.array(bootstrap["mu"], dtype=_np.float64)
 
     # Shapes may differ if model was re-sized — use minimum shared dims

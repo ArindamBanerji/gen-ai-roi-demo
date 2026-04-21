@@ -122,7 +122,7 @@ def build_bootstrap_decisions(
         for i in range(n):
             action_idx  = i % n_actions
             action_name = actions[action_idx]
-            centroid    = scorer.mu[cat_idx, action_idx]  # shape (n_factors,)
+            centroid    = scorer.centroids[cat_idx, action_idx]  # shape (n_factors,)
 
             # Add small noise so records aren't all identical centroids;
             # clip to [0.0, 1.0] — factor values are bounded probabilities.

@@ -68,7 +68,7 @@ def build_judgment_response(
     judgment = compute_judgment(
         scoring_result=scoring_result,
         f=f,
-        mu=scorer.mu,
+        mu=scorer.centroids,
         category_index=category_index,
         factor_names=SOC_FACTORS,
         actions=scorer.actions,

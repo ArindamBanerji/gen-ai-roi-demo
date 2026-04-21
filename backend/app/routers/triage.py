@@ -1087,7 +1087,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                             from app.services.iks import compute_iks as _compute_iks_snap
                             _ps_snap = _get_ps_snap()
                             if _ps_snap is not None:
-                                _iks_result = _compute_iks_snap(_ps_snap.mu)
+                                _iks_result = _compute_iks_snap(_ps_snap.centroids)
                                 _snap.on_iks_recalculated(
                                     float(_iks_result.get("current", 0.0))
                                 )
@@ -1126,7 +1126,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                             await _log_dist(
                                 neo4j_client=neo4j_client,
                                 decision_id=request.decision_id,
-                                mu=_ps_dist.mu,
+                                mu=_ps_dist.centroids,
                                 mu_zero=_mu_zero,
                                 pattern_history_value=_ph_value,
                                 alert_category_distribution=_cat_dist,
@@ -1372,7 +1372,7 @@ async def get_profile_state():
         for a in range(n_actions)
     ))
 
-    iks_result = compute_iks(scorer.mu)  # SOURCE: computed from in-memory centroids (resets on restart)
+    iks_result = compute_iks(scorer.centroids)  # SOURCE: computed from in-memory centroids (resets on restart)
     delta_7d = await _compute_delta_7d(iks_result["current"])
     trend = []  # populated lazily via /api/soc/profile/iks-trend if needed
 
@@ -1407,7 +1407,7 @@ async def get_profile_state():
     return {
         "categories": SOC_CATEGORIES,
         "actions": SCORER_ACTIONS,         # A=4 — matches counts/centroids shape
-        "centroids": scorer.mu.tolist(),   # shape (6, 4, 6)
+        "centroids": scorer.centroids.tolist(),   # shape (6, 4, 6)
         "counts": scorer.counts.tolist(),  # shape (6, 4)
         "decision_count": decision_count,
         "iks": {

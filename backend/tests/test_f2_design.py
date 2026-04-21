@@ -34,13 +34,13 @@ def test_detection_engineering_endpoint_registered():
 # ============================================================================
 
 def test_quality_score_stable_at_baseline():
-    """Mock scorer.mu == SOC_PROFILE_CENTROIDS (zero drift).
+    """Mock scorer.centroids == SOC_PROFILE_CENTROIDS (zero drift).
     All category quality_scores must equal 1.0 and status == 'stable'."""
     from app.routers.soc import get_detection_engineering
     from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SOC_CATEGORIES
 
     mock_scorer = MagicMock()
-    mock_scorer.mu = SOC_PROFILE_CENTROIDS.copy()
+    mock_scorer.centroids = SOC_PROFILE_CENTROIDS.copy()
 
     async def _run():
         with patch("app.services.gae_state.get_profile_scorer", return_value=mock_scorer):
@@ -65,13 +65,13 @@ def test_quality_score_stable_at_baseline():
 # ============================================================================
 
 def test_quality_score_drifting():
-    """Mock scorer.mu = SOC_PROFILE_CENTROIDS + 0.10 (drift=0.10).
+    """Mock scorer.centroids = SOC_PROFILE_CENTROIDS + 0.10 (drift=0.10).
     All statuses must be 'drifting'."""
     from app.routers.soc import get_detection_engineering
     from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SOC_CATEGORIES
 
     mock_scorer = MagicMock()
-    mock_scorer.mu = SOC_PROFILE_CENTROIDS + 0.10
+    mock_scorer.centroids = SOC_PROFILE_CENTROIDS + 0.10
 
     async def _run():
         with patch("app.services.gae_state.get_profile_scorer", return_value=mock_scorer):
@@ -93,13 +93,13 @@ def test_quality_score_drifting():
 # ============================================================================
 
 def test_quality_score_diverged():
-    """Mock scorer.mu = SOC_PROFILE_CENTROIDS + 0.20 (drift=0.20).
+    """Mock scorer.centroids = SOC_PROFILE_CENTROIDS + 0.20 (drift=0.20).
     All statuses must be 'diverged'."""
     from app.routers.soc import get_detection_engineering
     from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SOC_CATEGORIES
 
     mock_scorer = MagicMock()
-    mock_scorer.mu = SOC_PROFILE_CENTROIDS + 0.20
+    mock_scorer.centroids = SOC_PROFILE_CENTROIDS + 0.20
 
     async def _run():
         with patch("app.services.gae_state.get_profile_scorer", return_value=mock_scorer):
@@ -127,7 +127,7 @@ def test_overall_quality_is_mean_of_categories():
     from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SOC_CATEGORIES
 
     mock_scorer = MagicMock()
-    mock_scorer.mu = SOC_PROFILE_CENTROIDS + 0.07  # asymmetric drift value
+    mock_scorer.centroids = SOC_PROFILE_CENTROIDS + 0.07  # asymmetric drift value
 
     async def _run():
         with patch("app.services.gae_state.get_profile_scorer", return_value=mock_scorer):
@@ -158,7 +158,7 @@ def test_noise_map_null_when_no_decisions():
     from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SOC_CATEGORIES
 
     mock_scorer = MagicMock()
-    mock_scorer.mu = SOC_PROFILE_CENTROIDS.copy()
+    mock_scorer.centroids = SOC_PROFILE_CENTROIDS.copy()
 
     async def _run():
         with patch("app.services.gae_state.get_profile_scorer", return_value=mock_scorer):
@@ -189,7 +189,7 @@ def test_noise_map_fp_rate_computed_correctly():
     from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SOC_CATEGORIES
 
     mock_scorer = MagicMock()
-    mock_scorer.mu = SOC_PROFILE_CENTROIDS.copy()
+    mock_scorer.centroids = SOC_PROFILE_CENTROIDS.copy()
 
     # credential_access is index 0 in SOC_CATEGORIES
     side_effects = (

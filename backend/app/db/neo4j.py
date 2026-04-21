@@ -390,7 +390,7 @@ class Neo4jClient:
             scorer = get_profile_scorer()
             if scorer is None:
                 return 0.0
-            result = _compute_iks(scorer.mu)
+            result = _compute_iks(scorer.centroids)
             return float(result.get("current", 0.0))
         except Exception:
             return 0.0

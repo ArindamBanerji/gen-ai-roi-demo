@@ -159,7 +159,7 @@ def init_learning_state() -> LearningState:
     if needs_bootstrap:
         # Persist μ₀ (pre-bootstrap centroid state) for IKS computation.
         try:
-            mu_zero = _profile_scorer.mu.copy()
+            mu_zero = _profile_scorer.centroids.copy()
             _MU_ZERO_PATH.parent.mkdir(parents=True, exist_ok=True)
             with open(_MU_ZERO_PATH, "w", encoding="utf-8") as _fh:
                 json.dump({"mu_zero": mu_zero.tolist()}, _fh)
@@ -301,11 +301,11 @@ def serialize_centroid_tensor(scorer) -> dict:
     import hashlib
     import time
 
-    mu = scorer.mu.tolist()
+    mu = scorer.centroids.tolist()
     step = getattr(scorer, "decision_count", 0)
     payload = {
         "mu":              mu,
-        "shape":           list(scorer.mu.shape),
+        "shape":           list(scorer.centroids.shape),
         "step":            step,
         "timestamp_epoch": int(time.time() * 1000),
         "version":         "1.0",
@@ -400,8 +400,8 @@ async def write_bootstrap_state(neo4j_client, scorer) -> dict:
     """
     import time as _time
     ts      = int(_time.time() * 1000)
-    mu_list = scorer.mu.tolist()
-    shape   = list(scorer.mu.shape)
+    mu_list = scorer.centroids.tolist()
+    shape   = list(scorer.centroids.shape)
 
     _mu_s    = _S(json.dumps(mu_list))
     _shape_s = _S(json.dumps(shape))
@@ -499,7 +499,7 @@ async def build_centroid_export(scorer, neo4j_client) -> dict:
     import time as _time
 
     bootstrap = await get_bootstrap_centroids(neo4j_client)
-    current_mu = scorer.mu.tolist()
+    current_mu = scorer.centroids.tolist()
 
     if bootstrap and bootstrap.get("mu") is not None:
         boot_arr = np.array(bootstrap["mu"], dtype=np.float64)
@@ -515,7 +515,7 @@ async def build_centroid_export(scorer, neo4j_client) -> dict:
         "export_version":       _EXPORT_VERSION,
         "generated_at_epoch":   int(_time.time() * 1000),
         "gae_version":          _EXPORT_GAE_VERSION,
-        "tensor_shape":         list(scorer.mu.shape),
+        "tensor_shape":         list(scorer.centroids.shape),
         "current_mu":           current_mu,
         "bootstrap_mu":         bootstrap["mu"] if bootstrap else None,
         "drift_from_bootstrap": drift,
@@ -554,7 +554,7 @@ def restore_centroid_from_backup(backup_id: str | None = None) -> dict:
         raise RuntimeError("ProfileScorer not attached — call init_learning_state() first")
 
     mu_array = np.array(payload["mu"], dtype=np.float64)
-    scorer.mu[:] = mu_array
+    scorer.centroids[:] = mu_array
     return payload
 
 

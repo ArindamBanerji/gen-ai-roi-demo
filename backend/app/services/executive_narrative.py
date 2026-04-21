@@ -307,7 +307,7 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
         from app.services.gae_state import get_profile_scorer as _get_ps_en
         _ps_en = _get_ps_en()
         if _ps_en is not None:
-            _drift_en = _compute_iks_drift_en(_ps_en.mu)
+            _drift_en = _compute_iks_drift_en(_ps_en.centroids)
             iks_current = float(_drift_en["current"])
     except Exception:
         pass
