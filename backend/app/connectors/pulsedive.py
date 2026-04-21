@@ -337,37 +337,31 @@ class PulsediveConnector(UCLConnector):
             try:
                 # Step A — update existing node
                 _match_result = await neo4j_client.run_query(
-                    """
-                    MATCH (ti:ThreatIntel {value: $value})
-                    SET ti.type         = $type,
-                        ti.severity     = $severity,
-                        ti.source       = $source,
-                        ti.risk_factors = $risk_factors,
-                        ti.first_seen   = $first_seen,
-                        ti.last_updated = $last_updated,
-                        ti.context      = $context,
-                        ti.refreshed_at = $now_epoch
-                    RETURN ti.value AS value
-                    """,
-                    _params,
+                    f"MATCH (ti:ThreatIntel {{value: {_S(_params['value'])}}}) "
+                    f"SET ti.type         = {_S(_params['type'])}, "
+                    f"    ti.severity     = {_S(_params['severity'])}, "
+                    f"    ti.source       = {_S(_params['source'])}, "
+                    f"    ti.risk_factors = {_S(_params['risk_factors'])}, "
+                    f"    ti.first_seen   = {_S(_params['first_seen'])}, "
+                    f"    ti.last_updated = {_S(_params['last_updated'])}, "
+                    f"    ti.context      = {_S(_params['context'])}, "
+                    f"    ti.refreshed_at = {_S(_params['now_epoch'])} "
+                    f"RETURN ti.value AS value"
                 )
                 if not _match_result:
                     # Step B — node does not exist yet; create it
                     await neo4j_client.run_query(
-                        """
-                        CREATE (ti:ThreatIntel {
-                            value:        $value,
-                            type:         $type,
-                            severity:     $severity,
-                            source:       $source,
-                            risk_factors: $risk_factors,
-                            first_seen:   $first_seen,
-                            last_updated: $last_updated,
-                            context:      $context,
-                            refreshed_at: $now_epoch
-                        })
-                        """,
-                        _params,
+                        f"CREATE (ti:ThreatIntel {{"
+                        f" value:        {_S(_params['value'])},"
+                        f" type:         {_S(_params['type'])},"
+                        f" severity:     {_S(_params['severity'])},"
+                        f" source:       {_S(_params['source'])},"
+                        f" risk_factors: {_S(_params['risk_factors'])},"
+                        f" first_seen:   {_S(_params['first_seen'])},"
+                        f" last_updated: {_S(_params['last_updated'])},"
+                        f" context:      {_S(_params['context'])},"
+                        f" refreshed_at: {_S(_params['now_epoch'])}"
+                        f"}})"
                     )
                 indicators_ingested += 1
             except Exception as exc:
