@@ -41,7 +41,7 @@ def test_learning_disabled_scorer_unchanged():
     from app.domains.soc.config import SOCDomainConfig
 
     scorer = _make_profile_scorer()
-    mu_before = scorer.mu.copy()
+    mu_before = scorer.centroids.copy()
 
     with patch.object(soc_cfg, "LEARNING_ENABLED", False):
         # Simulate what simulation.py Step 10 would call when LEARNING_ENABLED=False
@@ -55,7 +55,7 @@ def test_learning_disabled_scorer_unchanged():
             )
 
     np.testing.assert_array_equal(
-        scorer.mu, mu_before,
+        scorer.centroids, mu_before,
         err_msg="LEARNING_ENABLED=False must leave ProfileScorer centroids unchanged"
     )
 
@@ -71,7 +71,7 @@ def test_learning_enabled_scorer_updates():
     import app.domains.soc.config as soc_cfg
 
     scorer = _make_profile_scorer()
-    mu_before = scorer.mu.copy()
+    mu_before = scorer.centroids.copy()
 
     with patch.object(soc_cfg, "LEARNING_ENABLED", True):
         # Simulate what simulation.py Step 10 would call when LEARNING_ENABLED=True
@@ -84,7 +84,7 @@ def test_learning_enabled_scorer_updates():
                 gt_action_index=0,
             )
 
-    assert not np.array_equal(scorer.mu, mu_before), (
+    assert not np.array_equal(scorer.centroids, mu_before), (
         "LEARNING_ENABLED=True must cause ProfileScorer.update() to mutate centroids"
     )
 

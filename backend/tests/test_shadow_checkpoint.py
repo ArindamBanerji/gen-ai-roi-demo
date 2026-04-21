@@ -135,7 +135,7 @@ def test_checkpoint_rollback():
     scorer.unfreeze()  # ensure not frozen before rollback
 
     cp_id   = "test-cp-001"
-    mu_snap = scorer.mu.tolist()
+    mu_snap = scorer.centroids.tolist()
 
     async def fake_run_query(query, params=None):
         q = query.strip()

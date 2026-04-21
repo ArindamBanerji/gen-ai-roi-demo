@@ -161,8 +161,8 @@ def test_evaluation_does_not_modify_scorer():
     run_soc_evaluation(scorer, scenarios)
 
     np.testing.assert_array_equal(
-        scorer.mu, mu_original,
-        err_msg="scorer.mu was modified during evaluation (learn=False expected)"
+        scorer.centroids, mu_original,
+        err_msg="scorer.centroids was modified during evaluation (learn=False expected)"
     )
 
 

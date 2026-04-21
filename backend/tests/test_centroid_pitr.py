@@ -72,7 +72,7 @@ def test_serialize_produces_sha256():
     assert sha == expected, f"sha256 mismatch: stored={sha!r} computed={expected!r}"
 
     # shape matches actual mu
-    assert payload["shape"] == list(_SCORER.mu.shape)
+    assert payload["shape"] == list(_SCORER.centroids.shape)
     assert isinstance(payload["timestamp_epoch"], int)
     assert payload["timestamp_epoch"] > 0
 
@@ -113,18 +113,18 @@ def test_restore_from_backup(tmp_path):
     scorer = get_profile_scorer()
     with _temp_backup_dir(tmp_path):
         # Capture current mu and back it up
-        original_mu = scorer.mu.copy()
+        original_mu = scorer.centroids.copy()
         written = write_centroid_backup(scorer)
 
         # Corrupt live mu
-        scorer.mu[:] = 0.0
-        assert not np.allclose(scorer.mu, original_mu)
+        scorer.centroids[:] = 0.0
+        assert not np.allclose(scorer.centroids, original_mu)
 
         # Restore from backup — should put mu back to original_mu
         restored = restore_centroid_from_backup(written["backup_id"])
 
         # Verify inside context so _BACKUP_DIR patch is still active
-        assert np.allclose(scorer.mu, original_mu), "mu not restored correctly"
+        assert np.allclose(scorer.centroids, original_mu), "mu not restored correctly"
         assert restored["sha256"] == written["sha256"]
 
 

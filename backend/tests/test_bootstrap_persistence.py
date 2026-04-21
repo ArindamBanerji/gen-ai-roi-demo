@@ -73,7 +73,7 @@ def test_write_bootstrap_state_returns_payload():
     assert "bootstrap_stored_at" in result
     assert "gae_version" in result
     assert result["gae_version"] == _GAE_VERSION
-    assert result["bootstrap_shape"] == list(_SCORER.mu.shape)
+    assert result["bootstrap_shape"] == list(_SCORER.centroids.shape)
     assert isinstance(result["bootstrap_mu"], list)
     assert isinstance(result["bootstrap_stored_at"], int)
     assert result["bootstrap_stored_at"] > 0
@@ -85,8 +85,8 @@ def test_write_bootstrap_state_returns_payload():
 
 def test_get_bootstrap_centroids_returns_data():
     scorer = get_profile_scorer()
-    mu_list = scorer.mu.tolist()
-    shape = list(scorer.mu.shape)
+    mu_list = scorer.centroids.tolist()
+    shape = list(scorer.centroids.shape)
 
     mock_client = AsyncMock()
     mock_client.run_query.return_value = [{

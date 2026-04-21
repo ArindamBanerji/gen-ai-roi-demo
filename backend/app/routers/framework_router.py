@@ -487,6 +487,8 @@ async def checkpoint_create(request: CheckpointCreateRequest):
         scorer = get_profile_scorer()
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=f"Scorer not ready: {exc}")
+    if scorer is None:
+        raise HTTPException(status_code=503, detail="ProfileScorer not initialized")
 
     checkpoint_id = await CheckpointService.create_checkpoint(
         scorer=scorer,
@@ -517,6 +519,8 @@ async def checkpoint_rollback(request: RollbackRequest):
         scorer = get_profile_scorer()
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=f"Scorer not ready: {exc}")
+    if scorer is None:
+        raise HTTPException(status_code=503, detail="ProfileScorer not initialized")
 
     result = await CheckpointService.rollback(
         checkpoint_id=request.checkpoint_id,
@@ -540,6 +544,8 @@ async def scorer_freeze():
         scorer = get_profile_scorer()
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=f"Scorer not ready: {exc}")
+    if scorer is None:
+        raise HTTPException(status_code=503, detail="ProfileScorer not initialized")
     scorer.freeze()
     return {"frozen": True}
 
@@ -552,6 +558,8 @@ async def scorer_unfreeze():
         scorer = get_profile_scorer()
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=f"Scorer not ready: {exc}")
+    if scorer is None:
+        raise HTTPException(status_code=503, detail="ProfileScorer not initialized")
     scorer.unfreeze()
     return {"frozen": False}
 
@@ -741,6 +749,8 @@ def _get_intervention_controls():
     from app.services.composite_gate import CompositeDiscriminant
     from app.services.intervention_controls import InterventionControls
     scorer = get_profile_scorer()
+    if scorer is None:
+        raise RuntimeError("ProfileScorer not initialized")
     return InterventionControls(
         db_client=neo4j_client,
         scorer=scorer,

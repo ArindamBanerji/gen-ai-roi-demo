@@ -231,7 +231,7 @@ def test_scorer_profile_centroids_is_same_as_soc_profile_centroids():
 def test_detection_engineering_endpoint_no_shape_error():
     """
     GET /api/soc/detection-engineering must return 200 (no shape broadcast error).
-    A (6,5,6) vs (6,4,6) mismatch between SOC_PROFILE_CENTROIDS and scorer.mu
+    A (6,5,6) vs (6,4,6) mismatch between SOC_PROFILE_CENTROIDS and scorer.centroids
     caused this endpoint to crash with a 500 before the root-cause fix.
     """
     from fastapi.testclient import TestClient
@@ -241,7 +241,7 @@ def test_detection_engineering_endpoint_no_shape_error():
     resp = client.get("/api/soc/detection-engineering")
     assert resp.status_code == 200, (
         f"detection-engineering returned {resp.status_code}. "
-        f"Possible shape mismatch between SOC_PROFILE_CENTROIDS and scorer.mu. "
+        f"Possible shape mismatch between SOC_PROFILE_CENTROIDS and scorer.centroids. "
         f"Response: {resp.text[:500]}"
     )
 

@@ -32,7 +32,7 @@ def _run(coro):
 init_learning_state()
 _SCORER = get_profile_scorer()
 
-_BOOTSTRAP_MU = _SCORER.mu.tolist()   # use current mu as fake bootstrap
+_BOOTSTRAP_MU = _SCORER.centroids.tolist()   # use current mu as fake bootstrap
 
 
 def _neo4j_with_bootstrap(mu=None):
@@ -103,12 +103,12 @@ def test_drift_computed_when_bootstrap_present():
     scorer = get_profile_scorer()
 
     # Case A: bootstrap == current → drift should be 0.0
-    mock_same = _neo4j_with_bootstrap(scorer.mu.tolist())
+    mock_same = _neo4j_with_bootstrap(scorer.centroids.tolist())
     export_same = _run(build_centroid_export(scorer, mock_same))
     assert export_same["drift_from_bootstrap"] == pytest.approx(0.0, abs=1e-9)
 
     # Case B: bootstrap perturbed by +0.1 → drift ≈ 0.1
-    perturbed = (scorer.mu + 0.1).tolist()
+    perturbed = (scorer.centroids + 0.1).tolist()
     mock_perturbed = _neo4j_with_bootstrap(perturbed)
     export_perturbed = _run(build_centroid_export(scorer, mock_perturbed))
     assert export_perturbed["drift_from_bootstrap"] == pytest.approx(0.1, abs=1e-6)

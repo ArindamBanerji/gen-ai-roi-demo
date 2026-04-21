@@ -134,6 +134,8 @@ async def process_alert(request: ProcessAlertRequest):
         f = await compute_factor_vector(alert_data, computers, neo4j_client)
 
         _scorer = get_profile_scorer()
+        if _scorer is None:
+            raise HTTPException(status_code=503, detail="ProfileScorer not initialized")
         # CORR-1: resolve alert_type → category via explicit map (not direct equality)
         from app.domains.soc.config import resolve_alert_category, SOCDomainConfig as _SDC
         _cat_name = resolve_alert_category(context.get("alert_type") or "unknown")

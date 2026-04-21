@@ -54,7 +54,7 @@ def _fvec(value: float) -> np.ndarray:
 def test_correct_decisions_move_centroid_toward_action():
     """5 correct escalate decisions on credential_access must increase that centroid."""
     scorer = _make_scorer()
-    mu_before = scorer.mu[_CAT_IDX_CRED, _ACT_IDX_ESC, :].copy()
+    mu_before = scorer.centroids[_CAT_IDX_CRED, _ACT_IDX_ESC, :].copy()
 
     # f=1.0 → gradient = 1.0 - 0.5 = 0.5 (positive → centroid should rise)
     for _ in range(5):
@@ -65,7 +65,7 @@ def test_correct_decisions_move_centroid_toward_action():
             correct=True,
         )
 
-    mu_after = scorer.mu[_CAT_IDX_CRED, _ACT_IDX_ESC, :]
+    mu_after = scorer.centroids[_CAT_IDX_CRED, _ACT_IDX_ESC, :]
     delta = mu_after - mu_before
 
     assert np.all(delta > 0), (
@@ -91,7 +91,7 @@ def test_override_decisions_use_asymmetric_eta():
 
     # Scorer A: correct update
     scorer_a = _make_scorer()
-    mu_before_a = scorer_a.mu[_CAT_IDX_CRED, _ACT_IDX_ESC, :].copy()
+    mu_before_a = scorer_a.centroids[_CAT_IDX_CRED, _ACT_IDX_ESC, :].copy()
     scorer_a.update(
         f=_fvec(0.55),   # small gradient → below cap so raw ratio is preserved
         category_index=_CAT_IDX_CRED,
@@ -99,12 +99,12 @@ def test_override_decisions_use_asymmetric_eta():
         correct=True,
     )
     delta_correct = float(np.mean(np.abs(
-        scorer_a.mu[_CAT_IDX_CRED, _ACT_IDX_ESC, :] - mu_before_a
+        scorer_a.centroids[_CAT_IDX_CRED, _ACT_IDX_ESC, :] - mu_before_a
     )))
 
     # Scorer B: override update (correct=False, eta_override set)
     scorer_b = _make_scorer(eta_override=ETA_OVERRIDE)
-    mu_before_b = scorer_b.mu[_CAT_IDX_CRED, _ACT_IDX_ESC, :].copy()
+    mu_before_b = scorer_b.centroids[_CAT_IDX_CRED, _ACT_IDX_ESC, :].copy()
     import warnings
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -116,7 +116,7 @@ def test_override_decisions_use_asymmetric_eta():
             gt_action_index=None,
         )
     delta_override = float(np.mean(np.abs(
-        scorer_b.mu[_CAT_IDX_CRED, _ACT_IDX_ESC, :] - mu_before_b
+        scorer_b.centroids[_CAT_IDX_CRED, _ACT_IDX_ESC, :] - mu_before_b
     )))
 
     assert delta_correct > 0, "Correct update must move centroid"
@@ -141,7 +141,7 @@ def test_eta_cap_limits_single_update():
     Each coordinate must be capped at exactly MAX_ETA_DELTA = 0.005.
     """
     scorer = _make_scorer()
-    mu_before = scorer.mu[_CAT_IDX_CRED, _ACT_IDX_ESC, :].copy()
+    mu_before = scorer.centroids[_CAT_IDX_CRED, _ACT_IDX_ESC, :].copy()
 
     scorer.update(
         f=_fvec(1.0),
@@ -150,7 +150,7 @@ def test_eta_cap_limits_single_update():
         correct=True,
     )
 
-    delta = scorer.mu[_CAT_IDX_CRED, _ACT_IDX_ESC, :] - mu_before
+    delta = scorer.centroids[_CAT_IDX_CRED, _ACT_IDX_ESC, :] - mu_before
 
     np.testing.assert_allclose(
         delta,
@@ -179,11 +179,11 @@ def test_centroid_stays_in_bounds_after_many_updates():
             correct=True,
         )
 
-    assert np.all(scorer.mu >= 0.0), (
-        f"Centroid below 0.0 after 100 updates; min={scorer.mu.min():.6f}"
+    assert np.all(scorer.centroids >= 0.0), (
+        f"Centroid below 0.0 after 100 updates; min={scorer.centroids.min():.6f}"
     )
-    assert np.all(scorer.mu <= 1.0), (
-        f"Centroid above 1.0 after 100 updates; max={scorer.mu.max():.6f}"
+    assert np.all(scorer.centroids <= 1.0), (
+        f"Centroid above 1.0 after 100 updates; max={scorer.centroids.max():.6f}"
     )
 
 
@@ -204,7 +204,7 @@ def test_incorrect_decisions_do_not_update_centroid():
     scorer = _make_scorer()
     # Record centroid for an action that is NOT action_index=0 (escalate)
     uninvolved_act = 2  # suppress
-    mu_uninvolved_before = scorer.mu[_CAT_IDX_CRED, uninvolved_act, :].copy()
+    mu_uninvolved_before = scorer.centroids[_CAT_IDX_CRED, uninvolved_act, :].copy()
 
     import warnings
     with warnings.catch_warnings():
@@ -217,7 +217,7 @@ def test_incorrect_decisions_do_not_update_centroid():
             gt_action_index=None,
         )
 
-    mu_uninvolved_after = scorer.mu[_CAT_IDX_CRED, uninvolved_act, :]
+    mu_uninvolved_after = scorer.centroids[_CAT_IDX_CRED, uninvolved_act, :]
 
     np.testing.assert_array_equal(
         mu_uninvolved_after,

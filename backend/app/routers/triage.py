@@ -1001,19 +1001,20 @@ async def report_decision_outcome(request: OutcomeRequest):
                         _gt_idx  = action_index
                         _correct = correct_bool
 
-                    _ps_out.update(
-                        f=f.flatten(),
-                        category_index=_cat_idx_out,
-                        action_index=action_index,
-                        correct=_correct,
-                        gt_action_index=_gt_idx,
-                    )
-                    print(
-                        f"[GAE][LEARN] ProfileScorer.update called: "
-                        f"action={action_name} analyst_action={_analyst_action!r} "
-                        f"gt_action_index={_gt_idx} correct={_correct} "
-                        f"category={_cat_name_out}"
-                    )
+                    if _ps_out is not None:
+                        _ps_out.update(
+                            f=f.flatten(),
+                            category_index=_cat_idx_out,
+                            action_index=action_index,
+                            correct=_correct,
+                            gt_action_index=_gt_idx,
+                        )
+                        print(
+                            f"[GAE][LEARN] ProfileScorer.update called: "
+                            f"action={action_name} analyst_action={_analyst_action!r} "
+                            f"gt_action_index={_gt_idx} correct={_correct} "
+                            f"category={_cat_name_out}"
+                        )
 
                 # Change 5: ProfileSnapshot every 50 decisions
                 if wu is not None:

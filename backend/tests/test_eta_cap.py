@@ -58,11 +58,11 @@ def test_large_update_is_capped():
     0.025 > MAX_ETA_DELTA=0.005 → each coordinate must be capped at 0.005.
     """
     scorer = _make_scorer()
-    mu_before = scorer.mu[0, 0, :].copy()
+    mu_before = scorer.centroids[0, 0, :].copy()
 
     scorer.update(f=_fvec(1.0), category_index=0, action_index=0, correct=True)
 
-    actual_delta = scorer.mu[0, 0, :] - mu_before
+    actual_delta = scorer.centroids[0, 0, :] - mu_before
 
     assert np.all(np.abs(actual_delta) <= MAX_ETA_DELTA + 1e-9), (
         f"Delta exceeds cap: max|Δ|={np.max(np.abs(actual_delta)):.6f}, "
@@ -86,11 +86,11 @@ def test_small_update_passes_through():
     0.0025 < MAX_ETA_DELTA=0.005 → no cap; mu moves by exactly 0.0025.
     """
     scorer = _make_scorer()
-    mu_before = scorer.mu[0, 0, :].copy()
+    mu_before = scorer.centroids[0, 0, :].copy()
 
     scorer.update(f=_fvec(0.55), category_index=0, action_index=0, correct=True)
 
-    actual_delta = scorer.mu[0, 0, :] - mu_before
+    actual_delta = scorer.centroids[0, 0, :] - mu_before
     expected_delta = 0.05 * (0.55 - 0.5)   # = 0.0025
 
     assert expected_delta < MAX_ETA_DELTA, "Pre-condition: delta should be below cap"
@@ -112,8 +112,8 @@ def test_cap_applies_to_override_path():
     Capped at MAX_ETA_DELTA=0.005 on the override (correct=False, push-only) path.
     """
     scorer = _make_scorer(eta_override=0.05)
-    scorer.mu[:] = 0.5
-    mu_before = scorer.mu[0, 1, :].copy()
+    scorer.centroids[:] = 0.5
+    mu_before = scorer.centroids[0, 1, :].copy()
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", DeprecationWarning)
@@ -125,7 +125,7 @@ def test_cap_applies_to_override_path():
             gt_action_index=None,   # push-only backward-compat path
         )
 
-    actual_delta = scorer.mu[0, 1, :] - mu_before
+    actual_delta = scorer.centroids[0, 1, :] - mu_before
 
     assert np.all(np.abs(actual_delta) <= MAX_ETA_DELTA + 1e-9), (
         f"Override path delta exceeds cap: max|Δ|={np.max(np.abs(actual_delta)):.6f}"

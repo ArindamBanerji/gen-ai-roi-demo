@@ -408,28 +408,31 @@ async def write_bootstrap_state(neo4j_client, scorer) -> dict:
     _ts_s    = _S(ts)
     _ver_s   = _S(_GAE_VERSION)
 
-    existing = await neo4j_client.run_query(
-        "MATCH (ds:DeploymentState {id: 'current'}) RETURN ds"
-    )
-    if existing:
-        await neo4j_client.run_query(
-            f"MATCH (ds:DeploymentState {{id: 'current'}})"
-            f" SET ds.bootstrap_mu = {_mu_s},"
-            f"     ds.bootstrap_shape = {_shape_s},"
-            f"     ds.bootstrap_stored_at = {_ts_s},"
-            f"     ds.gae_version = {_ver_s}"
+    try:
+        existing = await neo4j_client.run_query(
+            "MATCH (ds:DeploymentState {id: 'current'}) RETURN ds"
         )
-    else:
-        await neo4j_client.run_query(
-            f"CREATE (ds:DeploymentState {{"
-            f" id: 'current',"
-            f" bootstrap_mu: {_mu_s},"
-            f" bootstrap_shape: {_shape_s},"
-            f" bootstrap_stored_at: {_ts_s},"
-            f" gae_version: {_ver_s}"
-            f"}})"
-        )
-    log.info("[GAE] DeploymentState written — shape=%s gae_version=%s", shape, _GAE_VERSION)
+        if existing:
+            await neo4j_client.run_query(
+                f"MATCH (ds:DeploymentState {{id: 'current'}})"
+                f" SET ds.bootstrap_mu = {_mu_s},"
+                f"     ds.bootstrap_shape = {_shape_s},"
+                f"     ds.bootstrap_stored_at = {_ts_s},"
+                f"     ds.gae_version = {_ver_s}"
+            )
+        else:
+            await neo4j_client.run_query(
+                f"CREATE (ds:DeploymentState {{"
+                f" id: 'current',"
+                f" bootstrap_mu: {_mu_s},"
+                f" bootstrap_shape: {_shape_s},"
+                f" bootstrap_stored_at: {_ts_s},"
+                f" gae_version: {_ver_s}"
+                f"}})"
+            )
+        log.info("[GAE] DeploymentState written — shape=%s gae_version=%s", shape, _GAE_VERSION)
+    except Exception as e:
+        log.warning("DeploymentState persist failed: %s", e)
     return {
         "bootstrap_mu":        mu_list,
         "bootstrap_shape":     shape,
