@@ -20,3 +20,7 @@ msal>=1.24.0
 
 # CORS
 python-multipart==0.0.9
+
+# Auth
+PyJWT>=2.8.0
+python3-saml>=1.16.0
