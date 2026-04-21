@@ -19,6 +19,11 @@ async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
 
   console.log(`[API] Response status: ${response.status} ${response.statusText}`)
 
+  if (response.status === 401) {
+    window.location.href = '/saml/login'
+    throw new Error('Unauthorized')
+  }
+
   if (!response.ok) {
     throw new Error(`API error: ${response.statusText}`)
   }
@@ -318,7 +323,5 @@ export async function verifyAuditChain() {
 }
 
 export async function getAccuracyTrajectory() {
-  const res = await fetch('/api/soc/accuracy-trajectory')
-  if (!res.ok) throw new Error('accuracy-trajectory fetch failed')
-  return res.json()
+  return fetchJSON('/soc/accuracy-trajectory')
 }
