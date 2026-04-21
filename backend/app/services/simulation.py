@@ -412,13 +412,15 @@ class SimulationOrchestrator:
                     _cat_name_sim = resolve_alert_category(category)
                     _cat_idx_sim  = _SDC_sim().get_category_index(_cat_name_sim)
                     _gt_idx_sim   = scorer_actions.index(ground_truth_action)
-                    get_profile_scorer().update(
-                        f=f_for_update.flatten(),
-                        category_index=_cat_idx_sim,
-                        action_index=action_index,
-                        correct=correct,
-                        gt_action_index=_gt_idx_sim,
-                    )
+                    _sim_scorer = get_profile_scorer()
+                    if _sim_scorer is not None:
+                        _sim_scorer.update(
+                            f=f_for_update.flatten(),
+                            category_index=_cat_idx_sim,
+                            action_index=action_index,
+                            correct=correct,
+                            gt_action_index=_gt_idx_sim,
+                        )
 
             # ------------------------------------------------------------------
             # Step 11: Emit OutcomeVerified + GraphMutated
