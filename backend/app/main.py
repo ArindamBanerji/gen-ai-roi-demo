@@ -4,8 +4,9 @@ Main application entry point with CORS and router registration.
 """
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,20 @@ app.add_middleware(
     allow_methods=["*"],  # Allow all HTTP methods
     allow_headers=["*"],  # Allow all headers
 )
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    from app.auth.dependencies import require_auth
+    try:
+        claims = await require_auth(request)
+        request.state.user = claims if claims else None
+    except HTTPException as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"detail": e.detail})
+    return await call_next(request)
+
 
 # Health check endpoint
 @app.get("/")
@@ -59,11 +74,24 @@ app.include_router(audit.router, prefix="/api", tags=["Audit Trail"])
 app.include_router(gae.router, prefix="/api", tags=["GAE Learning"])
 app.include_router(admin.router, prefix="/api", tags=["Admin"])
 app.include_router(simulation.router, prefix="/api", tags=["Simulation"])
+from app.routers.auth import router as auth_router
+app.include_router(auth_router)
 
 # Lifecycle events
 @app.on_event("startup")
 async def startup_event():
     """Initialize connections on startup"""
+    from app.auth.config import load_auth_config as _load_auth_config
+    _auth_cfg = _load_auth_config()
+    if _auth_cfg.saml_enabled:
+        _auth_errors = _auth_cfg.validate()
+        if _auth_errors:
+            print(f"[AUTH] SAML config invalid: {_auth_errors}")
+            raise SystemExit(1)
+        print(f"[AUTH] SAML enabled — IdP: {_auth_cfg.idp_entity_id}, SP: {_auth_cfg.sp_entity_id}")
+    else:
+        print("[AUTH] SAML disabled — all routes open")
+
     from app.db.neo4j import neo4j_client
     import os as _os
     import pathlib as _pathlib

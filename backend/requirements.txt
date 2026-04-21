@@ -1,3 +1,7 @@
+# Local dependency — editable install
+# Install with: pip install -e ../ci-platform
+-e ../ci-platform
+
 # Core
 fastapi==0.115.0
 uvicorn[standard]==0.31.0
