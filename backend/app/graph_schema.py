@@ -85,9 +85,10 @@ GRAPH_CONTRACT = {
         "Decision": {
             "min_count": 4860,
             "required_fields": ["decision_id", "category", "action",
-                                "factor_vector", "confidence", "correct",
-                                "outcome", "origin", "timestamp_epoch"],
+                                "factor_vector", "confidence",
+                                "outcome", "timestamp_epoch"],
             "optional_fields": [
+                "correct", "origin",
                 "source_id", "user_id", "reasoning", "alert_id",
                 "nodes_consulted", "patterns_matched", "user_snapshot",
                 "asset_snapshot", "campaign_id", "auto_approved",

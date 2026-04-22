@@ -119,13 +119,14 @@ async def analyze_alert(request: ProcessAlertRequest):
 
     # Guard: ProfileScorer must be attached before any scoring attempt
     from app.services.gae_state import get_profile_scorer as _get_scorer, init_learning_state as _init_ls
-    if _get_scorer() is None:
-        # Try to lazily initialize if startup didn't complete
+    _scorer = _get_scorer()
+    if _scorer is None:
         try:
             _init_ls()
+            _scorer = _get_scorer()
         except Exception:
             pass
-    if _get_scorer() is None:
+    if _scorer is None:
         raise HTTPException(
             status_code=503,
             detail="Scorer not ready — backend restarting or reset in progress"
@@ -176,7 +177,6 @@ async def analyze_alert(request: ProcessAlertRequest):
         tau     = SOCDomainConfig.get_temperature()  # τ=0.1 (V3B validated, ECE=0.036)
 
         # v5.0: ProfileScorer centroid-proximity scoring (EXP-E1 validated L2, τ=0.1)
-        _scorer = get_profile_scorer()
         _cfg = SOCDomainConfig()
         # CORR-1: resolve alert_type → category via explicit map (not direct equality)
         from app.domains.soc.config import resolve_alert_category
@@ -243,18 +243,6 @@ async def analyze_alert(request: ProcessAlertRequest):
         #                     timestamp: datetime(), outcome: null})
         # CREATE (d)-[:DECIDED_ON]->(a)
         # ====================================================================
-        _audit_rec_analyze = record_decision(
-            alert_id=alert_id,
-            situation_type=situation_analysis.situation_type,
-            action_taken=selected_action,
-            factors=[c.name for c in computers],
-            confidence=confidence,
-            kernel_type="unknown",
-            noise_zone="unknown",
-            conservation_status="unknown",
-        )
-        _entry_hash_analyze = _audit_rec_analyze.get("hash", "")
-
         decision_id = str(uuid.uuid4())
         await neo4j_client.run_query(
             """
@@ -270,8 +258,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                 timestamp_epoch:       $timestamp_epoch,
                 outcome:               null,
                 triage_entropy:        $triage_entropy,
-                triage_confidence_gap: $triage_confidence_gap,
-                entry_hash:            $entry_hash
+                triage_confidence_gap: $triage_confidence_gap
             })
             CREATE (d)-[:DECIDED_ON]->(a)
             """,
@@ -287,10 +274,27 @@ async def analyze_alert(request: ProcessAlertRequest):
                 "timestamp_epoch":       int(datetime.utcnow().timestamp() * 1000),
                 "triage_entropy":        triage_entropy,
                 "triage_confidence_gap": triage_confidence_gap,
-                "entry_hash":            _entry_hash_analyze,
             },
         )
         print(f"[GAE] Decision node written: id={decision_id} [:DECIDED_ON] {alert_id}")
+
+        _audit_rec_analyze = record_decision(
+            alert_id=alert_id,
+            situation_type=situation_analysis.situation_type,
+            action_taken=selected_action,
+            factors=[c.name for c in computers],
+            confidence=confidence,
+            kernel_type="unknown",
+            noise_zone="unknown",
+            conservation_status="unknown",
+        )
+        _entry_hash_analyze = _audit_rec_analyze.get("hash", "")
+        if _entry_hash_analyze:
+            await neo4j_client.run_query(
+                "MATCH (d:Decision {decision_id: $decision_id}) "
+                "SET d.entry_hash = $entry_hash",
+                {"decision_id": decision_id, "entry_hash": _entry_hash_analyze},
+            )
 
         # F4b: Record confidence snapshot for trajectory tracking
         # Placed AFTER successful graph write — prevents phantom entries on failure.
@@ -691,21 +695,6 @@ async def execute_action(request: ProcessAlertRequest):
         except Exception as exc:
             print(f"[EXECUTE] get_decision_factors failed for {alert_id}: {exc}")
 
-        # Record decision in the in-memory audit ledger (Evidence Ledger — Tab 4)
-        # EU AI Act Art. 15 epistemic fields: supply "unknown" when not yet available
-        # rather than None — documented absence is compliant; null is not (SOC-2).
-        _audit_rec_execute = record_decision(
-            alert_id=alert_id,
-            situation_type=situation_type_str,
-            action_taken=decision.action,
-            factors=factor_names,
-            confidence=decision.confidence,
-            kernel_type="unknown",
-            noise_zone="unknown",
-            conservation_status="unknown",
-        )
-        _entry_hash_execute = _audit_rec_execute.get("hash", "")
-
         # ====================================================================
         # Step 1: EXECUTED - Take action in target system
         # ====================================================================
@@ -741,8 +730,7 @@ async def execute_action(request: ProcessAlertRequest):
                 source_id:       $source_id,
                 user_id:         $user_id,
                 timestamp_epoch: $timestamp_epoch,
-                outcome:         null,
-                entry_hash:      $entry_hash
+                outcome:         null
             })
             CREATE (d)-[:DECIDED_ON]->(a)
             """,
@@ -756,9 +744,28 @@ async def execute_action(request: ProcessAlertRequest):
                 "source_id":       context.get("source_location", ""),
                 "user_id":         context.get("user_id", ""),
                 "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
-                "entry_hash":      _entry_hash_execute,
             },
         )
+
+        # Record decision in the in-memory audit ledger after graph write succeeds.
+        # EU AI Act Art. 15 epistemic fields: supply "unknown" when not yet available.
+        _audit_rec_execute = record_decision(
+            alert_id=alert_id,
+            situation_type=situation_type_str,
+            action_taken=decision.action,
+            factors=factor_names,
+            confidence=decision.confidence,
+            kernel_type="unknown",
+            noise_zone="unknown",
+            conservation_status="unknown",
+        )
+        _entry_hash_execute = _audit_rec_execute.get("hash", "")
+        if _entry_hash_execute:
+            await neo4j_client.run_query(
+                "MATCH (d:Decision {decision_id: $decision_id}) "
+                "SET d.entry_hash = $entry_hash",
+                {"decision_id": decision_id, "entry_hash": _entry_hash_execute},
+            )
 
         # Emit events — every graph write MUST emit events (TD-020)
         await event_bus.emit(DecisionMade(

@@ -20,7 +20,7 @@ EXEMPT_PREFIXES = (
 )
 
 ADMIN_PREFIXES = (
-    "/api/admin/", "/api/framework/", "/api/audit/",
+    "/api/admin", "/api/framework", "/api/audit",
 )
 
 
@@ -55,7 +55,7 @@ async def require_auth(request: Request) -> Optional[dict]:
             status_code=401,
             detail="Invalid or expired token")
 
-    if any(path.startswith(p) for p in ADMIN_PREFIXES):
+    if any(path == p or path.startswith(p + "/") for p in ADMIN_PREFIXES):
         if claims.get("role") != "admin":
             raise HTTPException(
                 status_code=403,

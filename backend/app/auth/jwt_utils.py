@@ -23,9 +23,16 @@ def create_jwt(user_email: str, role: str,
 
 def verify_jwt(token: str, config) -> Optional[dict]:
     try:
-        return jwt.decode(
+        payload = jwt.decode(
             token, config.jwt_secret,
             algorithms=[config.jwt_algorithm])
+        if not payload.get("sub"):
+            log.debug("JWT missing 'sub' claim")
+            return None
+        if "role" not in payload:
+            log.debug("JWT missing 'role' claim")
+            return None
+        return payload
     except jwt.ExpiredSignatureError:
         log.debug("JWT expired")
         return None
@@ -36,7 +43,11 @@ def verify_jwt(token: str, config) -> Optional[dict]:
 
 def derive_role(groups: List[str],
                 admin_groups: List[str]) -> str:
+    if not groups:
+        return "analyst"
     for g in groups:
-        if g.lower() in [ag.lower() for ag in admin_groups]:
+        if not isinstance(g, str):
+            continue
+        if g.lower() in [ag.lower() for ag in admin_groups if isinstance(ag, str)]:
             return "admin"
     return "analyst"

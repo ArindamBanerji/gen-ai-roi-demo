@@ -69,7 +69,13 @@ async def saml_acs(request: Request):
             detail=result.get("error",
                 "SAML validation failed"))
 
-    user_email = result.get("user_email", "unknown")
+    user_email = result.get("user_email", "")
+    if not user_email or user_email == "unknown":
+        log.warning("[AUTH] SAML validation succeeded but "
+                    "no user_email in response")
+        raise HTTPException(status_code=401,
+            detail="SAML response missing user identity")
+
     attributes = result.get("attributes", {})
     groups = (
         attributes.get("groups", []) or
@@ -80,6 +86,7 @@ async def saml_acs(request: Request):
         [])
     if isinstance(groups, str):
         groups = [groups]
+    groups = [g for g in groups if isinstance(g, str)]
 
     role = derive_role(groups, config.admin_groups)
     token = create_jwt(user_email, role, groups, config)
