@@ -97,6 +97,7 @@ GRAPH_CONTRACT = {
                 "shadow_mode", "analyst_action", "agreement",
                 "triage_entropy", "triage_confidence_gap", "entry_hash",
                 "decision_chain_index", "outcome_chain_index", "outcome_entry_hash",
+                "verified_by",
             ],
         },
         "User": {

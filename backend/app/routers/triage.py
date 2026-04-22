@@ -922,6 +922,13 @@ async def report_decision_outcome(request: OutcomeRequest):
         centroid_update_payload = None  # populated below if wu.centroid_update is present
         _resolved_category = ""  # BACKLOG-047: category for process_outcome()
 
+        # Per-analyst η: identity from SAML JWT "sub" claim; "anonymous" when auth is off
+        try:
+            analyst_id = (request.state.user or {}).get("sub", "anonymous")
+        except AttributeError:
+            analyst_id = "anonymous"
+        _analyst_eta = None  # populated below after quality lookup
+
         gae_result = await neo4j_client.run_query(
             """
             MATCH (d:Decision {decision_id: $decision_id})
@@ -929,7 +936,8 @@ async def report_decision_outcome(request: OutcomeRequest):
             SET d.outcome           = $outcome_label,
                 d.correct           = $correct,
                 d.verified_at_epoch = $verified_at_epoch,
-                d.override_comment  = $override_comment
+                d.override_comment  = $override_comment,
+                d.verified_by       = $analyst_id
             RETURN d.factor_vector AS factor_vector,
                    d.action        AS action,
                    d.confidence    AS confidence,
@@ -942,6 +950,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                 "correct":          correct_bool,
                 "verified_at_epoch": int(datetime.utcnow().timestamp() * 1000),
                 "override_comment": request.override_comment,
+                "analyst_id":       analyst_id,
             },
         )
 
@@ -963,6 +972,26 @@ async def report_decision_outcome(request: OutcomeRequest):
                 )
         except Exception as _e:
             logger.warning("[AUDIT] Outcome audit failed: %s", _e)
+
+        # Per-analyst η: query verified outcome history for this analyst
+        if analyst_id != "anonymous":
+            try:
+                _q_rows = await neo4j_client.run_query(
+                    f"MATCH (d:Decision) "
+                    f"WHERE d.verified_by = {_S(analyst_id)} AND d.correct IS NOT NULL "
+                    f"RETURN d.correct AS correct"
+                )
+                if len(_q_rows) >= 5:
+                    _total = len(_q_rows)
+                    _correct_cnt = sum(1 for r in _q_rows if r.get("correct") is True)
+                    from gae.calibration import compute_eta_override
+                    _analyst_eta = compute_eta_override(
+                        worst_case_quality=_correct_cnt / _total
+                    )
+                    logger.debug("[ETA] analyst=%s quality=%.2f eta=%.4f",
+                                 analyst_id, _correct_cnt / _total, _analyst_eta)
+            except Exception as _qe:
+                logger.debug("[ETA] Analyst quality query: %s", _qe)
 
         print(f"[GAE] Outcome lookup: decision_id={request.decision_id!r} -> {len(gae_result) if gae_result else 0} result(s)")
         if gae_result:
@@ -1048,6 +1077,9 @@ async def report_decision_outcome(request: OutcomeRequest):
                         _correct = correct_bool
 
                     if _ps_out is not None:
+                        _orig_eta_out = _ps_out.eta_override
+                        if _analyst_eta is not None:
+                            _ps_out.eta_override = _analyst_eta
                         _ps_out.update(
                             f=f.flatten(),
                             category_index=_cat_idx_out,
@@ -1055,11 +1087,13 @@ async def report_decision_outcome(request: OutcomeRequest):
                             correct=_correct,
                             gt_action_index=_gt_idx,
                         )
+                        if _analyst_eta is not None:
+                            _ps_out.eta_override = _orig_eta_out
                         print(
                             f"[GAE][LEARN] ProfileScorer.update called: "
                             f"action={action_name} analyst_action={_analyst_action!r} "
                             f"gt_action_index={_gt_idx} correct={_correct} "
-                            f"category={_cat_name_out}"
+                            f"category={_cat_name_out} eta={_analyst_eta or _orig_eta_out}"
                         )
 
                 # Change 5: ProfileSnapshot every 50 decisions
