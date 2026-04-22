@@ -1,6 +1,7 @@
 # Local dependency — editable install
-# Install with: pip install -e ../ci-platform
--e ../ci-platform
+# Install with: pip install -e ../ci-platform[graph]
+-e ../ci-platform[graph]
+-e ../graph-attention-engine-v50
 
 # Core
 fastapi==0.115.0

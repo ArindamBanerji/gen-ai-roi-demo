@@ -133,7 +133,7 @@ class CheckpointService:
         mu_str = cp.get("mu_snapshot") or "[]"
         try:
             mu_restored       = np.array(json.loads(mu_str), dtype=np.float64)
-            scorer.centroids[:] = mu_restored
+            scorer.centroids = mu_restored
         except Exception as exc:
             log.error("[CHECKPOINT] mu restore failed: %s", exc)
             return {"error": f"mu restore failed: {exc}"}

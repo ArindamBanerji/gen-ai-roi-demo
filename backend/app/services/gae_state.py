@@ -557,7 +557,7 @@ def restore_centroid_from_backup(backup_id: str | None = None) -> dict:
         raise RuntimeError("ProfileScorer not attached — call init_learning_state() first")
 
     mu_array = np.array(payload["mu"], dtype=np.float64)
-    scorer.centroids[:] = mu_array
+    scorer.centroids = mu_array
     return payload
 
 
