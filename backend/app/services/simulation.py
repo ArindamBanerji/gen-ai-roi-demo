@@ -27,6 +27,7 @@ from app.domains.soc.orchestrator import compute_factor_vector
 from app.services.audit import record_decision as audit_record_decision
 from app.services.event_bus import event_bus, DecisionMade, OutcomeVerified, GraphMutated
 from app.services.gae_state import get_learning_state, save_learning_state, get_profile_scorer
+from app.graph_schema import _S
 from gae.scoring import score_alert
 
 
@@ -483,10 +484,9 @@ class SimulationOrchestrator:
             _sim_chain_index = _sim_audit_rec.get("chain_index", -1)
             if _sim_entry_hash:
                 await neo4j_client.run_query(
-                    "MATCH (d:Decision {decision_id: $decision_id}) "
-                    "SET d.entry_hash = $entry_hash, "
-                    "d.decision_chain_index = $chain_index",
-                    {"decision_id": decision_id, "entry_hash": _sim_entry_hash, "chain_index": _sim_chain_index},
+                    f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
+                    f"SET d.entry_hash = {_S(_sim_entry_hash)}, "
+                    f"d.decision_chain_index = {_sim_chain_index}"
                 )
 
             # ------------------------------------------------------------------

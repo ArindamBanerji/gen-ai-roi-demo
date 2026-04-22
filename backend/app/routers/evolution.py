@@ -17,6 +17,7 @@ from app.services import evolver
 from app.services.event_bus import event_bus, DecisionMade, GraphMutated
 from app.services.gae_state import get_learning_state, save_learning_state, get_profile_scorer
 from app.db.neo4j import neo4j_client
+from app.graph_schema import _S
 from app.models.schemas import ProcessAlertRequest
 from app.domains.soc.config import SOCDomainConfig, SOC_CATEGORIES
 from app.domains.soc.orchestrator import compute_factor_vector
@@ -241,9 +242,8 @@ async def process_alert(request: ProcessAlertRequest):
         _entry_hash_evo = _evo_audit_rec.get("hash", "")
         if _entry_hash_evo:
             await neo4j_client.run_query(
-                "MATCH (d:Decision {decision_id: $decision_id}) "
-                "SET d.entry_hash = $entry_hash",
-                {"decision_id": decision_id, "entry_hash": _entry_hash_evo},
+                f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
+                f"SET d.entry_hash = {_S(_entry_hash_evo)}"
             )
 
         # ====================================================================
