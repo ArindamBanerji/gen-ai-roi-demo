@@ -289,11 +289,13 @@ async def analyze_alert(request: ProcessAlertRequest):
             conservation_status="unknown",
         )
         _entry_hash_analyze = _audit_rec_analyze.get("hash", "")
+        _chain_index_analyze = _audit_rec_analyze.get("chain_index", -1)
         if _entry_hash_analyze:
             await neo4j_client.run_query(
                 "MATCH (d:Decision {decision_id: $decision_id}) "
-                "SET d.entry_hash = $entry_hash",
-                {"decision_id": decision_id, "entry_hash": _entry_hash_analyze},
+                "SET d.entry_hash = $entry_hash, "
+                "d.decision_chain_index = $chain_index",
+                {"decision_id": decision_id, "entry_hash": _entry_hash_analyze, "chain_index": _chain_index_analyze},
             )
 
         # F4b: Record confidence snapshot for trajectory tracking
@@ -760,11 +762,13 @@ async def execute_action(request: ProcessAlertRequest):
             conservation_status="unknown",
         )
         _entry_hash_execute = _audit_rec_execute.get("hash", "")
+        _chain_index_execute = _audit_rec_execute.get("chain_index", -1)
         if _entry_hash_execute:
             await neo4j_client.run_query(
                 "MATCH (d:Decision {decision_id: $decision_id}) "
-                "SET d.entry_hash = $entry_hash",
-                {"decision_id": decision_id, "entry_hash": _entry_hash_execute},
+                "SET d.entry_hash = $entry_hash, "
+                "d.decision_chain_index = $chain_index",
+                {"decision_id": decision_id, "entry_hash": _entry_hash_execute, "chain_index": _chain_index_execute},
             )
 
         # Emit events — every graph write MUST emit events (TD-020)
@@ -941,6 +945,26 @@ async def report_decision_outcome(request: OutcomeRequest):
                 "override_comment": request.override_comment,
             },
         )
+
+        # Audit chain — record outcome as separate event
+        try:
+            from app.framework.audit import record_outcome as _audit_outcome
+            _outcome_rec = _audit_outcome(
+                decision_id=request.decision_id,
+                outcome=outcome_label,
+                analyst_override=(request.analyst_action is not None),
+            )
+            if _outcome_rec:
+                _oc_hash = _outcome_rec.get("hash", "")
+                _oc_idx = _outcome_rec.get("chain_index", -1)
+                await neo4j_client.run_query(
+                    "MATCH (d:Decision {decision_id: $decision_id}) "
+                    "SET d.outcome_entry_hash = $oc_hash, "
+                    "d.outcome_chain_index = $oc_idx",
+                    {"decision_id": request.decision_id, "oc_hash": _oc_hash, "oc_idx": _oc_idx},
+                )
+        except Exception as _e:
+            logger.warning("[AUDIT] Outcome audit failed: %s", _e)
 
         print(f"[GAE] Outcome lookup: decision_id={request.decision_id!r} -> {len(gae_result) if gae_result else 0} result(s)")
         if gae_result:

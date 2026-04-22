@@ -372,6 +372,16 @@ class SimulationOrchestrator:
                 },
             )
 
+            try:
+                from app.services.audit import record_outcome as _sim_outcome
+                _sim_outcome(
+                    decision_id=decision_id,
+                    outcome=outcome_str,
+                    analyst_override=False,
+                )
+            except Exception as _e:
+                print(f"[SIM-AUDIT] Outcome audit: {_e}")
+
             # Read f from graph result; fall back to locally-computed vector
             # (fallback is only taken for synthetic alerts with no Decision node)
             if gae_result and gae_result[0].get("factor_vector") is not None:
@@ -470,11 +480,13 @@ class SimulationOrchestrator:
                 conservation_status= "unknown",
             )
             _sim_entry_hash = _sim_audit_rec.get("hash", "")
+            _sim_chain_index = _sim_audit_rec.get("chain_index", -1)
             if _sim_entry_hash:
                 await neo4j_client.run_query(
                     "MATCH (d:Decision {decision_id: $decision_id}) "
-                    "SET d.entry_hash = $entry_hash",
-                    {"decision_id": decision_id, "entry_hash": _sim_entry_hash},
+                    "SET d.entry_hash = $entry_hash, "
+                    "d.decision_chain_index = $chain_index",
+                    {"decision_id": decision_id, "entry_hash": _sim_entry_hash, "chain_index": _sim_chain_index},
                 )
 
             # ------------------------------------------------------------------

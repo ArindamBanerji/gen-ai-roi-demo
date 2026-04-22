@@ -13,11 +13,14 @@ Two population paths (unchanged from before):
   2. reconstruct_from_memory() — reads FEEDBACK_GIVEN from feedback_store to
      back-fill records for decisions already made in the session
 """
+import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from ci_platform.audit.evidence_ledger import EvidenceLedger, LedgerEntry
+log = logging.getLogger(__name__)
+
+from ci_platform.audit.evidence_ledger import EvidenceLedger, LedgerEntry, OutcomeEntry
 
 
 # ── Module-level ledger (in-memory, demo-session scoped) ─────────────────────
@@ -82,10 +85,25 @@ def _entry_to_dict(entry: LedgerEntry) -> Dict[str, Any]:
         "outcome":             outcome_val,
         "analyst_confirmed":   entry.analyst_override,
         "hash":                entry.entry_hash,
+        "chain_index":         entry.chain_index,
         # EU AI Act Art. 15 epistemic fields from ci_platform LedgerEntry
         "kernel_type":         entry.kernel_type,
         "noise_zone":          entry.noise_zone,
         "conservation_status": entry.conservation_status,
+    }
+
+
+def _outcome_to_dict(entry: OutcomeEntry) -> Dict[str, Any]:
+    """Convert OutcomeEntry to API-friendly dict."""
+    return {
+        "type":                "outcome",
+        "decision_id":         entry.decision_id,
+        "decision_entry_hash": entry.decision_entry_hash,
+        "outcome":             entry.outcome,
+        "analyst_override":    entry.analyst_override,
+        "timestamp":           entry.timestamp,
+        "hash":                entry.entry_hash,
+        "chain_index":         entry.chain_index,
     }
 
 
@@ -126,27 +144,28 @@ def record_decision(
 
 
 def record_outcome(
-    alert_id: str,
+    decision_id: str,
     outcome: str,
-    analyst_notes: Optional[str] = None,  # noqa: ARG001 — reserved for future use
+    analyst_override: bool = False,
 ) -> Optional[Dict[str, Any]]:
-    """
-    Find the most-recent LedgerEntry for alert_id and update its outcome.
+    """Record a verified outcome as a separate chain entry."""
+    decision_entry = None
+    for e in _LEDGER.entries():
+        if isinstance(e, LedgerEntry) and e.decision_id == decision_id:
+            decision_entry = e
+            break
 
-    Mutates outcome and analyst_override; the entry_hash is NOT recomputed
-    (outcome is mutable by design — only the immutable decision-time fields
-    are included in the hash payload).
+    if decision_entry is None:
+        log.warning(f"[AUDIT] No decision entry for {decision_id}")
+        return None
 
-    Returns the updated record as a dict, or None if no record exists.
-    """
-    for entry in reversed(_LEDGER.entries()):
-        if entry.alert_id == alert_id:
-            entry.outcome = outcome
-            entry.analyst_override = True
-            print(f"[AUDIT] Updated outcome for {alert_id}: {outcome}")
-            return _entry_to_dict(entry)
-    print(f"[AUDIT] record_outcome: no record found for {alert_id}")
-    return None
+    entry = _LEDGER.append_outcome(
+        decision_id=decision_id,
+        decision_entry_hash=decision_entry.entry_hash,
+        outcome=outcome,
+        analyst_override=analyst_override,
+    )
+    return _outcome_to_dict(entry)
 
 
 def get_decisions() -> List[Dict[str, Any]]:
@@ -154,59 +173,68 @@ def get_decisions() -> List[Dict[str, Any]]:
     return [
         _entry_to_dict(e)
         for e in reversed(_LEDGER.entries())
-        if e.alert_id != "__RESET__"
+        if isinstance(e, LedgerEntry) and e.alert_id != "__RESET__"
     ]
 
 
+def get_decision_rows() -> List[Dict[str, Any]]:
+    """Project mixed chain into one-row-per-decision, most recent first."""
+    entries = _LEDGER.entries() if _LEDGER else []
+    # Build outcome lookup: decision_id → latest OutcomeEntry
+    outcomes: Dict[str, OutcomeEntry] = {}
+    for e in entries:
+        if isinstance(e, OutcomeEntry):
+            outcomes[e.decision_id] = e
+    # Build rows — one per decision, excluding RESET sentinels
+    rows = []
+    for e in entries:
+        if isinstance(e, LedgerEntry) and e.alert_id != "__RESET__":
+            row = _entry_to_dict(e)
+            oe = outcomes.get(e.decision_id)
+            if oe:
+                row["outcome"] = oe.outcome
+                row["analyst_confirmed"] = oe.analyst_override
+            rows.append(row)
+    return list(reversed(rows))
+
+
 def reconstruct_from_memory() -> int:
-    """
-    Back-fill the ledger from existing session state — specifically
-    FEEDBACK_GIVEN in feedback_store — without modifying those modules.
-
-    For each alert in FEEDBACK_GIVEN that is not yet in the ledger:
-      • Uses demo defaults (or generic defaults) for situation_type,
-        action_taken, factors, confidence.
-      • Sets outcome and analyst_override from the feedback entry.
-
-    For alerts already in the ledger but without an outcome, fills the
-    outcome from FEEDBACK_GIVEN if available (entry_hash is unchanged).
-
-    Returns the number of new records added.
-    """
+    """Reconstruct outcome events from FEEDBACK_GIVEN."""
     from app.framework.feedback_store import FEEDBACK_GIVEN  # noqa: PLC0415
 
-    existing_alert_ids = {e.alert_id for e in _LEDGER.entries()}
     added = 0
-
     for alert_id, fb in FEEDBACK_GIVEN.items():
-        if alert_id not in existing_alert_ids:
-            ctx = _ALERT_DEFAULTS.get(alert_id, _DEFAULT_CTX)
-            decision_id = str(uuid4())
-            ts = fb.get("timestamp", datetime.now(timezone.utc).isoformat())
-            _LEDGER.append(
-                decision_id=decision_id,
-                alert_id=alert_id,
-                factor_breakdown={f: 1.0 for f in ctx["factors"]},
-                action=ctx["action_taken"],
-                confidence=ctx["confidence"],
-                outcome=fb.get("outcome") or "pending",
+        did = fb.get("decision_id")
+        if not did:
+            continue
+        # Skip if outcome already recorded for this decision
+        has_outcome = any(
+            isinstance(e, OutcomeEntry) and e.decision_id == did
+            for e in _LEDGER.entries()
+        )
+        if has_outcome:
+            continue
+        # Find the decision entry
+        decision_entry = None
+        for e in _LEDGER.entries():
+            if isinstance(e, LedgerEntry) and e.decision_id == did:
+                decision_entry = e
+                break
+        if decision_entry is None:
+            continue
+        try:
+            _LEDGER.append_outcome(
+                decision_id=did,
+                decision_entry_hash=decision_entry.entry_hash,
+                outcome=fb.get("outcome", "pending"),
                 analyst_override=True,
-                centroid_state_hash="",
-                timestamp=ts,
+                timestamp=fb.get("timestamp"),
             )
-            _SITUATION_TYPES[decision_id] = ctx["situation_type"]
-            existing_alert_ids.add(alert_id)
             added += 1
-        else:
-            # Already have a record — back-fill outcome if missing
-            for entry in reversed(_LEDGER.entries()):
-                if entry.alert_id == alert_id and entry.outcome in ("pending", None):
-                    if fb.get("outcome"):
-                        entry.outcome = fb["outcome"]
-                        entry.analyst_override = True
-                    break
+        except ValueError:
+            pass  # hash mismatch — skip silently
 
-    print(f"[AUDIT] reconstruct_from_memory: +{added} new records ({len(_LEDGER)} total)")
+    print(f"[AUDIT] reconstruct_from_memory: +{added} outcome entries ({len(_LEDGER)} total)")
     return added
 
 

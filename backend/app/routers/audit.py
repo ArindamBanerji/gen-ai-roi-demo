@@ -15,7 +15,7 @@ import io
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
-from app.services.audit import reconstruct_from_memory, get_decisions, verify_chain
+from app.services.audit import reconstruct_from_memory, get_decisions, get_decision_rows, verify_chain
 
 
 router = APIRouter()
@@ -52,8 +52,8 @@ async def get_audit_decisions(format: str = "json"):
         # Back-fill from FEEDBACK_GIVEN before returning, so the ledger is
         # always current even if record_decision() was never called directly.
         added = reconstruct_from_memory()
-        decisions = get_decisions()
-        print(f"[AUDIT] {len(decisions)} records ({added} reconstructed this call)")
+        decisions = get_decision_rows()
+        print(f"[AUDIT] {len(decisions)} records ({added} outcome entries reconstructed this call)")
 
         # ================================================================
         # CSV export
