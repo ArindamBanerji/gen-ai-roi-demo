@@ -128,6 +128,22 @@ class GraphSnapshot:
         """Called after centroid update + IKS recalculation."""
         self.iks_score = new_iks
 
+    # Band thresholds: (min_count_inclusive, label) ordered high → low
+    _BAND_THRESHOLDS = [(500, "expert"), (200, "calibrating"), (50, "learning")]
+
+    def _band(self, count: int) -> str:
+        for threshold, label in self._BAND_THRESHOLDS:
+            if count >= threshold:
+                return label
+        return "novice"
+
+    def get_epistemic_state(self) -> Dict[str, Dict]:
+        """Per-category epistemic state: count + knowledge band."""
+        return {
+            cat: {"count": cnt, "band": self._band(cnt)}
+            for cat, cnt in self.category_counts.items()
+        }
+
     @staticmethod
     def _rolling_update(current: float, new_val: float, n: int) -> float:
         """Incremental mean. Numerically stable for large n."""

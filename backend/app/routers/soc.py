@@ -3972,3 +3972,38 @@ async def sentinel_writeback_test(req: _WritebackTestRequest):
         "campaign_id":      req.campaign_id,
         "connector_configured": connector.is_configured(),
     }
+
+
+# ============================================================================
+# GET /api/soc/epistemic-state — per-category knowledge band
+# ============================================================================
+
+@router.get("/soc/epistemic-state")
+async def get_epistemic_state():
+    """
+    Per-category epistemic state: verified decision count + knowledge band.
+
+    Band thresholds:
+        novice      < 50 verified decisions
+        learning    50–199
+        calibrating 200–499
+        expert      500+
+
+    Returns:
+        {
+          "categories": {
+            "<category>": {"count": int, "band": str},
+            ...
+          },
+          "total_verified": int
+        }
+    """
+    from app.state.graph_snapshot import get_snapshot
+    try:
+        snap = get_snapshot()
+    except RuntimeError:
+        return {"categories": {}, "total_verified": 0}
+    return {
+        "categories":     snap.get_epistemic_state(),
+        "total_verified": snap.verified_decisions,
+    }

@@ -66,3 +66,60 @@ def test_on_iks_recalculated():
     snap = GraphSnapshot(iks_score=70.0)
     snap.on_iks_recalculated(78.5)
     assert snap.iks_score == 78.5
+
+
+# ---------------------------------------------------------------------------
+# Epistemic state — band thresholds and get_epistemic_state()
+# ---------------------------------------------------------------------------
+
+def test_epistemic_band_novice():
+    snap = GraphSnapshot(category_counts={"lateral_movement": 10})
+    state = snap.get_epistemic_state()
+    assert state["lateral_movement"]["count"] == 10
+    assert state["lateral_movement"]["band"] == "novice"
+
+
+def test_epistemic_band_learning():
+    snap = GraphSnapshot(category_counts={"credential_access": 75})
+    assert snap.get_epistemic_state()["credential_access"]["band"] == "learning"
+
+
+def test_epistemic_band_calibrating():
+    snap = GraphSnapshot(category_counts={"malware_execution": 300})
+    assert snap.get_epistemic_state()["malware_execution"]["band"] == "calibrating"
+
+
+def test_epistemic_band_expert():
+    snap = GraphSnapshot(category_counts={"insider_threat": 600})
+    assert snap.get_epistemic_state()["insider_threat"]["band"] == "expert"
+
+
+def test_epistemic_boundary_50_is_learning():
+    snap = GraphSnapshot(category_counts={"cloud_infrastructure": 50})
+    assert snap.get_epistemic_state()["cloud_infrastructure"]["band"] == "learning"
+
+
+def test_epistemic_boundary_200_is_calibrating():
+    snap = GraphSnapshot(category_counts={"data_exfiltration": 200})
+    assert snap.get_epistemic_state()["data_exfiltration"]["band"] == "calibrating"
+
+
+def test_epistemic_boundary_500_is_expert():
+    snap = GraphSnapshot(category_counts={"lateral_movement": 500})
+    assert snap.get_epistemic_state()["lateral_movement"]["band"] == "expert"
+
+
+def test_epistemic_empty_categories():
+    snap = GraphSnapshot()
+    assert snap.get_epistemic_state() == {}
+
+
+def test_epistemic_multiple_categories():
+    snap = GraphSnapshot(category_counts={
+        "a": 10, "b": 100, "c": 250, "d": 700,
+    })
+    state = snap.get_epistemic_state()
+    assert state["a"]["band"] == "novice"
+    assert state["b"]["band"] == "learning"
+    assert state["c"]["band"] == "calibrating"
+    assert state["d"]["band"] == "expert"
