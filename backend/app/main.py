@@ -107,12 +107,15 @@ async def startup_event():
     # discover it automatically without manual configuration.
     _port = _os.getenv("PORT", "8001")
     _env_path = _pathlib.Path(__file__).parents[2] / ".env"
-    if _env_path.exists():
-        _lines = _env_path.read_text(encoding="utf-8").splitlines()
-        _lines = [l for l in _lines if not l.startswith("BACKEND_PORT=")]
-        _lines.append(f"BACKEND_PORT={_port}")
-        _env_path.write_text("\n".join(_lines) + "\n", encoding="utf-8")
-        print(f"[STARTUP] BACKEND_PORT={_port} written to .env")
+    try:
+        if _env_path.exists():
+            _lines = _env_path.read_text(encoding="utf-8").splitlines()
+            _lines = [l for l in _lines if not l.startswith("BACKEND_PORT=")]
+            _lines.append(f"BACKEND_PORT={_port}")
+            _env_path.write_text("\n".join(_lines) + "\n", encoding="utf-8")
+            print(f"[STARTUP] BACKEND_PORT={_port} written to .env")
+    except (OSError, PermissionError) as e:
+        log.warning(f"[STARTUP] Cannot write .env: {e}")
 
     _backend = _os.getenv("GRAPH_BACKEND", "neo4j").lower()
 

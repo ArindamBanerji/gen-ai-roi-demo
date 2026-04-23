@@ -485,7 +485,12 @@ export default function RuntimeEvolutionTab() {
 
   const loadGraphStats = async () => {
     try {
-      const data = await fetch('/api/soc/graph-stats').then(r => r.json())
+      const resp = await fetch('/api/soc/graph-stats')
+      if (!resp.ok) {
+        if (resp.status === 401) window.location.href = '/saml/login'
+        return
+      }
+      const data = await resp.json()
       setGraphStats(data as GraphStats)
     } catch (error) {
       console.error('Failed to load graph stats:', error)

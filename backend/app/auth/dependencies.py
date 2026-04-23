@@ -24,10 +24,13 @@ ADMIN_PREFIXES = (
 )
 
 MUTATION_PATHS = (
-    "/api/soc/shadow/",
-    "/api/soc/checkpoint/",
-    "/api/soc/scorer/",
-    "/api/soc/interventions/",
+    "/api/soc/checkpoint/rollback",
+    "/api/soc/scorer/freeze",
+    "/api/soc/scorer/unfreeze",
+    "/api/soc/interventions/rollback",
+    "/api/soc/interventions/threshold",
+    "/api/soc/reset",
+    "/api/admin/reset",
 )
 
 
@@ -68,10 +71,10 @@ async def require_auth(request: Request) -> Optional[dict]:
                 status_code=403,
                 detail="Admin access required")
 
-    if any(path.startswith(mp) for mp in MUTATION_PATHS):
+    if any(path == p or path.startswith(p + "/") for p in MUTATION_PATHS):
         if claims.get("role") != "admin":
             raise HTTPException(
                 status_code=403,
-                detail="Admin access required for framework mutations")
+                detail="Admin access required for mutation")
 
     return claims

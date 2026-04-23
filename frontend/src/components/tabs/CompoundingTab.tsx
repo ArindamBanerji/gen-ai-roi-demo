@@ -385,7 +385,12 @@ export default function CompoundingTab() {
   // H7-FIX-4: load real decision economics from Neo4j
   const loadDecisionEconomics = async () => {
     try {
-      const d = await fetch('/api/metrics/decision-economics').then(r => r.json())
+      const resp = await fetch('/api/metrics/decision-economics')
+      if (!resp.ok) {
+        if (resp.status === 401) window.location.href = '/saml/login'
+        return
+      }
+      const d = await resp.json()
       setDecisionEconomics(d as DecisionEconomics)
     } catch (e) { console.error('[CompoundingTab] Failed to load decision economics:', e) }
   }
@@ -394,7 +399,12 @@ export default function CompoundingTab() {
   // F4-OVERLAY: load operational metrics
   const loadOperationalMetrics = async () => {
     try {
-      const d = await fetch('/api/soc/operational-metrics').then(r => r.json())
+      const resp = await fetch('/api/soc/operational-metrics')
+      if (!resp.ok) {
+        if (resp.status === 401) window.location.href = '/saml/login'
+        return
+      }
+      const d = await resp.json()
       setOperationalMetrics(d as OperationalMetrics)
     } catch (e) { console.error('[CompoundingTab] Failed to load operational metrics:', e) }
   }
@@ -403,7 +413,12 @@ export default function CompoundingTab() {
   // F4-OVERLAY: board export download
   const handleBoardExport = async () => {
     try {
-      const d = await fetch('/api/soc/board-export').then(r => r.json())
+      const resp = await fetch('/api/soc/board-export')
+      if (!resp.ok) {
+        if (resp.status === 401) window.location.href = '/saml/login'
+        return
+      }
+      const d = await resp.json()
       const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -418,7 +433,12 @@ export default function CompoundingTab() {
   // ECON-1: load economics data
   const loadEconomicsData = async () => {
     try {
-      const d = await fetch('/api/soc/economics').then(r => r.json())
+      const resp = await fetch('/api/soc/economics')
+      if (!resp.ok) {
+        if (resp.status === 401) window.location.href = '/saml/login'
+        return
+      }
+      const d = await resp.json()
       setEconomicsData(d as EconomicsData)
     } catch (e) { console.error('[CompoundingTab] Failed to load economics data:', e) }
   }
