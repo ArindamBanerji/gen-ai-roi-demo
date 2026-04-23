@@ -13,6 +13,7 @@ Design:
 Reference: docs/soc_copilot_design_v1.md §14.
 """
 
+import asyncio
 import json
 import logging
 from pathlib import Path
@@ -29,6 +30,12 @@ from app.domains.soc.config import (
 import app.framework.learning_state as _fw
 
 log = logging.getLogger(__name__)
+
+_scorer_lock = asyncio.Lock()
+
+
+def get_scorer_lock() -> asyncio.Lock:
+    return _scorer_lock
 
 
 def _S(val) -> str:

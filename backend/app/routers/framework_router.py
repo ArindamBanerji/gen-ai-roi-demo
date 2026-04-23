@@ -539,28 +539,30 @@ async def checkpoint_rollback(request: RollbackRequest):
 @router.post("/soc/scorer/freeze")
 async def scorer_freeze():
     """Freeze the ProfileScorer — stops centroid updates."""
-    from app.services.gae_state import get_profile_scorer
+    from app.services.gae_state import get_profile_scorer, get_scorer_lock
     try:
         scorer = get_profile_scorer()
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=f"Scorer not ready: {exc}")
     if scorer is None:
         raise HTTPException(status_code=503, detail="ProfileScorer not initialized")
-    scorer.freeze()
+    async with get_scorer_lock():
+        scorer.freeze()
     return {"frozen": True}
 
 
 @router.post("/soc/scorer/unfreeze")
 async def scorer_unfreeze():
     """Unfreeze the ProfileScorer — re-enables centroid updates."""
-    from app.services.gae_state import get_profile_scorer
+    from app.services.gae_state import get_profile_scorer, get_scorer_lock
     try:
         scorer = get_profile_scorer()
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=f"Scorer not ready: {exc}")
     if scorer is None:
         raise HTTPException(status_code=503, detail="ProfileScorer not initialized")
-    scorer.unfreeze()
+    async with get_scorer_lock():
+        scorer.unfreeze()
     return {"frozen": False}
 
 

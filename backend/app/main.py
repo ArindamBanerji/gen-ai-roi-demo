@@ -21,13 +21,18 @@ app = FastAPI(
     version="5.0.0",
 )
 
-# CORS configuration (allow all for demo/ngrok)
+import os as _cors_os
+_allowed_origins = _cors_os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173,http://localhost:8001",
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for demo purposes
+    allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 

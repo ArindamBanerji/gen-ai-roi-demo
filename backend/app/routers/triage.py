@@ -1046,19 +1046,21 @@ async def report_decision_outcome(request: OutcomeRequest):
                         _correct = correct_bool
 
                     if _ps_out is not None:
-                        _orig_eta_out = _ps_out.eta_override
-                        try:
-                            if _analyst_eta is not None:
-                                _ps_out.eta_override = _analyst_eta
-                            _ps_out.update(
-                                f=f.flatten(),
-                                category_index=_cat_idx_out,
-                                action_index=action_index,
-                                correct=_correct,
-                                gt_action_index=_gt_idx,
-                            )
-                        finally:
-                            _ps_out.eta_override = _orig_eta_out
+                        from app.services.gae_state import get_scorer_lock
+                        async with get_scorer_lock():
+                            _orig_eta_out = _ps_out.eta_override
+                            try:
+                                if _analyst_eta is not None:
+                                    _ps_out.eta_override = _analyst_eta
+                                _ps_out.update(
+                                    f=f.flatten(),
+                                    category_index=_cat_idx_out,
+                                    action_index=action_index,
+                                    correct=_correct,
+                                    gt_action_index=_gt_idx,
+                                )
+                            finally:
+                                _ps_out.eta_override = _orig_eta_out
                         print(
                             f"[GAE][LEARN] ProfileScorer.update called: "
                             f"action={action_name} analyst_action={_analyst_action!r} "
