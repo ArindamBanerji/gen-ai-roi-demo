@@ -245,37 +245,25 @@ async def analyze_alert(request: ProcessAlertRequest):
         # CREATE (d)-[:DECIDED_ON]->(a)
         # ====================================================================
         decision_id = str(uuid.uuid4())
+        _ts_analyze = int(datetime.utcnow().timestamp() * 1000)
         await neo4j_client.run_query(
-            """
-            MATCH (a:Alert {alert_id: $alert_id})
-            CREATE (d:Decision {
-                decision_id:           $decision_id,
-                action:                $action,
-                confidence:            $confidence,
-                factor_vector:         $fv,
-                category:              $category,
-                source_id:             $source_id,
-                user_id:               $user_id,
-                timestamp_epoch:       $timestamp_epoch,
+            f"""
+            MATCH (a:Alert {{alert_id: {_S(alert_id)}}})
+            CREATE (d:Decision {{
+                decision_id:           {_S(decision_id)},
+                action:                {_S(selected_action)},
+                confidence:            {confidence},
+                factor_vector:         {_S(json.dumps(fv_list))},
+                category:              {_S(alert_category)},
+                source_id:             {_S(alert_data.get("source_location", ""))},
+                user_id:               {_S(context.get("user_id", ""))},
+                timestamp_epoch:       {_ts_analyze},
                 outcome:               null,
-                triage_entropy:        $triage_entropy,
-                triage_confidence_gap: $triage_confidence_gap
-            })
+                triage_entropy:        {triage_entropy},
+                triage_confidence_gap: {triage_confidence_gap}
+            }})
             CREATE (d)-[:DECIDED_ON]->(a)
-            """,
-            {
-                "alert_id":              alert_id,
-                "decision_id":           decision_id,
-                "action":                selected_action,
-                "confidence":            confidence,
-                "fv":                    fv_list,
-                "category":              alert_category,
-                "source_id":             alert_data.get("source_location", ""),
-                "user_id":               context.get("user_id", ""),
-                "timestamp_epoch":       int(datetime.utcnow().timestamp() * 1000),
-                "triage_entropy":        triage_entropy,
-                "triage_confidence_gap": triage_confidence_gap,
-            },
+            """
         )
         print(f"[GAE] Decision node written: id={decision_id} [:DECIDED_ON] {alert_id}")
 
@@ -323,9 +311,8 @@ async def analyze_alert(request: ProcessAlertRequest):
             _campaign_id = await _camp_matcher.check_alert(alert_id)
             if _campaign_id:
                 await neo4j_client.run_query(
-                    "MATCH (d:Decision {decision_id: $decision_id}) "
-                    "SET d.campaign_id = $campaign_id",
-                    {"decision_id": decision_id, "campaign_id": _campaign_id},
+                    f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
+                    f"SET d.campaign_id = {_S(_campaign_id)}"
                 )
         except Exception as _camp_exc:
             logger.warning("[TRIAGE] Campaign wiring failed for %s: %s", alert_id, _camp_exc)
@@ -720,33 +707,23 @@ async def execute_action(request: ProcessAlertRequest):
         # Atomic MATCH+CREATE: Decision node linked to Alert via DECIDED_ON.
         # Replaces create_decision_trace() which used FOR_ALERT (wrong schema)
         # and had a signature mismatch (category kwarg) that caused TypeError.
+        _ts_execute = int(datetime.utcnow().timestamp() * 1000)
         await neo4j_client.run_query(
-            """
-            MATCH (a:Alert {alert_id: $alert_id})
-            CREATE (d:Decision {
-                decision_id:     $decision_id,
-                action:          $action,
-                confidence:      $confidence,
-                factor_vector:   $fv,
-                category:        $category,
-                source_id:       $source_id,
-                user_id:         $user_id,
-                timestamp_epoch: $timestamp_epoch,
+            f"""
+            MATCH (a:Alert {{alert_id: {_S(alert_id)}}})
+            CREATE (d:Decision {{
+                decision_id:     {_S(decision_id)},
+                action:          {_S(decision.action)},
+                confidence:      {decision.confidence},
+                factor_vector:   {_S(json.dumps([]))},
+                category:        {_S(_exec_category)},
+                source_id:       {_S(context.get("source_location", ""))},
+                user_id:         {_S(context.get("user_id", ""))},
+                timestamp_epoch: {_ts_execute},
                 outcome:         null
-            })
+            }})
             CREATE (d)-[:DECIDED_ON]->(a)
-            """,
-            {
-                "alert_id":        alert_id,
-                "decision_id":     decision_id,
-                "action":          decision.action,
-                "confidence":      decision.confidence,
-                "fv":              [],
-                "category":        _exec_category,
-                "source_id":       context.get("source_location", ""),
-                "user_id":         context.get("user_id", ""),
-                "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
-            },
+            """
         )
 
         # Record decision in the in-memory audit ledger after graph write succeeds.
@@ -784,8 +761,7 @@ async def execute_action(request: ProcessAlertRequest):
 
         # Update alert status in Neo4j
         await neo4j_client.run_query(
-            "MATCH (alert:Alert {alert_id: $alert_id}) SET alert.status = 'resolved'",
-            {"alert_id": alert_id}
+            f"MATCH (alert:Alert {{alert_id: {_S(alert_id)}}}) SET alert.status = 'resolved'"
         )
         await event_bus.emit(GraphMutated(
             mutation_type     = "alert_status",
@@ -929,29 +905,22 @@ async def report_decision_outcome(request: OutcomeRequest):
             analyst_id = "anonymous"
         _analyst_eta = None  # populated below after quality lookup
 
+        _ts_outcome = int(datetime.utcnow().timestamp() * 1000)
         gae_result = await neo4j_client.run_query(
-            """
-            MATCH (d:Decision {decision_id: $decision_id})
+            f"""
+            MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
             OPTIONAL MATCH (d)-[:DECIDED_ON]->(a:Alert)
-            SET d.outcome           = $outcome_label,
-                d.correct           = $correct,
-                d.verified_at_epoch = $verified_at_epoch,
-                d.override_comment  = $override_comment,
-                d.verified_by       = $analyst_id
+            SET d.outcome           = {_S(outcome_label)},
+                d.correct           = {'true' if correct_bool else 'false'},
+                d.verified_at_epoch = {_ts_outcome},
+                d.override_comment  = {_S(request.override_comment or '')},
+                d.verified_by       = {_S(analyst_id)}
             RETURN d.factor_vector AS factor_vector,
                    d.action        AS action,
                    d.confidence    AS confidence,
                    a.category      AS category,
                    coalesce(a.alert_type, 'unknown') AS alert_type
-            """,
-            {
-                "decision_id":      request.decision_id,
-                "outcome_label":    outcome_label,
-                "correct":          correct_bool,
-                "verified_at_epoch": int(datetime.utcnow().timestamp() * 1000),
-                "override_comment": request.override_comment,
-                "analyst_id":       analyst_id,
-            },
+            """
         )
 
         # Audit chain — record outcome as separate event
@@ -1078,16 +1047,17 @@ async def report_decision_outcome(request: OutcomeRequest):
 
                     if _ps_out is not None:
                         _orig_eta_out = _ps_out.eta_override
-                        if _analyst_eta is not None:
-                            _ps_out.eta_override = _analyst_eta
-                        _ps_out.update(
-                            f=f.flatten(),
-                            category_index=_cat_idx_out,
-                            action_index=action_index,
-                            correct=_correct,
-                            gt_action_index=_gt_idx,
-                        )
-                        if _analyst_eta is not None:
+                        try:
+                            if _analyst_eta is not None:
+                                _ps_out.eta_override = _analyst_eta
+                            _ps_out.update(
+                                f=f.flatten(),
+                                category_index=_cat_idx_out,
+                                action_index=action_index,
+                                correct=_correct,
+                                gt_action_index=_gt_idx,
+                            )
+                        finally:
                             _ps_out.eta_override = _orig_eta_out
                         print(
                             f"[GAE][LEARN] ProfileScorer.update called: "
@@ -1104,21 +1074,15 @@ async def report_decision_outcome(request: OutcomeRequest):
                 if wu and wu.centroid_update is not None:
                     cu = wu.centroid_update
                     # Write centroid_delta_norm back to the Decision node
+                    _ts_centroid = int(datetime.utcnow().timestamp() * 1000)
                     await neo4j_client.run_query(
+                        f"""
+                        MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
+                        SET d.centroid_delta_norm = {cu.centroid_delta_norm},
+                            d.category            = {_S(cu.category_name)},
+                            d.correct             = {'true' if correct_bool else 'false'},
+                            d.verified_at_epoch   = {_ts_centroid}
                         """
-                        MATCH (d:Decision {decision_id: $decision_id})
-                        SET d.centroid_delta_norm = $centroid_delta_norm,
-                            d.category            = $category,
-                            d.correct             = $correct,
-                            d.verified_at_epoch   = $verified_at_epoch
-                        """,
-                        {
-                            "decision_id":         request.decision_id,
-                            "centroid_delta_norm": cu.centroid_delta_norm,
-                            "category":            cu.category_name,
-                            "correct":             correct_bool,
-                            "verified_at_epoch":   int(datetime.utcnow().timestamp() * 1000),
-                        },
                     )
                     print(
                         f"[GAE] Centroid updated: action={cu.action_name} "
@@ -1608,8 +1572,8 @@ async def get_graph_data(alert_id: str) -> Dict[str, Any]:
     Returns nodes and relationships in a format suitable for graph rendering.
     """
 
-    query = """
-    MATCH (alert:Alert {alert_id: $alert_id})
+    query = f"""
+    MATCH (alert:Alert {{alert_id: {_S(alert_id)}}})
     MATCH (alert)-[:DETECTED_ON]->(asset:Asset)
     MATCH (alert)-[:INVOLVES]->(user:User)
     OPTIONAL MATCH (alert)-[:CLASSIFIED_AS]->(ap:AttackPattern)
@@ -1621,7 +1585,7 @@ async def get_graph_data(alert_id: str) -> Dict[str, Any]:
     """
 
     try:
-        results = await neo4j_client.run_query(query, {"alert_id": alert_id})
+        results = await neo4j_client.run_query(query)
 
         if not results:
             return {"nodes": [], "relationships": []}

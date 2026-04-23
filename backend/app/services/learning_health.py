@@ -516,7 +516,7 @@ async def compute_analyst_precision(neo4j_client: Any) -> dict[str, float]:
     """
     Compute per-analyst override precision from Decision nodes.
 
-    Only counts live decisions (d.source = "live") where the analyst is known.
+    Only counts decisions with a known source_id and verified_by analyst.
     Excludes analysts with fewer than _MIN_ANALYST_DECISIONS (10) decisions.
     Returns {} if fewer than _MIN_ANALYSTS_REQUIRED (2) analysts qualify.
 
@@ -529,8 +529,8 @@ async def compute_analyst_precision(neo4j_client: Any) -> dict[str, float]:
         rows = await neo4j_client.run_query(
             """
             MATCH (d:Decision)
-            WHERE d.source = "live" AND d.analyst IS NOT NULL
-            WITH d.analyst AS analyst,
+            WHERE d.source_id IS NOT NULL AND d.verified_by IS NOT NULL
+            WITH d.verified_by AS analyst,
                  count(d) AS total,
                  sum(CASE WHEN d.correct = true THEN 1 ELSE 0 END) AS correct
             WHERE total >= $min_decisions

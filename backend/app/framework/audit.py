@@ -168,15 +168,6 @@ def record_outcome(
     return _outcome_to_dict(entry)
 
 
-def get_decisions() -> List[Dict[str, Any]]:
-    """Return all decision records, most recent first, excluding RESET sentinels."""
-    return [
-        _entry_to_dict(e)
-        for e in reversed(_LEDGER.entries())
-        if isinstance(e, LedgerEntry) and e.alert_id != "__RESET__"
-    ]
-
-
 def get_decision_rows() -> List[Dict[str, Any]]:
     """Project mixed chain into one-row-per-decision, most recent first."""
     entries = _LEDGER.entries() if _LEDGER else []

@@ -23,6 +23,13 @@ ADMIN_PREFIXES = (
     "/api/admin", "/api/framework", "/api/audit",
 )
 
+MUTATION_PATHS = (
+    "/api/soc/shadow/",
+    "/api/soc/checkpoint/",
+    "/api/soc/scorer/",
+    "/api/soc/interventions/",
+)
+
 
 async def require_auth(request: Request) -> Optional[dict]:
     from app.auth.jwt_utils import verify_jwt
@@ -60,5 +67,11 @@ async def require_auth(request: Request) -> Optional[dict]:
             raise HTTPException(
                 status_code=403,
                 detail="Admin access required")
+
+    if any(path.startswith(mp) for mp in MUTATION_PATHS):
+        if claims.get("role") != "admin":
+            raise HTTPException(
+                status_code=403,
+                detail="Admin access required for framework mutations")
 
     return claims

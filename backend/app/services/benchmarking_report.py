@@ -157,10 +157,9 @@ class BenchmarkingEngine:
     def _fetch_verified_decisions(self, start_date, end_date) -> List[Dict]:
         query = """
         MATCH (d:Decision)
-        WHERE d.verified = true
+        WHERE d.outcome IS NOT NULL
         RETURN d.decision_id AS id, d.action AS system_action,
                d.analyst_action AS analyst_action,
-               d.gt_action AS gt_action,
                d.category AS category,
                d.confidence AS confidence
         """

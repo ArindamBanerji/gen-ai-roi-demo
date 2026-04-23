@@ -16,7 +16,7 @@ _VALID_MODES = {"soft", "hard"}
 
 class ResetRequest(BaseModel):
     mode:    str  = "soft"   # "soft" | "hard"
-    confirm: bool = True     # must be true; default allows empty-body POST
+    confirm: bool = False    # must be set to true explicitly — no default allow
 
 
 @router.post("/admin/reset")

@@ -15,7 +15,7 @@ import io
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
-from app.services.audit import reconstruct_from_memory, get_decisions, get_decision_rows, verify_chain
+from app.services.audit import reconstruct_from_memory, get_decision_rows, verify_chain
 
 
 router = APIRouter()

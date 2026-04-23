@@ -305,27 +305,21 @@ class SimulationOrchestrator:
             # written — the fallback in step 9 covers the weight update.
             # ------------------------------------------------------------------
             decision_id = str(uuid.uuid4())
+            _ts_sim = int(datetime.utcnow().timestamp() * 1000)
             await neo4j_client.run_query(
-                """
-                MATCH (a:Alert {alert_id: $alert_id})
-                CREATE (d:Decision {
-                    decision_id:     $decision_id,
-                    action:          $action,
-                    confidence:      $confidence,
-                    factor_vector:   $fv,
-                    timestamp_epoch: $timestamp_epoch,
+                f"""
+                MATCH (a:Alert {{alert_id: {_S(alert_id)}}})
+                CREATE (d:Decision {{
+                    decision_id:     {_S(decision_id)},
+                    action:          {_S(scoring.selected_action)},
+                    confidence:      {scoring.confidence},
+                    factor_vector:   {_S(json.dumps(fv_list))},
+                    category:        {_S(category)},
+                    timestamp_epoch: {_ts_sim},
                     outcome:         null
-                })
+                }})
                 CREATE (d)-[:DECIDED_ON]->(a)
-                """,
-                {
-                    "alert_id":        alert_id,
-                    "decision_id":     decision_id,
-                    "action":          scoring.selected_action,
-                    "confidence":      scoring.confidence,
-                    "fv":              fv_list,
-                    "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
-                },
+                """
             )
 
             # ------------------------------------------------------------------
@@ -355,33 +349,18 @@ class SimulationOrchestrator:
             # Step 9: Update Decision node + retrieve f(t) from graph (R4)
             # (same Cypher as POST /api/alert/outcome → gae_result query)
             # ------------------------------------------------------------------
+            _ts_sim_outcome = int(datetime.utcnow().timestamp() * 1000)
             gae_result = await neo4j_client.run_query(
-                """
-                MATCH (d:Decision {decision_id: $decision_id})
-                SET d.outcome           = $outcome_label,
-                    d.correct           = $correct,
-                    d.verified_at_epoch = $verified_at_epoch
+                f"""
+                MATCH (d:Decision {{decision_id: {_S(decision_id)}}})
+                SET d.outcome           = {_S(outcome_str)},
+                    d.correct           = {'true' if correct else 'false'},
+                    d.verified_at_epoch = {_ts_sim_outcome}
                 RETURN d.factor_vector AS factor_vector,
                        d.action        AS action,
                        d.confidence    AS confidence
-                """,
-                {
-                    "decision_id":      decision_id,
-                    "outcome_label":    outcome_str,
-                    "correct":          correct,
-                    "verified_at_epoch": int(datetime.utcnow().timestamp() * 1000),
-                },
+                """
             )
-
-            try:
-                from app.services.audit import record_outcome as _sim_outcome
-                _sim_outcome(
-                    decision_id=decision_id,
-                    outcome=outcome_str,
-                    analyst_override=False,
-                )
-            except Exception as _e:
-                print(f"[SIM-AUDIT] Outcome audit: {_e}")
 
             # Read f from graph result; fall back to locally-computed vector
             # (fallback is only taken for synthetic alerts with no Decision node)
@@ -488,6 +467,15 @@ class SimulationOrchestrator:
                     f"SET d.entry_hash = {_S(_sim_entry_hash)}, "
                     f"d.decision_chain_index = {_sim_chain_index}"
                 )
+            try:
+                from app.services.audit import record_outcome as _sim_outcome
+                _sim_outcome(
+                    decision_id=decision_id,
+                    outcome=outcome_str,
+                    analyst_override=False,
+                )
+            except Exception as _e:
+                print(f"[SIM-AUDIT] Outcome audit: {_e}")
 
             # ------------------------------------------------------------------
             # Step 13: Log structured experiment record

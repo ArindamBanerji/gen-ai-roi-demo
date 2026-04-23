@@ -141,7 +141,7 @@ class GraphSnapshot:
         """Per-category epistemic state: count + knowledge band."""
         return {
             cat: {"count": cnt, "band": self._band(cnt)}
-            for cat, cnt in self.category_counts.items()
+            for cat, cnt in (self.category_counts or {}).items()
         }
 
     @staticmethod
