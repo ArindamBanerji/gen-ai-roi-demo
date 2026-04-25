@@ -267,7 +267,7 @@ async def analyze_alert(request: ProcessAlertRequest):
         )
         print(f"[GAE] Decision node written: id={decision_id} [:DECIDED_ON] {alert_id}")
 
-        _audit_rec_analyze = record_decision(
+        _audit_rec_analyze = await record_decision(
             alert_id=alert_id,
             situation_type=situation_analysis.situation_type,
             action_taken=selected_action,
@@ -592,6 +592,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             "provenance":      _provenance_payload,
             "referral":        _referral_payload,
             "referral_debug":  _referral_debug,
+            "decision_method": "referral_override" if _referral.should_refer else "gae_scoring",
         }
         # ====================================================================
         # NAR-1: Build calibration_context and generate structured narrative
@@ -728,7 +729,7 @@ async def execute_action(request: ProcessAlertRequest):
 
         # Record decision in the in-memory audit ledger after graph write succeeds.
         # EU AI Act Art. 15 epistemic fields: supply "unknown" when not yet available.
-        _audit_rec_execute = record_decision(
+        _audit_rec_execute = await record_decision(
             alert_id=alert_id,
             situation_type=situation_type_str,
             action_taken=decision.action,
@@ -837,7 +838,7 @@ async def reset_demo_alerts():
         # Reset demo-cycle state only — deliberately skip 'learning_state' so
         # ProfileScorer centroids (IKS) survive demo resets (BACKLOG-020).
         # Full hard reset (including learning_state) is POST /api/admin/reset.
-        state_manager.reset_except(["learning_state"])
+        await state_manager.reset_except(["learning_state"])
 
         return {
             "status": "success",
@@ -926,7 +927,7 @@ async def report_decision_outcome(request: OutcomeRequest):
         # Audit chain — record outcome as separate event
         try:
             from app.framework.audit import record_outcome as _audit_outcome
-            _outcome_rec = _audit_outcome(
+            _outcome_rec = await _audit_outcome(
                 decision_id=request.decision_id,
                 outcome=outcome_label,
                 analyst_override=(request.analyst_action is not None),
@@ -1013,15 +1014,22 @@ async def report_decision_outcome(request: OutcomeRequest):
                     )
                     save_learning_state()
 
-                    # SOC-Q3: Wire conservation status → scorer auto-pause
+                    # SOC-Q3 / DRIFT-01: Wire conservation status → scorer auto-pause.
+                    # auto_pause_active (14+ RED days) overrides current status to RED
+                    # so that a brief GREEN window cannot clear an accumulated freeze.
+                    # FIX 1: fail-closed — if health check throws, block learning (treat as RED).
+                    _conservation_block = False
+                    _eff_status = "GREEN"
                     try:
                         from app.services.learning_health import LearningHealthMonitor
                         _health = await LearningHealthMonitor.evaluate(neo4j_client)
-                        _scorer = get_profile_scorer()
-                        if _scorer is not None and hasattr(_scorer, "set_conservation_status"):
-                            _scorer.set_conservation_status(_health["status"])
+                        _eff_status = (
+                            "RED" if _health.get("auto_pause_active")
+                            else _health.get("status", "GREEN")
+                        )
                     except Exception as _cse:
                         logger.warning("Conservation status update failed: %s", _cse)
+                        _conservation_block = True  # fail-closed: unknown health → block
 
                 # CORR-2 fix: ProfileScorer.update() — gated by LEARNING_ENABLED (default False).
                 # gt_action_index = analyst's actual chosen action when provided;
@@ -1046,27 +1054,41 @@ async def report_decision_outcome(request: OutcomeRequest):
                         _correct = correct_bool
 
                     if _ps_out is not None:
-                        from app.services.gae_state import get_scorer_lock
-                        async with get_scorer_lock():
-                            _orig_eta_out = _ps_out.eta_override
-                            try:
-                                if _analyst_eta is not None:
-                                    _ps_out.eta_override = _analyst_eta
-                                _ps_out.update(
-                                    f=f.flatten(),
-                                    category_index=_cat_idx_out,
-                                    action_index=action_index,
-                                    correct=_correct,
-                                    gt_action_index=_gt_idx,
+                        from app.services.gae_state import get_scorer_lock, guarded_update as _guarded_update
+                        if _conservation_block:
+                            logger.warning("[B5] Conservation check failed — learning blocked (fail-closed)")
+                        else:
+                            _cu = None
+                            async with get_scorer_lock():
+                                _orig_eta_out = _ps_out.eta_override
+                                try:
+                                    if _analyst_eta is not None:
+                                        _ps_out.eta_override = _analyst_eta
+                                    # FIX 3: status write inside lock prevents concurrent race
+                                    if hasattr(_ps_out, "set_conservation_status"):
+                                        _ps_out.set_conservation_status(_eff_status)
+                                    # DRIFT-03: route through guarded_update() so D3/D2/D7
+                                    # spike guards AND conservation freeze are enforced.
+                                    _cu = _guarded_update(
+                                        _ps_out,
+                                        f=f.flatten(),
+                                        category_index=_cat_idx_out,
+                                        action_index=action_index,
+                                        correct=_correct,
+                                        category_name=_cat_name_out,
+                                        gt_action_index=_gt_idx,
+                                    )
+                                finally:
+                                    _ps_out.eta_override = _orig_eta_out
+                            if _cu is None:
+                                logger.info("[GAE][LEARN] Update blocked by conservation/spike/freeze guard")
+                            else:
+                                print(
+                                    f"[GAE][LEARN] ProfileScorer.update called: "
+                                    f"action={action_name} analyst_action={_analyst_action!r} "
+                                    f"gt_action_index={_gt_idx} correct={_correct} "
+                                    f"category={_cat_name_out} eta={_analyst_eta or _orig_eta_out}"
                                 )
-                            finally:
-                                _ps_out.eta_override = _orig_eta_out
-                        print(
-                            f"[GAE][LEARN] ProfileScorer.update called: "
-                            f"action={action_name} analyst_action={_analyst_action!r} "
-                            f"gt_action_index={_gt_idx} correct={_correct} "
-                            f"category={_cat_name_out} eta={_analyst_eta or _orig_eta_out}"
-                        )
 
                 # Change 5: ProfileSnapshot every 50 decisions
                 if wu is not None:
@@ -1131,12 +1153,11 @@ async def report_decision_outcome(request: OutcomeRequest):
                     if wu and wu.centroid_update is not None:
                         try:
                             from app.services.gae_state import get_profile_scorer as _get_ps_snap
-                            from app.services.iks import compute_iks as _compute_iks_snap
+                            from app.services.iks import compute_visible_iks as _compute_visible_iks
                             _ps_snap = _get_ps_snap()
                             if _ps_snap is not None:
-                                _iks_result = _compute_iks_snap(_ps_snap.centroids)
                                 _snap.on_iks_recalculated(
-                                    float(_iks_result.get("current", 0.0))
+                                    await _compute_visible_iks(neo4j_client, scorer=_ps_snap)
                                 )
                         except Exception as _snap_exc:
                             logger.warning(
@@ -1186,6 +1207,81 @@ async def report_decision_outcome(request: OutcomeRequest):
                         )
                 except Exception as _g1_exc:
                     logger.warning("[EXP-G1] Distance log scheduling failed: %s", _g1_exc)
+
+                # ============================================================
+                # FLYWHEEL: Create TRIGGERED_EVOLUTION edge for correct scorer
+                # actions — feeds PatternHistoryFactorComputer (CLAIM-W2).
+                # Only fires on correct outcomes for SCORER_ACTIONS (not
+                # refer_to_analyst). Fire-and-forget; never blocks response.
+                # ============================================================
+                if correct_bool and action_name in SCORER_ACTIONS:
+                    try:
+                        _evo_id = f"EVO-{uuid.uuid4().hex[:4].upper()}"
+                        _evo_ts = int(datetime.utcnow().timestamp() * 1000)
+                        _evo_dec_num = int(learning_state.decision_count)
+                        _evo_ph = float(fv[3]) if (isinstance(fv, list) and len(fv) > 3) else 0.4
+                        await neo4j_client.run_query(
+                            f"""
+                            MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
+                            CREATE (evo:EvolutionEvent {{
+                                id:              {_S(_evo_id)},
+                                event_type:      'verified_outcome',
+                                triggered_by:    {_S(request.decision_id)},
+                                category:        {_S(_resolved_category)},
+                                correct:         true,
+                                action:          {_S(action_name)},
+                                timestamp_epoch: {_evo_ts}
+                            }})
+                            CREATE (d)-[:TRIGGERED_EVOLUTION {{
+                                timestamp_epoch: {_evo_ts},
+                                decision_id:     {_S(request.decision_id)},
+                                category:        {_S(_resolved_category)},
+                                correct:         true,
+                                action:          {_S(action_name)}
+                            }}]->(evo)
+                            SET d.verified_correct  = true,
+                                d.factor_snapshot   = {_S(json.dumps(fv if isinstance(fv, list) else []))},
+                                d.decision_number   = {_evo_dec_num},
+                                d.action_index      = {action_index}
+                            """
+                        )
+                        await event_bus.emit(GraphMutated(
+                            mutation_type="evolution",
+                            affected_entities=(request.decision_id, request.alert_id),
+                        ))
+                        logger.info(
+                            "[FLYWHEEL] TRIGGERED_EVOLUTION edge created: %s → %s",
+                            request.decision_id,
+                            request.alert_id,
+                        )
+                    except Exception as _evo_exc:
+                        logger.warning(
+                            "[FLYWHEEL] TRIGGERED_EVOLUTION creation failed (non-blocking): %s",
+                            _evo_exc,
+                        )
+
+                # ============================================================
+                # FEATURE-04: Auto-snapshot centroids every SNAPSHOT_INTERVAL
+                # verified decisions for the Centroid Time Machine.
+                # Fire-and-forget — never blocks the outcome response.
+                # ============================================================
+                try:
+                    from app.services.gae_state import (
+                        maybe_write_centroid_snapshot as _maybe_snap,
+                        get_profile_scorer as _get_ps_snap2,
+                    )
+                    _ps_snap2 = _get_ps_snap2()
+                    if _ps_snap2 is not None:
+                        _maybe_snap(
+                            _ps_snap2,
+                            decision_id=str(request.decision_id),
+                            category=_resolved_category,
+                        )
+                except Exception as _snap2_exc:
+                    logger.warning(
+                        "[SNAPSHOT] Centroid auto-snapshot failed (non-blocking): %s",
+                        _snap2_exc,
+                    )
 
         else:
             print(
@@ -1273,6 +1369,72 @@ async def get_outcome_status(alert_id: str):
 # GET /api/alert/policy-check - Check Policy Conflicts
 # ============================================================================
 
+_LEGACY_POLICY_CONTEXTS = {
+    "ALERT-7823": {
+        "user_risk_score": 0.85,
+        "user_traveling": True,
+        "vpn_matches_location": True,
+        "alert_type": "anomalous_login",
+    },
+    "ALERT-7824": {
+        "user_risk_score": 0.45,
+        "alert_type": "phishing",
+        "known_campaign_signature": True,
+    },
+}
+
+
+async def _build_policy_context(alert_id: str) -> Dict[str, Any]:
+    """Build policy context from graph Alert data; legacy demo IDs are fallback only."""
+    rows = await neo4j_client.run_query(
+        f"""
+        MATCH (alert:Alert {{alert_id: {_S(alert_id)}}})
+        OPTIONAL MATCH (alert)-[:INVOLVES]->(user:User)
+        OPTIONAL MATCH (alert)-[:DETECTED_ON]->(detected_asset:Asset)
+        OPTIONAL MATCH (alert)-[:INVOLVES]->(involved_asset:Asset)
+        OPTIONAL MATCH (alert)-[:MATCHES]->(pattern:AttackPattern)
+        OPTIONAL MATCH (user)-[:HAS_TRAVEL]->(travel:TravelContext)
+        RETURN
+            alert.alert_type AS alert_type,
+            alert.category AS category,
+            alert.source_location AS source_location,
+            user.risk_score AS user_risk_score,
+            detected_asset.criticality AS detected_asset_criticality,
+            involved_asset.criticality AS involved_asset_criticality,
+            travel.destination AS travel_destination,
+            CASE WHEN pattern IS NOT NULL THEN true ELSE false END AS known_campaign_signature
+        LIMIT 1
+        """
+    )
+
+    if not rows:
+        context = dict(_LEGACY_POLICY_CONTEXTS.get(alert_id, {}))
+        context.setdefault("user_risk_score", 0.5)
+        context.setdefault("alert_type", "unknown")
+        return context
+
+    row = rows[0]
+    alert_type = row.get("alert_type") or row.get("category") or "unknown"
+    source_location = row.get("source_location")
+    travel_destination = row.get("travel_destination")
+    context = {
+        "user_risk_score": row.get("user_risk_score") or 0.5,
+        "alert_type": alert_type,
+        "asset_criticality": (
+            row.get("detected_asset_criticality")
+            or row.get("involved_asset_criticality")
+            or "medium"
+        ),
+        "user_traveling": travel_destination is not None,
+        "vpn_matches_location": (
+            travel_destination is not None
+            and source_location == travel_destination
+        ),
+        "known_campaign_signature": bool(row.get("known_campaign_signature")),
+    }
+    return context
+
+
 @router.get("/alert/policy-check")
 async def check_policy_conflicts(alert_id: str):
     """
@@ -1287,26 +1449,9 @@ async def check_policy_conflicts(alert_id: str):
     print(f"[POLICY] GET /alert/policy-check called for {alert_id}")
 
     try:
-        # Build minimal context based on alert_id (demo data)
-        if alert_id == "ALERT-7823":
-            context = {
-                "user_risk_score": 0.85,
-                "user_traveling": True,
-                "vpn_matches_location": True,
-                "alert_type": "anomalous_login"
-            }
-        elif alert_id == "ALERT-7824":
-            context = {
-                "user_risk_score": 0.45,
-                "alert_type": "phishing",
-                "known_campaign_signature": True
-            }
-        else:
-            # Default context
-            context = {
-                "user_risk_score": 0.5,
-                "alert_type": "unknown"
-            }
+        context = await _build_policy_context(alert_id)
+        alert_type = context.get("alert_type") or "unknown"
+        logger.debug("[POLICY] Resolved alert_type=%s for %s", alert_type, alert_id)
 
         print(f"[POLICY] Context: {context}")
 

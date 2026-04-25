@@ -665,7 +665,8 @@ class SOCDomainConfig(DomainConfig):
             actions=list(SCORER_ACTIONS),
             kernel=KernelType.L2,
             categories=list(SOC_CATEGORIES),
-            eta_override=0.01,  # P0 fix: attenuate override learning 5x
+            eta_override=0.01,       # P0 fix: attenuate override learning 5x
+            auto_pause_on_amber=True,  # DRIFT-01: enable conservation RED/AMBER freeze
         )
 
     @staticmethod

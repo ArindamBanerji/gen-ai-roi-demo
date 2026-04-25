@@ -173,8 +173,8 @@ class StateManager:
             committed.append("neo4j_outcomes")
 
             # Step 4: audit — clear ledger, anchor fresh chain with RESET marker
-            self._audit.reset_audit_state()
-            self._audit.record_reset_marker("soft")
+            await self._audit.reset_audit_state()
+            await self._audit.record_reset_marker("soft")
             committed.append("audit")
 
         except Exception as exc:
@@ -238,8 +238,8 @@ class StateManager:
             committed.append("neo4j_delete")
 
             # Step 4: audit reset + RESET marker
-            self._audit.reset_audit_state()
-            self._audit.record_reset_marker("hard")
+            await self._audit.reset_audit_state()
+            await self._audit.record_reset_marker("hard")
             committed.append("audit")
 
             log.info(

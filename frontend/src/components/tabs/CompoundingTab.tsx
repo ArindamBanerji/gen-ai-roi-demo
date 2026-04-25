@@ -24,6 +24,7 @@ import {
 } from 'recharts'
 import {
   getCompoundingMetrics, resetAllDemoData, resetAlerts, reseedDemoData,
+  fetchAutoApproveStats,
   getAuditDecisions, verifyAuditChain, getGAEConvergence,
   getGAEConfidenceTrajectory, getGAETrustCurve, getGAEBeforeAfter,
   getEvolutionEvents, getCentroidEvolution, getProfileState,
@@ -85,6 +86,16 @@ interface EvolutionEvent {
 interface BusinessImpact {
   analyst_hours_saved_monthly: number; cost_avoided_quarterly: number
   mttr_reduction_pct: number; alert_backlog_eliminated_monthly: number
+}
+interface AutoApproveStats {
+  total_decisions: number
+  auto_approved: number
+  coverage_pct: number
+  by_category: Record<string, {
+    total: number
+    auto_approved: number
+    coverage_pct: number
+  }>
 }
 interface CompoundingData {
   period: { start: string; end: string }
@@ -291,6 +302,8 @@ export default function CompoundingTab() {
   // — real Tab 4 data (H7-FIX-4) —
   const [decisionEconomics, setDecisionEconomics] = useState<DecisionEconomics | null>(null)
   const [evolutionEventsReal, setEvolutionEventsReal] = useState<EvolutionEventsState | null>(null)
+  const [autoApproveStats, setAutoApproveStats] = useState<AutoApproveStats | null>(null)
+  const [autoApproveLoading, setAutoApproveLoading] = useState(true)
 
   // — F4-OVERLAY: operational metrics —
   const [operationalMetrics, setOperationalMetrics] = useState<OperationalMetrics | null>(null)
@@ -317,6 +330,19 @@ export default function CompoundingTab() {
     finally { setLoading(false) }
   }
   useEffect(() => { loadData() }, [])
+
+  const loadAutoApproveStats = async () => {
+    setAutoApproveLoading(true)
+    try {
+      const stats = await fetchAutoApproveStats() as AutoApproveStats
+      setAutoApproveStats(stats)
+    } catch (e) {
+      console.error('[CompoundingTab] Failed to load auto-approve stats:', e)
+    } finally {
+      setAutoApproveLoading(false)
+    }
+  }
+  useEffect(() => { loadAutoApproveStats() }, [])
 
   const handleReseed = async () => {
     if (!window.confirm('Re-seed Neo4j? This will DELETE all current data and restore the canonical demo dataset.')) return
@@ -585,7 +611,7 @@ export default function CompoundingTab() {
             <p className="text-sm text-gray-500 mt-1">Based on 200 alerts/day processing rate</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="bg-white rounded-lg border-2 border-green-300 shadow p-5 text-center hover:shadow-xl transition-shadow">
               <Clock className="w-5 h-5 text-green-600 mx-auto mb-2" />
               <div className="text-4xl font-bold text-green-600 mb-1">{animatedAnalystHours.toLocaleString()}</div>
@@ -605,6 +631,52 @@ export default function CompoundingTab() {
               <CheckCircle className="w-5 h-5 text-emerald-600 mx-auto mb-2" />
               <div className="text-4xl font-bold text-emerald-600 mb-1">{animatedBacklogEliminated.toLocaleString()}</div>
               <div className="text-xs text-gray-600 font-medium">{domainConfig.impactLabels.backlog}</div>
+            </div>
+            <div className="bg-white rounded-lg border-2 border-sky-300 shadow p-5 hover:shadow-xl transition-shadow">
+              <div className="flex items-center gap-2 mb-3">
+                <Shield className="w-5 h-5 text-sky-600" />
+                <div>
+                  <div className="text-sm font-bold text-slate-900">Automation Rate</div>
+                  <div className="text-xs text-gray-500">Auto-approve snapshot</div>
+                </div>
+              </div>
+
+              {autoApproveLoading && !autoApproveStats ? (
+                <div className="text-sm text-gray-500 italic">Loading automation stats&hellip;</div>
+              ) : autoApproveStats ? (
+                <>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-lg bg-sky-50 border border-sky-200 p-2">
+                      <div className="text-[10px] uppercase tracking-wide text-sky-700 font-semibold">Auto-approve</div>
+                      <div className="text-2xl font-bold text-sky-700">{autoApproveStats.coverage_pct.toFixed(1)}%</div>
+                    </div>
+                    <div className="rounded-lg bg-sky-50 border border-sky-200 p-2">
+                      <div className="text-[10px] uppercase tracking-wide text-sky-700 font-semibold">Precision / accuracy</div>
+                      <div className="text-2xl font-bold text-sky-700">{autoApproveStats.coverage_pct.toFixed(1)}%</div>
+                    </div>
+                    <div className="rounded-lg bg-sky-50 border border-sky-200 p-2">
+                      <div className="text-[10px] uppercase tracking-wide text-sky-700 font-semibold">Threshold</div>
+                      <div className="text-2xl font-bold text-sky-700">90%</div>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs text-gray-600 leading-relaxed">
+                    {autoApproveStats.coverage_pct.toFixed(1)}% of alerts auto-resolved at 90% precision gate.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {Object.entries(autoApproveStats.by_category).slice(0, 6).map(([category, stats]) => (
+                      <span
+                        key={category}
+                        className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] text-sky-700"
+                      >
+                        <span className="font-semibold">{category.replace(/_/g, ' ')}</span>
+                        <span>{stats.coverage_pct.toFixed(0)}%</span>
+                      </span>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-sm text-gray-500 italic">Automation stats unavailable.</div>
+              )}
             </div>
           </div>
 

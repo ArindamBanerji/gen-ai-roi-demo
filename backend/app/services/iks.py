@@ -96,6 +96,50 @@ def compute_iks(mu_t: np.ndarray, mu_zero: Optional[np.ndarray] = None) -> dict:
     return _compute_iks_base(mu_t, mu_zero, D_MAX)
 
 
+async def compute_visible_iks(
+    neo4j_service=None,
+    scorer=None,
+) -> float:
+    """
+    Compute the shipped user-visible IKS score.
+
+    Canonical order:
+    1. Drift-based scorer IKS from current centroids, using μ₀ from gae_state.get_mu_zero().
+       Only returned when score > 50.0 — below that, centroids have not diverged enough
+       from μ₀ for drift to be informative. Threshold at 50 (half of 0–100 range) means
+       centroids must have moved significantly across all categories before drift-IKS
+       is trusted. Small post-decision shifts (~5–10) correctly fall back to v2.
+    2. Graph-composite IKS v2 as fallback when drift ≤ 50.0 or scorer unavailable.
+    """
+    if scorer is None:
+        try:
+            from app.services.gae_state import get_profile_scorer
+
+            scorer = get_profile_scorer()
+        except Exception:
+            scorer = None
+
+    if scorer is not None:
+        try:
+            from app.services.gae_state import get_mu_zero
+            mu_zero = get_mu_zero()
+            result = compute_iks(scorer.centroids, mu_zero=mu_zero)
+            score = float(result.get("current", 0.0))
+            if score > 50.0:
+                return score
+        except Exception:
+            pass
+
+    if neo4j_service is not None:
+        try:
+            iks_data = await compute_iks_v2(neo4j_service)
+            return float(iks_data.get("iks_v2", 0.0))
+        except Exception:
+            pass
+
+    return 0.0
+
+
 async def get_iks_trend() -> list[dict]:
     """
     Return IKS values at each ProfileSnapshot node (ordered by decision_count).

@@ -399,18 +399,36 @@ class SimulationOrchestrator:
                 # gt_action_index derived from ground_truth_action (always available in simulation).
                 if LEARNING_ENABLED and ground_truth_action in scorer_actions:
                     from app.domains.soc.config import resolve_alert_category, SOCDomainConfig as _SDC_sim
+                    from app.services.gae_state import guarded_update as _guarded_update_sim
                     _cat_name_sim = resolve_alert_category(category)
                     _cat_idx_sim  = _SDC_sim().get_category_index(_cat_name_sim)
                     _gt_idx_sim   = scorer_actions.index(ground_truth_action)
                     _sim_scorer = get_profile_scorer()
                     if _sim_scorer is not None:
-                        _sim_scorer.update(
+                        _cu_sim = _guarded_update_sim(
+                            _sim_scorer,
                             f=f_for_update.flatten(),
                             category_index=_cat_idx_sim,
                             action_index=action_index,
                             correct=correct,
+                            category_name=_cat_name_sim,
                             gt_action_index=_gt_idx_sim,
                         )
+                        if _cu_sim is None:
+                            logger.info("[SIM] Learning update blocked by conservation/spike guard")
+                        # FEATURE-04: snapshot centroids for Time Machine
+                        try:
+                            from app.services.gae_state import maybe_write_centroid_snapshot as _snap_sim
+                            _snap_sim(
+                                _sim_scorer,
+                                decision_id=str(decision_id),
+                                category=_cat_name_sim,
+                            )
+                        except Exception as _snap_sim_exc:
+                            logger.warning(
+                                "[SNAPSHOT] Sim centroid snapshot failed (non-blocking): %s",
+                                _snap_sim_exc,
+                            )
 
             # ------------------------------------------------------------------
             # Step 11: Emit OutcomeVerified + GraphMutated
@@ -449,7 +467,7 @@ class SimulationOrchestrator:
             # triage.py so simulation decisions appear in the Evidence Ledger
             # (Tab 4 / GET /api/audit/decisions).
             # ------------------------------------------------------------------
-            _sim_audit_rec = audit_record_decision(
+            _sim_audit_rec = await audit_record_decision(
                 alert_id           = alert_id,
                 situation_type     = situation_type,
                 action_taken       = scoring.selected_action,
@@ -469,7 +487,7 @@ class SimulationOrchestrator:
                 )
             try:
                 from app.services.audit import record_outcome as _sim_outcome
-                _sim_outcome(
+                await _sim_outcome(
                     decision_id=decision_id,
                     outcome=outcome_str,
                     analyst_override=False,

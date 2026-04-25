@@ -15,7 +15,7 @@ import {
   TrendingDown,
   RefreshCw,
 } from 'lucide-react'
-import { getAlerts, analyzeAlert, executeAction, resetAlerts, checkPolicyConflict, refreshThreatIntel, getDecisionFactors, getAlertEnrichment } from '../../lib/api'
+import { getAlerts, analyzeAlert, executeAction, resetAlerts, checkPolicyConflict, refreshThreatIntel, getDecisionFactors, getAlertEnrichment, fetchJudgmentExplain } from '../../lib/api'
 import { ensureArray, ensureObject } from '../../lib/guards'
 import { domainConfig } from '../../lib/domain'
 import OutcomeFeedback from '../OutcomeFeedback'
@@ -107,6 +107,7 @@ interface AnalysisResult {
   campaign_id?: string
   campaign_severity?: string
   campaign_alert_count?: number
+  decision_method?: string
 }
 
 interface ClosedLoopResult {
@@ -183,6 +184,19 @@ interface DecisionFactors {
   kernel_note?: string
 }
 
+interface JudgmentExplain {
+  alert_id: string
+  category: string
+  action: string
+  confidence: number
+  confidence_tier: string
+  dominant_factors: string[]
+  factor_contributions: unknown
+  rationale: string
+  action_scores: unknown
+  auto_approvable: boolean
+}
+
 const MITRE_TECHNIQUE_NAMES: Record<string, string> = {
   'T1078':     'Valid Accounts',
   'T1078.004': 'Valid Accounts: Cloud Accounts',
@@ -251,6 +265,12 @@ function formatFactorName(name: string): string {
   return name.replace(/Factor$/, '').replace(/([A-Z])/g, ' $1').trim()
 }
 
+function renderExplainValue(value: unknown): string {
+  if (Array.isArray(value)) return value.map((item) => String(item)).join(', ')
+  if (value && typeof value === 'object') return JSON.stringify(value)
+  return String(value)
+}
+
 const REFERRAL_REASON_LABELS: Record<string, string> = {
   EXECUTIVE_ACCOUNT:  'Executive account — policy requires human review',
   RAPID_SUCCESSION:   'Rapid succession alerts from same source',
@@ -284,6 +304,10 @@ export default function AlertTriageTab() {
   const [decisionFactors, setDecisionFactors] = useState<DecisionFactors | null>(null)
   const [decisionFactorsCollapsed, setDecisionFactorsCollapsed] = useState(false)
   const [narrativeOpen, setNarrativeOpen] = useState(false)
+  const [judgmentExplain, setJudgmentExplain] = useState<JudgmentExplain | null>(null)
+  const [judgmentExplainLoading, setJudgmentExplainLoading] = useState(false)
+  const [judgmentExplainCollapsed, setJudgmentExplainCollapsed] = useState(true)
+  const [judgmentExplainAlertId, setJudgmentExplainAlertId] = useState<string | null>(null)
 
   const [alertEnrichment, setAlertEnrichment] = useState<AlertEnrichmentData | null>(null)
   const [enrichmentExpanded, setEnrichmentExpanded] = useState(false)
@@ -293,6 +317,45 @@ export default function AlertTriageTab() {
   useEffect(() => {
     loadAlertQueue()
   }, [])
+
+  useEffect(() => {
+    const alertId = selectedAlert?.id
+
+    if (!alertId || !analysis) {
+      setJudgmentExplain(null)
+      setJudgmentExplainLoading(false)
+      setJudgmentExplainCollapsed(true)
+      setJudgmentExplainAlertId(null)
+      return
+    }
+
+    if (judgmentExplainAlertId === alertId) {
+      return
+    }
+
+    let cancelled = false
+    setJudgmentExplainLoading(true)
+    setJudgmentExplain(null)
+    setJudgmentExplainCollapsed(true)
+
+    fetchJudgmentExplain(alertId)
+      .then((data) => {
+        if (cancelled) return
+        setJudgmentExplain(data as JudgmentExplain)
+        setJudgmentExplainAlertId(alertId)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setJudgmentExplain(null)
+      })
+      .finally(() => {
+        if (!cancelled) setJudgmentExplainLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [analysis, judgmentExplainAlertId, selectedAlert?.id])
 
   const loadAlertEnrichment = async (alertId: string) => {
     try {
@@ -1140,6 +1203,95 @@ export default function AlertTriageTab() {
                     </div>
                   )}
 
+                  {selectedAlert && analysis && (judgmentExplainLoading || judgmentExplain) && (
+                    <div className="pt-3 border-t border-gray-800">
+                      <button
+                        onClick={() => setJudgmentExplainCollapsed((c) => !c)}
+                        className="w-full flex items-center justify-between gap-3 text-left"
+                        aria-expanded={!judgmentExplainCollapsed}
+                        type="button"
+                      >
+                        <div>
+                          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">Why This Recommendation</p>
+                          <p className="text-xs text-gray-600">
+                            {judgmentExplainLoading ? 'Generating explanation...' : 'Open for decision reasoning'}
+                          </p>
+                        </div>
+                        {judgmentExplainCollapsed
+                          ? <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+                          : <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" />
+                        }
+                      </button>
+
+                      {!judgmentExplainCollapsed && (
+                        <div className="mt-4 space-y-4">
+                          {judgmentExplainLoading ? (
+                            <p className="text-sm text-gray-500 italic">Generating explanation...</p>
+                          ) : judgmentExplain ? (
+                            <>
+                              <p className="text-sm text-gray-300 leading-relaxed">
+                                {judgmentExplain.rationale}
+                              </p>
+
+                              <div className="grid gap-3 md:grid-cols-3">
+                                <div className="rounded-lg border border-gray-800 bg-gray-900/60 p-3">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Confidence tier</p>
+                                  <p className="text-sm font-semibold text-gray-200">{judgmentExplain.confidence_tier}</p>
+                                </div>
+                                <div className="rounded-lg border border-gray-800 bg-gray-900/60 p-3">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Confidence</p>
+                                  <p className="text-sm font-semibold text-gray-200">{(judgmentExplain.confidence * 100).toFixed(1)}%</p>
+                                </div>
+                                <div className="rounded-lg border border-gray-800 bg-gray-900/60 p-3">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Auto-approvable</p>
+                                  <p className="text-sm font-semibold text-gray-200">{judgmentExplain.auto_approvable ? 'Yes' : 'No'}</p>
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Dominant factors</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {ensureArray<string>(judgmentExplain.dominant_factors).map((factor) => (
+                                    <span
+                                      key={factor}
+                                      className="inline-flex items-center rounded-full border border-gray-700 bg-gray-900 px-2.5 py-0.5 text-xs text-gray-300"
+                                    >
+                                      {factor.replace(/_/g, ' ')}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Factor contributions</p>
+                                {Array.isArray(judgmentExplain.factor_contributions) ? (
+                                  <div className="space-y-1 text-xs text-gray-400">
+                                    {judgmentExplain.factor_contributions.map((item, idx) => (
+                                      <div key={idx} className="rounded border border-gray-800 bg-gray-900/50 px-3 py-2">
+                                        {renderExplainValue(item)}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : judgmentExplain.factor_contributions && typeof judgmentExplain.factor_contributions === 'object' ? (
+                                  <div className="space-y-1 text-xs text-gray-400">
+                                    {Object.entries(judgmentExplain.factor_contributions as Record<string, unknown>).map(([label, value]) => (
+                                      <div key={label} className="flex items-start justify-between gap-3 rounded border border-gray-800 bg-gray-900/50 px-3 py-2">
+                                        <span className="text-gray-500 uppercase tracking-wide">{label.replace(/_/g, ' ')}</span>
+                                        <span className="text-gray-300 text-right">{renderExplainValue(value)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-gray-500 italic">No structured factor contributions returned.</p>
+                                )}
+                              </div>
+                            </>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="pt-3 border-t border-gray-800 space-y-1">
                     <p className="text-xs text-gray-400">
                       <span className="font-semibold">Decision method:</span>{' '}
@@ -1296,6 +1448,12 @@ export default function AlertTriageTab() {
                   <div className="text-xs text-gray-500">
                     Pattern: {analysis.recommendation.pattern_id}
                   </div>
+                )}
+
+                {analysis.decision_method && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Method: {analysis.decision_method.replace(/_/g, ' ')}
+                  </p>
                 )}
 
                 {/* Referral callout — rendered only when should_refer === true */}

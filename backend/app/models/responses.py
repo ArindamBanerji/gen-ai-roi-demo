@@ -249,6 +249,7 @@ class DecisionFactorsResponse(BaseModel):
     confidence: float
     decision_method: str
     weights_note: str
+    kernel_note: Optional[str] = None
 
 
 # =============================================================================

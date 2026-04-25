@@ -81,8 +81,14 @@ class GraphSnapshot:
         snap.override_rate = outcome_stats.get("override_rate", 0.0)
         snap.override_quality = outcome_stats.get("override_quality", 0.0)
 
-        # IKS
+        # IKS — prefer the graph client's own value when it is non-zero, but
+        # fall back to the visible scorer-driven path when the backend returns
+        # a sentinel placeholder (AGE currently returns 0.0).
+        from app.services.iks import compute_visible_iks
+
         snap.iks_score = await graph_client.compute_iks()
+        if snap.iks_score == 0.0:
+            snap.iks_score = await compute_visible_iks(graph_client)
 
         logger.info(
             f"GraphSnapshot initialized: "

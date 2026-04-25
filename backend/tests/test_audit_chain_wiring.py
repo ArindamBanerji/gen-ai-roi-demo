@@ -7,6 +7,7 @@ contracts live in test_audit_chain_contract.py.
 
 13 tests.
 """
+import asyncio
 import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 from fastapi.testclient import TestClient
@@ -14,6 +15,10 @@ from fastapi.testclient import TestClient
 from ci_platform.audit.evidence_ledger import OutcomeEntry
 from app.framework.audit import _LEDGER, _SITUATION_TYPES
 from app.framework.feedback_store import FEEDBACK_GIVEN
+
+
+def _run(coro):
+    return asyncio.run(coro)
 
 
 # ---------------------------------------------------------------------------
@@ -24,13 +29,13 @@ def _fresh_decision(alert_id="ALT-WIRE-001", situation_type="malware_detected",
                     action_taken="escalate", confidence=0.85):
     """Append one clean LedgerEntry and return its SOC dict."""
     from app.framework.audit import record_decision
-    return record_decision(
+    return _run(record_decision(
         alert_id=alert_id,
         situation_type=situation_type,
         action_taken=action_taken,
         factors=["factor_a", "factor_b"],
         confidence=confidence,
-    )
+    ))
 
 
 def _clear():
@@ -47,7 +52,7 @@ def test_record_outcome_returns_none_when_decision_missing():
     """record_outcome with an unknown decision_id returns None gracefully."""
     from app.framework.audit import record_outcome
     _clear()
-    result = record_outcome("DEC-MISSING-XYZ", "correct")
+    result = _run(record_outcome("DEC-MISSING-XYZ", "correct"))
     assert result is None
 
 
@@ -61,7 +66,7 @@ def test_reconstruct_appends_outcome_entry_once():
         "outcome": "correct",
         "timestamp": "2026-04-22T12:00:00",
     }
-    added = reconstruct_from_memory()
+    added = _run(reconstruct_from_memory())
     assert added >= 1
     outcomes = [e for e in _LEDGER.entries() if isinstance(e, OutcomeEntry)]
     assert len(outcomes) >= 1
@@ -72,13 +77,13 @@ def test_reconstruct_skips_existing_outcome():
     from app.framework.audit import record_outcome, reconstruct_from_memory
     _clear()
     rec = _fresh_decision()
-    record_outcome(rec["id"], "correct")
+    _run(record_outcome(rec["id"], "correct"))
     FEEDBACK_GIVEN["ALT-WIRE-001"] = {
         "decision_id": rec["id"],
         "outcome": "correct",
     }
     before = sum(1 for e in _LEDGER.entries() if isinstance(e, OutcomeEntry))
-    reconstruct_from_memory()
+    _run(reconstruct_from_memory())
     after = sum(1 for e in _LEDGER.entries() if isinstance(e, OutcomeEntry))
     assert after == before
 
@@ -93,7 +98,7 @@ def test_reconstruct_swallows_missing_decision():
         "outcome": "correct",
     }
     # Must not raise; returns 0 (nothing matched)
-    added = reconstruct_from_memory()
+    added = _run(reconstruct_from_memory())
     assert added == 0
 
 
@@ -102,8 +107,8 @@ def test_get_decision_rows_latest_outcome():
     from app.framework.audit import record_outcome, get_decision_rows
     _clear()
     rec = _fresh_decision()
-    record_outcome(rec["id"], "correct")
-    record_outcome(rec["id"], "incorrect")   # later insertion wins
+    _run(record_outcome(rec["id"], "correct"))
+    _run(record_outcome(rec["id"], "incorrect"))   # later insertion wins
     rows = get_decision_rows()
     match = [r for r in rows if r["id"] == rec["id"]]
     assert len(match) == 1

@@ -51,7 +51,7 @@ async def get_audit_decisions(format: str = "json"):
     try:
         # Back-fill from FEEDBACK_GIVEN before returning, so the ledger is
         # always current even if record_decision() was never called directly.
-        added = reconstruct_from_memory()
+        added = await reconstruct_from_memory()
         decisions = get_decision_rows()
         print(f"[AUDIT] {len(decisions)} records ({added} outcome entries reconstructed this call)")
 
@@ -130,7 +130,7 @@ async def verify_audit_chain():
 
     try:
         # Reconstruct first so the ledger is current
-        reconstruct_from_memory()
+        await reconstruct_from_memory()
         result = verify_chain()
         print(
             f"[AUDIT] verify_chain → verified={result['verified']}, "

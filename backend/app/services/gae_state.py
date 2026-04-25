@@ -322,15 +322,25 @@ def serialize_centroid_tensor(scorer) -> dict:
     return payload
 
 
-def write_centroid_backup(scorer) -> dict:
+def write_centroid_backup(scorer, metadata: dict | None = None) -> dict:
     """
     Serialize mu, write timestamped + latest backup files.
     Returns the payload dict (includes sha256 and backup_id).
+
+    Parameters
+    ----------
+    scorer   : ProfileScorer — source of centroids.
+    metadata : optional dict merged into the JSON payload (trigger, decision_id, …).
     """
+    import uuid as _uuid
     payload = serialize_centroid_tensor(scorer)
     ts = payload["timestamp_epoch"]
-    backup_id = f"centroid_backup_{ts}"
+    # UUID suffix guarantees uniqueness even when two snapshots occur in the
+    # same millisecond (common in tests and high-throughput simulation runs).
+    backup_id = f"centroid_backup_{ts}_{_uuid.uuid4().hex[:8]}"
     payload["backup_id"] = backup_id
+    if metadata:
+        payload["metadata"] = metadata
 
     d = _ensure_backup_dir()
     timestamped = d / f"{backup_id}.json"
@@ -341,6 +351,50 @@ def write_centroid_backup(scorer) -> dict:
     latest.write_text(data)
 
     return payload
+
+
+# =============================================================================
+# Block 2.1b — Auto-snapshot trigger (FEATURE-04 Centroid Time Machine)
+# =============================================================================
+
+SNAPSHOT_INTERVAL: int = 10   # snapshot every N verified decisions
+
+_snapshot_decision_count: int = 0
+
+
+def maybe_write_centroid_snapshot(
+    scorer,
+    decision_id: str = "",
+    category: str = "",
+) -> bool:
+    """Auto-snapshot centroids every SNAPSHOT_INTERVAL verified decisions.
+
+    Increments a module-level counter on every call and writes a backup when
+    the counter is a positive multiple of SNAPSHOT_INTERVAL.  Returns True
+    if a backup was written, False otherwise.  Never raises — all errors are
+    logged as warnings so callers can fire-and-forget.
+    """
+    global _snapshot_decision_count
+    _snapshot_decision_count += 1
+    if _snapshot_decision_count % SNAPSHOT_INTERVAL != 0:
+        return False
+    try:
+        metadata = {
+            "trigger":        "auto",
+            "decision_count": _snapshot_decision_count,
+            "decision_id":    decision_id,
+            "category":       category,
+        }
+        write_centroid_backup(scorer, metadata=metadata)
+        log.info(
+            "[SNAPSHOT] Auto-snapshot #%d written (every %d decisions)",
+            _snapshot_decision_count,
+            SNAPSHOT_INTERVAL,
+        )
+        return True
+    except Exception as e:
+        log.warning("[SNAPSHOT] Auto-snapshot failed: %s", e)
+        return False
 
 
 def list_centroid_backups() -> list:
@@ -661,6 +715,13 @@ def guarded_update(scorer, f, category_index: int, action_index: int,
             "[D2] guarded_update: category '%s' frozen — skipping update "
             "(action=%d, correct=%s)",
             category_name, action_index, correct,
+        )
+        return None
+    if getattr(scorer, 'is_paused', False) is True:
+        log.warning(
+            "[B5] guarded_update: conservation paused — skipping centroid update "
+            "(category=%d/%s, action=%d, correct=%s)",
+            category_index, category_name or "?", action_index, correct,
         )
         return None
     if not increment_spike_counter():

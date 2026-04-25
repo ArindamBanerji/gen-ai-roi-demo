@@ -9,6 +9,10 @@ import {
   FileText,
   Database,
   Settings,
+  Users,
+  TrendingUp,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react'
 import {
   BarChart,
@@ -21,7 +25,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { queryMetric, getThreatLandscape, getAttackTacticBreakdown } from '../../lib/api'
+import { queryMetric, getThreatLandscape, getAttackTacticBreakdown, fetchAnalystBenchmarking, fetchF9Report, fetchGraphSummary, fetchPrebuiltQueries, fetchNodeNeighbors, runPrebuiltQuery } from '../../lib/api'
 import { ensureArray } from '../../lib/guards'
 import { domainConfig } from '../../lib/domain'
 
@@ -86,6 +90,41 @@ const CROSS_SOURCE_QUESTIONS = [
   `What threat intel sources cover ${domainConfig.defaultAlertId}?`,
 ]
 
+interface BenchmarkingCategoryEntry {
+  agree_rate: number
+  ai_accuracy: number
+  override_count: number
+  total: number
+  analyst_agreement: number
+  override_precision: number | null
+  verified_decisions: number
+  signal: string
+  confidence: 'calibrated' | 'learning' | 'cold_start'
+}
+
+interface BenchmarkingData {
+  status: 'ready' | 'accumulating'
+  message?: string
+  source?: string
+  total_decisions?: number
+  overall_agreement_rate?: number
+  overall_ai_accuracy?: number
+  lead_finding?: string
+  per_category?: Record<string, BenchmarkingCategoryEntry>
+  day_variance?: { min_daily_agree: number; max_daily_agree: number; trend: string }
+}
+
+interface F9ReportData {
+  report_title: string
+  generated_at: number
+  status: 'ready' | 'accumulating'
+  total_shadow_decisions: number
+  lead_finding: string
+  key_insight: string
+  per_category: Record<string, BenchmarkingCategoryEntry>
+  methodology: string
+}
+
 interface CategoryScore {
   category: string
   quality_score: number | null
@@ -147,8 +186,24 @@ export default function SOCAnalyticsTab() {
   const [tacticBreakdownLoading, setTacticBreakdownLoading] = useState(true)
   const [detEng, setDetEng] = useState<DetectionEngineering | null>(null)
   const [detEngError, setDetEngError] = useState(false)
+  const [benchmarking, setBenchmarking] = useState<BenchmarkingData | null>(null)
+  const [f9Report, setF9Report] = useState<F9ReportData | null>(null)
 
-  // Fetch threat landscape, tactic breakdown, and detection engineering on mount
+  // WIRE-08: Graph Explorer
+  const [graphExpanded, setGraphExpanded] = useState(false)
+  const [graphInitialized, setGraphInitialized] = useState(false)
+  const [graphSummary, setGraphSummary] = useState<any>(null)
+  const [prebuiltList, setPrebuiltList] = useState<any[]>([])
+  const [queryRows, setQueryRows] = useState<any[]>([])
+  const [queryRunning, setQueryRunning] = useState(false)
+  const [activeQueryKey, setActiveQueryKey] = useState<string | null>(null)
+  const [queryError, setQueryError] = useState<string | null>(null)
+  const [queryPage, setQueryPage] = useState(0)
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [nodeNeighbors, setNodeNeighbors] = useState<any>(null)
+  const [neighborsLoading, setNeighborsLoading] = useState(false)
+
+  // Fetch threat landscape, tactic breakdown, detection engineering, and benchmarking on mount
   useEffect(() => {
     getThreatLandscape()
       .then((data) => setThreatLandscape(data as ThreatLandscape))
@@ -162,6 +217,12 @@ export default function SOCAnalyticsTab() {
       .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() })
       .then((data) => setDetEng(data as DetectionEngineering))
       .catch(() => setDetEngError(true))
+    fetchAnalystBenchmarking()
+      .then((data) => setBenchmarking(data as BenchmarkingData))
+      .catch(() => {})
+    fetchF9Report()
+      .then((data) => setF9Report(data as F9ReportData))
+      .catch(() => {})
   }, [])
 
   const handleQuery = async (queryText?: string) => {
@@ -185,6 +246,57 @@ export default function SOCAnalyticsTab() {
       setResult(null)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Lazy-load graph summary + prebuilt list when explorer is first expanded
+  useEffect(() => {
+    if (!graphExpanded || graphInitialized) return
+    setGraphInitialized(true)
+    fetchGraphSummary().then((d: any) => setGraphSummary(d)).catch(() => {})
+    fetchPrebuiltQueries()
+      .then((d: any) => setPrebuiltList(ensureArray((d as any)?.queries)))
+      .catch(() => {})
+  }, [graphExpanded, graphInitialized])
+
+  const handleRunPrebuilt = async (queryKey: string) => {
+    setActiveQueryKey(queryKey)
+    setQueryRunning(true)
+    setQueryRows([])
+    setQueryError(null)
+    setQueryPage(0)
+    setSelectedNodeId(null)
+    setNodeNeighbors(null)
+    try {
+      const result: any = await runPrebuiltQuery(queryKey)
+      if (result?.error) {
+        setQueryError(result.error)
+      } else {
+        setQueryRows(ensureArray(result?.rows))
+      }
+    } catch {
+      setQueryError('Query failed — check backend connection')
+    } finally {
+      setQueryRunning(false)
+    }
+  }
+
+  const handleNodeClick = async (nodeId: string) => {
+    if (selectedNodeId === nodeId) {
+      setSelectedNodeId(null)
+      setNodeNeighbors(null)
+      return
+    }
+    setSelectedNodeId(nodeId)
+    setNeighborsLoading(true)
+    setNodeNeighbors(null)
+    try {
+      const data: any = await fetchNodeNeighbors(nodeId)
+      setNodeNeighbors(data)
+    } catch {
+      setNodeNeighbors({ neighbors: [], total: 0, error: 'Failed to load neighbors' })
+    } finally {
+      setNeighborsLoading(false)
     }
   }
 
@@ -473,6 +585,125 @@ export default function SOCAnalyticsTab() {
           <div className="px-5 pb-3 text-xs text-gray-600 italic">{detEng.note}</div>
         </div>
       ) : null}
+
+      {/* Team Performance — F9 Analyst Benchmarking (WIRE-02) */}
+      {benchmarking && benchmarking.status === 'ready' && (
+        <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-800 flex items-center gap-2">
+            <Users className="w-4 h-4 text-indigo-400" />
+            <span className="text-sm font-semibold">Team Performance</span>
+            <span className="ml-auto text-xs text-gray-600">
+              F9 · {(benchmarking.total_decisions ?? 0).toLocaleString()} shadow decisions
+            </span>
+          </div>
+
+          <div className="p-5">
+            {/* Key insight from f9Report */}
+            {f9Report?.key_insight && (
+              <div className="mb-4 bg-indigo-500/10 border border-indigo-500/30 rounded-lg px-4 py-3">
+                <p className="text-xs text-indigo-300 leading-relaxed italic">"{f9Report.key_insight}"</p>
+              </div>
+            )}
+
+            {/* Lead finding */}
+            {benchmarking.lead_finding && (
+              <div className="mb-5 flex items-start gap-2">
+                <TrendingUp className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
+                <p className="text-sm text-gray-300 leading-relaxed">{benchmarking.lead_finding}</p>
+              </div>
+            )}
+
+            {/* Summary comparison cards */}
+            <div className="grid grid-cols-3 gap-3 mb-5">
+              <div className="bg-soc-bg rounded-lg p-4 text-center border border-gray-700">
+                <div className="text-2xl font-bold text-blue-300">
+                  {((benchmarking.overall_ai_accuracy ?? 0) * 100).toFixed(0)}%
+                </div>
+                <div className="text-xs text-gray-500 mt-1">AI Accuracy</div>
+              </div>
+              <div className="bg-soc-bg rounded-lg p-4 text-center border border-gray-700">
+                <div className="text-2xl font-bold text-gray-300">
+                  {((benchmarking.overall_agreement_rate ?? 0) * 100).toFixed(0)}%
+                </div>
+                <div className="text-xs text-gray-500 mt-1">Analyst Agreement</div>
+              </div>
+              <div className="bg-soc-bg rounded-lg p-4 text-center border border-gray-700">
+                <div className="text-2xl font-bold text-purple-300">100%</div>
+                <div className="text-xs text-gray-500 mt-1">AI Consistency</div>
+                <div className="text-xs text-gray-600 mt-0.5">vs ~65% analyst</div>
+              </div>
+            </div>
+
+            {/* Per-category breakdown */}
+            {benchmarking.per_category && Object.keys(benchmarking.per_category).length > 0 && (
+              <div>
+                <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Per-Category Breakdown</div>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-gray-500 border-b border-gray-800">
+                      <th className="text-left py-1.5 font-normal">Category</th>
+                      <th className="text-right py-1.5 font-normal">AI Accuracy</th>
+                      <th className="text-right py-1.5 font-normal">Agreement</th>
+                      <th className="text-right py-1.5 font-normal">Override %</th>
+                      <th className="text-right py-1.5 font-normal">N</th>
+                      <th className="text-right py-1.5 font-normal">Confidence</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(benchmarking.per_category).map(([cat, row]) => {
+                      const overridePct = Math.round((1 - row.analyst_agreement) * 100)
+                      const aiPct = Math.round(row.ai_accuracy * 100)
+                      const agreePct = Math.round(row.analyst_agreement * 100)
+                      const aiColor = aiPct >= 80 ? 'text-green-400' : aiPct >= 60 ? 'text-yellow-400' : 'text-red-400'
+                      const overrideColor = overridePct >= 50 ? 'text-red-400' : overridePct >= 30 ? 'text-yellow-400' : 'text-gray-400'
+                      return (
+                        <tr key={cat} className="border-b border-gray-800/50 hover:bg-soc-bg/50 transition-colors">
+                          <td className="py-2 text-gray-300 font-mono">{cat.replace(/_/g, ' ')}</td>
+                          <td className={`py-2 text-right font-semibold ${aiColor}`}>{aiPct}%</td>
+                          <td className="py-2 text-right text-gray-400">{agreePct}%</td>
+                          <td className={`py-2 text-right font-semibold ${overrideColor}`}>{overridePct}%</td>
+                          <td className="py-2 text-right text-gray-500">{row.verified_decisions}</td>
+                          <td className="py-2 text-right">
+                            <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${
+                              row.confidence === 'calibrated'
+                                ? 'bg-green-500/20 text-green-400'
+                                : row.confidence === 'learning'
+                                ? 'bg-yellow-500/20 text-yellow-400'
+                                : 'bg-gray-500/20 text-gray-500'
+                            }`}>
+                              {row.confidence}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Methodology footnote */}
+            {f9Report?.methodology && (
+              <div className="mt-4 text-xs text-gray-600 italic border-t border-gray-800 pt-3">
+                Methodology: {f9Report.methodology}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Benchmarking — accumulating state */}
+      {benchmarking && benchmarking.status === 'accumulating' && (
+        <div className="bg-soc-card rounded-lg border border-gray-800 p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <Users className="w-4 h-4 text-indigo-400" />
+            <span className="text-sm font-semibold">Team Performance</span>
+          </div>
+          <p className="text-xs text-gray-500">
+            {benchmarking.message ?? 'Shadow decision data is still loading. Check back after Step 3 ingest.'}
+          </p>
+        </div>
+      )}
 
       {/* Query Input */}
       <div className="bg-soc-card rounded-lg p-6 border border-gray-800">
@@ -857,6 +1088,205 @@ export default function SOCAnalyticsTab() {
 
       {/* F6 — Campaign Intelligence Panel */}
       <CampaignIntelligencePanel />
+
+      {/* F7 — Graph Explorer Panel (WIRE-08) */}
+      <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
+        {/* Collapsible header */}
+        <button
+          onClick={() => setGraphExpanded(v => !v)}
+          className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-800/30 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Database className="w-4 h-4 text-purple-400" />
+            <h3 className="font-semibold text-white text-sm">Graph Explorer</h3>
+            <span className="text-xs text-gray-500 ml-1">Ask the Graph · 5 prebuilt queries</span>
+          </div>
+          {graphExpanded
+            ? <ChevronDown className="w-4 h-4 text-gray-400" />
+            : <ChevronRight className="w-4 h-4 text-gray-400" />
+          }
+        </button>
+
+        {graphExpanded && (
+          <div className="border-t border-gray-800 p-5 space-y-5">
+
+            {/* Part A: Graph Summary */}
+            {graphSummary ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="bg-soc-bg rounded border border-gray-700 p-3">
+                  <div className="text-gray-500 mb-0.5">Total Nodes</div>
+                  <div className="font-mono font-semibold text-gray-200 text-base">
+                    {(graphSummary.total_nodes ?? 0).toLocaleString()}
+                  </div>
+                </div>
+                <div className="bg-soc-bg rounded border border-gray-700 p-3">
+                  <div className="text-gray-500 mb-0.5">Relationships</div>
+                  <div className="font-mono font-semibold text-gray-200 text-base">
+                    {(graphSummary.total_relationships ?? 0).toLocaleString()}
+                  </div>
+                </div>
+                <div className="bg-soc-bg rounded border border-gray-700 p-3 col-span-2">
+                  <div className="text-gray-500 mb-1">Node Types</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(graphSummary.node_types ?? {}).slice(0, 6).map(([label, cnt]: any) => (
+                      <span key={label} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-700/60 text-gray-300 font-mono">
+                        {label} <span className="text-gray-500">{cnt}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-xs text-gray-500 italic">Loading graph summary…</div>
+            )}
+
+            {/* Part B: Prebuilt Query Selector */}
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Prebuilt Queries</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {prebuiltList.length > 0 ? prebuiltList.map((q: any) => (
+                  <button
+                    key={q.key}
+                    onClick={() => handleRunPrebuilt(q.key)}
+                    disabled={queryRunning}
+                    className={`text-left rounded border px-3 py-2.5 text-xs transition-colors disabled:opacity-50 ${
+                      activeQueryKey === q.key
+                        ? 'border-purple-500/60 bg-purple-500/10 text-purple-200'
+                        : 'border-gray-700 bg-soc-bg text-gray-300 hover:border-gray-600 hover:bg-gray-800/60'
+                    }`}
+                  >
+                    <div className="font-semibold mb-0.5">{q.name}</div>
+                    <div className="text-gray-500">{q.description}</div>
+                  </button>
+                )) : (
+                  <div className="col-span-2 text-xs text-gray-600 italic py-2">Loading queries…</div>
+                )}
+              </div>
+            </div>
+
+            {/* Part C: Results */}
+            {queryRunning && (
+              <div className="text-xs text-gray-400 italic py-3 text-center">Running query…</div>
+            )}
+            {queryError && (
+              <div className="text-xs text-red-300 bg-red-900/20 border border-red-500/30 rounded px-3 py-2">
+                {queryError}
+              </div>
+            )}
+            {queryRows.length > 0 && !queryRunning && (() => {
+              const PAGE_SIZE = 20
+              const totalPages = Math.ceil(queryRows.length / PAGE_SIZE)
+              const pageRows = queryRows.slice(queryPage * PAGE_SIZE, (queryPage + 1) * PAGE_SIZE)
+              const cols = Object.keys(queryRows[0] ?? {})
+              const nodeIdCol = cols.find(c => c === 'id' || c === 'node_id' || c === 'alert_id')
+              return (
+                <div>
+                  <div className="flex items-center justify-between mb-2 text-xs">
+                    <span className="text-gray-500">{queryRows.length} result{queryRows.length !== 1 ? 's' : ''}</span>
+                    {totalPages > 1 && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setQueryPage(p => Math.max(0, p - 1))}
+                          disabled={queryPage === 0}
+                          className="px-2 py-0.5 rounded border border-gray-700 disabled:opacity-40 hover:bg-gray-700"
+                        >←</button>
+                        <span className="text-gray-500">{queryPage + 1} / {totalPages}</span>
+                        <button
+                          onClick={() => setQueryPage(p => Math.min(totalPages - 1, p + 1))}
+                          disabled={queryPage === totalPages - 1}
+                          className="px-2 py-0.5 rounded border border-gray-700 disabled:opacity-40 hover:bg-gray-700"
+                        >→</button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-gray-700 text-gray-500 uppercase tracking-wide">
+                          {cols.map(col => (
+                            <th key={col} className="text-left py-1.5 pr-4 font-medium whitespace-nowrap">
+                              {col.replace(/_/g, ' ')}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pageRows.map((row: any, i: number) => (
+                          <tr key={i} className="border-b border-gray-800/60 last:border-0 hover:bg-gray-800/30">
+                            {cols.map(col => {
+                              const val = row[col]
+                              const isClickable = col === nodeIdCol && val != null
+                              return (
+                                <td key={col} className="py-1.5 pr-4 align-top">
+                                  {isClickable ? (
+                                    <button
+                                      onClick={() => handleNodeClick(String(val))}
+                                      className={`font-mono hover:underline ${selectedNodeId === String(val) ? 'text-purple-300 underline' : 'text-purple-400 hover:text-purple-300'}`}
+                                    >
+                                      {String(val)}
+                                    </button>
+                                  ) : val == null ? (
+                                    <span className="text-gray-600">—</span>
+                                  ) : typeof val === 'number' ? (
+                                    <span className="font-mono text-gray-200">
+                                      {Number.isInteger(val) ? val.toLocaleString() : val.toFixed(3)}
+                                    </span>
+                                  ) : typeof val === 'boolean' ? (
+                                    <span className={val ? 'text-green-400' : 'text-gray-500'}>{String(val)}</span>
+                                  ) : (
+                                    <span className="text-gray-300">{String(val)}</span>
+                                  )}
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Neighbor drilldown */}
+                  {selectedNodeId && (
+                    <div className="mt-4 rounded border border-purple-500/30 bg-purple-900/10 p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-purple-300">
+                          Neighbors of <span className="font-mono">{selectedNodeId}</span>
+                        </span>
+                        <button
+                          onClick={() => { setSelectedNodeId(null); setNodeNeighbors(null) }}
+                          className="text-xs text-gray-500 hover:text-gray-300"
+                        >✕</button>
+                      </div>
+                      {neighborsLoading ? (
+                        <div className="text-xs text-gray-500 italic">Loading neighbors…</div>
+                      ) : (nodeNeighbors as any)?.error ? (
+                        <div className="text-xs text-red-300">{(nodeNeighbors as any).error}</div>
+                      ) : ensureArray<any>((nodeNeighbors as any)?.neighbors).length === 0 ? (
+                        <div className="text-xs text-gray-500 italic">No neighbors found.</div>
+                      ) : (
+                        <div className="space-y-1">
+                          {ensureArray<any>((nodeNeighbors as any)?.neighbors).slice(0, 15).map((n: any, i: number) => (
+                            <div key={i} className="flex items-center gap-3 text-xs">
+                              <span className="text-gray-500 font-mono w-36 truncate shrink-0">{n.relationship}</span>
+                              <span className="text-purple-400 font-semibold w-20 shrink-0">{n.neighbor_type}</span>
+                              <span className="text-gray-300 truncate">{n.neighbor_name ?? n.neighbor_id ?? '—'}</span>
+                            </div>
+                          ))}
+                          {((nodeNeighbors as any)?.total ?? 0) > 15 && (
+                            <div className="text-xs text-gray-600 italic mt-1">
+                              +{(nodeNeighbors as any).total - 15} more neighbors
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

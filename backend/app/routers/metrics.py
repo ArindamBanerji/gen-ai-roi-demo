@@ -364,7 +364,7 @@ async def reset_all_demo_data():
 
         # Reset demo-cycle in-memory state only — preserve learning_state so
         # ProfileScorer centroids (IKS) survive this reset (BACKLOG-020).
-        state_manager.reset_except(["learning_state"])
+        await state_manager.reset_except(["learning_state"])
 
         print("[DEMO RESET] Comprehensive reset completed successfully")
 

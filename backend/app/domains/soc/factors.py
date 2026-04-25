@@ -782,4 +782,13 @@ def compute_soc_factors(
             "Centroids update automatically through verified analyst decisions "
             "(Loop 2 + Loop 3)"
         ),
+        # DiagonalKernel explainability (CLAIM-B3).
+        # Percentage = _factor_kernel_weight(0.28, all_soc_sigmas)*100 ≈ 6
+        # (device_trust σ=0.28 vs threat_intel_enrichment σ=0.07 as max-precision anchor).
+        "kernel_note": (
+            "Higher-noise factors are automatically down-weighted by the "
+            "DiagonalKernel scoring engine (Innovation #4). "
+            "device_trust (σ=0.28) contributes 6% of its nominal weight — "
+            "the system trusts your highest-confidence signals most."
+        ),
     }

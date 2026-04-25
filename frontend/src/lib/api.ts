@@ -97,6 +97,9 @@ export async function getCentroidEvolution(n: number = 200) {
   return fetchJSON(`/soc/centroid-evolution?n=${n}`)
 }
 
+export const fetchCentroidExport = () =>
+  fetchJSON('/soc/centroid-export')
+
 // ============================================================================
 // Tab 3: Alert Triage
 // ============================================================================
@@ -133,6 +136,9 @@ export async function getDecisionFactors(alertId: string) {
   return fetchJSON(`/triage/decision-factors/${alertId}`)
 }
 
+export const fetchJudgmentExplain = (alertId: string) =>
+  fetchJSON(`/soc/judgment/explain/${alertId}`)
+
 // ============================================================================
 // Simulation (SIM-2)
 // ============================================================================
@@ -163,6 +169,9 @@ export async function getSimulationExperimentLog(simId: string) {
 export async function getCompoundingMetrics(weeks: number = 4) {
   return fetchJSON(`/metrics/compounding?weeks=${weeks}`)
 }
+
+export const fetchAutoApproveStats = () =>
+  fetchJSON('/soc/auto-approve-stats')
 
 export async function getEvolutionEvents(limit: number = 10) {
   return fetchJSON(`/metrics/evolution-events?limit=${limit}`)
@@ -325,3 +334,100 @@ export async function verifyAuditChain() {
 export async function getAccuracyTrajectory() {
   return fetchJSON('/soc/accuracy-trajectory')
 }
+
+// ============================================================================
+// WIRE-03: Learning Health / Conservation Law (Tab 2 System Health)
+// ============================================================================
+
+export async function fetchLearningHealth() {
+  return fetchJSON('/soc/learning-health')
+}
+
+// ============================================================================
+// WIRE-04: IKS Trend / Trajectory (Tab 2 System Health)
+// ============================================================================
+
+export async function fetchIksTrend() {
+  return fetchJSON('/soc/iks-trend')
+}
+
+// ============================================================================
+// WIRE-01: Governance & Compliance (Tab 5)
+// ============================================================================
+
+export async function fetchCompliance() {
+  return fetchJSON('/soc/compliance')
+}
+
+export async function fetchTransparency() {
+  return fetchJSON('/soc/transparency')
+}
+
+// ============================================================================
+// WIRE-02: Analyst Benchmarking (Tab 1)
+// ============================================================================
+
+export async function fetchAnalystBenchmarking() {
+  return fetchJSON('/soc/analyst-benchmarking')
+}
+
+export async function fetchF9Report() {
+  return fetchJSON('/soc/f9-report')
+}
+
+// ============================================================================
+// WIRE-05: Shadow Mode
+// ============================================================================
+
+export const toggleShadowMode = (enabled: boolean) =>
+  fetchJSON('/soc/shadow/toggle', { method: 'POST', body: JSON.stringify({ enabled }) })
+
+export const recordShadowAction = (body: Record<string, unknown>) =>
+  fetchJSON('/soc/shadow/analyst-action', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+
+export const fetchShadowReport = () =>
+  fetchJSON('/soc/shadow/report')
+
+// ============================================================================
+// WIRE-06: Checkpoint Controls
+// ============================================================================
+
+export const createCheckpoint = (reason = 'manual') =>
+  fetchJSON('/soc/checkpoint/create', { method: 'POST', body: JSON.stringify({ reason }) })
+
+export const fetchCheckpoints = () =>
+  fetchJSON('/soc/checkpoint/list')
+
+export const rollbackCheckpoint = (checkpointId: string) =>
+  fetchJSON('/soc/checkpoint/rollback', {
+    method: 'POST',
+    body: JSON.stringify({ checkpoint_id: checkpointId }),
+  })
+
+// ============================================================================
+// WIRE-08: Graph Explorer
+// ============================================================================
+
+export const fetchGraphSummary = () =>
+  fetchJSON('/soc/graph/summary')
+
+export const fetchTopNodes = () =>
+  fetchJSON('/soc/graph/top-nodes')
+
+export const fetchNodeNeighbors = (nodeId: string) =>
+  fetchJSON(`/soc/graph/node/${nodeId}/neighbors`)
+
+export const fetchPrebuiltQueries = () =>
+  fetchJSON('/soc/graph/prebuilt-queries')
+
+export const runPrebuiltQuery = (queryName: string) =>
+  fetchJSON(`/soc/graph/prebuilt/${queryName}`, { method: 'POST' })
+
+export const runGraphQuery = (cypher: string) =>
+  fetchJSON('/soc/graph/query', {
+    method: 'POST',
+    body: JSON.stringify({ cypher }),
+  })

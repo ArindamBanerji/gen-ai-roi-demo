@@ -175,6 +175,14 @@ interface CentroidEvolutionEntry {
 
 // CentroidEvolutionData removed — backend returns flat array, not {evolution:[]} wrapper
 
+interface CentroidExportResponse {
+  exported_at?: number
+  generated_at_epoch?: number
+  tensor_shape?: number[]
+  sha256?: string
+  decision_count?: number
+}
+
 const DEFAULT_ALERT_ID = domainConfig.defaultAlertId
 
 
@@ -352,6 +360,25 @@ export default function RuntimeEvolutionTab() {
     interpretation: string
     note?: string
   } | null>(null)
+  const [centroidExportBusy, setCentroidExportBusy] = useState(false)
+  const [centroidExportMessage, setCentroidExportMessage] = useState<string | null>(null)
+
+  // WIRE-03/04: Learning Health + IKS Trend — lazy-loaded when section D activates
+  const [healthData, setHealthData] = useState<any>(null)
+  const [iksTrend, setIksTrend] = useState<any>(null)
+  const [healthDataLoading, setHealthDataLoading] = useState(false)
+  const [iksTrendLoading, setIksTrendLoading] = useState(false)
+
+  // WIRE-05: Shadow Mode
+  const [shadowEnabled, setShadowEnabled] = useState(false)
+  const [shadowReport, setShadowReport] = useState<any>(null)
+  const [shadowToggleBusy, setShadowToggleBusy] = useState(false)
+
+  // WIRE-06: Checkpoints
+  const [checkpoints, setCheckpoints] = useState<any[]>([])
+  const [checkpointBusy, setCheckpointBusy] = useState(false)
+  const [checkpointMsg, setCheckpointMsg] = useState<string | null>(null)
+  const [rollbackBusy, setRollbackBusy] = useState<string | null>(null)
 
   // Section refs for IntersectionObserver
   const sectionARef = useRef<HTMLDivElement>(null)
@@ -448,6 +475,27 @@ export default function RuntimeEvolutionTab() {
     refs.forEach(({ ref }) => { if (ref.current) observer.observe(ref.current) })
     return () => observer.disconnect()
   }, [])
+
+  // Lazy-load WIRE-03/04/05/06 data only when System Health section is active
+  useEffect(() => {
+    if (activeSection !== 'd') return
+    setHealthDataLoading(true)
+    api.fetchLearningHealth()
+      .then((d: any) => setHealthData(d))
+      .catch(() => {})
+      .finally(() => setHealthDataLoading(false))
+    setIksTrendLoading(true)
+    api.fetchIksTrend()
+      .then((d: any) => setIksTrend(d))
+      .catch(() => {})
+      .finally(() => setIksTrendLoading(false))
+    api.fetchShadowReport()
+      .then((d: any) => setShadowReport(d))
+      .catch(() => {})
+    api.fetchCheckpoints()
+      .then((d: any) => setCheckpoints(ensureArray((d as any)?.checkpoints)))
+      .catch(() => {})
+  }, [activeSection])
 
   const loadDeployments = async () => {
     try {
@@ -561,6 +609,90 @@ export default function RuntimeEvolutionTab() {
     }
   }
 
+  const handleExportCentroids = async () => {
+    setCentroidExportBusy(true)
+    setCentroidExportMessage(null)
+
+    try {
+      const data = await api.fetchCentroidExport() as CentroidExportResponse
+      const payload = JSON.stringify(data, null, 2)
+      const blob = new Blob([payload], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const timestamp = data.exported_at ?? data.generated_at_epoch ?? Date.now()
+      const stamp = new Date(timestamp).toISOString().replace(/[:.]/g, '-')
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `centroid_export_${stamp}.json`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+
+      const tensorShape = Array.isArray(data.tensor_shape) ? data.tensor_shape.join('x') : 'unknown'
+      const sha256 = data.sha256 ?? 'unknown'
+      const decisionCount = data.decision_count ?? 0
+      setCentroidExportMessage(
+        `Exported ${tensorShape} tensor, ${decisionCount} decisions, SHA-256 ${sha256}, ${new Date(timestamp).toLocaleString()}.`
+      )
+    } catch (error) {
+      console.error('[RuntimeEvolutionTab] Failed to export centroids:', error)
+      setCentroidExportMessage('Centroid export failed.')
+    } finally {
+      setCentroidExportBusy(false)
+    }
+  }
+
+  const handleShadowToggle = async () => {
+    const newState = !shadowEnabled
+    if (newState && !window.confirm('Enable shadow mode? The system will observe but not act on recommendations.')) return
+    setShadowToggleBusy(true)
+    try {
+      const result: any = await api.toggleShadowMode(newState)
+      setShadowEnabled(result.shadow_mode)
+      if (result.shadow_mode) {
+        const report: any = await api.fetchShadowReport()
+        setShadowReport(report)
+      }
+    } catch {
+      // non-critical
+    } finally {
+      setShadowToggleBusy(false)
+    }
+  }
+
+  const handleCreateCheckpoint = async () => {
+    setCheckpointBusy(true)
+    setCheckpointMsg(null)
+    try {
+      const result: any = await api.createCheckpoint()
+      setCheckpointMsg(`Checkpoint created: ${String(result.checkpoint_id).slice(0, 8)}… (${result.reason})`)
+      const list: any = await api.fetchCheckpoints()
+      setCheckpoints(ensureArray((list as any)?.checkpoints))
+    } catch {
+      setCheckpointMsg('Failed to create checkpoint')
+    } finally {
+      setCheckpointBusy(false)
+    }
+  }
+
+  const handleRollback = async (checkpointId: string) => {
+    const cp = checkpoints.find((c: any) => c.id === checkpointId)
+    const dcLabel = cp ? `${cp.decision_count} decisions` : '?'
+    if (!window.confirm(`Roll back to checkpoint ${checkpointId.slice(0, 8)}…?\nThis will restore centroids to their state at ${dcLabel}.\nThis action cannot be undone.`)) return
+    setRollbackBusy(checkpointId)
+    setCheckpointMsg(null)
+    try {
+      const result: any = await api.rollbackCheckpoint(checkpointId)
+      setCheckpointMsg(`Restored to checkpoint (${result.restored_decision_count} decisions). Scorer is now frozen.`)
+      const list: any = await api.fetchCheckpoints()
+      setCheckpoints(ensureArray((list as any)?.checkpoints))
+    } catch {
+      setCheckpointMsg('Rollback failed. Check backend connection.')
+    } finally {
+      setRollbackBusy(null)
+    }
+  }
+
   const processAlert = async (alertId: string = DEFAULT_ALERT_ID) => {
     setProcessing(true)
     setResult(null)
@@ -596,6 +728,14 @@ export default function RuntimeEvolutionTab() {
   // Prefer IKS v2 (Neo4j composite) which reflects actual decision volume.
   const iksCurrentDisplay: number | null = learningStateData?.iks_v2 ?? iks?.current ?? null
   const decisionCount = iks?.decision_count ?? profileState?.decision_count ?? 0
+
+  // WIRE-04: IKS trend derived values
+  const iksTrendPoints: { decisions: number; iks_v2: number; timestamp: string }[] =
+    iksTrend ? ensureArray(iksTrend.trend) : []
+  const iksTrendDir =
+    iksTrendPoints.length >= 2
+      ? iksTrendPoints[iksTrendPoints.length - 1].iks_v2 - iksTrendPoints[0].iks_v2
+      : 0
 
   const categoryStats = (() => {
     if (centroidEvolution.length === 0) return null
@@ -1625,8 +1765,239 @@ export default function RuntimeEvolutionTab() {
                     {iks?.estimated && (!iks?.trend || iks.trend.length === 0) && (
                       <p className="text-xs text-gray-500 italic">(Drift trend available after first 50 verified decisions)</p>
                     )}
+
+                    {/* WIRE-04: IKS Trajectory sparkline */}
+                    {iksTrendLoading && !iksTrend && (
+                      <p className="text-xs text-gray-600">Loading IKS trend…</p>
+                    )}
+                    {iksTrendPoints.length > 0 && (
+                      <div className="mt-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs text-gray-500">IKS Trajectory</span>
+                          <span className={`text-xs font-semibold ${iksTrendDir > 0.5 ? 'text-green-400' : iksTrendDir < -0.5 ? 'text-red-400' : 'text-gray-400'}`}>
+                            {iksTrendDir > 0.5 ? '↑ improving' : iksTrendDir < -0.5 ? '↓ degrading' : '→ stable'}
+                          </span>
+                        </div>
+                        <ResponsiveContainer width="100%" height={72}>
+                          <AreaChart data={iksTrendPoints} margin={{ top: 2, right: 2, left: 0, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="iksGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <XAxis dataKey="decisions" hide />
+                            <YAxis domain={[0, 100]} hide />
+                            <Tooltip
+                              contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #374151', borderRadius: '6px', fontSize: '11px' }}
+                              formatter={(v: number) => [v.toFixed(1), 'IKS']}
+                              labelFormatter={(l: number) => `${l} decisions`}
+                            />
+                            <Area
+                              type="monotone"
+                              dataKey="iks_v2"
+                              stroke="#10b981"
+                              fill="url(#iksGrad)"
+                              strokeWidth={1.5}
+                              dot={iksTrendPoints.length === 1 ? { r: 3, fill: '#10b981' } : false}
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                        <p className="text-xs text-gray-600 mt-0.5">
+                          Based on {iksTrendPoints.length} data point{iksTrendPoints.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
+              </div>
+
+              {/* F1a. Conservation Law Status (WIRE-03) */}
+              {healthDataLoading && !healthData && (
+                <div className="bg-soc-card rounded-lg border border-gray-800 p-5">
+                  <div className="text-sm text-gray-500">Loading conservation status…</div>
+                </div>
+              )}
+              {healthData && (
+                <div className="bg-soc-card rounded-lg border border-gray-800 p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-gray-200">Conservation Law</h4>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                      healthData.status === 'GREEN'
+                        ? 'bg-green-900/40 text-green-400 border border-green-500/30'
+                        : healthData.status === 'AMBER'
+                        ? 'bg-amber-900/40 text-amber-400 border border-amber-500/30'
+                        : healthData.status === 'RED'
+                        ? 'bg-red-900/40 text-red-400 border border-red-500/30'
+                        : 'bg-gray-700/40 text-gray-400 border border-gray-600/30'
+                    }`}>{healthData.status}</span>
+                  </div>
+
+                  {healthData.auto_pause_active ? (
+                    <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-red-900/30 border border-red-500/40 rounded-lg">
+                      <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                      <span className="text-xs font-semibold text-red-300">Learning paused — conservation threshold breached</span>
+                    </div>
+                  ) : (
+                    <div className="mb-3 flex items-center gap-1.5">
+                      <div className="w-2 h-2 bg-green-400 rounded-full" />
+                      <span className="text-xs text-green-400 font-semibold">Learning active</span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="bg-soc-bg rounded p-2 border border-gray-700">
+                      <div className="text-gray-500 mb-0.5">α · learning rate</div>
+                      <div className="font-mono font-semibold text-gray-200">
+                        {((healthData.components?.alpha) ?? 0).toFixed(4)}
+                      </div>
+                    </div>
+                    <div className="bg-soc-bg rounded p-2 border border-gray-700">
+                      <div className="text-gray-500 mb-0.5">q · accuracy</div>
+                      <div className="font-mono font-semibold text-gray-200">
+                        {(((healthData.components?.q) ?? 0) * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                    <div className="bg-soc-bg rounded p-2 border border-gray-700">
+                      <div className="text-gray-500 mb-0.5">V · verified</div>
+                      <div className="font-mono font-semibold text-gray-200">
+                        {(healthData.components?.V) ?? 0}
+                      </div>
+                    </div>
+                    <div className="bg-soc-bg rounded p-2 border border-gray-700">
+                      <div className="text-gray-500 mb-0.5">θ_min · floor</div>
+                      <div className="font-mono font-semibold text-gray-200">
+                        {((healthData.theta_min) ?? 0).toFixed(3)}
+                      </div>
+                    </div>
+                    <div className="bg-soc-bg rounded p-2 border border-gray-700">
+                      <div className="text-gray-500 mb-0.5">α·q·V · signal</div>
+                      <div className={`font-mono font-semibold ${healthData.conservation?.passed ? 'text-green-400' : 'text-red-400'}`}>
+                        {((healthData.signal) ?? 0).toFixed(2)}
+                      </div>
+                    </div>
+                    <div className="bg-soc-bg rounded p-2 border border-gray-700">
+                      <div className="text-gray-500 mb-0.5">headroom</div>
+                      <div className={`font-mono font-semibold ${((healthData.conservation?.headroom) ?? 0) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {((healthData.conservation?.headroom) ?? 0) > 0 ? '+' : ''}
+                        {((healthData.conservation?.headroom) ?? 0).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {healthData.interpretation && (
+                    <p className="mt-3 text-xs text-gray-400 italic leading-relaxed">{healthData.interpretation}</p>
+                  )}
+                </div>
+              )}
+
+              {/* ── Operator Controls (WIRE-05 + WIRE-06) ─────────────── */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-px flex-1 bg-gray-800" />
+                  <span className="text-xs text-gray-500 uppercase tracking-widest">Operator Controls</span>
+                  <div className="h-px flex-1 bg-gray-800" />
+                </div>
+
+                {/* WIRE-05: Shadow Mode */}
+                <div className="bg-soc-card rounded-lg border border-gray-800 p-5 mb-4">
+                  {shadowEnabled && (
+                    <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-amber-900/30 border border-amber-500/40 rounded-lg">
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span className="text-xs font-semibold text-amber-300">Shadow mode active — system is observing, not acting</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-gray-400" />
+                      <h4 className="text-sm font-semibold text-gray-200">Shadow Mode</h4>
+                    </div>
+                    <button
+                      onClick={handleShadowToggle}
+                      disabled={shadowToggleBusy}
+                      aria-label={shadowEnabled ? 'Disable shadow mode' : 'Enable shadow mode'}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50 ${shadowEnabled ? 'bg-amber-500' : 'bg-gray-600'}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${shadowEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-3">
+                    {shadowEnabled
+                      ? 'System observes but does not act. Analyst actions are recorded for agreement tracking.'
+                      : 'Enable to observe system decisions without acting on them.'}
+                  </p>
+                  {shadowReport && (shadowReport.total_shadow_decisions ?? 0) > 0 && (
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div className="bg-soc-bg rounded p-2 border border-gray-700">
+                        <div className="text-gray-500 mb-0.5">Shadow decisions</div>
+                        <div className="font-mono font-semibold text-gray-200">{shadowReport.total_shadow_decisions}</div>
+                      </div>
+                      <div className="bg-soc-bg rounded p-2 border border-gray-700">
+                        <div className="text-gray-500 mb-0.5">Agreement rate</div>
+                        <div className="font-mono font-semibold text-green-400">{((shadowReport.overall_agreement ?? 0) * 100).toFixed(1)}%</div>
+                      </div>
+                      <div className="bg-soc-bg rounded p-2 border border-gray-700">
+                        <div className="text-gray-500 mb-0.5">Recommendation</div>
+                        <div className={`font-semibold ${shadowReport.recommendation === 'Ready for live mode' ? 'text-green-400' : 'text-amber-400'}`}>
+                          {shadowReport.recommendation}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* WIRE-06: Checkpoints */}
+                <div className="bg-soc-card rounded-lg border border-gray-800 p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Database className="w-4 h-4 text-gray-400" />
+                      <h4 className="text-sm font-semibold text-gray-200">Checkpoints</h4>
+                    </div>
+                    <button
+                      onClick={handleCreateCheckpoint}
+                      disabled={checkpointBusy}
+                      className="inline-flex items-center gap-1.5 rounded border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 disabled:opacity-50"
+                    >
+                      {checkpointBusy ? 'Creating…' : '+ Create Checkpoint'}
+                    </button>
+                  </div>
+                  {checkpointMsg && (
+                    <p className={`mb-3 text-xs px-2 py-1.5 rounded border ${checkpointMsg.startsWith('Failed') || checkpointMsg.startsWith('Rollback failed') ? 'text-red-300 bg-red-900/20 border-red-500/30' : 'text-green-300 bg-green-900/20 border-green-500/30'}`}>
+                      {checkpointMsg}
+                    </p>
+                  )}
+                  {checkpoints.length === 0 ? (
+                    <p className="text-xs text-gray-500 italic text-center py-3">No checkpoints yet. Create one before making significant changes.</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {checkpoints.slice(0, 5).map((cp: any) => {
+                        const tsMs = Number(cp.timestamp)
+                        const relTime = (() => {
+                          if (isNaN(tsMs)) return cp.timestamp
+                          const diffMs = Date.now() - tsMs
+                          const diffH = Math.floor(diffMs / 3600000)
+                          const diffM = Math.floor(diffMs / 60000)
+                          return diffH > 0 ? `${diffH}h ago` : diffM > 0 ? `${diffM}m ago` : 'just now'
+                        })()
+                        return (
+                          <div key={cp.id} className="flex items-center gap-2 text-xs bg-soc-bg rounded border border-gray-700 px-3 py-2">
+                            <span className="font-mono text-gray-400 flex-1">{String(cp.id ?? '').slice(0, 8)}…</span>
+                            <span className="text-gray-500">{relTime}</span>
+                            <span className="text-gray-600">·</span>
+                            <span className="text-gray-400">{cp.decision_count} decisions</span>
+                            <button
+                              onClick={() => handleRollback(cp.id)}
+                              disabled={rollbackBusy === cp.id}
+                              className="ml-auto inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-amber-300 hover:bg-amber-500/20 disabled:opacity-50"
+                            >
+                              {rollbackBusy === cp.id ? 'Rolling back…' : 'Rollback'}
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* F1b. Noise Fingerprint — Block 2.4 */}
@@ -1722,6 +2093,26 @@ export default function RuntimeEvolutionTab() {
                   <p className="text-xs text-gray-400 mt-1 ml-6">{centroidSupport.interpretation}</p>
                 </div>
               )}
+
+              <div className="bg-soc-card rounded-lg border border-gray-800 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-200">Institutional Knowledge Export</h4>
+                    <p className="text-xs text-gray-500 mt-1">Download the current centroid tensor as JSON.</p>
+                  </div>
+                  <button
+                    onClick={handleExportCentroids}
+                    disabled={centroidExportBusy}
+                    className="inline-flex items-center gap-2 rounded border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 disabled:opacity-50"
+                  >
+                    <Database className="w-3.5 h-3.5" />
+                    {centroidExportBusy ? 'Exporting...' : 'Export Centroids'}
+                  </button>
+                </div>
+                {centroidExportMessage && (
+                  <p className="mt-2 text-xs text-green-400">{centroidExportMessage}</p>
+                )}
+              </div>
 
               {/* F2. Drift Alerts */}
               <div className="bg-soc-card rounded-lg border border-gray-800 p-5">

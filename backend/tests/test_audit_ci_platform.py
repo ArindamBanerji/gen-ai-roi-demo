@@ -5,8 +5,14 @@ Coverage:
   test_soc_audit_uses_ci_platform_ledger — records are backed by LedgerEntry,
     hash chain is sealed, and epistemic fields round-trip correctly.
 """
+import asyncio
+
 import app.services.audit as audit_module
 from ci_platform.audit.evidence_ledger import LedgerEntry
+
+
+def _run(coro):
+    return asyncio.run(coro)
 
 
 def test_soc_audit_uses_ci_platform_ledger():
@@ -18,9 +24,9 @@ def test_soc_audit_uses_ci_platform_ledger():
     ci_platform only — no duplicate in SOC.
     """
     # Start clean
-    audit_module.reset_audit_state()
+    _run(audit_module.reset_audit_state())
 
-    record = audit_module.record_decision(
+    record = _run(audit_module.record_decision(
         alert_id="ALERT-CI-TEST",
         situation_type="test_situation",
         action_taken="escalate",
@@ -29,7 +35,7 @@ def test_soc_audit_uses_ci_platform_ledger():
         kernel_type="diagonal",
         noise_zone="amber",
         conservation_status="green",
-    )
+    ))
 
     # 1. The returned dict contains the three EU AI Act Art. 15 epistemic fields
     assert record.get("kernel_type") == "diagonal", f"kernel_type missing: {record}"
@@ -55,7 +61,7 @@ def test_soc_audit_uses_ci_platform_ledger():
     assert result["first_record"] == entry.timestamp
 
     # Cleanup
-    audit_module.reset_audit_state()
+    _run(audit_module.reset_audit_state())
 
 
 def test_epistemic_fields_never_none_in_normal_path():
@@ -68,10 +74,10 @@ def test_epistemic_fields_never_none_in_normal_path():
     etc. passed) and verifies that all three fields are non-None strings when the
     caller supplies the 'unknown' fallback as required by the fix.
     """
-    audit_module.reset_audit_state()
+    _run(audit_module.reset_audit_state())
 
     # Simulate triage.py / simulation.py call (SOC-2 fix applied: supplies "unknown")
-    record = audit_module.record_decision(
+    record = _run(audit_module.record_decision(
         alert_id="ALERT-SOC2-TEST",
         situation_type="credential_access",
         action_taken="escalate",
@@ -80,7 +86,7 @@ def test_epistemic_fields_never_none_in_normal_path():
         kernel_type="unknown",
         noise_zone="unknown",
         conservation_status="unknown",
-    )
+    ))
 
     assert record.get("kernel_type") is not None, "kernel_type must not be None"
     assert record.get("noise_zone") is not None, "noise_zone must not be None"
@@ -89,4 +95,4 @@ def test_epistemic_fields_never_none_in_normal_path():
     assert record.get("noise_zone") == "unknown"
     assert record.get("conservation_status") == "unknown"
 
-    audit_module.reset_audit_state()
+    _run(audit_module.reset_audit_state())

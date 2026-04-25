@@ -12,7 +12,7 @@ Status levels:
   AMBER        : conservation satisfied BUT signal < baseline - 2*sigma
   RED          : conservation violated OR signal < baseline - 3*sigma
 
-Auto-pause triggers after AUTO_PAUSE_RED_DAYS=14 consecutive RED days.
+Auto-pause triggers after AUTO_PAUSE_RED_DAYS=14 RED days in a 30-day rolling window.
 
 Reference: docs/project_status_and_plan_v3_part2.md P9
 """
@@ -33,6 +33,12 @@ log = logging.getLogger(__name__)
 CALIBRATION_DECISIONS: int = 300   # proxy for ~30 days at ~10/day
 CALIBRATION_DAYS:      int = 30
 AUTO_PAUSE_RED_DAYS:   int = 14
+# Cumulative-over-window, NOT consecutive. The conservation law (α·q·V ≥ θ_min)
+# uses rolling aggregates — q over 400 decisions, α/V over 50. The auto-pause arm
+# must use the same temporal model. Consecutive-only counting creates a semantic
+# mismatch: a system can breach the rolling conservation signal while the consecutive
+# counter keeps resetting on intermittent GREEN days.
+AUTO_PAUSE_LOOKBACK_DAYS: int = 30  # ~2× threshold; covers 3-4× q_window at V=200
 WINDOW_DECISIONS:      int = 50    # rolling window for alpha/q estimation
 
 
@@ -240,21 +246,26 @@ class LearningHealthMonitor:
     @staticmethod
     async def _count_red_days(neo4j_service: Any) -> int:
         """
-        Count consecutive RED-status days from HealthLog nodes.
+        Count distinct RED-status days in the 30-day lookback window.
 
+        Cumulative, not consecutive — matches the rolling-aggregate semantics of
+        the conservation law (α, q, V use rolling windows, not consecutive runs).
         Returns 0 if neo4j_service is None or the query fails.
         """
         if neo4j_service is None:
             return 0
         try:
+            # Inline the cutoff as a literal integer — $param is forbidden in AGE
+            # (AGEClient does naive string substitution, not driver parameterization).
+            # Integer inlining is safe here: value is computed, never from user input.
+            _cutoff = int((datetime.utcnow().timestamp() - AUTO_PAUSE_LOOKBACK_DAYS * 86400) * 1000)
             rows = await neo4j_service.run_query(
-                """
+                f"""
                 MATCH (h:HealthLog)
                 WHERE h.status = 'RED'
-                  AND h.timestamp_epoch >= $cutoff_epoch
+                  AND h.timestamp_epoch >= {_cutoff}
                 RETURN count(DISTINCT (h.timestamp_epoch / 86400000)) AS red_days
-                """,
-                {"cutoff_epoch": int((datetime.utcnow().timestamp() - (AUTO_PAUSE_RED_DAYS + 1) * 86400) * 1000)},
+                """
             )
             return int((rows[0].get("red_days") or 0) if rows else 0)
         except Exception as exc:

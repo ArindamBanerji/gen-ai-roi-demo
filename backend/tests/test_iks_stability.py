@@ -10,6 +10,7 @@ Fix: reset_demo_alerts() now calls reset_except(["learning_state"]),
 preserving the ProfileScorer across demo resets.
 """
 
+import asyncio
 import os
 import sys
 from unittest.mock import AsyncMock, patch
@@ -96,7 +97,7 @@ def test_state_manager_reset_except_skips_named_handler():
     sm.register("audit",          lambda: called.append("audit"))
     sm.register("learning_state", lambda: called.append("learning_state"))
 
-    sm.reset_except(["learning_state"])
+    asyncio.run(sm.reset_except(["learning_state"]))
 
     assert "feedback"       in called
     assert "audit"          in called
@@ -118,7 +119,7 @@ def test_state_manager_reset_except_empty_skip_calls_all():
     sm.register("feedback",       lambda: called.append("feedback"))
     sm.register("learning_state", lambda: called.append("learning_state"))
 
-    sm.reset_except([])
+    asyncio.run(sm.reset_except([]))
 
     assert "feedback"       in called
     assert "learning_state" in called

@@ -229,7 +229,7 @@ async def process_alert(request: ProcessAlertRequest):
         print(f"[GAE][TAB2] Decision node written: {decision_id} [:DECIDED_ON] {request.alert_id}")
 
         from app.services.audit import record_decision as _audit_record_evo
-        _evo_audit_rec = _audit_record_evo(
+        _evo_audit_rec = await _audit_record_evo(
             alert_id=request.alert_id,
             situation_type=situation_analysis.situation_type,
             action_taken=selected_action,

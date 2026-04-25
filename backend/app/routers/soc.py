@@ -2602,7 +2602,7 @@ async def _tab1_content() -> dict:
 
 async def _tab2_content() -> dict:
     """Tab 2 — Institutional Intelligence."""
-    from app.services.iks import compute_iks_v2
+    from app.services.iks import compute_iks_v2, compute_visible_iks, interpret_iks_v2
 
     iks_score          = 0.0
     iks_interpretation = ""
@@ -2616,13 +2616,8 @@ async def _tab2_content() -> dict:
     # Same path as Tab 5 (executive_narrative.py). Avoids event-loop issues that
     # affect compute_iks_v2 async queries.
     try:
-        from app.services.iks import compute_iks as _compute_iks_drift, interpret_iks_v2 as _interp_v2
-        from app.services.gae_state import get_profile_scorer as _get_ps
-        _ps = _get_ps()
-        if _ps is not None:
-            _drift_result = _compute_iks_drift(_ps.centroids)
-            iks_score = _drift_result["current"]
-            iks_interpretation = _interp_v2(iks_score)
+        iks_score = await compute_visible_iks(neo4j_client)
+        iks_interpretation = interpret_iks_v2(iks_score)
     except Exception as _exc:
         print(f"[SOC] tab2 iks drift query failed: {_exc}")
 
@@ -2632,7 +2627,7 @@ async def _tab2_content() -> dict:
         iks_data = await compute_iks_v2(neo4j_client)
         category_accuracy_summary = iks_data.get("components", {})
         total_decisions            = iks_data.get("total_decisions", 0)
-        if iks_score == 0.0:
+        if iks_score < 50.0:
             iks_score          = iks_data.get("iks_v2", 0.0)
             iks_interpretation = iks_data.get("interpretation", "")
     except Exception as _exc:
