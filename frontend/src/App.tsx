@@ -1,11 +1,12 @@
 import { useState, useEffect, Component, type ErrorInfo, type ReactNode } from 'react'
-import { Shield, Activity, Zap, TrendingUp, FileText } from 'lucide-react'
+import { Shield, Activity, Zap, TrendingUp, FileText, ReceiptText } from 'lucide-react'
 import { domainConfig } from './lib/domain'
 import SOCAnalyticsTab from './components/tabs/SOCAnalyticsTab'
 import RuntimeEvolutionTab from './components/tabs/RuntimeEvolutionTab'
 import AlertTriageTab from './components/tabs/AlertTriageTab'
 import CompoundingTab from './components/tabs/CompoundingTab'
 import ExecutiveNarrativeTab from './components/tabs/ExecutiveNarrativeTab'
+import S2PPreviewTab from './components/tabs/S2PPreviewTab'
 
 // ErrorBoundary must be a class component — hooks cannot catch render errors.
 interface ErrorBoundaryState { hasError: boolean; message: string }
@@ -33,7 +34,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
   }
 }
 
-type TabId = 'soc' | 'evolution' | 'triage' | 'compounding' | 'executive'
+type TabId = 'soc' | 'evolution' | 'triage' | 'compounding' | 'executive' | 's2p'
 
 interface Tab {
   id: TabId
@@ -84,6 +85,14 @@ const tabs: Tab[] = [
     component: ExecutiveNarrativeTab,
     energyPercent: 0,
     description: 'Weekly digest for CISO — what changed, discovered, and what the system knows',
+  },
+  {
+    id: 's2p',
+    label: 'S2P Preview',
+    icon: <ReceiptText className="w-4 h-4" />,
+    component: S2PPreviewTab,
+    energyPercent: 0,
+    description: 'Same engine applied to invoice exception management',
   },
 ]
 

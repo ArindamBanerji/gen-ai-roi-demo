@@ -33,6 +33,38 @@ async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
   return data
 }
 
+async function getErrorMessage(response: Response): Promise<string> {
+  try {
+    const data = await response.json() as { detail?: unknown }
+    const detail = data?.detail
+    if (typeof detail === 'string') return detail
+    if (detail && typeof detail === 'object') return JSON.stringify(detail)
+  } catch {
+    // Fall back to status text when JSON parsing fails.
+  }
+  return response.statusText || `HTTP ${response.status}`
+}
+
+function triggerBrowserDownload(blob: Blob, filename: string) {
+  const objectUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = objectUrl
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(objectUrl)
+}
+
+function triggerDirectDownload(url: string) {
+  const link = document.createElement('a')
+  link.href = `${API_BASE}${url}`
+  link.download = ''
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
+
 // ============================================================================
 // Tab 1: SOC Analytics
 // ============================================================================
@@ -170,8 +202,36 @@ export async function getCompoundingMetrics(weeks: number = 4) {
   return fetchJSON(`/metrics/compounding?weeks=${weeks}`)
 }
 
+export async function uploadEvalCSV(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const response = await fetch(`${API_BASE}/eval/upload`, {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (response.status === 401) {
+    window.location.href = '/saml/login'
+    throw new Error('Unauthorized')
+  }
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response))
+  }
+
+  return response.json()
+}
+
+export async function fetchEvalTemplates() {
+  return fetchJSON('/eval/templates')
+}
+
 export const fetchAutoApproveStats = () =>
   fetchJSON('/soc/auto-approve-stats')
+
+export const fetchLearningBalanceSheet = () =>
+  fetchJSON('/soc/learning-balance-sheet')
 
 export async function getEvolutionEvents(limit: number = 10) {
   return fetchJSON(`/metrics/evolution-events?limit=${limit}`)
@@ -351,6 +411,56 @@ export async function fetchIksTrend() {
   return fetchJSON('/soc/iks-trend')
 }
 
+export async function fetchFactorAnalysis() {
+  return fetchJSON('/soc/factor-analysis')
+}
+
+export async function fetchFactorAnalysisSummary() {
+  return fetchJSON('/soc/factor-analysis/summary')
+}
+
+export const fetchModelSwapTrial = (n?: number) =>
+  fetchJSON(`/soc/model-swap-trial${n ? `?n_alerts=${n}` : ''}`)
+
+// ============================================================================
+// FEATURE-03: What-If Simulator
+// ============================================================================
+
+export async function runWhatIfProjection(scenario: Record<string, unknown>) {
+  return fetchJSON('/whatif/project', {
+    method: 'POST',
+    body: JSON.stringify(scenario),
+  })
+}
+
+export async function fetchWhatIfPresets() {
+  return fetchJSON('/whatif/presets')
+}
+
+// ============================================================================
+// FEATURE-04: Centroid Time Machine
+// ============================================================================
+
+export async function fetchTimeMachineSnapshots() {
+  return fetchJSON('/time-machine/snapshots')
+}
+
+export async function fetchTimeMachineSnapshot(id: string) {
+  return fetchJSON(`/time-machine/snapshots/${id}`)
+}
+
+export async function fetchTimeMachineCompare(idA: string, idB: string) {
+  return fetchJSON(`/time-machine/compare?a=${idA}&b=${idB}`)
+}
+
+export async function fetchTimeMachineCompareBootstrap(snapshotId: string) {
+  return fetchJSON(`/time-machine/compare-bootstrap?snapshot_id=${snapshotId}`)
+}
+
+export async function fetchTimeMachineTimeline() {
+  return fetchJSON('/time-machine/timeline')
+}
+
 // ============================================================================
 // WIRE-01: Governance & Compliance (Tab 5)
 // ============================================================================
@@ -361,6 +471,25 @@ export async function fetchCompliance() {
 
 export async function fetchTransparency() {
   return fetchJSON('/soc/transparency')
+}
+
+export async function fetchGovernanceReport() {
+  return fetchJSON('/governance/report')
+}
+
+export async function fetchGovernanceSummary() {
+  return fetchJSON('/governance/summary')
+}
+
+export async function downloadGovernanceReportJson() {
+  const report = await fetchGovernanceReport()
+  const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' })
+  triggerBrowserDownload(blob, 'governance_report.json')
+  return report
+}
+
+export function downloadGovernanceReportCsv() {
+  triggerDirectDownload('/governance/report/csv')
 }
 
 // ============================================================================

@@ -1,0 +1,614 @@
+[playwright] BACKEND_PORT not found in .env ΓÇö using default 8001
+
+Running 209 tests using 1 worker
+
+[playwright] BACKEND_PORT not found in .env ΓÇö using default 8001
+  ok   1 [chromium] ΓÇ║ tests\e2e\age_contracts.spec.ts:27:3 ΓÇ║ AGE serialization contracts ΓÇ║ campaigns API ΓÇö category_sequence is JSON array not string (947ms)
+  ok   2 [chromium] ΓÇ║ tests\e2e\age_contracts.spec.ts:41:3 ΓÇ║ AGE serialization contracts ΓÇ║ campaigns API ΓÇö shared_entities is JSON array not string (192ms)
+  ok   3 [chromium] ΓÇ║ tests\e2e\age_contracts.spec.ts:54:3 ΓÇ║ AGE serialization contracts ΓÇ║ analytics API ΓÇö correct_decisions is integer (520ms)
+  ok   4 [chromium] ΓÇ║ tests\e2e\age_contracts.spec.ts:65:3 ΓÇ║ AGE serialization contracts ΓÇ║ analytics API ΓÇö total_alerts is integer (789ms)
+  ok   5 [chromium] ΓÇ║ tests\e2e\age_contracts.spec.ts:76:3 ΓÇ║ AGE serialization contracts ΓÇ║ threat-landscape ΓÇö graph_coverage.nodes is integer (2.5s)
+  ok   6 [chromium] ΓÇ║ tests\e2e\age_contracts.spec.ts:87:3 ΓÇ║ AGE serialization contracts ΓÇ║ executive-narrative ΓÇö what_changed.top_shifts is array (1.9s)
+  ok   7 [chromium] ΓÇ║ tests\e2e\age_contracts.spec.ts:98:3 ΓÇ║ AGE serialization contracts ΓÇ║ evolution-events ΓÇö no DEC-None IDs (decision_id property used correctly) (191ms)
+  ok   8 [chromium] ΓÇ║ tests\e2e\age_contracts.spec.ts:128:3 ΓÇ║ Session integrity contracts ΓÇ║ audit chain verified on startup (64ms)
+  ok   9 [chromium] ΓÇ║ tests\e2e\age_contracts.spec.ts:136:3 ΓÇ║ Session integrity contracts ΓÇ║ audit epochs endpoint returns data (28ms)
+  ok  10 [chromium] ΓÇ║ tests\e2e\age_contracts.spec.ts:147:3 ΓÇ║ Session integrity contracts ΓÇ║ threat-landscape last_refreshed not hardcoded 23 (1.5s)
+  ok  11 [chromium] ΓÇ║ tests\e2e\age_contracts.spec.ts:158:3 ΓÇ║ Session integrity contracts ΓÇ║ threat-landscape avg_confidence not hardcoded 0.89 (1.5s)
+  ok  12 [chromium] ΓÇ║ tests\e2e\age_contracts.spec.ts:170:3 ΓÇ║ Session integrity contracts ΓÇ║ analytics has no threat_intel_match category (436ms)
+  ok  13 [chromium] ΓÇ║ tests\e2e\age_contracts.spec.ts:181:3 ΓÇ║ Session integrity contracts ΓÇ║ compounding weekly data has real counts (1.2s)
+  ok  14 [chromium] ΓÇ║ tests\e2e\age_contracts.spec.ts:207:3 ΓÇ║ Tab render contracts ΓÇ║ Tab 1 loads without error boundary or crash text (8.9s)
+  ok  15 [chromium] ΓÇ║ tests\e2e\age_contracts.spec.ts:221:3 ΓÇ║ Tab render contracts ΓÇ║ Tab 4 compounding panel ΓÇö no DEC-None text visible (5.9s)
+  ok  16 [chromium] ΓÇ║ tests\e2e\age_contracts.spec.ts:231:3 ΓÇ║ Tab render contracts ΓÇ║ SOC Analytics tab campaign panel ΓÇö no error boundary fires for category_sequence (5.1s)
+  ok  17 [chromium] ΓÇ║ tests\e2e\campaigns.spec.ts:8:3 ΓÇ║ Campaign and threat intel ΓÇ║ campaigns endpoint returns valid data (1.4s)
+  ok  18 [chromium] ΓÇ║ tests\e2e\campaigns.spec.ts:16:3 ΓÇ║ Campaign and threat intel ΓÇ║ threat landscape has real node count (3.1s)
+  ok  19 [chromium] ΓÇ║ tests\e2e\campaigns.spec.ts:24:3 ΓÇ║ Campaign and threat intel ΓÇ║ attack tactic breakdown is non-empty (607ms)
+  ok  20 [chromium] ΓÇ║ tests\e2e\campaigns.spec.ts:34:3 ΓÇ║ Campaign and threat intel ΓÇ║ detection engineering has 6 categories (2.7s)
+  ok  21 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:33:3 ΓÇ║ Tab 1 ΓÇô Alert Triage ΓÇ║ alerts load ΓÇô at least 1 alert card visible (6.5s)
+  ok  22 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:41:3 ΓÇ║ Tab 1 ΓÇô Alert Triage ΓÇ║ NL explanation text non-empty (5.6s)
+  ok  23 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:67:3 ΓÇ║ Tab 2 ΓÇô Institutional Intelligence ΓÇ║ IKS score is a number (not null, not 0) (3.2s)
+  ok  24 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:80:3 ΓÇ║ Tab 2 ΓÇô Institutional Intelligence ΓÇ║ accuracy trajectory panel renders (SVG present) (2.9s)
+  ok  25 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:87:3 ΓÇ║ Tab 2 ΓÇô Institutional Intelligence ΓÇ║ category dropdown has options (3.5s)
+  ok  26 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:96:3 ΓÇ║ Tab 2 ΓÇô Institutional Intelligence ΓÇ║ OLS / advanced oversight section present (3.5s)
+  ok  27 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:106:3 ΓÇ║ Tab 3 ΓÇô Alert Detail ΓÇ║ at least 1 provenance node label visible (6.7s)
+  ok  28 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:135:3 ΓÇ║ Tab 4 ΓÇô Decision Economics ΓÇ║ ROI calculator renders (7.0s)
+  ok  29 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:141:3 ΓÇ║ Tab 4 ΓÇô Decision Economics ΓÇ║ decisions_per_day value present (6.0s)
+  ok  30 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:149:3 ΓÇ║ Tab 4 ΓÇô Decision Economics ΓÇ║ qualifies_one_quarter field present (5.9s)
+  ok  31 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:166:3 ΓÇ║ Tab 5 ΓÇô Executive Narrative ΓÇ║ 3 narrative sections present (4.4s)
+  ok  32 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:172:3 ΓÇ║ Tab 5 ΓÇô Executive Narrative ΓÇ║ PDF export button visible and initiates download (4.2s)
+  ok  33 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:189:3 ΓÇ║ API checks ΓÇ║ GET /api/soc/analyst-benchmarking ΓåÆ status=ready (704ms)
+  ok  34 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:196:3 ΓÇ║ API checks ΓÇ║ GET /api/soc/enrichment-advisor ΓåÆ ioc_coverage present (184ms)
+  -   35 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:204:8 ΓÇ║ API checks ΓÇ║ POST /api/s2p/score ├ù 10 scenarios ΓåÆ all return valid action
+  ok  36 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:227:3 ΓÇ║ API checks ΓÇ║ GET /api/soc/accuracy-trajectory ΓåÆ trajectory_points non-empty (112ms)
+  x   37 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:278:5 ΓÇ║ Tab 1 ΓÇô Alert Triage (factor names) ΓÇ║ factor "Travel Match" visible after clicking alert (19.2s)
+[playwright] BACKEND_PORT not found in .env ΓÇö using default 8001
+  ok  38 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:278:5 ΓÇ║ Tab 1 ΓÇô Alert Triage (factor names) ΓÇ║ factor "Asset Criticality" visible after clicking alert (7.7s)
+  ok  39 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:278:5 ΓÇ║ Tab 1 ΓÇô Alert Triage (factor names) ΓÇ║ factor "Threat Intel Enrichment" visible after clicking alert (7.8s)
+  ok  40 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:278:5 ΓÇ║ Tab 1 ΓÇô Alert Triage (factor names) ΓÇ║ factor "Pattern History" visible after clicking alert (7.8s)
+  ok  41 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:278:5 ΓÇ║ Tab 1 ΓÇô Alert Triage (factor names) ΓÇ║ factor "Time Anomaly" visible after clicking alert (7.8s)
+  ok  42 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:278:5 ΓÇ║ Tab 1 ΓÇô Alert Triage (factor names) ΓÇ║ factor "Device Trust" visible after clicking alert (7.7s)
+  ok  43 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:290:3 ΓÇ║ Tab 1 ΓÇô Alert Triage (detail panel) ΓÇ║ NL explanation changes when a different alert is clicked (5.3s)
+  ok  44 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:318:3 ΓÇ║ Tab 1 ΓÇô Alert Triage (detail panel) ΓÇ║ campaign badge shows exact text "Part of Campaign" or "No active campaign" (8.8s)
+  ok  45 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:324:3 ΓÇ║ Tab 1 ΓÇô Alert Triage (detail panel) ΓÇ║ confidence renders as "Confidence: XX.X%" pattern (8.4s)
+  ok  46 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:330:3 ΓÇ║ Tab 1 ΓÇô Alert Triage (detail panel) ΓÇ║ Recommendation panel heading visible after clicking alert (8.3s)
+  ok  47 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:335:3 ΓÇ║ Tab 1 ΓÇô Alert Triage (detail panel) ΓÇ║ Investigation Summary (narrative) panel renders or is absent gracefully (8.5s)
+  ok  48 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:347:3 ΓÇ║ Tab 1 ΓÇô Alert Triage (detail panel) ΓÇ║ alert queue shows severity badge (HIGH / MEDIUM / LOW / CRITICAL) (5.3s)
+  ok  49 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:355:3 ΓÇ║ Tab 1 ΓÇô Alert Triage (detail panel) ΓÇ║ selected alert detail panel shows "Selected:" header (5.7s)
+  ok  50 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:370:3 ΓÇ║ Tab 2 ΓÇô Institutional Intelligence (extended) ΓÇ║ IKS value > 0 (v2 fallback fix verified) (2.8s)
+  ok  51 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:378:3 ΓÇ║ Tab 2 ΓÇô Institutional Intelligence (extended) ΓÇ║ IKS "/ 100" label present (2.5s)
+  ok  52 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:382:3 ΓÇ║ Tab 2 ΓÇô Institutional Intelligence (extended) ΓÇ║ all 6 SOC categories in dropdown (fix verified) (2.8s)
+  ok  53 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:390:3 ΓÇ║ Tab 2 ΓÇô Institutional Intelligence (extended) ΓÇ║ accuracy trajectory SVG has at least 1 path element (2.7s)
+  ok  54 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:398:3 ΓÇ║ Tab 2 ΓÇô Institutional Intelligence (extended) ΓÇ║ decision count shown on tab (>= 0) (2.7s)
+  ok  55 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:407:3 ΓÇ║ Tab 2 ΓÇô Institutional Intelligence (extended) ΓÇ║ Drift Alerts section present (2.6s)
+  ok  56 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:411:3 ΓÇ║ Tab 2 ΓÇô Institutional Intelligence (extended) ΓÇ║ category dropdown first option is "All categories" (2.7s)
+  ok  57 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:419:3 ΓÇ║ Tab 2 ΓÇô Institutional Intelligence (extended) ΓÇ║ switching cost section present in IKS block (2.7s)
+  ok  58 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:426:3 ΓÇ║ Tab 2 ΓÇô Institutional Intelligence (extended) ΓÇ║ override learning status: frozen badge OR active badge visible (2.5s)
+  ok  59 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:432:3 ΓÇ║ Tab 2 ΓÇô Institutional Intelligence (extended) ΓÇ║ accuracy trajectory category dropdown triggers re-render (2.6s)
+  ok  60 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:445:3 ΓÇ║ Tab 2 ΓÇô Institutional Intelligence (extended) ΓÇ║ IKS interpretation text visible (non-empty italic description) (2.5s)
+  ok  61 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:461:3 ΓÇ║ Tab 3 ΓÇô Alert Detail (extended) ΓÇ║ "Why This Decision?" heading contains emoji prefix ≡ƒöÄ (8.6s)
+  x   62 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:469:3 ΓÇ║ Tab 3 ΓÇô Alert Detail (extended) ΓÇ║ all 6 factor display names visible in breakdown (16.3s)
+[playwright] BACKEND_PORT not found in .env ΓÇö using default 8001
+  ok  63 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:484:3 ΓÇ║ Tab 3 ΓÇô Alert Detail (extended) ΓÇ║ factor bar percentage values rendered (e.g. "42%") (9.1s)
+  ok  64 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:493:3 ΓÇ║ Tab 3 ΓÇô Alert Detail (extended) ΓÇ║ factor contribution labels visible (high / medium / low) (8.1s)
+  ok  65 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:499:3 ΓÇ║ Tab 3 ΓÇô Alert Detail (extended) ΓÇ║ decision method line visible below factors (8.5s)
+  ok  66 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:504:3 ΓÇ║ Tab 3 ΓÇô Alert Detail (extended) ΓÇ║ graph context section shows node count (8.6s)
+  ok  67 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:510:3 ΓÇ║ Tab 3 ΓÇô Alert Detail (extended) ΓÇ║ MITRE ATT&CK badge renders OR is absent without error (8.3s)
+  ok  68 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:518:3 ΓÇ║ Tab 3 ΓÇô Alert Detail (extended) ΓÇ║ collapse/expand button on "Why This Decision?" panel works (9.1s)
+  ok  69 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:543:3 ΓÇ║ Tab 4 ΓÇô Decision Economics (extended) ΓÇ║ ROI dollar value is non-zero (formatUSD output visible) (4.4s)
+  ok  70 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:551:3 ΓÇ║ Tab 4 ΓÇô Decision Economics (extended) ΓÇ║ "Calculate ROI" button visible (4.4s)
+  ok  71 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:555:3 ΓÇ║ Tab 4 ΓÇô Decision Economics (extended) ΓÇ║ ROI modal opens when "Calculate ROI" clicked (5.6s)
+  ok  72 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:562:3 ΓÇ║ Tab 4 ΓÇô Decision Economics (extended) ΓÇ║ alerts_per_day input present in ROI modal (7.4s)
+  ok  73 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:569:3 ΓÇ║ Tab 4 ΓÇô Decision Economics (extended) ΓÇ║ business impact section shows cost avoided (5.2s)
+  ok  74 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:573:3 ΓÇ║ Tab 4 ΓÇô Decision Economics (extended) ΓÇ║ evolution events section renders (4.8s)
+  ok  75 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:579:3 ΓÇ║ Tab 4 ΓÇô Decision Economics (extended) ΓÇ║ headline metrics panel renders (auto-close or MTTR stat) (4.8s)
+  ok  76 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:594:3 ΓÇ║ Tab 5 ΓÇô Executive Narrative (extended) ΓÇ║ headline text is non-empty (4.1s)
+  ok  77 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:604:3 ΓÇ║ Tab 5 ΓÇô Executive Narrative (extended) ΓÇ║ "What Changed" section heading present (4.0s)
+  ok  78 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:608:3 ΓÇ║ Tab 5 ΓÇô Executive Narrative (extended) ΓÇ║ "What Was Discovered" section heading present (3.9s)
+  ok  79 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:612:3 ΓÇ║ Tab 5 ΓÇô Executive Narrative (extended) ΓÇ║ "What the System Knows" section heading present (4.0s)
+  ok  80 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:616:3 ΓÇ║ Tab 5 ΓÇô Executive Narrative (extended) ΓÇ║ PDF export link href points to executive-narrative/pdf (3.9s)
+  ok  81 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:623:3 ΓÇ║ Tab 5 ΓÇô Executive Narrative (extended) ΓÇ║ generated_at timestamp or date visible on narrative (3.6s)
+  ok  82 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:633:3 ΓÇ║ API contract ΓÇô learning-state ΓÇ║ GET /api/soc/learning-state ΓåÆ 200 (772ms)
+  ok  83 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:638:3 ΓÇ║ API contract ΓÇô learning-state ΓÇ║ GET /api/soc/learning-state ΓåÆ decision_count >= 0 (439ms)
+  ok  84 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:644:3 ΓÇ║ API contract ΓÇô learning-state ΓÇ║ GET /api/soc/learning-state ΓåÆ iks_v2 >= 0 (457ms)
+  ok  85 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:650:3 ΓÇ║ API contract ΓÇô learning-state ΓÇ║ GET /api/soc/learning-state ΓåÆ frozen is boolean (461ms)
+  ok  86 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:657:3 ΓÇ║ API contract ΓÇô profile (decisions_per_day / qualifies_one_quarter) ΓÇ║ GET /api/soc/profile ΓåÆ 200 (95ms)
+  ok  87 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:662:3 ΓÇ║ API contract ΓÇô profile (decisions_per_day / qualifies_one_quarter) ΓÇ║ GET /api/soc/profile ΓåÆ iks.switching_cost.decisions_per_day is a positive number (86ms)
+  ok  88 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:670:3 ΓÇ║ API contract ΓÇô profile (decisions_per_day / qualifies_one_quarter) ΓÇ║ GET /api/soc/profile ΓåÆ iks.switching_cost.qualifies_one_quarter is boolean (102ms)
+  ok  89 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:678:3 ΓÇ║ API contract ΓÇô analytics and trajectory ΓÇ║ GET /api/soc/analytics ΓåÆ 200 and total_decisions > 0 (627ms)
+  ok  90 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:685:3 ΓÇ║ API contract ΓÇô analytics and trajectory ΓÇ║ GET /api/soc/analytics ΓåÆ category_breakdown non-empty (420ms)
+  ok  91 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:692:3 ΓÇ║ API contract ΓÇô analytics and trajectory ΓÇ║ GET /api/soc/accuracy-trajectory ΓåÆ categories has 6 entries (95ms)
+  ok  92 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:697:3 ΓÇ║ API contract ΓÇô analytics and trajectory ΓÇ║ GET /api/soc/accuracy-trajectory ΓåÆ days_to_plateau is a number (103ms)
+  ok  93 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:702:3 ΓÇ║ API contract ΓÇô analytics and trajectory ΓÇ║ GET /api/soc/accuracy-trajectory ΓåÆ source = "live" (104ms)
+  ok  94 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:709:3 ΓÇ║ API contract ΓÇô enrichment and benchmarking ΓÇ║ GET /api/soc/enrichment-advisor ΓåÆ top_opportunity.factor_name = "threat_intel_enrichment" (96ms)
+  ok  95 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:715:3 ΓÇ║ API contract ΓÇô enrichment and benchmarking ΓÇ║ GET /api/soc/enrichment-advisor ΓåÆ ranked_factors has 6 entries (99ms)
+  ok  96 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:721:3 ΓÇ║ API contract ΓÇô enrichment and benchmarking ΓÇ║ GET /api/soc/analyst-benchmarking ΓåÆ per_category has 6 keys (373ms)
+  ok  97 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:727:3 ΓÇ║ API contract ΓÇô enrichment and benchmarking ΓÇ║ GET /api/soc/analyst-benchmarking ΓåÆ lead_finding is non-empty string (401ms)
+  ok  98 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:735:3 ΓÇ║ API contract ΓÇô threat and campaigns ΓÇ║ GET /api/soc/threat-landscape ΓåÆ 200 (1.3s)
+  ok  99 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:740:3 ΓÇ║ API contract ΓÇô threat and campaigns ΓÇ║ GET /api/soc/threat-landscape ΓåÆ nodes > 100 (1.3s)
+  ok 100 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:746:3 ΓÇ║ API contract ΓÇô threat and campaigns ΓÇ║ GET /api/soc/campaigns ΓåÆ 200 and total >= 0 (126ms)
+  ok 101 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:754:3 ΓÇ║ API contract ΓÇô threat and campaigns ΓÇ║ GET /api/soc/attack-tactic-breakdown ΓåÆ breakdown array non-empty (97ms)
+  ok 102 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:763:3 ΓÇ║ API contract ΓÇô threat and campaigns ΓÇ║ GET /api/soc/detection-engineering ΓåÆ category_scores has 6 entries (552ms)
+  ok 103 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:773:3 ΓÇ║ API contract ΓÇô narrative and misc ΓÇ║ GET /api/soc/executive-narrative ΓåÆ headline non-empty (1.1s)
+  ok 104 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:781:3 ΓÇ║ API contract ΓÇô narrative and misc ΓÇ║ GET /api/soc/three-claims ΓåÆ 200 (38ms)
+  ok 105 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:786:3 ΓÇ║ API contract ΓÇô narrative and misc ΓÇ║ GET /api/soc/compliance ΓåÆ 200 (87ms)
+  ok 106 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:791:3 ΓÇ║ API contract ΓÇô narrative and misc ΓÇ║ GET /api/soc/transparency ΓåÆ 200 (22ms)
+  ok 107 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:796:3 ΓÇ║ API contract ΓÇô narrative and misc ΓÇ║ GET /api/soc/benchmarking-report ΓåÆ report.total_decisions >= 0 (108ms)
+  ok 108 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:808:3 ΓÇ║ Error and edge cases ΓÇ║ no console errors on initial page load (3.4s)
+  ok 109 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:824:3 ΓÇ║ Error and edge cases ΓÇ║ page title contains "SOC" or "Copilot" (457ms)
+  ok 110 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:830:3 ΓÇ║ Error and edge cases ΓÇ║ no horizontal scroll at 1280px viewport width (3.3s)
+  ok 111 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:839:3 ΓÇ║ Error and edge cases ΓÇ║ all 5 tab buttons visible on page load (2.9s)
+  ok 112 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:848:3 ΓÇ║ Error and edge cases ΓÇ║ backend health: GET /health returns 200 (313ms)
+  ok 113 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:853:3 ΓÇ║ Error and edge cases ΓÇ║ SOC Analytics tab reachable without crash (4.7s)
+  ok 114 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:860:3 ΓÇ║ Error and edge cases ΓÇ║ Runtime Evolution tab reachable without crash (3.0s)
+  ok 115 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:867:3 ΓÇ║ Error and edge cases ΓÇ║ Compounding tab reachable without crash (5.2s)
+  ok 116 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:874:3 ΓÇ║ Error and edge cases ΓÇ║ Executive Narrative tab reachable without crash (4.0s)
+  ok 117 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:886:3 ΓÇ║ Tab 5 ΓÇô Executive Narrative (content gate) ΓÇ║ What Changed section has specific centroid shift content (4.3s)
+  ok 118 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:896:3 ΓÇ║ Tab 5 ΓÇô Executive Narrative (content gate) ΓÇ║ verified decisions count > 100 on Tab 5 (5.3s)
+  ok 119 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:907:3 ΓÇ║ Tab 5 ΓÇô Executive Narrative (content gate) ΓÇ║ campaigns detected count >= 1 on Tab 5 (4.7s)
+  ok 120 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:917:3 ΓÇ║ Tab 5 ΓÇô Executive Narrative (content gate) ΓÇ║ IKS score > 0 on executive narrative API (1.1s)
+  ok 121 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:924:3 ΓÇ║ Tab 5 ΓÇô Executive Narrative (content gate) ΓÇ║ What Was Discovered shows at least one chain summary (3.9s)
+  ok 122 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:939:3 ΓÇ║ Tab content contract ΓÇö Phase A E2E gates ΓÇ║ tab2_iks_score_visible_and_positive (3.1s)
+  ok 123 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:956:3 ΓÇ║ Tab content contract ΓÇö Phase A E2E gates ΓÇ║ tab2_categories_calibrated_max_six (2.7s)
+  ok 124 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:967:3 ΓÇ║ Tab content contract ΓÇö Phase A E2E gates ΓÇ║ tab5_conservation_has_evidence_ledger (1.6s)
+  ok 125 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:978:3 ΓÇ║ Tab content contract ΓÇö Phase A E2E gates ΓÇ║ tab5_categories_calibrated_shows_six (4.3s)
+  ok 126 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:987:3 ΓÇ║ Tab content contract ΓÇö Phase A E2E gates ΓÇ║ tab1_no_unknown_category_visible (5.7s)
+  ok 127 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:1000:3 ΓÇ║ Tab content contract ΓÇö Phase A E2E gates ΓÇ║ tab2_iks_interpretation_not_cold_start (2.5s)
+  ok 128 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:1009:3 ΓÇ║ Tab content contract ΓÇö Phase A E2E gates ΓÇ║ tab3_diagonalkernel_visible_in_factor_breakdown (706ms)
+  ok 129 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:1025:3 ΓÇ║ Phase B ΓÇö centroid drift + frontend gaps ΓÇ║ tab2_centroid_drift_api_returns_data (372ms)
+  ok 130 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:1036:3 ΓÇ║ Phase B ΓÇö centroid drift + frontend gaps ΓÇ║ tab2_accuracy_trajectory_endpoint_returns_valid_shape (239ms)
+  ok 131 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:1055:3 ΓÇ║ Phase B ΓÇö centroid drift + frontend gaps ΓÇ║ backlog017_conservation_narrative_api_has_evidence_ledger (1.2s)
+  ok 132 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:1066:3 ΓÇ║ Phase B ΓÇö centroid drift + frontend gaps ΓÇ║ backlog017_conservation_narrative_visible_in_dom (3.5s)
+  ok 133 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:1079:3 ΓÇ║ Phase B ΓÇö centroid drift + frontend gaps ΓÇ║ backlog018_kernel_note_api_has_diagonalkernel (392ms)
+  ok 134 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:1088:3 ΓÇ║ Phase B ΓÇö centroid drift + frontend gaps ΓÇ║ backlog018_kernel_note_in_alert_detail_api (441ms)
+  ok 135 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:1101:3 ΓÇ║ Phase B ΓÇö centroid drift + frontend gaps ΓÇ║ f9_report_returns_lead_finding (599ms)
+  ok 136 [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:1114:3 ΓÇ║ Phase B ΓÇö centroid drift + frontend gaps ΓÇ║ f9_analyst_benchmarking_has_six_categories (528ms)
+  ok 137 [chromium] ΓÇ║ tests\e2e\checkpoint.spec.ts:8:3 ΓÇ║ Checkpoint integrity ΓÇ║ checkpoint create returns success (550ms)
+  ok 138 [chromium] ΓÇ║ tests\e2e\checkpoint.spec.ts:14:3 ΓÇ║ Checkpoint integrity ΓÇ║ profile endpoint returns centroid info (985ms)
+  ok 139 [chromium] ΓÇ║ tests\e2e\checkpoint.spec.ts:22:3 ΓÇ║ Checkpoint integrity ΓÇ║ convergence endpoint returns finite weight norm (886ms)
+  ok 140 [chromium] ΓÇ║ tests\e2e\checkpoint.spec.ts:32:3 ΓÇ║ Checkpoint integrity ΓÇ║ checkpoint list returns data (751ms)
+  x  141 [chromium] ΓÇ║ tests\e2e\compounding.spec.ts:39:3 ΓÇ║ Cross-tab compounding ΓÇ║ decisions increment tab2 decision count (18.0s)
+[playwright] BACKEND_PORT not found in .env ΓÇö using default 8001
+  ok 142 [chromium] ΓÇ║ tests\e2e\compounding.spec.ts:59:3 ΓÇ║ Cross-tab compounding ΓÇ║ decisions leave tab2 IKS as a valid number (29.9s)
+  ok 143 [chromium] ΓÇ║ tests\e2e\compounding.spec.ts:79:3 ΓÇ║ Cross-tab compounding ΓÇ║ decisions do not shrink accuracy trajectory (28.3s)
+  ok 144 [chromium] ΓÇ║ tests\e2e\compounding.spec.ts:100:3 ΓÇ║ Cross-tab compounding ΓÇ║ tab4 economics reports positive decisions_per_day (853ms)
+  ok 145 [chromium] ΓÇ║ tests\e2e\compounding.spec.ts:115:3 ΓÇ║ Cross-tab compounding ΓÇ║ decisions do not decrease tab5 verified count (31.8s)
+  ok 146 [chromium] ΓÇ║ tests\e2e\compounding.spec.ts:138:3 ΓÇ║ Cross-tab compounding ΓÇ║ epistemic state endpoint returns valid categories structure (18.5s)
+  ok 147 [chromium] ΓÇ║ tests\e2e\compounding.spec.ts:159:3 ΓÇ║ Cross-tab compounding ΓÇ║ learning state has required conservation fields (1.4s)
+  ok 148 [chromium] ΓÇ║ tests\e2e\compounding.spec.ts:180:3 ΓÇ║ Cross-tab compounding ΓÇ║ cross tab decision count directional consistency (2.3s)
+  ok 149 [chromium] ΓÇ║ tests\e2e\conservation.spec.ts:39:3 ΓÇ║ Conservation law E2E ΓÇ║ learning state has conservation fields (1.2s)
+  ok 150 [chromium] ΓÇ║ tests\e2e\conservation.spec.ts:65:3 ΓÇ║ Conservation law E2E ΓÇ║ conservation narrative in tab5 DOM (4.0s)
+  ok 151 [chromium] ΓÇ║ tests\e2e\conservation.spec.ts:97:3 ΓÇ║ Conservation law E2E ΓÇ║ frozen badge matches API state (1.9s)
+  ok 152 [chromium] ΓÇ║ tests\e2e\conservation.spec.ts:133:3 ΓÇ║ Conservation law E2E ΓÇ║ epistemic state bands are valid (948ms)
+  ok 153 [chromium] ΓÇ║ tests\e2e\conservation.spec.ts:170:3 ΓÇ║ Conservation law E2E ΓÇ║ accuracy trajectory has 6 live categories (881ms)
+  ok 154 [chromium] ΓÇ║ tests\e2e\decision_flow.spec.ts:58:1 ΓÇ║ correct_decision_increments_verified_count (10.3s)
+  ok 155 [chromium] ΓÇ║ tests\e2e\decision_flow.spec.ts:84:1 ΓÇ║ incorrect_decision_does_not_increment_correct_count (9.6s)
+  ok 156 [chromium] ΓÇ║ tests\e2e\decision_flow.spec.ts:110:1 ΓÇ║ tab4_weight_norm_present_after_decisions (1.7s)
+  ok 157 [chromium] ΓÇ║ tests\e2e\decision_flow.spec.ts:129:1 ΓÇ║ tab5_narrative_has_content_after_decisions (25.8s)
+  x  158 [chromium] ΓÇ║ tests\e2e\decision_flow.spec.ts:190:1 ΓÇ║ learning_loop_validates_20_decisions (2.0m)
+[playwright] BACKEND_PORT not found in .env ΓÇö using default 8001
+  ok 159 [chromium] ΓÇ║ tests\e2e\deep_flows.spec.ts:116:1 ΓÇ║ decision_appears_on_tab4_with_valid_id (10.9s)
+  ok 160 [chromium] ΓÇ║ tests\e2e\deep_flows.spec.ts:162:1 ΓÇ║ outcome_updates_tab2_metrics (13.3s)
+  ok 161 [chromium] ΓÇ║ tests\e2e\deep_flows.spec.ts:224:1 ΓÇ║ cross_tab_decision_count_consistent (1.8s)
+  ok 162 [chromium] ΓÇ║ tests\e2e\deep_flows.spec.ts:293:1 ΓÇ║ simulation_does_not_produce_dec_none (12.8s)
+  ok 163 [chromium] ΓÇ║ tests\e2e\deep_flows.spec.ts:368:1 ΓÇ║ five_tab_round_trip_no_crashes (7.0s)
+  x  164 [chromium] ΓÇ║ tests\e2e\deep_flows.spec.ts:457:1 ΓÇ║ reset_returns_alerts_to_pending (13.6s)
+[playwright] BACKEND_PORT not found in .env ΓÇö using default 8001
+"Evaluate on Your Data" section: VISIBLE, upload input: ATTACHED
+  ok 165 [chromium] ΓÇ║ tests\e2e\feature01_eval.spec.ts:36:1 ΓÇ║ test_eval_section_renders (3.0s)
+/api/soc/eval/demo: HTTP 404
+Eval section visible: true
+Overall Accuracy card visible (requires prior upload): false
+Majority baseline visible: false
+  ok 166 [chromium] ΓÇ║ tests\e2e\feature01_eval.spec.ts:50:1 ΓÇ║ test_eval_result_displays_accuracy (2.8s)
+Direction indicator (converging/moving away): NOT VISIBLE (no eval run yet)
+  ok 167 [chromium] ΓÇ║ tests\e2e\feature01_eval.spec.ts:78:1 ΓÇ║ test_eval_direction_indicator_visible (2.9s)
+Structural Ceiling Estimate heading: NOT VISIBLE (no eval run yet)
+  ok 168 [chromium] ΓÇ║ tests\e2e\feature01_eval.spec.ts:93:1 ΓÇ║ test_eval_ceiling_estimate_visible (3.1s)
+Calibration banner: uncalibrated=false, calibrated text present=false
+  ok 169 [chromium] ΓÇ║ tests\e2e\feature01_eval.spec.ts:107:1 ΓÇ║ test_eval_calibration_warning_present (3.3s)
+Governance & Compliance section: VISIBLE
+Legal disclaimer banner visible: true
+  ok 170 [chromium] ΓÇ║ tests\e2e\feature02_governance.spec.ts:36:1 ΓÇ║ test_governance_section_renders (2.8s)
+Article section cards found: 0
+  x  171 [chromium] ΓÇ║ tests\e2e\feature02_governance.spec.ts:54:1 ΓÇ║ test_governance_article_count (5.2s)
+[playwright] BACKEND_PORT not found in .env ΓÇö using default 8001
+Download JSON button: VISIBLE
+Download CSV button: VISIBLE
+  ok 172 [chromium] ΓÇ║ tests\e2e\feature02_governance.spec.ts:75:1 ΓÇ║ test_governance_export_buttons (4.2s)
+Legal disclaimer text: VISIBLE
+"certified" text visible (must be false): false
+"compliant" text visible (must be false): true
+  x  173 [chromium] ΓÇ║ tests\e2e\feature02_governance.spec.ts:97:1 ΓÇ║ test_governance_legal_disclaimer (2.6s)
+[playwright] BACKEND_PORT not found in .env ΓÇö using default 8001
+What-If Simulator section: VISIBLE
+  ok 174 [chromium] ΓÇ║ tests\e2e\feature03_whatif.spec.ts:44:1 ΓÇ║ test_whatif_section_renders (4.5s)
+Preset buttons found: 3
+First preset button visible: true
+  ok 175 [chromium] ΓÇ║ tests\e2e\feature03_whatif.spec.ts:63:1 ΓÇ║ test_whatif_presets_load (7.0s)
+"Run Projection" button: VISIBLE
+Trajectory results after Run Projection: VISIBLE
+  ok 176 [chromium] ΓÇ║ tests\e2e\feature03_whatif.spec.ts:93:1 ΓÇ║ test_whatif_run_button (10.0s)
+Ceiling reference line/text: VISIBLE
+  ok 177 [chromium] ΓÇ║ tests\e2e\feature03_whatif.spec.ts:124:1 ΓÇ║ test_whatif_ceiling_line (11.1s)
+Centroid Time Machine section: VISIBLE
+  ok 178 [chromium] ΓÇ║ tests\e2e\feature04_timemachine.spec.ts:42:1 ΓÇ║ test_timemachine_section_renders (5.3s)
+SVG chart elements in page: 28
+"No centroid snapshots yet" message: false
+Timeline chart SVG: VISIBLE
+  ok 179 [chromium] ΓÇ║ tests\e2e\feature04_timemachine.spec.ts:56:1 ΓÇ║ test_timemachine_timeline_chart (6.4s)
+Snapshot table visible: true
+"No snapshots yet" message: false
+Snapshot table rows: 20 (0 is valid at baseline)
+SHA cell visible: false
+  ok 180 [chromium] ΓÇ║ tests\e2e\feature04_timemachine.spec.ts:84:1 ΓÇ║ test_timemachine_snapshot_table (6.3s)
+Compare Current vs Bootstrap button: NOT VISIBLE
+Compare button not found ΓÇö Time Machine panel may require scroll or section expansion
+  ok 181 [chromium] ΓÇ║ tests\e2e\feature04_timemachine.spec.ts:121:1 ΓÇ║ test_timemachine_bootstrap_compare (6.3s)
+Factor Analysis (SNR) section: VISIBLE
+  ok 182 [chromium] ΓÇ║ tests\e2e\feature05_factor.spec.ts:42:1 ΓÇ║ test_factor_analysis_section_renders (5.3s)
+Overall SNR label: VISIBLE
+SNR numeric value visible: true
+Weakest category / SNR text visible: true
+SNR loading: false, error: false
+  ok 183 [chromium] ΓÇ║ tests\e2e\feature05_factor.spec.ts:56:1 ΓÇ║ test_factor_analysis_summary_loads (7.9s)
+Proposal "recommendation" text: NOT VISIBLE (no proposal yet)
+"Structural analysis" label: NOT VISIBLE
+  ok 184 [chromium] ΓÇ║ tests\e2e\feature05_factor.spec.ts:99:1 ΓÇ║ test_factor_proposal_card (7.8s)
+Model Swap Trial / LLM Independence section: VISIBLE
+  ok 185 [chromium] ΓÇ║ tests\e2e\feature06_modelswap.spec.ts:42:1 ΓÇ║ test_modelswap_section_renders (5.3s)
+"Run Model Swap Trial" button: VISIBLE
+Clicked "Run Model Swap Trial"
+Results section (LLM Calls label): VISIBLE
+  ok 186 [chromium] ΓÇ║ tests\e2e\feature06_modelswap.spec.ts:56:1 ΓÇ║ test_modelswap_run_button (14.8s)
+"LLM Calls" label: VISIBLE
+"Zero by construction" text: VISIBLE
+"Deterministic" label: VISIBLE
+PASS/FAIL verdict: VISIBLE
+Repro Proof section: VISIBLE
+  ok 187 [chromium] ΓÇ║ tests\e2e\feature06_modelswap.spec.ts:81:1 ΓÇ║ test_modelswap_proof_values (13.9s)
+Learning Balance Sheet section: VISIBLE
+  ok 188 [chromium] ΓÇ║ tests\e2e\feature10_balance.spec.ts:36:1 ΓÇ║ test_balance_sheet_section_renders (3.6s)
+Table Category column header: VISIBLE
+Table Band column header: VISIBLE
+Table Verified column header: VISIBLE
+Table Status column header: VISIBLE
+Balance sheet table rows: 6 (expect 6)
+  ok 189 [chromium] ΓÇ║ tests\e2e\feature10_balance.spec.ts:50:1 ΓÇ║ test_balance_sheet_loads_categories (5.6s)
+Ceiling column header: VISIBLE
+Status column: VISIBLE
+Status badge value visible: true
+  ok 190 [chromium] ΓÇ║ tests\e2e\feature10_balance.spec.ts:110:1 ΓÇ║ test_balance_sheet_ceiling_column (5.6s)
+  x  191 [chromium] ΓÇ║ tests\e2e\learning_stress.spec.ts:54:3 ΓÇ║ Learning stress tests ΓÇ║ mixed correct incorrect does not collapse (1.0m)
+[playwright] BACKEND_PORT not found in .env ΓÇö using default 8001
+  x  192 [chromium] ΓÇ║ tests\e2e\learning_stress.spec.ts:100:3 ΓÇ║ Learning stress tests ΓÇ║ rapid fire 10 decisions no race condition (1.1m)
+[playwright] BACKEND_PORT not found in .env ΓÇö using default 8001
+  ok 193 [chromium] ΓÇ║ tests\e2e\learning_stress.spec.ts:139:3 ΓÇ║ Learning stress tests ΓÇ║ decision then reset then decision (37.8s)
+  ok 194 [chromium] ΓÇ║ tests\e2e\learning_stress.spec.ts:177:3 ΓÇ║ Learning stress tests ΓÇ║ all tabs reachable after 5 decisions (35.8s)
+  ok 195 [chromium] ΓÇ║ tests\e2e\learning_stress.spec.ts:229:3 ΓÇ║ Learning stress tests ΓÇ║ centroid values bounded after decisions (22.1s)
+  ok 196 [chromium] ΓÇ║ tests\e2e\learning_stress.spec.ts:253:3 ΓÇ║ Learning stress tests ΓÇ║ alert queue renders without prior decisions (1.3s)
+  ok 197 [chromium] ΓÇ║ tests\e2e\learning_stress.spec.ts:294:3 ΓÇ║ Learning stress tests ΓÇ║ concurrent tab switch during decision (3.6s)
+  ok 198 [chromium] ΓÇ║ tests\e2e\narrative_quality.spec.ts:8:3 ΓÇ║ Narrative quality ΓÇ║ executive narrative has non-empty headline (1.5s)
+  ok 199 [chromium] ΓÇ║ tests\e2e\narrative_quality.spec.ts:16:3 ΓÇ║ Narrative quality ΓÇ║ narrative response has substantial content (1.6s)
+  ok 200 [chromium] ΓÇ║ tests\e2e\narrative_quality.spec.ts:24:3 ΓÇ║ Narrative quality ΓÇ║ PDF export returns content (3.4s)
+  ok 201 [chromium] ΓÇ║ tests\e2e\narrative_quality.spec.ts:34:3 ΓÇ║ Narrative quality ΓÇ║ benchmarking report has content (441ms)
+
+=== TAB 0: SOC Analytics ===
+Headings: SOC Copilot Demo | SOC Analytics | Campaign Intelligence | Graph Explorer
+Metrics: SOC Copilot Demo | 95 | 95 | 95 | 95 | 95 | 95 | credential_access | malware_execution | lateral_movement
+Charts: canvas=0  svg=15  tables=2
+Badges: 50 active
+
+=== TAB 1: Runtime Evolution ===
+Headings: SOC Copilot Demo | Institutional Intelligence Summary ΓÇö How the system's judgment has evolved | This Decision | Situational Understanding | Deployment Adaptation | System Health | Accuracy Trajectory
+Metrics: SOC Copilot Demo | ΓÇö | 1 | 0.0000 | 1 | 0.0000 | 1 | 0.0000 | 1 | 0.0000
+Charts: canvas=0  svg=31  tables=4
+  Subsection a (This Decision): clicked
+  Subsection b (Situational): clicked
+  Subsection c (Adaptation): clicked
+  Subsection d (System Health): clicked
+  IKS value (.text-3xl): 88.5
+  "/ 100" label: VISIBLE
+
+=== TAB 2: Alert Triage ===
+Headings: SOC Copilot Demo | Alert Triage | Alert Queue | Selected: ALERT-LM-005
+Metrics: SOC Copilot Demo | ALERT-LM-005 | ALERT-CI-005 | ALERT-ME-005 | ALERT-CA-005 | ALERT-IT-005 | ALERT-DE-005 | ALERT-DE-004 | ALERT-IT-004 | ALERT-CI-004
+Charts: canvas=0  svg=9  tables=0
+  Alert cards: 30
+  First alert IDs: ALERT-LM-005LOWprivilege, ALERT-CI-005LOWcloud, ALERT-ME-005LOWmalware
+
+=== TAB 3: Compounding ===
+Headings: SOC Copilot Demo | GAE Batch SimulationLIVE | SOC Copilot Compounding ΓÇö "Watch the Moat Grow" | Business Impact Summary | THE HEADLINE | Evaluate on Your Data | Learning Balance Sheet | The Compounding CurveΓùÅ LIVE | ΓÜíGAE Weight Convergence | Evidence Ledger
+Metrics: SOC Copilot Demo | SOC Copilot Compounding ΓÇö "Watch the Moat Grow" | 0.0% | 0.0% | 90% | 23 nodes | 88 nodes | 68% ΓåÆ 81% | 12.4 min ΓåÆ 6.4 min | 4,200/wk ΓåÆ 2,111/wk
+Charts: canvas=0  svg=39  tables=1
+Badges: credential access0% | Interactive
+
+=== TAB 4: Executive Narrative ===
+Headings: SOC Copilot Demo
+Metrics: SOC Copilot Demo | 570 | 5050 | 769 | 88.5 | 5050 | 4001 | 769 | 0 | 88.5
+Charts: canvas=0  svg=15  tables=0
+
+=== TAB WALKTHROUGH SUMMARY ===
+Tab              | Headings | Metrics | Canvas | SVG | Tables
+-----------------------------------------------------------------
+SOC Analytics    | 4        | 15      | 0      | 15  | 2
+Runtime Evolution | 7        | 15      | 0      | 31  | 4
+Alert Triage     | 4        | 15      | 0      | 9   | 0
+Compounding      | 16       | 15      | 0      | 39  | 1
+Executive Narrative | 1        | 11      | 0      | 15  | 0
+  ok 202 [chromium] ΓÇ║ tests\e2e\tab_walkthrough.spec.ts:56:1 ΓÇ║ tab_walkthrough_all_tabs (12.9s)
+SOC Analytics: navigated=true
+  ok 203 [chromium] ΓÇ║ tests\e2e\tab_walkthrough.spec.ts:233:3 ΓÇ║ tab_visible_soc (3.3s)
+Runtime Evolution: navigated=true
+  ok 204 [chromium] ΓÇ║ tests\e2e\tab_walkthrough.spec.ts:233:3 ΓÇ║ tab_visible_evolution (3.5s)
+Alert Triage: navigated=true
+  ok 205 [chromium] ΓÇ║ tests\e2e\tab_walkthrough.spec.ts:233:3 ΓÇ║ tab_visible_triage (3.4s)
+Compounding: navigated=true
+  ok 206 [chromium] ΓÇ║ tests\e2e\tab_walkthrough.spec.ts:233:3 ΓÇ║ tab_visible_compounding (3.6s)
+Executive Narrative: navigated=true
+  ok 207 [chromium] ΓÇ║ tests\e2e\tab_walkthrough.spec.ts:233:3 ΓÇ║ tab_visible_executive (3.3s)
+
+=== STEP 1: BASELINE CAPTURE ===
+[baseline:before] {"label":"before","decision_count":0,"iks_score":88.5,"graph_nodes":9073,"tab2_iks":88.5}
+
+=== STEP 2: NAVIGATE TO ALERT TRIAGE ===
+Alert cards visible: 30
+
+=== STEP 3: SELECT FIRST ALERT ===
+Clicking alert: ALERT-LM-005LOWprivilege
+Selected alert ID: ALERT-LM-005LOWprivilege
+
+=== STEP 4: EXAMINE SCORING PANEL ===
+"Why This Decision?" panel: VISIBLE
+Factors found: Runtime EvolutionKEY | Asset | Time saved:
+Recommendation section: VISIBLE
+Confidence: Confidence: 55.4%
+DiagonalKernel/kernel text visible in DOM: false
+Decision method line: NOT VISIBLE
+
+=== STEP 5: SUBMIT VERDICT ===
+Clicked: Apply Recommendation / Apply Policy Resolution
+"OUTCOME FEEDBACK" panel: VISIBLE
+Outcome submitted: Confirmed Correct
+
+=== STEP 6: POST-TRIAGE CAPTURE ===
+[baseline:after] {"label":"after","decision_count":0,"iks_score":88.5,"graph_nodes":9077,"tab2_iks":88.5}
+
+=== TRIAGE WRITE PATH RESULTS ===
+Alert: ALERT-LM-005LOWprivilege
+Action taken: confirmed_correct
+Decision count: 0 ΓåÆ 0 (delta: 0)
+Graph nodes: 9073 ΓåÆ 9077
+IKS: 88.5 ΓåÆ 88.5
+=================================
+
+=== STEP 8: AUDIT CHAIN CHECK ===
+Most recent audit entry: {
+  decision_id: [32m'43657c58-f8ed-4dd8-b94a-47769d9c6677'[39m,
+  action: [1mnull[22m,
+  hash: [32m'46bac950368d805951dda5ab825a198d4faa957705f79247315c68b6e1195cbd'[39m,
+  chain_index: [33m0[39m
+}
+Evidence Ledger text visible on Tab 5: true
+  ok 208 [chromium] ΓÇ║ tests\e2e\triage_write_path.spec.ts:69:1 ΓÇ║ triage_write_path_end_to_end (18.7s)
+
+=== API PROBE ===
+/api/soc/learning-state: HTTP 200 ΓÇö keys: frozen, decision_count, verified_decisions, last_verified_at, checkpoint_id, iks_v2
+/api/soc/graph-stats: HTTP 200 ΓÇö keys: nodes_traversed, relationships_analyzed, historical_decisions, source
+/api/soc/tab/2/content: HTTP 200 ΓÇö keys: tab, tab_name, content, generated_at_epoch
+/api/soc/tab/3/content: HTTP 200 ΓÇö keys: tab, tab_name, content, generated_at_epoch
+/api/soc/analytics: HTTP 200 ΓÇö keys: total_alerts, open_alerts, total_decisions, correct_decisions, accuracy_pct, category_breakdown
+
+=== AUDIT ENDPOINT PROBE ===
+/api/audit/decisions: HTTP 200
+/api/audit/decisions?format=json: HTTP 200
+/api/audit/chain: HTTP 404
+/api/soc/audit: HTTP 404
+  ok 209 [chromium] ΓÇ║ tests\e2e\triage_write_path.spec.ts:308:1 ΓÇ║ triage_write_path_api_probe (5.0s)
+
+
+  1) [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:278:5 ΓÇ║ Tab 1 ΓÇô Alert Triage (factor names) ΓÇ║ factor "Travel Match" visible after clicking alert 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByText(/Travel Match/i).or(getByText(/travel_match/i)).first()
+    Expected: visible
+    Timeout: 12000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 12000ms[22m
+    [2m  - waiting for getByText(/Travel Match/i).or(getByText(/travel_match/i)).first()[22m
+
+
+      282 |       const factor = page.getByText(new RegExp(displayName, 'i'))
+      283 |         .or(page.getByText(new RegExp(factorName, 'i')));
+    > 284 |       await expect(factor.first()).toBeVisible({ timeout: 12_000 });
+          |                                    ^
+      285 |     });
+      286 |   }
+      287 | });
+        at C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\frontend\tests\e2e\checklist.spec.ts:284:36
+
+    attachment #1: screenshot (image/png) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    test-results\checklist-Tab-1-ΓÇô-Alert-Tr-87260-isible-after-clicking-alert-chromium\test-failed-1.png
+    ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error Context: test-results\checklist-Tab-1-ΓÇô-Alert-Tr-87260-isible-after-clicking-alert-chromium\error-context.md
+
+  2) [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:469:3 ΓÇ║ Tab 3 ΓÇô Alert Detail (extended) ΓÇ║ all 6 factor display names visible in breakdown 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByText(/Travel Match/i).first()
+    Expected: visible
+    Timeout: 8000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 8000ms[22m
+    [2m  - waiting for getByText(/Travel Match/i).first()[22m
+
+
+      478 |     ];
+      479 |     for (const name of factorDisplayNames) {
+    > 480 |       await expect(page.getByText(new RegExp(name, 'i')).first()).toBeVisible({ timeout: 8_000 });
+          |                                                                   ^
+      481 |     }
+      482 |   });
+      483 |
+        at C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\frontend\tests\e2e\checklist.spec.ts:480:67
+
+    attachment #1: screenshot (image/png) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    test-results\checklist-Tab-3-ΓÇô-Alert-De-3d835--names-visible-in-breakdown-chromium\test-failed-1.png
+    ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error Context: test-results\checklist-Tab-3-ΓÇô-Alert-De-3d835--names-visible-in-breakdown-chromium\error-context.md
+
+  3) [chromium] ΓÇ║ tests\e2e\compounding.spec.ts:39:3 ΓÇ║ Cross-tab compounding ΓÇ║ decisions increment tab2 decision count 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBeGreaterThan[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected: > [32m4860[39m
+    Received:   [31m4860[39m
+
+      48 |
+      49 |     const after = await getTab2Metrics(page);
+    > 50 |     expect(after.decisionCount).toBeGreaterThan(before.decisionCount);
+         |                                 ^
+      51 |   });
+      52 |
+      53 |   // ΓöÇΓöÇ Test 2 ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+        at C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\frontend\tests\e2e\compounding.spec.ts:50:33
+
+    attachment #1: screenshot (image/png) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    test-results\compounding-Cross-tab-comp-5205c-crement-tab2-decision-count-chromium\test-failed-1.png
+    ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error Context: test-results\compounding-Cross-tab-comp-5205c-crement-tab2-decision-count-chromium\error-context.md
+
+  4) [chromium] ΓÇ║ tests\e2e\decision_flow.spec.ts:190:1 ΓÇ║ learning_loop_validates_20_decisions ΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBeGreaterThanOrEqual[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected: >= [32m4872[39m
+    Received:    [31m4860[39m
+
+      288 |   // Convergence counter counts W-matrix updates (correct decisions only)
+      289 |   // 15 correct decisions processed ΓåÆ expect at least 14 (allow 1 timing slack)
+    > 290 |   expect(tab4_after.decision_count).toBeGreaterThanOrEqual(
+          |                                     ^
+      291 |     tab4_baseline.decision_count + 12
+      292 |   );
+      293 |
+        at C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\frontend\tests\e2e\decision_flow.spec.ts:290:37
+
+    attachment #1: screenshot (image/png) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    test-results\decision_flow-learning-loop-validates-20-decisions-chromium\test-failed-1.png
+    ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error Context: test-results\decision_flow-learning-loop-validates-20-decisions-chromium\error-context.md
+
+  5) [chromium] ΓÇ║ tests\e2e\deep_flows.spec.ts:457:1 ΓÇ║ reset_returns_alerts_to_pending ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error: Console errors during reset flow:
+    Failed to load resource: the server responded with a status of 404 (Not Found)
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoHaveLength[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected length: [32m0[39m
+    Received length: [31m1[39m
+    Received array:  [31m["Failed to load resource: the server responded with a status of 404 (Not Found)"][39m
+
+      540 |     consoleErrors,
+      541 |     `Console errors during reset flow:\n${consoleErrors.join('\n')}`,
+    > 542 |   ).toHaveLength(0);
+          |     ^
+      543 | });
+      544 |
+        at C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\frontend\tests\e2e\deep_flows.spec.ts:542:5
+
+    attachment #1: screenshot (image/png) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    test-results\deep_flows-reset-returns-alerts-to-pending-chromium\test-failed-1.png
+    ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error Context: test-results\deep_flows-reset-returns-alerts-to-pending-chromium\error-context.md
+
+  6) [chromium] ΓÇ║ tests\e2e\feature02_governance.spec.ts:54:1 ΓÇ║ test_governance_article_count ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBeGreaterThanOrEqual[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected: >= [32m5[39m
+    Received:    [31m0[39m
+
+      70 |
+      71 |   // At least 5 EU AI Act article sections must render after expand.
+    > 72 |   expect(count).toBeGreaterThanOrEqual(5);
+         |                 ^
+      73 | });
+      74 |
+      75 | test('test_governance_export_buttons', async ({ page }) => {
+        at C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\frontend\tests\e2e\feature02_governance.spec.ts:72:17
+
+    attachment #1: screenshot (image/png) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    test-results\feature02_governance-test-governance-article-count-chromium\test-failed-1.png
+    ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error Context: test-results\feature02_governance-test-governance-article-count-chromium\error-context.md
+
+  7) [chromium] ΓÇ║ tests\e2e\feature02_governance.spec.ts:97:1 ΓÇ║ test_governance_legal_disclaimer ΓöÇΓöÇΓöÇ
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32mfalse[39m
+    Received: [31mtrue[39m
+
+      115 |
+      116 |   expect(certifiedVisible).toBe(false);
+    > 117 |   expect(compliantVisible).toBe(false);
+          |                            ^
+      118 |
+      119 |   await snap(page, '04_governance_disclaimer');
+      120 | });
+        at C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\frontend\tests\e2e\feature02_governance.spec.ts:117:28
+
+    attachment #1: screenshot (image/png) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    test-results\feature02_governance-test-governance-legal-disclaimer-chromium\test-failed-1.png
+    ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error Context: test-results\feature02_governance-test-governance-legal-disclaimer-chromium\error-context.md
+
+  8) [chromium] ΓÇ║ tests\e2e\learning_stress.spec.ts:54:3 ΓÇ║ Learning stress tests ΓÇ║ mixed correct incorrect does not collapse 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBeGreaterThan[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected: > [32m0[39m
+    Received:   [31m0[39m
+
+      70 |     expect(after.iks_v2).toBeGreaterThanOrEqual(0);
+      71 |     expect(isNaN(after.iks_v2)).toBe(false);
+    > 72 |     expect(after.decision_count).toBeGreaterThan(beforeDC);
+         |                                  ^
+      73 |
+      74 |     // Filter navigation artifacts:
+      75 |     //   ΓÇó React duplicate-key warnings from SYN-DEC-* event rows (known, BACKLOG)
+        at C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\frontend\tests\e2e\learning_stress.spec.ts:72:34
+
+    attachment #1: screenshot (image/png) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    test-results\learning_stress-Learning-s-30169-incorrect-does-not-collapse-chromium\test-failed-1.png
+    ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error Context: test-results\learning_stress-Learning-s-30169-incorrect-does-not-collapse-chromium\error-context.md
+
+  9) [chromium] ΓÇ║ tests\e2e\learning_stress.spec.ts:100:3 ΓÇ║ Learning stress tests ΓÇ║ rapid fire 10 decisions no race condition 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBeGreaterThan[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected: > [32m0[39m
+    Received:   [31m0[39m
+
+      109 |
+      110 |     const after = await getApiData(page, '/api/soc/learning-state');
+    > 111 |     expect(after.decision_count).toBeGreaterThan(beforeDC);
+          |                                  ^
+      112 |
+      113 |     // Navigate to Tab 4 and assert no "DEC-None" element anywhere on the page.
+      114 |     // Use exact:true ΓÇö SYN-DEC-* event rows render id-div("DEC-SYN-DEC-") +
+        at C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\frontend\tests\e2e\learning_stress.spec.ts:111:34
+
+    attachment #1: screenshot (image/png) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    test-results\learning_stress-Learning-s-5b66b-decisions-no-race-condition-chromium\test-failed-1.png
+    ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error Context: test-results\learning_stress-Learning-s-5b66b-decisions-no-race-condition-chromium\error-context.md
+
+  9 failed
+    [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:278:5 ΓÇ║ Tab 1 ΓÇô Alert Triage (factor names) ΓÇ║ factor "Travel Match" visible after clicking alert 
+    [chromium] ΓÇ║ tests\e2e\checklist.spec.ts:469:3 ΓÇ║ Tab 3 ΓÇô Alert Detail (extended) ΓÇ║ all 6 factor display names visible in breakdown 
+    [chromium] ΓÇ║ tests\e2e\compounding.spec.ts:39:3 ΓÇ║ Cross-tab compounding ΓÇ║ decisions increment tab2 decision count 
+    [chromium] ΓÇ║ tests\e2e\decision_flow.spec.ts:190:1 ΓÇ║ learning_loop_validates_20_decisions ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    [chromium] ΓÇ║ tests\e2e\deep_flows.spec.ts:457:1 ΓÇ║ reset_returns_alerts_to_pending ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    [chromium] ΓÇ║ tests\e2e\feature02_governance.spec.ts:54:1 ΓÇ║ test_governance_article_count ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    [chromium] ΓÇ║ tests\e2e\feature02_governance.spec.ts:97:1 ΓÇ║ test_governance_legal_disclaimer ΓöÇΓöÇΓöÇΓöÇ
+    [chromium] ΓÇ║ tests\e2e\learning_stress.spec.ts:54:3 ΓÇ║ Learning stress tests ΓÇ║ mixed correct incorrect does not collapse 
+    [chromium] ΓÇ║ tests\e2e\learning_stress.spec.ts:100:3 ΓÇ║ Learning stress tests ΓÇ║ rapid fire 10 decisions no race condition 
+  1 skipped
+  199 passed (21.8m)

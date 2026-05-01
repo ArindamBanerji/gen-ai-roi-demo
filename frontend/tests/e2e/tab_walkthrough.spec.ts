@@ -14,13 +14,14 @@ const FRONTEND_PORT = process.env.FRONTEND_PORT || '5173';
 const FRONTEND      = `http://localhost:${FRONTEND_PORT}`;
 const SCREENSHOTS   = path.join(__dirname, 'screenshots', 'tab_walkthrough');
 
-// Tab definitions — order matches App.tsx tabs array (index 0..4).
+// Tab definitions — order matches App.tsx tabs array (index 0..5).
 const TABS = [
   { index: 0, id: 'soc',         label: 'SOC Analytics'       },
   { index: 1, id: 'evolution',   label: 'Runtime Evolution'    },
   { index: 2, id: 'triage',      label: 'Alert Triage'         },
   { index: 3, id: 'compounding', label: 'Compounding'          },
   { index: 4, id: 'executive',   label: 'Executive Narrative'  },
+  { index: 5, id: 's2p',         label: 'S2P Preview'          },
 ];
 
 // Runtime Evolution subsections.

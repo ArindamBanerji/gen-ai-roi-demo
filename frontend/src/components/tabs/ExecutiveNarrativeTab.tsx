@@ -5,44 +5,14 @@
  * digest for CISO / executive audiences. Includes a PDF download button.
  */
 
-import { useState, useEffect } from 'react'
-import { FileText, Download, TrendingUp, Search, Brain, Activity, Shield, CheckCircle, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { FileText, Download, TrendingUp, Search, Brain, Activity, Shield, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react'
 import { ensureArray } from '../../lib/guards'
-import { fetchCompliance, fetchTransparency } from '../../lib/api'
-
-
-interface ComplianceArticle {
-  article: number
-  title: string
-  evidence: string
-  mechanisms: string[]
-  status: 'fully_addressed' | 'partially_addressed'
-}
-
-interface ComplianceData {
-  title: string
-  enforcement_date: string
-  last_updated: string
-  articles: ComplianceArticle[]
-  summary: {
-    fully_addressed: number
-    total_articles: number
-    adversarial_experiments: number
-    known_risks_disclosed: number
-  }
-}
-
-interface TransparencySection {
-  heading: string
-  content: string
-}
-
-interface TransparencyData {
-  level_1_analyst: { title: string; sections: TransparencySection[] }
-  level_2_ciso: { title: string; sections: TransparencySection[] }
-  level_3_auditor: { title: string; sections: TransparencySection[] }
-  limitations: { title: string; items: string[] }
-}
+import {
+  downloadGovernanceReportCsv,
+  downloadGovernanceReportJson,
+  fetchGovernanceSummary,
+} from '../../lib/api'
 
 interface Shift {
   label: string
@@ -89,6 +59,39 @@ interface NarrativeData {
   pdf_available: boolean
 }
 
+interface GovernanceSummarySection {
+  article: string
+  title: string
+  status: string
+  evidence_count: number
+  legal_disclaimer: string
+}
+
+interface GovernanceSummaryData {
+  title: string
+  generated_at: string
+  overall_assessment: string
+  legal_disclaimer: string
+  sections: GovernanceSummarySection[]
+}
+
+interface GovernanceReportSection extends GovernanceSummarySection {
+  summary: string
+  evidence: Record<string, unknown>
+}
+
+interface GovernanceReportData extends GovernanceSummaryData {
+  report_id: string
+  system_version: string
+  decision_count: number
+  evidence_item_count: number
+  known_risks: Array<Record<string, string>>
+  sections: GovernanceReportSection[]
+}
+
+const GOVERNANCE_DISCLAIMER =
+  'Evidence supporting human oversight only. This report is not a compliance certification or legal determination.'
+
 function healthColor(status: string) {
   if (status === 'GREEN') return 'text-green-400'
   if (status === 'AMBER') return 'text-yellow-400'
@@ -104,14 +107,62 @@ function MetricCard({ label, value }: { label: string; value: string | number })
   )
 }
 
+function statusTone(status: string) {
+  if (status === 'READY' || status === 'GREEN') return 'bg-green-500/15 text-green-300 border-green-500/30'
+  if (status === 'PAUSED' || status === 'AMBER') return 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30'
+  return 'bg-red-500/15 text-red-300 border-red-500/30'
+}
+
+function formatEvidenceValue(value: unknown): string {
+  if (value === null) return 'null'
+  if (value === undefined) return 'undefined'
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  return JSON.stringify(value)
+}
+
+function EvidenceValue({ value }: { value: unknown }) {
+  if (Array.isArray(value)) {
+    return (
+      <div className="space-y-2">
+        {value.map((item, index) => (
+          <div key={index} className="rounded border border-gray-700 bg-gray-950/60 px-3 py-2 text-xs text-gray-300">
+            <EvidenceValue value={item} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (value && typeof value === 'object') {
+    return (
+      <div className="space-y-2">
+        {Object.entries(value).map(([key, nestedValue]) => (
+          <div key={key} className="rounded border border-gray-700 bg-gray-950/60 px-3 py-2">
+            <div className="text-[11px] uppercase tracking-wide text-gray-500">{key.replace(/_/g, ' ')}</div>
+            <div className="mt-1 text-xs text-gray-300">
+              <EvidenceValue value={nestedValue} />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return <span>{formatEvidenceValue(value)}</span>
+}
+
 export default function ExecutiveNarrativeTab() {
   const [data, setData] = useState<NarrativeData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [compliance, setCompliance] = useState<ComplianceData | null>(null)
-  const [transparency, setTransparency] = useState<TransparencyData | null>(null)
   const [govExpanded, setGovExpanded] = useState(false)
-  const [transLevel, setTransLevel] = useState<'level_1_analyst' | 'level_2_ciso' | 'level_3_auditor'>('level_2_ciso')
+  const [governanceSummary, setGovernanceSummary] = useState<GovernanceSummaryData | null>(null)
+  const [governanceReport, setGovernanceReport] = useState<GovernanceReportData | null>(null)
+  const [governanceLoading, setGovernanceLoading] = useState(false)
+  const [governanceError, setGovernanceError] = useState<string | null>(null)
+  const [downloadingJson, setDownloadingJson] = useState(false)
+  const [expandedArticle, setExpandedArticle] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/soc/executive-narrative')
@@ -122,15 +173,18 @@ export default function ExecutiveNarrativeTab() {
       .then(setData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
-
-    fetchCompliance()
-      .then((d) => setCompliance(d as ComplianceData))
-      .catch(() => {})
-
-    fetchTransparency()
-      .then((d) => setTransparency(d as TransparencyData))
-      .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (!govExpanded || governanceSummary || governanceLoading) return
+
+    setGovernanceLoading(true)
+    setGovernanceError(null)
+    fetchGovernanceSummary()
+      .then((summary) => setGovernanceSummary(summary as GovernanceSummaryData))
+      .catch((e) => setGovernanceError(e instanceof Error ? e.message : 'Failed to load governance summary'))
+      .finally(() => setGovernanceLoading(false))
+  }, [govExpanded, governanceLoading, governanceSummary])
 
   if (loading) {
     return (
@@ -149,6 +203,25 @@ export default function ExecutiveNarrativeTab() {
   }
 
   const { headline, what_changed, what_discovered, what_knows, metrics, generated_at } = data
+  const governanceSections = ensureArray<GovernanceSummarySection>(governanceSummary?.sections)
+
+  async function handleGovernanceJsonDownload() {
+    try {
+      setDownloadingJson(true)
+      setGovernanceError(null)
+      const report = await downloadGovernanceReportJson() as GovernanceReportData
+      setGovernanceReport(report)
+    } catch (e) {
+      setGovernanceError(e instanceof Error ? e.message : 'Failed to download governance report')
+    } finally {
+      setDownloadingJson(false)
+    }
+  }
+
+  function handleGovernanceCsvDownload() {
+    setGovernanceError(null)
+    downloadGovernanceReportCsv()
+  }
 
   return (
     <div className="space-y-6">
@@ -291,128 +364,163 @@ export default function ExecutiveNarrativeTab() {
         </div>
       </div>
 
-      {/* Governance & Compliance — EU AI Act evidence (WIRE-01) */}
-      {compliance && (
-        <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-          {/* Header — always visible, click to expand */}
-          <button
-            onClick={() => setGovExpanded((v) => !v)}
-            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-gray-800/50 transition-colors text-left"
-          >
-            <Shield className="w-4 h-4 text-green-400 shrink-0" />
-            <div className="flex-1">
-              <span className="text-sm font-semibold text-gray-200">Governance &amp; Compliance</span>
-              <span className="ml-3 text-xs text-gray-500">EU AI Act — enforcement {compliance.enforcement_date}</span>
-            </div>
-            <div className="flex items-center gap-3">
+      {/* Governance & Compliance — governance evidence export */}
+      <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
+        <button
+          onClick={() => setGovExpanded((v) => !v)}
+          className="w-full flex items-center gap-3 px-5 py-4 hover:bg-gray-800/50 transition-colors text-left"
+        >
+          <Shield className="w-4 h-4 text-green-400 shrink-0" />
+          <div className="flex-1">
+            <span className="text-sm font-semibold text-gray-200">Governance &amp; Compliance</span>
+            <span className="ml-3 text-xs text-gray-500">Evidence export and oversight review</span>
+          </div>
+          <div className="flex items-center gap-3">
+            {governanceSummary && (
               <span className="text-xs font-semibold text-green-400">
-                {compliance.summary.fully_addressed}/{compliance.summary.total_articles} Articles Addressed
+                {governanceSummary.sections.length} Sections Ready
               </span>
-              {govExpanded
-                ? <ChevronDown className="w-4 h-4 text-gray-500" />
-                : <ChevronRight className="w-4 h-4 text-gray-500" />}
-            </div>
-          </button>
+            )}
+            {govExpanded
+              ? <ChevronDown className="w-4 h-4 text-gray-500" />
+              : <ChevronRight className="w-4 h-4 text-gray-500" />}
+          </div>
+        </button>
 
-          {govExpanded && (
-            <div className="border-t border-gray-800">
-              {/* Summary strip */}
-              <div className="grid grid-cols-3 gap-px bg-gray-800">
-                <div className="bg-gray-900 px-4 py-3 text-center">
-                  <div className="text-lg font-bold text-green-400">{compliance.summary.fully_addressed}/{compliance.summary.total_articles}</div>
-                  <div className="text-xs text-gray-500">Articles addressed</div>
-                </div>
-                <div className="bg-gray-900 px-4 py-3 text-center">
-                  <div className="text-lg font-bold text-blue-400">{compliance.summary.adversarial_experiments}+</div>
-                  <div className="text-xs text-gray-500">Adversarial experiments</div>
-                </div>
-                <div className="bg-gray-900 px-4 py-3 text-center">
-                  <div className="text-lg font-bold text-yellow-400">{compliance.summary.known_risks_disclosed}</div>
-                  <div className="text-xs text-gray-500">Known risks disclosed</div>
-                </div>
+        <div className="border-t border-gray-800 px-5 py-4">
+          <div className="rounded-lg border border-yellow-500/30 bg-amber-500/10 px-4 py-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-amber-300">Legal Disclaimer</div>
+                <p className="mt-1 text-sm text-amber-100">{governanceSummary?.legal_disclaimer ?? GOVERNANCE_DISCLAIMER}</p>
               </div>
+            </div>
+          </div>
+        </div>
 
-              {/* Article list */}
-              <div className="divide-y divide-gray-800">
-                {ensureArray<ComplianceArticle>(compliance.articles).map((art) => (
-                  <div key={art.article} className="px-5 py-4">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-mono font-bold text-green-300">Art. {art.article}</span>
-                          <span className="text-xs font-semibold text-gray-200">{art.title}</span>
-                          <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-green-500/15 text-green-400">
-                            {art.status === 'fully_addressed' ? 'Addressed' : 'Partial'}
+        {govExpanded && (
+          <div className="border-t border-gray-800 px-5 py-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="text-sm font-semibold text-gray-200">{governanceSummary?.title ?? 'Governance Evidence Export'}</div>
+                <p className="mt-1 text-xs text-gray-400">
+                  {governanceSummary?.overall_assessment ?? 'Expand this section to load the five-section governance summary.'}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleGovernanceJsonDownload}
+                  disabled={downloadingJson}
+                  className="inline-flex items-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-sm font-medium text-sky-200 transition-colors hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Download className="h-4 w-4" />
+                  {downloadingJson ? 'Downloading JSON...' : 'Download JSON'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGovernanceCsvDownload}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-200 transition-colors hover:bg-gray-700"
+                >
+                  <Download className="h-4 w-4" />
+                  Download CSV
+                </button>
+              </div>
+            </div>
+
+            {governanceLoading && (
+              <div className="mt-4 rounded-lg border border-gray-800 bg-gray-950/60 px-4 py-3 text-sm text-gray-400">
+                Loading governance summary…
+              </div>
+            )}
+
+            {governanceError && (
+              <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                {governanceError}
+              </div>
+            )}
+
+            {!governanceLoading && governanceSections.length > 0 && (
+              <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-5">
+                {governanceSections.map((section) => {
+                  const isOpen = expandedArticle === section.article
+                  const detailSection = governanceReport?.sections.find((entry) => entry.article === section.article)
+                  return (
+                    <div
+                      key={section.article}
+                      className="rounded-xl border border-gray-800 bg-gray-950/60 transition-colors hover:border-gray-700"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setExpandedArticle(isOpen ? null : section.article)}
+                        className="w-full px-4 py-4 text-left"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="text-xs font-mono uppercase tracking-wide text-green-300">{section.article}</div>
+                            <div className="mt-1 text-sm font-semibold text-gray-100">{section.title}</div>
+                          </div>
+                          <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${statusTone(section.status)}`}>
+                            {section.status}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-400 leading-relaxed mb-2">{art.evidence}</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {ensureArray<string>(art.mechanisms).map((m, i) => (
-                            <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">
-                              {m}
-                            </span>
-                          ))}
+                        <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
+                          <span>{section.evidence_count} evidence items</span>
+                          <span className="inline-flex items-center gap-1">
+                            {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                            Details
+                          </span>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                      </button>
 
-              {/* Transparency accordion */}
-              {transparency && (
-                <div className="border-t border-gray-800 px-5 py-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <FileText className="w-4 h-4 text-blue-400" />
-                    <span className="text-sm font-semibold text-gray-200">System Transparency (L-11)</span>
-                    <div className="ml-auto flex gap-1">
-                      {(['level_1_analyst', 'level_2_ciso', 'level_3_auditor'] as const).map((lvl) => {
-                        const labels: Record<string, string> = { level_1_analyst: 'Analyst', level_2_ciso: 'CISO', level_3_auditor: 'Auditor' }
-                        return (
-                          <button
-                            key={lvl}
-                            onClick={() => setTransLevel(lvl)}
-                            className={`text-xs px-2 py-1 rounded transition-colors ${
-                              transLevel === lvl
-                                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
-                                : 'text-gray-500 hover:text-gray-300'
-                            }`}
-                          >
-                            {labels[lvl]}
-                          </button>
-                        )
-                      })}
+                      {isOpen && (
+                        <div className="border-t border-gray-800 px-4 py-4">
+                          {detailSection ? (
+                            <div className="space-y-3">
+                              <p className="text-xs text-gray-400">{detailSection.summary}</p>
+                              <div className="space-y-3">
+                                {Object.entries(detailSection.evidence).map(([key, value]) => (
+                                  <div key={key} className="rounded-lg border border-gray-800 bg-gray-900/80 p-3">
+                                    <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                                      {key.replace(/_/g, ' ')}
+                                    </div>
+                                    <div className="mt-2 text-xs text-gray-300">
+                                      <EvidenceValue value={value} />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/50 px-3 py-4 text-xs text-gray-400">
+                              Detailed evidence is loaded only when you click <span className="font-semibold text-gray-200">Download JSON</span>.
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="space-y-3">
-                    {ensureArray<TransparencySection>(transparency[transLevel].sections).map((sec, i) => (
-                      <div key={i} className="bg-gray-800 rounded-lg p-3">
-                        <div className="text-xs font-semibold text-gray-300 mb-1">{sec.heading}</div>
-                        <p className="text-xs text-gray-400 leading-relaxed">{sec.content}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <AlertTriangle className="w-3 h-3 text-yellow-400" />
-                      <span className="text-xs font-semibold text-yellow-400">{transparency.limitations.title}</span>
-                    </div>
-                    <ul className="space-y-1">
-                      {ensureArray<string>(transparency.limitations.items).map((item, i) => (
-                        <li key={i} className="text-xs text-gray-400 flex gap-2">
-                          <span className="text-yellow-600 shrink-0">•</span>
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+                  )
+                })}
+              </div>
+            )}
+
+            {!governanceLoading && governanceSummary && (
+              <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-gray-500">
+                <span>Generated {governanceSummary.generated_at.replace('T', ' ').replace('Z', ' UTC')}</span>
+                {governanceReport && (
+                  <>
+                    <span className="text-gray-600">•</span>
+                    <span>{governanceReport.decision_count} decisions referenced</span>
+                    <span className="text-gray-600">•</span>
+                    <span>{governanceReport.evidence_item_count} evidence items in downloaded JSON</span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Activity indicator */}
       <div className="flex items-center gap-2 text-xs text-gray-600">

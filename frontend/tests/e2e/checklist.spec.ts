@@ -253,6 +253,11 @@ async function openFirstAlert(page: Page) {
   const target = (await malwareAlert.count()) > 0 ? malwareAlert : fallback;
   await target.click();
   await page.waitForLoadState('networkidle');
+  // Wait for scoring panel to load (backend GAE round-trip)
+  await page.waitForSelector(
+    'text=/Why This Decision|Confidence:|Recommendation/i',
+    { timeout: 20000 }
+  );
 }
 
 // Helper: wait for the factor panel to be fully loaded.
@@ -268,7 +273,7 @@ async function waitForFactorPanel(page: Page) {
 
 test.describe('Tab 1 – Alert Triage (factor names)', () => {
   for (const [factorName, displayName] of [
-    ['travel_match',             'Travel Match'],
+    ['privileged_identity_context', 'Privileged Identity Context'],
     ['asset_criticality',        'Asset Criticality'],
     ['threat_intel_enrichment',  'Threat Intel Enrichment'],
     ['pattern_history',          'Pattern History'],
@@ -469,7 +474,7 @@ test.describe('Tab 3 – Alert Detail (extended)', () => {
   test('all 6 factor display names visible in breakdown', async ({ page }) => {
     await waitForFactorPanel(page);
     const factorDisplayNames = [
-      'Travel Match',
+      'Privileged Identity Context',
       'Asset Criticality',
       'Threat Intel Enrichment',
       'Pattern History',
@@ -836,10 +841,10 @@ test.describe('Error and edge cases', () => {
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 5); // 5px tolerance
   });
 
-  test('all 5 tab buttons visible on page load', async ({ page }) => {
+  test('all 6 tab buttons visible on page load', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.waitForLoadState('networkidle');
-    const tabLabels = ['SOC Analytics', 'Runtime Evolution', 'Alert Triage', 'Compounding', 'Executive Narrative'];
+    const tabLabels = ['SOC Analytics', 'Runtime Evolution', 'Alert Triage', 'Compounding', 'Executive Narrative', 'S2P Preview'];
     for (const label of tabLabels) {
       await expect(page.getByRole('button', { name: new RegExp(label, 'i') })).toBeVisible({ timeout: 5_000 });
     }
