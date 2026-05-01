@@ -1,9 +1,9 @@
 """
 SOC domain factor computers — GAE FactorComputer implementations.
 
-Six FactorComputer classes, each implementing the gae.factors.FactorComputer
-Protocol.  Four use Cypher relationship traversal (P10); two read alert
-properties directly (documented tech debt).
+One FactorComputer per SOC factor, each implementing the
+gae.factors.FactorComputer Protocol. Four use Cypher relationship traversal
+(P10); two read alert properties directly (documented tech debt).
 
 Backward-compatible helpers (SOC_FACTOR_TEMPLATES, _contribution,
 compute_soc_factors) are preserved at the bottom for services/triage.py.
@@ -15,6 +15,7 @@ from datetime import date
 from typing import Any, Dict, List, Optional
 
 from gae.contracts import SchemaContract, PropertySpec
+from gae.factors import FactorComputer
 
 log = logging.getLogger(__name__)
 
@@ -44,6 +45,95 @@ def _S(val) -> str:
 # ===========================================================================
 # GAE FactorComputer implementations
 # ===========================================================================
+
+
+class PrivilegedIdentityContextFactor(FactorComputer):
+    """
+    Computes privileged identity context risk from pre-resolved security context.
+
+    Uses normalized user risk, title heuristics, and inverted trust signals
+    (missing MFA, fingerprint mismatch) when available. No usable context → 0.5.
+    """
+
+    name = "privileged_identity_context"
+    contract = SchemaContract(
+        node_type="alert",
+        properties=(
+            PropertySpec(
+                name="privileged_identity_context",
+                required=False,
+                default_value=0.5,
+            ),
+        ),
+    )
+
+    @staticmethod
+    def _clamp(value: float) -> float:
+        return float(max(0.0, min(float(value), 1.0)))
+
+    @staticmethod
+    def _title_risk(title: Optional[str]) -> Optional[float]:
+        if title is None:
+            return None
+        normalized = str(title).strip().lower()
+        if not normalized:
+            return None
+        if any(token in normalized for token in ("admin", "root", "privileged", "service", "system", "svc")):
+            return 0.9
+        if any(token in normalized for token in ("chief", "ciso", "cio", "cto", "ceo", "vp", "vice president", "director", "executive", "exec")):
+            return 0.7
+        return 0.2
+
+    @staticmethod
+    def _resolve_context(entity_id: Any, context: Any) -> Any:
+        if context is not None and (
+            _get(context, "user_risk_score") is not None
+            or _get(context, "user_title") is not None
+            or _get(context, "mfa_completed") is not None
+            or _get(context, "device_fingerprint_match") is not None
+        ):
+            return context
+        if (
+            _get(entity_id, "user_risk_score") is not None
+            or _get(entity_id, "user_title") is not None
+            or _get(entity_id, "mfa_completed") is not None
+            or _get(entity_id, "device_fingerprint_match") is not None
+        ):
+            return entity_id
+        nested = _get(entity_id, "security_context")
+        if nested is not None:
+            return nested
+        return None
+
+    async def compute(self, entity_id: str, context: Any = None) -> float:
+        ctx = self._resolve_context(entity_id, context)
+        if ctx is None:
+            return 0.5
+
+        components: List[float] = []
+
+        risk_score = _get(ctx, "user_risk_score")
+        if risk_score is not None:
+            try:
+                components.append(self._clamp(float(risk_score)))
+            except (TypeError, ValueError):
+                pass
+
+        title_risk = self._title_risk(_get(ctx, "user_title"))
+        if title_risk is not None:
+            components.append(title_risk)
+
+        mfa_completed = _get(ctx, "mfa_completed")
+        if mfa_completed is not None:
+            components.append(0.85 if not bool(mfa_completed) else 0.10)
+
+        fingerprint_match = _get(ctx, "device_fingerprint_match")
+        if fingerprint_match is not None:
+            components.append(0.80 if not bool(fingerprint_match) else 0.10)
+
+        if not components:
+            return 0.5
+        return self._clamp(sum(components) / len(components))
 
 
 class TravelMatchFactor:
@@ -516,10 +606,10 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "confidence": 0.94,
         "factors": [
             {
-                "name":        "travel_match",
-                "value":       0.95,
+                "name":        "privileged_identity_context",
+                "value":       0.92,
                 "weight":      0.82,
-                "explanation": "Employee calendar shows Singapore travel — VPN origin matches destination",
+                "explanation": "Privileged admin identity used without strong session safeguards — elevated account context raises risk",
             },
             {
                 "name":        "asset_criticality",
@@ -695,14 +785,14 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
     },
 
     # Default — conservative fallback for unknown alert IDs
-    # Factor order matches SOC_FACTORS: travel_match, asset_criticality,
+    # Factor order matches SOC_FACTORS: privileged_identity_context, asset_criticality,
     # [threat_intel_enrichment inserted by compute_soc_factors at pos 2],
     # pattern_history, time_anomaly, device_trust.
     "_default": {
         "recommended_action": "escalate_tier2",
         "confidence":         0.60,
         "factors": [
-            {"name": "travel_match",    "value": 0.50, "weight": 0.60, "explanation": "No travel context available — defaulting to neutral score"},
+            {"name": "privileged_identity_context", "value": 0.50, "weight": 0.60, "explanation": "No privileged identity context available — defaulting to neutral score"},
             {"name": "asset_criticality","value": 0.50, "weight": 0.45, "explanation": "Asset criticality undetermined — defaulting to conservative action"},
             {"name": "pattern_history", "value": 0.30, "weight": 0.60, "explanation": "Limited pattern history for this alert type"},
             {"name": "time_anomaly",    "value": 0.50, "weight": 0.50, "explanation": "Activity detected outside normal business hours"},
@@ -777,7 +867,7 @@ def compute_soc_factors(
         "factors":            factors,
         "recommended_action": template["recommended_action"],
         "confidence":         template["confidence"],
-        "decision_method":    "ProfileScorer L2 centroid-proximity scoring (6 factors × 4 actions × 6 categories)",
+        "decision_method":    "ProfileScorer L2 centroid-proximity scoring (n_factors × n_actions × n_categories)",
         "weights_note":       (
             "Centroids update automatically through verified analyst decisions "
             "(Loop 2 + Loop 3)"

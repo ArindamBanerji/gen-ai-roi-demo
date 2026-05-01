@@ -1,0 +1,36 @@
+==========================================================================================
+EXP-F4: V-COMPOSITION-ORDER
+==========================================================================================
+
+  Seed 42:
+    CONFIG 1 (fΓéÇ only):        86.8%
+    PATH 1 (fΓéÇ ΓåÆ DK ΓåÆ RL):    86.6%  (DK=86.0%, +RL=86.6%)
+    PATH 2 (fΓéÇ ΓåÆ RL):          87.4%  (RL directly on centroid residuals)
+    PATH 3 (MLP joint):         86.4%  (end-to-end, no sequential)
+    PATH 1 vs PATH 2:           -0.8pp
+    PATH 3 vs PATH 1:           -0.2pp
+
+  Seed 123:
+    CONFIG 1 (fΓéÇ only):        78.6%
+    PATH 1 (fΓéÇ ΓåÆ DK ΓåÆ RL):    85.2%  (DK=79.2%, +RL=85.2%)
+    PATH 2 (fΓéÇ ΓåÆ RL):          84.2%  (RL directly on centroid residuals)
+    PATH 3 (MLP joint):         85.8%  (end-to-end, no sequential)
+    PATH 1 vs PATH 2:           +1.0pp
+    PATH 3 vs PATH 1:           +0.6pp
+
+  Seed 777:
+    CONFIG 1 (fΓéÇ only):        75.8%
+    PATH 1 (fΓéÇ ΓåÆ DK ΓåÆ RL):    80.4%  (DK=78.8%, +RL=80.4%)
+    PATH 2 (fΓéÇ ΓåÆ RL):          82.8%  (RL directly on centroid residuals)
+    PATH 3 (MLP joint):         82.4%  (end-to-end, no sequential)
+    PATH 1 vs PATH 2:           -2.4pp
+    PATH 3 vs PATH 1:           +2.0pp
+
+==========================================================================================
+BINARY QUESTIONS
+==========================================================================================
+Q1: PATH 1 Γëá PATH 2? (order matters)
+Q2: PATH 3 > PATH 1? (joint beats sequential)
+Q3: If PATH 1 Γëê PATH 2: terms are orthogonal
+
+DONE.

@@ -1,0 +1,58 @@
+==========================================================================================
+EXP-F3: V-ORTHOGONALITY-TEST
+==========================================================================================
+
+  Seed 42:
+    |A| (centroid errors):   66
+    |B| (DK errors):         70
+    |C| (DK+MLP errors):     67
+    overlap(A,B):           0.86 (57 shared)
+    unique_to_A (DK fixes): 0.14 (9 fixed)
+    new_in_B (DK creates):  0.19 (13 new)
+    overlap(B,C):           0.93 (65 shared)
+    unique_to_B (RL fixes): 0.07 (5 fixed)
+    new_in_C (RL creates):  0.03 (2 new)
+    irreducible (AΓê⌐BΓê⌐C):    54
+    Accuracy: fΓéÇ=86.8% ΓåÆ fΓéÇ+╬┤Γéü=86.0% ΓåÆ fΓéÇ+╬┤Γéü+╬┤Γéé=86.6%
+    Fixed errors mean dist:     0.4769
+    Inherited errors mean dist: 0.6440
+
+  Seed 123:
+    |A| (centroid errors):   107
+    |B| (DK errors):         104
+    |C| (DK+MLP errors):     74
+    overlap(A,B):           0.83 (89 shared)
+    unique_to_A (DK fixes): 0.17 (18 fixed)
+    new_in_B (DK creates):  0.14 (15 new)
+    overlap(B,C):           0.65 (68 shared)
+    unique_to_B (RL fixes): 0.35 (36 fixed)
+    new_in_C (RL creates):  0.08 (6 new)
+    irreducible (AΓê⌐BΓê⌐C):    62
+    Accuracy: fΓéÇ=78.6% ΓåÆ fΓéÇ+╬┤Γéü=79.2% ΓåÆ fΓéÇ+╬┤Γéü+╬┤Γéé=85.2%
+    Fixed errors mean dist:     0.5090
+    Inherited errors mean dist: 0.6174
+
+  Seed 777:
+    |A| (centroid errors):   121
+    |B| (DK errors):         106
+    |C| (DK+MLP errors):     98
+    overlap(A,B):           0.76 (92 shared)
+    unique_to_A (DK fixes): 0.24 (29 fixed)
+    new_in_B (DK creates):  0.13 (14 new)
+    overlap(B,C):           0.86 (91 shared)
+    unique_to_B (RL fixes): 0.14 (15 fixed)
+    new_in_C (RL creates):  0.07 (7 new)
+    irreducible (AΓê⌐BΓê⌐C):    79
+    Accuracy: fΓéÇ=75.8% ΓåÆ fΓéÇ+╬┤Γéü=78.8% ΓåÆ fΓéÇ+╬┤Γéü+╬┤Γéé=80.4%
+    Fixed errors mean dist:     0.4957
+    Inherited errors mean dist: 0.6123
+
+==========================================================================================
+BINARY QUESTIONS
+==========================================================================================
+Q1: overlap(A,B) > 0.80? (DK inherits most centroid errors)
+Q2: new_in_B / |B| < 0.10? (DK doesn't create many new errors)
+Q3: Are there irreducible errors no term fixes?
+Q4: Do fixed errors have different geometry than inherited?
+
+DONE.

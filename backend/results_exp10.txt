@@ -1,0 +1,36 @@
+================================================================================
+EXP-10: V-WEIGHT-DRIVERS
+================================================================================
+  5 seeds done
+
+================================================================================
+CORRELATION with w_pipeline (level)
+================================================================================
+  corr(            accuracy, w_pipeline) = +0.8291
+  corr(            velocity, w_pipeline) = +0.0177
+  corr(     P_conf_above_60, w_pipeline) = +0.0056
+  corr(     P_conf_above_80, w_pipeline) = +0.0417
+  corr(           mean_conf, w_pipeline) = +0.0481
+  corr(           raw_drift, w_pipeline) = +0.2043
+  corr(           pipe_frob, w_pipeline) = +0.2567
+  corr(                   N, w_pipeline) = +0.3473
+
+================================================================================
+CORRELATION with dw/dN (rate of change)
+================================================================================
+  corr(            accuracy, dw/dN) = +0.0746
+  corr(            velocity, dw/dN) = +0.0006
+  corr(     P_conf_above_60, dw/dN) = +0.0501
+  corr(     P_conf_above_80, dw/dN) = -0.0092
+  corr(           mean_conf, dw/dN) = +0.0260
+  corr(           raw_drift, dw/dN) = +0.0299
+  corr(           pipe_frob, dw/dN) = +0.0160
+  corr(                   N, dw/dN) = +0.0149
+
+================================================================================
+BINARY QUESTIONS
+================================================================================
+Q1: Best predictor of w_pipeline: accuracy (|r|=0.8291)
+Q2: Any |r| > 0.5? YES
+
+DONE.

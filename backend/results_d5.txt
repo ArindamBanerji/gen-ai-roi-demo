@@ -1,0 +1,31 @@
+================================================================================
+EXP-D5: SCOPE COMPARISON
+================================================================================
+
+  WITH WRONG CATEGORY (insider_threat shifted 0.3):
+            Scope  Overall@2000  WrongCat   Other
+  ---------------------------------------------
+           global        83.2%    67.8%   83.9%
+     per_category        82.6%    65.9%   83.4%
+           per_ca        82.5%    66.4%   83.3%
+        clustered        83.2%    66.1%   84.1%
+
+  CALIBRATED PRIOR (no wrong category):
+            Scope  Overall@2000
+  ------------------------------
+           global        83.3%
+     per_category        82.6%
+           per_ca        82.5%
+        clustered        83.2%
+
+  CLUSTERED SCOPE ΓÇö per-category accuracy (wrong cat setup):
+
+================================================================================
+BINARY QUESTIONS
+================================================================================
+Q1: Per-category improves wrong cat? global=67.8% per_cat=65.9% gap=-1.8pp
+Q2: Per-(c,a) improves further? per_ca=66.4% gap_vs_global=-1.4pp
+Q3: Clustered sufficient? clustered=66.1% vs per_cat=65.9% gap=+0.2pp
+Q4: Per-category hurts others? global_other=83.9% percat_other=83.4% NO
+
+DONE.

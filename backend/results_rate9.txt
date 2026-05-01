@@ -1,0 +1,128 @@
+================================================================================
+RATE-9: H-MONO + H-FLOOR
+================================================================================
+
+Seed 42 (centroid: 81.6%)
+     N      DK   >=C?   Mix.5   Mix.7  BestA
+----------------------------------------
+  calibrating N=500...
+   500  84.8%      Y  85.2%  85.0%   0.9
+  calibrating N=1000...
+  1000  84.8%      Y  84.0%  84.2%   1.0
+  calibrating N=2000...
+  2000  85.8%      Y  84.4%  85.2%   1.0
+  calibrating N=3000...
+  3000  85.6%      Y  84.8%  85.8%   0.7
+  calibrating N=4000...
+  4000  85.8%      Y  85.2%  86.0%   0.7
+  calibrating N=6000...
+  6000  83.8%      Y  84.6%  85.0%   0.7
+  calibrating N=8000...
+  8000  85.8%      Y  85.6%  86.8%   0.7
+H-MONO: 0/7 below centroid
+
+Seed 123 (centroid: 80.0%)
+     N      DK   >=C?   Mix.5   Mix.7  BestA
+----------------------------------------
+  calibrating N=500...
+   500  80.8%      Y  81.6%  81.8%   0.7
+  calibrating N=1000...
+  1000  81.0%      Y  81.8%  81.2%   0.5
+  calibrating N=2000...
+  2000  81.8%      Y  82.0%  81.4%   0.3
+  calibrating N=3000...
+  3000  83.2%      Y  83.0%  82.6%   1.0
+  calibrating N=4000...
+  4000  84.8%      Y  83.0%  84.0%   0.9
+  calibrating N=6000...
+  6000  83.2%      Y  83.0%  83.6%   0.7
+  calibrating N=8000...
+  8000  79.8%      N  81.4%  82.6%   0.7
+H-MONO: 1/7 below centroid
+
+Seed 777 (centroid: 85.2%)
+     N      DK   >=C?   Mix.5   Mix.7  BestA
+----------------------------------------
+  calibrating N=500...
+   500  84.2%      N  85.6%  85.2%   0.5
+  calibrating N=1000...
+  1000  85.6%      Y  86.0%  87.2%   0.7
+  calibrating N=2000...
+  2000  85.4%      Y  87.2%  87.2%   0.5
+  calibrating N=3000...
+  3000  86.2%      Y  86.8%  87.2%   0.7
+  calibrating N=4000...
+  4000  85.8%      Y  87.0%  86.8%   0.3
+  calibrating N=6000...
+  6000  84.8%      N  86.8%  87.0%   0.3
+  calibrating N=8000...
+  8000  87.6%      Y  87.4%  87.2%   0.9
+H-MONO: 2/7 below centroid
+
+================================================================================
+RATE-10: H-CATCOMP
+================================================================================
+
+Seed 42:
+            Category    N_c    Cent      DK    Delta
+   credential_access   2645  84.8%  89.6%   +4.9pp
+   malware_execution    452  78.0%  84.0%   +6.0pp
+    lateral_movement    327  79.2%  79.2%   +0.0pp
+   data_exfiltration    228  75.0%  75.0%   +0.0pp
+      insider_threat    198  74.2%  77.4%   +3.2pp
+cloud_infrastructure    150  60.0%  66.7%   +6.7pp
+corr(log(N_c), Delta): +0.175
+
+Seed 123:
+            Category    N_c    Cent      DK    Delta
+   credential_access   2638  86.0%  90.3%   +4.2pp
+   malware_execution    477  73.1%  85.1%  +11.9pp
+    lateral_movement    300  79.1%  76.7%   -2.3pp
+   data_exfiltration    235  65.6%  68.8%   +3.1pp
+      insider_threat    202  65.6%  68.8%   +3.1pp
+cloud_infrastructure    148  55.6%  66.7%  +11.1pp
+corr(log(N_c), Delta): -0.066
+
+Seed 777:
+            Category    N_c    Cent      DK    Delta
+   credential_access   2633  88.2%  88.9%   +0.6pp
+   malware_execution    465  85.5%  85.5%   +0.0pp
+    lateral_movement    347  80.4%  78.3%   -2.2pp
+   data_exfiltration    228  85.2%  85.2%   +0.0pp
+      insider_threat    171  70.0%  70.0%   +0.0pp
+cloud_infrastructure    156  64.3%  78.6%  +14.3pp
+corr(log(N_c), Delta): -0.347
+
+================================================================================
+RATE-11: H-DEPLOY (full two-phase deployment)
+================================================================================
+
+Seed 42:
+          Strategy    N=500   N=1000   N=2000   N=4000   N=8000
+------------------------------------------------------------
+        ALL_FROZEN   81.6%   81.6%   81.6%   81.6%   81.6%
+       SPLIT_CUMUL   81.6%   84.8%   85.8%   85.8%   85.8%
+     DK_FROM_START   84.8%   84.8%   85.8%   85.8%   85.8%
+
+Seed 123:
+          Strategy    N=500   N=1000   N=2000   N=4000   N=8000
+------------------------------------------------------------
+        ALL_FROZEN   80.0%   80.0%   80.0%   80.0%   80.0%
+       SPLIT_CUMUL   80.0%   81.0%   81.8%   84.8%   79.8%
+     DK_FROM_START   80.8%   81.0%   81.8%   84.8%   79.8%
+
+Seed 777:
+          Strategy    N=500   N=1000   N=2000   N=4000   N=8000
+------------------------------------------------------------
+        ALL_FROZEN   85.2%   85.2%   85.2%   85.2%   85.2%
+       SPLIT_CUMUL   85.2%   85.6%   85.4%   85.8%   87.6%
+     DK_FROM_START   84.2%   85.6%   85.4%   85.8%   87.6%
+
+================================================================================
+BINARY QUESTIONS
+H-MONO:    DK below centroid at any checkpoint?
+H-FLOOR:   Mix at 0.5 always >= centroid?
+H-CATCOMP: corr(log(N_c), Delta) > 0.3?
+H-DEPLOY:  SPLIT_CUMUL best at N=4000+?
+
+DONE.

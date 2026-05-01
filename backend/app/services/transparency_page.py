@@ -1,5 +1,7 @@
 from typing import Dict
 
+from app.domains.soc.config import SOC_FACTORS
+
 
 def generate_transparency_page() -> Dict:
     """
@@ -14,12 +16,11 @@ def generate_transparency_page() -> Dict:
             'title': 'How Recommendations Work',
             'sections': [
                 {
-                    'heading': 'Six Factors',
+                    'heading': 'SOC Factors',
                     'content': (
-                        'Every recommendation is based on six factors computed '
-                        'from your organization\'s security graph: travel match, '
-                        'asset criticality, threat intelligence enrichment, '
-                        'time anomaly, pattern history, and device trust.'
+                        'Every recommendation is based on SOC factors computed '
+                        'from your organization\'s security graph: '
+                        + ', '.join(f.replace('_', ' ') for f in SOC_FACTORS) + '.'
                     )
                 },
                 {
@@ -109,7 +110,7 @@ def generate_transparency_page() -> Dict:
                     'heading': 'Scoring Mechanism',
                     'content': (
                         'L2-distance ProfileScorer with temperature-scaled softmax. '
-                        'Tensor shape: (6 categories, 4 actions, 6 factors) = 144 parameters. '
+                        'Tensor shape: (n_categories, 4 actions, n_factors) = 144 parameters at today\'s SOC size. '
                         'Actions: escalate, investigate, suppress, monitor. '
                         'refer_to_analyst is a confidence-gate decision, not a scored action. '
                         'Temperature tau=0.1 (ECE=0.036, V3B validated).'

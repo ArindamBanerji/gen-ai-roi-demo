@@ -1,0 +1,83 @@
+================================================================================
+EXP-R1: V-BOUNDARY-LINEARITY
+================================================================================
+  Seed 42 done
+  Seed 123 done
+  Seed 777 done
+  Seed 2024 done
+  Seed 9999 done
+
+================================================================================
+BIN DISTRIBUTION
+================================================================================
+          DEEP_CORRECT:  1883 (75.3%)
+      BOUNDARY_CORRECT:   309 (12.4%)
+        BOUNDARY_WRONG:   200 (8.0%)
+            DEEP_WRONG:   108 (4.3%)
+
+  Total errors: 308 (12.3%)
+  Boundary errors: 65% of all errors
+  Deep errors: 35% of all errors
+
+================================================================================
+BOUNDARY_WRONG ANALYSIS (200 errors)
+================================================================================
+  By category:
+       credential_access: 121
+       malware_execution: 28
+        lateral_movement: 18
+       data_exfiltration: 8
+          insider_threat: 16
+    cloud_infrastructure: 9
+
+  Top error pairs (cat, trueΓåÆpred):
+       credential_access:      monitor ΓåÆ  investigate: 44
+       credential_access:  investigate ΓåÆ      monitor: 40
+       credential_access:     suppress ΓåÆ      monitor: 23
+       malware_execution:  investigate ΓåÆ      monitor: 15
+       malware_execution:      monitor ΓåÆ  investigate: 10
+          insider_threat:      monitor ΓåÆ  investigate: 10
+        lateral_movement:  investigate ΓåÆ      monitor: 8
+    cloud_infrastructure:      monitor ΓåÆ  investigate: 8
+       credential_access:     suppress ΓåÆ  investigate: 6
+       credential_access:     escalate ΓåÆ  investigate: 5
+
+  PCA of boundary-wrong factor vectors:
+    Explained variance: [21.8 19.1 16.5 16.2]
+    Top 2 components explain 41%
+    Structure: SPREAD
+
+================================================================================
+DEEP_WRONG ANALYSIS (108 errors)
+================================================================================
+  By category:
+       credential_access: 51
+       malware_execution: 19
+        lateral_movement: 5
+       data_exfiltration: 8
+          insider_threat: 17
+    cloud_infrastructure: 8
+
+  Top error pairs:
+       credential_access:      monitor ΓåÆ  investigate: 19
+       credential_access:     escalate ΓåÆ  investigate: 11
+       malware_execution:      monitor ΓåÆ  investigate: 10
+          insider_threat:      monitor ΓåÆ  investigate: 10
+       credential_access:     suppress ΓåÆ      monitor: 9
+    cloud_infrastructure:      monitor ΓåÆ  investigate: 8
+       credential_access:     suppress ΓåÆ  investigate: 6
+       data_exfiltration:      monitor ΓåÆ  investigate: 6
+          insider_threat:  investigate ΓåÆ      monitor: 5
+       credential_access:  investigate ΓåÆ      monitor: 5
+
+  Gap distribution: mean=0.466 max=0.776
+
+================================================================================
+BINARY QUESTIONS
+================================================================================
+Q1: >70% of errors in BOUNDARY bins? 65% NO
+Q2: >20% of errors in DEEP_WRONG? 35% YES
+Q3: BOUNDARY_WRONG show geometric structure? (see PCA above)
+Q4: DEEP_WRONG concentrated in specific categories? (see distribution above)
+
+DONE.

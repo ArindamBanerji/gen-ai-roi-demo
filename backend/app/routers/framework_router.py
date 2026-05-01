@@ -741,6 +741,68 @@ async def learning_health():
 
 
 # ============================================================================
+# FEATURE-10: Learning Balance Sheet
+# ============================================================================
+
+@router.get("/soc/learning-balance-sheet")
+async def learning_balance_sheet():
+    from dataclasses import asdict
+    from app.services.balance_sheet import generate_balance_sheet
+
+    return asdict(await generate_balance_sheet(neo4j_client))
+
+
+# ============================================================================
+# FEATURE-05: Factor Analysis
+# ============================================================================
+
+@router.get("/soc/factor-analysis")
+async def factor_analysis():
+    from app.services.factor_analysis import run_factor_analysis
+
+    result = await run_factor_analysis()
+    if result.get("status") == "cold_start":
+        raise HTTPException(status_code=503, detail=result)
+    return result
+
+
+@router.get("/soc/factor-analysis/summary")
+async def factor_analysis_summary():
+    from app.services.factor_analysis import run_factor_analysis
+
+    result = await run_factor_analysis()
+    if result.get("status") == "cold_start":
+        raise HTTPException(status_code=503, detail=result)
+
+    current = result["current"]
+    proposed = current.get("proposed_improvement") or {}
+    weakest = current.get("weakest_category") or "unknown"
+    bootstrap_improved = result.get("snr_improved")
+    if bootstrap_improved is True:
+        improvement_note = "Current centroids outperform the bootstrap baseline."
+    elif bootstrap_improved is False:
+        improvement_note = "Current centroids have not exceeded the bootstrap baseline."
+    else:
+        improvement_note = "Bootstrap comparison is unavailable."
+
+    recommendation = (
+        f"{proposed.get('recommendation') or 'Review the weakest category for additional separation.'} "
+        f"The weakest category is {weakest}. {improvement_note}"
+    )
+    cats = current.get("categories") or []
+    weakest_cat = min(cats, key=lambda c: c["snr_effective"]) if cats else None
+    return {
+        "overall_snr": current["overall_snr"],
+        "overall_ceiling": current["overall_ceiling"],
+        "weakest_category": weakest,
+        "weakest_category_ceiling": weakest_cat["ceiling_estimate"] if weakest_cat else None,
+        "recommendation": recommendation,
+        "bootstrap_improved": bootstrap_improved,
+        "generated_at": result["generated_at"],
+    }
+
+
+# ============================================================================
 # P22: Intervention Controls — EU AI Act Article 14 human oversight (L-12)
 # ============================================================================
 

@@ -20,11 +20,15 @@ from app.db.neo4j import neo4j_client
 router = APIRouter()
 
 # ── Constants ────────────────────────────────────────────────────────────────
-# Factor names in centroid order — must stay in sync with SOC_PROFILE_CENTROIDS
-# depth axis: [0]=travel_match [1]=asset_criticality [2]=threat_intel_enrichment
-#             [3]=pattern_history [4]=time_anomaly [5]=device_trust
+# Factor names in centroid order — derived from SOC_FACTORS in config.py.
+# Do not hardcode factor names here; use SOC_FACTORS directly.
 # SOC_ACTIONS imported from config — do not redeclare here (v5.5)
 # SOC_ACTIONS = ["escalate", "investigate", "suppress", "monitor", "refer_to_analyst"]
+
+# Backward-compat map: current factor name → legacy persisted property name
+_LEGACY_FACTOR_NAMES: dict[str, str] = {
+    "privileged_identity_context": "travel_match",
+}
 
 
 # ── Request model ─────────────────────────────────────────────────────────────
@@ -39,14 +43,7 @@ class JudgmentRequest(BaseModel):
 
 def _build_factor_vector(factors: Dict[str, float]) -> np.ndarray:
     return np.array(
-        [
-            factors["travel_match"],
-            factors["asset_criticality"],
-            factors["threat_intel_enrichment"],
-            factors["pattern_history"],
-            factors["time_anomaly"],
-            factors["device_trust"],
-        ],
+        [factors.get(f, 0.5) for f in SOC_FACTORS],
         dtype=np.float64,
     )
 
@@ -60,7 +57,7 @@ def build_judgment_response(
     """
     Pure computation helper: score + compute_judgment -> response dict.
     Exported so tests can call it directly without the HTTP layer.
-    Assumes category is valid (in SOC_CATEGORIES) and all 6 factors present.
+    Assumes category is valid (in SOC_CATEGORIES) and all modeled factors are present.
     """
     category_index = SOC_CATEGORIES.index(category)
     f = _build_factor_vector(factors)
@@ -165,14 +162,13 @@ async def explain_decision_get(alert_id: str):
     d = rows[0]["d"]
 
     try:
-        factors = {
-            "travel_match":      float(d["travel_match"]),
-            "asset_criticality": float(d["asset_criticality"]),
-            "threat_intel_enrichment": float(d["threat_intel_enrichment"]),
-            "pattern_history":   float(d["pattern_history"]),
-            "time_anomaly":      float(d["time_anomaly"]),
-            "device_trust":      float(d["device_trust"]),
-        }
+        factors = {}
+        for fname in SOC_FACTORS:
+            legacy = _LEGACY_FACTOR_NAMES.get(fname, fname)
+            val = d.get(fname) if d.get(fname) is not None else d.get(legacy)
+            if val is None:
+                raise KeyError(fname)
+            factors[fname] = float(val)
     except (KeyError, TypeError):
         raise HTTPException(
             status_code=404,

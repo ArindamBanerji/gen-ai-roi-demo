@@ -1,0 +1,110 @@
+==========================================================================================
+Q1: DK TRANSFER
+Does Firm A's DK weights help Firm B?
+==========================================================================================
+
+                          Config     Acc  ╬ö vs centroid
+  -------------------------------------------------------
+                   Centroid only  81.9%         +0.0pp
+                  DK from Firm A  76.3%         -5.6pp
+                  DK from Firm B  84.2%         +2.3pp
+                     DK from A+B  80.2%         -1.7pp
+            MLP from Firm A (G3)  77.3%         -4.6pp
+
+  DK WEIGHT SIMILARITY ACROSS FIRMS:
+    Firm 42 vs Firm 123: corr=-0.026 cos=0.793
+    Firm 123 vs Firm 777: corr=+0.063 cos=0.803
+
+==========================================================================================
+Q2: DK + MLP COMPOSITION
+Does bounded MLP on DK residuals beat DK alone?
+==========================================================================================
+
+  Seed 42:
+                          Config     Acc  ╬ö vs cent      Layers
+  ------------------------------------------------------------
+                   Centroid only  81.6%          ΓÇö          L1
+                    DK on frozen  86.0%     +4.4pp     L1+L1.5
+         Bounded MLP on centroid  85.4%     +3.8pp       L1+L2
+               Bounded MLP on DK  86.0%     +4.4pp  L1+L1.5+L2
+             Unbounded MLP on DK  86.0%     +4.4pp  L1+L1.5+L2*
+                  MLP standalone  85.6%     +4.0pp     L2 only
+
+  Seed 123:
+                          Config     Acc  ╬ö vs cent      Layers
+  ------------------------------------------------------------
+                   Centroid only  80.0%          ΓÇö          L1
+                    DK on frozen  84.2%     +4.2pp     L1+L1.5
+         Bounded MLP on centroid  82.6%     +2.6pp       L1+L2
+               Bounded MLP on DK  84.2%     +4.2pp  L1+L1.5+L2
+             Unbounded MLP on DK  84.2%     +4.2pp  L1+L1.5+L2*
+                  MLP standalone  85.2%     +5.2pp     L2 only
+
+  Seed 777:
+                          Config     Acc  ╬ö vs cent      Layers
+  ------------------------------------------------------------
+                   Centroid only  85.2%          ΓÇö          L1
+                    DK on frozen  86.0%     +0.8pp     L1+L1.5
+         Bounded MLP on centroid  86.0%     +0.8pp       L1+L2
+               Bounded MLP on DK  86.2%     +1.0pp  L1+L1.5+L2
+             Unbounded MLP on DK  86.2%     +1.0pp  L1+L1.5+L2*
+                  MLP standalone  86.0%     +0.8pp     L2 only
+
+==========================================================================================
+Q3: DK SATURATION
+Extended learning curve: where does DK plateau?
+==========================================================================================
+
+  Seed 42 (centroid baseline: 81.6%):
+       N   DK_acc  DK-Cent  ╬ö from prev  Marginal/1000
+  -------------------------------------------------------
+     200   81.8%   +0.2pp       +0.2pp         +1.0pp
+     500   84.8%   +3.2pp       +3.0pp        +10.0pp
+    1000   85.2%   +3.6pp       +0.4pp         +0.8pp
+    1500   85.6%   +4.0pp       +0.4pp         +0.8pp
+    2000   86.0%   +4.4pp       +0.4pp         +0.8pp
+    3000   86.2%   +4.6pp       +0.2pp         +0.2pp
+    4000   87.0%   +5.4pp       +0.8pp         +0.8pp
+    5000   85.6%   +4.0pp       -1.4pp         -1.4pp
+    6000   85.8%   +4.2pp       +0.2pp         +0.2pp
+    7000   86.2%   +4.6pp       +0.4pp         +0.4pp
+    8000   86.6%   +5.0pp       +0.4pp         +0.4pp
+
+  Seed 123 (centroid baseline: 80.0%):
+       N   DK_acc  DK-Cent  ╬ö from prev  Marginal/1000
+  -------------------------------------------------------
+     200   79.6%   -0.4pp       -0.4pp         -2.0pp
+     500   80.8%   +0.8pp       +1.2pp         +4.0pp
+    1000   83.2%   +3.2pp       +2.4pp         +4.8pp
+    1500   84.0%   +4.0pp       +0.8pp         +1.6pp
+    2000   84.2%   +4.2pp       +0.2pp         +0.4pp
+    3000   83.2%   +3.2pp       -1.0pp         -1.0pp
+    4000   83.0%   +3.0pp       -0.2pp         -0.2pp
+    5000   82.8%   +2.8pp       -0.2pp         -0.2pp
+    6000   83.8%   +3.8pp       +1.0pp         +1.0pp
+    7000   84.6%   +4.6pp       +0.8pp         +0.8pp
+    8000   85.2%   +5.2pp       +0.6pp         +0.6pp
+
+  Seed 777 (centroid baseline: 85.2%):
+       N   DK_acc  DK-Cent  ╬ö from prev  Marginal/1000
+  -------------------------------------------------------
+     200   82.6%   -2.6pp       -2.6pp        -13.0pp
+     500   84.2%   -1.0pp       +1.6pp         +5.3pp
+    1000   83.6%   -1.6pp       -0.6pp         -1.2pp
+    1500   84.6%   -0.6pp       +1.0pp         +2.0pp
+    2000   86.0%   +0.8pp       +1.4pp         +2.8pp
+    3000   86.6%   +1.4pp       +0.6pp         +0.6pp
+    4000   86.8%   +1.6pp       +0.2pp         +0.2pp
+    5000   87.0%   +1.8pp       +0.2pp         +0.2pp
+    6000   86.0%   +0.8pp       -1.0pp         -1.0pp
+    7000   86.0%   +0.8pp       +0.0pp         +0.0pp
+    8000   86.2%   +1.0pp       +0.2pp         +0.2pp
+
+==========================================================================================
+BINARY ANSWERS
+==========================================================================================
+Q1: Does Firm A's DK help Firm B? (compare to G3 MLP transfer at -2.2pp)
+Q2: Does L1+L1.5+L2 > max(L1+L1.5, L1+L2)?
+Q3: At what N does DK marginal gain drop below +0.1pp/1000?
+
+DONE.

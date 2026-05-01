@@ -1,0 +1,68 @@
+==========================================================================================
+EXP-D6: COMPONENT COMBINATION
+Mix-and-match best components from D2-D5
+==========================================================================================
+
+==========================================================================================
+CALIBRATED PRIOR
+==========================================================================================
+    Signal     Gain   Switch    Scope     Acc       ECE
+  -------------------------------------------------------
+  confidence inv_sqrt     none   global   83.2%    0.1456
+  confidence inv_sqrt     none per_category   83.4%    0.1441
+  confidence inv_sqrt hysteresis   global   83.2%    0.1456
+  confidence inv_sqrt hysteresis per_category   83.4%    0.1441
+  confidence dual_rate     none   global   82.7%    0.1571
+  confidence dual_rate     none per_category   83.0%    0.1607
+  confidence dual_rate hysteresis   global   83.8%    0.1040
+  confidence dual_rate hysteresis per_category   83.8%    0.1106
+  override_rate inv_sqrt     none   global   82.7%    0.1322
+  override_rate inv_sqrt     none per_category   82.7%    0.1294
+  override_rate inv_sqrt hysteresis   global   82.7%    0.1322
+  override_rate inv_sqrt hysteresis per_category   82.7%    0.1294
+  override_rate dual_rate     none   global   82.0%    0.1395
+  override_rate dual_rate     none per_category   82.1%    0.1378
+  override_rate dual_rate hysteresis   global   82.9%    0.1316
+  override_rate dual_rate hysteresis per_category   82.9%    0.1224
+                               STATIC   80.4%    0.0543
+                             PIPELINE   80.6%    0.0562
+
+==========================================================================================
+WRONG CATEGORY (insider_threat shifted 0.3)
+==========================================================================================
+    Signal     Gain   Switch    Scope  Overall  WrongCat
+  -------------------------------------------------------
+  confidence inv_sqrt     none   global   83.1%    67.4%
+  confidence inv_sqrt     none per_category   83.2%    66.8%
+  confidence inv_sqrt hysteresis   global   83.1%    67.4%
+  confidence inv_sqrt hysteresis per_category   83.2%    66.8%
+  confidence dual_rate     none   global   82.6%    67.4%
+  confidence dual_rate     none per_category   82.8%    65.0%
+  confidence dual_rate hysteresis   global   83.7%    67.0%
+  confidence dual_rate hysteresis per_category   83.5%    65.4%
+  override_rate inv_sqrt     none   global   82.6%    68.4%
+  override_rate inv_sqrt     none per_category   82.6%    68.0%
+  override_rate inv_sqrt hysteresis   global   82.6%    68.4%
+  override_rate inv_sqrt hysteresis per_category   82.6%    68.0%
+  override_rate dual_rate     none   global   81.9%    66.9%
+  override_rate dual_rate     none per_category   82.0%    66.5%
+  override_rate dual_rate hysteresis   global   82.8%    66.9%
+  override_rate dual_rate hysteresis per_category   82.8%    67.1%
+
+==========================================================================================
+INTERACTION ANALYSIS (do components compose?)
+==========================================================================================
+  signal=  confidence: mean_acc=83.3%  mean_ece=0.1390
+  signal=override_rate: mean_acc=82.6%  mean_ece=0.1318
+  gain=    inv_sqrt: mean_acc=83.0%  mean_ece=0.1378
+  gain=   dual_rate: mean_acc=82.9%  mean_ece=0.1330
+  switching=        none: mean_acc=82.8%  mean_ece=0.1433
+  switching=  hysteresis: mean_acc=83.2%  mean_ece=0.1275
+  scope=      global: mean_acc=82.9%  mean_ece=0.1360
+  scope=per_category: mean_acc=83.0%  mean_ece=0.1348
+
+  Best accuracy: con_dua_hys_glo (83.8%)
+  Best ECE: con_dua_hys_glo (0.1040)
+  Best composite: con_dua_hys_glo
+
+DONE.

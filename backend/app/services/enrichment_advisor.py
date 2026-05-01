@@ -33,12 +33,12 @@ from app.domains.soc.constants import get_sigma_band, get_permanent_gap_pp
 # High sigma → factor is noisy → more to gain from structured enrichment.
 # ---------------------------------------------------------------------------
 FACTOR_SIGMA: dict[str, float] = {
-    "threat_intel_enrichment": 0.28,   # high — source quality varies widely
-    "pattern_history":         0.18,   # medium — history volume-dependent
-    "time_anomaly":            0.15,   # medium — discrete windows, partial signal
-    "asset_criticality":       0.12,   # low — discrete tiers, mostly stable
-    "device_trust":            0.10,   # low — stable per device profile
-    "travel_match":            0.07,   # low — largely binary match
+    "threat_intel_enrichment":      0.28,   # high — source quality varies widely
+    "pattern_history":              0.18,   # medium — history volume-dependent
+    "time_anomaly":                 0.15,   # medium — discrete windows, partial signal
+    "asset_criticality":            0.12,   # low — discrete tiers, mostly stable
+    "privileged_identity_context":  0.10,   # low — access-right signals mostly stable
+    "device_trust":                 0.10,   # low — stable per device profile
 }
 
 # Human-readable enrichment recommendations per sigma band

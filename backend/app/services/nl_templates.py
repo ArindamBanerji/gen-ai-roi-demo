@@ -363,11 +363,9 @@ class NLTemplateEngine:
 
     def render_shadow_disagreement(self, decision: dict, alert: dict) -> str:
         """Generate an explanation for a shadow-mode disagreement entry."""
-        factor_names = [
-            "travel_match", "asset_criticality", "threat_intel_enrichment",
-            "pattern_history", "time_anomaly", "device_trust",
-        ]
-        fv = decision.get("factor_vector") or [0.5] * 6
+        from app.domains.soc.config import SOC_FACTORS
+        factor_names = list(SOC_FACTORS)
+        fv = decision.get("factor_vector") or [0.5] * len(factor_names)
         factors = dict(zip(factor_names, fv))
         dominant_name, dominant_val = max(factors.items(), key=lambda x: abs(x[1] - 0.5))
         return (
@@ -375,7 +373,7 @@ class NLTemplateEngine:
             f"System: {decision.get('action', '[unknown]')} "
             f"({decision.get('confidence', 0.0):.0%}). "
             f"Analyst: {decision.get('analyst_action', '[unknown]')}. "
-            f"Likely: analyst applied context outside the 6 factors."
+            f"Likely: analyst applied context outside the modeled factor set."
         )
 
 

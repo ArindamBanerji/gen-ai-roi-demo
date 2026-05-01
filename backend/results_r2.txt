@@ -1,0 +1,63 @@
+================================================================================
+EXP-R2: V-MULTIMODALITY-TEST
+================================================================================
+
+  Seed 42:
+              Category      Action      N     Dip  Silh_k2  VarRatio  Multimodal?
+  ---------------------------------------------------------------------------
+     credential_access  investigate   2693   0.290    0.117      0.78  no
+     credential_access     monitor    541   0.241    0.143      0.88  no
+     malware_execution  investigate    397   0.207    0.135      0.85  no
+     malware_execution     monitor    196   0.224    0.143      0.88  no
+      lateral_movement  investigate    317   0.146    0.138      0.88  no
+      lateral_movement     monitor     80   0.212    0.149      0.93  no
+     data_exfiltration  investigate    251   0.263    0.141      0.86  no
+     data_exfiltration     monitor     64   0.199    0.173      1.03  no
+        insider_threat  investigate    142   0.311    0.160      0.96  no
+        insider_threat     monitor     70   0.266    0.163      1.04  no
+  cloud_infrastructure  investigate    170   0.143    0.144      0.89  no
+
+  Seed 123:
+              Category      Action      N     Dip  Silh_k2  VarRatio  Multimodal?
+  ---------------------------------------------------------------------------
+     credential_access  investigate   2775   0.224    0.119      0.78  no
+     credential_access    suppress    285   0.253    0.142      0.89  no
+     credential_access     monitor    232   0.171    0.157      0.95  no
+     malware_execution  investigate    324   0.240    0.130      0.83  no
+     malware_execution     monitor    260   0.198    0.138      0.89  no
+      lateral_movement  investigate    344   0.160    0.129      0.82  no
+      lateral_movement     monitor     37   0.138    0.182      1.17  no
+     data_exfiltration  investigate    179   0.154    0.143      0.89  no
+     data_exfiltration     monitor     97   0.182    0.156      0.98  no
+        insider_threat  investigate    215   0.201    0.156      0.92  no
+  cloud_infrastructure  investigate    123   0.185    0.151      0.95  no
+  cloud_infrastructure     monitor     57   0.099    0.190      1.11  no
+
+  Seed 777:
+              Category      Action      N     Dip  Silh_k2  VarRatio  Multimodal?
+  ---------------------------------------------------------------------------
+     credential_access    escalate     94   0.151    0.180      1.04  no
+     credential_access  investigate   2738   0.236    0.117      0.77  no
+     credential_access     monitor    364   0.241    0.135      0.86  no
+     malware_execution  investigate    546   0.198    0.130      0.83  no
+     malware_execution     monitor     47   0.218    0.188      1.15  no
+      lateral_movement  investigate    318   0.204    0.128      0.83  no
+      lateral_movement     monitor     67   0.166    0.167      1.04  no
+     data_exfiltration  investigate    274   0.192    0.133      0.86  no
+     data_exfiltration     monitor     37   0.062    0.222      1.23  no
+        insider_threat  investigate    216   0.238    0.135      0.86  no
+  cloud_infrastructure  investigate    135   0.147    0.149      0.93  no
+  cloud_infrastructure     monitor     67   0.141    0.159      1.00  no
+
+================================================================================
+SUMMARY
+================================================================================
+  Multimodal (c,a) pairs: 0 / 35
+
+================================================================================
+BINARY QUESTIONS
+================================================================================
+Q1: Any (c,a) pairs show multimodality? NO
+Q3: Would k=2 centroids help? N/A ΓÇö single prototype adequate
+
+DONE.

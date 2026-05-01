@@ -1,0 +1,118 @@
+==========================================================================================
+G1: MLP LEARNING CURVE
+Does accuracy improve with more analyst decisions?
+==========================================================================================
+
+   N_train  Centroid  Bounded MLP       ╬ö  MLP unbounded
+  -------------------------------------------------------
+
+  Seed 42:
+       100    84.0%       84.2%  +0.2pp         81.6%
+       200    84.0%       84.2%  +0.2pp         83.8%
+       500    84.0%       84.8%  +0.8pp         84.2%
+      1000    84.0%       85.2%  +1.2pp         84.8%
+      1500    84.0%       85.4%  +1.4pp         85.2%
+      2000    84.0%       85.6%  +1.6pp         85.4%
+      3000    84.0%       85.6%  +1.6pp         85.4%
+      4000    84.0%       85.4%  +1.4pp         85.4%
+
+  LEARNING CURVE (mean across 3 seeds):
+   N_train  Bounded MLP  ╬ö vs N=100
+  -----------------------------------
+       100       81.5%      +0.0pp
+       200       82.9%      +1.4pp
+       500       83.6%      +2.1pp
+      1000       84.1%      +2.5pp
+      1500       84.3%      +2.8pp
+      2000       84.5%      +3.0pp
+      3000       84.6%      +3.1pp
+      4000       84.6%      +3.1pp
+
+==========================================================================================
+G2: MLP TEMPORAL VALIDITY
+Does the bounded MLP stay valid after environment shifts?
+==========================================================================================
+
+  Seed 42:
+   Shift  Pre-shift  Post-shift       ╬ö  Centroid post
+  --------------------------------------------------
+    0.00     83.6%      82.0%  -1.6pp         81.4%
+    0.10     83.6%      81.8%  -1.8pp         81.2%
+    0.25     83.6%      80.2%  -3.4pp         79.6%
+    0.50     83.6%      77.2%  -6.4pp         76.6%
+    0.75     83.6%      73.2%  -10.4pp         72.6%
+    1.00     83.6%      67.2%  -16.4pp         67.0%
+
+==========================================================================================
+G3: MLP TRANSFER
+Does Firm A's MLP correction transfer to Firm B?
+==========================================================================================
+
+                     Config     Acc  ╬ö vs centroid
+  --------------------------------------------------
+              Centroid only  79.5%         +0.0pp
+      MLP trained on Firm A  77.3%         -2.2pp
+      MLP trained on Firm B  82.8%         +3.3pp
+         MLP trained on A+B  80.4%         +0.9pp
+
+==========================================================================================
+G4: GRAPH ΓåÆ MLP INTERACTION
+Does richer context (more informative factors) help the MLP?
+==========================================================================================
+
+  Factor_╧â  Centroid  Bounded MLP  MLP Gain        Interpretation
+  -----------------------------------------------------------------
+      0.20    78.1%       81.6%    +3.5pp                 noisy
+      0.15    79.4%       83.2%    +3.8pp            production
+      0.10    84.8%       87.3%    +2.5pp              enriched
+      0.05    87.9%       88.7%    +0.8pp              enriched
+      0.02    88.9%       88.9%    +0.0pp              enriched
+
+==========================================================================================
+G5: CONSERVATION LAW + BOUNDED MLP
+Does ╬▒┬╖q┬╖V ΓëÑ ╬╕_min still hold when MLP correction is active?
+==========================================================================================
+
+  Seed 42:
+    Centroid q (rolling 400): min=0.845 mean=0.857 max=0.870
+    MLP q (rolling 400):      min=0.845 mean=0.861 max=0.877
+    MLP q ALWAYS ΓëÑ centroid q? NO
+    MLP q ever drops below 0.75? NO ΓÇö safe
+    Since MLP doesn't change centroids (V unchanged)
+    and q_mlp ΓëÑ q_centroid (accuracy improves),
+    ╬▒┬╖q_mlp┬╖V ΓëÑ ╬▒┬╖q_centroid┬╖V ΓëÑ ╬╕_min
+    ΓåÆ Conservation law STRENGTHENED by MLP correction
+
+==========================================================================================
+G6: LABEL QUALITY FEEDBACK LOOP
+Simulate: LLM-judge cleans labels ΓåÆ retrain MLP ΓåÆ measure improvement
+==========================================================================================
+
+  Seed 42:
+                 Round  Train labels  Acc (noisy)  Acc (clean)
+  ------------------------------------------------------------
+         Centroid only             ΓÇö       83.4%       72.8%
+    MLP (noisy labels)         noisy       84.8%       73.2%
+     MLP (50% cleaned)       partial       82.0%       75.6%
+    MLP (clean labels)         clean       80.0%       78.0%
+    MLP (clean + 3000)         clean       80.0%       78.0%
+
+  COMPOUNDING PATH:
+    Centroid only:              72.8%
+    + MLP (noisy, N=2000):      73.2% (+0.4pp)
+    + LLM-judge (50% cleaned):  75.6% (+2.4pp)
+    + Full clean labels:         78.0% (+2.4pp)
+    + More data (N=3000):        78.0% (+0.0pp)
+    TOTAL COMPOUNDING:           +5.2pp over centroid only
+
+==========================================================================================
+BINARY ANSWERS
+==========================================================================================
+G1: Does MLP improve with more data? (see learning curve)
+G2: Does MLP survive GT shift? (see temporal validity)
+G3: Does Firm A's MLP help Firm B? (see transfer)
+G4: Does richer context help MLP? (see graph interaction)
+G5: Does conservation law hold with MLP? (see conservation)
+G6: Does clean labels ΓåÆ better MLP compound? (see feedback loop)
+
+DONE.

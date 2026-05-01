@@ -1,0 +1,67 @@
+================================================================================
+EXP-C6: V-PER-CATEGORY-DRIFT (Raw SGD)
+Does drift concentrate in the dominant category?
+================================================================================
+  5 seeds done
+
+  N=500:
+              Category   Vol%     Drift   Drift%  Updates    Acc
+  ------------------------------------------------------------
+     credential_access    65%    0.2748   57.2%    338    90%
+     malware_execution    12%    0.1700   21.9%     59    89%
+      lateral_movement     8%    0.0929    6.5%     34    90%
+     data_exfiltration     6%    0.0834    5.3%     24    92%
+        insider_threat     5%    0.0882    5.9%     26    82%
+  cloud_infrastructure     4%    0.0645    3.2%     19    83%
+                 TOTAL          0.3632
+
+  N=1000:
+              Category   Vol%     Drift   Drift%  Updates    Acc
+  ------------------------------------------------------------
+     credential_access    65%    0.3812   48.2%    661    89%
+     malware_execution    12%    0.2730   24.7%    120    89%
+      lateral_movement     8%    0.1553    8.0%     73    93%
+     data_exfiltration     6%    0.1521    7.7%     55    91%
+        insider_threat     5%    0.1546    7.9%     52    87%
+  cloud_infrastructure     4%    0.1011    3.4%     39    87%
+                 TOTAL          0.5488
+
+  N=2000:
+              Category   Vol%     Drift   Drift%  Updates    Acc
+  ------------------------------------------------------------
+     credential_access    65%    0.4349   33.9%   1318    85%
+     malware_execution    12%    0.3849   26.5%    235    90%
+      lateral_movement     8%    0.2546   11.6%    151    91%
+     data_exfiltration     6%    0.2680   12.9%    115    95%
+        insider_threat     5%    0.2319    9.6%     99    85%
+  cloud_infrastructure     4%    0.1754    5.5%     81    87%
+                 TOTAL          0.7473
+
+  N=5000:
+              Category   Vol%     Drift   Drift%  Updates    Acc
+  ------------------------------------------------------------
+     credential_access    65%    0.4918   22.7%   3279    83%
+     malware_execution    12%    0.4758   21.2%    590    88%
+      lateral_movement     8%    0.3755   13.2%    398    85%
+     data_exfiltration     6%    0.4391   18.1%    292    90%
+        insider_threat     5%    0.4007   15.1%    248    87%
+  cloud_infrastructure     4%    0.3210    9.7%    194    91%
+                 TOTAL          1.0323
+
+================================================================================
+H7 TEST: Does credential_access account for >80% of drift?
+================================================================================
+     credential_access: 22.7% of total drift
+     malware_execution: 21.2% of total drift
+      lateral_movement: 13.2% of total drift
+     data_exfiltration: 18.1% of total drift
+        insider_threat: 15.1% of total drift
+  cloud_infrastructure: 9.7% of total drift
+
+  H7: credential_access accounts for 22.7% of drift
+  REFUTED: Drift is distributed
+
+  corr(volume, drift) = +0.6345
+  Drift NOT simply volume-proportional
+
+DONE.

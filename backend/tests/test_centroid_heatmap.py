@@ -10,9 +10,14 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-import pytest
 from fastapi.testclient import TestClient
 from app.main import app
+from app.services.gae_state import init_learning_state
+
+# Ensure ProfileScorer is initialized before tests run (startup event not fired
+# by TestClient unless used as context manager — call init_learning_state directly,
+# matching the pattern used in test_centroid_export.py tests 7–10).
+init_learning_state()
 
 client = TestClient(app)
 
@@ -42,9 +47,7 @@ def test_centroid_heatmap_returns_200():
 
 def test_centroid_heatmap_has_six_factors():
     data = _heatmap_data()
-    if not _scorer_ready(data):
-        pytest.skip("ProfileScorer not initialized — skipping factor check")
-
+    assert _scorer_ready(data), "ProfileScorer must be initialized (init_learning_state called at module level)"
     assert len(data["factors"]) == 6
     assert "device_trust" in data["factors"]
 
@@ -55,9 +58,7 @@ def test_centroid_heatmap_has_six_factors():
 
 def test_centroid_heatmap_noise_fingerprint_present():
     data = _heatmap_data()
-    if not _scorer_ready(data):
-        pytest.skip("ProfileScorer not initialized — skipping noise_fingerprint check")
-
+    assert _scorer_ready(data), "ProfileScorer must be initialized (init_learning_state called at module level)"
     assert "noise_fingerprint" in data
     dt = data["noise_fingerprint"].get("device_trust", {})
     assert dt.get("kernel_weight", 1.0) < 0.10
@@ -69,9 +70,7 @@ def test_centroid_heatmap_noise_fingerprint_present():
 
 def test_centroid_heatmap_kernel_weights_sum_reasonable():
     data = _heatmap_data()
-    if not _scorer_ready(data):
-        pytest.skip("ProfileScorer not initialized — skipping kernel_weights check")
-
+    assert _scorer_ready(data), "ProfileScorer must be initialized (init_learning_state called at module level)"
     weights = list(data["kernel_weights"].values())
     assert max(weights) <= 1.0
     assert min(weights) > 0.0
@@ -83,8 +82,6 @@ def test_centroid_heatmap_kernel_weights_sum_reasonable():
 
 def test_centroid_heatmap_heatmap_has_six_categories():
     data = _heatmap_data()
-    if not _scorer_ready(data):
-        pytest.skip("ProfileScorer not initialized — skipping heatmap categories check")
-
+    assert _scorer_ready(data), "ProfileScorer must be initialized (init_learning_state called at module level)"
     for cat in data["categories"]:
         assert cat in data["heatmap"], f"Category missing from heatmap: {cat}"

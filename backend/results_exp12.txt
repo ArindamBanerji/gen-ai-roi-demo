@@ -1,0 +1,181 @@
+================================================================================
+EXP-12: V-WEIGHT-DIFFERENT-PRIOR
+================================================================================
+
+  Seed 42:
+       N   calibrated_wp  shifted_0.10_wp  shifted_0.30_wp
+  --------------------------------------------------
+     100          -1.0pp          -2.0pp          +2.0pp
+     200          -1.5pp          -1.5pp          +2.0pp
+     300          -1.7pp          -1.0pp          +1.3pp
+     400          -0.5pp          -0.5pp          +1.5pp
+     500          -0.4pp          -0.4pp          +1.4pp
+     600          +0.0pp          -0.2pp          +1.5pp
+     700          +0.4pp          +0.0pp          +1.6pp
+     800          +0.8pp          +0.4pp          +2.0pp
+     900          +0.9pp          +0.2pp          +1.9pp
+    1000          +1.9pp          +1.5pp          +3.0pp
+    1100          +2.6pp          +2.3pp          +3.4pp
+    1200          +2.8pp          +2.5pp          +3.2pp
+    1300          +3.4pp          +3.0pp          +3.6pp
+    1400          +3.4pp          +3.0pp          +3.8pp
+    1500          +3.5pp          +2.9pp          +3.7pp
+    1600          +3.5pp          +3.1pp          +3.6pp
+    1700          +3.6pp          +3.2pp          +3.6pp
+    1800          +3.7pp          +3.3pp          +3.4pp
+    1900          +3.8pp          +3.4pp          +3.5pp
+    2000          +3.9pp          +3.5pp          +3.6pp
+    2100          +4.0pp          +3.5pp          +3.8pp
+    2200          +4.0pp          +3.6pp          +3.9pp
+    2300          +4.0pp          +3.7pp          +4.0pp
+    2400          +4.1pp          +3.8pp          +4.0pp
+    2500          +4.4pp          +4.1pp          +4.2pp
+    2600          +4.2pp          +4.0pp          +4.0pp
+    2700          +4.3pp          +4.1pp          +4.0pp
+    2800          +4.3pp          +4.1pp          +3.9pp
+    2900          +4.6pp          +4.4pp          +4.2pp
+    3000          +4.7pp          +4.5pp          +4.1pp
+    3100          +4.7pp          +4.5pp          +4.2pp
+    3200          +4.6pp          +4.4pp          +4.2pp
+    3300          +4.6pp          +4.4pp          +4.2pp
+    3400          +4.6pp          +4.4pp          +4.3pp
+    3500          +4.8pp          +4.5pp          +4.4pp
+    3600          +4.9pp          +4.6pp          +4.5pp
+    3700          +4.9pp          +4.5pp          +4.5pp
+    3800          +4.9pp          +4.5pp          +4.5pp
+    3900          +5.1pp          +4.5pp          +4.7pp
+    4000          +4.9pp          +4.4pp          +4.6pp
+
+  Seed 123:
+       N   calibrated_wp  shifted_0.10_wp  shifted_0.30_wp
+  --------------------------------------------------
+     100          -1.0pp          -1.0pp          -2.0pp
+     200          +0.5pp          +0.5pp          -0.5pp
+     300          +0.0pp          +0.7pp          -0.3pp
+     400          +0.0pp          +0.8pp          -0.2pp
+     500          +0.2pp          +0.8pp          -0.2pp
+     600          -0.7pp          -0.2pp          -0.8pp
+     700          -1.1pp          -0.9pp          -1.3pp
+     800          -1.5pp          -1.2pp          -1.6pp
+     900          -2.0pp          -2.0pp          -1.9pp
+    1000          -2.5pp          -2.5pp          -2.3pp
+    1100          -2.9pp          -2.9pp          -2.5pp
+    1200          -2.4pp          -2.2pp          -2.2pp
+    1300          -2.0pp          -1.8pp          -2.3pp
+    1400          -2.1pp          -2.0pp          -2.4pp
+    1500          -2.3pp          -2.2pp          -2.5pp
+    1600          -2.6pp          -2.4pp          -2.8pp
+    1700          -2.6pp          -2.5pp          -2.8pp
+    1800          -2.4pp          -2.4pp          -2.6pp
+    1900          -2.4pp          -2.4pp          -2.7pp
+    2000          -2.3pp          -2.2pp          -2.6pp
+    2100          -2.1pp          -2.0pp          -2.4pp
+    2200          -2.0pp          -2.1pp          -2.5pp
+    2300          -2.0pp          -2.0pp          -2.4pp
+    2400          -1.9pp          -1.8pp          -2.4pp
+    2500          -2.0pp          -1.9pp          -2.3pp
+    2600          -2.2pp          -2.1pp          -2.5pp
+    2700          -1.9pp          -1.8pp          -2.3pp
+    2800          -1.7pp          -1.6pp          -2.1pp
+    2900          -1.7pp          -1.5pp          -1.9pp
+    3000          -1.5pp          -1.3pp          -1.8pp
+    3100          -1.5pp          -1.4pp          -1.8pp
+    3200          -1.5pp          -1.4pp          -1.8pp
+    3300          -1.4pp          -1.3pp          -1.7pp
+    3400          -1.4pp          -1.2pp          -1.6pp
+    3500          -1.3pp          -1.1pp          -1.5pp
+    3600          -1.5pp          -1.3pp          -1.7pp
+    3700          -1.4pp          -1.1pp          -1.5pp
+    3800          -1.1pp          -0.9pp          -1.3pp
+    3900          -1.2pp          -1.0pp          -1.3pp
+    4000          -1.1pp          -0.9pp          -1.2pp
+
+  Seed 777:
+       N   calibrated_wp  shifted_0.10_wp  shifted_0.30_wp
+  --------------------------------------------------
+     100          +0.0pp          +1.0pp          -1.0pp
+     200          +0.0pp          +0.5pp          -1.5pp
+     300          -0.7pp          -0.3pp          -2.3pp
+     400          -2.2pp          -1.8pp          -4.2pp
+     500          -2.0pp          -1.4pp          -3.4pp
+     600          -2.7pp          -1.7pp          -3.8pp
+     700          -2.6pp          -1.4pp          -3.6pp
+     800          -2.5pp          -1.1pp          -3.6pp
+     900          -2.3pp          -1.0pp          -3.6pp
+    1000          -2.1pp          -0.8pp          -3.8pp
+    1100          -1.5pp          -0.5pp          -3.0pp
+    1200          -1.7pp          -0.8pp          -3.2pp
+    1300          -1.8pp          -0.8pp          -3.4pp
+    1400          -1.6pp          -0.8pp          -3.2pp
+    1500          -1.6pp          -0.7pp          -3.3pp
+    1600          -1.5pp          -0.7pp          -3.0pp
+    1700          -1.4pp          -0.6pp          -2.9pp
+    1800          -1.3pp          -0.6pp          -2.9pp
+    1900          -1.2pp          -0.5pp          -2.9pp
+    2000          -1.0pp          -0.3pp          -2.8pp
+    2100          -1.0pp          -0.3pp          -2.8pp
+    2200          -1.0pp          -0.4pp          -2.9pp
+    2300          -1.0pp          -0.2pp          -2.7pp
+    2400          -0.8pp          -0.2pp          -2.6pp
+    2500          -0.8pp          -0.2pp          -2.8pp
+    2600          -0.9pp          -0.3pp          -2.8pp
+    2700          -0.9pp          -0.4pp          -2.9pp
+    2800          -0.8pp          -0.2pp          -2.9pp
+    2900          -0.7pp          -0.2pp          -2.9pp
+    3000          -0.5pp          -0.0pp          -2.6pp
+    3100          -0.5pp          +0.0pp          -2.6pp
+    3200          -0.5pp          +0.1pp          -2.6pp
+    3300          -0.4pp          +0.1pp          -2.5pp
+    3400          -0.3pp          +0.3pp          -2.3pp
+    3500          -0.2pp          +0.3pp          -2.2pp
+    3600          -0.2pp          +0.3pp          -2.3pp
+    3700          -0.2pp          +0.4pp          -2.4pp
+    3800          -0.3pp          +0.4pp          -2.3pp
+    3900          -0.4pp          +0.2pp          -2.4pp
+    4000          -0.4pp          +0.2pp          -2.4pp
+
+================================================================================
+Do trajectories converge regardless of prior?
+================================================================================
+  N=  100: spread=4.0pp DIVERGENT
+  N=  200: spread=3.5pp DIVERGENT
+  N=  300: spread=3.0pp DIVERGENT
+  N=  400: spread=2.0pp DIVERGENT
+  N=  500: spread=1.8pp DIVERGENT
+  N=  600: spread=1.7pp DIVERGENT
+  N=  700: spread=1.6pp DIVERGENT
+  N=  800: spread=1.6pp DIVERGENT
+  N=  900: spread=1.7pp DIVERGENT
+  N= 1000: spread=1.5pp DIVERGENT
+  N= 1100: spread=1.1pp DIVERGENT
+  N= 1200: spread=0.7pp CONVERGED
+  N= 1300: spread=0.6pp CONVERGED
+  N= 1400: spread=0.8pp CONVERGED
+  N= 1500: spread=0.8pp CONVERGED
+  N= 1600: spread=0.6pp CONVERGED
+  N= 1700: spread=0.4pp CONVERGED
+  N= 1800: spread=0.4pp CONVERGED
+  N= 1900: spread=0.4pp CONVERGED
+  N= 2000: spread=0.5pp CONVERGED
+  N= 2100: spread=0.5pp CONVERGED
+  N= 2200: spread=0.5pp CONVERGED
+  N= 2300: spread=0.3pp CONVERGED
+  N= 2400: spread=0.3pp CONVERGED
+  N= 2500: spread=0.3pp CONVERGED
+  N= 2600: spread=0.3pp CONVERGED
+  N= 2700: spread=0.4pp CONVERGED
+  N= 2800: spread=0.4pp CONVERGED
+  N= 2900: spread=0.4pp CONVERGED
+  N= 3000: spread=0.5pp CONVERGED
+  N= 3100: spread=0.5pp CONVERGED
+  N= 3200: spread=0.4pp CONVERGED
+  N= 3300: spread=0.4pp CONVERGED
+  N= 3400: spread=0.4pp CONVERGED
+  N= 3500: spread=0.3pp CONVERGED
+  N= 3600: spread=0.4pp CONVERGED
+  N= 3700: spread=0.3pp CONVERGED
+  N= 3800: spread=0.3pp CONVERGED
+  N= 3900: spread=0.5pp CONVERGED
+  N= 4000: spread=0.5pp CONVERGED
+
+DONE.

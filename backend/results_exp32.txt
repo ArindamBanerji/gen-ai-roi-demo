@@ -1,0 +1,27 @@
+================================================================================
+EXP-32: V-GAIN-MARGIN
+================================================================================
+
+  RAW SGD gain sweep:
+     eta   acc@200   acc@2000     drift   Stable?
+  ---------------------------------------------
+   0.010    80.3%     82.3%    +2.0pp  YES
+   0.020    80.3%     82.6%    +2.3pp  YES
+   0.050    80.3%     80.3%    -0.1pp  YES
+   0.100    80.2%     72.1%    -8.1pp  NO
+   0.150    80.2%     68.5%   -11.7pp  NO
+   0.200    80.5%     66.9%   -13.6pp  NO
+   0.300    80.7%     65.7%   -15.0pp  NO
+   0.500    80.7%     65.0%   -15.7pp  NO
+
+  PIPELINE (internal gain management):
+  Pipeline: acc@200=79.0% acc@2000=80.3% drift=+1.3pp
+
+================================================================================
+BINARY QUESTIONS
+================================================================================
+Q1: Pipeline eta_max > raw eta_max? Pipeline always stable. Raw eta_max=0.05. YES
+Q2: Pipeline stable at eta=0.20 (4x)? Pipeline drift=+1.3pp YES
+Q3: Raw first unstable at eta=0.1. Drift spread=2.4pp MONOTONIC decline
+
+DONE.

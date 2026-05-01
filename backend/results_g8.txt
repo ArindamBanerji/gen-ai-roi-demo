@@ -1,0 +1,81 @@
+==========================================================================================
+G8: PROPERLY CALIBRATED DK
+Does gradient-based DK capture curvature that random search missed?
+==========================================================================================
+
+  Seed 42:
+    Calibrating DK (random search, 100 iter)...
+    Calibrating DK (coordinate descent)...
+      Round 0: acc=88.5%
+      Round 3: acc=88.8%
+
+    RESULTS:
+                       Method     Acc  ╬ö vs centroid    Params      Boundary
+    ----------------------------------------------------------------------
+                Centroid (fΓéÇ)  84.2%         +0.0pp       144    hyperplane
+            DK random (F3-F6)  83.8%         -0.4pp       288      quadric*
+        DK coordinate descent  84.0%         -0.2pp       288       quadric
+        QDA (full covariance)  71.6%        -12.6pp       648       quadric
+         MLP (discriminative)  84.2%         +0.0pp       700     arbitrary
+               Centroid + MLP  84.2%         +0.0pp       844     arbitrary
+               DK_coord + MLP  84.0%         -0.2pp       988     arbitrary
+
+    DK WEIGHT ANALYSIS (coordinate descent):
+         credential_access:  esca=[2.0,3.0,1.0,1.0,1.0,1.0]  inve=[1.0,0.7,1.5,0.7,1.0,1.0]  supp=[1.5,0.3,0.7,3.0,1.5,0.3]  moni=[1.0,1.0,1.0,1.0,1.0,0.7]
+         malware_execution:  esca=[0.1,1.0,1.0,1.0,1.0,3.0]  inve=[2.0,0.7,1.0,1.0,1.0,1.0]  supp=[1.0,1.0,1.0,1.0,1.0,1.0]  moni=[1.0,0.5,0.7,1.0,1.0,0.7]
+          lateral_movement:  esca=[1.0,1.0,1.0,0.3,0.1,1.0]  inve=[0.7,0.5,0.5,1.0,1.0,0.5]  supp=[1.0,1.0,1.0,1.0,1.0,1.0]  moni=[1.5,1.0,0.3,1.5,0.5,0.5]
+
+  Seed 123:
+    Calibrating DK (random search, 100 iter)...
+    Calibrating DK (coordinate descent)...
+      Round 0: acc=84.0%
+      Round 3: acc=87.7%
+
+    RESULTS:
+                       Method     Acc  ╬ö vs centroid    Params      Boundary
+    ----------------------------------------------------------------------
+                Centroid (fΓéÇ)  78.0%         +0.0pp       144    hyperplane
+            DK random (F3-F6)  80.4%         +2.4pp       288      quadric*
+        DK coordinate descent  83.6%         +5.6pp       288       quadric
+        QDA (full covariance)  68.8%         -9.2pp       648       quadric
+         MLP (discriminative)  87.2%         +9.2pp       700     arbitrary
+               Centroid + MLP  87.2%         +9.2pp       844     arbitrary
+               DK_coord + MLP  83.8%         +5.8pp       988     arbitrary
+
+    DK WEIGHT ANALYSIS (coordinate descent):
+         credential_access:  esca=[0.3,0.7,3.0,1.5,0.3,1.0]  inve=[0.7,0.7,0.7,0.5,0.5,1.5]  supp=[0.1,1.5,0.5,0.5,0.3,0.5]  moni=[1.0,1.0,1.5,0.5,0.7,1.0]
+         malware_execution:  esca=[3.0,0.7,0.7,1.0,1.0,2.0]  inve=[1.5,3.0,1.5,0.1,0.7,1.5]  supp=[0.5,1.0,1.0,1.0,1.0,1.0]  moni=[1.0,1.0,1.0,0.5,1.5,1.0]
+          lateral_movement:  esca=[1.0,1.0,1.0,1.0,1.0,1.0]  inve=[0.1,1.0,0.1,0.5,1.0,1.0]  supp=[1.0,1.0,1.0,1.0,1.0,1.0]  moni=[1.0,1.0,0.7,1.0,1.0,1.0]
+
+  Seed 777:
+    Calibrating DK (random search, 100 iter)...
+    Calibrating DK (coordinate descent)...
+      Round 0: acc=85.2%
+      Round 3: acc=86.7%
+
+    RESULTS:
+                       Method     Acc  ╬ö vs centroid    Params      Boundary
+    ----------------------------------------------------------------------
+                Centroid (fΓéÇ)  76.0%         +0.0pp       144    hyperplane
+            DK random (F3-F6)  80.6%         +4.6pp       288      quadric*
+        DK coordinate descent  81.8%         +5.8pp       288       quadric
+        QDA (full covariance)  47.0%        -29.0pp       648       quadric
+         MLP (discriminative)  83.2%         +7.2pp       700     arbitrary
+               Centroid + MLP  84.0%         +8.0pp       844     arbitrary
+               DK_coord + MLP  81.6%         +5.6pp       988     arbitrary
+
+    DK WEIGHT ANALYSIS (coordinate descent):
+         credential_access:  esca=[0.3,0.3,0.7,0.7,0.7,0.3]  inve=[0.7,0.5,0.7,1.0,0.5,0.3]  supp=[0.7,1.0,1.0,1.0,1.0,0.7]  moni=[1.0,1.0,1.0,1.0,0.1,0.5]
+         malware_execution:  esca=[0.5,0.3,1.0,1.0,1.0,1.0]  inve=[0.1,0.7,0.5,0.3,1.5,1.0]  supp=[0.1,1.0,1.0,1.0,0.3,0.1]  moni=[1.0,3.0,0.3,1.0,1.0,1.0]
+          lateral_movement:  esca=[0.1,1.0,1.0,0.3,1.0,2.0]  inve=[0.5,1.0,0.7,1.0,1.0,1.0]  supp=[1.0,1.0,1.0,1.0,1.0,1.0]  moni=[1.5,1.0,0.7,1.0,1.0,1.0]
+
+==========================================================================================
+BINARY QUESTIONS
+==========================================================================================
+Q1: Does properly-calibrated DK beat random-search DK by >1pp?
+Q2: Does DK_coord capture >1pp of the MLP's 4.5pp gap?
+Q3: Does QDA (full covariance) beat DK_coord? (quadric capacity)
+Q4: Does DK_coord + MLP beat Centroid + MLP? (DK helps MLP)
+Q5: Are DK weights category-dependent? (different axes matter for different categories)
+
+DONE.

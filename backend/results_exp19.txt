@@ -1,0 +1,32 @@
+================================================================================
+EXP-19: V-TRANSFER-WITHOUT-PIPELINE
+Firm B GT shifted 0.1 Frobenius from Firm A
+================================================================================
+  Seed 42 done
+  Seed 123 done
+  Seed 777 done
+  Seed 2024 done
+  Seed 9999 done
+
+================================================================================
+     N     generic_raw  generic_pipeli    transfer_raw  transfer_pipel   own_prior_raw  own_prior_pipe
+------------------------------------------------------------------------------------------------
+    50          34.0%           8.0%          82.4%          82.8%          84.8%          85.2%
+   100          36.4%           5.2%          84.2%          84.4%          86.2%          87.0%
+   200          43.2%           5.8%          80.7%          81.2%          84.1%          84.5%
+   500          46.4%          10.0%          81.1%          81.6%          83.5%          85.0%
+  1000          48.7%          16.8%          80.6%          80.7%          82.4%          84.3%
+  2000          51.5%          23.1%          80.1%          81.1%          81.2%          84.8%
+
+================================================================================
+BINARY QUESTIONS
+================================================================================
+Q1: transfer_raw (82.4%) vs generic_raw (34.0%) at N=50: gap=+48.4pp
+Q2: transfer_raw (80.1%) vs generic_raw (51.5%) at N=2000: gap=+28.6pp (TRUE transfer value)
+Q3: Raw SGD degrades transfer? 82.4%@50 -> 80.1%@2000 YES (drift=-2.3pp)
+Q4: Pipeline on top of transfer: pipe=81.1% raw=80.1% gap=+1.0pp
+
+  >>> Transfer + pipeline = preserve transfer value
+  >>> Transfer + raw SGD = eventually degrades transfer
+
+DONE.

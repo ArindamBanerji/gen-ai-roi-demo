@@ -1,0 +1,42 @@
+================================================================================
+EXP-R5: V-CENTROID-VS-ALTERNATIVES
+The definitive representational limit test
+================================================================================
+  Seed 42 done
+  Seed 123 done
+  Seed 777 done
+  Seed 2024 done
+  Seed 9999 done
+
+================================================================================
+OVERALL RESULTS (mean across seeds)
+================================================================================
+       Classifier  Accuracy       ECE  ╬ö vs centroid
+  --------------------------------------------------
+         centroid    80.6%    0.0586         +0.0pp
+            knn_5    79.6%    0.0697         -1.0pp
+         logistic    80.0%    0.0510         -0.5pp
+    random_forest    81.4%    0.0656         +0.8pp
+        mlp_small    85.0%    0.0483         +4.5pp
+
+================================================================================
+PER-CATEGORY ACCURACY
+================================================================================
+              Category  centroid     knn_5  logistic  random_f  mlp_smal
+  -----------------------------------------------------------------
+     credential_access    84.8%    84.6%    83.4%    85.9%    89.1%
+     malware_execution    72.6%    76.1%    76.5%    74.4%    80.2%
+      lateral_movement    75.9%    69.2%    75.9%    80.6%    79.9%
+     data_exfiltration    74.5%    71.7%    70.5%    69.4%    77.0%
+        insider_threat    64.1%    55.6%    63.2%    61.5%    64.8%
+  cloud_infrastructure    70.1%    65.2%    72.8%    69.0%    74.2%
+
+================================================================================
+BINARY QUESTIONS
+================================================================================
+Q1: Any classifier beats centroid by >3pp? Best: mlp_small (85.0%), gap=+4.5pp YES
+Q2: Best achievable accuracy: 85.0%
+Q3: Any beats centroid on ECE? Best: mlp_small (0.0483) vs centroid (0.0586) YES
+Q5: Gap concentrated? Largest per-cat gap: malware_execution (+7.6pp)
+
+DONE.

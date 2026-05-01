@@ -1,0 +1,199 @@
+==========================================================================================
+EXP-F9: V-SIGNAL-DECOMPOSITION
+==========================================================================================
+
+==========================================================================================
+Seed 42
+==========================================================================================
+
+  TABLE 1: Per-dimension SNR profile (N=1500-2000)
+    Dim       SNR     |g_i|
+  -------------------------
+      0    0.4813   0.08789
+      1    0.3165   0.05107
+      2    0.2684   0.05096
+      3    0.3581   0.06204
+      4    0.2757   0.04373
+      5    0.2299   0.04193
+
+  SNR concentration: max/min = 2.1
+  Top-2 SNR fraction: 0.54
+
+  TABLE 2: Per-category ├ù per-dimension SNR
+              Category      d0      d1      d2      d3      d4      d5    mean
+  -----------------------------------------------------------------
+     credential_access   0.529   0.328   0.248   0.330   0.313   0.226   0.329
+     malware_execution   0.688   0.222   0.609   0.531   0.133   0.245   0.405
+      lateral_movement   0.182   0.199   0.057   0.919   0.324   0.120   0.300
+     data_exfiltration   0.445   0.521   0.243   0.113   0.234   0.225   0.297
+        insider_threat   0.306   0.543   0.467   0.293   0.229   0.289   0.355
+  cloud_infrastructure   0.443   0.197   0.137   0.665   0.213   0.533   0.365
+
+  TABLE 3: Signal covariance eigenspectrum
+  Eigenvalues: [0.034799 0.02508  0.022943 0.021748 0.021377 0.019187]
+  Explained:   [24.  17.3 15.8 15.  14.7 13.2]%
+  Effective dimensionality: 5.88
+
+  TABLE 4: GT covariance eigenspectrum
+  Eigenvalues: [0.012761 0.005892 0.002752 0.001965 0.000845 0.000737]
+  Explained:   [51.1 23.6 11.   7.9  3.4  3. ]%
+
+  TABLE 5: Subspace alignment
+  cos(signal_top2, gt_top2) = 0.3782
+  cos(signal_top2, centroid_top2) = 0.4690
+
+  SIGNAL DYNAMICS (F10):
+           Window      N  SNR_mean  EffDim  |g|_mean  Alignment
+  ------------------------------------------------------------
+       W1 (0-200)    200    0.2675    5.64   0.12987     0.2964
+     W2 (200-500)    300    0.3102    5.70   0.15091     0.5361
+    W3 (500-1000)    500    0.2963    5.81   0.15773     0.4410
+   W4 (1500-2000)    501    0.3216    5.88   0.16646     0.3782
+
+  CONDITIONED SIGNAL (F11):
+                 Group      N   SNR_0   SNR_1   SNR_2   SNR_3   SNR_4   SNR_5    mean
+  ----------------------------------------------------------------------
+               CORRECT    410   0.545   0.350   0.291   0.385   0.268   0.257   0.349
+             INCORRECT     91   0.332   0.223   0.219   0.284   0.309   0.195   0.260
+      BOUNDARY (<0.50)     50   0.358   0.241   0.241   0.361   0.269   0.213   0.281
+          DEEP (>0.80)     28   0.363   0.358   0.208   0.583   0.176   0.346   0.339
+              OVERRIDE     91   0.332   0.223   0.219   0.284   0.309   0.195   0.260
+               CONFIRM    410   0.545   0.350   0.291   0.385   0.268   0.257   0.349
+       DOMINANT (cred)    331   0.529   0.328   0.248   0.330   0.313   0.226   0.329
+      RARE (ins+cloud)     50   0.287   0.414   0.306   0.382   0.220   0.356   0.328
+
+==========================================================================================
+Seed 123
+==========================================================================================
+
+  TABLE 1: Per-dimension SNR profile (N=1500-2000)
+    Dim       SNR     |g_i|
+  -------------------------
+      0    0.2806   0.05226
+      1    0.5073   0.09028
+      2    0.3051   0.06134
+      3    0.2943   0.05085
+      4    0.1913   0.03102
+      5    0.6513   0.12209
+
+  SNR concentration: max/min = 3.4
+  Top-2 SNR fraction: 0.70
+
+  TABLE 2: Per-category ├ù per-dimension SNR
+              Category      d0      d1      d2      d3      d4      d5    mean
+  -----------------------------------------------------------------
+     credential_access   0.280   0.664   0.244   0.184   0.116   0.963   0.408
+     malware_execution   0.348   0.503   0.746   1.191   0.452   0.297   0.589
+      lateral_movement   0.340   0.123   0.257   0.155   0.125   0.114   0.186
+     data_exfiltration   0.238   0.272   0.243   0.302   0.663   0.120   0.307
+        insider_threat   0.251   0.461   0.338   0.492   0.091   0.573   0.368
+  cloud_infrastructure   0.143   0.197   0.576   0.123   0.192   0.326   0.260
+
+  TABLE 3: Signal covariance eigenspectrum
+  Eigenvalues: [0.033262 0.026675 0.024065 0.02123  0.019029 0.018721]
+  Explained:   [23.3 18.7 16.8 14.8 13.3 13.1]%
+  Effective dimensionality: 5.87
+
+  TABLE 4: GT covariance eigenspectrum
+  Eigenvalues: [0.025091 0.011079 0.004939 0.001292 0.001052 0.000473]
+  Explained:   [57.1 25.2 11.2  2.9  2.4  1.1]%
+
+  TABLE 5: Subspace alignment
+  cos(signal_top2, gt_top2) = 0.3944
+  cos(signal_top2, centroid_top2) = 0.4638
+
+  SIGNAL DYNAMICS (F10):
+           Window      N  SNR_mean  EffDim  |g|_mean  Alignment
+  ------------------------------------------------------------
+       W1 (0-200)    200    0.2934    5.54   0.17679     0.1889
+     W2 (200-500)    300    0.3088    5.72   0.18923     0.3354
+    W3 (500-1000)    500    0.3307    5.74   0.20272     0.4774
+   W4 (1500-2000)    501    0.3717    5.87   0.22672     0.3944
+
+  CONDITIONED SIGNAL (F11):
+                 Group      N   SNR_0   SNR_1   SNR_2   SNR_3   SNR_4   SNR_5    mean
+  ----------------------------------------------------------------------
+               CORRECT    406   0.300   0.566   0.336   0.310   0.207   0.720   0.407
+             INCORRECT     95   0.231   0.360   0.254   0.242   0.154   0.453   0.282
+      BOUNDARY (<0.50)    139   0.305   0.534   0.295   0.248   0.124   0.724   0.372
+          DEEP (>0.80)     26   0.346   0.369   0.385   0.242   0.291   0.387   0.337
+              OVERRIDE     95   0.231   0.360   0.254   0.242   0.154   0.453   0.282
+               CONFIRM    406   0.300   0.566   0.336   0.310   0.207   0.720   0.407
+       DOMINANT (cred)    323   0.280   0.664   0.244   0.184   0.116   0.963   0.408
+      RARE (ins+cloud)     43   0.196   0.286   0.414   0.321   0.142   0.438   0.299
+
+==========================================================================================
+Seed 777
+==========================================================================================
+
+  TABLE 1: Per-dimension SNR profile (N=1500-2000)
+    Dim       SNR     |g_i|
+  -------------------------
+      0    0.5948   0.12305
+      1    0.5657   0.09894
+      2    0.5696   0.11781
+      3    0.2384   0.03884
+      4    0.3802   0.06426
+      5    0.5782   0.11002
+
+  SNR concentration: max/min = 2.5
+  Top-2 SNR fraction: 0.45
+
+  TABLE 2: Per-category ├ù per-dimension SNR
+              Category      d0      d1      d2      d3      d4      d5    mean
+  -----------------------------------------------------------------
+     credential_access   0.822   0.715   0.750   0.201   0.420   0.720   0.605
+     malware_execution   0.307   0.388   1.003   0.174   0.281   0.495   0.441
+      lateral_movement   0.317   0.333   0.080   0.807   0.371   0.395   0.384
+     data_exfiltration   0.200   0.448   0.440   0.323   0.335   0.544   0.382
+        insider_threat   0.195   0.305   0.254   0.089   0.360   0.285   0.248
+  cloud_infrastructure   0.195   0.234   0.708   0.436   0.429   0.689   0.449
+
+  TABLE 3: Signal covariance eigenspectrum
+  Eigenvalues: [0.037237 0.026929 0.02288  0.022486 0.019974 0.019093]
+  Explained:   [25.1 18.1 15.4 15.1 13.4 12.8]%
+  Effective dimensionality: 5.83
+
+  TABLE 4: GT covariance eigenspectrum
+  Eigenvalues: [0.019765 0.016415 0.004547 0.002304 0.001858 0.000954]
+  Explained:   [43.1 35.8  9.9  5.   4.1  2.1]%
+
+  TABLE 5: Subspace alignment
+  cos(signal_top2, gt_top2) = 0.3779
+  cos(signal_top2, centroid_top2) = 0.5312
+
+  SIGNAL DYNAMICS (F10):
+           Window      N  SNR_mean  EffDim  |g|_mean  Alignment
+  ------------------------------------------------------------
+       W1 (0-200)    200    0.4589    5.65   0.22774     0.3653
+     W2 (200-500)    300    0.4685    5.78   0.23217     0.2825
+    W3 (500-1000)    500    0.4609    5.69   0.24779     0.4483
+   W4 (1500-2000)    501    0.4878    5.83   0.26328     0.3779
+
+  CONDITIONED SIGNAL (F11):
+                 Group      N   SNR_0   SNR_1   SNR_2   SNR_3   SNR_4   SNR_5    mean
+  ----------------------------------------------------------------------
+               CORRECT    379   0.728   0.668   0.634   0.257   0.433   0.679   0.566
+             INCORRECT    122   0.407   0.405   0.412   0.201   0.301   0.405   0.355
+      BOUNDARY (<0.50)    110   0.709   0.721   0.700   0.179   0.396   0.623   0.555
+          DEEP (>0.80)     57   0.273   0.344   0.512   0.264   0.266   0.479   0.356
+              OVERRIDE    122   0.407   0.405   0.412   0.201   0.301   0.405   0.355
+               CONFIRM    379   0.728   0.668   0.634   0.257   0.433   0.679   0.566
+       DOMINANT (cred)    336   0.822   0.715   0.750   0.201   0.420   0.720   0.605
+      RARE (ins+cloud)     39   0.194   0.263   0.417   0.199   0.390   0.422   0.314
+
+==========================================================================================
+BINARY QUESTIONS
+==========================================================================================
+Q1: Is SNR profile concentrated (max/min > 5)?
+Q2: Is SNR profile category-dependent?
+Q3: Signal effective dimensionality?
+Q4: Is signal subspace aligned with GT subspace?
+Q5: Is signal subspace aligned with centroid subspace?
+F10-Q1: Does SNR decrease as centroids converge?
+F10-Q2: Do all dimensions lose SNR equally?
+F11-Q1: Override SNR Γëá confirm SNR?
+F11-Q2: Boundary signal more concentrated than deep?
+F11-Q3: Rare categories higher SNR than dominant?
+
+DONE.

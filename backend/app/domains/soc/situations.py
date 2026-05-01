@@ -466,7 +466,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
         {
             "action":                   "false_positive_close",
             "score":                    0.92,
-            "factors":                  ["travel_match", "mfa_ok", "device_known"],
+            "factors":                  ["privileged_identity_context", "mfa_ok", "device_known"],
             "estimated_resolution_time": "3 seconds",
             "estimated_analyst_cost":   0.0,
             "risk_if_wrong":            "Low — auto-reopen if flagged",

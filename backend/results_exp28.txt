@@ -1,0 +1,57 @@
+================================================================================
+EXP-28: V-CROSS-MECHANISM-COUPLING (2^3 factorial)
+================================================================================
+  --- done
+  --S done
+  -B- done
+  -BS done
+  G-- done
+  G-S done
+  GB- done
+  GBS done
+
+================================================================================
+FACTORIAL TABLE
+================================================================================
+  Config  Gate  Batch  Scale     Acc       ECE
+  ----------------------------------------
+     ---   off    off    off   78.4%    0.0954
+     --S   off    off     ON   80.3%    0.0546
+     -B-   off     ON    off   80.6%    0.0721
+     -BS   off     ON     ON   80.2%    0.0553
+     G--    ON    off    off   81.0%    0.1141
+     G-S    ON    off     ON   80.4%    0.0562
+     GB-    ON     ON    off   80.6%    0.0622
+     GBS    ON     ON     ON   80.3%    0.0552
+
+================================================================================
+MAIN EFFECTS (accuracy)
+================================================================================
+  Gate: ON=80.6% OFF=79.9% effect=+0.7pp
+  Batch: ON=80.4% OFF=80.0% effect=+0.4pp
+  Scale: ON=80.3% OFF=80.1% effect=+0.2pp
+
+  MAIN EFFECTS (ECE):
+  Gate: ON=0.0719 OFF=0.0693 effect=+0.0026
+  Batch: ON=0.0612 OFF=0.0801 effect=-0.0189
+  Scale: ON=0.0553 OFF=0.0859 effect=-0.0306
+
+================================================================================
+TWO-WAY INTERACTIONS (accuracy)
+================================================================================
+  Gate*Batch: -0.34pp ANTAGONISM
+  Gate*Scale: -0.29pp ANTAGONISM
+  Batch*Scale: -0.25pp ADDITIVE
+
+================================================================================
+BINARY QUESTIONS
+================================================================================
+Q1: Pairwise interactions > 0.5pp? max=0.34pp NO
+Q3: Net interaction sign: GB=-0.34 GS=-0.29 BS=-0.25
+Q4: Largest main effect: GATE (+0.7pp)
+
+  Best config by accuracy: G-- (81.0%)
+  Best config by ECE: --S (0.0546)
+  Best composite: G-S (acc=80.4% ECE=0.0562)
+
+DONE.

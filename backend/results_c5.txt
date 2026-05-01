@@ -1,0 +1,38 @@
+================================================================================
+EXP-C5: V-FEEDBACK-COUPLING-SWEEP
+================================================================================
+
+================================================================================
+TEST A: COUPLING (live vs frozen feedback)
+================================================================================
+       confidence: live=82.7% frozen=81.3% diff=1.5pp COUPLING
+  confidence done
+     raw_distance: live=80.3% frozen=80.3% diff=0.0pp BLIND
+  raw_distance done
+          entropy: live=81.1% frozen=81.0% diff=0.1pp BLIND
+  entropy done
+         conf_gap: live=82.7% frozen=81.3% diff=1.4pp COUPLING
+  conf_gap done
+    override_rate: live=82.2% frozen=82.2% diff=0.0pp BLIND
+  override_rate done
+
+================================================================================
+TEST B: PERFORMANCE (which gated controller is best?)
+================================================================================
+           Signal  Acc@2000  ECE@2000   Rate%  Coupling?
+  -------------------------------------------------------
+       confidence    82.7%    0.1531   32.0%  YES
+     raw_distance    80.3%    0.1585   98.5%  NO
+          entropy    81.1%    0.1601   71.7%  NO
+         conf_gap    82.7%    0.1570   37.0%  YES
+    override_rate    82.2%    0.1045   31.4%  NO
+
+================================================================================
+BINARY QUESTIONS
+================================================================================
+Q1: Any signal shows coupling? YES: confidence, conf_gap
+Q2: Best accuracy signal: confidence (82.7%)
+Q3: Best ECE signal: override_rate (0.1045)
+Q4: Coupling exists for ['confidence', 'conf_gap'] ΓåÆ plant is NOT flat for these signals.
+
+DONE.

@@ -1,0 +1,70 @@
+================================================================================
+EXP-R6: V-UNMEASURED-VALUE
+================================================================================
+
+  Seed 42:
+
+  METRIC 1: Referral Quality (conf < 0.50)
+    Strategy  Referred  Ref_Difficult  Precision
+  ---------------------------------------------
+    PIPELINE     4.7%             48     51.1%
+     RAW_SGD     8.2%             56     34.1%
+      STATIC     5.0%             52     52.0%
+
+  METRIC 2: Boundary Sharpness
+      PIPELINE: %gap>0.30 = 78.1%, mean_gap = 0.5628
+       RAW_SGD: %gap>0.30 = 44.3%, mean_gap = 0.2937
+        STATIC: %gap>0.30 = 80.2%, mean_gap = 0.5737
+
+  METRIC 3: Temporal Stability (probe consistency)
+      PIPELINE: 100% of probes stable across all checkpoints
+       RAW_SGD: 80% of probes stable across all checkpoints
+        STATIC: 100% of probes stable across all checkpoints
+
+  Seed 123:
+
+  METRIC 1: Referral Quality (conf < 0.50)
+    Strategy  Referred  Ref_Difficult  Precision
+  ---------------------------------------------
+    PIPELINE     4.6%             59     64.1%
+     RAW_SGD    18.1%            121     33.4%
+      STATIC     4.2%             54     64.3%
+
+  METRIC 2: Boundary Sharpness
+      PIPELINE: %gap>0.30 = 78.1%, mean_gap = 0.5548
+       RAW_SGD: %gap>0.30 = 42.3%, mean_gap = 0.2737
+        STATIC: %gap>0.30 = 81.0%, mean_gap = 0.5759
+
+  METRIC 3: Temporal Stability (probe consistency)
+      PIPELINE: 100% of probes stable across all checkpoints
+       RAW_SGD: 70% of probes stable across all checkpoints
+        STATIC: 100% of probes stable across all checkpoints
+
+  Seed 777:
+
+  METRIC 1: Referral Quality (conf < 0.50)
+    Strategy  Referred  Ref_Difficult  Precision
+  ---------------------------------------------
+    PIPELINE     3.8%             15     19.7%
+     RAW_SGD    13.2%             39     14.8%
+      STATIC     3.8%             12     15.8%
+
+  METRIC 2: Boundary Sharpness
+      PIPELINE: %gap>0.30 = 79.4%, mean_gap = 0.5673
+       RAW_SGD: %gap>0.30 = 51.0%, mean_gap = 0.3293
+        STATIC: %gap>0.30 = 78.3%, mean_gap = 0.5622
+
+  METRIC 3: Temporal Stability (probe consistency)
+      PIPELINE: 95% of probes stable across all checkpoints
+       RAW_SGD: 65% of probes stable across all checkpoints
+        STATIC: 100% of probes stable across all checkpoints
+
+================================================================================
+BINARY QUESTIONS
+================================================================================
+Q1: PIPELINE referral precision > STATIC by >5pp? (see above)
+Q3: PIPELINE achieves sharper boundaries? (see gap>0.30 above)
+Q4: PIPELINE probe stability > 95%? (see above)
+Q5: RAW SGD probe stability < 80%? (see above)
+
+DONE.

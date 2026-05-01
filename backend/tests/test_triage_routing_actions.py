@@ -1,0 +1,140 @@
+"""
+test_triage_routing_actions.py — routing-action outcome handling tests.
+
+Validates that report_decision_outcome() counts verified routing decisions,
+does not mutate centroids for refer_to_analyst, and still counts outcomes
+when the Decision.factor_vector is NULL.
+"""
+import asyncio
+import contextlib
+import json
+import os
+import sys
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+from gae.calibration import CalibrationProfile
+from app.framework.learning_state import make_state
+from app.models.schemas import OutcomeRequest
+from app.routers.triage import report_decision_outcome
+
+_ROUTING_ACTION = "refer_to_analyst"
+_DECISION_ID = "DEC-TRIAGE-ROUTING-001"
+_ALERT_ID = "ALERT-TRIAGE-ROUTING-001"
+_CATEGORY = "credential_access"
+_FV_JSON = json.dumps([0.7, 0.8, 0.5, 0.4, 0.6, 0.9])
+
+
+def _make_neo4j(action: str = _ROUTING_ACTION, factor_vector=_FV_JSON):
+    async def _run(query, params=None):
+        if "RETURN d.factor_vector AS factor_vector" in query:
+            return [{
+                "factor_vector": factor_vector,
+                "action": action,
+                "confidence": 0.85,
+                "category": _CATEGORY,
+                "alert_type": _CATEGORY,
+            }]
+        return []
+
+    client = AsyncMock()
+    client.run_query.side_effect = _run
+    return client
+
+
+def _make_learning_state(decision_count: int = 100):
+    return make_state(
+        W=np.zeros((4, 6), dtype=np.float64),
+        factor_names=[f"f{i}" for i in range(6)],
+        profile=CalibrationProfile(
+            learning_rate=0.02,
+            penalty_ratio=20.0,
+            temperature=0.1,
+        ),
+        decision_count=decision_count,
+    )
+
+
+def _make_outcome_result():
+    result = MagicMock()
+    result.model_dump.return_value = {
+        "graph_updates": [],
+        "consequence": "stable",
+        "narrative": "ok",
+    }
+    return result
+
+
+def _make_request(outcome: str = "correct") -> OutcomeRequest:
+    return OutcomeRequest(
+        alert_id=_ALERT_ID,
+        decision_id=_DECISION_ID,
+        outcome=outcome,
+    )
+
+
+def _patches(neo4j, ls, scorer=None):
+    score_stub = scorer if scorer is not None else None
+    return [
+        patch("app.routers.triage.neo4j_client", neo4j),
+        patch("app.routers.triage.get_feedback_status", return_value={"has_feedback": False}),
+        patch("app.routers.triage.process_outcome", return_value=_make_outcome_result()),
+        patch("app.routers.triage.event_bus.emit", new_callable=AsyncMock),
+        patch("app.routers.triage.get_learning_state", return_value=ls),
+        patch("app.routers.triage.get_profile_scorer", return_value=score_stub),
+        patch("app.routers.triage.save_learning_state"),
+        patch("app.framework.audit.record_outcome", new_callable=AsyncMock,
+              return_value={"hash": "fakehash", "chain_index": 0}),
+        patch("app.state.graph_snapshot.get_snapshot", return_value=MagicMock()),
+        patch("app.services.gae_state.get_mu_zero", return_value=None),
+        patch("app.services.gae_state.get_profile_scorer", return_value=score_stub),
+        patch("app.services.gae_state.maybe_write_centroid_snapshot", return_value=False),
+    ]
+
+
+async def _call(neo4j, ls, outcome: str = "correct", scorer=None) -> dict:
+    with contextlib.ExitStack() as stack:
+        for p in _patches(neo4j, ls, scorer=scorer):
+            stack.enter_context(p)
+        return await report_decision_outcome(_make_request(outcome))
+
+
+def _run(coro):
+    return asyncio.run(coro)
+
+
+def test_refer_to_analyst_increments_decision_count():
+    ls = _make_learning_state(decision_count=100)
+    before = ls.decision_count
+
+    _run(_call(_make_neo4j(action=_ROUTING_ACTION), ls, outcome="correct"))
+
+    after = ls.decision_count
+    assert after == before + 1
+
+
+def test_refer_to_analyst_does_not_update_centroids():
+    ls = _make_learning_state(decision_count=100)
+    scorer = SimpleNamespace(
+        centroids=np.arange(24, dtype=np.float64).reshape(1, 4, 6).copy()
+    )
+    before = scorer.centroids.copy()
+
+    _run(_call(_make_neo4j(action=_ROUTING_ACTION), ls, outcome="correct", scorer=scorer))
+
+    after = scorer.centroids
+    assert np.array_equal(before, after)
+
+
+def test_fv_none_still_increments_decision_count():
+    ls = _make_learning_state(decision_count=100)
+    before = ls.decision_count
+
+    _run(_call(_make_neo4j(action=_ROUTING_ACTION, factor_vector=None), ls, outcome="correct"))
+
+    after = ls.decision_count
+    assert after == before + 1

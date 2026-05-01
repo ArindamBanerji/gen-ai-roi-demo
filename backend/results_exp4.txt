@@ -1,0 +1,120 @@
+===========================================================================
+EXP-4: V-DISTRIBUTION-SHIFT
+===========================================================================
+
+===========================================================================
+STRATEGY: LEARN_pipeline
+===========================================================================
+
+  ╬┤=0.05 (pre-shift acc: 80.3%)
+  N_post  Accuracy  ╬ö from pre
+  ------------------------------
+      10    82.0%      +1.7pp
+      25    81.6%      +1.3pp
+      50    82.4%      +2.1pp
+     100    80.4%      +0.1pp
+     200    81.8%      +1.5pp
+     500    82.8%      +2.5pp
+    1000    81.8%      +1.5pp
+  Recovery to within 2pp of pre-shift: N=10
+  Update rate: pre=0.011, post=0.016, ratio=1.4x
+
+  ╬┤=0.10 (pre-shift acc: 80.3%)
+  N_post  Accuracy  ╬ö from pre
+  ------------------------------
+      10    82.0%      +1.7pp
+      25    82.4%      +2.1pp
+      50    82.8%      +2.5pp
+     100    80.2%      -0.1pp
+     200    81.7%      +1.4pp
+     500    82.6%      +2.3pp
+    1000    81.6%      +1.3pp
+  Recovery to within 2pp of pre-shift: N=10
+  Update rate: pre=0.011, post=0.016, ratio=1.4x
+
+  ╬┤=0.15 (pre-shift acc: 80.3%)
+  N_post  Accuracy  ╬ö from pre
+  ------------------------------
+      10    82.0%      +1.7pp
+      25    82.4%      +2.1pp
+      50    82.8%      +2.5pp
+     100    80.2%      -0.1pp
+     200    81.7%      +1.4pp
+     500    82.4%      +2.1pp
+    1000    81.5%      +1.2pp
+  Recovery to within 2pp of pre-shift: N=10
+  Update rate: pre=0.011, post=0.016, ratio=1.4x
+
+  ╬┤=0.25 (pre-shift acc: 80.3%)
+  N_post  Accuracy  ╬ö from pre
+  ------------------------------
+      10    84.0%      +3.7pp
+      25    83.2%      +2.9pp
+      50    82.0%      +1.7pp
+     100    79.4%      -0.9pp
+     200    81.3%      +1.0pp
+     500    81.9%      +1.6pp
+    1000    81.2%      +0.8pp
+  Recovery to within 2pp of pre-shift: N=10
+  Update rate: pre=0.011, post=0.016, ratio=1.4x
+
+===========================================================================
+STRATEGY: LEARN_raw
+===========================================================================
+
+  ╬┤=0.05 (pre-shift acc: 80.4%)
+  N_post  Accuracy  ╬ö from pre
+  ------------------------------
+      10    80.0%      -0.4pp
+      25    81.6%      +1.2pp
+      50    82.0%      +1.6pp
+     100    79.8%      -0.6pp
+     200    80.8%      +0.4pp
+     500    81.7%      +1.3pp
+    1000    80.4%      -0.1pp
+  Recovery to within 2pp of pre-shift: N=10
+
+  ╬┤=0.10 (pre-shift acc: 80.4%)
+  N_post  Accuracy  ╬ö from pre
+  ------------------------------
+      10    80.0%      -0.4pp
+      25    80.8%      +0.4pp
+      50    82.0%      +1.6pp
+     100    79.8%      -0.6pp
+     200    80.8%      +0.4pp
+     500    81.7%      +1.3pp
+    1000    80.4%      -0.0pp
+  Recovery to within 2pp of pre-shift: N=10
+
+  ╬┤=0.15 (pre-shift acc: 80.4%)
+  N_post  Accuracy  ╬ö from pre
+  ------------------------------
+      10    80.0%      -0.4pp
+      25    80.8%      +0.4pp
+      50    82.0%      +1.6pp
+     100    80.2%      -0.2pp
+     200    81.0%      +0.6pp
+     500    81.8%      +1.3pp
+    1000    80.3%      -0.1pp
+  Recovery to within 2pp of pre-shift: N=10
+
+  ╬┤=0.25 (pre-shift acc: 80.4%)
+  N_post  Accuracy  ╬ö from pre
+  ------------------------------
+      10    82.0%      +1.6pp
+      25    83.2%      +2.8pp
+      50    82.8%      +2.4pp
+     100    81.0%      +0.6pp
+     200    81.9%      +1.5pp
+     500    81.8%      +1.4pp
+    1000    80.7%      +0.2pp
+  Recovery to within 2pp of pre-shift: N=10
+
+===========================================================================
+BINARY QUESTIONS (╬┤=0.15)
+===========================================================================
+Q1: Pipeline update rate increases post-shift? pre=0.011 post=0.016 YES (1.4x)
+Q2: Pipeline recovers within 200? acc@200=81.7% vs pre=80.3% YES
+Q3: Raw SGD vs pipeline recovery at N=200: raw=+0.6pp pipe=+1.4pp SLOWER
+
+DONE.

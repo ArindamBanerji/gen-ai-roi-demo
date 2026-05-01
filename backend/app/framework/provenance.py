@@ -46,26 +46,26 @@ class DecisionProvenance:
 # Per-factor explainers
 # ---------------------------------------------------------------------------
 
-def _explain_travel_match(value: float) -> Tuple[str, str, List[str]]:
+def _explain_privileged_identity_context(value: float) -> Tuple[str, str, List[str]]:
     method = (
-        "Graph traversal: (User)-[:HAS_TRAVEL]->(TravelRecord) "
-        "WHERE destination = source_location"
+        "Security context read: user_risk_score, user_title, mfa_completed, "
+        "device_fingerprint_match"
     )
-    nodes = ["User", "TravelRecord"]
+    nodes = ["User", "Identity", "Device"]
     if value >= 0.7:
         explanation = (
-            f"Travel record found matching source location (score={value:.2f}). "
-            "High travel match — likely business travel explains the anomaly."
+            f"Privileged or high-risk identity context detected (score={value:.2f}). "
+            "Elevated role or weak session trust signals raise risk."
         )
     elif value == 0.5:
         explanation = (
-            "No travel records found for this user/location pair. "
+            "No privileged identity context available. "
             "Neutral prior applied (score=0.50)."
         )
     else:
         explanation = (
-            f"Partial or low travel match (score={value:.2f}). "
-            "Limited corroboration from travel records."
+            f"Low privileged identity context risk (score={value:.2f}). "
+            "Standard role or strong session trust signals reduce concern."
         )
     return method, explanation, nodes
 
@@ -214,7 +214,8 @@ def _explain_device_trust(value: float) -> Tuple[str, str, List[str]]:
 
 
 _FACTOR_EXPLAINERS = {
-    "travel_match":             _explain_travel_match,
+    "privileged_identity_context": _explain_privileged_identity_context,
+    "travel_match":             _explain_privileged_identity_context,
     "asset_criticality":        _explain_asset_criticality,
     "threat_intel_enrichment":  _explain_threat_intel_enrichment,
     "pattern_history":          _explain_pattern_history,

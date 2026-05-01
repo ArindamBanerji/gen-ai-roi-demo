@@ -1,0 +1,110 @@
+================================================================================
+1. NOVELTY-LARGE (coord descent): shifts at delta=0.05-0.25
+================================================================================
+  delta=0.05 seed=42 A... B... done
+  delta=0.05 seed=123 A... B... done
+  delta=0.05 seed=777 A... B... done
+  delta=0.05: A(fixed)=84.8%  B(shift)=84.9%  B-A=+0.1pp
+  delta=0.10 seed=42 A... B... done
+  delta=0.10 seed=123 A... B... done
+  delta=0.10 seed=777 A... B... done
+  delta=0.10: A(fixed)=84.8%  B(shift)=84.6%  B-A=-0.2pp
+  delta=0.15 seed=42 A... B... done
+  delta=0.15 seed=123 A... B... done
+  delta=0.15 seed=777 A... B... done
+  delta=0.15: A(fixed)=84.8%  B(shift)=84.5%  B-A=-0.3pp
+  delta=0.25 seed=42 A... B... done
+  delta=0.25 seed=123 A... B... done
+  delta=0.25 seed=777 A... B... done
+  delta=0.25: A(fixed)=84.8%  B(shift)=82.1%  B-A=-2.7pp
+
+================================================================================
+2. DK-NOISE (coord descent): 4 oracle noise levels
+================================================================================
+  noise~5% seed=42... done
+  noise~5% seed=123... done
+  noise~5% seed=777... done
+  noise~  5%: cent=83.8%  DK@0.5=85.3%  gain=+1.5pp
+  noise~15% seed=42... done
+  noise~15% seed=123... done
+  noise~15% seed=777... done
+  noise~ 15%: cent=82.3%  DK@0.5=85.3%  gain=+3.1pp
+  noise~25% seed=42... done
+  noise~25% seed=123... done
+  noise~25% seed=777... done
+  noise~ 25%: cent=79.7%  DK@0.5=84.2%  gain=+4.5pp
+  noise~50% seed=42... done
+  noise~50% seed=123... done
+  noise~50% seed=777... done
+  noise~ 50%: cent=72.0%  DK@0.5=80.1%  gain=+8.1pp
+
+================================================================================
+3. WINDOW-1 (coord descent): accumulation vs window under shift
+================================================================================
+
+  Seed 42 (shift at N=3000, delta=0.15):
+       N     All   Win1k    Best
+  ------------------------------
+  N=2000...
+    2000  85.8%  86.0%     Win
+  N=3000...
+    3000  85.6%  86.0%     Win <SHIFT
+  N=3500...
+    3500  85.8%  86.4%     Win
+  N=4000...
+    4000  86.4%  85.8%     All
+  N=5000...
+    5000  85.8%  84.8%     All
+  N=6000...
+    6000  86.8%  86.2%     All
+
+  Seed 123 (shift at N=3000, delta=0.15):
+       N     All   Win1k    Best
+  ------------------------------
+  N=2000...
+    2000  81.8%  83.2%     Win
+  N=3000...
+    3000  84.4%  82.2%     All <SHIFT
+  N=3500...
+    3500  84.0%  83.0%     All
+  N=4000...
+    4000  83.0%  81.6%     All
+  N=5000...
+    5000  83.2%  83.6%     Win
+  N=6000...
+    6000  83.2%  82.6%     All
+
+  Seed 777 (shift at N=3000, delta=0.15):
+       N     All   Win1k    Best
+  ------------------------------
+  N=2000...
+    2000  86.0%  84.2%     All
+  N=3000...
+    3000  85.4%  84.4%     All <SHIFT
+  N=3500...
+    3500  85.6%  84.6%     All
+  N=4000...
+    4000  85.8%  85.0%     All
+  N=5000...
+    5000  84.0%  84.0%     All
+  N=6000...
+    6000  84.8%  84.2%     All
+
+================================================================================
+4. NOVELTY-TRIGGER (coord descent): triggered vs fixed
+================================================================================
+  Seed 42 fixed... novelty...
+  Seed 42: fixed=85.6% (8 reest)  novelty=85.6% (7 reest)  savings=1
+  Seed 123 fixed... novelty...
+  Seed 123: fixed=83.8% (8 reest)  novelty=83.8% (7 reest)  savings=1
+  Seed 777 fixed... novelty...
+  Seed 777: fixed=86.6% (8 reest)  novelty=86.6% (6 reest)  savings=2
+
+================================================================================
+BINARY QUESTIONS
+1: At what delta does shift make B different from A?
+2: Does noise reduction amplify DK gain (R1 x R3)?
+3: Does window recover faster than full after shift?
+4: Does novelty-trigger match fixed with fewer reest?
+
+DONE.

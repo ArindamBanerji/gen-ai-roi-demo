@@ -1,7 +1,7 @@
 """
 GAE learning state manager — live LearningState singleton for SOC Copilot.
 
-Single source of truth for the W matrix (n_actions × 6 factors) across
+Single source of truth for the W matrix (n_actions × d factors) across
 the backend process.  Initialized once at startup, persisted to JSON after
 each outcome update.
 
@@ -94,7 +94,7 @@ def _soc_profile() -> CalibrationProfile:
 def _make_fresh_state() -> LearningState:
     """Build a LearningState from SOCDomainConfig expert priors."""
     from app.domains.soc.config import SOCDomainConfig
-    W = SOCDomainConfig.get_initial_W()                      # shape (n_actions, 6)
+    W = SOCDomainConfig.get_initial_W()                      # shape (n_actions, n_factors)
     factor_names = [c.name for c in SOCDomainConfig.get_factor_computers()]
     return _fw.make_state(W, factor_names, _soc_profile())
 

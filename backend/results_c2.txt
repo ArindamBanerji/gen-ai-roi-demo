@@ -1,0 +1,61 @@
+================================================================================
+EXP-C2: V-ACCURACY-ECE-TRADEOFF (Pareto Frontier)
+================================================================================
+  gate theta=0.30 done
+  gate theta=0.40 done
+  gate theta=0.50 done
+  gate theta=0.60 done
+  gate theta=0.70 done
+  gate theta=0.80 done
+  gate theta=0.90 done
+  gate theta=0.95 done
+  gate theta=1.00 done
+  decay n0=5 done
+  decay n0=10 done
+  decay n0=25 done
+  decay n0=50 done
+  decay n0=100 done
+  decay n0=500 done
+  decay n0=2000 done
+
+================================================================================
+PARETO FRONTIER DATA
+================================================================================
+                 Label     Type     Acc       ECE   Rate%
+  -------------------------------------------------------
+             gate_0.30    gated   80.4%    0.0543    0.0%
+             gate_0.40    gated   80.5%    0.0549    0.3%
+              PIPELINE  baseline   80.6%    0.0562    1.5%
+             gate_0.50    gated   82.5%    0.0919    6.3%
+            decay_n0=5    decay   82.5%    0.1228  100.0%
+           decay_n0=10    decay   83.0%    0.1401  100.0%
+           decay_n0=25    decay   82.7%    0.1480  100.0%
+             gate_0.60    gated   82.6%    0.1521   31.6%
+           decay_n0=50    decay   82.6%    0.1539  100.0%
+          decay_n0=100    decay   82.3%    0.1543  100.0%
+          decay_n0=500    decay   81.5%    0.1565  100.0%
+             gate_0.80    gated   81.0%    0.1568   80.5%
+         decay_n0=2000    decay   80.9%    0.1579  100.0%
+             gate_0.95    gated   80.4%    0.1581   99.8%
+             gate_1.00    gated   80.4%    0.1581  100.0%
+               RAW_SGD  baseline   80.4%    0.1581  100.0%
+             gate_0.90    gated   80.4%    0.1587   96.6%
+             gate_0.70    gated   81.7%    0.1603   61.4%
+
+================================================================================
+PARETO FRONTIER (non-dominated points)
+================================================================================
+             gate_0.30  acc=80.4%  ECE=0.0543
+             gate_0.40  acc=80.5%  ECE=0.0549
+              PIPELINE  acc=80.6%  ECE=0.0562
+             gate_0.50  acc=82.5%  ECE=0.0919
+           decay_n0=10  acc=83.0%  ECE=0.1401
+
+================================================================================
+BINARY QUESTIONS
+================================================================================
+Q1: Pareto-dominant strategy? NO (tradeoff)
+Q2: Tradeoff slope: 30.9pp accuracy per 0.01 ECE
+Q3: Gated and decay on same frontier? gated: 3 points, decay: 1 points SAME
+
+DONE.

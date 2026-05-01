@@ -161,7 +161,7 @@ async def analyze_alert(request: ProcessAlertRequest):
         # ====================================================================
         # Step 4: GAE Scoring Pipeline (GAE-2d — replaces agent.decide())
         #
-        # 4a. Compute factor vector via orchestrator (6 FactorComputers → Neo4j)
+        # 4a. Compute factor vector via orchestrator (FactorComputers → Neo4j, one per factor)
         # 4b. score_alert: Eq. 4  P(action|alert) = softmax(f·Wᵀ / τ)
         # ====================================================================
         print(f"[GAE] Computing factor vector for {alert_id}...")
@@ -578,7 +578,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                 "routing_zone":         routing_zone,
                 "decision_method":      (
                     "ProfileScorer centroid-proximity scoring "
-                    "(6 factors × 5 actions × 6 categories, "
+                    "(n_factors × 5 actions × n_categories, "
                     "L2 kernel τ=0.1, EXP-E1 validated)"
                 ),
             },
@@ -839,6 +839,8 @@ async def reset_demo_alerts():
         # ProfileScorer centroids (IKS) survive demo resets (BACKLOG-020).
         # Full hard reset (including learning_state) is POST /api/admin/reset.
         await state_manager.reset_except(["learning_state"])
+        from app.services.servicenow_mock import get_servicenow_mock
+        get_servicenow_mock().reset()
 
         return {
             "status": "success",
@@ -989,6 +991,9 @@ async def report_decision_outcome(request: OutcomeRequest):
 
             if fv is None:
                 print(f"[GAE] Decision node found but factor_vector is NULL — skipping weight update")
+                _ref_ls = get_learning_state()
+                if _ref_ls:
+                    _ref_ls.decision_count += 1
 
             if fv is not None:
                 f = np.array(fv, dtype=np.float64).reshape(1, -1)
@@ -1002,6 +1007,11 @@ async def report_decision_outcome(request: OutcomeRequest):
                         f"{action_name!r} (not in SCORER_ACTIONS)"
                     )
                     wu = None
+                    # Still count this verified outcome so decision_count reflects
+                    # all verified decisions, not only scorable actions.
+                    _ref_ls = get_learning_state()
+                    _ref_ls.decision_count += 1
+                    save_learning_state()
                 else:
                     action_index = list(SCORER_ACTIONS).index(action_name)
                     learning_state = get_learning_state()
@@ -1143,6 +1153,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                             category=_cat_snap,
                             was_override=_was_override,
                             quality_signal=1.0 if correct_bool else 0.0,
+                            is_correct=correct_bool,
                         )
                     except Exception as _snap_exc:
                         logger.warning(
@@ -1317,6 +1328,21 @@ async def report_decision_outcome(request: OutcomeRequest):
         print(f"[FEEDBACK] Graph updates: {len(result.graph_updates)}")
         print(f"[FEEDBACK] Consequence: {result.consequence}")
         print(f"[FEEDBACK] centroid_update in response: {centroid_update_payload is not None}")
+
+        if gae_result and correct_bool and action_name == "escalate":
+            try:
+                from app.services.servicenow_mock import get_servicenow_mock
+                _result_payload = result.model_dump()
+                get_servicenow_mock().create_incident(
+                    decision_id=str(getattr(request, "decision_id", "")),
+                    alert_id=str(getattr(request, "alert_id", "")),
+                    alert_type=str(locals().get("alert_type_for_cat", "Unknown") or "Unknown"),
+                    category=str(locals().get("_resolved_category", "Security") or "Security"),
+                    confidence=float(locals().get("confidence_at_decision", 0.5) or 0.5),
+                    nl_explanation=str(_result_payload.get("narrative", "") or ""),
+                )
+            except Exception as _sn_exc:
+                logger.warning("ServiceNow mock creation failed: %s", _sn_exc)
 
         response_body = result.model_dump()
         response_body["centroid_update"] = centroid_update_payload
@@ -1599,7 +1625,7 @@ async def get_profile_state():
     return {
         "categories": SOC_CATEGORIES,
         "actions": SCORER_ACTIONS,         # A=4 — matches counts/centroids shape
-        "centroids": scorer.centroids.tolist(),   # shape (6, 4, 6)
+        "centroids": scorer.centroids.tolist(),   # shape (n_categories, n_actions, n_factors)
         "counts": scorer.counts.tolist(),  # shape (6, 4)
         "decision_count": decision_count,
         "iks": {
@@ -1662,7 +1688,7 @@ async def rl_reward_summary():
 @router.get("/triage/decision-factors/{alert_id}", response_model=DecisionFactorsResponse)
 async def decision_factors(alert_id: str):
     """
-    Return the 6-factor explainability matrix for an agent decision.
+    Return the factor explainability matrix for an agent decision.
 
     Factor 3 (threat_intel_enrichment) is queried live from Neo4j using the
     ASSOCIATED_WITH relationship written by the Threat Intel refresh endpoint.

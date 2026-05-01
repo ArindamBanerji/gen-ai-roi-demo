@@ -15,6 +15,12 @@ import numpy as np
 from fastapi import APIRouter, HTTPException
 
 from gae.evaluation import EvaluationScenario, EvaluationReport, run_evaluation
+from app.domains.soc.config import SOC_FACTORS
+
+# Backward-compat map: new factor name → old JSON key (FEATURE-05B rename)
+_LEGACY_FACTOR_NAMES: dict[str, str] = {
+    "privileged_identity_context": "travel_match",
+}
 
 router = APIRouter()
 
@@ -31,21 +37,16 @@ def load_soc_scenarios() -> List[EvaluationScenario]:
     """
     Load and deserialise all 36 SOC evaluation scenarios from JSON.
 
-    Factor vector order matches SOC_PROFILE_CENTROIDS:
-      [0] travel_match  [1] asset_criticality  [2] threat_intel_enrichment
-      [3] pattern_history  [4] time_anomaly  [5] device_trust
+    Factor vector order matches SOC_PROFILE_CENTROIDS (SOC_FACTORS order).
+    Handles both current factor names and legacy names (pre-FEATURE-05B rename).
     """
     raw = json.loads(_SCENARIOS_PATH.read_text(encoding="utf-8"))
     scenarios: List[EvaluationScenario] = []
     for s in raw:
         f = s["factors"]
         factors_list = [
-            f["travel_match"],
-            f["asset_criticality"],
-            f["threat_intel_enrichment"],
-            f["pattern_history"],
-            f["time_anomaly"],
-            f["device_trust"],
+            f.get(fname, f.get(_LEGACY_FACTOR_NAMES.get(fname, fname), 0.5))
+            for fname in SOC_FACTORS
         ]
         scenarios.append(
             EvaluationScenario(

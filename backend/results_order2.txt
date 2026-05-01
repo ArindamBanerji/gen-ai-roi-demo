@@ -1,0 +1,63 @@
+==========================================================================================
+EXP-ORDER-2: ORDER ├ù DIMENSIONALITY INTERACTION
+==========================================================================================
+
+  Seed 42: calibrating DK (standard init)...
+  Seed 42: calibrating DK (enriched init)...
+
+  Seed 42:
+                  Condition  EffDim  Order     Acc   ╬ö vs A
+  -------------------------------------------------------
+       A: Standard, Order 0    1.77      0  86.0%        ΓÇö
+       B: Standard, Order 1    1.77      1  85.2%   -0.8pp
+       C: Enriched, Order 0    2.14      0  78.0%   -8.0pp
+       D: Enriched, Order 1    2.14      1  82.2%   -3.8pp
+
+  DECOMPOSITION:
+    Order effect (B-A):       -0.8pp
+    Dimensionality effect (C-A): -8.0pp
+    Interaction (D-A-B-C+A):  +5.0pp (SYNERGISTIC)
+    D vs max(B,C):            -3.0pp
+
+  Seed 123: calibrating DK (standard init)...
+  Seed 123: calibrating DK (enriched init)...
+
+  Seed 123:
+                  Condition  EffDim  Order     Acc   ╬ö vs A
+  -------------------------------------------------------
+       A: Standard, Order 0    1.77      0  76.8%        ΓÇö
+       B: Standard, Order 1    1.77      1  80.4%   +3.6pp
+       C: Enriched, Order 0    2.08      0  69.4%   -7.4pp
+       D: Enriched, Order 1    2.08      1  79.0%   +2.2pp
+
+  DECOMPOSITION:
+    Order effect (B-A):       +3.6pp
+    Dimensionality effect (C-A): -7.4pp
+    Interaction (D-A-B-C+A):  +6.0pp (SYNERGISTIC)
+    D vs max(B,C):            -1.4pp
+
+  Seed 777: calibrating DK (standard init)...
+  Seed 777: calibrating DK (enriched init)...
+
+  Seed 777:
+                  Condition  EffDim  Order     Acc   ╬ö vs A
+  -------------------------------------------------------
+       A: Standard, Order 0    1.77      0  82.8%        ΓÇö
+       B: Standard, Order 1    1.77      1  87.0%   +4.2pp
+       C: Enriched, Order 0    2.09      0  79.0%   -3.8pp
+       D: Enriched, Order 1    2.09      1  84.4%   +1.6pp
+
+  DECOMPOSITION:
+    Order effect (B-A):       +4.2pp
+    Dimensionality effect (C-A): -3.8pp
+    Interaction (D-A-B-C+A):  +1.2pp (SYNERGISTIC)
+    D vs max(B,C):            -2.6pp
+
+==========================================================================================
+BINARY QUESTIONS
+==========================================================================================
+Q1: D > max(B, C)? (interaction is synergistic)
+Q2: D approaches MLP ceiling (85.0%)?
+Q3: Interaction term > 0? (positive = synergy)
+
+DONE.

@@ -1,0 +1,37 @@
+===========================================================================
+EXP-3: V-CONFIDENCE-LOCKOUT
+Wrong category: insider_threat, shift: 0.3 Frobenius
+===========================================================================
+
+  LEARN_pipeline:
+       N  WrongCat%  OtherCat%   FrobΓåÆGT  WrongN
+  --------------------------------------------------
+      50     50.0%     78.3%   0.4799       2
+     100     42.0%     80.8%   0.4799       4
+     200     49.6%     80.8%   0.4799       9
+     500     64.9%     81.8%   0.4799      25
+    1000     65.1%     81.1%   0.4795      52
+    2000     65.0%     81.7%   0.4793      98
+
+  Gate first opens for wrong cat at N: [24, 22, 89, 24, 9]
+  Max consecutive overrides before gate opens: [3, 3, 5, 4, 3]
+
+  LEARN_raw:
+       N  WrongCat%  OtherCat%   FrobΓåÆGT  WrongN
+  --------------------------------------------------
+      50     50.0%     78.7%   0.4765       2
+     100     42.0%     81.4%   0.4736       4
+     200     49.6%     81.7%   0.4653       9
+     500     66.6%     82.5%   0.4485      25
+    1000     68.2%     81.0%   0.4295      52
+    2000     68.6%     80.9%   0.4364      98
+
+===========================================================================
+BINARY QUESTIONS
+===========================================================================
+Q1: Pipeline corrects wrong category? Frob: 0.4799ΓåÆ0.4793 YES
+Q2: Raw SGD corrects wrong category? Frob: 0.4765ΓåÆ0.4364 YES
+Q3: Overrides before gate opens: 4 mean
+Q4: Wrong cat accuracy at N=2000: pipeline=65.0%
+
+DONE.

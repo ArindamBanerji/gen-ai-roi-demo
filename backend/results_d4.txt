@@ -1,0 +1,23 @@
+================================================================================
+EXP-D4: SWITCHING LOGIC COMPARISON
+================================================================================
+
+  LIFECYCLE (shift@1000, quality@2000, restore@3000):
+               Logic  Pre@1000  Post@1500  Final@4000  Chatter
+  ------------------------------------------------------------
+           fixed_200    81.7%     80.6%      69.8%      6
+  velocity_threshold    80.9%     80.3%      74.9%     10
+  override_threshold    81.7%     81.5%      75.8%     93
+          hysteresis    81.8%     81.3%      75.6%     12
+                 fsm    81.4%     81.0%      70.7%     18
+
+  WRONG CATEGORY (insider_threat shifted 0.3):
+               Logic  Acc@500  Acc@2000
+  --------------------------------------
+           fixed_200   82.8%    81.1%
+  velocity_threshold   82.5%    81.1%
+  override_threshold   82.9%    82.4%
+          hysteresis   83.1%    82.5%
+                 fsm   82.6%    81.9%
+
+DONE.

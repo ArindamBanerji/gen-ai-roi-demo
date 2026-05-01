@@ -1,0 +1,132 @@
+==========================================================================================
+EXP-P6: PLANT DECOMPOSITION
+Composition chain: distance ΓåÆ square ΓåÆ scale ΓåÆ softmax ΓåÆ argmax
+==========================================================================================
+
+==========================================================================================
+SECTION 1: BOUNDARY PROXIMITY (how far are queries from Voronoi boundaries?)
+==========================================================================================
+
+  Seed 42:
+    Accuracy: 94.3%
+    Boundary distance: mean=0.0852 median=0.0843 std=0.0495
+    Margin ratio (d2/d1): mean=1.529 median=1.420
+    Fraction of queries near boundary:
+      d_boundary < 0.01: 5.6% of queries, acc_near=61.9% acc_far=96.3%
+      d_boundary < 0.02: 11.1% of queries, acc_near=68.7% acc_far=97.5%
+      d_boundary < 0.05: 28.8% of queries, acc_near=82.4% acc_far=99.2%
+      d_boundary < 0.10: 59.8% of queries, acc_near=90.6% acc_far=99.9%
+      d_boundary < 0.20: 99.5% of queries, acc_near=94.3% acc_far=100.0%
+      d_boundary < 0.50: 100.0% of queries, acc_near=94.3% acc_far=0.0%
+    Confidence vs boundary distance (binned):
+      d Γêê [0.00, 0.02): conf=0.5126 acc=68.7% n=553
+      d Γêê [0.02, 0.05): conf=0.6263 acc=91.0% n=885
+      d Γêê [0.05, 0.10): conf=0.7736 acc=98.2% n=1551
+      d Γêê [0.10, 0.20): conf=0.8875 acc=99.9% n=1984
+      d Γêê [0.20, 0.50): conf=0.9237 acc=100.0% n=27
+
+  Seed 123:
+    Accuracy: 84.6%
+    Boundary distance: mean=0.0857 median=0.0856 std=0.0503
+    Margin ratio (d2/d1): mean=1.537 median=1.421
+    Fraction of queries near boundary:
+      d_boundary < 0.01: 5.7% of queries, acc_near=44.2% acc_far=87.0%
+      d_boundary < 0.02: 11.5% of queries, acc_near=47.3% acc_far=89.4%
+      d_boundary < 0.05: 29.3% of queries, acc_near=58.0% acc_far=95.6%
+      d_boundary < 0.10: 59.8% of queries, acc_near=74.4% acc_far=99.7%
+      d_boundary < 0.20: 99.5% of queries, acc_near=84.5% acc_far=100.0%
+      d_boundary < 0.50: 100.0% of queries, acc_near=84.6% acc_far=0.0%
+    Confidence vs boundary distance (binned):
+      d Γêê [0.00, 0.02): conf=0.5131 acc=47.3% n=573
+      d Γêê [0.02, 0.05): conf=0.6277 acc=64.9% n=892
+      d Γêê [0.05, 0.10): conf=0.7774 acc=90.2% n=1526
+      d Γêê [0.10, 0.20): conf=0.8883 acc=99.7% n=1984
+      d Γêê [0.20, 0.50): conf=0.9170 acc=100.0% n=25
+
+  Seed 777:
+    Accuracy: 86.5%
+    Boundary distance: mean=0.0857 median=0.0842 std=0.0506
+    Margin ratio (d2/d1): mean=1.542 median=1.421
+    Fraction of queries near boundary:
+      d_boundary < 0.01: 6.1% of queries, acc_near=57.6% acc_far=88.4%
+      d_boundary < 0.02: 11.8% of queries, acc_near=57.0% acc_far=90.4%
+      d_boundary < 0.05: 29.0% of queries, acc_near=65.0% acc_far=95.3%
+      d_boundary < 0.10: 59.6% of queries, acc_near=77.7% acc_far=99.5%
+      d_boundary < 0.20: 99.5% of queries, acc_near=86.4% acc_far=100.0%
+      d_boundary < 0.50: 100.0% of queries, acc_near=86.5% acc_far=0.0%
+    Confidence vs boundary distance (binned):
+      d Γêê [0.00, 0.02): conf=0.5111 acc=57.0% n=589
+      d Γêê [0.02, 0.05): conf=0.6269 acc=70.4% n=859
+      d Γêê [0.05, 0.10): conf=0.7727 acc=89.8% n=1534
+      d Γêê [0.10, 0.20): conf=0.8883 acc=99.4% n=1993
+      d Γêê [0.20, 0.50): conf=0.9290 acc=100.0% n=25
+
+==========================================================================================
+SECTION 2: COMPOSITION CHAIN SENSITIVITY
+How does a centroid perturbation propagate through each stage?
+==========================================================================================
+
+  Seed 42:
+      eps    ╬ö_dist   ╬ö_dist┬▓   ╬ö_logit    ╬ö_prob    ╬ö_conf  ╬ö_action    ╬ö_acc
+  ------------------------------------------------------------------------
+    0.001   0.00005   0.00006   0.00006   0.00005   0.00010     0.0%  (see P4)
+    0.005   0.00023   0.00028   0.00028   0.00027   0.00049     0.0%  (see P4)
+    0.010   0.00047   0.00056   0.00056   0.00053   0.00098     0.0%  (see P4)
+    0.050   0.00235   0.00279   0.00279   0.00267   0.00485     0.4%  (see P4)
+    0.100   0.00472   0.00560   0.00560   0.00534   0.00960     0.9%  (see P4)
+
+==========================================================================================
+SECTION 3: ERROR GEOGRAPHY ΓÇö where do wrong decisions concentrate?
+==========================================================================================
+
+  Seed 42: 283 errors out of 5000
+    Error boundary distance: mean=0.0224 median=0.0149
+    Correct boundary distance: mean=0.0889 median=0.0888
+    Errors are 4.0x further from boundary than correct decisions
+    Errors with d_boundary < 0.01 (fixable by ╬╝ move of ~0.01): 106/283 (37%)
+    Errors with d_boundary < 0.02 (fixable by ╬╝ move of ~0.02): 173/283 (61%)
+    Errors with d_boundary < 0.05 (fixable by ╬╝ move of ~0.05): 253/283 (89%)
+    Errors with d_boundary < 0.10 (fixable by ╬╝ move of ~0.10): 281/283 (99%)
+    Errors with d_boundary < 0.20 (fixable by ╬╝ move of ~0.20): 283/283 (100%)
+
+  Seed 123: 771 errors out of 5000
+    Error boundary distance: mean=0.0313 median=0.0266
+    Correct boundary distance: mean=0.0956 median=0.0968
+    Errors are 3.1x further from boundary than correct decisions
+    Errors with d_boundary < 0.01 (fixable by ╬╝ move of ~0.01): 159/771 (21%)
+    Errors with d_boundary < 0.02 (fixable by ╬╝ move of ~0.02): 302/771 (39%)
+    Errors with d_boundary < 0.05 (fixable by ╬╝ move of ~0.05): 615/771 (80%)
+    Errors with d_boundary < 0.10 (fixable by ╬╝ move of ~0.10): 765/771 (99%)
+    Errors with d_boundary < 0.20 (fixable by ╬╝ move of ~0.20): 771/771 (100%)
+
+==========================================================================================
+SECTION 4: PRODUCTION ProfileScorer ΓÇö controller leverage vs separation
+(Replaces P4/P5 with production scorer)
+==========================================================================================
+     Sep  %NearBdry    STATIC     GATED  SQRT_DEC   RAW_SGD  Gated-S  Decay-S   Raw-S
+  -------------------------------------------------------------------------------------
+    0.00     30.5%    90.1%    86.8%    84.3%    82.2%   -3.3pp   -5.8pp  -7.8pp
+    0.10     31.0%    88.9%    86.6%    84.1%    82.1%   -2.3pp   -4.8pp  -6.8pp
+    0.25     31.1%    86.8%    86.4%    83.9%    82.0%   -0.4pp   -2.9pp  -4.8pp
+    0.50     31.9%    83.6%    85.6%    83.3%    81.4%   +2.0pp   -0.3pp  -2.2pp
+    0.75     33.0%    80.6%    84.7%    82.4%    80.7%   +4.1pp   +1.8pp  +0.1pp
+    1.00     34.2%    77.6%    83.3%    81.6%    79.9%   +5.7pp   +4.1pp  +2.3pp
+    1.50     35.4%    72.0%    80.3%    80.0%    78.4%   +8.4pp   +8.1pp  +6.5pp
+    2.00     38.4%    66.6%    77.6%    78.5%    77.2%  +11.0pp  +11.9pp  +10.6pp
+
+==========================================================================================
+SECTION 5: BOUNDARY-AWARE ΓÇö only update queries near boundaries
+==========================================================================================
+  sep=0.50: Static=83.6%  Gated=85.6%  BoundaryAware=85.2%  BA-Static=+1.6pp
+  sep=0.75: Static=80.6%  Gated=84.7%  BoundaryAware=84.5%  BA-Static=+3.8pp
+  sep=1.00: Static=77.6%  Gated=83.3%  BoundaryAware=83.3%  BA-Static=+5.7pp
+  sep=1.50: Static=72.0%  Gated=80.3%  BoundaryAware=81.1%  BA-Static=+9.1pp
+
+==========================================================================================
+BINARY QUESTIONS
+==========================================================================================
+Q1: What fraction of queries are near boundary (<0.05)? 28.8%
+Q2: What fraction of ERRORS are near boundary? 89%
+Q3: Does boundary-aware controller outperform gated? (see Section 5)
+
+DONE.

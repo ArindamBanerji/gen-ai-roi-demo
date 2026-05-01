@@ -12,15 +12,7 @@ from app.framework.convergence_math import (  # noqa: F401
     COEFF_SIGMA,
     KERNEL_DIAGONAL_OFFSET,
 )
-
-SOC_FACTORS = [
-    "travel_match",
-    "asset_criticality",
-    "threat_intel_enrichment",
-    "time_anomaly",
-    "pattern_history",
-    "device_trust",
-]
+from app.domains.soc.config import SOC_FACTORS  # noqa: F401
 
 
 def build_convergence_calendar(

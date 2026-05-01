@@ -1,0 +1,45 @@
+==========================================================================================
+EXP-F15: V-DK-WIENER-UNIFICATION
+Do DK scoring weights improve update efficiency?
+==========================================================================================
+
+  CALIBRATED PRIOR:
+           Config     Acc       ECE   V_final     Scoring      Update
+  -----------------------------------------------------------------
+           STATIC  80.4%    0.0543    0.7277           ΓÇö           ΓÇö
+   EUCLID_UNIFORM  82.6%    0.1539    0.9041      Euclid     Uniform
+       DK_UNIFORM  81.6%    0.5082    0.8792          DK     Uniform
+    EUCLID_WIENER  81.1%    0.0664    1.0356      Euclid      Wiener
+        DK_WIENER  79.4%    0.4722    1.2472          DK      Wiener
+     DK_DKDERIVED  81.9%    0.5101    0.8506          DK      DK-der
+
+  LEARNED WEIGHTS ANALYSIS (seed 42):
+    Per-dim ╧â┬▓:         [0.03105 0.02854 0.02544 0.02925 0.02419 0.02579]
+    Per-dim signal┬▓:    [0.00319 0.00144 0.00062 0.00388 0.00474 0.00344]
+    Per-dim SNR:        [0.3207 0.2244 0.1556 0.3641 0.4426 0.3654]
+    DK weights (1/╧â┬▓):  [0.875 0.952 1.068 0.929 1.123 1.054]
+    Wiener gains:       [0.0932 0.0479 0.0236 0.117  0.1638 0.1178]
+    DK-derived gains:   [0.7791 0.8476 0.9511 0.827  1.     0.9382]
+
+    Correlation(DK_weights, Wiener_gains): +0.2353
+    (If high: DK and Wiener are measuring the same thing)
+
+  STABILITY CHECK:
+  Config with lowest V_final (most stable) and its accuracy:
+             STATIC: V_final=0.7277, acc=80.4%
+     EUCLID_UNIFORM: V_final=0.9041, acc=82.6%
+         DK_UNIFORM: V_final=0.8792, acc=81.6%
+      EUCLID_WIENER: V_final=1.0356, acc=81.1%
+          DK_WIENER: V_final=1.2472, acc=79.4%
+       DK_DKDERIVED: V_final=0.8506, acc=81.9%
+
+==========================================================================================
+BINARY QUESTIONS
+==========================================================================================
+Q1: DK_WIENER > DK_UNIFORM? (Wiener update helps on top of DK scoring)
+Q2: DK_WIENER > EUCLID_WIENER? (DK scoring helps on top of Wiener update)
+Q3: DK_WIENER > both individual improvements? (synergy)
+Q4: corr(DK_weights, Wiener_gains) > 0.7? (same underlying quantity)
+Q5: DK_WIENER has lower V_final than EUCLID_UNIFORM? (more stable)
+
+DONE.

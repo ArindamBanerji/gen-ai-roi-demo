@@ -1,0 +1,57 @@
+================================================================================
+EXP-31: V-FREQUENCY-RESPONSE
+Periodic oracle noise amplitude=0.10, periods 20-2000
+================================================================================
+  PIPELINE done
+  RAW_SGD done
+  STATIC done
+
+================================================================================
+FREQUENCY RESPONSE TABLE
+Input: noise rate oscillation amplitude = 0.10 (10pp)
+================================================================================
+   Period      Freq  PIPELINE_amp  PIPELINE_acc   RAW_SGD_amp   RAW_SGD_acc    STATIC_amp    STATIC_acc
+  -------------------------------------------------------------------------------------
+       20    0.0500       13.14pp        79.8%       13.66pp        78.3%       13.26pp        79.3%
+       50    0.0200       12.41pp        80.7%       13.16pp        78.6%       12.62pp        80.4%
+      100    0.0100        9.44pp        79.8%        9.37pp        77.9%        9.30pp        79.4%
+      200    0.0050        7.93pp        80.1%        7.98pp        78.3%        8.02pp        79.7%
+      500    0.0020        5.83pp        79.4%        5.45pp        77.9%        5.75pp        79.0%
+     1000    0.0010        5.30pp        79.9%        5.30pp        78.0%        5.37pp        79.5%
+     2000    0.0005        0.00pp        80.1%        0.00pp        77.7%        0.00pp        79.8%
+
+  GAIN (output_amplitude / 5pp input):
+    PIPELINE:
+      T=  20: gain=2.627  (TRACKS)
+      T=  50: gain=2.481  (TRACKS)
+      T= 100: gain=1.888  (TRACKS)
+      T= 200: gain=1.586  (TRACKS)
+      T= 500: gain=1.166  (TRACKS)
+      T=1000: gain=1.061  (TRACKS)
+      T=2000: gain=0.000  (ATTENUATED)
+    RAW_SGD:
+      T=  20: gain=2.732  (TRACKS)
+      T=  50: gain=2.631  (TRACKS)
+      T= 100: gain=1.873  (TRACKS)
+      T= 200: gain=1.597  (TRACKS)
+      T= 500: gain=1.090  (TRACKS)
+      T=1000: gain=1.060  (TRACKS)
+      T=2000: gain=0.000  (ATTENUATED)
+    STATIC:
+      T=  20: gain=2.651  (TRACKS)
+      T=  50: gain=2.524  (TRACKS)
+      T= 100: gain=1.859  (TRACKS)
+      T= 200: gain=1.605  (TRACKS)
+      T= 500: gain=1.150  (TRACKS)
+      T=1000: gain=1.075  (TRACKS)
+      T=2000: gain=0.000  (ATTENUATED)
+
+================================================================================
+BINARY QUESTIONS
+================================================================================
+Q1: High-freq attenuation (T=20)? amp=13.14pp gain=2.627 NO
+Q2: Low-freq tracking (T=2000)? amp=0.00pp gain=0.000 NO
+Q3: Crossover period (gain=0.5): T=20
+Q4: Bandwidth differs at T=20: pipe=2.627 raw=2.732
+
+DONE.

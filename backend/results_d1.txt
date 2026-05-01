@@ -1,0 +1,78 @@
+==========================================================================================
+EXP-D1: FIVE-WAY CANDIDATE COMPARISON
+==========================================================================================
+
+==========================================================================================
+CONDITION 1: Calibrated prior, N=2000
+==========================================================================================
+           A_DecayOnly: acc=82.6% ECE=0.1539 Lyap=28%
+          B_EntropyVel: acc=80.4% ECE=0.1583 Lyap=27%
+            C_DualMode: acc=82.8% ECE=0.1156 Lyap=24%
+        D_Hierarchical: acc=81.5% ECE=0.0489 Lyap=32%
+          E_CascadeECE: acc=79.7% ECE=0.0550 Lyap=15%
+               RAW_SGD: acc=80.4% ECE=0.1581 Lyap=25%
+                STATIC: acc=80.4% ECE=0.0543 Lyap=100%
+              PIPELINE: acc=80.6% ECE=0.0562 Lyap=85%
+
+==========================================================================================
+CONDITION 2: Generic prior, N=2000
+==========================================================================================
+           A_DecayOnly: acc@200=43.5% acc@2000=59.8%
+          B_EntropyVel: acc@200=39.2% acc@2000=49.5%
+            C_DualMode: acc@200=40.5% acc@2000=53.6%
+        D_Hierarchical: acc@200=41.5% acc@2000=54.6%
+          E_CascadeECE: acc@200=42.2% acc@2000=53.5%
+               RAW_SGD: acc@200=42.3% acc@2000=50.4%
+                STATIC: acc@200=5.3% acc@2000=5.4%
+              PIPELINE: acc@200=5.3% acc@2000=21.6%
+
+==========================================================================================
+CONDITION 3: Lifecycle (shift@1000, quality@2000, restore@3000)
+==========================================================================================
+           A_DecayOnly: pre=82.1% post_shift=81.8% recovery=-0.3pp final=76.0%
+          B_EntropyVel: pre=81.4% post_shift=80.0% recovery=-1.4pp final=68.3%
+            C_DualMode: pre=82.0% post_shift=81.4% recovery=-0.6pp final=75.7%
+        D_Hierarchical: pre=80.8% post_shift=80.5% recovery=-0.3pp final=75.4%
+          E_CascadeECE: pre=81.0% post_shift=79.2% recovery=-1.8pp final=68.8%
+               RAW_SGD: pre=81.1% post_shift=80.0% recovery=-1.1pp final=69.0%
+                STATIC: pre=80.1% post_shift=79.5% recovery=-0.7pp final=73.8%
+              PIPELINE: pre=80.2% post_shift=79.6% recovery=-0.6pp final=74.0%
+
+==========================================================================================
+CONDITION 4: Wrong category (insider_threat shifted 0.3)
+==========================================================================================
+           A_DecayOnly: acc@2000=82.5%
+          B_EntropyVel: acc@2000=80.2%
+            C_DualMode: acc@2000=82.6%
+        D_Hierarchical: acc@2000=81.4%
+          E_CascadeECE: acc@2000=79.6%
+               RAW_SGD: acc@2000=80.2%
+                STATIC: acc@2000=80.4%
+              PIPELINE: acc@2000=80.6%
+
+==========================================================================================
+GATE CHECK (G1-G7)
+==========================================================================================
+             Candidate    G1    G2    G3    G4    G5    G6    G7   PASS
+  ------------------------------------------------------------
+           A_DecayOnly     N     Y     Y     Y     Y     Y     N  FAIL
+          B_EntropyVel     N     Y     Y     N     Y     Y     N  FAIL
+            C_DualMode     N     Y     Y     Y     Y     Y     N  FAIL
+        D_Hierarchical     N     Y     Y     Y     Y     Y     Y  FAIL
+          E_CascadeECE     N     Y     N     Y     Y     Y     Y  FAIL
+
+==========================================================================================
+PARETO SUMMARY
+==========================================================================================
+             Candidate  Cal_Acc  Cal_ECE  Gen@200  ShiftRec  WrongCat
+  -----------------------------------------------------------------
+           A_DecayOnly   82.6%   0.1539   43.5%    -0.3pp    82.5%
+          B_EntropyVel   80.4%   0.1583   39.2%    -1.4pp    80.2%
+            C_DualMode   82.8%   0.1156   40.5%    -0.6pp    82.6%
+        D_Hierarchical   81.5%   0.0489   41.5%    -0.3pp    81.4%
+          E_CascadeECE   79.7%   0.0550   42.2%    -1.8pp    79.6%
+               RAW_SGD   80.4%   0.1581   42.3%    -1.1pp    80.2%
+                STATIC   80.4%   0.0543    5.3%    -0.7pp    80.4%
+              PIPELINE   80.6%   0.0562    5.3%    -0.6pp    80.6%
+
+DONE.

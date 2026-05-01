@@ -1,0 +1,44 @@
+================================================================================
+EXP-13: V-MECHANISM-ABLATION-LIFECYCLE
+================================================================================
+  RAW (none) done
+  GATE only done
+  BATCH only done
+  SCALE only done
+  GATE+BATCH done
+  GATE+SCALE done
+  ALL THREE done
+
+================================================================================
+ACCURACY AT KEY CHECKPOINTS
+================================================================================
+       N    RAW (none)     GATE only    BATCH only    SCALE only    GATE+BATCH    GATE+SCALE     ALL THREE
+  ----------------------------------------------------------------------------------------------------
+     200        80.3%        79.3%        79.3%        79.5%        79.0%        79.3%        79.0%
+     500        82.3%        81.9%        81.4%        81.7%        81.0%        81.2%        80.9%
+    1000        80.6%        81.9%        80.0%        81.0%        79.9%        80.8%        79.6%
+    2000        80.3%        82.4%        80.6%        80.0%        80.6%        81.5%        80.3%
+    4000        78.8%        81.5%        80.0%        77.5%        80.8%        80.9%        80.0%
+
+================================================================================
+INTERACTION ANALYSIS AT N=4000
+================================================================================
+  Individual effects (vs RAW 78.8%):
+    e_gate  = +2.7pp
+    e_batch = +1.2pp
+    e_scale = -1.3pp
+  Pairwise interactions:
+    i_gate_batch = -1.9pp (ANTAGONISM)
+    i_gate_scale = +0.7pp (SYNERGY)
+  Three-way interaction:
+    i_all = -0.2pp
+
+================================================================================
+BINARY QUESTIONS
+================================================================================
+Q1: Pairwise interactions > 0.5pp? gate_batch=-1.9pp gate_scale=+0.7pp YES
+Q2: Three-way interaction > 0.5pp? -0.2pp NO
+Q3: Sign: ANTAGONISM
+Q4: Largest individual effect: GATE (+2.7pp)
+
+DONE.

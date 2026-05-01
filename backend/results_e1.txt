@@ -1,0 +1,185 @@
+==========================================================================================
+EXP-E1: ERROR SPACE DECOMPOSITION
+==========================================================================================
+
+==========================================================================================
+SECTION 1: BAYES ERROR ΓÇö minimum achievable with PERFECT centroids
+Error floor set by oracle noise alone
+==========================================================================================
+
+  Seed 42:
+    Noiseless + GT centroids:  100.0% (theoretical max)
+    GT centroids + noise:      89.1% (Bayes error = 10.9%)
+    Expert prior + noise:      84.5% (current system)
+    Oracle matches GT:         89.1%
+
+    ERROR DECOMPOSITION:
+      ╬╡_noise     = 10.9pp  (oracle disagrees with GT scorer)
+      ╬╡_centroid  = 4.6pp  (prior disagrees with GT)
+      ╬╡_total     = 15.5pp
+      CONTROLLABLE fraction: 30%
+
+    PER-CATEGORY:
+                Category  NoiseFloor  PriorErr  Controllable   Frac
+    ------------------------------------------------------------
+       credential_access       7.5pp     9.9pp         2.4pp    24%
+       malware_execution      13.2pp    24.0pp        10.8pp    45%
+        lateral_movement      18.0pp    26.4pp         8.5pp    32%
+       data_exfiltration      17.8pp    21.2pp         3.4pp    16%
+          insider_threat      22.0pp    34.1pp        12.1pp    36%
+    cloud_infrastructure      21.9pp    28.5pp         6.6pp    23%
+
+  Seed 123:
+    Noiseless + GT centroids:  100.0% (theoretical max)
+    GT centroids + noise:      89.0% (Bayes error = 11.0%)
+    Expert prior + noise:      76.8% (current system)
+    Oracle matches GT:         89.0%
+
+    ERROR DECOMPOSITION:
+      ╬╡_noise     = 11.0pp  (oracle disagrees with GT scorer)
+      ╬╡_centroid  = 12.2pp  (prior disagrees with GT)
+      ╬╡_total     = 23.2pp
+      CONTROLLABLE fraction: 52%
+
+    PER-CATEGORY:
+                Category  NoiseFloor  PriorErr  Controllable   Frac
+    ------------------------------------------------------------
+       credential_access       7.8pp    19.3pp        11.5pp    60%
+       malware_execution      12.6pp    30.1pp        17.5pp    58%
+        lateral_movement      16.1pp    22.9pp         6.8pp    30%
+       data_exfiltration      18.6pp    32.7pp        14.1pp    43%
+          insider_threat      22.5pp    34.1pp        11.7pp    34%
+    cloud_infrastructure      23.9pp    38.4pp        14.5pp    38%
+
+  Seed 777:
+    Noiseless + GT centroids:  100.0% (theoretical max)
+    GT centroids + noise:      88.8% (Bayes error = 11.2%)
+    Expert prior + noise:      78.2% (current system)
+    Oracle matches GT:         88.8%
+
+    ERROR DECOMPOSITION:
+      ╬╡_noise     = 11.2pp  (oracle disagrees with GT scorer)
+      ╬╡_centroid  = 10.6pp  (prior disagrees with GT)
+      ╬╡_total     = 21.8pp
+      CONTROLLABLE fraction: 49%
+
+    PER-CATEGORY:
+                Category  NoiseFloor  PriorErr  Controllable   Frac
+    ------------------------------------------------------------
+       credential_access       8.6pp    18.5pp         9.9pp    54%
+       malware_execution      12.3pp    28.6pp        16.3pp    57%
+        lateral_movement      13.6pp    21.7pp         8.1pp    37%
+       data_exfiltration      16.7pp    23.6pp         7.0pp    29%
+          insider_threat      20.3pp    33.5pp        13.2pp    39%
+    cloud_infrastructure      24.6pp    36.8pp        12.3pp    33%
+
+==========================================================================================
+SECTION 2: CONFUSION MATRIX (expert prior, with oracle noise)
+==========================================================================================
+
+  Seed 42 ΓÇö Predicted vs Oracle (with noise):
+     Predicted  escalate  investig  suppress   monitor   Total    Acc
+      escalate        18        13         0         1      32    56%
+   investigate       459      6947        17       684    8107    86%
+      suppress         1         5        21        15      42    50%
+       monitor        13       233       112      1461    1819    80%
+
+  Predicted vs TRUE action (noiseless):
+     Predicted  escalate  investig  suppress   monitor
+      escalate        18        14         0         0
+   investigate        66      7729         0       312
+      suppress         0         6        24        12
+       monitor         0       163        15      1641
+
+  Top error pairs (true ΓåÆ predicted):
+         monitor ΓåÆ  investigate:   312 errors
+     investigate ΓåÆ      monitor:   163 errors
+        escalate ΓåÆ  investigate:    66 errors
+        suppress ΓåÆ      monitor:    15 errors
+     investigate ΓåÆ     escalate:    14 errors
+         monitor ΓåÆ     suppress:    12 errors
+     investigate ΓåÆ     suppress:     6 errors
+
+==========================================================================================
+SECTION 3: ERROR GEOMETRY ΓÇö boundary vs structural vs noise
+==========================================================================================
+
+  Seed 42:
+    Correct (prior agrees with oracle):            8447 (84.5%)
+    ╬╡_boundary (GT right, prior wrong):             507 (5.1%)
+    ╬╡_noise (both wrong ΓÇö oracle noise):           1046 (10.5%)
+    ╬╡_total:                                      15.5%
+    CONTROLLABLE (╬╡_boundary / ╬╡_total):          33%
+    Boundary errors ΓÇö distance to boundary:
+      mean=0.0218 median=0.0148
+      < 0.01: 39% of boundary errors
+      < 0.02: 60% of boundary errors
+      < 0.05: 89% of boundary errors
+      < 0.10: 100% of boundary errors
+
+  Seed 123:
+    Correct (prior agrees with oracle):            7679 (76.8%)
+    ╬╡_boundary (GT right, prior wrong):            1326 (13.3%)
+    ╬╡_noise (both wrong ΓÇö oracle noise):            995 (10.0%)
+    ╬╡_total:                                      23.2%
+    CONTROLLABLE (╬╡_boundary / ╬╡_total):          57%
+    Boundary errors ΓÇö distance to boundary:
+      mean=0.0325 median=0.0279
+      < 0.01: 20% of boundary errors
+      < 0.02: 38% of boundary errors
+      < 0.05: 78% of boundary errors
+      < 0.10: 99% of boundary errors
+
+  Seed 777:
+    Correct (prior agrees with oracle):            7820 (78.2%)
+    ╬╡_boundary (GT right, prior wrong):            1164 (11.6%)
+    ╬╡_noise (both wrong ΓÇö oracle noise):           1016 (10.2%)
+    ╬╡_total:                                      21.8%
+    CONTROLLABLE (╬╡_boundary / ╬╡_total):          53%
+    Boundary errors ΓÇö distance to boundary:
+      mean=0.0349 median=0.0293
+      < 0.01: 20% of boundary errors
+      < 0.02: 38% of boundary errors
+      < 0.05: 74% of boundary errors
+      < 0.10: 98% of boundary errors
+
+==========================================================================================
+SECTION 4: ERROR COMPONENTS vs GT-PRIOR SEPARATION
+==========================================================================================
+     Sep  ╬╡_total  ╬╡_noise  ╬╡_boundary   ╬╡_both  Controllable   Bayes
+  -----------------------------------------------------------------
+    0.00   11.0pp   11.0pp       0.0pp   11.0pp           0%   11.0%
+    0.10   12.2pp   10.9pp       1.3pp   10.9pp          10%   11.0%
+    0.25   14.0pp   10.8pp       3.3pp   10.8pp          23%   11.0%
+    0.50   16.9pp   10.5pp       6.4pp   10.5pp          38%   11.0%
+    0.75   19.6pp   10.3pp       9.3pp   10.3pp          47%   11.0%
+    1.00   22.6pp   10.1pp      12.5pp   10.1pp          55%   11.0%
+    1.50   28.6pp    9.9pp      18.7pp    9.9pp          66%   11.0%
+    2.00   34.1pp    9.6pp      24.4pp    9.6pp          72%   11.0%
+
+==========================================================================================
+SECTION 5: CAPACITY ERROR ΓÇö does low effective dimensionality cause errors?
+==========================================================================================
+
+  Seed 42:
+    Full-rank GT accuracy (noiseless):    100.0%
+    2D-projected GT accuracy (noiseless): 94.2%
+    ╬╡_capacity (lost by projection):      5.8pp
+    Projection preserves 94.2% of decisions
+
+==========================================================================================
+SECTION 6: ERROR BUDGET (production operating point, sepΓëê0.8)
+==========================================================================================
+
+    ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+    Γöé  TOTAL ERROR:         20.2pp                      Γöé
+    Γöé  Γö£ΓöÇΓöÇ ╬╡_noise:         10.2pp  (IRREDUCIBLE)       Γöé
+    Γöé  ΓööΓöÇΓöÇ ╬╡_boundary:      10.0pp  (CONTROLLABLE)    Γöé
+    Γöé                                                 Γöé
+    Γöé  Controllable fraction:   50%                  Γöé
+    Γöé  Max achievable acc:     89.8%                 Γöé
+    Γöé  Current acc:            79.8%                 Γöé
+    Γöé  Room to improve:        10.0pp                 Γöé
+    ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+    
+DONE.

@@ -70,7 +70,8 @@ async def health():
     return {"status": "healthy"}
 
 # Router imports
-from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae, admin, simulation, evaluation, judgment, framework_router
+from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae, admin, simulation, evaluation, judgment, framework_router, eval_router, governance_router, whatif_router, time_machine_router
+from app.routers.servicenow_router import router as servicenow_router
 
 # Register routers
 app.include_router(evaluation.router, prefix="/api/soc", tags=["evaluation"])
@@ -83,9 +84,14 @@ app.include_router(metrics.router, prefix="/api", tags=["Compounding Metrics"])
 app.include_router(roi.router, prefix="/api", tags=["ROI Calculator"])
 app.include_router(graph.router, prefix="/api", tags=["Graph Intelligence"])
 app.include_router(audit.router, prefix="/api", tags=["Audit Trail"])
+app.include_router(governance_router.router, prefix="/api", tags=["Governance Evidence"])
 app.include_router(gae.router, prefix="/api", tags=["GAE Learning"])
 app.include_router(admin.router, prefix="/api", tags=["Admin"])
 app.include_router(simulation.router, prefix="/api", tags=["Simulation"])
+app.include_router(whatif_router.router, prefix="/api", tags=["What-If"])
+app.include_router(eval_router.router, prefix="/api", tags=["Evaluation Upload"])
+app.include_router(time_machine_router.router, prefix="/api", tags=["Time Machine"])
+app.include_router(servicenow_router)
 from app.routers.auth import router as auth_router
 app.include_router(auth_router)
 
@@ -334,6 +340,7 @@ async def startup_event():
     from app.services.audit import reset_audit_state
     from app.services.evolver import reset_evolver_state
     from app.services.triage import reset_confidence_history, seed_confidence_history
+    from app.services.servicenow_mock import get_servicenow_mock
     state_manager.register("feedback",            reset_feedback_state)
     state_manager.register("trust",               reset_trust_state)
     state_manager.register("policy",              reset_policy_state)
@@ -341,6 +348,7 @@ async def startup_event():
     state_manager.register("evolver",             reset_evolver_state)
     state_manager.register("confidence_history",  reset_confidence_history)
     state_manager.register("learning_state",      reset_learning_state)
+    state_manager.register("servicenow_mock",     get_servicenow_mock().reset)
 
     # Pre-populate demo charts (previously done at module import).
     # Called here so they run once at boot regardless of import order.

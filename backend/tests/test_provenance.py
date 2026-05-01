@@ -4,7 +4,7 @@ Tests for Phase 6: ProvenanceService and provenance endpoint.
 Coverage:
   test_provenance_builds_6_factors        — build_provenance returns 6 FactorProvenance entries
   test_provenance_factor_names            — all 6 SOC factor names present
-  test_provenance_travel_match_high       — travel_match=0.9 → User, TravelRecord in nodes
+  test_provenance_privileged_identity_context_high — privileged_identity_context=0.9 → User, Identity, Device in nodes
   test_provenance_device_trust_fully_trusted — device_trust=0.0 → "fully trusted" in explanation
   test_provenance_endpoint_not_found      — GET /api/soc/provenance/{id} returns 404 when missing
   test_provenance_threat_intel_nodes      — threat_intel_enrichment → ThreatIntel, Alert in nodes
@@ -24,7 +24,7 @@ from app.domains.soc.config import SOC_FACTORS
 # ---------------------------------------------------------------------------
 
 _DECISION_ID = "prov-test-001"
-_FACTOR_VALUES = [0.9, 0.8, 0.0, 0.5, 0.7, 0.0]   # travel_match…device_trust
+_FACTOR_VALUES = [0.9, 0.8, 0.0, 0.5, 0.7, 0.0]   # privileged_identity_context…device_trust
 
 
 def _build():
@@ -65,22 +65,24 @@ def test_provenance_factor_names():
 
 
 # ---------------------------------------------------------------------------
-# Test 3: travel_match high value → correct graph nodes
+# Test 3: privileged_identity_context high value → correct graph nodes
 # ---------------------------------------------------------------------------
 
-def test_provenance_travel_match_high():
-    """travel_match=0.9 → graph_nodes_consulted includes User and TravelRecord."""
+def test_provenance_privileged_identity_context_high():
+    """privileged_identity_context=0.9 → graph_nodes_consulted includes User, Identity, Device."""
     prov = _build()
-    travel = next(fp for fp in prov.factors if fp.factor_name == "travel_match")
-    assert travel.factor_value == pytest.approx(0.9, abs=1e-3)
-    assert "User" in travel.graph_nodes_consulted, (
-        f"User not in nodes: {travel.graph_nodes_consulted}"
+    identity = next(fp for fp in prov.factors if fp.factor_name == "privileged_identity_context")
+    assert identity.factor_value == pytest.approx(0.9, abs=1e-3)
+    assert "User" in identity.graph_nodes_consulted, (
+        f"User not in nodes: {identity.graph_nodes_consulted}"
     )
-    assert "TravelRecord" in travel.graph_nodes_consulted, (
-        f"TravelRecord not in nodes: {travel.graph_nodes_consulted}"
+    assert "Identity" in identity.graph_nodes_consulted, (
+        f"Identity not in nodes: {identity.graph_nodes_consulted}"
     )
-    # High travel match → explanation should mention travel
-    assert "travel" in travel.explanation.lower(), travel.explanation
+    assert "Device" in identity.graph_nodes_consulted, (
+        f"Device not in nodes: {identity.graph_nodes_consulted}"
+    )
+    assert "identity" in identity.explanation.lower(), identity.explanation
 
 
 # ---------------------------------------------------------------------------

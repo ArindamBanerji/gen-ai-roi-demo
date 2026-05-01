@@ -1,0 +1,33 @@
+================================================================================
+EXP-R3: V-FACTOR-INTERACTION
+================================================================================
+  Seed 42: linear=0.6868 interaction=0.7000 quadratic=0.7025
+  Seed 123: linear=0.7934 interaction=0.8060 quadratic=0.8010
+  Seed 777: linear=0.6717 interaction=0.6822 quadratic=0.6822
+  Seed 2024: linear=0.7724 interaction=0.7861 quadratic=0.7915
+  Seed 9999: linear=0.6520 interaction=0.6527 quadratic=0.6689
+
+================================================================================
+SUMMARY (mean AUC across seeds)
+================================================================================
+           linear: AUC = 0.7153 ┬▒ 0.0567
+      interaction: AUC = 0.7254 ┬▒ 0.0600
+        quadratic: AUC = 0.7292 ┬▒ 0.0558
+
+  Interaction improvement: ╬öAUC = +0.0102
+  Quadratic improvement:  ╬öAUC = +0.0038
+
+  Top interaction pairs (from last seed):
+    f1 ├ù f4: |coef| = 0.8945
+    f2 ├ù f3: |coef| = 0.7455
+    f4 ├ù f5: |coef| = 0.7107
+    f0 ├ù f3: |coef| = 0.6565
+    f1 ├ù f5: |coef| = 0.6131
+
+================================================================================
+BINARY QUESTIONS
+================================================================================
+Q1: Interactions improve AUC > 0.02? ╬öAUC=+0.0102 NO
+Q2: Quadratic improves over interaction? ╬öAUC=+0.0038 NO
+
+DONE.

@@ -1,0 +1,44 @@
+================================================================================
+EXP-D2: FEEDBACK SIGNAL COMPARISON
+================================================================================
+
+  CALIBRATED PRIOR:
+           Signal  Acc@2000  ECE@2000   Rate%
+  ------------------------------------------
+       confidence    83.3%    0.1480   27.9%
+     raw_distance    82.2%    0.1522   98.5%
+          entropy    82.9%    0.1582   67.6%
+         conf_gap    83.5%    0.1528   32.2%
+    override_rate    82.2%    0.0974   30.7%
+         velocity    82.5%    0.1550   66.6%
+             none    82.2%    0.1525  100.0%
+
+  GENERIC PRIOR:
+           Signal  Acc@2000  ECE@2000
+  -----------------------------------
+       confidence    59.0%    0.2480
+     raw_distance    58.2%    0.2370
+          entropy    58.4%    0.2393
+         conf_gap    59.1%    0.2520
+    override_rate    58.0%    0.2402
+         velocity    57.4%    0.2392
+             none    58.2%    0.2371
+
+  COUPLING TEST (live vs frozen, calibrated):
+           Signal    Live  Frozen    Diff  Coupled?
+  --------------------------------------------------
+       confidence   83.3%   82.3%   1.0pp  YES
+     raw_distance   82.2%   82.2%   0.0pp  NO
+          entropy   82.9%   81.7%   1.2pp  YES
+         conf_gap   83.5%   82.4%   1.1pp  YES
+    override_rate   82.2%   82.2%   0.0pp  NO
+         velocity   82.5%   82.5%   0.0pp  NO
+
+================================================================================
+BINARY QUESTIONS
+================================================================================
+Q1: Best accuracy signal: conf_gap (83.5%)
+Q2: Best ECE signal: override_rate (0.0974)
+Q3: Best from generic: conf_gap (59.1%)
+
+DONE.

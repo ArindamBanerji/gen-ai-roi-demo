@@ -16,6 +16,7 @@ import json
 import random
 import time
 import uuid
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Coroutine, Dict, List, Optional
@@ -231,12 +232,30 @@ class SimulationOrchestrator:
         scorer_actions = list(SCORER_ACTIONS)            # A=4: escalate/investigate/suppress/monitor
         tau            = SOCDomainConfig.get_temperature()
 
+        # FIX-05: Isolate simulation from production learning state.
+        # deepcopy before the loop; sim updates go to this local copy only.
+        # save_learning_state() is never called during simulation.
+        sim_ls = deepcopy(get_learning_state())
+
         correct_total = 0
         correct_by_category: Dict[str, int] = {}
         total_by_category:   Dict[str, int] = {}
         weight_trajectory:   List[List[List[float]]] = []
         gt_correct_total = 0
         gt_correct_by_category: Dict[str, int] = {}
+
+        # FIX-06: Guard against empty alert pool — modulo-zero would crash.
+        if not alert_pool:
+            return SimulationResult(
+                n_decisions=0,
+                overall_accuracy=0.0,
+                category_accuracy={},
+                weight_trajectory=[],
+                experiment_log=[],
+                duration_seconds=round(time.perf_counter() - start_ts, 3),
+                ground_truth_accuracy=0.0,
+                category_ground_truth={},
+            )
 
         for step in range(n_decisions):
             # ------------------------------------------------------------------
@@ -290,7 +309,7 @@ class SimulationOrchestrator:
             # Step 5: GAE scoring — capture W snapshot BEFORE update
             # (same as POST /api/alert/analyze → score_alert)
             # ------------------------------------------------------------------
-            W          = get_learning_state().W
+            W          = sim_ls.W
             W_snapshot = W.tolist()          # capture before weight update
             scoring    = score_alert(f_2d, W, scorer_actions, tau)
 
@@ -385,15 +404,14 @@ class SimulationOrchestrator:
             # ------------------------------------------------------------------
             if scoring.selected_action in scorer_actions:
                 action_index = scorer_actions.index(scoring.selected_action)
-                learning_state = get_learning_state()
-                learning_state.update(
+                # FIX-05: update the local copy only — never the production singleton
+                sim_ls.update(
                     action_index           = action_index,
                     action_name            = scoring.selected_action,
                     outcome                = outcome_int,
                     f                      = f_for_update,
                     confidence_at_decision = scoring.confidence,
                 )
-                save_learning_state()
 
                 # CORR-2: ProfileScorer.update() — gated by LEARNING_ENABLED (default False).
                 # gt_action_index derived from ground_truth_action (always available in simulation).

@@ -1,0 +1,79 @@
+==========================================================================================
+EXP-F8: V-ERROR-CONSERVATION
+==========================================================================================
+
+  Seed 42: baseline ╬╡_boundary = 4.2pp (21/500)
+
+   Magnitude   Mean_╬ö╬╡    Std_╬ö╬╡  %Positive  %Negative   %Zero  Conservation?
+  ----------------------------------------------------------------------
+       0.001   +0.00pp    0.00pp        0%        0%   100%  YES
+       0.005   +0.03pp    0.07pp       16%        0%    84%  YES
+       0.010   +0.03pp    0.16pp       22%       18%    60%  YES
+       0.020   -0.01pp    0.18pp       20%       26%    54%  YES
+       0.050   +0.14pp    0.33pp       46%       30%    24%  YES
+       0.100   +0.49pp    0.38pp       80%        8%    12%  YES
+
+  DIRECTIONAL ANALYSIS (mag=0.05):
+  Does a gradient direction exist?
+    Best direction:  ╬ö╬╡ = -0.40pp
+    Worst direction: ╬ö╬╡ = +0.80pp
+    Range: 1.20pp
+    cos(best_direction, GT_direction) = +0.1315
+    1% toward GT: ╬ö╬╡ = +0.00pp
+    5% toward GT: ╬ö╬╡ = -0.20pp
+    10% toward GT: ╬ö╬╡ = -0.20pp
+    20% toward GT: ╬ö╬╡ = -0.80pp
+
+  Seed 123: baseline ╬╡_boundary = 14.0pp (70/500)
+
+   Magnitude   Mean_╬ö╬╡    Std_╬ö╬╡  %Positive  %Negative   %Zero  Conservation?
+  ----------------------------------------------------------------------
+       0.001   +0.00pp    0.00pp        0%        0%   100%  YES
+       0.005   -0.01pp    0.05pp        0%        6%    94%  YES
+       0.010   -0.05pp    0.09pp        0%       22%    78%  YES
+       0.020   -0.08pp    0.16pp       10%       36%    54%  YES
+       0.050   -0.10pp    0.27pp       24%       52%    24%  YES
+       0.100   -0.13pp    0.61pp       36%       56%     8%  YES
+
+  DIRECTIONAL ANALYSIS (mag=0.05):
+  Does a gradient direction exist?
+    Best direction:  ╬ö╬╡ = -1.00pp
+    Worst direction: ╬ö╬╡ = +0.60pp
+    Range: 1.60pp
+    cos(best_direction, GT_direction) = -0.0460
+    1% toward GT: ╬ö╬╡ = -0.20pp
+    5% toward GT: ╬ö╬╡ = -0.20pp
+    10% toward GT: ╬ö╬╡ = -0.80pp
+    20% toward GT: ╬ö╬╡ = -1.80pp
+
+  Seed 777: baseline ╬╡_boundary = 8.4pp (42/500)
+
+   Magnitude   Mean_╬ö╬╡    Std_╬ö╬╡  %Positive  %Negative   %Zero  Conservation?
+  ----------------------------------------------------------------------
+       0.001   +0.08pp    0.12pp       46%        6%    48%  YES
+       0.005   +0.02pp    0.15pp       34%       22%    44%  YES
+       0.010   +0.01pp    0.15pp       28%       26%    46%  YES
+       0.020   +0.06pp    0.22pp       38%       18%    44%  YES
+       0.050   +0.18pp    0.41pp       56%       22%    22%  YES
+       0.100   +0.46pp    0.55pp       66%       16%    18%  YES
+
+  DIRECTIONAL ANALYSIS (mag=0.05):
+  Does a gradient direction exist?
+    Best direction:  ╬ö╬╡ = -0.80pp
+    Worst direction: ╬ö╬╡ = +1.20pp
+    Range: 2.00pp
+    cos(best_direction, GT_direction) = +0.1295
+    1% toward GT: ╬ö╬╡ = -0.20pp
+    5% toward GT: ╬ö╬╡ = -0.20pp
+    10% toward GT: ╬ö╬╡ = -0.60pp
+    20% toward GT: ╬ö╬╡ = -1.00pp
+
+==========================================================================================
+BINARY QUESTIONS
+==========================================================================================
+Q1: Is mean(╬ö╬╡_boundary) < 0.5pp across all perturbations?
+Q2: Does std(╬ö╬╡_boundary) increase with magnitude?
+Q3: Is there a consistent gradient direction?
+Q4: How does gradient direction compare to GT direction?
+
+DONE.

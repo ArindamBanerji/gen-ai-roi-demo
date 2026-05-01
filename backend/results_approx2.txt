@@ -1,0 +1,112 @@
+==========================================================================================
+EXP-APPROX-2: BOUNDARY CURVATURE QUANTIFICATION
+==========================================================================================
+
+  Seed 42: Boundary investigateΓåömonitor in credential_access
+
+                      Order         MSD      MaxDev  N_found     Curvature
+  ----------------------------------------------------------------------
+         ORDER_0 (centroid)    0.000000    0.000000      200          FLAT
+               ORDER_1 (DK)    0.000076    0.029457      200          FLAT
+                        MLP    0.000006    0.033049      200          FLAT
+                         GT    0.000000    0.000000      200          FLAT
+
+  CURVATURE CAPTURE (fraction of GT curvature):
+           ORDER_0 (centroid): 2.50 (250% of GT)
+                 ORDER_1 (DK): 7408536253024603524787339264.00 (740853625302460409653338570752% of GT)
+                          MLP: 564693618491285381329190912.00 (56469361849128534559506300928% of GT)
+
+  CURVATURE ACROSS BOUNDARIES (Order 0 vs GT):
+              Category             Pair  ╬║_centroid        ╬║_GT   Ratio
+  -----------------------------------------------------------------
+     credential_access        esca-inve    0.000000    0.000000   0.00
+     credential_access        inve-supp    0.000067    0.000010   6.45
+     credential_access        inve-moni    0.000000    0.000000   0.00
+     credential_access        supp-moni    0.000012    0.000002   7.40
+     malware_execution        esca-inve    0.000000    0.000028   0.00
+     malware_execution        esca-moni    0.000000    0.000003   0.00
+     malware_execution        inve-supp    0.000002    0.000058   0.04
+     malware_execution        inve-moni    0.000000    0.000000   0.00
+     malware_execution        supp-moni    0.000036    0.000098   0.37
+      lateral_movement        esca-inve    0.000000    0.000000   0.00
+      lateral_movement        esca-moni    0.000000    0.000000   0.00
+      lateral_movement        inve-supp    0.000015    0.000055   0.28
+      lateral_movement        inve-moni    0.000000    0.000000   0.00
+      lateral_movement        supp-moni    0.000054    0.000005  11.52
+     data_exfiltration        esca-inve    0.000000    0.000000   0.00
+     data_exfiltration        inve-moni    0.000000    0.000000   0.00
+
+  Seed 123: Boundary investigateΓåömonitor in credential_access
+
+                      Order         MSD      MaxDev  N_found     Curvature
+  ----------------------------------------------------------------------
+         ORDER_0 (centroid)    0.000000    0.000000      200          FLAT
+               ORDER_1 (DK)    0.000116    0.055785      200           LOW
+                        MLP    0.000172    0.075018      200           LOW
+                         GT    0.000063    0.073418      200          FLAT
+
+  CURVATURE CAPTURE (fraction of GT curvature):
+           ORDER_0 (centroid): 0.00 (0% of GT)
+                 ORDER_1 (DK): 1.82 (182% of GT)
+                          MLP: 2.71 (271% of GT)
+
+  CURVATURE ACROSS BOUNDARIES (Order 0 vs GT):
+              Category             Pair  ╬║_centroid        ╬║_GT   Ratio
+  -----------------------------------------------------------------
+     credential_access        esca-inve    0.000000    0.000000   0.00
+     credential_access        inve-supp    0.000038    0.000136   0.28
+     credential_access        inve-moni    0.000000    0.000153   0.00
+     credential_access        supp-moni    0.000000    0.000747   0.00
+     malware_execution        esca-inve    0.000000    0.000000   0.00
+     malware_execution        esca-moni    0.000000    0.000000   0.00
+     malware_execution        inve-supp    0.000000    0.000000   0.00
+     malware_execution        inve-moni    0.000000    0.000000   0.00
+     malware_execution        supp-moni    0.000000    0.000000   0.00
+      lateral_movement        esca-inve    0.000000    0.000000   0.00
+      lateral_movement        esca-moni    0.000000    0.000000   0.00
+      lateral_movement        inve-moni    0.000000    0.000000   0.00
+     data_exfiltration        inve-moni    0.000000    0.000000   0.00
+
+  Seed 777: Boundary investigateΓåömonitor in credential_access
+
+                      Order         MSD      MaxDev  N_found     Curvature
+  ----------------------------------------------------------------------
+         ORDER_0 (centroid)    0.000000    0.000000      200          FLAT
+               ORDER_1 (DK)    0.000257    0.082133      200           LOW
+                        MLP    0.000238    0.041491      200           LOW
+                         GT    0.000000    0.007572      200          FLAT
+
+  CURVATURE CAPTURE (fraction of GT curvature):
+           ORDER_0 (centroid): 0.00 (0% of GT)
+                 ORDER_1 (DK): 842.29 (84229% of GT)
+                          MLP: 781.04 (78104% of GT)
+
+  CURVATURE ACROSS BOUNDARIES (Order 0 vs GT):
+              Category             Pair  ╬║_centroid        ╬║_GT   Ratio
+  -----------------------------------------------------------------
+     credential_access        esca-inve    0.000000    0.000000   0.00
+     credential_access        esca-moni    0.000000    0.000000   0.00
+     credential_access        inve-supp    0.000022    0.000277   0.08
+     credential_access        inve-moni    0.000000    0.000000   0.00
+     credential_access        supp-moni    0.000000    0.000292   0.00
+     malware_execution        esca-inve    0.000000    0.000000   0.00
+     malware_execution        esca-moni    0.000000    0.000000   0.00
+     malware_execution        inve-supp    0.000001    0.000235   0.00
+     malware_execution        inve-moni    0.000000    0.000016   0.00
+      lateral_movement        esca-inve    0.000000    0.000000   0.00
+      lateral_movement        esca-moni    0.000000    0.000000   0.00
+      lateral_movement        inve-supp    0.000011    0.000096   0.12
+      lateral_movement        inve-moni    0.000000    0.000015   0.00
+      lateral_movement        supp-moni    0.000000    0.000052   0.00
+     data_exfiltration        esca-inve    0.000000    0.000000   0.00
+     data_exfiltration        inve-moni    0.000000    0.000000   0.00
+
+==========================================================================================
+BINARY QUESTIONS
+==========================================================================================
+Q1: Is ╬║_centroid Γëê 0 (flat boundary confirmed)?
+Q2: Is ╬║_DK > ╬║_centroid (DK adds curvature)?
+Q3: Is ╬║_MLP > ╬║_DK (MLP adds MORE curvature)?
+Q4: What fraction of ╬║_GT does each order capture?
+
+DONE.

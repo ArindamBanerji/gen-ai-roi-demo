@@ -1,0 +1,168 @@
+==========================================================================================
+EXP-P7: VORONOI GEOMETRY
+==========================================================================================
+
+==========================================================================================
+SECTION 1: CENTROID STRUCTURE (expert prior)
+==========================================================================================
+
+  Category: credential_access (vol=65%)
+    Pairwise centroid distances:
+                  escalate  investig  suppress   monitor
+        escalate    0.0000    0.4848    1.3398    1.0805
+     investigate    0.4848    0.0000    0.8718    0.6305
+        suppress    1.3398    0.8718    0.0000    0.3640
+         monitor    1.0805    0.6305    0.3640    0.0000
+    Min separation: 0.3640
+    Max separation: 1.3398
+    Mean separation: 0.7952
+    Effective dimensionality: 1.88 / 6
+    Singular values: [1.0402 0.182  0.0819 0.    ]
+
+  Category: malware_execution (vol=12%)
+    Pairwise centroid distances:
+                  escalate  investig  suppress   monitor
+        escalate    0.0000    0.4000    1.3647    1.0198
+     investigate    0.4000    0.0000    0.9887    0.6519
+        suppress    1.3647    0.9887    0.0000    0.4444
+         monitor    1.0198    0.6519    0.4444    0.0000
+    Min separation: 0.4000
+    Max separation: 1.3647
+    Mean separation: 0.8116
+    Effective dimensionality: 1.91 / 6
+    Singular values: [1.0588 0.1913 0.0899 0.    ]
+
+  Category: lateral_movement (vol=8%)
+    Pairwise centroid distances:
+                  escalate  investig  suppress   monitor
+        escalate    0.0000    0.4528    1.3388    1.0724
+     investigate    0.4528    0.0000    0.8874    0.6364
+        suppress    1.3388    0.8874    0.0000    0.3571
+         monitor    1.0724    0.6364    0.3571    0.0000
+    Min separation: 0.3571
+    Max separation: 1.3388
+    Mean separation: 0.7908
+    Effective dimensionality: 1.63 / 6
+    Singular values: [1.0429 0.1695 0.0227 0.    ]
+
+  Category: data_exfiltration (vol=6%)
+    Pairwise centroid distances:
+                  escalate  investig  suppress   monitor
+        escalate    0.0000    0.5099    1.4866    1.2114
+     investigate    0.5099    0.0000    0.9874    0.7297
+        suppress    1.4866    0.9874    0.0000    0.3571
+         monitor    1.2114    0.7297    0.3571    0.0000
+    Min separation: 0.3571
+    Max separation: 1.4866
+    Mean separation: 0.8804
+    Effective dimensionality: 1.73 / 6
+    Singular values: [1.1666 0.1674 0.065  0.    ]
+
+  Category: insider_threat (vol=5%)
+    Pairwise centroid distances:
+                  escalate  investig  suppress   monitor
+        escalate    0.0000    0.4387    1.4053    1.0770
+     investigate    0.4387    0.0000    0.9734    0.6538
+        suppress    1.4053    0.9734    0.0000    0.4243
+         monitor    1.0770    0.6538    0.4243    0.0000
+    Min separation: 0.4243
+    Max separation: 1.4053
+    Mean separation: 0.8288
+    Effective dimensionality: 1.74 / 6
+    Singular values: [1.0881 0.1852 0.0475 0.    ]
+
+  Category: cloud_infrastructure (vol=4%)
+    Pairwise centroid distances:
+                  escalate  investig  suppress   monitor
+        escalate    0.0000    0.4873    1.4309    1.1011
+     investigate    0.4873    0.0000    0.9487    0.6364
+        suppress    1.4309    0.9487    0.0000    0.4183
+         monitor    1.1011    0.6364    0.4183    0.0000
+    Min separation: 0.4183
+    Max separation: 1.4309
+    Mean separation: 0.8371
+    Effective dimensionality: 1.72 / 6
+    Singular values: [1.0997 0.1817 0.046  0.    ]
+
+==========================================================================================
+SECTION 2: GT vs PRIOR ΓÇö does GT have the same Voronoi structure?
+==========================================================================================
+
+  Seed 42:
+       credential_access: prior_sep=0.7952 gt_sep=0.7759 alignment=0.9513
+       malware_execution: prior_sep=0.8116 gt_sep=0.8629 alignment=0.9618
+        lateral_movement: prior_sep=0.7908 gt_sep=0.8370 alignment=0.9461
+       data_exfiltration: prior_sep=0.8804 gt_sep=0.9047 alignment=0.9451
+          insider_threat: prior_sep=0.8288 gt_sep=0.7647 alignment=0.9423
+    cloud_infrastructure: prior_sep=0.8371 gt_sep=0.9374 alignment=0.9090
+
+  Seed 123:
+       credential_access: prior_sep=0.7952 gt_sep=0.8301 alignment=0.9149
+       malware_execution: prior_sep=0.8116 gt_sep=0.7718 alignment=0.9563
+        lateral_movement: prior_sep=0.7908 gt_sep=0.8693 alignment=0.9768
+       data_exfiltration: prior_sep=0.8804 gt_sep=0.9509 alignment=0.9585
+          insider_threat: prior_sep=0.8288 gt_sep=0.8009 alignment=0.9011
+    cloud_infrastructure: prior_sep=0.8371 gt_sep=0.8380 alignment=0.9466
+
+  Seed 777:
+       credential_access: prior_sep=0.7952 gt_sep=0.8232 alignment=0.9446
+       malware_execution: prior_sep=0.8116 gt_sep=0.7853 alignment=0.9474
+        lateral_movement: prior_sep=0.7908 gt_sep=0.7678 alignment=0.9596
+       data_exfiltration: prior_sep=0.8804 gt_sep=0.9742 alignment=0.9330
+          insider_threat: prior_sep=0.8288 gt_sep=0.8458 alignment=0.9176
+    cloud_infrastructure: prior_sep=0.8371 gt_sep=0.8838 alignment=0.9099
+
+==========================================================================================
+SECTION 3: VORONOI CELL VOLUMES (Monte Carlo)
+==========================================================================================
+
+  Seed 42:
+       credential_access: prior_vols=[0.004 0.836 0.004 0.156] gt_vols=[0.005 0.832 0.004 0.16 ] cell_mismatch=2.9%
+       malware_execution: prior_vols=[0.003 0.73  0.001 0.266] gt_vols=[0.013 0.671 0.002 0.314] cell_mismatch=12.0%
+        lateral_movement: prior_vols=[0.002 0.768 0.005 0.225] gt_vols=[0.004 0.772 0.005 0.219] cell_mismatch=8.8%
+       data_exfiltration: prior_vols=[0.002 0.791 0.001 0.206] gt_vols=[0.002 0.807 0.001 0.19 ] cell_mismatch=4.5%
+          insider_threat: prior_vols=[0.001 0.704 0.003 0.292] gt_vols=[0.031 0.63  0.007 0.332] cell_mismatch=14.2%
+    cloud_infrastructure: prior_vols=[0.003 0.845 0.001 0.151] gt_vols=[0.013 0.851 0.001 0.135] cell_mismatch=11.7%
+
+==========================================================================================
+SECTION 4: CROSS-ACTION COUPLING
+Moving centroid a1 ΓÇö how much does action a2's cell change?
+==========================================================================================
+
+  Category: credential_access
+  Move action a1 by eps=0.05, measure cell volume change for all actions:
+       Moved   ╬öVol_esca   ╬öVol_inve   ╬öVol_supp   ╬öVol_moni
+    escalate      -0.1%      +0.1%      +0.0%      +0.0%
+  investigat      -0.0%      -0.6%      -0.0%      +0.6%
+    suppress      +0.0%      +0.0%      -0.0%      +0.0%
+     monitor      +0.0%      -0.4%      -0.0%      +0.4%
+
+  Category: insider_threat
+  Move action a1 by eps=0.05, measure cell volume change for all actions:
+       Moved   ╬öVol_esca   ╬öVol_inve   ╬öVol_supp   ╬öVol_moni
+    escalate      +0.0%      -0.0%      +0.0%      +0.0%
+  investigat      +0.1%      +1.6%      +0.0%      -1.7%
+    suppress      +0.0%      -0.0%      +0.0%      -0.0%
+     monitor      +0.0%      -4.5%      -0.1%      +4.6%
+
+==========================================================================================
+SECTION 5: Where does the +1-6pp improvement from moving toward GT come from?
+==========================================================================================
+
+  Seed 42: queries that FLIP when moving 20% toward GT:
+       credential_access: esca=4 inve=11 supp=1 moni=25   total=41 (0.6%)
+       malware_execution: esca=1 inve=12 supp=0 moni=16   total=29 (2.4%)
+        lateral_movement: esca=0 inve=10 supp=0 moni=7   total=17 (2.2%)
+       data_exfiltration: esca=0 inve=3 supp=0 moni=4   total=7 (1.1%)
+          insider_threat: esca=0 inve=3 supp=0 moni=5   total=8 (1.5%)
+    cloud_infrastructure: esca=0 inve=5 supp=0 moni=5   total=10 (2.6%)
+
+  Seed 123: queries that FLIP when moving 20% toward GT:
+       credential_access: esca=0 inve=82 supp=46 moni=28   total=156 (2.4%)
+       malware_execution: esca=1 inve=4 supp=0 moni=27   total=32 (2.8%)
+        lateral_movement: esca=0 inve=29 supp=0 moni=2   total=31 (3.7%)
+       data_exfiltration: esca=0 inve=0 supp=0 moni=15   total=15 (2.5%)
+          insider_threat: esca=0 inve=16 supp=1 moni=0   total=17 (3.4%)
+    cloud_infrastructure: esca=0 inve=2 supp=0 moni=11   total=13 (3.4%)
+
+DONE.

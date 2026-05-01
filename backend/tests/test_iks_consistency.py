@@ -102,7 +102,7 @@ async def test_iks_stable_after_single_decision():
 
     with patch("app.services.gae_state.get_profile_scorer", return_value=_fake_scorer()):
         with patch("app.services.iks.compute_iks", return_value={"current": 89.0}):
-            snap.on_verified_decision("credential_access", False, 1.0)
+            snap.on_verified_decision("credential_access", False, 1.0, is_correct=True)
             recalculated = await compute_visible_iks(fake_client, scorer=_fake_scorer())
             snap.on_iks_recalculated(recalculated)
 

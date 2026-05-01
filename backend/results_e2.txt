@@ -1,0 +1,118 @@
+==========================================================================================
+EXP-E2: ERROR DYNAMICS AND REACHABILITY
+==========================================================================================
+
+==========================================================================================
+SECTION 1: How does the error budget change as the controller operates?
+==========================================================================================
+
+  STRATEGY: GATED
+       N  ╬╡_total  ╬╡_bound  ╬╡_noise  Controllable%    Acc
+  -------------------------------------------------------
+       0   14.6pp    4.1pp   10.5pp           28%  85.4%
+      50   15.3pp    4.9pp   10.5pp           32%  84.7%
+     100   15.4pp    4.9pp   10.5pp           32%  84.6%
+     200   14.0pp    3.5pp   10.5pp           25%  86.0%
+     500   14.5pp    4.0pp   10.5pp           28%  85.5%
+    1000   15.3pp    4.7pp   10.6pp           31%  84.7%
+    2000   14.2pp    3.6pp   10.6pp           26%  85.8%
+
+  STRATEGY: SQRT_DECAY
+       N  ╬╡_total  ╬╡_bound  ╬╡_noise  Controllable%    Acc
+  -------------------------------------------------------
+       0   14.6pp    4.1pp   10.5pp           28%  85.4%
+      50   16.5pp    6.1pp   10.4pp           37%  83.5%
+     100   16.3pp    5.9pp   10.5pp           36%  83.7%
+     200   14.8pp    4.4pp   10.4pp           30%  85.2%
+     500   15.9pp    5.5pp   10.4pp           35%  84.1%
+    1000   16.2pp    5.6pp   10.7pp           34%  83.8%
+    2000   15.8pp    5.2pp   10.6pp           33%  84.2%
+
+  STRATEGY: RAW_SGD
+       N  ╬╡_total  ╬╡_bound  ╬╡_noise  Controllable%    Acc
+  -------------------------------------------------------
+       0   14.6pp    4.1pp   10.5pp           28%  85.4%
+      50   16.5pp    6.1pp   10.4pp           37%  83.5%
+     100   16.4pp    5.9pp   10.5pp           36%  83.6%
+     200   15.1pp    4.7pp   10.4pp           31%  84.9%
+     500   16.2pp    5.7pp   10.5pp           35%  83.8%
+    1000   19.0pp    8.5pp   10.5pp           45%  81.0%
+    2000   20.6pp   10.1pp   10.5pp           49%  79.4%
+
+==========================================================================================
+SECTION 2: Does fixing one error create another?
+Measure errors BEFORE and AFTER each update
+==========================================================================================
+    Update    1: errors 27 ΓåÆ 27 (╬ö=+0)
+    Update    2: errors 27 ΓåÆ 26 (╬ö=-1)
+    Update    3: errors 26 ΓåÆ 27 (╬ö=+1)
+    Update    4: errors 27 ΓåÆ 26 (╬ö=-1)
+    Update    5: errors 26 ΓåÆ 30 (╬ö=+4)
+    Update    6: errors 30 ΓåÆ 31 (╬ö=+1)
+    Update    7: errors 31 ΓåÆ 31 (╬ö=+0)
+    Update    8: errors 31 ΓåÆ 31 (╬ö=+0)
+    Update    9: errors 31 ΓåÆ 33 (╬ö=+2)
+    Update   10: errors 33 ΓåÆ 30 (╬ö=-3)
+    Update   11: errors 30 ΓåÆ 31 (╬ö=+1)
+    Update   12: errors 31 ΓåÆ 30 (╬ö=-1)
+    Update   13: errors 30 ΓåÆ 29 (╬ö=-1)
+    Update   14: errors 29 ΓåÆ 30 (╬ö=+1)
+    Update   15: errors 30 ΓåÆ 32 (╬ö=+2)
+    Update   16: errors 32 ΓåÆ 30 (╬ö=-2)
+    Update   17: errors 30 ΓåÆ 28 (╬ö=-2)
+    Update   18: errors 28 ΓåÆ 28 (╬ö=+0)
+    Update   19: errors 28 ΓåÆ 28 (╬ö=+0)
+    Update   20: errors 28 ΓåÆ 29 (╬ö=+1)
+    Update   50: errors 26 ΓåÆ 25 (╬ö=-1)
+
+    Summary (94 updates measured):
+      Total errors fixed:   48
+      Total errors created: 46
+      Net:                  +2
+      Fix rate:             0.51 per update
+      Create rate:          0.49 per update
+      Net rate:             +0.021 per update
+
+==========================================================================================
+SECTION 3: Is the average update direction aligned with GT direction?
+==========================================================================================
+
+  Seed 42: alignment of mean update direction with GT direction
+              Category      Action  N_updates  Alignment  |GT_dir|
+  -----------------------------------------------------------------
+     credential_access    escalate         38    -0.0969    0.2109
+     credential_access  investigate       1016    +0.6058    0.1103
+     credential_access    suppress         17    +0.6428    0.1342
+     credential_access     monitor        260    +0.4724    0.1236
+     malware_execution    escalate         16    +0.1039    0.0769
+     malware_execution  investigate        134    +0.0529    0.2004
+     malware_execution    suppress          7    -0.2022    0.1209
+     malware_execution     monitor         69    +0.0016    0.0865
+      lateral_movement    escalate         10    -0.1609    0.1318
+      lateral_movement  investigate        105    +0.0361    0.1592
+      lateral_movement     monitor         33    +0.0524    0.1484
+     data_exfiltration    escalate          9    +0.1290    0.0992
+     data_exfiltration  investigate         66    -0.0488    0.0879
+     data_exfiltration     monitor         32    +0.1011    0.1748
+        insider_threat    escalate          6    +0.8442    0.1744
+        insider_threat  investigate         54    +0.1776    0.1194
+        insider_threat     monitor         38    +0.3579    0.1274
+  cloud_infrastructure    escalate          9    -0.2039    0.1443
+  cloud_infrastructure  investigate         49    +0.1104    0.1940
+  cloud_infrastructure     monitor         21    +0.2440    0.3161
+
+    Mean alignment across all (c,a): +0.1610
+    Positive alignment (toward GT): 15/20
+    Strong alignment (>0.3): 5/20
+
+==========================================================================================
+SECTION 4: How much update energy lands in the useful 2D subspace?
+==========================================================================================
+
+  Seed 42:
+    Total update energy:     311.2840
+    In 2D subspace:          124.3343 (39.9%)
+    Wasted (orthogonal):     186.9498 (60.1%)
+    Fraction wasted:         60.1%
+
+DONE.

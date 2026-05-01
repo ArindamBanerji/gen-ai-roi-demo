@@ -24,7 +24,7 @@ from datetime import datetime
 from typing import Any, Optional
 
 import numpy as np
-from gae.calibration import derive_theta_min, check_conservation
+from gae.calibration import compute_theta_min, derive_theta_min, check_conservation
 
 from app.services.gae_state import get_learning_state
 
@@ -172,11 +172,15 @@ class LearningHealthMonitor:
         """
         state          = get_learning_state()
         history        = getattr(state, "history", [])
+        history        = history or []   # guard: attribute may exist but be explicitly None
         decision_count = getattr(state, "decision_count", len(history))
 
         comps          = LearningHealthMonitor._extract_components(history)
         alpha, q, V    = comps["alpha"], comps["q"], comps["V"]
-        theta_min      = derive_theta_min()
+        try:
+            theta_min = compute_theta_min(alpha, V)
+        except ValueError:
+            theta_min = derive_theta_min()
         cc             = check_conservation(alpha, q, V, theta_min)
         signal         = LearningHealthMonitor._compute_signal(alpha, q, V)
 

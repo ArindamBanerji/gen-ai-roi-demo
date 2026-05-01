@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from pydantic import BaseModel
 import json
 import re
+from dataclasses import asdict
 
 from app.db.neo4j import neo4j_client
 from app.models.responses import (
@@ -17,6 +18,15 @@ from app.models.responses import (
     DetectionEngineeringResponse,
     ExecutiveNarrativeResponse,
     LearningStateResponse,
+)
+from app.domains.soc.config import (
+    N_ACTIONS,
+    N_CATEGORIES,
+    N_FACTORS,
+    SCORER_ACTIONS,
+    SOC_CATEGORIES,
+    SOC_FACTOR_SIGMA,
+    SOC_FACTORS,
 )
 
 router = APIRouter()
@@ -615,8 +625,8 @@ async def get_detection_engineering():
     overall_quality = None
     try:
         scorer = get_profile_scorer()
-        baseline = SOC_PROFILE_CENTROIDS  # shape (6, 4, 6) — matches scorer.centroids exactly
-        current = scorer.centroids        # shape (6, 4, 6)
+        baseline = SOC_PROFILE_CENTROIDS  # shape (N_CATEGORIES, N_ACTIONS, N_FACTORS)
+        current = scorer.centroids        # shape (N_CATEGORIES, N_ACTIONS, N_FACTORS)
 
         for i, cat in enumerate(SOC_CATEGORIES):
             drift = float(np.mean(np.abs(current[i] - baseline[i])))
@@ -1128,7 +1138,7 @@ async def explain_decision(decision_id: str):
 
     # ── Extract factor values using SOC_FACTORS ordering ────────────────────
     factor_map  = dict(zip(SOC_FACTORS, factor_vector)) if factor_vector else {}
-    travel_val  = factor_map.get("travel_match", 0.0)
+    pic_val     = factor_map.get(SOC_FACTORS[0], 0.0)   # privileged_identity_context
     asset_val   = factor_map.get("asset_criticality", 0.0)
     threat_val  = factor_map.get("threat_intel_enrichment", 0.0)
     pattern_val = factor_map.get("pattern_history", 0.0)
@@ -1211,8 +1221,8 @@ async def explain_decision(decision_id: str):
         "destination_host":    destination_ip,
         # Factor-derived human-readable context strings
         "travel_context": (
-            f"Travel match {travel_val:.0%} — "
-            f"{'matches travel record' if travel_val > 0.6 else 'no travel record match'}"
+            f"Privileged identity context {pic_val:.0%} — "
+            f"{'elevated privilege detected' if pic_val > 0.6 else 'standard identity context'}"
         ),
         "time_context": (
             f"Time anomaly {time_val:.0%} — "
@@ -1244,7 +1254,7 @@ async def explain_decision(decision_id: str):
         "access_context":   f"Asset criticality factor {asset_val:.0%}",
         "situation_type":   category.replace("_", " ").title(),
         "dominant_factors_description": (
-            f"travel={travel_val:.2f}, asset={asset_val:.2f}, "
+            f"pic={pic_val:.2f}, asset={asset_val:.2f}, "
             f"threat={threat_val:.2f}, pattern={pattern_val:.2f}"
         ),
         "agreement_pct": agreement_pct,
@@ -1377,7 +1387,7 @@ async def onboarding_calendar(
     graph_level        : str   — SIEM/graph enrichment tier G1-G4 (default G1)
     """
     from gae.convergence import generate_onboarding_calendar
-    from app.domains.soc.config import SOC_CATEGORIES, BOOTSTRAP_CATEGORY_WEIGHTS
+    from app.domains.soc.config import BOOTSTRAP_CATEGORY_WEIGHTS, N_FACTORS, SOC_CATEGORIES
 
     calendar = generate_onboarding_calendar(
         categories=SOC_CATEGORIES,
@@ -1385,6 +1395,7 @@ async def onboarding_calendar(
         alerts_per_day=alerts_per_day,
         verification_rate=verification_rate,
         graph_level=graph_level,
+        d=N_FACTORS,
     )
     return calendar
 
@@ -1591,6 +1602,17 @@ async def executive_narrative_pdf():
         media_type='application/pdf',
         headers={'Content-Disposition': 'attachment; filename="executive_narrative.pdf"'},
     )
+
+
+@router.get("/soc/model-swap-trial")
+async def model_swap_trial(n_alerts: int = 20):
+    """Run the deterministic model-swap trial over demo alerts."""
+    from app.services.model_swap import run_model_swap_trial
+
+    result = await run_model_swap_trial(n_alerts=n_alerts)
+    if not result.ok and not result.alerts:
+        raise HTTPException(status_code=503, detail=result.summary)
+    return asdict(result)
 
 
 # ============================================================================
@@ -2710,15 +2732,9 @@ async def _tab2_content() -> dict:
     }
 
 
-# FIX 2.4 — documented per-factor sigma values (V-STABILITY + enrichment_advisor)
-_FACTOR_SIGMA = {
-    "travel_match":            0.18,
-    "asset_criticality":       0.12,
-    "threat_intel_enrichment": 0.07,
-    "pattern_history":         0.15,
-    "time_anomaly":            0.20,
-    "device_trust":            0.28,
-}
+# FIX-24B — derived from SOC_FACTOR_SIGMA in config.py; update sigma there, not here.
+_FACTOR_SIGMA_BY_NAME = SOC_FACTOR_SIGMA
+_FACTOR_SIGMA = {factor: _FACTOR_SIGMA_BY_NAME[factor] for factor in SOC_FACTORS}
 
 
 def _factor_kernel_weight(sigma: float, all_sigmas: list) -> float:
@@ -3056,7 +3072,7 @@ async def _tab5_content() -> dict:
         mu_mean = float(mu.mean())
         centroid_summary = (
             f"Centroid tensor {shape}: 144 values encoding institutional "
-            f"judgment across 6 alert categories, 4 actions, 6 factors. "
+            f"judgment across {N_CATEGORIES} alert categories, {N_ACTIONS} actions, {N_FACTORS} factors. "
             f"Mean={mu_mean:.3f} — system judgment calibrated to your environment."
         )
     else:
@@ -3494,7 +3510,7 @@ async def get_centroid_export(format: str = "json"):
 
     Additive schema over build_centroid_export base fields:
       exported_at           — alias for generated_at_epoch (ms)
-      factors               — factor name list [6]
+      factors               — factor name list [n_factors]
       centroids             — dict: category → action → [factor_values]
       drift_from_bootstrap  — per-category L2 drift dict (overrides scalar)
       checksum              — SHA-256 of centroids dict (auditable)
@@ -3515,11 +3531,6 @@ async def get_centroid_export(format: str = "json"):
     import numpy as _np
     from app.services.gae_state import build_centroid_export, get_profile_scorer
 
-    _FACTORS = [
-        "travel_match", "asset_criticality", "threat_intel_enrichment",
-        "pattern_history", "time_anomaly", "device_trust",
-    ]
-
     scorer = get_profile_scorer()
 
     if scorer is None:
@@ -3531,9 +3542,9 @@ async def get_centroid_export(format: str = "json"):
     # Build base export (current_mu, bootstrap_mu, sha256, categories, etc.)
     raw = await build_centroid_export(scorer, neo4j_client)
 
-    categories = raw["categories"]   # list[str], len 6
-    actions    = raw["actions"]      # list[str], len 4
-    current_mu = raw["current_mu"]   # nested list [6][4][6]
+    categories = raw["categories"]
+    actions    = raw["actions"]
+    current_mu = raw["current_mu"]
 
     # Centroids dict: category → action → [factor_values]
     centroids: dict = {}
@@ -3548,10 +3559,10 @@ async def get_centroid_export(format: str = "json"):
     bootstrap_mu = raw.get("bootstrap_mu")
     drift_per_cat: dict = {}
     if bootstrap_mu is not None:
-        curr_arr = _np.array(current_mu,   dtype=_np.float64)  # [6, 4, 6]
-        boot_arr = _np.array(bootstrap_mu, dtype=_np.float64)  # [6, 4, 6]
+        curr_arr = _np.array(current_mu, dtype=_np.float64)   # [n_categories, n_actions, n_factors]
+        boot_arr = _np.array(bootstrap_mu, dtype=_np.float64) # [n_categories, n_actions, n_factors]
         for c_idx, cat in enumerate(categories):
-            diff = curr_arr[c_idx] - boot_arr[c_idx]           # [4, 6]
+            diff = curr_arr[c_idx] - boot_arr[c_idx]           # [n_actions, n_factors]
             drift_per_cat[cat] = round(
                 float(_np.mean(_np.linalg.norm(diff, axis=1))), 4
             )
@@ -3577,7 +3588,7 @@ async def get_centroid_export(format: str = "json"):
     export = {
         **raw,
         "exported_at":          raw["generated_at_epoch"],
-        "factors":              _FACTORS,
+        "factors":              list(SOC_FACTORS),
         "centroids":            centroids,
         "drift_from_bootstrap": drift_per_cat,   # override scalar with per-cat dict
         "checksum":             checksum,
@@ -3610,18 +3621,6 @@ async def get_centroid_heatmap():
     import numpy as _np
     from app.services.gae_state import get_profile_scorer
 
-    _FACTORS = [
-        "travel_match", "asset_criticality", "threat_intel_enrichment",
-        "pattern_history", "time_anomaly", "device_trust",
-    ]
-    _CATEGORIES = [
-        "credential_access", "lateral_movement",
-        "data_exfiltration", "malware_execution",
-        "insider_threat", "cloud_infrastructure",
-    ]
-    from app.domains.soc.config import SCORER_ACTIONS
-    _ACTIONS = list(SCORER_ACTIONS)
-
     scorer = get_profile_scorer()
     if scorer is None:
         return {
@@ -3630,24 +3629,24 @@ async def get_centroid_heatmap():
         }
 
     # ── kernel_weights: normalised 1/σ² per factor ─────────────────────
-    all_sigmas = [_FACTOR_SIGMA.get(f, 0.15) for f in _FACTORS]
+    all_sigmas = [_FACTOR_SIGMA.get(f, 0.15) for f in SOC_FACTORS]
     kernel_weights: dict = {
         f: _factor_kernel_weight(_FACTOR_SIGMA.get(f, 0.15), all_sigmas)
-        for f in _FACTORS
+        for f in SOC_FACTORS
     }
 
     # ── heatmap: category → action → {mean, factors} ───────────────────
     mu = scorer.centroids  # shape [n_cat, n_actions, n_factors]
-    n_cat    = min(len(_CATEGORIES), mu.shape[0])
-    n_act    = min(len(_ACTIONS),    mu.shape[1])
-    n_fac    = min(len(_FACTORS),    mu.shape[2])
+    n_cat    = min(len(SOC_CATEGORIES), mu.shape[0])
+    n_act    = min(len(SCORER_ACTIONS), mu.shape[1])
+    n_fac    = min(len(SOC_FACTORS),    mu.shape[2])
 
     heatmap: dict = {}
     for c_idx in range(n_cat):
-        cat = _CATEGORIES[c_idx]
+        cat = SOC_CATEGORIES[c_idx]
         heatmap[cat] = {}
         for a_idx in range(n_act):
-            action = _ACTIONS[a_idx]
+            action = SCORER_ACTIONS[a_idx]
             vals = [round(float(mu[c_idx, a_idx, f_idx]), 4) for f_idx in range(n_fac)]
             heatmap[cat][action] = {
                 "mean":    round(float(_np.mean(mu[c_idx, a_idx, :n_fac])), 4),
@@ -3656,7 +3655,7 @@ async def get_centroid_heatmap():
 
     # ── noise_fingerprint: per-factor sigma + kernel_weight + label ─────
     noise_fingerprint: dict = {}
-    for f in _FACTORS:
+    for f in SOC_FACTORS:
         sigma = _FACTOR_SIGMA.get(f, 0.15)
         kw    = kernel_weights[f]
         if sigma <= 0.10:
@@ -3678,11 +3677,20 @@ async def get_centroid_heatmap():
         f"{round(kernel_weights.get('device_trust', 0) * 100, 1)}% of its nominal weight."
     )
 
+    # kernel_label: DiagonalKernel when noise spans >1.5× range; L2Kernel otherwise.
+    # Computed from actual sigma values so the frontend never hardcodes the name.
+    if all_sigmas:
+        noise_ratio = max(all_sigmas) / min(all_sigmas) if min(all_sigmas) > 0 else 1.0
+        kernel_label = "DiagonalKernel" if noise_ratio > 1.5 else "L2Kernel"
+    else:
+        kernel_label = "DiagonalKernel"
+
     return {
-        "categories":        _CATEGORIES[:n_cat],
-        "actions":           _ACTIONS[:n_act],
-        "factors":           _FACTORS[:n_fac],
+        "categories":        SOC_CATEGORIES[:n_cat],
+        "actions":           SCORER_ACTIONS[:n_act],
+        "factors":           SOC_FACTORS[:n_fac],
         "kernel_weights":    kernel_weights,
+        "kernel_label":      kernel_label,
         "heatmap":           heatmap,
         "noise_fingerprint": noise_fingerprint,
         "interpretation":    interpretation,
@@ -3714,18 +3722,7 @@ async def get_centroid_support():
     from app.services.centroid_support import compute_centroid_support
     from app.services.gae_state import get_profile_scorer, get_bootstrap_centroids
 
-    _CATEGORIES = [
-        "credential_access", "lateral_movement",
-        "data_exfiltration", "malware_execution",
-        "insider_threat", "cloud_infrastructure",
-    ]
-    from app.domains.soc.config import SCORER_ACTIONS as _sc_actions
-    _ACTIONS = list(_sc_actions)
-    _FACTORS = [
-        "travel_match", "asset_criticality", "threat_intel_enrichment",
-        "pattern_history", "time_anomaly", "device_trust",
-    ]
-    _SIGMA = [_FACTOR_SIGMA.get(f, 0.15) for f in _FACTORS]
+    _SIGMA = [_FACTOR_SIGMA.get(f, 0.15) for f in SOC_FACTORS]
     _THRESHOLD = 2.0
 
     _COLD_START = {
@@ -3755,8 +3752,8 @@ async def get_centroid_support():
     mu_zero = _np.array(bootstrap["mu"], dtype=_np.float64)
 
     # Shapes may differ if model was re-sized — use minimum shared dims
-    C = min(mu.shape[0], mu_zero.shape[0], len(_CATEGORIES))
-    A = min(mu.shape[1], mu_zero.shape[1], len(_ACTIONS))
+    C = min(mu.shape[0], mu_zero.shape[0], len(SOC_CATEGORIES))
+    A = min(mu.shape[1], mu_zero.shape[1], len(SCORER_ACTIONS))
     D = min(mu.shape[2], mu_zero.shape[2], len(_SIGMA))
 
     mu_slice      = mu[:C, :A, :D]
@@ -3768,10 +3765,10 @@ async def get_centroid_support():
     support_summary: dict = {}
     warning_count = 0
     for c in range(C):
-        cat = _CATEGORIES[c]
+        cat = SOC_CATEGORIES[c]
         support_summary[cat] = {}
         for a in range(A):
-            action = _ACTIONS[a]
+            action = SCORER_ACTIONS[a]
             entry = raw[(c, a)]
             if entry["support_status"] == "warning":
                 warning_count += 1

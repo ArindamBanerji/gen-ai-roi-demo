@@ -1,0 +1,86 @@
+==========================================================================================
+EXP-ORDER-1: V-DK-LEARNING-DYNAMICS
+Does ╧ü_variance > 0.08 at the operating point?
+==========================================================================================
+
+  Seed 42: computing GT-optimal DK weights...
+
+       N    ╧ü_var   DK_acc  Cent_acc  DK-Cent  w_dist_to_opt   Cumul_DK
+  ----------------------------------------------------------------------
+     500  +0.1066   85.8%    86.0%   -0.2pp       8.2704     85.0%
+    1000  +0.1636   83.8%    86.0%   -2.2pp       7.6824     85.0%
+    1500  +0.6667   86.0%    86.0%   +0.0pp       7.5485     85.4%
+    2000  +0.0362   82.6%    86.0%   -3.4pp       8.0691     85.2%
+    3000  +0.4218   86.2%    86.0%   +0.2pp       7.4061     86.4%
+    4000  +0.6698   84.4%    86.0%   -1.6pp       7.6492     86.8%
+
+  DK WEIGHT CONVERGENCE (distance to optimal over time):
+    N=500: dist_to_optimal = 8.2704
+    N=1000: dist_to_optimal = 7.6824
+    N=1500: dist_to_optimal = 7.5485
+    N=2000: dist_to_optimal = 8.0691
+    N=3000: dist_to_optimal = 7.4061
+    N=4000: dist_to_optimal = 7.6492
+    Monotonically decreasing? NO (oscillating)
+
+  Seed 123: computing GT-optimal DK weights...
+
+       N    ╧ü_var   DK_acc  Cent_acc  DK-Cent  w_dist_to_opt   Cumul_DK
+  ----------------------------------------------------------------------
+     500  +0.0725   79.6%    76.8%   +2.8pp      10.0519     80.6%
+    1000  +0.3830   77.6%    76.8%   +0.8pp       8.3714     81.8%
+    1500  +0.4495   76.6%    76.8%   -0.2pp       8.6718     81.0%
+    2000  +0.5713   76.0%    76.8%   -0.8pp       9.1110     80.4%
+    3000  +0.5121   77.6%    76.8%   +0.8pp       8.5358     81.4%
+    4000  +0.4647   81.6%    76.8%   +4.8pp       8.8080     83.4%
+
+  DK WEIGHT CONVERGENCE (distance to optimal over time):
+    N=500: dist_to_optimal = 10.0519
+    N=1000: dist_to_optimal = 8.3714
+    N=1500: dist_to_optimal = 8.6718
+    N=2000: dist_to_optimal = 9.1110
+    N=3000: dist_to_optimal = 8.5358
+    N=4000: dist_to_optimal = 8.8080
+    Monotonically decreasing? NO (oscillating)
+
+  Seed 777: computing GT-optimal DK weights...
+
+       N    ╧ü_var   DK_acc  Cent_acc  DK-Cent  w_dist_to_opt   Cumul_DK
+  ----------------------------------------------------------------------
+     500  +0.0784   83.6%    82.8%   +0.8pp       7.7485     85.2%
+    1000  +0.3127   82.6%    82.8%   -0.2pp       7.8854     85.8%
+    1500  +0.4012   83.2%    82.8%   +0.4pp       7.0193     85.8%
+    2000  +0.3008   85.8%    82.8%   +3.0pp       8.0318     87.0%
+    3000  +0.4858   81.0%    82.8%   -1.8pp       7.6948     85.6%
+    4000  +0.2933   83.2%    82.8%   +0.4pp       7.4451     85.2%
+
+  DK WEIGHT CONVERGENCE (distance to optimal over time):
+    N=500: dist_to_optimal = 7.7485
+    N=1000: dist_to_optimal = 7.8854
+    N=1500: dist_to_optimal = 7.0193
+    N=2000: dist_to_optimal = 8.0318
+    N=3000: dist_to_optimal = 7.6948
+    N=4000: dist_to_optimal = 7.4451
+    Monotonically decreasing? NO (oscillating)
+
+==========================================================================================
+COMPARISON: ╧ü_variance vs ╧ü_mean (from F1)
+==========================================================================================
+  F1 showed ╧ü_mean Γëê -0.05 to -0.13 at convergence (N>500)
+  If ╧ü_variance above is consistently > 0.08:
+    ΓåÆ Variance estimation HAS different learning dynamics
+    ΓåÆ The centroid DOES compound through Order 1 parameters
+  If ╧ü_variance is also negative or near zero:
+    ΓåÆ ALL centroid learning stops at convergence
+    ΓåÆ Compounding is only through the MLP correction
+
+==========================================================================================
+BINARY QUESTIONS
+==========================================================================================
+Q1: Is ╧ü_variance > 0.08 at any checkpoint N ΓëÑ 1000?
+Q2: Does DK accuracy improve with N (compounding)?
+Q3: Does cumulative DK beat recent-window DK (data accumulation helps)?
+Q4: Do DK weights converge toward optimal (dist_to_optimal decreasing)?
+Q5: Is ╧ü_variance qualitatively different from ╧ü_mean?
+
+DONE.

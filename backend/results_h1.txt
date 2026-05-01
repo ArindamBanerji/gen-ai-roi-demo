@@ -1,0 +1,35 @@
+================================================================================
+EXP-H1: SUBSPACE PROJECTION
+Does projecting onto 2D centroid manifold improve accuracy?
+================================================================================
+
+  CALIBRATED PRIOR:
+              Strategy     Acc       ECE   Sub%
+  ---------------------------------------------
+                STATIC   80.4%    0.0543    49%
+              STANDARD   82.6%    0.1539    41%
+             PROJECTED   72.0%    0.0461    25%
+     PROJECTED_BOOSTED   67.5%    0.0538    19%
+                 GATED   83.4%    0.1310    44%
+       GATED_PROJECTED   80.5%    0.0887    42%
+
+  GENERIC PRIOR:
+              Strategy     Acc
+  ------------------------------
+                STATIC    5.4%
+              STANDARD   59.8%
+             PROJECTED   51.1%
+     PROJECTED_BOOSTED   48.0%
+                 GATED   60.1%
+       GATED_PROJECTED   55.5%
+
+  SEPARATION SWEEP (projected vs standard):
+     Sep   Static  Standard  Projected  Std-Stat  Proj-Stat  Proj-Std
+  -----------------------------------------------------------------
+    0.25   86.8%    83.9%     70.0%    -2.9pp    -16.8pp   -13.9pp
+    0.50   83.6%    83.3%     69.2%    -0.3pp    -14.4pp   -14.1pp
+    0.75   80.6%    82.4%     68.0%    +1.8pp    -12.7pp   -14.4pp
+    1.00   77.6%    81.6%     66.9%    +4.1pp    -10.6pp   -14.7pp
+    1.50   72.0%    80.0%     62.4%    +8.1pp     -9.5pp   -17.6pp
+
+DONE.

@@ -1,0 +1,52 @@
+================================================================================
+EXP-D7: BOOTSTRAP-THEN-HANDOFF (from GENERIC prior)
+================================================================================
+
+  BOOTSTRAP PHASE OPTIMIZATION (post=STATIC):
+  boot_n  boot_eta  Acc@200  Acc@2000  ECE@2000
+  ---------------------------------------------
+       0      0.10    5.3%     5.4%    0.1955
+      50      0.10   34.8%    37.5%    0.1106
+      50      0.15   33.5%    35.6%    0.0901
+      50      0.20   35.3%    36.7%    0.1012
+     100      0.10   37.3%    40.2%    0.1350
+     100      0.15   36.7%    38.1%    0.1140
+     100      0.20   37.5%    40.0%    0.1321
+     200      0.10   39.3%    42.2%    0.1465
+     200      0.15   38.5%    42.6%    0.1512
+     200      0.20   39.7%    41.5%    0.1401
+     500      0.10   39.3%    43.6%    0.1518
+     500      0.15   38.5%    43.4%    0.1501
+     500      0.20   39.7%    43.6%    0.1531
+
+  Best bootstrap config: N=500, eta=0.1
+
+  POST-BOOTSTRAP COMPARISON (bootstrap N=500, eta=0.1):
+    Post Strategy  Acc@500  Acc@2000  ECE@2000
+  ------------------------------------------
+           STATIC   42.1%    43.6%    0.1518
+         PIPELINE   42.1%    43.8%    0.1515
+       GATE_DECAY   42.1%    55.7%    0.2160
+    RAW_CONTINUED   42.1%    46.6%    0.1803
+
+  COMPARISON: Bootstrap+handoff vs pure strategies:
+                   Strategy  Acc@2000
+  -------------------------------------
+          Pure RAW eta=0.05    50.4%
+           Pure RAW eta=0.1    46.6%
+           Pure RAW eta=0.2    43.3%
+             Boot500+STATIC    43.6%
+           Boot500+PIPELINE    43.8%
+         Boot500+GATE_DECAY    55.7%
+      Boot500+RAW_CONTINUED    46.6%
+
+================================================================================
+BINARY QUESTIONS
+================================================================================
+Q1: Does bootstrap+handoff beat pure RAW at N=2000?
+Q2: Does bootstrap+handoff beat pure PIPELINE from generic?
+Q3: Best post-bootstrap strategy?
+Q4: Optimal bootstrap length? N=500
+Q5: H4 confirmed? (Cold start needs aggressive eta, not smart controller)
+
+DONE.

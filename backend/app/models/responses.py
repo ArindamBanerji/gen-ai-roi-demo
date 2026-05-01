@@ -6,8 +6,8 @@ AGE on port 5433). Do NOT tighten types without re-verifying against the
 live endpoint — a stricter type that doesn't coerce causes a 500.
 
 Shape annotations come from observed responses:
-  profile.centroids  → list[list[list[float]]]  shape (6, 4, 6)
-  profile.counts     → list[list[int]]           shape (6, 4)
+  profile.centroids  → list[list[list[float]]]  shape (n_categories, n_actions, n_factors)
+  profile.counts     → list[list[int]]           shape (n_categories, n_actions)
 """
 
 from __future__ import annotations
@@ -69,8 +69,8 @@ class IksData(BaseModel):
 class ProfileResponse(BaseModel):
     categories: list[str]
     actions: list[str]
-    centroids: list[list[list[float]]]   # shape (6, 4, 6)
-    counts: list[list[int]]              # shape (6, 4)
+    centroids: list[list[list[float]]]   # shape (n_categories, n_actions, n_factors)
+    counts: list[list[int]]              # shape (n_categories, n_actions)
     decision_count: int
     iks: IksData
 

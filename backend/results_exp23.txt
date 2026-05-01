@@ -1,0 +1,53 @@
+================================================================================
+EXP-23: V-ETA-SCHEDULE (STOP GATE EXPERIMENT)
+If decaying eta matches pipeline, redesign before continuing.
+================================================================================
+  RAW_FIXED done
+  DECAYING_ETA done
+  SQRT_DECAY done
+  PIPELINE done
+  GATE_PLUS_DECAY done
+
+================================================================================
+ACCURACY at each checkpoint (mean across 5 seeds)
+================================================================================
+       N       RAW_FIXED    DECAYING_ETA      SQRT_DECAY        PIPELINE  GATE_PLUS_DECA
+  --------------------------------------------------------------------------------
+     200          80.5%          80.3%          80.2%          79.6%          79.8%
+     500          81.8%          82.0%          82.2%          81.0%          81.9%
+    1000          80.4%          81.4%          81.7%          80.3%          82.2%
+    2000          80.3%          82.4%          82.7%          81.0%          83.2%
+    5000          78.9%          81.1%          81.3%          80.8%          84.0%
+
+================================================================================
+ECE at each checkpoint
+================================================================================
+       N       RAW_FIXED    DECAYING_ETA      SQRT_DECAY        PIPELINE  GATE_PLUS_DECA
+  --------------------------------------------------------------------------------
+     200          0.0817          0.0794          0.0783          0.0753          0.0612
+     500          0.1121          0.1053          0.1028          0.0599          0.0744
+    1000          0.1297          0.1234          0.1173          0.0544          0.1009
+    2000          0.1615          0.1508          0.1403          0.0591          0.1438
+    5000          0.1908          0.1395          0.1214          0.0598          0.1704
+
+================================================================================
+BINARY QUESTIONS (STOP GATE)
+================================================================================
+  DECAYING_ETA: acc=81.1% (pipe=80.8%, match=YES) ECE=0.1395 (pipe=0.0598, match=NO)
+  SQRT_DECAY: acc=81.3% (pipe=80.8%, match=YES) ECE=0.1214 (pipe=0.0598, match=NO)
+  GATE_PLUS_DECAY: acc=84.0% (pipe=80.8%, match=NO) ECE=0.1704 (pipe=0.0598, match=NO)
+
+  CRITICAL Q3: GATE_PLUS_DECAY matches full PIPELINE?
+    Accuracy: NO (84.0% vs 80.8%)
+    ECE:      NO (0.1704 vs 0.0598)
+
+  >>> Pipeline complexity JUSTIFIED ΓÇö simpler alternatives don't match.
+
+  Q4: Best accuracy x ECE tradeoff at N=5000:
+             RAW_FIXED: acc=78.9% ECE=0.1908 composite=63.9
+          DECAYING_ETA: acc=81.1% ECE=0.1395 composite=69.8
+            SQRT_DECAY: acc=81.3% ECE=0.1214 composite=71.4
+              PIPELINE: acc=80.8% ECE=0.0598 composite=76.0
+       GATE_PLUS_DECAY: acc=84.0% ECE=0.1704 composite=69.7
+
+DONE.

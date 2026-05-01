@@ -132,7 +132,16 @@ class CheckpointService:
         # Restore mu
         mu_str = cp.get("mu_snapshot") or "[]"
         try:
-            mu_restored       = np.array(json.loads(mu_str), dtype=np.float64)
+            mu_restored = np.array(json.loads(mu_str), dtype=np.float64)
+            if not np.isfinite(mu_restored).all():
+                log.error(
+                    "[CHECKPOINT] mu_snapshot contains NaN or Inf — rollback aborted: id=%s",
+                    checkpoint_id,
+                )
+                return {
+                    "error": "Checkpoint contains NaN or Inf values — rollback aborted",
+                    "checkpoint_id": checkpoint_id,
+                }
             scorer.centroids = mu_restored
         except Exception as exc:
             log.error("[CHECKPOINT] mu restore failed: %s", exc)
@@ -142,8 +151,11 @@ class CheckpointService:
         counts_str = cp.get("counts_snapshot") or ""
         if counts_str and hasattr(scorer, "counts"):
             try:
-                counts_restored  = np.array(json.loads(counts_str), dtype=np.float64)
-                scorer.counts[:] = counts_restored
+                counts_restored = np.array(json.loads(counts_str), dtype=np.float64)
+                if np.isfinite(counts_restored).all():
+                    scorer.counts[:] = counts_restored
+                else:
+                    log.warning("[CHECKPOINT] counts_snapshot contains NaN or Inf — skipped")
             except Exception as exc:
                 log.debug("[CHECKPOINT] counts restore skipped: %s", exc)
 

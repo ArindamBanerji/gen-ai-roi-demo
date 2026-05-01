@@ -1,0 +1,42 @@
+================================================================================
+EXP-29: V-STATE-PREDICTION
+10 seeds: 8 train, 2 validation
+================================================================================
+  8 train + 2 val seeds done
+
+================================================================================
+MODEL COMPARISON
+================================================================================
+                      Model  Train RMSE    Val RMSE  Val < 0.05?
+  ------------------------------------------------------------
+                A: w = f(N)      1.9284      1.0405  NO
+     B: w = f(acc,vel,conf)      1.2439      1.3249  NO
+   C: w = f(N,acc,vel,gate)      1.1555      0.9834  NO
+
+  MODEL B coefficients:
+    intercept: -42.8812
+    accuracy: +0.536199
+    velocity: -1.937232
+    mean_conf: -0.013785
+
+  MODEL C coefficients:
+    intercept: -42.9781
+    N: +0.00040069
+    accuracy: +0.524520
+    velocity: -77.659649
+    gate_rejection: +0.002535
+
+  Feature importance (|beta * std|) for Model B:
+    accuracy: 1.5826
+    mean_conf: 0.0003
+    velocity: 0.0001
+
+================================================================================
+BINARY QUESTIONS
+================================================================================
+Q1: Model B (state) outperforms Model A (time)? B_val=1.3249 A_val=1.0405 NO
+Q2: Model C improves over Model B? C_val=0.9834 B_val=1.3249 YES
+Q3: Validation RMSE < 0.05 for any model? NO
+Q4: Top 3 state drivers: accuracy(1.5826), mean_conf(0.0003), velocity(0.0001)
+
+DONE.

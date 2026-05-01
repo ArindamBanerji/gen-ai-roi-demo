@@ -104,7 +104,7 @@ class GraphSnapshot:
         category: str,
         was_override: bool,
         quality_signal: float,
-        is_correct: bool = True,
+        is_correct: bool,
     ) -> None:
         """
         Called AFTER successful graph write. Never called if write fails.

@@ -20,7 +20,7 @@ from app.domains.base import (
     DomainSituationType, DomainPolicy, PromptVariant,
 )
 from app.domains.soc.factors import (
-    TravelMatchFactor, AssetCriticalityFactor, ThreatIntelEnrichmentFactor,
+    PrivilegedIdentityContextFactor, AssetCriticalityFactor, ThreatIntelEnrichmentFactor,
     PatternHistoryFactor, PatternHistoryFactorComputer, TimeAnomalyFactor, DeviceTrustFactor,
 )
 from dataclasses import dataclass, field
@@ -28,8 +28,8 @@ from typing import Dict, List
 
 
 # ── v5.0 ProfileScorer Configuration ────────────────────────────────
-# 6 SOC categories (rows), 4 actions (cols), 6 factors (depth)
-# Factor order: [travel_match, asset_criticality, threat_intel_enrichment,
+# SOC categories (rows), scorer actions (cols), factors (depth)
+# Factor order: [privileged_identity_context, asset_criticality, threat_intel_enrichment,
 #                pattern_history, time_anomaly, device_trust]
 # Action order: [escalate, investigate, suppress, monitor]
 # Centroid values: what each action looks like for each category.
@@ -82,18 +82,33 @@ BOOTSTRAP_CATEGORY_WEIGHTS = {
     "malware_execution":     0.10,
 }
 
-# Shape: (6 categories, 4 scorer actions, 6 factors) = 144 values
+# Shape: (N_CATEGORIES, N_ACTIONS, N_FACTORS) = 144 values at today's SOC size
 # Action index: 0=escalate, 1=investigate, 2=suppress, 3=monitor  (SCORER_ACTIONS)
-# Factor index: 0=travel_match, 1=asset_criticality, 2=threat_intel_enrichment,
+# Factor index: 0=privileged_identity_context, 1=asset_criticality, 2=threat_intel_enrichment,
 #               3=pattern_history, 4=time_anomaly, 5=device_trust
 SOC_FACTORS = [
-    "travel_match",
+    "privileged_identity_context",
     "asset_criticality",
     "threat_intel_enrichment",
     "pattern_history",
     "time_anomaly",
     "device_trust",
 ]
+
+N_FACTORS = len(SOC_FACTORS)
+N_CATEGORIES = len(SOC_CATEGORIES)
+N_ACTIONS = len(SCORER_ACTIONS)
+
+# Per-factor noise sigma — co-located with SOC_FACTORS so both stay in sync.
+# When FEATURE-05B renames a factor, update the name here and sigma moves with it.
+SOC_FACTOR_SIGMA = {
+    "privileged_identity_context": 0.10,
+    "asset_criticality":       0.12,
+    "threat_intel_enrichment": 0.07,
+    "pattern_history":         0.15,
+    "time_anomaly":            0.20,
+    "device_trust":            0.28,
+}
 
 # Bootstrap calibration parameters (GAE-BOOT-1)
 # Used by gae_state.init_learning_state() on cold start or legacy checkpoint.
@@ -112,77 +127,77 @@ SOC_PROFILE_CENTROIDS = np.array([
   # triage.py; it has no centroid geometry and is excluded from this tensor.
   [
     # escalate: travel anomaly + high asset + high threat_intel + low device_trust
-    [0.72, 0.85, 0.80, 0.60, 0.65, 0.15],
+    [0.75, 0.85, 0.80, 0.60, 0.65, 0.15],
     # investigate: moderate signals, some pattern history
-    [0.40, 0.60, 0.55, 0.55, 0.50, 0.40],
+    [0.60, 0.60, 0.55, 0.55, 0.50, 0.40],
     # suppress: low threat, normal hours, trusted device
-    [0.20, 0.25, 0.15, 0.20, 0.25, 0.85],
+    [0.30, 0.25, 0.15, 0.20, 0.25, 0.85],
     # monitor: moderate asset, low threat, normal pattern
-    [0.30, 0.45, 0.25, 0.35, 0.35, 0.65],
+    [0.20, 0.45, 0.25, 0.35, 0.35, 0.65],
   ],
 
   # ── Category 1: malware_execution (formerly threat_intel_match) ──
   [
     # escalate: high threat_intel + high asset_criticality
-    [0.35, 0.80, 0.90, 0.55, 0.60, 0.20],
+    [0.75, 0.80, 0.90, 0.55, 0.60, 0.20],
     # investigate: confirmed intel but lower asset risk
-    [0.30, 0.55, 0.75, 0.50, 0.50, 0.40],
+    [0.60, 0.55, 0.75, 0.50, 0.50, 0.40],
     # suppress: false positive intel, trusted device
-    [0.20, 0.20, 0.20, 0.15, 0.20, 0.90],
+    [0.30, 0.20, 0.20, 0.15, 0.20, 0.90],
     # monitor: low-confidence intel match
-    [0.25, 0.40, 0.45, 0.30, 0.35, 0.70],
+    [0.20, 0.40, 0.45, 0.30, 0.35, 0.70],
   ],
 
   # ── Category 2: lateral_movement ───────────────────────────────
   [
     # escalate: strong pattern history + high asset
-    [0.50, 0.80, 0.70, 0.85, 0.70, 0.20],
+    [0.75, 0.80, 0.70, 0.85, 0.70, 0.20],
     # investigate: some lateral signals, moderate asset
-    [0.45, 0.60, 0.50, 0.65, 0.55, 0.40],
+    [0.60, 0.60, 0.50, 0.65, 0.55, 0.40],
     # suppress: travel explains movement, trusted device
-    [0.85, 0.25, 0.15, 0.20, 0.25, 0.80],
+    [0.30, 0.25, 0.15, 0.20, 0.25, 0.80],
     # monitor: single hop, low asset, normal hours
-    [0.40, 0.40, 0.30, 0.40, 0.35, 0.65],
+    [0.20, 0.40, 0.30, 0.40, 0.35, 0.65],
   ],
 
   # ── Category 3: data_exfiltration ──────────────────────────────
   [
     # escalate: high asset + threat_intel + anomaly
-    [0.30, 0.90, 0.75, 0.70, 0.80, 0.15],
+    [0.75, 0.90, 0.75, 0.70, 0.80, 0.15],
     # investigate: high asset but unclear intent
-    [0.35, 0.75, 0.50, 0.55, 0.60, 0.45],
+    [0.60, 0.75, 0.50, 0.55, 0.60, 0.45],
     # suppress: authorized transfer, trusted device, normal hours
-    [0.20, 0.30, 0.10, 0.15, 0.20, 0.90],
+    [0.30, 0.30, 0.10, 0.15, 0.20, 0.90],
     # monitor: low-value asset, no threat intel
-    [0.25, 0.40, 0.25, 0.30, 0.35, 0.70],
+    [0.20, 0.40, 0.25, 0.30, 0.35, 0.70],
   ],
 
   # ── Category 4: insider_threat ─────────────────────────────────
   [
     # escalate: pattern history + time anomaly + low device_trust
-    [0.40, 0.75, 0.65, 0.85, 0.80, 0.15],
+    [0.75, 0.75, 0.65, 0.85, 0.80, 0.15],
     # investigate: behavioral signals, moderate confidence
-    [0.45, 0.60, 0.50, 0.70, 0.60, 0.40],
+    [0.60, 0.60, 0.50, 0.70, 0.60, 0.40],
     # suppress: explainable behavior, trusted device
     [0.30, 0.25, 0.15, 0.20, 0.20, 0.85],
     # monitor: weak signals, normal hours
-    [0.35, 0.40, 0.30, 0.45, 0.35, 0.65],
+    [0.20, 0.40, 0.30, 0.45, 0.35, 0.65],
   ],
 
   # ── Category 5: cloud_infrastructure ───────────────────────────
   [
     # escalate: high asset + threat_intel + time_anomaly
-    [0.25, 0.85, 0.80, 0.60, 0.75, 0.20],
+    [0.75, 0.85, 0.80, 0.60, 0.75, 0.20],
     # investigate: cloud anomaly, moderate signals
-    [0.30, 0.65, 0.55, 0.50, 0.55, 0.45],
+    [0.60, 0.65, 0.55, 0.50, 0.55, 0.45],
     # suppress: scheduled maintenance, trusted source
-    [0.20, 0.25, 0.10, 0.15, 0.20, 0.90],
+    [0.30, 0.25, 0.10, 0.15, 0.20, 0.90],
     # monitor: low-risk cloud activity
-    [0.25, 0.45, 0.30, 0.30, 0.35, 0.70],
+    [0.20, 0.45, 0.30, 0.30, 0.35, 0.70],
   ],
 
-], dtype=np.float64)
-# Shape: (6 categories, 4 scorer actions, 6 factors) = (6, 4, 6).
+], dtype=np.float64).reshape(N_CATEGORIES, N_ACTIONS, N_FACTORS)
+# Shape: (N_CATEGORIES, N_ACTIONS, N_FACTORS).
 # Axis-1 order matches SCORER_ACTIONS: [escalate, investigate, suppress, monitor].
 
 # SCORER_PROFILE_CENTROIDS is identical to SOC_PROFILE_CENTROIDS now that
@@ -321,7 +336,7 @@ class SOCDomainConfig(DomainConfig):
     # Source: services/triage.py — _ALERT_FACTORS["ALERT-7823"] name list +
     #         _build_threat_intel_factor() for the live factor at index 2.
     # Final factor order (from get_decision_factors docstring):
-    #   [0] travel_match
+    #   [0] privileged_identity_context
     #   [1] asset_criticality
     #   [2] threat_intel_enrichment  (live Neo4j query)
     #   [3] time_anomaly
@@ -333,10 +348,10 @@ class SOCDomainConfig(DomainConfig):
     def factors(self) -> List[DomainFactor]:
         return [
             DomainFactor(
-                id="travel_match",
-                label="Travel Match",
+                id="privileged_identity_context",
+                label="Privileged Identity Context",
                 description=(
-                    "Employee calendar shows travel — VPN origin matches destination"
+                    "Privilege level, user risk, and session trust signals for the acting identity"
                 ),
             ),
             DomainFactor(
@@ -608,16 +623,20 @@ class SOCDomainConfig(DomainConfig):
         }
 
     # =========================================================================
-    # GAE factor computers — all 6 SOC FactorComputer implementations
+    # GAE factor computers — one FactorComputer per SOC factor
     # Reference: docs/soc_copilot_design_v1.md §14
     # =========================================================================
 
     def get_profile_centroids(self) -> np.ndarray:
         """
         Return profile centroids for ProfileScorer.
-        Shape: (n_categories, n_actions, n_factors) = (6, 4, 6).
+        Shape: (n_categories, n_actions, n_factors).
         τ=0.1 validated (V3B ECE=0.036).
         """
+        return SOC_PROFILE_CENTROIDS.copy()
+
+    def get_initial_centroids(self) -> np.ndarray:
+        """Return the initial SOC profile centroids tensor."""
         return SOC_PROFILE_CENTROIDS.copy()
 
     def get_categories(self) -> list:
@@ -656,7 +675,7 @@ class SOCDomainConfig(DomainConfig):
         Uses L2 kernel (EXP-E1 validated), τ=0.1 (V3B validated, default).
 
         Phase 0b: scorer uses SCORER_ACTIONS (A=4) and SCORER_PROFILE_CENTROIDS
-        (6, 4, 6).  refer_to_analyst is handled by the confidence gate in
+        shaped as (N_CATEGORIES, N_ACTIONS, N_FACTORS). refer_to_analyst is handled by the confidence gate in
         triage.py, not by centroid proximity.  SOC_ACTIONS (A=5) is kept
         for the API response and NL templates.
         """
@@ -679,9 +698,9 @@ class SOCDomainConfig(DomainConfig):
 
     @staticmethod
     def get_factor_computers() -> List:
-        """Return ordered list of all 6 SOC FactorComputer instances."""
+        """Return ordered list of SOC FactorComputer instances."""
         return [
-            TravelMatchFactor(),
+            PrivilegedIdentityContextFactor(),
             AssetCriticalityFactor(),
             ThreatIntelEnrichmentFactor(),
             PatternHistoryFactorComputer(),
@@ -705,18 +724,18 @@ class SOCDomainConfig(DomainConfig):
 
     @staticmethod
     def get_initial_W():
-        """Initial weight matrix (4 scorer actions × 6 factors). Security expert priors (v5.5).
+        """Initial weight matrix (N_ACTIONS scorer actions × N_FACTORS factors). Security expert priors (v5.5).
         Row order matches SCORER_ACTIONS: [escalate, investigate, suppress, monitor].
         refer_to_analyst is a routing decision handled by the confidence gate — no W row.
         """
         import numpy as np
         return np.array([
-            # travel  asset  threat  pattern  time  device
-            [ 0.8,   0.9,    0.9,    0.3,    0.4,   0.3],   # escalate
-            [ 0.5,   0.5,    0.7,    0.5,    0.6,   0.5],   # investigate
-            [-0.3,  -0.2,   -0.5,    0.7,   -0.3,  -0.2],   # suppress
-            [ 0.2,   0.3,    0.4,    0.4,    0.3,   0.4],   # monitor
-        ], dtype=np.float64)
+            # privileged  asset  threat  pattern  time  device
+            [ 0.75,   0.9,    0.9,    0.3,    0.4,   0.3],   # escalate
+            [ 0.60,   0.5,    0.7,    0.5,    0.6,   0.5],   # investigate
+            [-0.30,  -0.2,   -0.5,    0.7,   -0.3,  -0.2],   # suppress
+            [ 0.20,   0.3,    0.4,    0.4,    0.3,   0.4],   # monitor
+        ], dtype=np.float64).reshape(N_ACTIONS, N_FACTORS)
 
     # τ=0.1 (V3B validated, ECE=0.036). NEVER return 0.25.
     # Prior value of 0.25 was a pre-V3B default that was never updated after TD-030.

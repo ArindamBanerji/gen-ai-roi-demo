@@ -1,5 +1,7 @@
 from typing import Dict
 
+from app.domains.soc.config import N_ACTIONS, N_CATEGORIES, N_FACTORS
+
 
 def generate_three_claims() -> Dict:
     """
@@ -17,8 +19,8 @@ def generate_three_claims() -> Dict:
                 'name': 'Operational Consistency',
                 'headline': 'Every alert gets consistent, institutional judgment.',
                 'explanation': (
-                    'The system maintains 144 learned parameters '
-                    '(6 categories × 4 actions × 6 factors) that encode your '
+                    f'The system maintains {N_CATEGORIES * N_ACTIONS * N_FACTORS} learned parameters '
+                    f'({N_CATEGORIES} categories × {N_ACTIONS} actions × {N_FACTORS} factors) that encode your '
                     'organization\'s security judgment. Every analyst — day shift, '
                     'night shift, new hire, veteran — sees recommendations calibrated '
                     'from the same institutional knowledge base. '
@@ -39,7 +41,7 @@ def generate_three_claims() -> Dict:
                 'explanation': (
                     'Centroid learning half-life: 14 verified decisions per '
                     'category-action pair. At 200 alerts/day with 30% verification, '
-                    'all 6 categories calibrate within 2-3 weeks. '
+                    'all categories calibrate within 2-3 weeks at the current SOC configuration. '
                     'Connecting a second SIEM accelerates convergence by 15%. '
                     'Full graph enrichment: 35-47% faster at production precision.'
                 ),

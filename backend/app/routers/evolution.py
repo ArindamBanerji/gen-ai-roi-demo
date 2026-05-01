@@ -125,7 +125,7 @@ async def process_alert(request: ProcessAlertRequest):
         # ====================================================================
         # Step 2: GAE Scoring Pipeline (v5.0 ProfileScorer — replaces agent.decide())
         #
-        # 2a. Compute factor vector via orchestrator (6 FactorComputers → Neo4j)
+        # 2a. Compute factor vector via orchestrator (FactorComputers → Neo4j, one per factor)
         # 2b. ProfileScorer centroid-proximity scoring (L2 kernel, τ=0.1)
         #     P(action|f,cat) = softmax(−‖f−μ‖² / τ)
         # ====================================================================
@@ -368,7 +368,7 @@ async def process_alert(request: ProcessAlertRequest):
                 "ambiguous":            ambiguous,
                 "decision_method":      (
                     "ProfileScorer centroid-proximity scoring "
-                    "(6 factors × 4 actions × 6 categories, "
+                    "(n_factors × 4 actions × n_categories, "
                     "L2 kernel τ=0.1, EXP-E1 validated)"
                 ),
             },

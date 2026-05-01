@@ -45,9 +45,35 @@ async def test_restart_idempotent(mock_graph_client):
 def test_on_verified_decision_increments_count():
     """Write-through update increments verified_decisions."""
     snap = GraphSnapshot(verified_decisions=10)
-    snap.on_verified_decision("lateral_movement", False, 0.0)
+    snap.on_verified_decision("lateral_movement", False, 0.0, is_correct=True)
     assert snap.verified_decisions == 11
     assert snap.category_counts["lateral_movement"] == 1
+
+
+def test_on_verified_decision_correct_increments_correct_decisions():
+    """is_correct=True increments both verified_decisions and correct_decisions."""
+    snap = GraphSnapshot(verified_decisions=5, correct_decisions=3)
+    snap.on_verified_decision("credential_access", False, 1.0, is_correct=True)
+    assert snap.verified_decisions == 6
+    assert snap.correct_decisions == 4
+
+
+def test_on_verified_decision_incorrect_does_not_increment_correct_decisions():
+    """is_correct=False increments verified_decisions but NOT correct_decisions."""
+    snap = GraphSnapshot(verified_decisions=5, correct_decisions=3)
+    snap.on_verified_decision("credential_access", False, 0.0, is_correct=False)
+    assert snap.verified_decisions == 6
+    assert snap.correct_decisions == 3
+
+
+def test_on_verified_decision_requires_is_correct():
+    """Omitting is_correct raises TypeError — no silent default any more."""
+    snap = GraphSnapshot()
+    try:
+        snap.on_verified_decision("lateral_movement", False, 0.0)
+        assert False, "Expected TypeError when is_correct is omitted"
+    except TypeError:
+        pass  # expected — no default means callers must be explicit
 
 
 def test_on_verified_decision_graph_write_failure_leaves_snapshot_unchanged():
