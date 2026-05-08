@@ -1,141 +1,182 @@
-"""
-tests/test_switching_cost.py — Switching Cost Demo Moment (Feature 4) test suite.
+from dataclasses import asdict
+import asyncio
+from unittest.mock import AsyncMock, patch
 
-4 tests validating the switching_cost sub-dict in GET /api/soc/profile.
-
-Run from backend/:
-    pytest tests/test_switching_cost.py -v
-"""
-
-import sys
-import os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
-import pytest
-from fastapi.testclient import TestClient
-
-# Initialize learning state before the TestClient is used — mirrors the
-# startup event that the TestClient does not trigger automatically.
-from app.services.gae_state import init_learning_state
-init_learning_state()
-
-from app.main import app
-
-client = TestClient(app)
+from app.services.switching_cost import (
+    DEFAULT_COST_PER_DAY,
+    DEFAULT_REBUILD_RATE,
+    build_switching_cost_trajectory_payload,
+    compute_switching_cost_trajectory,
+)
 
 
-# ============================================================================
-# Test 1 — decisions_accumulated equals decision_count
-# ============================================================================
+MILESTONES = [
+    {"month": 1, "decisions": 540, "iks": 12, "label": "Calibrating"},
+    {"month": 3, "decisions": 1620, "iks": 45, "label": "Learning"},
+    {"month": 6, "decisions": 3240, "iks": 67, "label": "Switching cost plateau"},
+    {"month": 9, "decisions": 4860, "iks": 89, "label": "Expert"},
+]
 
-def test_switching_cost_decisions_match_decision_count():
-    """
-    switching_cost.decisions_accumulated must equal iks.decision_count exactly.
-    These two fields are derived from the same source — if they diverge the
-    Switching Cost panel shows inconsistent numbers to the prospect.
-    """
-    response = client.get("/api/soc/profile")
 
-    assert response.status_code == 200, (
-        f"Expected 200, got {response.status_code}: {response.text[:300]}"
-    )
-    body = response.json()
+def test_trajectory_has_actual_and_projected_points():
+    trajectory = compute_switching_cost_trajectory(MILESTONES)
 
-    assert "iks" in body, f"Response missing 'iks' key: {list(body.keys())}"
-    iks = body["iks"]
+    assert len(trajectory.points) == 7
+    assert [point.month for point in trajectory.points] == [1, 3, 6, 9, 12, 18, 24]
+    assert [point.point_type for point in trajectory.points[:4]] == ["actual"] * 4
+    assert [point.point_type for point in trajectory.points[4:]] == ["projected"] * 3
 
-    assert "switching_cost" in iks, (
-        f"iks missing 'switching_cost' key: {list(iks.keys())}"
-    )
-    switching_cost = iks["switching_cost"]
 
-    if switching_cost.get("decisions_accumulated") is None:
-        pytest.skip("no decisions in test graph")
-
-    assert switching_cost["decisions_accumulated"] == iks["decision_count"], (
-        f"decisions_accumulated ({switching_cost['decisions_accumulated']}) "
-        f"must equal decision_count ({iks['decision_count']}). "
-        "These must always be identical — same source, same value."
+def test_cost_formula_is_decisions_over_rebuild_rate_times_cost_per_day():
+    trajectory = compute_switching_cost_trajectory(
+        [{"month": 3, "decisions": 1620, "iks": 45, "label": "Learning"}],
+        cost_per_day=800,
+        rebuild_rate=10,
     )
 
+    point = trajectory.current
+    assert point is not None
+    assert point.analyst_days == 162
+    assert point.cost_usd == 129600
 
-# ============================================================================
-# Test 2 — competitor_iks is always 0 (static invariant)
-# ============================================================================
 
-def test_competitor_iks_always_zero():
-    """
-    competitor_iks must always be exactly 0.
-    This is a hardcoded invariant — a competitor starting fresh has no
-    institutional knowledge. It must never be derived from data.
-    """
-    response = client.get("/api/soc/profile")
+def test_projection_extrapolates_beyond_current_month():
+    trajectory = compute_switching_cost_trajectory(MILESTONES, decisions_per_month=540)
+    projected = [point for point in trajectory.points if point.point_type == "projected"]
 
-    assert response.status_code == 200, (
-        f"Expected 200, got {response.status_code}: {response.text[:300]}"
+    assert [point.month for point in projected] == [12, 18, 24]
+    assert all(point.cost_usd > trajectory.current.cost_usd for point in projected)
+    assert projected[0].cost_usd < projected[1].cost_usd < projected[2].cost_usd
+
+
+def test_custom_cost_per_day_scales_exactly():
+    base = compute_switching_cost_trajectory(MILESTONES, cost_per_day=800)
+    higher = compute_switching_cost_trajectory(MILESTONES, cost_per_day=1200)
+
+    assert higher.current.cost_usd / base.current.cost_usd == 1.5
+
+
+def test_current_point_is_latest_actual_milestone():
+    trajectory = compute_switching_cost_trajectory(MILESTONES)
+
+    assert trajectory.current is not None
+    assert trajectory.current.month == 9
+    assert trajectory.current.point_type == "actual"
+    assert trajectory.current.label == "Expert"
+
+
+def test_empty_milestones_return_empty_trajectory():
+    trajectory = compute_switching_cost_trajectory([])
+
+    assert trajectory.points == []
+    assert trajectory.current is None
+    assert trajectory.projection_12m == 0.0
+    assert trajectory.projection_24m == 0.0
+    assert trajectory.rebuild_rate == DEFAULT_REBUILD_RATE
+    assert trajectory.cost_per_day == DEFAULT_COST_PER_DAY
+
+
+def test_unsorted_milestones_use_latest_month_as_current():
+    trajectory = compute_switching_cost_trajectory([MILESTONES[2], MILESTONES[0], MILESTONES[3], MILESTONES[1]])
+
+    assert [point.month for point in trajectory.points[:4]] == [1, 3, 6, 9]
+    assert trajectory.current is not None
+    assert trajectory.current.month == 9
+
+
+def test_duplicate_month_prefers_last_milestone():
+    trajectory = compute_switching_cost_trajectory([
+        {"month": 3, "decisions": 100, "iks": 10, "label": "Old"},
+        {"month": 3, "decisions": 200, "iks": 20, "label": "New"},
+    ])
+
+    assert trajectory.current is not None
+    assert trajectory.current.decisions == 200
+    assert trajectory.current.label == "New"
+
+
+def test_rebuild_rate_zero_or_negative_falls_back():
+    zero = compute_switching_cost_trajectory(MILESTONES, rebuild_rate=0)
+    negative = compute_switching_cost_trajectory(MILESTONES, rebuild_rate=-5)
+
+    assert zero.rebuild_rate == DEFAULT_REBUILD_RATE
+    assert negative.rebuild_rate == DEFAULT_REBUILD_RATE
+
+
+def test_negative_decisions_are_clamped_to_zero():
+    trajectory = compute_switching_cost_trajectory([
+        {"month": 1, "decisions": -100, "iks": 10, "label": "Bad input"}
+    ])
+
+    assert trajectory.current is not None
+    assert trajectory.current.decisions == 0
+    assert trajectory.current.analyst_days == 0
+    assert trajectory.current.cost_usd == 0
+
+
+def test_to_dict_uses_dict_and_list_primitives():
+    payload = compute_switching_cost_trajectory(MILESTONES).to_dict()
+
+    assert isinstance(payload, dict)
+    assert isinstance(payload["points"], list)
+    assert isinstance(payload["points"][0], dict)
+    assert payload["current"] == asdict(compute_switching_cost_trajectory(MILESTONES).current)
+
+
+def test_payload_helper_aligns_per_day_and_per_month_inputs():
+    payload_from_day = build_switching_cost_trajectory_payload(
+        iks_milestones=MILESTONES,
+        decisions_per_day=18,
     )
-    body = response.json()
+    direct = compute_switching_cost_trajectory(
+        MILESTONES,
+        decisions_per_month=540,
+    ).to_dict()
 
-    switching_cost = body["iks"]["switching_cost"]
+    assert payload_from_day["projection_12m"] == direct["projection_12m"]
+    assert payload_from_day["projection_24m"] == direct["projection_24m"]
+    assert payload_from_day["points"] == direct["points"]
 
-    assert switching_cost["competitor_iks"] == 0, (
-        f"competitor_iks must always be 0 (static invariant). "
-        f"Got: {switching_cost['competitor_iks']!r}"
+
+def test_payload_helper_prefers_explicit_decisions_per_month():
+    payload = build_switching_cost_trajectory_payload(
+        iks_milestones=MILESTONES,
+        decisions_per_day=999,
+        decisions_per_month=540,
     )
+    direct = compute_switching_cost_trajectory(MILESTONES, decisions_per_month=540).to_dict()
+
+    assert payload["projection_12m"] == direct["projection_12m"]
+    assert payload["projection_24m"] == direct["projection_24m"]
 
 
-# ============================================================================
-# Test 3 — decisions_per_day and qualifies_one_quarter fields present
-# ============================================================================
+def test_soc_and_metrics_paths_use_same_trajectory_assumptions():
+    timestamp_rows = [{"t_min": 1_700_000_000_000, "t_max": 1_700_086_400_000, "n": 18}]
 
-def test_switching_cost_new_fields_present():
-    """
-    switching_cost must contain decisions_per_day (float) and
-    qualifies_one_quarter (bool) — V-SWITCHING-COST-FACTORIAL fields.
-    """
-    response = client.get("/api/soc/profile")
-    assert response.status_code == 200, response.text[:300]
+    async def _run():
+        from app.routers.metrics import get_decision_economics
+        from app.routers.soc import _tab4_content
 
-    switching_cost = response.json()["iks"]["switching_cost"]
+        with patch("app.routers.soc.neo4j_client") as soc_client:
+            soc_client.run_query = AsyncMock(side_effect=[
+                [{"cnt": 18}],
+                timestamp_rows,
+                [{"cnt": 14}],
+            ])
+            soc_payload = await _tab4_content()
 
-    assert "decisions_per_day" in switching_cost, (
-        f"switching_cost missing 'decisions_per_day': {list(switching_cost.keys())}"
-    )
-    assert "qualifies_one_quarter" in switching_cost, (
-        f"switching_cost missing 'qualifies_one_quarter': {list(switching_cost.keys())}"
-    )
-    assert isinstance(switching_cost["decisions_per_day"], float), (
-        f"decisions_per_day must be float, got {type(switching_cost['decisions_per_day'])}"
-    )
-    assert isinstance(switching_cost["qualifies_one_quarter"], bool), (
-        f"qualifies_one_quarter must be bool, got {type(switching_cost['qualifies_one_quarter'])}"
-    )
+        with patch("app.routers.metrics.neo4j_client") as metrics_client:
+            metrics_client.run_query = AsyncMock(side_effect=[
+                [{"total_decisions": 18}],
+                [{"correct_decisions": 14}],
+                timestamp_rows,
+            ])
+            metrics_payload = await get_decision_economics()
 
+        return soc_payload["switching_cost_trajectory"], metrics_payload["switching_cost_trajectory"]
 
-# ============================================================================
-# Test 4 — qualifies_one_quarter threshold logic
-# ============================================================================
+    soc_trajectory, metrics_trajectory = asyncio.run(_run())
 
-def test_switching_cost_qualifies_threshold():
-    """
-    qualifies_one_quarter must be True when decisions_per_day >= 20.0
-    and False when decisions_per_day < 20.0.
-
-    Default deployment: V=200, alpha=0.25 → decisions_per_day=50.0 → True.
-    """
-    response = client.get("/api/soc/profile")
-    assert response.status_code == 200, response.text[:300]
-
-    switching_cost = response.json()["iks"]["switching_cost"]
-    dpd = switching_cost["decisions_per_day"]
-    qualifies = switching_cost["qualifies_one_quarter"]
-
-    if dpd >= 20.0:
-        assert qualifies is True, (
-            f"decisions_per_day={dpd} >= 20.0 but qualifies_one_quarter={qualifies}"
-        )
-    else:
-        assert qualifies is False, (
-            f"decisions_per_day={dpd} < 20.0 but qualifies_one_quarter={qualifies}"
-        )
+    assert soc_trajectory["projection_12m"] == metrics_trajectory["projection_12m"]
+    assert soc_trajectory["projection_24m"] == metrics_trajectory["projection_24m"]
+    assert soc_trajectory["points"] == metrics_trajectory["points"]

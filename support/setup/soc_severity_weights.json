@@ -1,0 +1,8 @@
+{
+  "credential_access": {"base": 0.70},
+  "lateral_movement": {"base": 0.80},
+  "data_exfiltration": {"base": 0.90},
+  "insider_threat": {"base": 0.75},
+  "malware_execution": {"base": 0.85},
+  "cloud_infrastructure": {"base": 0.65}
+}

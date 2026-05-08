@@ -1,5 +1,5 @@
 import { useState, useEffect, Component, type ErrorInfo, type ReactNode } from 'react'
-import { Shield, Activity, Zap, TrendingUp, FileText, ReceiptText } from 'lucide-react'
+import { Shield, Activity, Zap, TrendingUp, FileText, ReceiptText, Scale } from 'lucide-react'
 import { domainConfig } from './lib/domain'
 import SOCAnalyticsTab from './components/tabs/SOCAnalyticsTab'
 import RuntimeEvolutionTab from './components/tabs/RuntimeEvolutionTab'
@@ -7,6 +7,7 @@ import AlertTriageTab from './components/tabs/AlertTriageTab'
 import CompoundingTab from './components/tabs/CompoundingTab'
 import ExecutiveNarrativeTab from './components/tabs/ExecutiveNarrativeTab'
 import S2PPreviewTab from './components/tabs/S2PPreviewTab'
+import GovernanceTab from './components/tabs/GovernanceTab'
 
 // ErrorBoundary must be a class component — hooks cannot catch render errors.
 interface ErrorBoundaryState { hasError: boolean; message: string }
@@ -34,7 +35,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
   }
 }
 
-type TabId = 'soc' | 'evolution' | 'triage' | 'compounding' | 'executive' | 's2p'
+type TabId = 'soc' | 'evolution' | 'triage' | 'compounding' | 'executive' | 's2p' | 'governance'
 
 interface Tab {
   id: TabId
@@ -93,6 +94,14 @@ const tabs: Tab[] = [
     component: S2PPreviewTab,
     energyPercent: 0,
     description: 'Same engine applied to invoice exception management',
+  },
+  {
+    id: 'governance',
+    label: 'Evidence Room',
+    icon: <Scale className="w-4 h-4" />,
+    component: GovernanceTab,
+    energyPercent: 0,
+    description: 'Governance evidence, audit chain, conservation health, and evolution trail',
   },
 ]
 

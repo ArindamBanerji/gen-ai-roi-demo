@@ -1,0 +1,75 @@
+[
+  {
+    "signal_id": "XC-SOC-S2P-001",
+    "source_domain": "SOC",
+    "target_domain": "S2P",
+    "signal_type": "credential_access_supplier_cluster",
+    "entity": "Rhine-Stahl GmbH",
+    "entity_type": "supplier",
+    "summary": "SOC flagged 3 credential_access alerts from Rhine-Stahl users in 14 days. The S2P copilot did not know that supplier context, but the shared graph did.",
+    "evidence": [
+      {
+        "decision_id": "DEC-RS-001",
+        "category": "credential_access",
+        "action": "force_password_reset",
+        "outcome": "correct",
+        "days_ago": 13,
+        "user": "jdoe"
+      },
+      {
+        "decision_id": "DEC-RS-002",
+        "category": "credential_access",
+        "action": "require_mfa_challenge",
+        "outcome": "correct",
+        "days_ago": 8,
+        "user": "apatel"
+      },
+      {
+        "decision_id": "DEC-RS-003",
+        "category": "credential_access",
+        "action": "disable_account",
+        "outcome": "correct",
+        "days_ago": 2,
+        "user": "mchen"
+      }
+    ],
+    "confidence": 0.82,
+    "discovered_epoch": 1762214400000,
+    "status": "active"
+  },
+  {
+    "signal_id": "XC-SOC-S2P-002",
+    "source_domain": "SOC",
+    "target_domain": "S2P",
+    "signal_type": "lateral_movement_vendor_risk",
+    "entity": "NovaTech Solutions",
+    "entity_type": "supplier",
+    "summary": "SOC observed lateral_movement activity tied to a NovaTech user shortly before invoice exceptions increased.",
+    "evidence": [
+      {
+        "decision_id": "DEC-NT-001",
+        "category": "lateral_movement",
+        "action": "isolate_host",
+        "outcome": "correct",
+        "days_ago": 6,
+        "user": "srivera"
+      }
+    ],
+    "confidence": 0.61,
+    "discovered_epoch": 1762387200000,
+    "status": "active"
+  },
+  {
+    "signal_id": "XC-SOC-S2P-003",
+    "source_domain": "SOC",
+    "target_domain": "S2P",
+    "signal_type": "acknowledged_supplier_watch",
+    "entity": "Meridian Components Ltd",
+    "entity_type": "supplier",
+    "summary": "A prior SOC supplier watch signal for Meridian has been acknowledged by the business review workflow.",
+    "evidence": [],
+    "confidence": 0.94,
+    "discovered_epoch": 1762473600000,
+    "status": "acknowledged"
+  }
+]

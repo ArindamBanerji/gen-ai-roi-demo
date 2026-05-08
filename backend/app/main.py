@@ -8,6 +8,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
+from app.middleware.pii_redaction import PIIRedactionMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,9 @@ async def auth_middleware(request: Request, call_next):
     return await call_next(request)
 
 
+app.add_middleware(PIIRedactionMiddleware)
+
+
 # Health check endpoint
 @app.get("/")
 async def root():
@@ -70,8 +74,9 @@ async def health():
     return {"status": "healthy"}
 
 # Router imports
-from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae, admin, simulation, evaluation, judgment, framework_router, eval_router, governance_router, whatif_router, time_machine_router
+from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae, admin, simulation, evaluation, judgment, framework_router, eval_router, governance_router, whatif_router, time_machine_router, discoveries_router, platform
 from app.routers.servicenow_router import router as servicenow_router
+from app.routers.rl_router import router as rl_router
 
 # Register routers
 app.include_router(evaluation.router, prefix="/api/soc", tags=["evaluation"])
@@ -91,6 +96,9 @@ app.include_router(simulation.router, prefix="/api", tags=["Simulation"])
 app.include_router(whatif_router.router, prefix="/api", tags=["What-If"])
 app.include_router(eval_router.router, prefix="/api", tags=["Evaluation Upload"])
 app.include_router(time_machine_router.router, prefix="/api", tags=["Time Machine"])
+app.include_router(discoveries_router.router, prefix="/api", tags=["Cross-Graph Discovery"])
+app.include_router(platform.router, prefix="/api", tags=["Platform"])
+app.include_router(rl_router, prefix="/api", tags=["RL Observability"])
 app.include_router(servicenow_router)
 from app.routers.auth import router as auth_router
 app.include_router(auth_router)
@@ -188,18 +196,22 @@ async def startup_event():
     except Exception as _cd_exc:
         print(f"[STARTUP] correct_decisions bootstrap failed (non-blocking): {_cd_exc}")
 
-    # Rebuild audit hash-chain from synthetic Decision nodes in AGE.
-    # Must run early so verify_chain() returns non-zero chain_length immediately
-    # after restart.  Uses rebuild_chain_from_graph() which preserves existing
-    # decision_ids (not record_decision() which generates new UUIDs) and queries
-    # in ASC chronological order so the hash chain stays valid.
     try:
-        from app.framework.audit import rebuild_chain_from_graph as _rebuild_chain
-        _chain_n = await _rebuild_chain(neo4j_client)
-        if _chain_n > 0:
-            print(f"[STARTUP] Audit chain rebuilt: {_chain_n} entries (ascending)")
-    except Exception as _chain_exc:
-        print(f"[STARTUP] Audit chain rebuild failed (non-blocking): {_chain_exc}")
+        from gae.evolution import rebuild_shadow_index
+        _shadow_index = await rebuild_shadow_index(neo4j_client)
+        if _shadow_index:
+            print(f"[STARTUP] Evolution shadow index rebuilt: {len(_shadow_index)} variants")
+    except Exception as _shadow_exc:
+        print(f"[STARTUP] Evolution shadow index rebuild failed (non-blocking): {_shadow_exc}")
+
+    try:
+        from app.services.variant_registry import rebuild_registry
+        _variant_registry = await rebuild_registry(neo4j_client)
+        _variant_count = int(_variant_registry.get("rebuilt", 0))
+        if _variant_count:
+            print(f"[STARTUP] Variant registry rebuilt: {_variant_count} variants")
+    except Exception as _registry_exc:
+        print(f"[STARTUP] Variant registry rebuild failed (non-blocking): {_registry_exc}")
 
     # Load analyst correct-override examples into OverrideDetector.
     # Activates automatically when >= 50 examples are found in Neo4j.
@@ -221,6 +233,16 @@ async def startup_event():
     from app.services.gae_state import init_learning_state, reset_learning_state, get_bootstrap_result, get_profile_scorer
     ls = init_learning_state()
     print(f"[GAE] LearningState ready: W.shape={ls.W.shape}, step={ls.decision_count}")
+
+    try:
+        from app.services.promotion_gate import register_rollback_handler
+        _rollback_registered = register_rollback_handler(neo4j_client)
+        print(
+            "[STARTUP] Promotion rollback handler "
+            f"{'registered' if _rollback_registered else 'not available'}"
+        )
+    except Exception as _rollback_exc:
+        print(f"[STARTUP] Promotion rollback handler registration failed (non-blocking): {_rollback_exc}")
 
     # Block 2.2: Persist bootstrap μ₀ centroid tensor to DeploymentState node.
     # Runs every startup so the centroid export endpoint always reflects current μ₀.
@@ -295,6 +317,11 @@ async def startup_event():
     except Exception as _audit_exc:
         print(f"[STARTUP] Audit ledger rebuild failed (non-blocking): {_audit_exc}")
 
+    # Timestamp repair is now an explicit operator action:
+    #   python support/setup/repair_zero_day_timestamps.py --dry-run
+    #   python support/setup/repair_zero_day_timestamps.py --apply
+    # Startup must not mutate zero_day_synthetic Decision timestamps.
+
     # Warm up all domain config properties.
     # Iterates every registered domain and touches all @property accessors so
     # Python initialises any lazy sub-modules now, not on the first API request.
@@ -366,6 +393,15 @@ async def startup_event():
         f"{connector_registry.count()} connector(s) registered"
     )
 
+    # Discovery cache warm (non-blocking — server starts even if this fails).
+    # Prevents first GET /api/discoveries from triggering synchronous full refresh.
+    try:
+        from app.services.cross_graph_discovery import discovery_service
+        await discovery_service.refresh("soc", neo4j_client)
+        logger.info("[Discovery] Cache warmed at startup")
+    except Exception as _disc_exc:
+        logger.warning("[Discovery] Startup warm failed (non-blocking): %s", _disc_exc)
+
     # F6 startup recorrelation — runs only if no Campaign nodes exist yet.
     # Non-blocking: any exception is logged and swallowed.
     try:
@@ -385,9 +421,26 @@ async def startup_event():
     except Exception as _camp_exc:
         print(f"[F6] Startup recorrelation failed (non-blocking): {_camp_exc}")
 
+    # PB-03 Sentinel polling — disabled by default; non-blocking if configured.
+    try:
+        from app.services.sentinel_poller import start_sentinel_poller
+
+        _sentinel_status = await start_sentinel_poller()
+        if _sentinel_status.get("started"):
+            logger.info("[Sentinel] Poller started")
+    except Exception as _sentinel_exc:
+        logger.warning("[Sentinel] Poller startup failed (non-blocking): %s", _sentinel_exc)
+
 @app.on_event("shutdown")
 async def shutdown_event():
     """Close connections on shutdown"""
+    try:
+        from app.services.sentinel_poller import stop_sentinel_poller
+
+        await stop_sentinel_poller()
+    except Exception as _sentinel_exc:
+        logger.warning("[Sentinel] Poller shutdown failed: %s", _sentinel_exc)
+
     from app.db.neo4j import neo4j_client
     if hasattr(neo4j_client, "close"):
         await neo4j_client.close()

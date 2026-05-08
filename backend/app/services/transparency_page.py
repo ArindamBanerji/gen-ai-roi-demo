@@ -130,7 +130,7 @@ def generate_transparency_page() -> Dict:
                     'heading': 'Conservation Law',
                     'content': (
                         'alpha(t) * q(t) * V(t) >= theta_min. '
-                        'SOC theta_min = 0.434 (eta * N_half^2 / T_max = 0.05 * 13.51^2 / 21). '
+                        'theta_min = 23.53 / (alpha * V), deployment-specific. '
                         'Breach window: relative threshold (baseline - 2sigma = AMBER, '
                         'baseline - 3sigma = RED). Absolute floor at theta_min as safety net. '
                         'Three-judge validated (Borkar 2008, Wu et al. 2016, Kazerouni et al. 2017).'
@@ -169,7 +169,7 @@ def generate_transparency_page() -> Dict:
                 'Subtle manipulation (<=10pp) is structurally blocked but not detected.',
                 'tau=0.1 calibrated on synthetic distributions. '
                 'Recalibration on real alerts required before shadow-to-live transition (TD-034).',
-                'Conservation law absolute floor (theta_min=0.434) is 33x below healthy '
+                'Conservation law absolute floor (theta_min=23.53/(alpha*V)) is 33x below healthy '
                 'signal at typical SOC volumes. Practical monitoring uses relative thresholds.'
             ]
         }

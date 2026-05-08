@@ -4,7 +4,7 @@ Tab 2 endpoints: Deployment registry, eval gates, TRIGGERED_EVOLUTION
 """
 import dataclasses
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 from datetime import datetime
 import uuid
@@ -21,6 +21,11 @@ from app.graph_schema import _S
 from app.models.schemas import ProcessAlertRequest
 from app.domains.soc.config import SOCDomainConfig, SOC_CATEGORIES
 from app.domains.soc.orchestrator import compute_factor_vector
+from gae.evolution import (
+    get_evolution_summary as get_ledger_evolution_summary,
+    get_recent_events as get_ledger_recent_events,
+    get_variant_history as get_ledger_variant_history,
+)
 from gae.scoring import score_alert
 
 
@@ -639,6 +644,59 @@ async def get_recent_evolution():
         return {"events": events}
     except Exception:
         return {"events": []}
+
+
+# ============================================================================
+# GET /api/evolution/variant-history - AE-04 Variant Lifecycle Timeline
+# ============================================================================
+
+@router.get("/evolution/variant-history")
+async def get_variant_history(variant_id: str = Query(..., description="Variant id")):
+    """Return graph-backed AE lifecycle events for one variant."""
+    try:
+        events = await get_ledger_variant_history(neo4j_client, variant_id)
+        return {"variant_id": variant_id, "events": events, "count": len(events)}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception:
+        return {"variant_id": variant_id, "events": [], "count": 0}
+
+
+# ============================================================================
+# GET /api/evolution/summary - AE Lifecycle Aggregate Summary
+# ============================================================================
+
+@router.get("/evolution/summary")
+async def get_evolution_summary():
+    """Return aggregate graph-backed AE lifecycle statistics."""
+    try:
+        return await get_ledger_evolution_summary(neo4j_client)
+    except Exception:
+        return {
+            "variants_generated": 0,
+            "variants_promoted": 0,
+            "variants_rejected": 0,
+            "variants_rolled_back": 0,
+            "shadow_batches": 0,
+            "shadow_started": 0,
+            "by_artifact_type": {},
+            "avg_shadow_win_rate": 0.0,
+            "total_shadow_decisions": 0,
+        }
+
+
+# ============================================================================
+# GET /api/evolution/recent-events - AE-04 Recent Lifecycle Events
+# ============================================================================
+
+@router.get("/evolution/recent-events")
+async def get_recent_events(limit: int = Query(20, ge=1, le=100)):
+    """Return recent graph-backed AE lifecycle events across variants."""
+    try:
+        events = await get_ledger_recent_events(neo4j_client, limit)
+        return {"events": events, "count": len(events), "limit": limit}
+    except Exception:
+        return {"events": [], "count": 0, "limit": limit}
 
 
 # ============================================================================

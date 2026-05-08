@@ -14,6 +14,7 @@ from app.domains.soc.constants import (
     COLD_START_REFERENCE_TRAJECTORY,
     S2P_COLD_START_REFERENCE,
 )
+from app.domains.soc.config import SOC_FACTORS, soc_config
 
 
 def test_get_sigma_band_boundaries():
@@ -54,3 +55,13 @@ def test_trajectory_dicts_monotonically_increasing():
     assert all(s2p_vals[i] < s2p_vals[i + 1] for i in range(len(s2p_vals) - 1)), (
         f"S2P trajectory not monotonically increasing: {s2p_vals}"
     )
+
+
+def test_config_factors_order_matches_tensor_order():
+    display_names = [factor.id for factor in soc_config.factors]
+    assert display_names == SOC_FACTORS
+
+
+def test_factor_computers_order_matches_tensor_order():
+    computer_names = [computer.name for computer in soc_config.get_factor_computers()]
+    assert computer_names == SOC_FACTORS

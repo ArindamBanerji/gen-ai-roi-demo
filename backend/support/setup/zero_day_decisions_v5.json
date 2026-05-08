@@ -3,13 +3,13 @@
     "generator": "enrich_zero_day_v5",
     "version": "5.0",
     "based_on": "zero_day_decisions.json (v4)",
-    "total_alerts": 540,
+    "total_alerts": 543,
     "total_demo_alerts": 30,
-    "total_decisions": 4860,
-    "total_users": 20,
-    "total_assets": 15,
-    "total_attack_patterns": 6,
-    "total_threat_indicators": 5,
+    "total_decisions": 4862,
+    "total_users": 21,
+    "total_assets": 16,
+    "total_attack_patterns": 7,
+    "total_threat_indicators": 9,
     "total_campaigns": 4,
     "days_simulated": 90,
     "category_order": [
@@ -177,6 +177,13 @@
       "department": "engineering",
       "risk_level": "service",
       "origin": "zero_day_synthetic"
+    },
+    {
+      "user_id": "jdoe",
+      "name": "jdoe",
+      "department": "identity_operations",
+      "risk_level": "high",
+      "origin": "zero_day_synthetic"
     }
   ],
   "assets": [
@@ -284,6 +291,13 @@
       "criticality": "high",
       "asset_type": "cloud_resource",
       "origin": "zero_day_synthetic"
+    },
+    {
+      "asset_id": "DC-PROD-07",
+      "hostname": "DC-PROD-07",
+      "criticality": "critical",
+      "asset_type": "domain_controller",
+      "origin": "zero_day_synthetic"
     }
   ],
   "attack_patterns": [
@@ -334,6 +348,14 @@
       "tactic": "defense_evasion",
       "category": "cloud_infrastructure",
       "origin": "zero_day_synthetic"
+    },
+    {
+      "pattern_id": "T1110",
+      "name": "Brute Force",
+      "mitre_id": "T1110",
+      "tactic": "credential_access",
+      "category": "credential_access",
+      "origin": "zero_day_synthetic"
     }
   ],
   "threat_indicators": [
@@ -370,6 +392,37 @@
       "indicator_type": "domain",
       "severity": "high",
       "source": "Pulsedive",
+      "origin": "zero_day_synthetic"
+    },
+    {
+      "indicator": "103.253.41.18",
+      "indicator_type": "ip",
+      "severity": "high",
+      "source": "CISA-AA-2026-0419",
+      "origin": "zero_day_synthetic"
+    },
+    {
+      "indicator": "103.253.41.22",
+      "indicator_type": "ip",
+      "severity": "high",
+      "source": "CISA-AA-2026-0419",
+      "origin": "zero_day_synthetic"
+    },
+    {
+      "indicator": "103.253.41.30",
+      "indicator_type": "ip",
+      "severity": "high",
+      "source": "CISA-AA-2026-0419",
+      "origin": "zero_day_synthetic"
+    },
+    {
+      "indicator": "CISA-AA-2026-0419",
+      "indicator_type": "advisory",
+      "severity": "high",
+      "source": "Credential Stuffing Campaign Targeting APAC Infrastructure",
+      "ip_ranges": [
+        "103.253.40.0/22"
+      ],
       "origin": "zero_day_synthetic"
     }
   ],
@@ -8223,6 +8276,108 @@
       "asset_id": "AST-004",
       "attack_pattern_id": "T1078.003",
       "indicator_ids": []
+    },
+    {
+      "alert_id": "ALT-JDOE-001",
+      "category": "credential_access",
+      "severity": "high",
+      "alert_type": "credential_stuffing",
+      "timestamp_epoch": 1748577600000,
+      "origin": "zero_day_synthetic",
+      "source_location": "103.253.41.18",
+      "user_id": "jdoe",
+      "status": "decided",
+      "asset_id": "DC-PROD-07",
+      "attack_pattern_id": "T1078",
+      "indicator_ids": [
+        "103.253.41.18",
+        "CISA-AA-2026-0419"
+      ],
+      "geo": "Singapore",
+      "factors": {
+        "privileged_identity_context": 0.82,
+        "asset_criticality": 0.91,
+        "threat_intel_enrichment": 0.88,
+        "pattern_history": 0.35,
+        "time_anomaly": 0.72,
+        "device_trust": 0.41
+      },
+      "ti_match": {
+        "advisory": "CISA-AA-2026-0419",
+        "title": "Credential Stuffing Campaign Targeting APAC Infrastructure",
+        "ip_ranges": [
+          "103.253.40.0/22"
+        ],
+        "confidence": "high"
+      }
+    },
+    {
+      "alert_id": "ALT-JDOE-002",
+      "category": "lateral_movement",
+      "severity": "high",
+      "alert_type": "lateral_movement",
+      "timestamp_epoch": 1748642400000,
+      "origin": "zero_day_synthetic",
+      "source_location": "103.253.41.22",
+      "user_id": "jdoe",
+      "status": "decided",
+      "asset_id": "DC-PROD-07",
+      "attack_pattern_id": "T1021",
+      "indicator_ids": [
+        "103.253.41.22",
+        "CISA-AA-2026-0419"
+      ],
+      "geo": "Singapore",
+      "factors": {
+        "privileged_identity_context": 0.79,
+        "asset_criticality": 0.91,
+        "threat_intel_enrichment": 0.85,
+        "pattern_history": 0.55,
+        "time_anomaly": 0.68,
+        "device_trust": 0.38
+      },
+      "ti_match": {
+        "advisory": "CISA-AA-2026-0419",
+        "title": "Credential Stuffing Campaign Targeting APAC Infrastructure",
+        "ip_ranges": [
+          "103.253.40.0/22"
+        ],
+        "confidence": "high"
+      }
+    },
+    {
+      "alert_id": "ALT-JDOE-003",
+      "category": "credential_access",
+      "severity": "critical",
+      "alert_type": "credential_stuffing",
+      "timestamp_epoch": 1748736000000,
+      "origin": "zero_day_synthetic",
+      "source_location": "103.253.41.30",
+      "user_id": "jdoe",
+      "status": "pending",
+      "asset_id": "DC-PROD-07",
+      "attack_pattern_id": "T1110",
+      "indicator_ids": [
+        "103.253.41.30",
+        "CISA-AA-2026-0419"
+      ],
+      "geo": "Singapore",
+      "factors": {
+        "privileged_identity_context": 0.88,
+        "asset_criticality": 0.91,
+        "threat_intel_enrichment": 0.92,
+        "pattern_history": 0.78,
+        "time_anomaly": 0.81,
+        "device_trust": 0.35
+      },
+      "ti_match": {
+        "advisory": "CISA-AA-2026-0419",
+        "title": "Credential Stuffing Campaign Targeting APAC Infrastructure",
+        "ip_ranges": [
+          "103.253.40.0/22"
+        ],
+        "confidence": "high"
+      }
     }
   ],
   "demo_alerts": [
@@ -8728,6 +8883,50 @@
       "origin": "zero_day_synthetic",
       "source_id": "synthetic",
       "user_id": "USR-004"
+    },
+    {
+      "decision_id": "DEC-JDOE-001",
+      "alert_id": "ALT-JDOE-001",
+      "category": "credential_access",
+      "action": "investigate",
+      "factor_vector": [
+        0.82,
+        0.91,
+        0.88,
+        0.35,
+        0.72,
+        0.41
+      ],
+      "confidence": 0.72,
+      "correct": true,
+      "outcome": "correct",
+      "timestamp_epoch": 1748577600000,
+      "origin": "zero_day_synthetic",
+      "source_id": "103.253.41.18",
+      "user_id": "jdoe",
+      "verified_by": "analyst_park"
+    },
+    {
+      "decision_id": "DEC-JDOE-002",
+      "alert_id": "ALT-JDOE-002",
+      "category": "lateral_movement",
+      "action": "escalate",
+      "factor_vector": [
+        0.79,
+        0.91,
+        0.85,
+        0.55,
+        0.68,
+        0.38
+      ],
+      "confidence": 0.68,
+      "correct": true,
+      "outcome": "correct",
+      "timestamp_epoch": 1748642400000,
+      "origin": "zero_day_synthetic",
+      "source_id": "103.253.41.22",
+      "user_id": "jdoe",
+      "verified_by": "analyst_chen"
     },
     {
       "decision_id": "SYN-DEC-3978c160",

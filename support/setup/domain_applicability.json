@@ -1,0 +1,306 @@
+{
+  "engine_version": "v0.7.23",
+  "note": "Nine domains. Each needs 2-4 days of domain engineering: categories, actions, factors, calibration, and verification. This is engineering, not configuration.",
+  "cross_domain_surfaces": "2 domains: 1 surface. 9 domains: 36 surfaces. Super-quadratic discovery emerges from pairwise domain intersections.",
+  "domains": [
+    {
+      "name": "Security Operations",
+      "short": "SOC",
+      "categories": 6,
+      "actions": 4,
+      "factors": 6,
+      "tensor_size": 144,
+      "penalty_ratio": 20,
+      "engineering_days": null,
+      "status": "live",
+      "verification": "Production demo: SOC copilot v5.5, A=4 scorer, referral handled outside scorer.",
+      "categories_list": [
+        "credential_access",
+        "malware_execution",
+        "lateral_movement",
+        "data_exfiltration",
+        "insider_threat",
+        "cloud_infrastructure"
+      ],
+      "actions_list": [
+        "escalate",
+        "investigate",
+        "suppress",
+        "monitor"
+      ],
+      "factors_list": [
+        "privileged_identity_context",
+        "asset_criticality",
+        "threat_intel_enrichment",
+        "pattern_history",
+        "time_anomaly",
+        "device_trust"
+      ]
+    },
+    {
+      "name": "Source-to-Pay",
+      "short": "S2P",
+      "categories": 5,
+      "actions": 5,
+      "factors": 7,
+      "tensor_size": 175,
+      "penalty_ratio": 5,
+      "engineering_days": null,
+      "status": "live",
+      "verification": "Preview domain: invoice exceptions, supplier risk, and procurement action space.",
+      "categories_list": [
+        "price_variance",
+        "vendor_risk",
+        "contract_compliance",
+        "delivery_exception",
+        "payment_anomaly"
+      ],
+      "actions_list": [
+        "approve",
+        "reject",
+        "escalate",
+        "request_documentation",
+        "hold_payment"
+      ],
+      "factors_list": [
+        "amount_variance",
+        "supplier_risk_score",
+        "contract_match",
+        "delivery_delay",
+        "duplicate_invoice_signal",
+        "prior_exception_rate",
+        "approval_path_anomaly"
+      ]
+    },
+    {
+      "name": "Trading",
+      "short": "TRD",
+      "categories": 5,
+      "actions": 3,
+      "factors": 6,
+      "tensor_size": 90,
+      "penalty_ratio": 2,
+      "engineering_days": 3,
+      "status": "specified",
+      "verification": "Price verification at T+30/60/90 days via market data API",
+      "categories_list": [
+        "equity_long",
+        "equity_short",
+        "crypto_spot",
+        "options",
+        "etf"
+      ],
+      "actions_list": [
+        "buy",
+        "hold",
+        "sell"
+      ],
+      "factors_list": [
+        "conviction",
+        "research_depth",
+        "technical_signal",
+        "position_size",
+        "time_horizon",
+        "market_regime"
+      ]
+    },
+    {
+      "name": "Purchasing",
+      "short": "PUR",
+      "categories": 5,
+      "actions": 4,
+      "factors": 6,
+      "tensor_size": 120,
+      "penalty_ratio": 3,
+      "engineering_days": 2,
+      "status": "specified",
+      "verification": "Waste measurement next morning + stockout tracking",
+      "categories_list": [
+        "protein",
+        "produce",
+        "dairy",
+        "dry_goods",
+        "beverages"
+      ],
+      "actions_list": [
+        "order_as_planned",
+        "order_more",
+        "order_less",
+        "skip"
+      ],
+      "factors_list": [
+        "expected_demand",
+        "day_of_week",
+        "weather_forecast",
+        "event_flag",
+        "historical_waste",
+        "supplier_lead_time"
+      ]
+    },
+    {
+      "name": "DataOps",
+      "short": "DOP",
+      "categories": 6,
+      "actions": 5,
+      "factors": 6,
+      "tensor_size": 180,
+      "penalty_ratio": 10,
+      "engineering_days": 2,
+      "status": "specified",
+      "verification": "Downstream pipeline health check at T+1h/24h",
+      "categories_list": [
+        "schema_change",
+        "volume_anomaly",
+        "quality_anomaly",
+        "freshness_violation",
+        "pipeline_failure",
+        "transform_drift"
+      ],
+      "actions_list": [
+        "auto_approve",
+        "investigate",
+        "escalate_to_owner",
+        "pause_downstream",
+        "refer_to_specialist"
+      ],
+      "factors_list": [
+        "impact_scope",
+        "source_reliability",
+        "recurrence_frequency",
+        "downstream_urgency",
+        "data_freshness",
+        "business_criticality"
+      ]
+    },
+    {
+      "name": "Fraud",
+      "short": "Fraud",
+      "categories": 6,
+      "actions": 3,
+      "factors": 7,
+      "tensor_size": 126,
+      "penalty_ratio": 25,
+      "engineering_days": 3,
+      "status": "designed",
+      "verification": "Designed domain; calibration requires loss-model validation before activation.",
+      "categories_list": [
+        "account_takeover",
+        "synthetic_identity",
+        "card_testing",
+        "refund_abuse",
+        "merchant_collusion",
+        "mule_activity"
+      ],
+      "actions_list": [
+        "block",
+        "challenge",
+        "investigate"
+      ],
+      "factors_list": [
+        "transaction_velocity",
+        "identity_confidence",
+        "device_reputation",
+        "merchant_risk",
+        "geo_anomaly",
+        "payment_history",
+        "loss_exposure"
+      ]
+    },
+    {
+      "name": "Clinical",
+      "short": "Clinical",
+      "categories": 5,
+      "actions": 4,
+      "factors": 6,
+      "tensor_size": 120,
+      "penalty_ratio": 50,
+      "engineering_days": 4,
+      "status": "designed",
+      "verification": "Highest-stakes domain; requires clinician-reviewed category/action ontology and safety validation.",
+      "categories_list": [
+        "medication_risk",
+        "diagnostic_delay",
+        "care_gap",
+        "sepsis_signal",
+        "patient_deterioration"
+      ],
+      "actions_list": [
+        "page_clinician",
+        "order_review",
+        "monitor",
+        "escalate_safety"
+      ],
+      "factors_list": [
+        "patient_acuity",
+        "clinical_confidence",
+        "time_sensitivity",
+        "protocol_match",
+        "comorbidity_risk",
+        "care_team_load"
+      ]
+    },
+    {
+      "name": "Hiring",
+      "short": "Hiring",
+      "categories": 4,
+      "actions": 3,
+      "factors": 5,
+      "tensor_size": 60,
+      "penalty_ratio": 8,
+      "engineering_days": 3,
+      "status": "designed",
+      "verification": "Designed domain; fairness review and policy constraints required before specification.",
+      "categories_list": [
+        "candidate_screening",
+        "interview_risk",
+        "offer_exception",
+        "pipeline_health"
+      ],
+      "actions_list": [
+        "advance",
+        "hold",
+        "review"
+      ],
+      "factors_list": [
+        "role_fit",
+        "assessment_signal",
+        "interview_consistency",
+        "pipeline_priority",
+        "policy_risk"
+      ]
+    },
+    {
+      "name": "Legal",
+      "short": "Legal",
+      "categories": 5,
+      "actions": 4,
+      "factors": 6,
+      "tensor_size": 120,
+      "penalty_ratio": 15,
+      "engineering_days": 3,
+      "status": "designed",
+      "verification": "Designed domain; privilege, jurisdiction, and retention rules need legal sign-off.",
+      "categories_list": [
+        "contract_review",
+        "litigation_hold",
+        "privacy_request",
+        "regulatory_inquiry",
+        "policy_exception"
+      ],
+      "actions_list": [
+        "assign_counsel",
+        "request_info",
+        "approve",
+        "escalate"
+      ],
+      "factors_list": [
+        "jurisdiction_risk",
+        "privilege_sensitivity",
+        "deadline_pressure",
+        "matter_complexity",
+        "regulatory_exposure",
+        "business_materiality"
+      ]
+    }
+  ]
+}

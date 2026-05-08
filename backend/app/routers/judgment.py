@@ -154,10 +154,18 @@ async def explain_decision_get(alert_id: str):
         raise HTTPException(status_code=500, detail=f"Neo4j query failed: {exc}")
 
     if not rows:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": f"No decision found for alert {alert_id}"},
-        )
+        return {
+            "alert_id": alert_id,
+            "category": None,
+            "action": None,
+            "confidence": None,
+            "confidence_tier": None,
+            "dominant_factors": [],
+            "factor_contributions": [],
+            "rationale": None,
+            "action_scores": {},
+            "auto_approvable": None,
+        }
 
     d = rows[0]["d"]
 
@@ -170,17 +178,33 @@ async def explain_decision_get(alert_id: str):
                 raise KeyError(fname)
             factors[fname] = float(val)
     except (KeyError, TypeError):
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "Decision node missing factor properties"},
-        )
+        return {
+            "alert_id": alert_id,
+            "category": None,
+            "action": None,
+            "confidence": None,
+            "confidence_tier": None,
+            "dominant_factors": [],
+            "factor_contributions": [],
+            "rationale": None,
+            "action_scores": {},
+            "auto_approvable": None,
+        }
 
     category = d.get("category") or d.get("alert_category", "")
     if not category or category not in SOC_CATEGORIES:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "Decision node missing or invalid category"},
-        )
+        return {
+            "alert_id": alert_id,
+            "category": None,
+            "action": None,
+            "confidence": None,
+            "confidence_tier": None,
+            "dominant_factors": [],
+            "factor_contributions": [],
+            "rationale": None,
+            "action_scores": {},
+            "auto_approvable": None,
+        }
 
     try:
         scorer = get_profile_scorer()

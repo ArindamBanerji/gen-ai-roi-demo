@@ -42,6 +42,20 @@ AUTO_PAUSE_LOOKBACK_DAYS: int = 30  # ~2× threshold; covers 3-4× q_window at V
 WINDOW_DECISIONS:      int = 50    # rolling window for alpha/q estimation
 
 
+def _is_learning_enabled(default: bool = True) -> bool:
+    """Lazy-import LEARNING_ENABLED from SOC config.
+
+    Fail open to True so non-SOC or broken-config contexts do not mask real
+    RED conservation states as pre-activation.
+    """
+    try:
+        from app.domains.soc.config import LEARNING_ENABLED
+
+        return bool(LEARNING_ENABLED)
+    except (ImportError, AttributeError):
+        return default
+
+
 class LearningHealthMonitor:
     """Two-threshold conservation law monitor for the GAE learning system."""
 
@@ -169,6 +183,10 @@ class LearningHealthMonitor:
             red_days          : int
             auto_pause_active : bool
             interpretation    : str
+            pre_activation    : bool
+            learning_enabled  : bool | None
+            health_source     : str
+            status_reason     : str | None
         """
         state          = get_learning_state()
         history        = getattr(state, "history", [])
@@ -183,6 +201,40 @@ class LearningHealthMonitor:
             theta_min = derive_theta_min()
         cc             = check_conservation(alpha, q, V, theta_min)
         signal         = LearningHealthMonitor._compute_signal(alpha, q, V)
+
+        learning_enabled = _is_learning_enabled()
+
+        # ── Pre-activation / frozen learning phase ───────────────────────────
+        if (
+            learning_enabled is False
+            and decision_count >= CALIBRATION_DECISIONS
+            and int(comps.get("n", 0) or 0) == 0
+            and signal == 0.0
+        ):
+            return {
+                "status":            "CALIBRATING",
+                "signal":            round(signal, 6),
+                "theta_min":         round(theta_min, 6),
+                "conservation":      {
+                    "passed":   True,
+                    "status":   "CALIBRATING",
+                    "headroom": 0.0,
+                },
+                "components":        _round_comps(comps),
+                "baseline":          None,
+                "baseline_std":      None,
+                "red_days":          0,
+                "auto_pause_active": False,
+                "interpretation":    (
+                    f"Pre-activation — learning is disabled with {decision_count} "
+                    "decisions recorded but no live learning history. Conservation "
+                    "cannot be evaluated until learning is enabled."
+                ),
+                "pre_activation":    True,
+                "learning_enabled":  False,
+                "health_source":     "learning_health_pre_activation",
+                "status_reason":     "learning_disabled_no_live_history",
+            }
 
         # ── Calibration phase ────────────────────────────────────────────────
         if decision_count < CALIBRATION_DECISIONS:
@@ -204,6 +256,10 @@ class LearningHealthMonitor:
                     f"Calibrating — {decision_count} decisions recorded "
                     f"(target: {CALIBRATION_DECISIONS} / ~{CALIBRATION_DAYS} days)"
                 ),
+                "pre_activation":    False,
+                "learning_enabled":  learning_enabled,
+                "health_source":     "learning_health",
+                "status_reason":     None,
             }
 
         # ── Baseline from calibration window ─────────────────────────────────
@@ -241,6 +297,10 @@ class LearningHealthMonitor:
             "interpretation":    LearningHealthMonitor._interpret(
                 status, signal, theta_min, red_days
             ),
+            "pre_activation":    False,
+            "learning_enabled":  learning_enabled,
+            "health_source":     "learning_health",
+            "status_reason":     None,
         }
 
     # -------------------------------------------------------------------------
@@ -343,14 +403,13 @@ async def compute_volume_baseline(neo4j_client: Any) -> dict:
     daily_counts: list[float] = []
     try:
         rows = await neo4j_client.run_query(
-            """
+            f"""
             MATCH (a:Alert)
-            WHERE a.timestamp_epoch > $cutoff_epoch
+            WHERE a.timestamp_epoch > {cutoff_epoch}
             WITH a.timestamp_epoch / 86400000 AS day_bucket, count(a) AS daily_count
             RETURN day_bucket, daily_count
             ORDER BY day_bucket
-            """,
-            {"cutoff_epoch": cutoff_epoch},
+            """
         )
         daily_counts = [float(r.get("daily_count") or 0) for r in rows if r.get("daily_count")]
     except Exception as exc:
@@ -445,12 +504,11 @@ async def compute_category_baseline(neo4j_client: Any) -> dict[str, float]:
 
     try:
         rows = await neo4j_client.run_query(
-            """
+            f"""
             MATCH (a:Alert)
-            WHERE a.timestamp_epoch > $cutoff_epoch AND a.category IS NOT NULL
+            WHERE a.timestamp_epoch > {cutoff_epoch} AND a.category IS NOT NULL
             RETURN a.category AS category, count(a) AS cnt
-            """,
-            {"cutoff_epoch": cutoff_epoch},
+            """
         )
     except Exception as exc:
         log.warning("[D2] compute_category_baseline query failed: %s", exc)
@@ -542,16 +600,15 @@ async def compute_analyst_precision(neo4j_client: Any) -> dict[str, float]:
     """
     try:
         rows = await neo4j_client.run_query(
-            """
+            f"""
             MATCH (d:Decision)
             WHERE d.source_id IS NOT NULL AND d.verified_by IS NOT NULL
             WITH d.verified_by AS analyst,
                  count(d) AS total,
                  sum(CASE WHEN d.correct = true THEN 1 ELSE 0 END) AS correct
-            WHERE total >= $min_decisions
+            WHERE total >= {_MIN_ANALYST_DECISIONS}
             RETURN analyst, toFloat(correct) / toFloat(total) AS precision
-            """,
-            {"min_decisions": _MIN_ANALYST_DECISIONS},
+            """
         )
     except Exception as exc:
         log.warning("[D5] compute_analyst_precision query failed: %s", exc)
@@ -599,7 +656,7 @@ async def compute_verification_health(neo4j_client: Any) -> dict:
     verified_decisions = 0
     try:
         rows = await neo4j_client.run_query(
-            "MATCH (d:Decision) RETURN count(d) AS total", {}
+            "MATCH (d:Decision) RETURN count(d) AS total"
         )
         total_decisions = int((rows[0].get("total") or 0) if rows else 0)
     except Exception as exc:
@@ -609,8 +666,7 @@ async def compute_verification_health(neo4j_client: Any) -> dict:
         rows = await neo4j_client.run_query(
             "MATCH (d:Decision) "
             "WHERE d.outcome IS NOT NULL AND d.verified_at_epoch IS NOT NULL "
-            "RETURN count(d) AS verified",
-            {},
+            "RETURN count(d) AS verified"
         )
         verified_decisions = int((rows[0].get("verified") or 0) if rows else 0)
     except Exception as exc:
@@ -627,14 +683,13 @@ async def compute_verification_health(neo4j_client: Any) -> dict:
     prior_7d_total = prior_7d_verified = 0
     try:
         rows = await neo4j_client.run_query(
-            """
+            f"""
             MATCH (d:Decision)
-            WHERE d.timestamp_epoch >= $last_start AND d.timestamp_epoch < $now
+            WHERE d.timestamp_epoch >= {last_7d_start} AND d.timestamp_epoch < {now_ms}
             RETURN
               count(d) AS total,
               count(CASE WHEN d.verified_at_epoch IS NOT NULL THEN 1 END) AS verified
-            """,
-            {"last_start": last_7d_start, "now": now_ms},
+            """
         )
         if rows:
             last_7d_total    = int(rows[0].get("total")    or 0)
@@ -644,14 +699,13 @@ async def compute_verification_health(neo4j_client: Any) -> dict:
 
     try:
         rows = await neo4j_client.run_query(
-            """
+            f"""
             MATCH (d:Decision)
-            WHERE d.timestamp_epoch >= $prior_start AND d.timestamp_epoch < $last_start
+            WHERE d.timestamp_epoch >= {prior_7d_start} AND d.timestamp_epoch < {last_7d_start}
             RETURN
               count(d) AS total,
               count(CASE WHEN d.verified_at_epoch IS NOT NULL THEN 1 END) AS verified
-            """,
-            {"prior_start": prior_7d_start, "last_start": last_7d_start},
+            """
         )
         if rows:
             prior_7d_total    = int(rows[0].get("total")    or 0)
@@ -677,7 +731,7 @@ async def compute_verification_health(neo4j_client: Any) -> dict:
     except Exception as exc:
         log.debug("[VERIF-HEALTH] conservation check failed: %s", exc)
 
-    conservation_healthy = conservation_status in ("GREEN", "CALIBRATING", "UNKNOWN")
+    conservation_healthy = conservation_status in ("GREEN", "CALIBRATING")
 
     # ── Overall status ────────────────────────────────────────────────────────
     unhealthy_count = sum([

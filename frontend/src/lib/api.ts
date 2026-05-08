@@ -171,6 +171,15 @@ export async function getDecisionFactors(alertId: string) {
 export const fetchJudgmentExplain = (alertId: string) =>
   fetchJSON(`/soc/judgment/explain/${alertId}`)
 
+export const fetchDiscoveries = (domain = 'soc') =>
+  fetchJSON(`/discoveries?domain=${encodeURIComponent(domain)}`)
+
+export const refreshDiscoveries = (domain = 'soc') =>
+  fetchJSON(`/discoveries/refresh?domain=${encodeURIComponent(domain)}`, { method: 'POST' })
+
+export const fetchDiscoverySummary = (domain = 'soc') =>
+  fetchJSON(`/discoveries/summary?domain=${encodeURIComponent(domain)}`)
+
 // ============================================================================
 // Simulation (SIM-2)
 // ============================================================================

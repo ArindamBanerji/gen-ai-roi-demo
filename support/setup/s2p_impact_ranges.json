@@ -1,0 +1,7 @@
+{
+  "price_variance": {"min": 10, "median": 45, "max": 500, "reference": 45},
+  "quantity_mismatch": {"min": 5, "median": 30, "max": 200, "reference": 30},
+  "duplicate_risk": {"min": 50, "median": 180, "max": 5000, "reference": 180},
+  "contract_gap": {"min": 20, "median": 95, "max": 1000, "reference": 95},
+  "format_compliance": {"min": 2, "median": 15, "max": 100, "reference": 15}
+}

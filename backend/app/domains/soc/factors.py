@@ -9,6 +9,7 @@ Backward-compatible helpers (SOC_FACTOR_TEMPLATES, _contribution,
 compute_soc_factors) are preserved at the bottom for services/triage.py.
 """
 
+import json
 import logging
 import numpy as np
 from datetime import date
@@ -42,6 +43,19 @@ def _S(val) -> str:
     return "'" + str(val).replace("\\", "\\\\").replace("'", "\\'") + "'"
 
 
+def _extract_pattern_history_from_factor_snapshot(raw_snapshot: Any) -> float:
+    """Normalize a Decision.factor_snapshot value to the pattern_history slot."""
+    if isinstance(raw_snapshot, str):
+        try:
+            parsed = json.loads(raw_snapshot)
+            return float(parsed[3]) if len(parsed) > 3 else 0.40
+        except (json.JSONDecodeError, IndexError, TypeError, ValueError):
+            return 0.40
+    if isinstance(raw_snapshot, (int, float)):
+        return float(raw_snapshot)
+    return 0.40
+
+
 # ===========================================================================
 # GAE FactorComputer implementations
 # ===========================================================================
@@ -56,6 +70,12 @@ class PrivilegedIdentityContextFactor(FactorComputer):
     """
 
     name = "privileged_identity_context"
+    factor_index = 0
+
+    @property
+    def factor_name(self) -> str:
+        return self.name
+
     contract = SchemaContract(
         node_type="alert",
         properties=(
@@ -146,6 +166,12 @@ class TravelMatchFactor:
     """
 
     name = "travel_match"
+    factor_index = 0
+
+    @property
+    def factor_name(self) -> str:
+        return self.name
+
     contract = SchemaContract(
         node_type="alert",
         properties=(
@@ -160,13 +186,12 @@ class TravelMatchFactor:
             return 0.5
         try:
             results = await neo4j.run_query(
-                """
-                MATCH (u:User {id: $user})-[:HAS_TRAVEL]->(t:TravelRecord)
-                WHERE t.destination = $geo
+                f"""
+                MATCH (u:User {{id: {_S(user_id)}}})-[:HAS_TRAVEL]->(t:TravelRecord)
+                WHERE t.destination = {_S(geo)}
                 RETURN count(t) AS cnt,
                        max(t.start_date) AS latest_date
-                """,
-                {"user": user_id, "geo": geo},
+                """
             )
             if not results:
                 return 0.5
@@ -208,6 +233,12 @@ class AssetCriticalityFactor:
     """
 
     name = "asset_criticality"
+    factor_index = 1
+
+    @property
+    def factor_name(self) -> str:
+        return self.name
+
     contract = SchemaContract(
         node_type="alert",
         properties=(
@@ -231,14 +262,13 @@ class AssetCriticalityFactor:
             return 0.5
         try:
             results = await neo4j.run_query(
-                """
-                MATCH (a:Alert {alert_id: $alert})-[:DETECTED_ON]->(asset:Asset)
+                f"""
+                MATCH (a:Alert {{alert_id: {_S(alert_id)}}})-[:DETECTED_ON]->(asset:Asset)
                 OPTIONAL MATCH (asset)-[:STORES]->(dc:DataClass)
                 RETURN asset.criticality AS criticality,
                        dc.sensitivity AS sensitivity
                 LIMIT 1
-                """,
-                {"alert": alert_id},
+                """
             )
             if not results:
                 return 0.5
@@ -266,6 +296,12 @@ class ThreatIntelEnrichmentFactor:
     """
 
     name = "threat_intel_enrichment"
+    factor_index = 2
+
+    @property
+    def factor_name(self) -> str:
+        return self.name
+
     contract = SchemaContract(
         node_type="alert",
         properties=(
@@ -332,15 +368,15 @@ class ThreatIntelEnrichmentFactor:
         Never raises — exceptions return neutral 0.50.
         """
         try:
-            results = await neo4j.run_query("""
-                MATCH (a:Alert {alert_id: $alert_id})-[:MEMBER_OF]->(c:Campaign)
+            results = await neo4j.run_query(f"""
+                MATCH (a:Alert {{alert_id: {_S(alert_id)}}})-[:MEMBER_OF]->(c:Campaign)
                 RETURN c.confidence AS confidence,
                        c.severity AS severity,
                        c.campaign_id AS campaign_id,
                        c.nl_summary AS summary,
                        c.trigger_rule AS trigger_rule
                 LIMIT 1
-            """, {"alert_id": alert_id})
+            """)
 
             if not results:
                 return {
@@ -388,6 +424,12 @@ class PatternHistoryFactor:
     """
 
     name = "pattern_history"
+    factor_index = 3
+
+    @property
+    def factor_name(self) -> str:
+        return self.name
+
     contract = SchemaContract(
         node_type="alert",
         properties=(
@@ -406,13 +448,12 @@ class PatternHistoryFactor:
             return 0.5
         try:
             results = await neo4j.run_query(
-                """
+                f"""
                 MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
-                WHERE a.alert_type = $type AND d.outcome IS NOT NULL
+                WHERE a.alert_type = {_S(situation_type)} AND d.outcome IS NOT NULL
                 RETURN count(d) AS total,
                        sum(CASE WHEN d.correct = true THEN 1 ELSE 0 END) AS correct
-                """,
-                {"type": situation_type},
+                """
             )
             if not results:
                 return 0.5
@@ -448,6 +489,12 @@ class PatternHistoryFactorComputer:
     """
 
     name = "pattern_history"
+    factor_index = 3
+
+    @property
+    def factor_name(self) -> str:
+        return self.name
+
     contract = SchemaContract(
         node_type="alert",
         properties=(
@@ -473,30 +520,28 @@ class PatternHistoryFactorComputer:
 
         try:
             if action_index is not None:
-                query = """
+                query = f"""
                 MATCH (d:Decision)-[:TRIGGERED_EVOLUTION]->(evo:EvolutionEvent)
-                WHERE d.category = $category
-                  AND d.action_index = $action_index
+                WHERE d.category = {_S(category)}
+                  AND d.action_index = {_S(action_index)}
                   AND d.verified_correct = true
-                RETURN d.factor_snapshot[3] AS pattern_value,
+                RETURN d.factor_snapshot AS factor_snapshot,
                        d.decision_number AS decision_num
                 ORDER BY d.decision_number DESC
                 LIMIT 50
                 """
-                params = {"category": category, "action_index": action_index}
             else:
-                query = """
+                query = f"""
                 MATCH (d:Decision)-[:TRIGGERED_EVOLUTION]->(evo:EvolutionEvent)
-                WHERE d.category = $category
+                WHERE d.category = {_S(category)}
                   AND d.verified_correct = true
-                RETURN d.factor_snapshot[3] AS pattern_value,
+                RETURN d.factor_snapshot AS factor_snapshot,
                        d.decision_number AS decision_num
                 ORDER BY d.decision_number DESC
                 LIMIT 50
                 """
-                params = {"category": category}
 
-            results = await neo4j.run_query(query, params)
+            results = await neo4j.run_query(query)
         except Exception as exc:
             log.warning("PatternHistoryFactorComputer error: %s", exc)
             return self._fallback_compute(alert)
@@ -504,8 +549,11 @@ class PatternHistoryFactorComputer:
         if not results:
             return self._fallback_compute(alert)
 
-        # Recency-weighted mean (exponential decay, half-life=30 decisions)
-        values = [r["pattern_value"] for r in results]
+        # Parse full JSON snapshot, then isolate factor_snapshot[3] (pattern_history).
+        values = []
+        for row in results:
+            raw_snapshot = row.get("factor_snapshot") or row.get("pattern_value")
+            values.append(_extract_pattern_history_from_factor_snapshot(raw_snapshot))
         decision_nums = [r["decision_num"] for r in results]
         max_dec = max(decision_nums)
         weights = [
@@ -535,6 +583,12 @@ class TimeAnomalyFactor:
     """
 
     name = "time_anomaly"
+    factor_index = 4
+
+    @property
+    def factor_name(self) -> str:
+        return self.name
+
     contract = SchemaContract(
         node_type="alert",
         properties=(
@@ -570,6 +624,12 @@ class DeviceTrustFactor:
     """
 
     name = "device_trust"
+    factor_index = 5
+
+    @property
+    def factor_name(self) -> str:
+        return self.name
+
     contract = SchemaContract(
         node_type="alert",
         properties=(

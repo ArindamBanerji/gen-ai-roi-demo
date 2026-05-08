@@ -16,6 +16,7 @@ The domain layer (services/feedback.py) owns SOC-specific seeding and resets.
 from __future__ import annotations
 
 import logging
+import importlib
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal
 
@@ -161,7 +162,7 @@ def get_reward_summary() -> Dict[str, Any]:
     incorrect = sum(1 for v in FEEDBACK_GIVEN.values() if v["outcome"] == "incorrect")
     cumulative_r_t = round(correct * 0.3 + incorrect * (-6.0), 4)
 
-    return {
+    summary = {
         "total_decisions":  total_decisions,
         "correct":          correct,
         "incorrect":        incorrect,
@@ -170,3 +171,15 @@ def get_reward_summary() -> Dict[str, Any]:
         "loop3_status":     "active" if total_decisions > 0 else "insufficient_data",
         "governs":          ["loop1_situation_analyzer", "loop2_agent_evolver"],
     }
+
+    try:
+        soc_config = importlib.import_module("app.domains.soc.config")
+
+        if getattr(soc_config, "RL_REWARD_LEDGER_ENABLED", False):
+            rl_engine = importlib.import_module("app.services.rl_engine")
+
+            summary["graded"] = rl_engine.get_reward_ledger().get_summary()
+    except (ImportError, AttributeError, RuntimeError) as exc:
+        log.debug("[RL] Reward ledger summary unavailable: %s", exc)
+
+    return summary

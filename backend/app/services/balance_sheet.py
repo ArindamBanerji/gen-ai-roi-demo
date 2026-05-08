@@ -173,8 +173,15 @@ def _build_recommendation(
     weakest: CategoryBalance,
     health_status: str,
     accuracy_fallback_used: bool,
+    pre_activation: bool = False,
 ) -> str:
     category_label = weakest.category.replace("_", " ")
+    if health_status == "CALIBRATING" or pre_activation:
+        return (
+            f"Learning health is in pre-activation: conservation monitoring is configured "
+            f"but learning is not yet enabled; continue validation for {category_label} "
+            f"before widening autonomy."
+        )
     if weakest.epistemic_band == "novice":
         return (
             f"Prioritize verified feedback in {category_label}; it remains in the novice band "
@@ -269,6 +276,7 @@ async def generate_balance_sheet(neo4j_service: Any = None) -> LearningBalanceSh
             ),
             health_status=str(learning_health.get("status") or "unavailable"),
             accuracy_fallback_used=accuracy_fallback_used,
+            pre_activation=bool(learning_health.get("pre_activation", False)),
         ),
     }
 

@@ -18,8 +18,11 @@ import {
 import { getAlerts, analyzeAlert, executeAction, resetAlerts, checkPolicyConflict, refreshThreatIntel, getDecisionFactors, getAlertEnrichment, fetchJudgmentExplain } from '../../lib/api'
 import { ensureArray, ensureObject } from '../../lib/guards'
 import { domainConfig } from '../../lib/domain'
+import DiscoveryBanner from '../discovery/DiscoveryBanner'
 import OutcomeFeedback from '../OutcomeFeedback'
 import PolicyConflict from '../PolicyConflict'
+import LearningStatePanel from '../LearningStatePanel'
+import ClusterHistoryPanel, { type ClusterHistoryData } from '../ClusterHistoryPanel'
 
 interface Alert {
   id: string
@@ -107,6 +110,7 @@ interface AnalysisResult {
   campaign_id?: string
   campaign_severity?: string
   campaign_alert_count?: number
+  cluster_history?: ClusterHistoryData
   decision_method?: string
 }
 
@@ -341,12 +345,14 @@ export default function AlertTriageTab() {
     fetchJudgmentExplain(alertId)
       .then((data) => {
         if (cancelled) return
-        setJudgmentExplain(data as JudgmentExplain)
+        const d = data as JudgmentExplain
+        setJudgmentExplain(d.action ? d : null)
         setJudgmentExplainAlertId(alertId)
       })
       .catch(() => {
         if (cancelled) return
         setJudgmentExplain(null)
+        setJudgmentExplainAlertId(alertId)
       })
       .finally(() => {
         if (!cancelled) setJudgmentExplainLoading(false)
@@ -577,6 +583,8 @@ export default function AlertTriageTab() {
           "A SIEM stops at detect. We close the loop."
         </div>
       </div>
+
+      <DiscoveryBanner />
 
       <div className="grid grid-cols-3 gap-6">
         {/* Alert Queue Sidebar */}
@@ -1304,6 +1312,12 @@ export default function AlertTriageTab() {
                 </div>
               )}
             </div>
+          )}
+
+          <ClusterHistoryPanel history={analysis?.cluster_history} />
+
+          {analysis && (
+            <LearningStatePanel category={analysis?.alert?.category || 'credential_access'} />
           )}
 
           {/* Investigation Summary Panel (NAR-2) */}

@@ -34,7 +34,7 @@ interface Supplier {
   region: string
   otif: { q1_q2: number; q3: number }
   exception_rate: { baseline: number; current: number }
-  lead_time: { contractual_days: number; actual_q4_days: number }
+  lead_time: { contractual: number; actual_q4: number }
   financial_health_trend: string
 }
 
@@ -45,8 +45,134 @@ interface Config {
   factors?: string[]
 }
 
-const UNAVAILABLE_MESSAGE = 'S2P Preview unavailable — ensure S2P backend is running on port 8002'
-const START_COMMAND = 'Start with: cd s2p-copilot/backend && uvicorn app.main:app --port 8002'
+interface CrossSignalEvidence {
+  decision_id?: string
+  category?: string
+  action?: string
+  outcome?: string
+  days_ago?: number
+  user?: string
+}
+
+interface CrossSignal {
+  signal_id?: string
+  source_domain?: string
+  target_domain?: string
+  signal_type?: string
+  entity?: string
+  entity_type?: string
+  summary?: string
+  evidence?: CrossSignalEvidence[]
+  confidence?: number
+  discovered_epoch?: number
+  status?: string
+}
+
+interface CrossSignalsResponse {
+  signals?: CrossSignal[]
+  total?: number
+  active?: number
+  acknowledged?: number
+  source_domains?: string[]
+  note?: string
+}
+
+interface WarmStartLifecycleEvent {
+  event_type?: string
+  timestamp_offset_days?: number
+  description?: string
+  metadata?: Record<string, unknown>
+}
+
+interface WarmStartEvidence {
+  evidence_id?: string
+  source_domain?: string
+  target_domain?: string
+  source_rule?: string
+  target_rule?: string
+  source_variant_id?: string
+  target_variant_id?: string
+  warm_start_prior?: number
+  warm_start_source?: string
+  status?: string
+  conservation_status?: string
+  summary?: string
+  lifecycle?: WarmStartLifecycleEvent[]
+  impact?: {
+    invoices_caught?: number
+    largest_catch_usd?: number
+    supplier?: string
+  }
+}
+
+interface WarmStartEvidenceResponse {
+  evidence?: WarmStartEvidence[]
+  total?: number
+  note?: string
+}
+
+interface ChainCreditDemo {
+  credit_id?: string
+  source_decision_id?: string
+  target_decision_id?: string
+  supplier?: string
+  source_decision?: {
+    decision_id?: string
+    amount_usd?: number
+    action?: string
+    analyst?: string
+    timestamp_offset_days?: number
+    summary?: string
+  }
+  target_decision?: {
+    decision_id?: string
+    amount_usd?: number
+    action?: string
+    analyst?: string
+    timestamp_offset_days?: number
+    summary?: string
+  }
+  attribution?: {
+    gamma?: number
+    factor_overlap?: number
+    chain_reward?: number
+    age_days?: number
+  }
+  narrative?: string
+}
+
+interface ChainCreditDemoResponse {
+  chain_credits?: ChainCreditDemo[]
+  summary?: Record<string, unknown>
+  note?: string
+}
+
+interface DomainApplicabilityRow {
+  name?: string
+  short?: string
+  categories?: number
+  actions?: number
+  factors?: number
+  tensor_size?: number
+  penalty_ratio?: number
+  engineering_days?: number | null
+  status?: string
+  verification?: string
+}
+
+interface DomainApplicabilityResponse {
+  domains?: DomainApplicabilityRow[]
+  total?: number
+  live?: number
+  specified?: number
+  designed?: number
+  engine_version?: string
+  note?: string
+  cross_domain_surfaces?: string
+}
+
+const UNAVAILABLE_MESSAGE = 'S2P Preview backend is not available. Start the S2P backend server and retry.'
+const START_COMMAND = 'Start with: cd s2p-copilot/backend && uvicorn app.main:app'
 
 function formatCategory(cat: unknown, fallback = 'Unknown'): string {
   if (typeof cat !== 'string') return fallback
@@ -172,12 +298,348 @@ async function fetchPreview<T>(url: string): Promise<T> {
   return response.json() as Promise<T>
 }
 
+async function fetchCrossSignals(): Promise<CrossSignalsResponse> {
+  const response = await fetch('/api/platform/cross-signals')
+  if (response.status === 401) {
+    window.location.href = '/saml/login'
+    throw new Error('Unauthorized')
+  }
+  if (!response.ok) {
+    throw new Error(`Cross-copilot signal request failed: ${response.status}`)
+  }
+  return response.json() as Promise<CrossSignalsResponse>
+}
+
+async function fetchWarmStartEvidence(): Promise<WarmStartEvidenceResponse> {
+  const response = await fetch('/api/platform/warm-start-evidence')
+  if (response.status === 401) {
+    window.location.href = '/saml/login'
+    throw new Error('Unauthorized')
+  }
+  if (!response.ok) {
+    throw new Error(`Warm-start evidence request failed: ${response.status}`)
+  }
+  return response.json() as Promise<WarmStartEvidenceResponse>
+}
+
+async function fetchChainCreditDemo(): Promise<ChainCreditDemoResponse> {
+  const response = await fetch('/api/platform/chain-credit-demo')
+  if (response.status === 401) {
+    window.location.href = '/saml/login'
+    throw new Error('Unauthorized')
+  }
+  if (!response.ok) {
+    throw new Error(`Chain-credit demo request failed: ${response.status}`)
+  }
+  return response.json() as Promise<ChainCreditDemoResponse>
+}
+
+async function fetchDomainApplicability(): Promise<DomainApplicabilityResponse> {
+  const response = await fetch('/api/platform/domain-applicability')
+  if (response.status === 401) {
+    window.location.href = '/saml/login'
+    throw new Error('Unauthorized')
+  }
+  if (!response.ok) {
+    throw new Error(`Domain applicability request failed: ${response.status}`)
+  }
+  return response.json() as Promise<DomainApplicabilityResponse>
+}
+
+function getSignalStatusClass(status: string): string {
+  if (status === 'acknowledged') return 'bg-green-500/15 text-green-300 border-green-500/40'
+  if (status === 'active') return 'bg-yellow-500/15 text-yellow-300 border-yellow-500/40'
+  return 'bg-slate-700 text-gray-300 border-gray-600'
+}
+
+function domainStatusTone(status: string) {
+  if (status === 'live') return 'bg-green-500/15 text-green-300 border-green-500/30'
+  if (status === 'specified') return 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+  if (status === 'designed') return 'bg-gray-700/70 text-gray-300 border-gray-600'
+  return 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+}
+
+function CrossCopilotSignalPanel({ data }: { data: CrossSignalsResponse | null }) {
+  const signals = ensureArray<CrossSignal>(data?.signals)
+  if (signals.length === 0) return null
+
+  const activeCount = toNumber(data?.active)
+
+  return (
+    <div className="bg-soc-card rounded-lg border border-yellow-500/30 overflow-hidden">
+      <div className="px-5 py-3 border-b border-yellow-500/20 flex items-center gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-100">Cross-Copilot Signals</h3>
+          <p className="mt-1 text-xs text-gray-400">Shared graph context surfaced supplier risk outside the S2P copilot's local view.</p>
+        </div>
+        <span className="ml-auto shrink-0 text-xs bg-yellow-500/20 text-yellow-200 border border-yellow-500/40 px-2.5 py-1 rounded-full">
+          {activeCount} active
+        </span>
+      </div>
+
+      <div className="grid gap-3 p-4 xl:grid-cols-3">
+        {signals.map((signal, index) => {
+          const status = String(signal?.status || 'active').toLowerCase()
+          const evidence = ensureArray<CrossSignalEvidence>(signal?.evidence)
+          const icon = status === 'acknowledged' ? '✅' : '⚠️'
+          return (
+            <div key={safeKey(signal?.signal_id, index)} className="rounded-lg border border-gray-800 bg-slate-900/70 p-4">
+              <div className="flex items-start gap-3">
+                <span className="text-lg leading-none" aria-hidden="true">{icon}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-sm font-semibold text-gray-100">{signal?.entity || 'Unknown entity'}</h4>
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${getSignalStatusClass(status)}`}>
+                      {status}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-500">
+                    {formatCategory(signal?.signal_type || 'cross_signal')} · {formatPct(toNumber(signal?.confidence))}
+                  </div>
+                </div>
+              </div>
+
+              <p className="mt-3 text-xs leading-5 text-gray-300">{signal?.summary || 'No summary available.'}</p>
+
+              {evidence.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {evidence.map((item, evidenceIndex) => (
+                    <div key={safeKey(item?.decision_id, evidenceIndex)} className="rounded border border-gray-800 bg-slate-950/60 p-2">
+                      <div className="flex items-center justify-between gap-2 text-[11px]">
+                        <span className="font-mono text-blue-300">{item?.decision_id || `EVIDENCE-${evidenceIndex + 1}`}</span>
+                        <span className="text-gray-500">{toNumber(item?.days_ago)}d ago</span>
+                      </div>
+                      <div className="mt-1 text-[11px] text-gray-400">
+                        {item?.user || 'unknown user'} · {formatCategory(item?.category || 'unknown')} · {formatAction(item?.action || 'review')} · {item?.outcome || 'unverified'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-3 border-t border-gray-800 pt-2 text-[11px] text-gray-500">
+                {signal?.source_domain || 'source'} → {signal?.target_domain || 'target'}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="border-t border-yellow-500/20 px-5 py-3 text-xs text-yellow-100/80">
+        {data?.note || 'Neither copilot was programmed to detect this. The graph discovered it.'}
+      </div>
+    </div>
+  )
+}
+
+function WarmStartEvidencePanel({ data }: { data: WarmStartEvidenceResponse | null }) {
+  const item = ensureArray<WarmStartEvidence>(data?.evidence)[0]
+  if (!item) return null
+
+  const lifecycle = ensureArray<WarmStartLifecycleEvent>(item.lifecycle)
+  const shadowResult = lifecycle.find((event) => event?.event_type === 'shadow_result')
+  const shadowMetadata = shadowResult?.metadata || {}
+
+  return (
+    <div className="bg-soc-card rounded-lg border border-blue-500/30 overflow-hidden">
+      <div className="px-5 py-3 border-b border-blue-500/20">
+        <h3 className="text-sm font-semibold text-gray-100">Cross-Domain Rule Transfer</h3>
+        <p className="mt-1 text-xs text-gray-400">SOC campaign learning became an S2P exception-cluster rule after shadow validation.</p>
+      </div>
+
+      <div className="grid gap-4 p-5 xl:grid-cols-[1fr_auto_1fr]">
+        <div className="rounded-lg border border-gray-800 bg-slate-900/70 p-4">
+          <div className="text-[11px] uppercase tracking-wide text-gray-500">SOC source</div>
+          <div className="mt-1 font-mono text-sm text-blue-300">{item.source_rule || 'RULE-CAMPAIGN-ESCALATE'}</div>
+          <div className="mt-2 text-xs text-gray-400">{item.warm_start_source || `Win rate ${formatPct(toNumber(item.warm_start_prior))}`}</div>
+        </div>
+
+        <div className="hidden items-center text-gray-500 xl:flex">-&gt; warm-started -&gt;</div>
+
+        <div className="rounded-lg border border-gray-800 bg-slate-900/70 p-4">
+          <div className="text-[11px] uppercase tracking-wide text-gray-500">S2P target</div>
+          <div className="mt-1 font-mono text-sm text-green-300">{item.target_rule || 'RULE-S2P-EXCEPTION-CLUSTER'}</div>
+          <div className="mt-2 text-xs text-gray-400">Promotion {formatCategory(item.status || 'approved')} · Conservation {item.conservation_status || 'GREEN'}</div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 px-5 pb-5 xl:grid-cols-2">
+        <div className="rounded-lg border border-gray-800 bg-slate-950/50 p-4">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Lifecycle</div>
+          <div className="space-y-2">
+            {lifecycle.map((event, index) => (
+              <div key={safeKey(event?.event_type, index)} className="flex gap-3 rounded border border-gray-800 bg-slate-900/70 p-2 text-xs">
+                <span className="w-12 shrink-0 font-mono text-gray-500">{toNumber(event?.timestamp_offset_days)}d</span>
+                <div>
+                  <div className="font-mono text-gray-200">{event?.event_type || 'event'}</div>
+                  <div className="mt-1 text-gray-400">{event?.description || 'No description available.'}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-gray-800 bg-slate-950/50 p-4">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Shadow result and impact</div>
+          <div className="grid gap-3 text-xs sm:grid-cols-2">
+            <div className="rounded border border-gray-800 bg-slate-900/70 p-3">
+              <div className="text-gray-500">Shadow win rate</div>
+              <div className="mt-1 font-mono text-green-300">
+                {formatPct(toNumber(shadowMetadata.win_rate))} ({toNumber(shadowMetadata.wins)}/{toNumber(shadowMetadata.comparisons)})
+              </div>
+            </div>
+            <div className="rounded border border-gray-800 bg-slate-900/70 p-3">
+              <div className="text-gray-500">Largest catch</div>
+              <div className="mt-1 font-mono text-green-300">{formatCurrency(toNumber(item.impact?.largest_catch_usd))}</div>
+            </div>
+            <div className="rounded border border-gray-800 bg-slate-900/70 p-3">
+              <div className="text-gray-500">Invoices caught</div>
+              <div className="mt-1 font-mono text-gray-200">{toNumber(item.impact?.invoices_caught)}</div>
+            </div>
+            <div className="rounded border border-gray-800 bg-slate-900/70 p-3">
+              <div className="text-gray-500">Supplier</div>
+              <div className="mt-1 text-gray-200">{item.impact?.supplier || 'Unknown supplier'}</div>
+            </div>
+          </div>
+          <p className="mt-4 text-xs leading-5 text-blue-100/80">
+            SOC didn't know this would help procurement. Priya's team didn't know SOC learned it.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ChainCreditPanel({ data }: { data: ChainCreditDemoResponse | null }) {
+  const credit = ensureArray<ChainCreditDemo>(data?.chain_credits)[0]
+  if (!credit) return null
+
+  const source = credit.source_decision || {}
+  const target = credit.target_decision || {}
+  const attribution = credit.attribution || {}
+
+  return (
+    <div className="bg-soc-card rounded-lg border border-green-500/30 overflow-hidden">
+      <div className="px-5 py-3 border-b border-green-500/20">
+        <h3 className="text-sm font-semibold text-gray-100">Chain Credit Attribution</h3>
+        <p className="mt-1 text-xs text-gray-400">RL attribution links Priya's earlier hold to a later automatic catch.</p>
+      </div>
+
+      <div className="grid gap-4 p-5 xl:grid-cols-[1fr_auto_1fr]">
+        <div className="rounded-lg border border-gray-800 bg-slate-900/70 p-4">
+          <div className="text-[11px] uppercase tracking-wide text-gray-500">Source decision</div>
+          <div className="mt-1 text-2xl font-bold text-gray-100">{formatCurrency(toNumber(source.amount_usd))}</div>
+          <div className="mt-2 text-xs text-gray-400">
+            {formatAction(source.action || 'hold_payment')} · {toNumber(source.timestamp_offset_days)}d · {source.analyst || 'analyst'}
+          </div>
+          <p className="mt-3 text-xs leading-5 text-gray-300">{source.summary || 'No source summary available.'}</p>
+        </div>
+
+        <div className="flex flex-col items-center justify-center text-center text-xs text-green-200">
+          <span className="rounded-full border border-green-500/40 bg-green-500/15 px-3 py-1 font-mono">
+            gamma={toNumber(attribution.gamma).toFixed(3)}
+          </span>
+          <span className="mt-2 text-gray-500">factor overlap {formatPct(toNumber(attribution.factor_overlap), 0)}</span>
+        </div>
+
+        <div className="rounded-lg border border-gray-800 bg-slate-900/70 p-4">
+          <div className="text-[11px] uppercase tracking-wide text-gray-500">Target decision</div>
+          <div className="mt-1 text-2xl font-bold text-green-300">{formatCurrency(toNumber(target.amount_usd))}</div>
+          <div className="mt-2 text-xs text-gray-400">
+            {formatAction(target.action || 'auto_hold')} · {toNumber(target.timestamp_offset_days)}d · {target.analyst || 'system_auto'}
+          </div>
+          <p className="mt-3 text-xs leading-5 text-gray-300">{target.summary || 'No target summary available.'}</p>
+        </div>
+      </div>
+
+      <div className="border-t border-green-500/20 px-5 py-3 text-xs text-green-100/80">
+        {credit.narrative || "Your first hold enabled this recovery."}
+      </div>
+    </div>
+  )
+}
+
+function DomainApplicabilityPanel({ data }: { data: DomainApplicabilityResponse | null }) {
+  const domains = ensureArray<DomainApplicabilityRow>(data?.domains)
+  if (domains.length === 0) return null
+
+  return (
+    <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800 flex flex-wrap items-start gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-100">Domain Applicability</h3>
+          <p className="mt-1 text-xs text-gray-500">Nine domains, one engine. Domain engineering still scales with each surface.</p>
+        </div>
+        <div className="ml-auto flex flex-wrap gap-2 text-[11px]">
+          <span className="rounded-full border border-green-500/30 bg-green-500/10 px-2 py-1 text-green-300">{toNumber(data?.live)} live</span>
+          <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-blue-300">{toNumber(data?.specified)} specified</span>
+          <span className="rounded-full border border-gray-600 bg-gray-800 px-2 py-1 text-gray-300">{toNumber(data?.designed)} designed</span>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-gray-800 text-left text-gray-500 uppercase tracking-wide">
+              <th className="px-4 py-3 font-medium">Domain</th>
+              <th className="px-4 py-3 font-medium">Shape</th>
+              <th className="px-4 py-3 font-medium">Penalty</th>
+              <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium">Est.</th>
+            </tr>
+          </thead>
+          <tbody>
+            {domains.map((domain, index) => {
+              const status = String(domain?.status || 'designed').toLowerCase()
+              const categories = toNumber(domain?.categories)
+              const actions = toNumber(domain?.actions)
+              const factors = toNumber(domain?.factors)
+              const engineeringDays = domain?.engineering_days
+              return (
+                <tr
+                  key={safeKey(domain?.short || domain?.name, index)}
+                  className="border-b border-gray-800/70 last:border-0 hover:bg-gray-800/30"
+                  title={domain?.verification || undefined}
+                >
+                  <td className="px-4 py-3">
+                    <div className="font-semibold text-gray-200">{domain?.short || 'Domain'}</div>
+                    <div className="mt-0.5 text-[11px] text-gray-500">{domain?.name || 'Unnamed domain'}</div>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-gray-300">({categories},{actions},{factors})</td>
+                  <td className="px-4 py-3 font-mono text-gray-300">{toNumber(domain?.penalty_ratio)}:1</td>
+                  <td className="px-4 py-3">
+                    <span className={`rounded-full border px-2 py-1 text-[11px] uppercase tracking-wide ${domainStatusTone(status)}`}>
+                      {status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-gray-300">
+                    {typeof engineeringDays === 'number' ? `${engineeringDays}d` : '-'}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="border-t border-gray-800 px-5 py-3 text-xs text-gray-400 space-y-1">
+        <p>{data?.note || 'Domain expansion requires explicit engineering for each domain surface.'}</p>
+        <p className="text-gray-500">{data?.cross_domain_surfaces || 'Cross-domain surfaces grow with each additional domain.'}</p>
+      </div>
+    </div>
+  )
+}
+
 export default function S2PPreviewTab() {
   const [queue, setQueue] = useState<ScoredInvoice[]>([])
   const [conservation, setConservation] = useState<ConservationStatus | null>(null)
   const [trajectory, setTrajectory] = useState<TrajectoryPoint[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [config, setConfig] = useState<Config | null>(null)
+  const [crossSignals, setCrossSignals] = useState<CrossSignalsResponse | null>(null)
+  const [warmStartEvidence, setWarmStartEvidence] = useState<WarmStartEvidenceResponse | null>(null)
+  const [chainCreditDemo, setChainCreditDemo] = useState<ChainCreditDemoResponse | null>(null)
+  const [domainApplicability, setDomainApplicability] = useState<DomainApplicabilityResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -199,7 +661,7 @@ export default function S2PPreviewTab() {
       setSuppliers(normalizeArrayPayload<Supplier>(suppliersPayload, ['suppliers', 'items']))
       setConfig((configPayload && typeof configPayload === 'object' ? configPayload : null) as Config | null)
     } catch (err) {
-      console.error('[S2PPreviewTab] Failed to load preview data:', err)
+      console.debug('[S2PPreviewTab] Preview data unavailable:', err)
       setQueue([])
       setConservation(null)
       setTrajectory([])
@@ -211,8 +673,52 @@ export default function S2PPreviewTab() {
     }
   }
 
+  const loadCrossSignals = async () => {
+    try {
+      const payload = await fetchCrossSignals()
+      setCrossSignals(payload && typeof payload === 'object' ? payload : null)
+    } catch (err) {
+      console.debug('[S2PPreviewTab] Cross-copilot signals unavailable:', err)
+      setCrossSignals(null)
+    }
+  }
+
+  const loadWarmStartEvidence = async () => {
+    try {
+      const payload = await fetchWarmStartEvidence()
+      setWarmStartEvidence(payload && typeof payload === 'object' ? payload : null)
+    } catch (err) {
+      console.debug('[S2PPreviewTab] Warm-start evidence unavailable:', err)
+      setWarmStartEvidence(null)
+    }
+  }
+
+  const loadChainCreditDemo = async () => {
+    try {
+      const payload = await fetchChainCreditDemo()
+      setChainCreditDemo(payload && typeof payload === 'object' ? payload : null)
+    } catch (err) {
+      console.debug('[S2PPreviewTab] Chain-credit demo unavailable:', err)
+      setChainCreditDemo(null)
+    }
+  }
+
+  const loadDomainApplicability = async () => {
+    try {
+      const payload = await fetchDomainApplicability()
+      setDomainApplicability(payload && typeof payload === 'object' ? payload : null)
+    } catch (err) {
+      console.debug('[S2PPreviewTab] Domain applicability unavailable:', err)
+      setDomainApplicability(null)
+    }
+  }
+
   useEffect(() => {
     loadPreviewData()
+    loadCrossSignals()
+    loadWarmStartEvidence()
+    loadChainCreditDemo()
+    loadDomainApplicability()
   }, [])
 
   const version = config?.engine_version || conservation?.engine_version || '0.7.23'
@@ -242,16 +748,28 @@ export default function S2PPreviewTab() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="max-w-2xl text-center bg-soc-card rounded-lg border border-red-500/30 p-6">
-          <p className="text-base font-semibold text-red-300">{UNAVAILABLE_MESSAGE}</p>
-          <p className="mt-3 text-xs text-gray-500 font-mono">{START_COMMAND}</p>
-          <button
-            onClick={loadPreviewData}
-            className="mt-5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors"
-          >
-            Retry
-          </button>
+      <div className="space-y-6">
+        <CrossCopilotSignalPanel data={crossSignals} />
+        <WarmStartEvidencePanel data={warmStartEvidence} />
+        <ChainCreditPanel data={chainCreditDemo} />
+        <DomainApplicabilityPanel data={domainApplicability} />
+        <div className="flex items-center justify-center h-96">
+          <div className="max-w-2xl text-center bg-soc-card rounded-lg border border-red-500/30 p-6">
+            <p className="text-base font-semibold text-red-300">{UNAVAILABLE_MESSAGE}</p>
+            <p className="mt-3 text-xs text-gray-500 font-mono">{START_COMMAND}</p>
+            <button
+              onClick={() => {
+                loadPreviewData()
+                loadCrossSignals()
+                loadWarmStartEvidence()
+                loadChainCreditDemo()
+                loadDomainApplicability()
+              }}
+              className="mt-5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -270,6 +788,11 @@ export default function S2PPreviewTab() {
           </span>
         </div>
       </div>
+
+      <CrossCopilotSignalPanel data={crossSignals} />
+      <WarmStartEvidencePanel data={warmStartEvidence} />
+      <ChainCreditPanel data={chainCreditDemo} />
+      <DomainApplicabilityPanel data={domainApplicability} />
 
       <div className="bg-soc-card rounded-lg border border-gray-800 overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800 flex items-center gap-2">
@@ -439,7 +962,7 @@ export default function S2PPreviewTab() {
                     <div className="rounded border border-gray-700 bg-soc-bg p-3 col-span-2">
                       <div className="text-gray-500 mb-1">Lead time</div>
                       <div className="font-mono text-gray-200">
-                        {toNumber(supplier?.lead_time?.contractual_days)} contractual days · {toNumber(supplier?.lead_time?.actual_q4_days)} actual Q4 days
+                        {toNumber(supplier?.lead_time?.contractual)} contractual days · {toNumber(supplier?.lead_time?.actual_q4)} actual Q4 days
                       </div>
                     </div>
                   </div>

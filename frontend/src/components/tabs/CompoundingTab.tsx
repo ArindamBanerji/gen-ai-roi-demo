@@ -39,6 +39,7 @@ import {
 } from 'lucide-react'
 import ROICalculatorModal from '../ROICalculator'
 import SimulationPanel from '../SimulationPanel'
+import ThreeChannelPanel from '../ThreeChannelPanel'
 
 // ============================================================================
 // Custom Hook: Counter Animation
@@ -143,6 +144,27 @@ interface DecisionEconomics {
   false_positive_rate: number
   time_saved_hours: number
   time_saved_estimated: boolean
+  note: string
+  switching_cost_trajectory?: SwitchingCostTrajectory | null
+}
+
+interface SwitchingCostPoint {
+  month: number
+  decisions: number
+  iks: number
+  analyst_days: number
+  cost_usd: number
+  label: string
+  point_type: 'actual' | 'projected'
+}
+
+interface SwitchingCostTrajectory {
+  points?: SwitchingCostPoint[] | null
+  current?: SwitchingCostPoint | null
+  projection_12m: number
+  projection_24m: number
+  rebuild_rate: number
+  cost_per_day: number
   note: string
 }
 
@@ -410,6 +432,113 @@ function ChartEmpty({ message }: { message: string }) {
   return (
     <div className="py-10 text-center text-gray-400 italic text-sm">
       {message}
+    </div>
+  )
+}
+
+function SwitchingCostChart({ trajectory }: { trajectory?: SwitchingCostTrajectory | null }) {
+  const points = ensureArray<SwitchingCostPoint>(trajectory?.points)
+    .map(point => ({
+      ...point,
+      month: Number(point.month ?? 0),
+      decisions: Number(point.decisions ?? 0),
+      iks: Number(point.iks ?? 0),
+      analyst_days: Number(point.analyst_days ?? 0),
+      cost_usd: Number(point.cost_usd ?? 0),
+    }))
+    .filter(point => point.month > 0)
+
+  if (points.length === 0) return null
+
+  const actualPoints = points.filter(point => point.point_type === 'actual')
+  const current = trajectory?.current ?? actualPoints[actualPoints.length - 1] ?? points[points.length - 1]
+  const costPerDay = Number(trajectory?.cost_per_day ?? 800)
+
+  return (
+    <div className="mt-5 rounded-lg border border-purple-200 bg-purple-50/50 p-4">
+      <div className="flex items-start justify-between gap-4 mb-3">
+        <div>
+          <h4 className="text-sm font-bold text-gray-900">Switching Cost Trajectory</h4>
+          <p className="text-xs text-gray-500 mt-1">
+            Analyst-days required to rebuild accumulated judgment after switching vendors.
+          </p>
+        </div>
+        <div className="text-right">
+          <div className="text-xs uppercase tracking-wide text-gray-500">Current</div>
+          <div className="text-xl font-bold text-purple-700">{formatUSD(Number(current?.cost_usd ?? 0))}</div>
+        </div>
+      </div>
+
+      <div className="h-64 bg-white rounded border border-purple-100 p-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={points} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#ede9fe" />
+            <XAxis
+              dataKey="month"
+              tickFormatter={(month: number) => `M${month}`}
+              stroke="#6b7280"
+              tick={{ fontSize: 11 }}
+            />
+            <YAxis
+              tickFormatter={(value: number) => formatUSD(value)}
+              stroke="#6b7280"
+              tick={{ fontSize: 11 }}
+              width={66}
+            />
+            <Tooltip
+              contentStyle={{ backgroundColor: '#111827', border: '1px solid #7e22ce', borderRadius: '6px' }}
+              labelStyle={{ color: '#c4b5fd', fontSize: '12px' }}
+              formatter={(value: any) => [formatUSD(Number(value)), 'Switching cost']}
+              labelFormatter={(_, payload) => {
+                const point = payload?.[0]?.payload as SwitchingCostPoint | undefined
+                if (!point) return 'Switching cost'
+                return `Month ${point.month} · ${point.point_type === 'actual' ? 'Actual' : 'Projected'}`
+              }}
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null
+                const point = payload[0].payload as SwitchingCostPoint
+                return (
+                  <div className="rounded-md border border-purple-500 bg-gray-950 px-3 py-2 text-xs text-gray-200 shadow-lg">
+                    <div className="font-semibold text-purple-200 mb-1">
+                      Month {point.month} · {point.point_type === 'actual' ? 'Actual' : 'Projected'}
+                    </div>
+                    <div>Cost: <span className="font-mono">{formatUSD(point.cost_usd)}</span></div>
+                    <div>Decisions: <span className="font-mono">{Math.round(point.decisions).toLocaleString()}</span></div>
+                    <div>IKS: <span className="font-mono">{point.iks.toFixed(1)}</span></div>
+                    <div>Analyst-days: <span className="font-mono">{point.analyst_days.toFixed(1)}</span></div>
+                    <div className="mt-1 text-gray-400">{point.label}</div>
+                  </div>
+                )
+              }}
+            />
+            <Area
+              type="monotone"
+              dataKey="cost_usd"
+              stroke="#7e22ce"
+              strokeWidth={2}
+              fill="#c084fc"
+              fillOpacity={0.25}
+              dot={({ cx, cy, payload }) => (
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r={4}
+                  fill={(payload as SwitchingCostPoint).point_type === 'actual' ? '#7e22ce' : '#f59e0b'}
+                  stroke="#ffffff"
+                  strokeWidth={1.5}
+                />
+              )}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+        <span>Current: {formatUSD(Number(current?.cost_usd ?? 0))} ({Math.round(Number(current?.decisions ?? 0)).toLocaleString()} decisions, month {Number(current?.month ?? 0)})</span>
+        <span>● Actual</span>
+        <span className="text-amber-600">● Projected</span>
+        <span>Uses ROI Calculator input: {formatUSD(costPerDay)}/day</span>
+      </div>
     </div>
   )
 }
@@ -1961,6 +2090,9 @@ export default function CompoundingTab() {
         </div>
       </div>
 
+      {/* ── Three-Channel Error Budget (FW-10) ──────────────────────────── */}
+      <ThreeChannelPanel />
+
       {/* ── 4. GAE Weight Convergence ───────────────────────────────────────── */}
       <div className="bg-slate-900 rounded-lg border border-blue-500/50 shadow-2xl p-6">
         <div className="flex items-center justify-between mb-5">
@@ -2277,6 +2409,7 @@ export default function CompoundingTab() {
             </div>
           </div>
           <p className="text-xs text-gray-400 mt-3 italic">{decisionEconomics.note}</p>
+          <SwitchingCostChart trajectory={decisionEconomics.switching_cost_trajectory} />
         </div>
       )}
 

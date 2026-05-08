@@ -107,7 +107,8 @@ def test_backup_writes_file(tmp_path):
 # Test 3 — restore_from_backup reloads mu into the live scorer
 # ---------------------------------------------------------------------------
 
-def test_restore_from_backup(tmp_path):
+@pytest.mark.asyncio
+async def test_restore_from_backup(tmp_path):
     # Use get_profile_scorer() live — avoids stale reference if other tests
     # called init_learning_state() and created a new scorer object.
     scorer = get_profile_scorer()
@@ -121,7 +122,7 @@ def test_restore_from_backup(tmp_path):
         assert not np.allclose(scorer.centroids, original_mu)
 
         # Restore from backup — should put mu back to original_mu
-        restored = restore_centroid_from_backup(written["backup_id"])
+        restored = await restore_centroid_from_backup(written["backup_id"])
 
         # Verify inside context so _BACKUP_DIR patch is still active
         assert np.allclose(scorer.centroids, original_mu), "mu not restored correctly"
@@ -132,7 +133,8 @@ def test_restore_from_backup(tmp_path):
 # Test 4 — restore_centroid_from_backup raises ValueError on checksum mismatch
 # ---------------------------------------------------------------------------
 
-def test_restore_validates_checksum(tmp_path):
+@pytest.mark.asyncio
+async def test_restore_validates_checksum(tmp_path):
     with _temp_backup_dir(tmp_path):
         written = write_centroid_backup(_SCORER)
 
@@ -144,7 +146,7 @@ def test_restore_validates_checksum(tmp_path):
         ts_file.write_text(json.dumps(raw))
 
         with pytest.raises(ValueError, match="[Cc]hecksum"):
-            restore_centroid_from_backup(written["backup_id"])
+            await restore_centroid_from_backup(written["backup_id"])
 
 
 # ---------------------------------------------------------------------------

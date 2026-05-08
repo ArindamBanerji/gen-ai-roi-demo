@@ -28,6 +28,22 @@ async def _stub_learning_health():
     }
 
 
+async def _stub_pre_activation_learning_health():
+    health = await _stub_learning_health()
+    health.update(
+        {
+            "status": "CALIBRATING",
+            "signal": 0.0,
+            "pre_activation": True,
+            "learning_enabled": False,
+            "health_source": "learning_health_pre_activation",
+            "status_reason": "learning_disabled_no_live_history",
+        }
+    )
+    health["conservation"] = {"passed": True, "status": "CALIBRATING", "headroom": 0.0}
+    return health
+
+
 async def _stub_audit():
     return (
         {
@@ -209,3 +225,21 @@ def test_governance_endpoints(monkeypatch):
     report_payload = report_response.json()
     assert report_payload["legal_disclaimer"] == governance_report.LEGAL_DISCLAIMER
     assert report_payload["known_risks"][0]["title"] == governance_report.N3_RISK_TITLE
+
+
+def test_governance_report_pre_activation_art9_art15_copy(monkeypatch):
+    _install_stubs(monkeypatch)
+    monkeypatch.setattr(governance_report, "_collect_learning_health", _stub_pre_activation_learning_health)
+
+    result = asyncio.run(governance_report.generate_governance_report())
+    by_article = {section.article: section for section in result.sections}
+
+    assert by_article["Art 9"].status == "CALIBRATING"
+    assert by_article["Art 15"].status == "CALIBRATING"
+    assert "Pre-activation" in by_article["Art 9"].summary
+    assert "conservation law monitoring is configured" in by_article["Art 9"].summary
+    assert "Pre-activation" in by_article["Art 15"].summary
+    assert "model robustness monitoring is configured" in by_article["Art 15"].summary
+    assert by_article["Art 12"].status == "READY"
+    assert by_article["Art 13"].status == "READY"
+    assert by_article["Art 14"].status == "READY"

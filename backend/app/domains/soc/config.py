@@ -60,6 +60,22 @@ SOC_N_ACT           = len(SCORER_ACTIONS)                          # 4
 # validates that learning improves outcomes.
 LEARNING_ENABLED = False
 
+# Phase 1: graded reward computation + ledger. Defaults False until phase
+# review passes and triage integration is explicitly implemented.
+RL_REWARD_LEDGER_ENABLED = False
+
+# Phase 2: Thompson sampling exploration proposals. Defaults False until
+# explicit triage integration is reviewed and enabled.
+RL_EXPLORATION_ENABLED = False
+
+# Phase 4: temporary eta multiplier from graded reward. Defaults False until
+# triage integration review passes.
+RL_ETA_MODULATION_ENABLED = False
+
+# Phase 4: read-only chain credit assignment. Defaults False until triage
+# integration review passes.
+RL_CHAIN_CREDIT_ENABLED = False
+
 SOC_CATEGORIES = [
     "credential_access",
     "malware_execution",
@@ -370,6 +386,14 @@ class SOCDomainConfig(DomainConfig):
                 ),
             ),
             DomainFactor(
+                id="pattern_history",
+                label="Pattern History",
+                description=(
+                    "Historical pattern match count and false positive rate "
+                    "(e.g. PAT-TRAVEL-001: 127 cases)"
+                ),
+            ),
+            DomainFactor(
                 id="time_anomaly",
                 label="Time Anomaly",
                 description=(
@@ -382,14 +406,6 @@ class SOCDomainConfig(DomainConfig):
                 label="Device Trust",
                 description=(
                     "Device MDM enrollment, fingerprint match, and corporate posture score"
-                ),
-            ),
-            DomainFactor(
-                id="pattern_history",
-                label="Pattern History",
-                description=(
-                    "Historical pattern match count and false positive rate "
-                    "(e.g. PAT-TRAVEL-001: 127 cases)"
                 ),
             ),
         ]

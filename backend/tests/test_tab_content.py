@@ -406,6 +406,47 @@ def test_tab5_has_conservation_narrative():
         )
 
 
+def test_tab5_pre_activation_conservation_narrative():
+    from app.routers.soc import _tab5_content
+
+    mock_narrative = {
+        "headline": "Test.",
+        "what_changed": {"top_shifts": [], "total_verified": 100},
+        "what_discovered": {"attack_chains_detected": 0, "chain_summaries": []},
+        "what_knows": {
+            "iks_current": 75.0,
+            "categories_calibrated": 6,
+            "health_status": "CALIBRATING",
+            "operational_knowledge_status": "GREEN",
+            "pre_activation": True,
+            "learning_enabled": False,
+            "health_source": "learning_health_pre_activation",
+            "status_reason": "learning_disabled_no_live_history",
+        },
+    }
+
+    mock_client = AsyncMock()
+    mock_client.run_query.return_value = [{"cnt": 0}]
+
+    with patch(
+        "app.services.executive_narrative.build_executive_narrative_async",
+        new=AsyncMock(return_value=mock_narrative),
+    ):
+        with patch("app.routers.soc.neo4j_client", mock_client):
+            content = _run(_tab5_content())
+
+    wsk = content["what_system_knows"]
+    narrative = wsk["conservation_narrative"]
+    assert wsk["health_status"] == "CALIBRATING"
+    assert wsk["pre_activation"] is True
+    assert "Pre-activation" in narrative
+    assert "Evidence Ledger" in narrative
+    assert "EU AI Act Art. 13" in narrative or "Art. 13" in narrative
+    assert "Conservation" in narrative
+    assert "degraded" not in narrative.lower()
+    assert "breached" not in narrative.lower()
+
+
 # ---------------------------------------------------------------------------
 # Test 9 — Tab 1 alert types are all valid SOC categories
 # ---------------------------------------------------------------------------

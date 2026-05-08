@@ -69,11 +69,11 @@ def generate_three_claims() -> Dict:
                     'the flow of verified decisions, the system alerts BEFORE '
                     'accuracy degrades. Two thresholds: relative drop detection '
                     '(AMBER at baseline-2sigma, RED at baseline-3sigma) for '
-                    'practical early warning, plus absolute floor (theta_min=0.434) '
+                    'practical early warning, plus absolute floor (theta_min = 23.53/(alpha*V), deployment-specific) '
                     'as theoretical safety net.'
                 ),
                 'metric': (
-                    'theta_min = 0.434 (SOC). '
+                    'theta_min = 23.53/(alpha*V) per deployment. '
                     'Healthy signal: 33x above floor at V=60/day. '
                     'Relative thresholds calibrated from 30-day shadow baseline. '
                     'Auto-pause after 14 consecutive RED days.'

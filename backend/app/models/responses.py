@@ -41,6 +41,35 @@ class LearningStateResponse(BaseModel):
     bootstrap_category_weights: dict[str, float] = Field(default_factory=dict)
 
 
+class TriageLearningStateResponse(BaseModel):
+    strategy: str
+    category: str
+    phase: str
+    alpha: float
+    dk_weights: Optional[list] = None
+    freeze_point: Optional[int] = None
+    decisions_in_category: int
+    novelty_rate: Optional[float] = None
+    batch_pipeline: Optional[dict] = None
+
+
+class ChannelContribution(BaseModel):
+    id: str
+    label: str
+    contribution_pp: float
+    status: str
+    description: str
+
+
+class ChannelDecompositionResponse(BaseModel):
+    strategy: str
+    channels: list[ChannelContribution]
+    total_improvement_pp: float
+    irreducible_pp: float
+    remaining_boundary_pp: float
+    disclaimer: str
+
+
 # =============================================================================
 # 2. GET /api/soc/profile  →  ProfileResponse
 # =============================================================================
@@ -210,6 +239,11 @@ class WhatKnows(BaseModel):
     categories_calibrated: int
     categories_total: int
     health_status: str
+    operational_knowledge_status: str | None = None
+    pre_activation: bool | None = None
+    learning_enabled: bool | None = None
+    health_source: str | None = None
+    status_reason: str | None = None
     conservation_narrative: str
 
 

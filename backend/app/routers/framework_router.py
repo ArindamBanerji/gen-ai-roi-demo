@@ -90,12 +90,18 @@ async def get_centroid_evolution(
     """
     result = []
     try:
+        from app.graph_schema import _S
+
+        category_filter = ""
+        if category:
+            category_filter = f"AND d.category = {_S(category)}"
+
         rows = await neo4j_client.run_query(
-            """
+            f"""
             MATCH (d:Decision)
             WHERE d.centroid_delta_norm IS NOT NULL
               AND d.centroid_delta_norm > 0
-              AND ($category IS NULL OR d.category = $category)
+              {category_filter}
             RETURN d.decision_id AS id,
                    d.centroid_delta_norm AS centroid_delta_norm,
                    d.category AS category,
@@ -103,9 +109,8 @@ async def get_centroid_evolution(
                    d.correct AS correct,
                    d.verified_at_epoch AS verified_at
             ORDER BY d.verified_at_epoch ASC
-            LIMIT $n
-            """,
-            {"category": category, "n": n},
+            LIMIT {n}
+            """
         )
         for i, r in enumerate(rows):
             result.append({
@@ -346,13 +351,13 @@ async def get_flywheel_comparison(alert_id: str = "ALERT-001", category: str = "
 
     try:
         # Count TRIGGERED_EVOLUTION edges for this category
+        from app.graph_schema import _S
         edge_result = await neo4j_client.run_query(
-            "MATCH (d:Decision)-[:TRIGGERED_EVOLUTION]->(e:EvolutionEvent) "
-            "WHERE d.category = $category "
-            "RETURN count(e) AS edge_count",
-            {"category": category},
+            f"MATCH (d:Decision)-[:TRIGGERED_EVOLUTION]->(e:EvolutionEvent) "
+            f"WHERE d.category = {_S(category)} "
+            f"RETURN count(e) AS cnt"
         )
-        edge_count = int(edge_result[0]["edge_count"]) if edge_result else 0
+        edge_count = int(edge_result[0]["cnt"]) if edge_result else 0
 
         if edge_count < 10:
             return build_flywheel_comparison(
@@ -366,13 +371,19 @@ async def get_flywheel_comparison(alert_id: str = "ALERT-001", category: str = "
 
         # Read latest factor_4 and confidence from most recent Decision for category
         decision_result = await neo4j_client.run_query(
-            "MATCH (d:Decision) WHERE d.category = $category "
-            "RETURN d.factor_snapshot[3] AS factor_4, d.confidence AS confidence, "
-            "d.action AS action ORDER BY d.decision_number DESC LIMIT 1",
-            {"category": category},
+            f"MATCH (d:Decision) WHERE d.category = {_S(category)} "
+            f"RETURN d.factor_snapshot AS factor_snapshot_raw, d.confidence AS confidence, "
+            f"d.action AS action ORDER BY d.decision_number DESC LIMIT 1"
         )
         if decision_result:
-            factor_4 = float(decision_result[0].get("factor_4") or 0.40)
+            _raw_snap = decision_result[0].get("factor_snapshot_raw")
+            if isinstance(_raw_snap, str):
+                import json
+                try:
+                    _raw_snap = json.loads(_raw_snap)
+                except (json.JSONDecodeError, ValueError):
+                    _raw_snap = None
+            factor_4 = float(_raw_snap[3]) if isinstance(_raw_snap, list) and len(_raw_snap) > 3 else 0.40
             confidence = float(decision_result[0].get("confidence") or 0.71)
             action = str(decision_result[0].get("action") or "investigate")
         else:
@@ -734,6 +745,10 @@ async def learning_health():
         red_days          : int,
         auto_pause_active : bool,
         interpretation    : str,
+        pre_activation    : bool,
+        learning_enabled  : bool | null,
+        health_source     : str,
+        status_reason     : str | null,
     }
     """
     from app.services.learning_health import LearningHealthMonitor
@@ -909,3 +924,188 @@ async def frozen_roi(
         auto_approve_rate=auto_approve_rate
     )
     return calc.compute()
+
+
+@router.get("/triage/learning-state")
+async def get_triage_learning_state(
+    category: str = Query("credential_access", description="SOC alert category"),
+):
+    """
+    Phase-aware learning state for Tab 3 LearningStatePanel.
+    Under ContinuousStrategy: phase=MEAN_CONVERGENCE, alpha=0.0, dk_weights=null.
+    """
+    from app.services.gae_state import get_profile_scorer
+    from app.domains.soc.config import SOC_CATEGORIES
+    from gae.two_phase import MEAN_CONVERGENCE
+
+    default = {
+        "strategy": "continuous",
+        "category": category,
+        "phase": MEAN_CONVERGENCE,
+        "alpha": 0.0,
+        "dk_weights": None,
+        "freeze_point": None,
+        "decisions_in_category": 0,
+        "novelty_rate": None,
+        "batch_pipeline": None,
+    }
+
+    try:
+        scorer = get_profile_scorer()
+    except Exception:
+        return default
+
+    if scorer is None or category not in SOC_CATEGORIES:
+        return default
+
+    cat_index = SOC_CATEGORIES.index(category)
+    strategy = (
+        "two_phase"
+        if getattr(scorer, "_learning_strategy", None) is not None
+        else "continuous"
+    )
+
+    phase = MEAN_CONVERGENCE
+    if hasattr(scorer, "get_phase"):
+        try:
+            phase_raw = scorer.get_phase(cat_index)
+            phase = str(getattr(phase_raw, "value", phase_raw))
+        except Exception:
+            phase = MEAN_CONVERGENCE
+
+    alpha = 0.0
+    if hasattr(scorer, "get_alpha"):
+        try:
+            alpha = float(scorer.get_alpha(cat_index))
+        except Exception:
+            alpha = 0.0
+
+    dk_weights = None
+    if hasattr(scorer, "get_dk_weights"):
+        try:
+            dk_raw = scorer.get_dk_weights(cat_index)
+            if dk_raw is not None:
+                dk_weights = dk_raw.tolist() if hasattr(dk_raw, "tolist") else list(dk_raw)
+        except Exception:
+            dk_weights = None
+
+    freeze_point = None
+    n_decisions = 0
+    category_states = getattr(scorer, "_category_states", None)
+    if category_states is not None:
+        try:
+            if cat_index < len(category_states):
+                cs = category_states[cat_index]
+                freeze_point = getattr(cs, "freeze_point", None)
+                n_decisions = getattr(cs, "n_decisions", 0)
+        except Exception:
+            freeze_point = None
+            n_decisions = 0
+
+    return {
+        "strategy": strategy,
+        "category": category,
+        "phase": phase,
+        "alpha": round(float(alpha), 4),
+        "dk_weights": dk_weights,
+        "freeze_point": freeze_point,
+        "decisions_in_category": int(n_decisions),
+        "novelty_rate": None,
+        "batch_pipeline": None,
+    }
+
+
+@router.get("/compounding/channel-decomposition")
+async def get_channel_decomposition():
+    """
+    Three-channel improvement decomposition for Tab 4.
+    Channel 1 (Scorer): centroid or DK learning.
+    Channel 2 (Graph): enrichment.
+    Channel 3 (Labels): LLM-as-Judge (not yet active).
+    """
+    from app.services.gae_state import get_profile_scorer, get_learning_state
+
+    try:
+        scorer = get_profile_scorer()
+    except Exception:
+        scorer = None
+
+    try:
+        ls = get_learning_state()
+    except Exception:
+        ls = None
+
+    try:
+        decision_count = int(getattr(ls, "decision_count", 0) or 0)
+    except Exception:
+        decision_count = 0
+
+    strategy = "continuous"
+    if scorer and getattr(scorer, "_learning_strategy", None) is not None:
+        strategy = "two_phase"
+
+    ch1_pp = 0.0
+    ch1_status = "inactive"
+    ch1_desc = "No verified decisions yet."
+    if decision_count > 0:
+        ch1_status = "active"
+        if strategy == "two_phase":
+            ch1_pp = round(min(3.2 + max(decision_count - 500, 0) * 2.2 / 3500, 5.4), 1)
+            ch1_desc = f"DK precision weights from {decision_count} decisions."
+        else:
+            ch1_pp = round(min(decision_count * 2.7 / 1000, 2.7), 1)
+            ch1_desc = f"Centroid learning from {decision_count} decisions."
+
+    ch2_pp = 0.0
+    ch2_status = "active"
+    ch2_desc = "Graph enrichment reducing factor noise."
+    try:
+        from app.state.graph_snapshot import get_snapshot
+        snap = get_snapshot()
+        verified = int(getattr(snap, "verified_decisions", 0) or 0)
+        ch2_pp = round(min(verified / 3000 * 1.8, 1.8), 1) if verified > 0 else 0.0
+        ch2_desc = f"{verified} verified decisions enriching graph context."
+    except Exception:
+        ch2_desc = "Graph snapshot unavailable."
+
+    ch3_pp = 0.0
+    ch3_status = "not_active"
+    ch3_desc = "Enable LLM-as-Judge for +3-4pp additional."
+
+    total_pp = round(ch1_pp + ch2_pp + ch3_pp, 1)
+    irreducible_pp = 10.0
+    remaining_boundary_pp = round(max(irreducible_pp - total_pp, 0), 1)
+
+    return {
+        "strategy": strategy,
+        "channels": [
+            {
+                "id": "scorer",
+                "label": "Channel 1 (Scorer)",
+                "contribution_pp": ch1_pp,
+                "status": ch1_status,
+                "description": ch1_desc,
+            },
+            {
+                "id": "graph",
+                "label": "Channel 2 (Graph)",
+                "contribution_pp": ch2_pp,
+                "status": ch2_status,
+                "description": ch2_desc,
+            },
+            {
+                "id": "labels",
+                "label": "Channel 3 (Labels)",
+                "contribution_pp": ch3_pp,
+                "status": ch3_status,
+                "description": ch3_desc,
+            },
+        ],
+        "total_improvement_pp": total_pp,
+        "irreducible_pp": irreducible_pp,
+        "remaining_boundary_pp": remaining_boundary_pp,
+        "disclaimer": (
+            "Estimated from simulation calibration. Actual contributions depend on "
+            "deployment noise, factor quality, and volume."
+        ),
+    }

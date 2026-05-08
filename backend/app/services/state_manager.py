@@ -165,7 +165,7 @@ class StateManager:
         try:
             # Step 1+2: reset W → priors, clear history/count
             if not preserve_learning:
-                self._ls_svc.reset_learning_state()
+                await self._ls_svc.reset_learning_state()
                 committed.append("learning_state")
 
             # Step 3: clear outcomes on session Decision nodes; keep nodes + training data
@@ -230,7 +230,7 @@ class StateManager:
         try:
             # Step 1+2: reset W → priors, clear history/count
             if not preserve_learning:
-                self._ls_svc.reset_learning_state()
+                await self._ls_svc.reset_learning_state()
                 committed.append("learning_state")
 
             # Step 3: delete session Decision nodes; training data preserved

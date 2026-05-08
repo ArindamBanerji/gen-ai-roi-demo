@@ -47,6 +47,16 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _rl_soc_config():
+    from app.domains.soc import config as soc_config
+
+    return soc_config
+
+
+def _rl_bool(value: Any) -> bool:
+    return value is True or str(value).lower() == "true"
+
+
 # ============================================================================
 # GET /api/alerts/queue - Alert Queue
 # ============================================================================
@@ -211,6 +221,56 @@ async def analyze_alert(request: ProcessAlertRequest):
         _effective_threshold = _cat_floor if _cat_floor else _threshold
         _elevated = SOC_AGENT_ZONE_ELEVATED.get(alert_category, False)
 
+        _rl_exploration_decision = None
+        _rl_original_action_name = _scoring_result.action_name
+        _rl_explored_action_name = None
+        _rl_explored_but_referred = False
+        _rl_exploration_executed = False
+        _rl_decision_method = "gae_scoring"
+        try:
+            _soc_cfg_rl = _rl_soc_config()
+            if (
+                getattr(_soc_cfg_rl, "RL_EXPLORATION_ENABLED", False)
+                and selected_action in scorer_actions
+            ):
+                _headroom_ratio = 0.0
+                try:
+                    from app.services.learning_health import LearningHealthMonitor as _RLHealth
+
+                    _health = await _RLHealth.evaluate(neo4j_client)
+                    _headroom_ratio = float(
+                        (_health.get("conservation") or {}).get("headroom") or 0.0
+                    )
+                except Exception as _rl_health_exc:
+                    logger.warning("[RL] Exploration health check failed: %s", _rl_health_exc)
+                from app.services.rl_engine import get_exploration_policy
+
+                _scorer_probs = _scoring_result.probabilities.tolist()[:len(scorer_actions)]
+                _rl_exploration_decision = get_exploration_policy().propose(
+                    _scorer_probs,
+                    _cat_idx,
+                    _headroom_ratio,
+                )
+                if (
+                    _rl_exploration_decision.explored
+                    and _rl_exploration_decision.explored_action is not None
+                    and 0 <= _rl_exploration_decision.explored_action < len(scorer_actions)
+                ):
+                    _rl_explored_action_name = scorer_actions[
+                        _rl_exploration_decision.explored_action
+                    ]
+                    if LEARNING_ENABLED:
+                        selected_action = _rl_explored_action_name
+                        _rl_exploration_executed = True
+                        _rl_decision_method = "gae_scoring_explored"
+                    else:
+                        _rl_decision_method = "gae_scoring_explore_proposed"
+        except Exception as _rl_explore_exc:
+            logger.warning("[RL] Exploration proposal failed: %s", _rl_explore_exc)
+            _rl_exploration_decision = None
+            _rl_explored_action_name = None
+            _rl_exploration_executed = False
+
         if selected_action == "refer_to_analyst":
             routing_zone = "human_review"   # graduated dispatch — always routes to human
         elif selected_action == "monitor":
@@ -225,6 +285,74 @@ async def analyze_alert(request: ProcessAlertRequest):
             routing_zone = "human_review"
 
         fv_list = f.flatten().tolist()   # JSON-serializable, stored in Decision node (R4)
+
+        # ====================================================================
+        # Step 4b: Referral VETO — independent of ProfileScorer (EXP-REFER-LAYERED)
+        #
+        # Evaluate before any action-dependent side effects. Referral must be
+        # authoritative over explored proposals for Decision, audit, Sentinel,
+        # events, and response surfaces.
+        # ====================================================================
+        from gae.referral import ReferralEngine
+        from app.services.referral_rules import get_soc_referral_rules
+
+        # R2/R7: query Decision nodes for sequence and cross-category counts
+        _source_id = alert_data.get('source_location')
+        _user_id   = context.get('user_id')
+        _sequence_count       = await neo4j_client.get_sequence_count(_source_id)
+        _cross_category_count = await neo4j_client.get_cross_category_count(_user_id)
+        # Referral runs before Decision creation so final-action side effects are
+        # safe. The DB helpers count persisted Decisions only, so include the
+        # current candidate decision in-memory to preserve previous R2/R7 semantics.
+        _referral_sequence_count = _sequence_count + 1
+        _referral_cross_category_count = _cross_category_count + 1
+        logger.debug(
+            "[TRIAGE-Referral] source_id=%r seq=%d(+current=%d) user_id=%r cross_cat=%d(+current=%d)",
+            _source_id, _sequence_count, _referral_sequence_count,
+            _user_id, _cross_category_count, _referral_cross_category_count,
+        )
+
+        _alert_context = {
+            # R1: executive account
+            'identity_tier':        alert_data.get('identity_tier', 'standard'),
+            # R2: rapid succession — live Neo4j count
+            'sequence_count':       _referral_sequence_count,
+            # R3: compliance mandate
+            'category':             alert_category,
+            'compliance_mode':      False,
+            # R4: high value data
+            'asset_criticality':    fv_list[1] if len(fv_list) > 1 else 0.0,
+            'stage1_action':        _scoring_result.action_name,
+            # R5: active incident
+            'incident_active':      False,
+            # R6: new asset
+            'asset_age_days':       alert_data.get('asset_age_days', 365),
+            # R7: cross-category — live Neo4j count
+            'cross_category_count': _referral_cross_category_count,
+            # full factor vector for future rules
+            'factor_values':        fv_list,
+        }
+
+        _referral_engine = ReferralEngine(rules=get_soc_referral_rules())
+        _referral = _referral_engine.evaluate(_alert_context)
+
+        if _referral.should_refer:
+            selected_action = "refer_to_analyst"
+            routing_zone = "human_review"
+            if _rl_exploration_decision and _rl_exploration_decision.explored:
+                _rl_explored_but_referred = True
+                _rl_exploration_executed = False
+            logger.info(
+                "[TRIAGE-Referral] VETO fired — rules=%s audit=%s",
+                _referral.reason_codes,
+                _referral.audit_summary,
+            )
+
+        _referral_payload = {
+            'should_refer':  _referral.should_refer,
+            'reasons':       _referral.reason_codes,
+            'audit_summary': _referral.audit_summary,
+        }
 
         logger.info(
             "[TRIAGE-v5] action=%s conf=%.3f zone=%s",
@@ -378,8 +506,8 @@ async def analyze_alert(request: ProcessAlertRequest):
             )
             if _composite["auto_approve"] and not ShadowModeService.SHADOW_ENABLED:
                 await neo4j_client.run_query(
-                    "MATCH (d:Decision {decision_id: $id}) SET d.auto_approved = true",
-                    {"id": decision_id},
+                    f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
+                    "SET d.auto_approved = true"
                 )
         except Exception as _cg_exc:
             logger.warning("[TRIAGE] composite gate failed: %s", _cg_exc)
@@ -463,65 +591,25 @@ async def analyze_alert(request: ProcessAlertRequest):
             (sorted_probs[0] - sorted_probs[1]) < 0.05
         )
 
-        # ====================================================================
-        # Step 8b: Referral VETO — independent of ProfileScorer (EXP-REFER-LAYERED)
-        #
-        # Rules R1-R7 evaluate alert_context and fire a VETO at any confidence.
-        # Action routing (ProfileScorer) and referral routing (ReferralRules)
-        # are independent pipelines. Referral wins if any rule fires.
-        # Missing context keys → rule does not fire (safe degradation).
-        # ====================================================================
-        from gae.referral import ReferralEngine
-        from app.services.referral_rules import get_soc_referral_rules
-
-        # R2/R7: query Decision nodes for sequence and cross-category counts
-        _source_id = alert_data.get('source_location')
-        _user_id   = context.get('user_id')
-        _sequence_count       = await neo4j_client.get_sequence_count(_source_id)
-        _cross_category_count = await neo4j_client.get_cross_category_count(_user_id)
-        logger.debug(
-            "[TRIAGE-Referral] source_id=%r seq=%d user_id=%r cross_cat=%d",
-            _source_id, _sequence_count, _user_id, _cross_category_count,
-        )
-
-        _alert_context = {
-            # R1: executive account
-            'identity_tier':        alert_data.get('identity_tier', 'standard'),
-            # R2: rapid succession — live Neo4j count
-            'sequence_count':       _sequence_count,
-            # R3: compliance mandate
-            'category':             alert_category,
-            'compliance_mode':      False,
-            # R4: high value data
-            'asset_criticality':    fv_list[1] if len(fv_list) > 1 else 0.0,
-            'stage1_action':        _scoring_result.action_name,
-            # R5: active incident
-            'incident_active':      False,
-            # R6: new asset
-            'asset_age_days':       alert_data.get('asset_age_days', 365),
-            # R7: cross-category — live Neo4j count
-            'cross_category_count': _cross_category_count,
-            # full factor vector for future rules
-            'factor_values':        fv_list,
-        }
-
-        _referral_engine = ReferralEngine(rules=get_soc_referral_rules())
-        _referral = _referral_engine.evaluate(_alert_context)
-
-        if _referral.should_refer:
-            selected_action = "refer_to_analyst"
-            routing_zone = "human_review"
-            logger.info(
-                "[TRIAGE-Referral] VETO fired — rules=%s audit=%s",
-                _referral.reason_codes,
-                _referral.audit_summary,
-            )
-
-        _referral_payload = {
-            'should_refer':  _referral.should_refer,
-            'reasons':       _referral.reason_codes,
-            'audit_summary': _referral.audit_summary,
-        }
+        if _rl_exploration_decision and _rl_exploration_decision.explored:
+            try:
+                _meta_ts = int(datetime.utcnow().timestamp() * 1000)
+                await neo4j_client.run_query(
+                    f"""
+                    MATCH (d:Decision {{decision_id: {_S(decision_id)}}})
+                    SET d.action                  = {_S(selected_action)},
+                        d.explored                = true,
+                        d.exploration_rate        = {float(_rl_exploration_decision.exploration_rate)},
+                        d.original_action         = {_S(_rl_original_action_name)},
+                        d.explored_action         = {_S(_rl_explored_action_name or '')},
+                        d.explored_but_referred   = {'true' if _rl_explored_but_referred else 'false'},
+                        d.exploration_executed    = {'true' if _rl_exploration_executed else 'false'},
+                        d.exploration_reason      = {_S(_rl_exploration_decision.reason)},
+                        d.exploration_updated_at  = {_meta_ts}
+                    """
+                )
+            except Exception as _rl_meta_exc:
+                logger.warning("[RL] Exploration metadata write failed: %s", _rl_meta_exc)
 
         _referral_debug = {
             'r2_sequence_count':       _sequence_count,
@@ -529,6 +617,29 @@ async def analyze_alert(request: ProcessAlertRequest):
             'rules_evaluated':         [r.rule_id for r in get_soc_referral_rules()],
             'rules_fired':             list(_referral.reason_codes),
         }
+
+        # ====================================================================
+        # Step 8c: AE-02 per-variant shadow comparison — fire-and-forget
+        # ====================================================================
+        from app.services.shadow_runner import SHADOW_TESTABLE_ARTIFACTS, maybe_shadow_compare
+        from app.services.variant_registry import SHADOW as _AE_SHADOW, get_all_variants as _ae_variants
+        import asyncio as _shadow_asyncio
+
+        _has_shadow_variant = any(
+            variant.artifact_type in SHADOW_TESTABLE_ARTIFACTS
+            and (variant.category == alert_category or variant.category is None)
+            for variant in _ae_variants(status_filter=_AE_SHADOW)
+        )
+        if _has_shadow_variant:
+            _shadow_asyncio.create_task(
+                maybe_shadow_compare(
+                    alert_id=alert_id,
+                    category=alert_category,
+                    production_action=selected_action,
+                    production_confidence=confidence,
+                    alert_data=alert_data,
+                )
+            )
 
         # ====================================================================
         # Build Response — existing structure preserved; gae_scoring added
@@ -541,6 +652,20 @@ async def analyze_alert(request: ProcessAlertRequest):
         attack_tactic = (
             alert_data.get("mitre_tactic") or situation_analysis.mitre_tactic
         )
+
+        _cluster_history_payload = None
+        try:
+            from app.services.cluster_history import get_cluster_history as _get_cluster_history
+
+            _cluster_history = await _get_cluster_history(
+                source_user=context.get("user_id") or alert_data.get("user_id"),
+                current_decision_id=decision_id,
+                graph_client=neo4j_client,
+            )
+            if _cluster_history is not None:
+                _cluster_history_payload = dataclasses.asdict(_cluster_history)
+        except Exception as _cluster_exc:
+            logger.warning("[TRIAGE] Cluster history failed for %s: %s", alert_id, _cluster_exc)
 
         response = {
             "alert": alert_data,
@@ -592,8 +717,10 @@ async def analyze_alert(request: ProcessAlertRequest):
             "provenance":      _provenance_payload,
             "referral":        _referral_payload,
             "referral_debug":  _referral_debug,
-            "decision_method": "referral_override" if _referral.should_refer else "gae_scoring",
+            "decision_method": "referral_override" if _referral.should_refer else _rl_decision_method,
         }
+        if _cluster_history_payload is not None:
+            response["cluster_history"] = _cluster_history_payload
         # ====================================================================
         # NAR-1: Build calibration_context and generate structured narrative
         # ====================================================================
@@ -839,6 +966,12 @@ async def reset_demo_alerts():
         # ProfileScorer centroids (IKS) survive demo resets (BACKLOG-020).
         # Full hard reset (including learning_state) is POST /api/admin/reset.
         await state_manager.reset_except(["learning_state"])
+        try:
+            from app.services.rl_engine import reset_rl_state
+
+            reset_rl_state()
+        except Exception as _rl_reset_exc:
+            logger.warning("[RL] Demo-cycle RL reset failed: %s", _rl_reset_exc)
         from app.services.servicenow_mock import get_servicenow_mock
         get_servicenow_mock().reset()
 
@@ -909,6 +1042,9 @@ async def report_decision_outcome(request: OutcomeRequest):
         _analyst_eta = None  # populated below after quality lookup
 
         _ts_outcome = int(datetime.utcnow().timestamp() * 1000)
+        reward_result = None
+        _rl_reward_ledger = None
+        _rl_posterior_updated = False
         gae_result = await neo4j_client.run_query(
             f"""
             MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
@@ -921,10 +1057,23 @@ async def report_decision_outcome(request: OutcomeRequest):
             RETURN d.factor_vector AS factor_vector,
                    d.action        AS action,
                    d.confidence    AS confidence,
+                   d.campaign_id    AS campaign_id,
+                   d.explored       AS explored,
+                   d.explored_but_referred AS explored_but_referred,
+                   d.exploration_executed AS exploration_executed,
+                   d.explored_action AS explored_action,
                    a.category      AS category,
                    coalesce(a.alert_type, 'unknown') AS alert_type
             """
         )
+        if not gae_result:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f"Decision {request.decision_id} not found in graph. "
+                    "Outcome not recorded."
+                ),
+            )
 
         # Audit chain — record outcome as separate event
         try:
@@ -989,11 +1138,32 @@ async def report_decision_outcome(request: OutcomeRequest):
                 or _resolve_cat_po(alert_type_for_cat)
             )
 
+            try:
+                _soc_cfg_rl = _rl_soc_config()
+                if getattr(_soc_cfg_rl, "RL_REWARD_LEDGER_ENABLED", False):
+                    from app.services.rl_engine import get_reward_computer, get_reward_ledger
+
+                    reward_result = get_reward_computer().compute(
+                        action=action_name,
+                        outcome="correct" if correct_bool else "incorrect",
+                        category=_resolved_category,
+                        context={
+                            "campaign_id": record.get("campaign_id"),
+                            "confidence": confidence_at_decision,
+                        },
+                    )
+                    _rl_reward_ledger = get_reward_ledger()
+            except Exception as _rl_reward_exc:
+                logger.warning("[RL] Reward computation failed: %s", _rl_reward_exc)
+                reward_result = None
+                _rl_reward_ledger = None
+
             if fv is None:
                 print(f"[GAE] Decision node found but factor_vector is NULL — skipping weight update")
                 _ref_ls = get_learning_state()
                 if _ref_ls:
                     _ref_ls.decision_count += 1
+                    save_learning_state()
 
             if fv is not None:
                 f = np.array(fv, dtype=np.float64).reshape(1, -1)
@@ -1024,6 +1194,28 @@ async def report_decision_outcome(request: OutcomeRequest):
                     )
                     save_learning_state()
 
+                    try:
+                        _soc_cfg_rl = _rl_soc_config()
+                        if getattr(_soc_cfg_rl, "RL_EXPLORATION_ENABLED", False):
+                            _explored = _rl_bool(record.get("explored"))
+                            _vetoed = _rl_bool(record.get("explored_but_referred"))
+                            _executed = _rl_bool(record.get("exploration_executed"))
+                            _explored_action = record.get("explored_action") or action_name
+                            if _explored and _executed and not _vetoed and _explored_action in SCORER_ACTIONS:
+                                from app.domains.soc.config import SOCDomainConfig as _SDC_rl
+                                from app.services.rl_engine import get_exploration_policy
+
+                                _posterior_cat_idx = _SDC_rl().get_category_index(_resolved_category)
+                                _posterior_action_idx = list(SCORER_ACTIONS).index(_explored_action)
+                                get_exploration_policy().update_posterior(
+                                    _posterior_cat_idx,
+                                    _posterior_action_idx,
+                                    correct_bool,
+                                )
+                                _rl_posterior_updated = True
+                    except Exception as _rl_posterior_exc:
+                        logger.warning("[RL] Posterior update failed: %s", _rl_posterior_exc)
+
                     # SOC-Q3 / DRIFT-01: Wire conservation status → scorer auto-pause.
                     # auto_pause_active (14+ RED days) overrides current status to RED
                     # so that a brief GREEN window cannot clear an accumulated freeze.
@@ -1049,7 +1241,6 @@ async def report_decision_outcome(request: OutcomeRequest):
                     from app.domains.soc.config import resolve_alert_category, SOCDomainConfig as _SDC_out
                     _cat_name_out = resolve_alert_category(alert_type_for_cat)
                     _cat_idx_out  = _SDC_out().get_category_index(_cat_name_out)
-                    _ps_out = get_profile_scorer()
 
                     _analyst_action = request.analyst_action
                     _scorer_acts = list(SCORER_ACTIONS)
@@ -1063,42 +1254,68 @@ async def report_decision_outcome(request: OutcomeRequest):
                         _gt_idx  = action_index
                         _correct = correct_bool
 
-                    if _ps_out is not None:
-                        from app.services.gae_state import get_scorer_lock, guarded_update as _guarded_update
-                        if _conservation_block:
-                            logger.warning("[B5] Conservation check failed — learning blocked (fail-closed)")
-                        else:
-                            _cu = None
-                            async with get_scorer_lock():
-                                _orig_eta_out = _ps_out.eta_override
+                    from app.services.gae_state import acquire_scorer as _acquire_scorer, guarded_update as _guarded_update
+                    if _conservation_block:
+                        logger.warning("[B5] Conservation check failed — learning blocked (fail-closed)")
+                    else:
+                        _cu = None
+                        # D-05: acquire lock and capture scorer atomically so a concurrent
+                        # reset cannot replace _learning_state between capture and update.
+                        async with _acquire_scorer() as _ps_out:
+                            _orig_eta_out = getattr(_ps_out, "eta", None)
+                            _orig_eta_neg_out = getattr(_ps_out, "eta_neg", None)
+                            _orig_eta_override_out = getattr(_ps_out, "eta_override", None)
+                            try:
+                                if _analyst_eta is not None:
+                                    _ps_out.eta_override = _analyst_eta
                                 try:
-                                    if _analyst_eta is not None:
-                                        _ps_out.eta_override = _analyst_eta
-                                    # FIX 3: status write inside lock prevents concurrent race
-                                    if hasattr(_ps_out, "set_conservation_status"):
-                                        _ps_out.set_conservation_status(_eff_status)
-                                    # DRIFT-03: route through guarded_update() so D3/D2/D7
-                                    # spike guards AND conservation freeze are enforced.
-                                    _cu = _guarded_update(
-                                        _ps_out,
-                                        f=f.flatten(),
-                                        category_index=_cat_idx_out,
-                                        action_index=action_index,
-                                        correct=_correct,
-                                        category_name=_cat_name_out,
-                                        gt_action_index=_gt_idx,
-                                    )
-                                finally:
-                                    _ps_out.eta_override = _orig_eta_out
-                            if _cu is None:
-                                logger.info("[GAE][LEARN] Update blocked by conservation/spike/freeze guard")
-                            else:
-                                print(
-                                    f"[GAE][LEARN] ProfileScorer.update called: "
-                                    f"action={action_name} analyst_action={_analyst_action!r} "
-                                    f"gt_action_index={_gt_idx} correct={_correct} "
-                                    f"category={_cat_name_out} eta={_analyst_eta or _orig_eta_out}"
+                                    _soc_cfg_rl = _rl_soc_config()
+                                    if (
+                                        getattr(_soc_cfg_rl, "RL_ETA_MODULATION_ENABLED", False)
+                                        and reward_result is not None
+                                    ):
+                                        _rl_weight = float(reward_result.reward_weight)
+                                        if hasattr(_ps_out, "eta") and _ps_out.eta is not None:
+                                            _ps_out.eta = _ps_out.eta * _rl_weight
+                                        if hasattr(_ps_out, "eta_neg") and _ps_out.eta_neg is not None:
+                                            _ps_out.eta_neg = _ps_out.eta_neg * _rl_weight
+                                        if (
+                                            hasattr(_ps_out, "eta_override")
+                                            and _ps_out.eta_override is not None
+                                        ):
+                                            _ps_out.eta_override = _ps_out.eta_override * _rl_weight
+                                except Exception as _rl_eta_exc:
+                                    logger.warning("[RL] Eta modulation failed: %s", _rl_eta_exc)
+                                # FIX 3: status write inside lock prevents concurrent race
+                                if hasattr(_ps_out, "set_conservation_status"):
+                                    _ps_out.set_conservation_status(_eff_status)
+                                # DRIFT-03: route through guarded_update() so D3/D2/D7
+                                # spike guards AND conservation freeze are enforced.
+                                _cu = _guarded_update(
+                                    _ps_out,
+                                    f=f.flatten(),
+                                    category_index=_cat_idx_out,
+                                    action_index=action_index,
+                                    correct=_correct,
+                                    category_name=_cat_name_out,
+                                    gt_action_index=_gt_idx,
                                 )
+                            finally:
+                                if _orig_eta_out is not None and hasattr(_ps_out, "eta"):
+                                    _ps_out.eta = _orig_eta_out
+                                if _orig_eta_neg_out is not None and hasattr(_ps_out, "eta_neg"):
+                                    _ps_out.eta_neg = _orig_eta_neg_out
+                                if hasattr(_ps_out, "eta_override"):
+                                    _ps_out.eta_override = _orig_eta_override_out
+                        if _cu is None:
+                            logger.info("[GAE][LEARN] Update blocked by conservation/spike/freeze guard")
+                        else:
+                            print(
+                                f"[GAE][LEARN] ProfileScorer.update called: "
+                                f"action={action_name} analyst_action={_analyst_action!r} "
+                                f"gt_action_index={_gt_idx} correct={_correct} "
+                                f"category={_cat_name_out} eta={_analyst_eta or _orig_eta_override_out}"
+                            )
 
                 # Change 5: ProfileSnapshot every 50 decisions
                 if wu is not None:
@@ -1225,6 +1442,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                 # Only fires on correct outcomes for SCORER_ACTIONS (not
                 # refer_to_analyst). Fire-and-forget; never blocks response.
                 # ============================================================
+                _triggered_evolution_written = False
                 if correct_bool and action_name in SCORER_ACTIONS:
                     try:
                         _evo_id = f"EVO-{uuid.uuid4().hex[:4].upper()}"
@@ -1256,6 +1474,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                                 d.action_index      = {action_index}
                             """
                         )
+                        _triggered_evolution_written = True
                         await event_bus.emit(GraphMutated(
                             mutation_type="evolution",
                             affected_entities=(request.decision_id, request.alert_id),
@@ -1270,6 +1489,31 @@ async def report_decision_outcome(request: OutcomeRequest):
                             "[FLYWHEEL] TRIGGERED_EVOLUTION creation failed (non-blocking): %s",
                             _evo_exc,
                         )
+
+                try:
+                    _soc_cfg_rl = _rl_soc_config()
+                    if (
+                        getattr(_soc_cfg_rl, "RL_CHAIN_CREDIT_ENABLED", False)
+                        and correct_bool
+                        and action_name in SCORER_ACTIONS
+                        and _triggered_evolution_written
+                    ):
+                        from app.services.rl_engine import get_credit_assigner, get_reward_ledger
+
+                        await get_credit_assigner().assign_chain_credit(
+                            source_decision_id=request.decision_id,
+                            category=_resolved_category,
+                            action_index=action_index,
+                            current_decision_number=int(learning_state.decision_count),
+                            reward=(
+                                reward_result.graded_reward
+                                if reward_result is not None
+                                else 1.0
+                            ),
+                            reward_ledger=_rl_reward_ledger or get_reward_ledger(),
+                        )
+                except Exception as _rl_chain_exc:
+                    logger.warning("[RL] Chain credit assignment failed: %s", _rl_chain_exc)
 
                 # ============================================================
                 # FEATURE-04: Auto-snapshot centroids every SNAPSHOT_INTERVAL
@@ -1294,11 +1538,32 @@ async def report_decision_outcome(request: OutcomeRequest):
                         _snap2_exc,
                     )
 
-        else:
-            print(
-                f"[GAE] Decision node {request.decision_id!r} not found "
-                f"— skipping weight update"
-            )
+        if reward_result is not None and _rl_reward_ledger is not None and gae_result:
+            try:
+                _record_for_reward = gae_result[0]
+                _rl_reward_ledger.append(
+                    decision_id=request.decision_id,
+                    reward_result=reward_result,
+                    category=_resolved_category,
+                    action=action_name,
+                    alert_id=request.alert_id,
+                    explored=_rl_bool(_record_for_reward.get("explored")),
+                    explored_but_referred=_rl_bool(
+                        _record_for_reward.get("explored_but_referred")
+                    ),
+                    posterior_updated=_rl_posterior_updated,
+                )
+            except Exception as _rl_ledger_exc:
+                logger.warning("[RL] Reward ledger append failed: %s", _rl_ledger_exc)
+
+        _shadow_verified_action = None
+        if request.analyst_action:
+            _shadow_verified_action = request.analyst_action
+        elif correct_bool and gae_result:
+            _shadow_verified_action = action_name
+        if _shadow_verified_action:
+            from app.services.shadow_runner import fill_shadow_outcome
+            fill_shadow_outcome(request.alert_id, _shadow_verified_action)
 
         # ====================================================================
         # Emit events (every graph mutation MUST emit events)

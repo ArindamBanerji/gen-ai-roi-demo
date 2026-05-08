@@ -146,3 +146,18 @@ def test_status_logic_all_unhealthy_is_red():
     assert result["coverage_healthy"] is False
     assert result["drift_healthy"] is False
     assert result["conservation_healthy"] is False
+
+
+def test_calibrating_conservation_is_healthy():
+    mock, _ = _neo4j_mock(
+        total=1000, verified=300,
+        last_total=100, last_verified=30,
+        prior_total=100, prior_verified=30,
+    )
+    with _patch_conservation("CALIBRATING"):
+        result = _run(compute_verification_health(mock))
+
+    assert result["status"] == "GREEN"
+    assert result["coverage_healthy"] is True
+    assert result["drift_healthy"] is True
+    assert result["conservation_healthy"] is True

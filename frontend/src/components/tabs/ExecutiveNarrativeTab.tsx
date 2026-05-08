@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { FileText, Download, TrendingUp, Search, Brain, Activity, Shield, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react'
-import { ensureArray } from '../../lib/guards'
+import { ensureArray, safeKey } from '../../lib/guards'
 import {
   downloadGovernanceReportCsv,
   downloadGovernanceReportJson,
@@ -38,7 +38,9 @@ interface WhatKnows {
   iks_current: number
   categories_calibrated: number
   categories_total: number
-  health_status: 'GREEN' | 'AMBER' | 'RED'
+  health_status: 'GREEN' | 'AMBER' | 'RED' | 'CALIBRATING'
+  operational_knowledge_status?: 'GREEN' | 'AMBER' | 'RED'
+  pre_activation?: boolean
   conservation_narrative?: string
 }
 
@@ -89,12 +91,39 @@ interface GovernanceReportData extends GovernanceSummaryData {
   sections: GovernanceReportSection[]
 }
 
+interface DomainApplicabilityRow {
+  name?: string
+  short?: string
+  categories?: number
+  actions?: number
+  factors?: number
+  tensor_size?: number
+  penalty_ratio?: number
+  engineering_days?: number | null
+  status?: string
+  verification?: string
+  categories_list?: string[]
+  actions_list?: string[]
+}
+
+interface DomainApplicabilityResponse {
+  domains?: DomainApplicabilityRow[]
+  total?: number
+  live?: number
+  specified?: number
+  designed?: number
+  engine_version?: string
+  note?: string
+  cross_domain_surfaces?: string
+}
+
 const GOVERNANCE_DISCLAIMER =
   'Evidence supporting human oversight only. This report is not a compliance certification or legal determination.'
 
 function healthColor(status: string) {
   if (status === 'GREEN') return 'text-green-400'
-  if (status === 'AMBER') return 'text-yellow-400'
+  if (status === 'AMBER') return 'text-amber-400'
+  if (status === 'CALIBRATING') return 'text-blue-400'
   return 'text-red-400'
 }
 
@@ -109,7 +138,8 @@ function MetricCard({ label, value }: { label: string; value: string | number })
 
 function statusTone(status: string) {
   if (status === 'READY' || status === 'GREEN') return 'bg-green-500/15 text-green-300 border-green-500/30'
-  if (status === 'PAUSED' || status === 'AMBER') return 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30'
+  if (status === 'PAUSED' || status === 'AMBER') return 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+  if (status === 'CALIBRATING') return 'bg-blue-900/40 text-blue-400 border-blue-500/30'
   return 'bg-red-500/15 text-red-300 border-red-500/30'
 }
 
@@ -152,6 +182,90 @@ function EvidenceValue({ value }: { value: unknown }) {
   return <span>{formatEvidenceValue(value)}</span>
 }
 
+function toNumber(value: unknown, fallback = 0): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+function domainStatusTone(status: string) {
+  if (status === 'live') return 'bg-green-500/15 text-green-300 border-green-500/30'
+  if (status === 'specified') return 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+  if (status === 'designed') return 'bg-gray-700/70 text-gray-300 border-gray-600'
+  return 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+}
+
+function DomainApplicabilityTable({ data }: { data: DomainApplicabilityResponse | null }) {
+  const domains = ensureArray<DomainApplicabilityRow>(data?.domains)
+  if (domains.length === 0) return null
+
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
+      <div className="px-5 py-4 border-b border-gray-800 flex flex-wrap items-start gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-200">Domain Applicability</h3>
+          <p className="mt-1 text-xs text-gray-500">Nine domains, one engine. Each row still requires domain engineering.</p>
+        </div>
+        <div className="ml-auto flex flex-wrap gap-2 text-[11px]">
+          <span className="rounded-full border border-green-500/30 bg-green-500/10 px-2 py-1 text-green-300">{toNumber(data?.live)} live</span>
+          <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-blue-300">{toNumber(data?.specified)} specified</span>
+          <span className="rounded-full border border-gray-600 bg-gray-800 px-2 py-1 text-gray-300">{toNumber(data?.designed)} designed</span>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-gray-800 text-left text-gray-500 uppercase tracking-wide">
+              <th className="px-4 py-3 font-medium">Domain</th>
+              <th className="px-4 py-3 font-medium">Shape</th>
+              <th className="px-4 py-3 font-medium">Size</th>
+              <th className="px-4 py-3 font-medium">Penalty</th>
+              <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium">Est.</th>
+            </tr>
+          </thead>
+          <tbody>
+            {domains.map((domain, index) => {
+              const status = String(domain?.status || 'designed').toLowerCase()
+              const categories = toNumber(domain?.categories)
+              const actions = toNumber(domain?.actions)
+              const factors = toNumber(domain?.factors)
+              const engineeringDays = domain?.engineering_days
+              return (
+                <tr
+                  key={safeKey(domain?.short || domain?.name, index)}
+                  className="border-b border-gray-800/70 last:border-0 hover:bg-gray-800/30"
+                  title={domain?.verification || undefined}
+                >
+                  <td className="px-4 py-3">
+                    <div className="font-semibold text-gray-200">{domain?.short || 'Domain'}</div>
+                    <div className="mt-0.5 text-[11px] text-gray-500">{domain?.name || 'Unnamed domain'}</div>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-gray-300">({categories},{actions},{factors})</td>
+                  <td className="px-4 py-3 font-mono text-gray-300">{toNumber(domain?.tensor_size)}</td>
+                  <td className="px-4 py-3 font-mono text-gray-300">{toNumber(domain?.penalty_ratio)}:1</td>
+                  <td className="px-4 py-3">
+                    <span className={`rounded-full border px-2 py-1 text-[11px] uppercase tracking-wide ${domainStatusTone(status)}`}>
+                      {status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-gray-300">
+                    {typeof engineeringDays === 'number' ? `${engineeringDays}d` : '—'}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="border-t border-gray-800 px-5 py-3 text-xs text-gray-400 space-y-1">
+        <p>{data?.note || 'Domain expansion requires explicit engineering for each domain surface.'}</p>
+        <p className="text-gray-500">{data?.cross_domain_surfaces || 'Cross-domain surfaces grow with each additional domain.'}</p>
+      </div>
+    </div>
+  )
+}
+
 export default function ExecutiveNarrativeTab() {
   const [data, setData] = useState<NarrativeData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -163,6 +277,7 @@ export default function ExecutiveNarrativeTab() {
   const [governanceError, setGovernanceError] = useState<string | null>(null)
   const [downloadingJson, setDownloadingJson] = useState(false)
   const [expandedArticle, setExpandedArticle] = useState<string | null>(null)
+  const [domainApplicability, setDomainApplicability] = useState<DomainApplicabilityResponse | null>(null)
 
   useEffect(() => {
     fetch('/api/soc/executive-narrative')
@@ -173,6 +288,19 @@ export default function ExecutiveNarrativeTab() {
       .then(setData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/platform/domain-applicability')
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json()
+      })
+      .then((payload) => setDomainApplicability(payload && typeof payload === 'object' ? payload : null))
+      .catch((e) => {
+        console.debug('[ExecutiveNarrativeTab] Domain applicability unavailable:', e)
+        setDomainApplicability(null)
+      })
   }, [])
 
   useEffect(() => {
@@ -363,6 +491,8 @@ export default function ExecutiveNarrativeTab() {
           )}
         </div>
       </div>
+
+      <DomainApplicabilityTable data={domainApplicability} />
 
       {/* Governance & Compliance — governance evidence export */}
       <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">

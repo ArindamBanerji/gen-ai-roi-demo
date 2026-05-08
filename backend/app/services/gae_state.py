@@ -16,6 +16,7 @@ Reference: docs/soc_copilot_design_v1.md §14.
 import asyncio
 import json
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -36,6 +37,31 @@ _scorer_lock = asyncio.Lock()
 
 def get_scorer_lock() -> asyncio.Lock:
     return _scorer_lock
+
+
+@asynccontextmanager
+async def acquire_scorer():
+    """
+    Acquire _scorer_lock then yield the live ProfileScorer.
+    Use for any path that mutates scorer state (centroid update, restore).
+    Raises RuntimeError if ProfileScorer is not attached.
+    """
+    async with _scorer_lock:
+        scorer = _learning_state.profile_scorer if _learning_state is not None else None
+        if scorer is None:
+            raise RuntimeError("ProfileScorer not attached — call init_learning_state() first")
+        yield scorer
+
+
+@asynccontextmanager
+async def acquire_scorer_for_reset():
+    """
+    Acquire _scorer_lock to guard the reset window.
+    Used only by reset_learning_state() to serialize against in-flight updates.
+    Yields None — the old scorer is being torn down.
+    """
+    async with _scorer_lock:
+        yield
 
 
 def _S(val) -> str:
@@ -274,15 +300,24 @@ def save_learning_state() -> None:
     _fw.save_state(_learning_state, _bootstrap_metadata, _STATE_PATH)
 
 
-def reset_learning_state() -> None:
+def _reset_learning_state_inner() -> None:
+    """Synchronous reset body. Must only be called while _scorer_lock is held."""
+    global _learning_state, _bootstrap_metadata, _bootstrap_result
+    _learning_state = None
+    _bootstrap_metadata = {}
+    _bootstrap_result = None
+    init_learning_state()
+    print("[GAE] Learning state reset and re-initialized with ProfileScorer")
+
+
+async def reset_learning_state() -> None:
     """
     Reset to initial W matrix (for demo reset).
+    Acquires _scorer_lock to serialize against in-flight centroid updates.
     Registered with state_manager so reset_all() covers this automatically.
     """
-    global _learning_state
-    _learning_state = _make_fresh_state()
-    save_learning_state()
-    print("[GAE] Learning state reset to initial W matrix")
+    async with acquire_scorer_for_reset():
+        _reset_learning_state_inner()
 
 
 # =============================================================================
@@ -590,9 +625,10 @@ async def build_centroid_export(scorer, neo4j_client) -> dict:
     }
 
 
-def restore_centroid_from_backup(backup_id: str | None = None) -> dict:
+async def restore_centroid_from_backup(backup_id: str | None = None) -> dict:
     """
     Load backup, verify SHA-256, and restore mu into the live ProfileScorer.
+    Acquires _scorer_lock to serialize against concurrent centroid updates.
 
     Returns the payload dict on success.
     Raises ValueError on checksum mismatch.
@@ -613,12 +649,28 @@ def restore_centroid_from_backup(backup_id: str | None = None) -> dict:
             f"computed={expected!r}"
         )
 
-    scorer = get_profile_scorer()
-    if scorer is None:
-        raise RuntimeError("ProfileScorer not attached — call init_learning_state() first")
+    async with acquire_scorer() as scorer:
+        expected_shape = scorer.centroids.shape
+        if "shape" in payload:
+            backup_shape = tuple(payload["shape"])
+            if backup_shape != expected_shape:
+                raise ValueError(
+                    f"Backup tensor shape {backup_shape} does not match "
+                    f"live scorer shape {expected_shape}. "
+                    f"Backup may be from a different domain configuration."
+                )
 
-    mu_array = np.array(payload["mu"], dtype=np.float64)
-    scorer.centroids = mu_array
+        mu_array = np.array(payload["mu"], dtype=np.float64)
+        actual_shape = mu_array.shape
+        if actual_shape != expected_shape:
+            raise ValueError(
+                f"Backup tensor shape {actual_shape} does not match "
+                f"live scorer shape {expected_shape}. "
+                f"Backup may be from a different domain configuration."
+            )
+
+        scorer.centroids = mu_array
+
     return payload
 
 
@@ -670,6 +722,8 @@ def set_volume_spike(active: bool) -> None:
     if active:
         log.warning("[D3] Volume spike flag SET — centroid updates frozen this cadence")
     else:
+        set_frozen_categories([])
+        reset_spike_counter()
         log.info("[D3] Volume spike flag CLEARED — centroid updates resumed")
 
 

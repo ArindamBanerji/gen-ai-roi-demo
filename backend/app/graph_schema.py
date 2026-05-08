@@ -477,7 +477,11 @@ async def seed_graph(json_path, clean=False, client=None):
                 "MATCH (n:" + label + ") RETURN count(n) AS cnt"
             )
             await client.run_query(
-                "MATCH (n:" + label + ") DETACH DELETE n"
+                "MATCH (n:" + label + ") "
+                "WHERE n.origin IS NULL "
+                "OR n.origin = " + _S(SYNTHETIC_ORIGIN) + " "
+                "OR n.origin = " + _S(DEMO_ORIGIN) + " "
+                "DETACH DELETE n"
             )
             deleted = int(before[0]["cnt"]) if before else 0
             print("  " + label + ": deleted " + str(deleted))

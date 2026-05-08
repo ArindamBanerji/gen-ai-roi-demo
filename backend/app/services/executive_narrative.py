@@ -397,17 +397,35 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
             f"{campaigns_detected} campaigns. IKS: {iks_current:.0f}."
         )
 
-    health_status = "GREEN"
+    operational_knowledge_status = "GREEN"
     if iks_current < 20:
-        health_status = "RED"
+        operational_knowledge_status = "RED"
     elif iks_current < 40:
-        health_status = "AMBER"
+        operational_knowledge_status = "AMBER"
 
-    _signal = (
-        "healthy — no intervention required"
-        if health_status == "GREEN"
-        else "degraded — learning paused automatically"
-    )
+    health_status = operational_knowledge_status
+    health_metadata: dict = {}
+    pre_activation = False
+    try:
+        from app.services.learning_health import LearningHealthMonitor
+
+        health_metadata = await LearningHealthMonitor.evaluate(neo4j_service)
+        health_status = str(health_metadata.get("status") or operational_knowledge_status)
+        pre_activation = bool(health_metadata.get("pre_activation", False))
+    except Exception:
+        health_metadata = {}
+
+    if pre_activation:
+        _signal = (
+            "Pre-activation — Conservation law monitoring is configured, "
+            "but live learning is disabled pending validation"
+        )
+    else:
+        _signal = (
+            "healthy — no intervention required"
+            if health_status == "GREEN"
+            else "degraded — learning paused automatically"
+        )
     conservation_narrative = (
         "Conservation law active — analyst override quality monitored "
         "continuously. 0% quality degradation events missed in validation "
@@ -437,6 +455,11 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
             "categories_calibrated":  categories_calibrated,
             "categories_total":       6,
             "health_status":          health_status,
+            "operational_knowledge_status": operational_knowledge_status,
+            "pre_activation":         pre_activation,
+            "learning_enabled":       health_metadata.get("learning_enabled", None),
+            "health_source":          health_metadata.get("health_source", None),
+            "status_reason":          health_metadata.get("status_reason", None),
             "conservation_narrative": conservation_narrative,
         },
         "metrics": {

@@ -30,7 +30,7 @@ def test_conservation_law():
     result = generate_three_claims()
     cl = next(c for c in result['claims'] if c['id'] == 'conservation_law')
     assert 'silently degrade' in cl['headline']
-    assert '0.434' in cl['metric']
+    assert '23.53' in cl['metric']
 
 
 def test_footer_mentions_a4():

@@ -6,12 +6,14 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
 from pydantic import BaseModel
+import logging
 
 from app.db.neo4j import neo4j_client
 from app.graph_schema import _S
 
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -365,6 +367,12 @@ async def reset_all_demo_data():
         # Reset demo-cycle in-memory state only — preserve learning_state so
         # ProfileScorer centroids (IKS) survive this reset (BACKLOG-020).
         await state_manager.reset_except(["learning_state"])
+        try:
+            from app.services.rl_engine import reset_rl_state
+
+            reset_rl_state()
+        except Exception as _rl_reset_exc:
+            logger.warning("[RL] Comprehensive demo RL reset failed: %s", _rl_reset_exc)
 
         print("[DEMO RESET] Comprehensive reset completed successfully")
 
@@ -586,6 +594,38 @@ async def get_decision_economics():
         correct_rate = correct / total if total > 0 else 0.0
         false_positive_rate = 1.0 - correct_rate
         time_saved_hours = correct_rate * total * 0.5
+        decisions_per_day = 50.0
+        try:
+            rows = await neo4j_client.run_query(
+                """
+                MATCH (d:Decision)
+                WHERE d.timestamp_epoch IS NOT NULL
+                RETURN min(d.timestamp_epoch) AS t_min, max(d.timestamp_epoch) AS t_max,
+                       count(d) AS n
+                """, {}
+            )
+            if rows and rows[0].get("n"):
+                t_min = rows[0].get("t_min") or 0
+                t_max = rows[0].get("t_max") or 0
+                n = int(rows[0].get("n") or 0)
+                span_days = max((t_max - t_min) / 86_400_000.0, 1.0)
+                decisions_per_day = round(n / span_days, 1)
+        except Exception as throughput_exc:
+            print(f"[METRICS] decision-economics decisions_per_day query failed: {throughput_exc}")
+
+        switching_cost_trajectory = None
+        try:
+            from app.services.switching_cost import (
+                build_switching_cost_trajectory_payload,
+                default_iks_milestones,
+            )
+
+            switching_cost_trajectory = build_switching_cost_trajectory_payload(
+                iks_milestones=default_iks_milestones(),
+                decisions_per_day=max(decisions_per_day, 0.0),
+            )
+        except Exception as trajectory_exc:
+            print(f"[METRICS] switching-cost trajectory failed: {trajectory_exc}")
 
         return {
             "decisions_made": total,
@@ -594,6 +634,7 @@ async def get_decision_economics():
             "time_saved_hours": round(time_saved_hours, 2),
             "time_saved_estimated": True,
             "note": "Time saved estimated at 0.5hr per correct decision",
+            "switching_cost_trajectory": switching_cost_trajectory,
         }
 
     except Exception as e:
@@ -605,6 +646,7 @@ async def get_decision_economics():
             "time_saved_hours": 0.0,
             "time_saved_estimated": True,
             "note": "Time saved estimated at 0.5hr per correct decision",
+            "switching_cost_trajectory": None,
             "error": str(e),
         }
 

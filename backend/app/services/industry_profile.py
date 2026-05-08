@@ -46,7 +46,8 @@ def load_industry_profile(industry_id: str) -> Dict:
 
     Raises KeyError if industry_id is not found.
     """
-    from app.domains.soc.config import compute_theta_min, compute_phase3_minimum
+    from gae.calibration import compute_theta_min
+    from app.domains.soc.config import compute_phase3_minimum
 
     raw = _load_raw()
     if industry_id not in raw:

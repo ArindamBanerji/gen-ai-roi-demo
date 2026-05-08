@@ -145,6 +145,36 @@ def test_generate_balance_sheet_summary_has_recommendation(monkeypatch):
     assert "insider threat" in result.summary["recommendation"]
 
 
+def test_pre_activation_recommendation_is_not_degraded_or_paused():
+    weakest = balance_sheet.CategoryBalance(
+        category="credential_access",
+        epistemic_band="expert",
+        verified_count=600,
+        centroid_drift=0.0,
+        auto_approve_rate=0.2,
+        accuracy=0.0,
+        accuracy_note="fallback",
+        iks_contribution=0.0,
+        ceiling_estimate=None,
+        status="converging",
+    )
+
+    recommendation = balance_sheet._build_recommendation(
+        weakest=weakest,
+        health_status="CALIBRATING",
+        accuracy_fallback_used=False,
+        pre_activation=True,
+    )
+
+    assert "pre-activation" in recommendation.lower()
+    assert "configured" in recommendation
+    assert "not yet enabled" in recommendation
+    assert "degraded" not in recommendation.lower()
+    assert "paused" not in recommendation.lower()
+    assert "RED" not in recommendation
+    assert "AMBER" not in recommendation
+
+
 def test_generate_balance_sheet_strongest_and_weakest(monkeypatch):
     _install_happy_path(monkeypatch)
 
@@ -248,4 +278,5 @@ def test_generate_balance_sheet_handles_cold_start(monkeypatch):
     assert result.overall_iks >= 0.0
     assert result.overall_ceiling is None
     assert result.summary["recommendation"]
+    assert "pre-activation" in result.summary["recommendation"].lower()
     assert all(item.verified_count == 0 for item in result.categories)

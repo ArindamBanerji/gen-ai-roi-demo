@@ -263,8 +263,9 @@ async def rebuild_chain_from_graph(client: Any) -> int:
 
         n = 0
         for row in rows:
+            did = str(row.get("decision_id") or "")
             _LEDGER.append(
-                decision_id=str(row.get("decision_id") or ""),
+                decision_id=did,
                 alert_id=str(row.get("alert_id") or ""),
                 factor_breakdown={row.get("category", "unknown"): 1.0},
                 action=str(row.get("action") or ""),
@@ -273,6 +274,8 @@ async def rebuild_chain_from_graph(client: Any) -> int:
                 analyst_override=False,
                 centroid_state_hash="",
             )
+            if row.get("category"):
+                _SITUATION_TYPES[did] = str(row["category"])
             n += 1
 
     print(f"[STARTUP] Audit chain rebuilt: {n} entries (ascending)")
@@ -296,7 +299,8 @@ async def rebuild_from_age() -> int:
         "d.timestamp_epoch AS ts, "
         "a.alert_id AS alert_id, "
         "d.correct AS correct, "
-        "d.outcome AS outcome "
+        "d.outcome AS outcome, "
+        "d.category AS category "
         "ORDER BY d.timestamp_epoch ASC"
     )
 
@@ -324,8 +328,9 @@ async def rebuild_from_age() -> int:
                 else datetime.now(timezone.utc).isoformat()
             )
 
+            did = str(row.get("decision_id") or "")
             _LEDGER.append(
-                decision_id=str(row.get("decision_id") or ""),
+                decision_id=did,
                 alert_id=str(row.get("alert_id") or ""),
                 factor_breakdown={},
                 action=str(row.get("action") or ""),
@@ -335,6 +340,8 @@ async def rebuild_from_age() -> int:
                 centroid_state_hash="",
                 timestamp=ts_iso,
             )
+            if row.get("category"):
+                _SITUATION_TYPES[did] = str(row["category"])
             n += 1
 
     print(f"[AUDIT] Rebuilt {n} entries from AGE")

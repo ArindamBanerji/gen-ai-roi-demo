@@ -64,6 +64,15 @@ class PromptEvolution(BaseModel):
 # Core Functions
 # ============================================================================
 
+def _resolve_registry_category(alert_type: str) -> Optional[str]:
+    """Resolve only explicitly mapped alert types for registry lookup."""
+    try:
+        from app.domains.soc.config import ALERT_TYPE_CATEGORY_MAP
+    except Exception:
+        return None
+    return ALERT_TYPE_CATEGORY_MAP.get(alert_type or "")
+
+
 def get_prompt_variant(alert_type: str) -> str:
     """
     Get the currently active prompt variant for an alert type.
@@ -74,6 +83,28 @@ def get_prompt_variant(alert_type: str) -> str:
     Returns:
         Name of the active prompt variant
     """
+    from gae.evolution import ARTIFACT_PROMPT_MODULE
+    from app.services.variant_registry import get_active_variant_for_category
+
+    resolved_category = _resolve_registry_category(alert_type)
+    registry_variant = None
+    if resolved_category is not None:
+        registry_variant = get_active_variant_for_category(
+            resolved_category,
+            ARTIFACT_PROMPT_MODULE,
+        )
+        if registry_variant is None and resolved_category != alert_type:
+            registry_variant = get_active_variant_for_category(
+                alert_type,
+                ARTIFACT_PROMPT_MODULE,
+            )
+    if registry_variant is not None:
+        return (
+            registry_variant.config.get("prompt_id_variant")
+            or registry_variant.config.get("prompt_variant")
+            or registry_variant.variant_id
+        )
+
     return ACTIVE_PROMPTS.get(alert_type, "DEFAULT_v1")
 
 
@@ -84,7 +115,30 @@ def get_prompt_stats() -> Dict[str, Dict[str, Any]]:
     Returns:
         Dictionary of variant names to their stats
     """
-    return PROMPT_STATS.copy()
+    from gae.evolution import ARTIFACT_PROMPT_MODULE
+    from app.services.variant_registry import get_all_variants
+
+    stats = {name: values.copy() for name, values in PROMPT_STATS.items()}
+    for record in get_all_variants():
+        if record.artifact_type != ARTIFACT_PROMPT_MODULE:
+            continue
+        variant_name = (
+            record.config.get("prompt_id_variant")
+            or record.config.get("prompt_variant")
+            or record.variant_id
+        )
+        stats.setdefault(
+            variant_name,
+            {
+                "success": 0,
+                "total": 0,
+                "success_rate": 0.0,
+                "status": record.status,
+                "source": "variant_registry",
+                "variant_id": record.variant_id,
+            },
+        )
+    return stats
 
 
 def record_decision_outcome(
@@ -404,6 +458,14 @@ def reset_evolver_state() -> None:
 
     RECENT_PROMOTIONS.clear()
     WEIGHT_HISTORY.clear()
+    from gae.evolution import reset_evolution_ledger
+    from app.services.promotion_gate import reset_promotion_gate
+    from app.services.shadow_runner import reset_shadow_runner
+    from app.services.variant_registry import reset_variant_registry
+    reset_evolution_ledger()
+    reset_promotion_gate()
+    reset_shadow_runner()
+    reset_variant_registry()
     seed_weight_history()
 
     print("[EVOLVER] State reset to initial values")

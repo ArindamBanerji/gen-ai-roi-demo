@@ -14,6 +14,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
+from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -138,3 +139,45 @@ def test_fv_none_still_increments_decision_count():
 
     after = ls.decision_count
     assert after == before + 1
+
+
+def test_outcome_for_nonexistent_decision_returns_404():
+    async def _run_missing(query, params=None):
+        if "RETURN d.factor_vector AS factor_vector" in query:
+            return []
+        return []
+
+    neo4j = AsyncMock()
+    neo4j.run_query.side_effect = _run_missing
+
+    with contextlib.ExitStack() as stack:
+        stack.enter_context(patch("app.routers.triage.neo4j_client", neo4j))
+        stack.enter_context(
+            patch("app.routers.triage.get_feedback_status", return_value={"has_feedback": False})
+        )
+        process_mock = stack.enter_context(
+            patch("app.routers.triage.process_outcome", return_value=_make_outcome_result())
+        )
+        emit_mock = stack.enter_context(
+            patch("app.routers.triage.event_bus.emit", new_callable=AsyncMock)
+        )
+        audit_mock = stack.enter_context(
+            patch("app.framework.audit.record_outcome", new_callable=AsyncMock)
+        )
+
+        from app.main import app
+        client = TestClient(app, raise_server_exceptions=False)
+        response = client.post(
+            "/api/alert/outcome",
+            json={
+                "alert_id": _ALERT_ID,
+                "decision_id": "DEC-DOES-NOT-EXIST",
+                "outcome": "correct",
+            },
+        )
+
+    assert response.status_code == 404
+    assert "Decision DEC-DOES-NOT-EXIST not found" in response.json()["detail"]
+    process_mock.assert_not_called()
+    emit_mock.assert_not_called()
+    audit_mock.assert_not_called()

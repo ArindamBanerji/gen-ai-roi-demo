@@ -1,0 +1,39 @@
+{
+  "chain_credits": [
+    {
+      "credit_id": "RL-SEED-S2P-001",
+      "source_decision_id": "S2P-PRIYA-HOLD-042K",
+      "target_decision_id": "S2P-AUTO-CATCH-045K",
+      "supplier": "Chen-Lin Manufacturing",
+      "source_decision": {
+        "decision_id": "S2P-PRIYA-HOLD-042K",
+        "amount_usd": 42000,
+        "action": "hold_payment",
+        "analyst": "priya_sharma",
+        "timestamp_offset_days": -68,
+        "summary": "Priya held a $42K invoice after detecting an exception-cluster pattern."
+      },
+      "target_decision": {
+        "decision_id": "S2P-AUTO-CATCH-045K",
+        "amount_usd": 45000,
+        "action": "auto_hold",
+        "analyst": "system_auto",
+        "timestamp_offset_days": -12,
+        "summary": "The system automatically caught a related $45K invoice exception later."
+      },
+      "attribution": {
+        "gamma": 0.068,
+        "factor_overlap": 0.89,
+        "chain_reward": 3060,
+        "age_days": 56
+      },
+      "narrative": "Your first hold enabled this recovery."
+    }
+  ],
+  "summary": {
+    "total_chain_credits": 1,
+    "total_attributed_value_usd": 45000,
+    "supplier": "Chen-Lin Manufacturing"
+  },
+  "note": "Chain-credit demo evidence is fixture-backed until live RL ledger attribution is displayed."
+}

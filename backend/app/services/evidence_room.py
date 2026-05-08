@@ -62,7 +62,7 @@ def _empty_audit_trail() -> dict[str, Any]:
 
 
 def _empty_hash_chain() -> dict[str, Any]:
-    return {"verified": True, "entries": 0, "status": "VERIFIED"}
+    return {"verified": False, "entries": 0, "status": "UNAVAILABLE"}
 
 
 def _empty_conservation() -> dict[str, Any]:
@@ -131,7 +131,7 @@ class EvidenceRoomService:
             self._format_export_entry(row) if export else self._format_summary_entry(row)
             for row in rows[:limit]
         ]
-        verified = bool(verification.get("verified", True))
+        verified = bool(verification.get("verified", False))
         chain_entries = _safe_int(verification.get("chain_length"), len(entries))
         return (
             {"entries": entries, "total": len(rows)},
@@ -172,6 +172,8 @@ class EvidenceRoomService:
 
     async def _collect_conservation(self) -> dict[str, Any]:
         health: dict[str, Any] = {}
+        health_source = "learning_health"
+        fallback_reason = None
         try:
             from app.db.neo4j import neo4j_client
             from app.services.learning_health import LearningHealthMonitor
@@ -183,6 +185,25 @@ class EvidenceRoomService:
         status = str(health.get("status", "UNKNOWN")).upper()
         if status not in KNOWN_STATUSES:
             status = "UNKNOWN"
+        product = _safe_float(health.get("signal"))
+        threshold = _safe_float(health.get("theta_min"))
+
+        if product == 0.0 and status in {"RED", "UNKNOWN"}:
+            try:
+                from app.db.neo4j import neo4j_client
+                from app.services.iks import compute_visible_iks
+
+                iks_score = float(await compute_visible_iks(neo4j_client))
+                if iks_score >= 40.0:
+                    status = "GREEN"
+                    health_source = "iks_fallback"
+                    fallback_reason = "zero_product_learning_health"
+                elif iks_score >= 20.0:
+                    status = "AMBER"
+                    health_source = "iks_fallback"
+                    fallback_reason = "zero_product_learning_health"
+            except Exception as exc:
+                log.debug("[EvidenceRoom] IKS fallback unavailable: %s", exc)
 
         verified_decisions = 0
         try:
@@ -198,12 +219,21 @@ class EvidenceRoomService:
             except Exception as state_exc:
                 log.debug("[EvidenceRoom] learning state unavailable for conservation: %s", state_exc)
 
+        result_health_source = health_source
+        if health_source == "learning_health":
+            result_health_source = health.get("health_source", health_source)
+
         return {
             "status": status,
-            "product": _safe_float(health.get("signal")),
-            "threshold": _safe_float(health.get("theta_min")),
+            "product": product,
+            "threshold": threshold,
             "verified_decisions": verified_decisions,
             "frozen": bool(health.get("auto_pause_active", False)),
+            "health_source": result_health_source,
+            "fallback_reason": fallback_reason,
+            "pre_activation": bool(health.get("pre_activation", False)),
+            "learning_enabled": health.get("learning_enabled", None),
+            "status_reason": health.get("status_reason", None),
         }
 
     async def _collect_override_analysis(self, rows: list[dict[str, Any]]) -> dict[str, Any]:

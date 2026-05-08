@@ -182,12 +182,25 @@ async def generate_governance_report() -> GovernanceReport:
         or audit_decisions.get("total")
         or auto_approve.get("total_decisions", 0)
     )
+    learning_status = learning_health.get("status", "UNKNOWN")
+    pre_activation = bool(learning_health.get("pre_activation", False))
+    art9_summary = "Controls that monitor learning quality, trigger safeguards, and disclose known residual risks."
+    art15_summary = "Model robustness evidence includes calibration, convergence, drift visibility, and tensor export metadata."
+    if pre_activation:
+        art9_summary = (
+            "Pre-activation — conservation law monitoring is configured but learning is not yet enabled. "
+            "Controls are ready to monitor learning quality, trigger safeguards, and disclose residual risks once activated."
+        )
+        art15_summary = (
+            "Pre-activation — model robustness monitoring is configured. Calibration, convergence, drift visibility, "
+            "and tensor export will activate with learning. Current evidence reflects system configuration."
+        )
 
     section_1 = _section(
         article="Art 9",
         title="Risk Management",
-        status=learning_health.get("status", "UNKNOWN"),
-        summary="Controls that monitor learning quality, trigger safeguards, and disclose known residual risks.",
+        status=learning_status,
+        summary=art9_summary,
         evidence={
             "learning_health": learning_health,
             "iks_score": tab2.get("iks_score"),
@@ -239,8 +252,8 @@ async def generate_governance_report() -> GovernanceReport:
     section_5 = _section(
         article="Art 15",
         title="Accuracy, Robustness, and Cybersecurity",
-        status=learning_health.get("status", "UNKNOWN"),
-        summary="Model robustness evidence includes calibration, convergence, drift visibility, and tensor export metadata.",
+        status=learning_status,
+        summary=art15_summary,
         evidence={
             "iks_score": tab2.get("iks_score"),
             "category_accuracy_summary": tab2.get("category_accuracy_summary", {}),

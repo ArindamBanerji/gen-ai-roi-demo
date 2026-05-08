@@ -1,0 +1,51 @@
+{
+  "reward_breakdown": [
+    {
+      "decision_id": "DEC-RL-DEMO-001",
+      "alert_id": "ALERT-CA-247",
+      "category": "credential_access",
+      "action": "escalate",
+      "severity": 0.30,
+      "outcome": "correct",
+      "base_reward": 1.0,
+      "reward_weight": 0.019,
+      "graded_reward": 0.019,
+      "eta_applied": 0.019,
+      "explanation": "Low severity (0.30) → proportional weight (0.019). Correct escalation confirmed."
+    },
+    {
+      "decision_id": "DEC-RL-DEMO-002",
+      "alert_id": "ALERT-ME-089",
+      "category": "malware_execution",
+      "action": "escalate",
+      "severity": 0.92,
+      "outcome": "correct",
+      "base_reward": 1.0,
+      "reward_weight": 0.046,
+      "graded_reward": 0.046,
+      "eta_applied": 0.046,
+      "explanation": "High severity (0.92) → proportional weight (0.046). Critical threat correctly escalated."
+    },
+    {
+      "decision_id": "DEC-RL-DEMO-003",
+      "alert_id": "ALERT-IT-512",
+      "category": "insider_threat",
+      "action": "investigate",
+      "severity": 0.65,
+      "outcome": "incorrect",
+      "base_reward": -1.0,
+      "reward_weight": 0.033,
+      "graded_reward": -0.660,
+      "eta_applied": 0.033,
+      "explanation": "Moderate severity (0.65) → proportional weight (0.033). Should have escalated — 20:1 penalty applied."
+    }
+  ],
+  "summary": {
+    "total_decisions": 3,
+    "correct": 2,
+    "incorrect": 1,
+    "mean_severity": 0.623,
+    "mean_reward_weight": 0.033
+  },
+  "note": "Reward weights scale with alert severity. High-severity correct decisions update centroids more than low-severity ones."
+}

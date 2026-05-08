@@ -19,7 +19,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import numpy as np
 import pytest
 
-from app.services.learning_health import LearningHealthMonitor, CALIBRATION_DECISIONS
+from app.services.learning_health import LearningHealthMonitor, CALIBRATION_DECISIONS, _is_learning_enabled
 
 
 # ---------------------------------------------------------------------------
@@ -98,6 +98,58 @@ async def test_evaluate_calibrating():
     assert result["red_days"]          == 0
     assert result["auto_pause_active"] is False
     assert "Calibrating" in result["interpretation"]
+    assert result["pre_activation"] is False
+
+
+@pytest.mark.asyncio
+async def test_evaluate_pre_activation_learning_disabled():
+    state = _make_state(decision_count=4860, history=[])
+
+    with patch("app.services.learning_health.get_learning_state", return_value=state), \
+         patch("app.services.learning_health._is_learning_enabled", return_value=False):
+        result = await LearningHealthMonitor.evaluate(neo4j_service=None)
+
+    assert result["status"] == "CALIBRATING"
+    assert result["signal"] == 0.0
+    assert result["components"]["n"] == 0
+    assert result["pre_activation"] is True
+    assert result["learning_enabled"] is False
+    assert result["health_source"] == "learning_health_pre_activation"
+    assert result["status_reason"] == "learning_disabled_no_live_history"
+    assert result["auto_pause_active"] is False
+    assert result["red_days"] == 0
+    assert "Pre-activation" in result["interpretation"]
+    assert "learning is disabled" in result["interpretation"]
+    assert "4860" in result["interpretation"]
+    assert "no live learning history" in result["interpretation"]
+    assert "cannot be evaluated until learning is enabled" in result["interpretation"]
+
+
+@pytest.mark.asyncio
+async def test_evaluate_empty_history_active_learning_stays_raw_red():
+    state = _make_state(decision_count=4860, history=[])
+
+    with patch("app.services.learning_health.get_learning_state", return_value=state), \
+         patch("app.services.learning_health._is_learning_enabled", return_value=True):
+        result = await LearningHealthMonitor.evaluate(neo4j_service=None)
+
+    assert result["status"] == "RED"
+    assert result["pre_activation"] is False
+    assert result["learning_enabled"] is True
+
+
+def test_is_learning_enabled_fails_open_on_import_failure():
+    import builtins
+
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "app.domains.soc.config":
+            raise ImportError("config unavailable")
+        return real_import(name, *args, **kwargs)
+
+    with patch("builtins.__import__", side_effect=fake_import):
+        assert _is_learning_enabled() is True
 
 
 # ---------------------------------------------------------------------------

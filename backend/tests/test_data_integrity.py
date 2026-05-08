@@ -3,6 +3,8 @@ import pytest
 import asyncio
 import os
 
+from app.domains.soc.config import SOC_CATEGORIES
+
 pytestmark = pytest.mark.skipif(
     os.getenv("GRAPH_BACKEND") != "age",
     reason="AGE integration test"
@@ -53,7 +55,8 @@ async def test_categories_are_canonical(graph_client):
         "MATCH (d:Decision) RETURN DISTINCT d.category AS cat"
     )
     cats = {row["cat"] for row in r if row["cat"]}
-    VALID = {"credential_access", "malware_execution", "lateral_movement",
-             "data_exfiltration", "insider_threat", "cloud_infrastructure"}
-    invalid = cats - VALID
+    valid = set(SOC_CATEGORIES)
+    invalid = cats - valid
+    missing = valid - cats
     assert not invalid, f"Non-canonical categories found: {invalid}"
+    assert not missing, f"Canonical SOC categories missing from graph: {missing}"

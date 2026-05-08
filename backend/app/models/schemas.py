@@ -110,7 +110,10 @@ class EvolutionEvent(BaseModel):
     """Agent evolution event triggered by decision"""
     id: str
     event_type: str  # pattern_learned, threshold_adjusted, playbook_updated
-    triggered_by: str  # decision_id
+    triggered_by: Optional[str] = None  # decision_id or external evidence id
+    variant_id: Optional[str] = None
+    artifact_type: Optional[str] = None
+    graph_context: Optional[Dict[str, Any]] = None
     before_state: Dict[str, Any]
     after_state: Dict[str, Any]
     description: str

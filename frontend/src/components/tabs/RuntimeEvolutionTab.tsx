@@ -320,6 +320,23 @@ interface TimeMachineTimelineResponse {
 
 const DEFAULT_ALERT_ID = domainConfig.defaultAlertId
 
+function getLearningStatusMeta(status?: string | null, fallbackActive = false) {
+  switch ((status ?? '').toUpperCase()) {
+    case 'GREEN':
+      return { dotClass: 'bg-green-400', textClass: 'text-green-400', label: 'Learning active' }
+    case 'AMBER':
+      return { dotClass: 'bg-amber-400', textClass: 'text-amber-400', label: 'Learning paused' }
+    case 'RED':
+      return { dotClass: 'bg-red-400', textClass: 'text-red-400', label: 'Learning paused' }
+    case 'CALIBRATING':
+      return { dotClass: 'bg-blue-400', textClass: 'text-blue-400', label: 'Calibrating' }
+    default:
+      return fallbackActive
+        ? { dotClass: 'bg-green-400', textClass: 'text-green-400', label: 'Learning active' }
+        : { dotClass: 'bg-gray-400', textClass: 'text-gray-400', label: 'Status unknown' }
+  }
+}
+
 function formatRelativeTime(timestamp?: number | null) {
   if (!timestamp) return 'unknown'
   const diffMs = Date.now() - timestamp
@@ -1116,6 +1133,8 @@ export default function RuntimeEvolutionTab() {
   // Prefer IKS v2 (Neo4j composite) which reflects actual decision volume.
   const iksCurrentDisplay: number | null = learningStateData?.iks_v2 ?? iks?.current ?? null
   const decisionCount = iks?.decision_count ?? profileState?.decision_count ?? 0
+  const conservationLearningStatus = getLearningStatusMeta(healthData?.status)
+  const learningStateStatus = getLearningStatusMeta(healthData?.status, true)
 
   // WIRE-04: IKS trend derived values
   const iksTrendPoints: { decisions: number; iks_v2: number; timestamp: string }[] =
@@ -2248,6 +2267,8 @@ export default function RuntimeEvolutionTab() {
                         ? 'bg-green-900/40 text-green-400 border border-green-500/30'
                         : healthData.status === 'AMBER'
                         ? 'bg-amber-900/40 text-amber-400 border border-amber-500/30'
+                        : healthData.status === 'CALIBRATING'
+                        ? 'bg-blue-900/40 text-blue-400 border border-blue-500/30'
                         : healthData.status === 'RED'
                         ? 'bg-red-900/40 text-red-400 border border-red-500/30'
                         : 'bg-gray-700/40 text-gray-400 border border-gray-600/30'
@@ -2261,8 +2282,10 @@ export default function RuntimeEvolutionTab() {
                     </div>
                   ) : (
                     <div className="mb-3 flex items-center gap-1.5">
-                      <div className="w-2 h-2 bg-green-400 rounded-full" />
-                      <span className="text-xs text-green-400 font-semibold">Learning active</span>
+                      <div className={`w-2 h-2 rounded-full ${conservationLearningStatus.dotClass}`} />
+                      <span className={`text-xs font-semibold ${conservationLearningStatus.textClass}`}>
+                        {conservationLearningStatus.label}
+                      </span>
                     </div>
                   )}
 
@@ -3436,8 +3459,10 @@ export default function RuntimeEvolutionTab() {
               <div className="bg-soc-card rounded-lg border border-gray-800 p-5">
                 <h4 className="text-sm font-semibold text-gray-200 mb-2">Learning State</h4>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full" />
-                  <span className="text-sm text-green-400 font-semibold">Learning active</span>
+                  <div className={`w-2 h-2 ${learningStateStatus.dotClass} rounded-full`} />
+                  <span className={`text-sm ${learningStateStatus.textClass} font-semibold`}>
+                    {learningStateStatus.label}
+                  </span>
                   <span className="text-xs text-gray-500">&mdash; {decisionCount} decisions recorded</span>
                 </div>
               </div>

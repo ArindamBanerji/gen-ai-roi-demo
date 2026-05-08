@@ -1,0 +1,63 @@
+{
+  "warm_start_evidence": [
+    {
+      "evidence_id": "AE-SD-S2P-001",
+      "source_domain": "soc",
+      "target_domain": "s2p",
+      "source_rule": "RULE-CAMPAIGN-ESCALATE",
+      "target_rule": "RULE-S2P-EXCEPTION-CLUSTER",
+      "source_variant_id": "ae_rule_campaign_escalate_campaign_c007",
+      "target_variant_id": "ae_rule_s2p_exception_cluster_v1",
+      "warm_start_prior": 0.757,
+      "warm_start_source": "SOC shadow win rate (75.7%, 25 comparisons)",
+      "status": "promotion_approved",
+      "conservation_status": "GREEN",
+      "summary": "SOC campaign escalation evidence warm-started the S2P exception-cluster rule, then S2P shadow testing promoted it.",
+      "lifecycle": [
+        {
+          "event_type": "variant_created",
+          "timestamp_offset_days": -42,
+          "description": "Created S2P exception-cluster variant from SOC campaign-escalation rule template.",
+          "metadata": {
+            "warm_start_prior": 0.757,
+            "source_rule": "RULE-CAMPAIGN-ESCALATE"
+          }
+        },
+        {
+          "event_type": "shadow_started",
+          "timestamp_offset_days": -35,
+          "description": "Started shadow evaluation on supplier exception clusters.",
+          "metadata": {
+            "shadow_mode": true,
+            "target_supplier_pattern": "3+ invoice exceptions from same supplier in 7 days"
+          }
+        },
+        {
+          "event_type": "shadow_result",
+          "timestamp_offset_days": -18,
+          "description": "Shadow test beat baseline routing on S2P exception clusters.",
+          "metadata": {
+            "win_rate": 0.72,
+            "comparisons": 25,
+            "wins": 18
+          }
+        },
+        {
+          "event_type": "promotion_approved",
+          "timestamp_offset_days": -15,
+          "description": "Promotion approved after conservation check remained GREEN.",
+          "metadata": {
+            "conservation_status": "GREEN",
+            "approved_by": "promotion_gate"
+          }
+        }
+      ],
+      "impact": {
+        "invoices_caught": 3,
+        "largest_catch_usd": 45000,
+        "supplier": "Chen-Lin Manufacturing"
+      }
+    }
+  ],
+  "note": "Cross-domain response evidence is fixture-backed until live AgentEvolver transfer queries replace this loader."
+}
