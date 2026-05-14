@@ -69,6 +69,21 @@ interface GovernanceSummary {
   sections?: GovernanceSection[] | null
 }
 
+interface EuAiActArticle {
+  status?: 'COMPLIANT' | 'INVESTIGATION' | string | null
+  title?: string | null
+  description?: string | null
+}
+
+interface EuAiActCompliance {
+  article_9?: EuAiActArticle | null
+  article_15?: EuAiActArticle | null
+}
+
+interface SocComplianceResponse {
+  eu_ai_act?: EuAiActCompliance | null
+}
+
 interface EvolutionEvent {
   id?: string | null
   event_type?: string | null
@@ -182,11 +197,13 @@ function statusBadgeClass(status: string | null | undefined): string {
     case 'GREEN':
     case 'READY':
     case 'VERIFIED':
+    case 'COMPLIANT':
       return 'border-green-500/40 bg-green-500/15 text-green-300'
     case 'AMBER':
     case 'ATTENTION':
     case 'PAUSED':
     case 'CALIBRATING':
+    case 'INVESTIGATION':
       return 'border-amber-500/40 bg-amber-500/15 text-amber-300'
     case 'RED':
     case 'BROKEN':
@@ -431,6 +448,8 @@ export default function GovernanceTab() {
   const [governanceStatus, setGovernanceStatus] = useState<PanelStatus>('idle')
   const [governanceError, setGovernanceError] = useState<string | null>(null)
 
+  const [socCompliance, setSocCompliance] = useState<SocComplianceResponse | null>(null)
+
   const [evolutionEvents, setEvolutionEvents] = useState<EvolutionEvent[]>([])
   const [evolutionStatus, setEvolutionStatus] = useState<PanelStatus>('idle')
   const [evolutionError, setEvolutionError] = useState<string | null>(null)
@@ -481,6 +500,19 @@ export default function GovernanceTab() {
           setGovernanceError('Governance summary unavailable')
           setGovernanceStatus('error')
         }
+      })
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    fetchJson<SocComplianceResponse>('/api/soc/compliance')
+      .then((payload) => {
+        if (!cancelled) setSocCompliance(payload && typeof payload === 'object' ? payload : null)
+      })
+      .catch((error) => {
+        console.debug('[GovernanceTab] SOC compliance unavailable:', error)
+        if (!cancelled) setSocCompliance(null)
       })
     return () => { cancelled = true }
   }, [])
@@ -540,6 +572,13 @@ export default function GovernanceTab() {
   const governanceSections = useMemo(
     () => ensureArray<GovernanceSection>(governanceSummary?.sections),
     [governanceSummary]
+  )
+  const euAiActArticles = useMemo(
+    () => [
+      { key: 'article_9', article: socCompliance?.eu_ai_act?.article_9 },
+      { key: 'article_15', article: socCompliance?.eu_ai_act?.article_15 },
+    ].filter((item): item is { key: string; article: EuAiActArticle } => Boolean(item.article)),
+    [socCompliance]
   )
 
   const conservation = evidenceRoom?.conservation
@@ -728,6 +767,36 @@ export default function GovernanceTab() {
               <p className="text-sm font-semibold text-white">{governanceSummary.title ?? 'Governance summary'}</p>
               <p className="mt-1 text-sm text-slate-400">{governanceSummary.overall_assessment ?? 'Assessment unavailable.'}</p>
             </div>
+            {euAiActArticles.length > 0 && (
+              <div className="rounded-md border border-purple-500/30 bg-purple-950/20 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-purple-300">EU AI Act</p>
+                    <p className="mt-1 text-sm text-slate-300">Compliance evidence from the SOC control plane</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {euAiActArticles.map(({ key, article }, index) => (
+                    <div key={safeKey(key, index)} className="rounded-md border border-slate-800 bg-slate-950/70 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase text-purple-300">
+                            {key === 'article_9' ? 'Article 9 / Risk Management' : 'Article 15 / Accuracy & Robustness'}
+                          </p>
+                          <p className="mt-1 text-sm font-semibold text-white">{article.title ?? 'EU AI Act control'}</p>
+                        </div>
+                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-bold ${statusBadgeClass(article.status)}`}>
+                          {article.status ?? 'UNKNOWN'}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-xs leading-5 text-slate-400">
+                        {article.description ?? 'Compliance evidence is not available yet.'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {governanceSections.length === 0 ? (
               <div className="rounded-md border border-slate-800 px-3 py-4 text-center text-sm text-slate-400">
                 Compliance report loading...
