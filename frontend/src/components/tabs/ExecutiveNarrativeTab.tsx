@@ -51,6 +51,32 @@ interface Metrics {
   iks_current: number
 }
 
+interface NarrativeCategory {
+  name: string
+  accuracy: number
+}
+
+interface NarrativeRecommendationItem {
+  type?: string
+  category?: string
+  message?: string
+}
+
+interface NarrativeSection {
+  title: string
+  content?: string
+  status?: string
+  verified_count?: number
+  correct_count?: number
+  q?: number
+  theta_min?: number
+  iks?: number
+  decision_count?: number
+  strongest_categories?: NarrativeCategory[]
+  weakest_category?: NarrativeCategory | null
+  items?: NarrativeRecommendationItem[]
+}
+
 interface NarrativeData {
   headline: string
   what_changed: WhatChanged
@@ -59,6 +85,7 @@ interface NarrativeData {
   metrics: Metrics
   generated_at: string
   pdf_available: boolean
+  sections?: NarrativeSection[]
 }
 
 interface GovernanceSummarySection {
@@ -132,6 +159,121 @@ function MetricCard({ label, value }: { label: string; value: string | number })
     <div className="bg-gray-800 rounded-lg p-4 text-center">
       <div className="text-2xl font-bold text-soc-primary">{value}</div>
       <div className="text-xs text-gray-400 mt-1">{label}</div>
+    </div>
+  )
+}
+
+function formatPct(value: unknown): string {
+  const n = toNumber(value)
+  return `${(n * 100).toFixed(1)}%`
+}
+
+function NarrativeSectionCards({ sections }: { sections: NarrativeSection[] }) {
+  if (sections.length === 0) return null
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {sections.map((section, index) => {
+        const strongest = ensureArray<NarrativeCategory>(section.strongest_categories)
+        const items = ensureArray<NarrativeRecommendationItem>(section.items)
+        return (
+          <div
+            key={safeKey(section.title, index)}
+            className="bg-gray-900 border border-gray-800 rounded-lg p-4"
+          >
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h3 className="text-sm font-semibold text-gray-200">{section.title}</h3>
+              {section.status && (
+                <span className={`text-xs font-semibold ${healthColor(section.status)}`}>
+                  {section.status}
+                </span>
+              )}
+            </div>
+
+            {section.content && (
+              <p className="text-xs text-gray-300 leading-relaxed">{section.content}</p>
+            )}
+
+            {section.title === 'System Health' && (
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-400">
+                <div>
+                  <div className="text-gray-500">Verified</div>
+                  <div className="font-mono text-gray-200">{toNumber(section.verified_count)}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Correct</div>
+                  <div className="font-mono text-gray-200">{toNumber(section.correct_count)}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Rolling accuracy</div>
+                  <div className="font-mono text-gray-200">{formatPct(section.q)}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Threshold</div>
+                  <div className="font-mono text-gray-200">{formatPct(section.theta_min)}</div>
+                </div>
+              </div>
+            )}
+
+            {section.title === 'What the System Has Learned' && (
+              <div className="mt-3 space-y-3 text-xs text-gray-400">
+                <div className="flex justify-between">
+                  <span>IKS</span>
+                  <span className="font-mono text-gray-200">{toNumber(section.iks).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Decisions processed</span>
+                  <span className="font-mono text-gray-200">{toNumber(section.decision_count)}</span>
+                </div>
+                {strongest.length > 0 && (
+                  <div>
+                    <div className="text-gray-500 mb-1">Strongest categories</div>
+                    <div className="space-y-1">
+                      {strongest.map((category, categoryIndex) => (
+                        <div
+                          key={safeKey(category.name, categoryIndex)}
+                          className="flex justify-between rounded bg-gray-800 px-2 py-1"
+                        >
+                          <span>{category.name.replace(/_/g, ' ')}</span>
+                          <span className="font-mono text-gray-200">{formatPct(category.accuracy)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {section.weakest_category && (
+                  <div className="rounded bg-gray-800 px-2 py-1">
+                    <span className="text-gray-500">Weakest category: </span>
+                    <span className="text-gray-200">
+                      {section.weakest_category.name.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {section.title === 'Recommendations' && (
+              <div className="mt-3 space-y-2">
+                {items.length > 0 ? (
+                  items.map((item, itemIndex) => (
+                    <div
+                      key={safeKey(`${item.type || 'recommendation'}-${item.category || itemIndex}`, itemIndex)}
+                      className="rounded bg-gray-800 px-3 py-2 text-xs text-gray-300"
+                    >
+                      <div className="font-semibold text-gray-200">
+                        {(item.category || item.type || 'Recommendation').replace(/_/g, ' ')}
+                      </div>
+                      {item.message && <p className="mt-1 leading-relaxed">{item.message}</p>}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-gray-500">No category-specific action required.</p>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -331,6 +473,7 @@ export default function ExecutiveNarrativeTab() {
   }
 
   const { headline, what_changed, what_discovered, what_knows, metrics, generated_at } = data
+  const narrativeSections = ensureArray<NarrativeSection>(data.sections)
   const governanceSections = ensureArray<GovernanceSummarySection>(governanceSummary?.sections)
 
   async function handleGovernanceJsonDownload() {
@@ -382,6 +525,8 @@ export default function ExecutiveNarrativeTab() {
         <MetricCard label="Campaigns Detected" value={metrics.campaigns_detected} />
         <MetricCard label="IKS Score" value={metrics.iks_current} />
       </div>
+
+      <NarrativeSectionCards sections={narrativeSections} />
 
       {/* Three sections */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

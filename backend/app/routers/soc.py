@@ -3259,6 +3259,7 @@ async def _tab5_content() -> dict:
 
     return {
         "headline":         narr.get("headline", ""),
+        "sections":         narr.get("sections", []),
         "what_changed":     what_changed_raw.get("top_shifts", [])[:3],
         "what_discovered": {
             "campaign_count": what_discovered_raw.get("attack_chains_detected", 0),

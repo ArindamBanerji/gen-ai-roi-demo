@@ -262,6 +262,7 @@ class ExecutiveNarrativeResponse(BaseModel):
     metrics: NarrativeMetrics
     generated_at: str
     pdf_available: bool
+    sections: list[dict[str, Any]] | None = None
 
 
 # =============================================================================

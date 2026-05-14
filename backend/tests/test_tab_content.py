@@ -113,6 +113,11 @@ def test_tab5_returns_narrative_fields():
         },
         "generated_at": "2026-04-04T10:00:00Z",
         "pdf_available": True,
+        "sections": [
+            {"title": "System Health", "content": "System is healthy."},
+            {"title": "What the System Has Learned", "content": "Learning summary."},
+            {"title": "Recommendations", "content": "Recommendation summary.", "items": []},
+        ],
     }
 
     mock_client_t2 = AsyncMock()
@@ -137,6 +142,50 @@ def test_tab5_returns_narrative_fields():
     assert content["what_system_knows"]["iks"]                   == 62.5
     assert content["what_system_knows"]["categories_calibrated"] == 4
     assert content["what_system_knows"]["health_status"]         == "GREEN"
+
+
+def test_tab5_content_includes_sections():
+    """Tab 5 content passes through executive narrative sections."""
+    from app.routers.soc import _tab5_content
+
+    mock_sections = [
+        {"title": "System Health", "content": "System is healthy."},
+        {"title": "What the System Has Learned", "content": "Learning summary."},
+        {"title": "Recommendations", "content": "Recommendation summary.", "items": []},
+    ]
+    mock_narrative = {
+        "headline": "System processed 500 alerts, learned from 120 decisions.",
+        "what_changed": {"total_verified": 120, "top_shifts": []},
+        "what_discovered": {"attack_chains_detected": 0, "chain_summaries": []},
+        "what_knows": {"iks_current": 62.5, "health_status": "GREEN"},
+        "metrics": {
+            "alerts_total": 500,
+            "decisions_verified": 120,
+            "campaigns_detected": 4,
+            "iks_current": 62.5,
+        },
+        "generated_at": "2026-04-04T10:00:00Z",
+        "pdf_available": True,
+        "sections": mock_sections,
+    }
+
+    mock_client_t2 = AsyncMock()
+    mock_client_t2.run_query.return_value = [{"cnt": 0}]
+
+    with patch(
+        "app.services.executive_narrative.build_executive_narrative_async",
+        new=AsyncMock(return_value=mock_narrative),
+    ):
+        with patch("app.routers.soc.neo4j_client", mock_client_t2):
+            content = _run(_tab5_content())
+
+    assert "sections" in content
+    assert content["sections"] == mock_sections
+    assert [section["title"] for section in content["sections"]] == [
+        "System Health",
+        "What the System Has Learned",
+        "Recommendations",
+    ]
 
 
 # ---------------------------------------------------------------------------

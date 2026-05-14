@@ -3,6 +3,159 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional
 
 
+def _safe_float(value, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_int(value, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _category_accuracy_rows(rows) -> list[dict]:
+    categories = []
+    for row in rows or []:
+        name = row.get("category")
+        total = _safe_int(row.get("total", row.get("n", 0)))
+        correct = _safe_int(row.get("correct", 0))
+        if not name or total <= 0:
+            continue
+        categories.append({
+            "name": str(name),
+            "count": total,
+            "correct": correct,
+            "accuracy": round(correct / total, 4),
+        })
+    return categories
+
+
+def _build_recommendations(category_accuracy: list[dict]) -> list[dict]:
+    items = []
+    for category in category_accuracy:
+        name = category["name"]
+        count = _safe_int(category.get("count"))
+        accuracy = _safe_float(category.get("accuracy"))
+        if count < 20:
+            items.append({
+                "type": "low_volume",
+                "category": name,
+                "message": f"{name}: collect more verified outcomes before expanding automation.",
+            })
+        elif accuracy > 0.90:
+            items.append({
+                "type": "high_accuracy",
+                "category": name,
+                "message": f"{name}: accuracy is strong enough for continued monitored automation.",
+            })
+        elif accuracy < 0.70:
+            items.append({
+                "type": "declining",
+                "category": name,
+                "message": f"{name}: review recent decisions before increasing autonomy.",
+            })
+    return items
+
+
+def _build_sections(
+    *,
+    verified_decisions: int,
+    correct_decisions: int,
+    iks_current: float,
+    health_metadata: dict,
+    category_accuracy: list[dict],
+) -> list[dict]:
+    status = str(health_metadata.get("status") or "UNKNOWN").upper()
+    components = health_metadata.get("components") or {}
+    q = round(_safe_float(components.get("q")), 4)
+    theta_min = round(_safe_float(health_metadata.get("theta_min")), 4)
+
+    if status == "GREEN":
+        health_content = (
+            f"System is operating within safe bounds: rolling accuracy {q:.2%} "
+            f"exceeds the conservation threshold {theta_min:.2%}."
+        )
+    elif status == "AMBER":
+        health_content = (
+            f"System is below ideal bounds or learning is paused: rolling accuracy {q:.2%}, "
+            f"threshold {theta_min:.2%}. Monitor before expanding automation."
+        )
+    else:
+        health_content = (
+            f"Protective mode recommended: current status {status}, rolling accuracy {q:.2%}, "
+            f"threshold {theta_min:.2%}. Investigation is recommended before autonomy changes."
+        )
+
+    ranked = sorted(
+        category_accuracy,
+        key=lambda item: (_safe_float(item.get("accuracy")), _safe_int(item.get("count"))),
+        reverse=True,
+    )
+    strongest = [
+        {"name": item["name"], "accuracy": round(_safe_float(item.get("accuracy")), 4)}
+        for item in ranked[:2]
+    ]
+    strongest_names = {item["name"] for item in strongest}
+    weakest_source = next(
+        (item for item in sorted(category_accuracy, key=lambda item: _safe_float(item.get("accuracy")))
+         if item["name"] not in strongest_names),
+        None,
+    )
+    weakest = (
+        {"name": weakest_source["name"], "accuracy": round(_safe_float(weakest_source.get("accuracy")), 4)}
+        if weakest_source else None
+    )
+
+    iks_score = _safe_float(iks_current)
+    if not category_accuracy:
+        learning_content = (
+            "Category-level accuracy is not yet available; the system is accumulating "
+            "verified decisions before making category-specific claims."
+        )
+    elif iks_score < 10.0:
+        learning_content = "Early stage — accumulating decisions before institutional knowledge claims."
+    elif iks_score < 20.0:
+        learning_content = "Building institutional knowledge from verified decisions and category outcomes."
+    else:
+        learning_content = "Substantial institutional knowledge developed from verified decision history."
+
+    recommendation_items = _build_recommendations(category_accuracy)
+    recommendation_content = (
+        "All categories performing within expected ranges."
+        if not recommendation_items
+        else "Review the category-specific operating recommendations before changing autonomy."
+    )
+
+    return [
+        {
+            "title": "System Health",
+            "content": health_content,
+            "status": status,
+            "verified_count": verified_decisions,
+            "correct_count": correct_decisions,
+            "q": q,
+            "theta_min": theta_min,
+        },
+        {
+            "title": "What the System Has Learned",
+            "content": learning_content,
+            "iks": round(_safe_float(iks_current), 4),
+            "decision_count": verified_decisions,
+            "strongest_categories": strongest,
+            "weakest_category": weakest,
+        },
+        {
+            "title": "Recommendations",
+            "content": recommendation_content,
+            "items": recommendation_items,
+        },
+    ]
+
+
 class ExecutiveNarrative:
     def __init__(self, db_client):
         self.db = db_client
@@ -339,6 +492,27 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     except Exception:
         pass
 
+    # Category-level accuracy for executive sections. Keep this separate from
+    # categories_calibrated so recommendations can use both volume and accuracy.
+    category_accuracy = []
+    try:
+        rows = await neo4j_service.run_query(
+            "MATCH (d:Decision) "
+            "WHERE d.category IS NOT NULL AND d.outcome IS NOT NULL "
+            "RETURN d.category AS category, count(d) AS total, "
+            "sum(CASE WHEN d.outcome = 'correct' OR d.correct = true THEN 1 ELSE 0 END) AS correct"
+        )
+        _SOC_CAT = {
+            "credential_access", "malware_execution", "lateral_movement",
+            "data_exfiltration", "insider_threat", "cloud_infrastructure",
+        }
+        category_accuracy = [
+            item for item in _category_accuracy_rows(rows)
+            if item["name"] in _SOC_CAT
+        ]
+    except Exception:
+        category_accuracy = []
+
     # ── 7. what_changed: top category/action pairs by correct-decision count ─
     top_shifts = []
     try:
@@ -436,6 +610,14 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
         "regulatory review (EU AI Act Art. 13 compliant)."
     )
 
+    sections = _build_sections(
+        verified_decisions=verified_decisions,
+        correct_decisions=centroid_updates,
+        iks_current=iks_current,
+        health_metadata=health_metadata,
+        category_accuracy=category_accuracy,
+    )
+
     return {
         "headline": headline,
         "what_changed": {
@@ -470,4 +652,5 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
         },
         "generated_at":  datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
         "pdf_available": True,
+        "sections": sections,
     }

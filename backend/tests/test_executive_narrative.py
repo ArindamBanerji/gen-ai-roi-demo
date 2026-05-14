@@ -101,10 +101,12 @@ def test_f12_endpoint_returns_required_keys():
     assert r.status_code == 200, f"Expected 200. Got {r.status_code}: {r.text[:300]}"
     data = r.json()
     required = {"headline", "what_changed", "what_discovered", "what_knows",
-                "metrics", "generated_at", "pdf_available"}
+                "metrics", "generated_at", "pdf_available", "sections"}
     missing = required - set(data.keys())
     assert not missing, f"Missing keys: {missing}"
     assert data["pdf_available"] is True
+    assert isinstance(data["sections"], list)
+    assert len(data["sections"]) == 3
 
 
 def test_f12_metrics_block_numeric():
@@ -127,12 +129,113 @@ def test_f12_what_changed_structure():
     assert isinstance(wc["top_shifts"], list)
 
 
+def _get_executive_narrative_payload():
+    from unittest.mock import AsyncMock, patch
+
+    fake = _make_narrative_neo4j(verified=50, correct=40, campaigns=3, alerts=100)
+    health = {
+        "status": "GREEN",
+        "components": {"q": 0.80},
+        "theta_min": 0.50,
+        "learning_enabled": True,
+        "health_source": "test",
+        "status_reason": "test",
+    }
+    with patch("app.services.gae_state.get_profile_scorer", return_value=None):
+        with patch("app.services.iks.compute_iks_v2", new=AsyncMock(return_value={"iks_v2": 0.25})):
+            with patch(
+                "app.services.learning_health.LearningHealthMonitor.evaluate",
+                new=AsyncMock(return_value=health),
+            ):
+                return asyncio.run(build_executive_narrative_async(fake))
+
+
+def test_executive_narrative_has_sections():
+    data = _get_executive_narrative_payload()
+    assert "sections" in data
+    assert isinstance(data["sections"], list)
+    assert len(data["sections"]) == 3
+
+
+def test_executive_narrative_section_titles():
+    data = _get_executive_narrative_payload()
+    assert [section["title"] for section in data["sections"]] == [
+        "System Health",
+        "What the System Has Learned",
+        "Recommendations",
+    ]
+
+
+def test_system_health_section_has_conservation_fields():
+    section = _get_executive_narrative_payload()["sections"][0]
+    for key in ("status", "verified_count", "correct_count", "q", "theta_min", "content"):
+        assert key in section, f"System Health section missing {key}"
+    assert isinstance(section["verified_count"], int)
+    assert isinstance(section["correct_count"], int)
+    assert isinstance(section["q"], (int, float))
+    assert isinstance(section["theta_min"], (int, float))
+
+
+def test_learning_section_has_iks():
+    section = _get_executive_narrative_payload()["sections"][1]
+    for key in ("iks", "decision_count", "strongest_categories", "weakest_category", "content"):
+        assert key in section, f"Learning section missing {key}"
+    assert isinstance(section["iks"], (int, float))
+    assert isinstance(section["decision_count"], int)
+    assert isinstance(section["strongest_categories"], list)
+
+
+def test_recommendations_section_has_items():
+    section = _get_executive_narrative_payload()["sections"][2]
+    assert section["title"] == "Recommendations"
+    assert isinstance(section["items"], list)
+    assert isinstance(section["content"], str)
+    assert section["content"]
+
+
+def test_existing_fields_preserved():
+    data = _get_executive_narrative_payload()
+    required = {
+        "headline",
+        "what_changed",
+        "what_discovered",
+        "what_knows",
+        "metrics",
+        "generated_at",
+        "pdf_available",
+    }
+    missing = required - set(data.keys())
+    assert not missing, f"Missing existing executive narrative fields: {missing}"
+
+
+def test_sections_content_all_non_empty():
+    data = _get_executive_narrative_payload()
+    for section in data["sections"]:
+        assert isinstance(section.get("content"), str)
+        assert section["content"].strip()
+
+
+def test_strongest_not_overlaps_weakest():
+    data = _get_executive_narrative_payload()
+    learning = data["sections"][1]
+    weakest = learning.get("weakest_category")
+    if weakest:
+        strongest_names = {
+            category["name"]
+            for category in learning.get("strongest_categories", [])
+        }
+        assert weakest["name"] not in strongest_names
+
+
 # ============================================================================
 # Tests for build_executive_narrative_async — unit-level with FakeNeo4j
 # ============================================================================
 
 import asyncio
-from app.services.executive_narrative import build_executive_narrative_async
+from app.services.executive_narrative import (
+    _build_sections,
+    build_executive_narrative_async,
+)
 
 
 def _make_narrative_neo4j(verified: int, correct: int, campaigns: int, alerts: int):
@@ -145,6 +248,13 @@ def _make_narrative_neo4j(verified: int, correct: int, campaigns: int, alerts: i
             return [{"cnt": verified}]
         if "d.correct = true" in q and "category" not in q:
             return [{"cnt": correct}]
+        if "WHERE d.category IS NOT NULL AND d.outcome IS NOT NULL" in q:
+            return [
+                {"category": "credential_access", "total": 50, "correct": 48},
+                {"category": "lateral_movement", "total": 40, "correct": 32},
+                {"category": "malware_execution", "total": 10, "correct": 9},
+                {"category": "data_exfiltration", "total": 30, "correct": 18},
+            ]
         if "MATCH (c:Campaign)" in q and "c.id" not in q:
             return [{"cnt": campaigns}]
         if "MATCH (a:Alert)" in q:
@@ -177,6 +287,84 @@ def _make_narrative_neo4j(verified: int, correct: int, campaigns: int, alerts: i
 
     FakeNeo4j.run_query = staticmethod(run_query)
     return FakeNeo4j()
+
+
+def test_low_raw_iks_uses_zero_to_one_hundred_scale():
+    sections = _build_sections(
+        verified_decisions=40,
+        correct_decisions=30,
+        iks_current=5.0,
+        health_metadata={"status": "GREEN", "components": {"q": 0.75}, "theta_min": 0.5},
+        category_accuracy=[
+            {"name": "credential_access", "count": 40, "correct": 36, "accuracy": 0.9},
+        ],
+    )
+
+    learning = sections[1]
+    assert learning["iks"] == 5.0
+    assert "Early stage" in learning["content"]
+    assert "Substantial institutional knowledge" not in learning["content"]
+
+
+def test_category_accuracy_uses_verified_outcomes_not_pending_denominator():
+    from unittest.mock import AsyncMock, patch
+
+    class FakeNeo4j:
+        async def run_query(self, query, params=None):
+            q = query.strip()
+            if "MATCH (d:Decision) RETURN count(d) AS cnt" in q:
+                return [{"cnt": 100}]
+            if "d.correct = true" in q and "category" not in q:
+                return [{"cnt": 90}]
+            if "MATCH (c:Campaign) RETURN count(c) AS cnt" in q:
+                return [{"cnt": 0}]
+            if "MATCH (a:Alert)" in q:
+                return [{"cnt": 0}]
+            if "RETURN count(d) AS total" in q:
+                return [{"total": 100}]
+            if "WHERE d.category IS NOT NULL AND d.outcome IS NOT NULL" in q:
+                return [
+                    {"category": "credential_access", "total": 30, "correct": 29},
+                    {"category": "lateral_movement", "total": 25, "correct": 22},
+                    {"category": "data_exfiltration", "total": 25, "correct": 18},
+                ]
+            if "WHERE d.category IS NOT NULL" in q:
+                return [
+                    {"category": "credential_access", "total": 100, "correct": 10},
+                ]
+            if "RETURN d.category AS category, count(d) AS n" in q:
+                return []
+            if "d.confidence >= 0.70" in q:
+                return [{"high_conf": 0}]
+            if "d.outcome IS NOT NULL" in q and "avg(" in q:
+                return []
+            if "d.correct = true" in q and "category" in q:
+                return []
+            if "c.campaign_id AS id" in q:
+                return []
+            return []
+
+    health = {
+        "status": "GREEN",
+        "components": {"q": 0.90},
+        "theta_min": 0.50,
+    }
+    with patch("app.services.gae_state.get_profile_scorer", return_value=None):
+        with patch("app.services.iks.compute_iks_v2", new=AsyncMock(return_value={"iks_v2": 25.0})):
+            with patch(
+                "app.services.learning_health.LearningHealthMonitor.evaluate",
+                new=AsyncMock(return_value=health),
+            ):
+                result = asyncio.run(build_executive_narrative_async(FakeNeo4j()))
+
+    recommendations = result["sections"][2]["items"]
+    credential_items = [
+        item for item in recommendations
+        if item.get("category") == "credential_access"
+    ]
+    assert credential_items
+    assert credential_items[0]["type"] == "high_accuracy"
+    assert all(item["type"] != "declining" for item in credential_items)
 
 
 def test_narrative_reads_verified_decisions():
