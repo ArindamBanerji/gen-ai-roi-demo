@@ -419,6 +419,8 @@ class SimulationOrchestrator:
                     from app.domains.soc.config import resolve_alert_category, SOCDomainConfig as _SDC_sim
                     from app.services.gae_state import guarded_update as _guarded_update_sim
                     _cat_name_sim = resolve_alert_category(category)
+                    if _cat_name_sim == "unclassified":
+                        continue
                     _cat_idx_sim  = _SDC_sim().get_category_index(_cat_name_sim)
                     _gt_idx_sim   = scorer_actions.index(ground_truth_action)
                     _sim_scorer = get_profile_scorer()

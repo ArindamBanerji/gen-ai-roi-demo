@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from pydantic import BaseModel
 import json
+import logging
 import re
 from dataclasses import asdict
 
@@ -31,6 +32,7 @@ from app.domains.soc.config import (
 )
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -1453,7 +1455,62 @@ async def compliance_dashboard():
     Enforcement: August 2, 2026.
     """
     from app.services.compliance_dashboard import generate_compliance_page
-    return generate_compliance_page()
+    payload = generate_compliance_page()
+    conservation_status = await _compliance_conservation_status()
+    audit_chain_valid = _compliance_audit_chain_valid()
+    payload["eu_ai_act"] = _build_eu_ai_act_summary(
+        conservation_status=conservation_status,
+        audit_chain_valid=audit_chain_valid,
+    )
+    return payload
+
+
+async def _compliance_conservation_status() -> str:
+    try:
+        from app.services.learning_health import LearningHealthMonitor
+
+        health = await LearningHealthMonitor.evaluate(neo4j_client)
+        return str(health.get("status") or "UNKNOWN").upper()
+    except Exception as exc:
+        logger.warning("[COMPLIANCE] Conservation status unavailable: %s", exc)
+        return "UNKNOWN"
+
+
+def _compliance_audit_chain_valid() -> bool:
+    try:
+        from app.framework.audit import verify_chain
+
+        verification = verify_chain() or {}
+        return bool(verification.get("verified", False))
+    except Exception as exc:
+        logger.warning("[COMPLIANCE] Audit chain verification unavailable: %s", exc)
+        return False
+
+
+def _build_eu_ai_act_summary(
+    conservation_status: str,
+    audit_chain_valid: bool,
+) -> dict:
+    article_9_status = "COMPLIANT" if conservation_status == "GREEN" else "INVESTIGATION"
+    article_15_status = "COMPLIANT" if audit_chain_valid else "INVESTIGATION"
+    return {
+        "article_9": {
+            "status": article_9_status,
+            "title": "Article 9 - Risk Management System",
+            "description": (
+                "Risk management is tied to the conservation guardrail. "
+                f"Current conservation status is {conservation_status or 'UNKNOWN'}."
+            ),
+        },
+        "article_15": {
+            "status": article_15_status,
+            "title": "Article 15 - Accuracy, Robustness, and Cybersecurity",
+            "description": (
+                "Accuracy and robustness evidence is supported by audit-chain verification. "
+                f"Audit chain valid: {audit_chain_valid}."
+            ),
+        },
+    }
 
 
 # ============================================================================
@@ -2504,13 +2561,13 @@ def _resolve_category(row: dict) -> str:
     """Return canonical SOC category: a.category first, a.alert_type as fallback.
 
     Normalises raw strings and maps through SENTINEL_TO_INTERNAL.
-    Falls back to 'credential_access' if the result is not in VALID_CATEGORIES.
+    Falls back to 'unclassified' if the result is not in VALID_CATEGORIES.
     """
     raw = row.get("category") or row.get("alert_type") or ""
     normalized = raw.lower().replace(" ", "_").replace("-", "_")
     category = SENTINEL_TO_INTERNAL.get(normalized, normalized)
     if category not in VALID_CATEGORIES:
-        category = "credential_access"
+        category = "unclassified"
     return category
 
 
@@ -2907,6 +2964,7 @@ async def _tab3_content() -> dict:
     baseline_action = "investigate"
     _alert_cat      = None
     _cat_idx        = 0
+    _unclassified_alert = False
 
     try:
         _scorer = _get_scorer()
@@ -2929,50 +2987,62 @@ async def _tab3_content() -> dict:
         except Exception as _exc:
             print(f"[SOC] tab3 pending alert query failed: {_exc}")
 
-        # Step 2: resolve category index (default: credential_access = 0)
+        # Step 2: resolve category index. Unclassified alerts are routing-only
+        # and must not be scored against category-0 centroids.
         _cfg = _SDC()
-        try:
-            _cat_idx = _cfg.get_category_index(_alert_cat) if _alert_cat else 0
-        except Exception as _exc:
-            print(f"[SOC] tab3 category_index lookup failed: {_exc}")
-            _cat_idx = 0
+        if _alert_cat == "unclassified":
+            print("[SOC] tab3 live scoring skipped for unclassified category")
+            _unclassified_alert = True
+            rec_conf = 0.0
+            baseline_conf = 0.0
+            rec_basis = "unclassified_routing"
+        else:
+            try:
+                _cat_idx = _cfg.get_category_index(_alert_cat) if _alert_cat else 0
+            except Exception as _exc:
+                print(f"[SOC] tab3 category_index lookup failed: {_exc}")
+                _cat_idx = 0
 
-        # Step 3: score with neutral factor vector
-        try:
-            _f = _np.full(6, 0.5)
-            _result = _scorer.score(_f, _cat_idx)
-            rec_action = _result.action_name
-            rec_conf   = round(float(_result.confidence), 3)
-            rec_basis  = "live_scoring" if _alert_cat else "centroid_fallback"
-        except Exception as _exc:
-            print(f"[SOC] tab3 live scoring failed: {_exc}")
+            # Step 3: score with neutral factor vector
+            try:
+                _f = _np.full(6, 0.5)
+                _result = _scorer.score(_f, _cat_idx)
+                rec_action = _result.action_name
+                rec_conf   = round(float(_result.confidence), 3)
+                rec_basis  = "live_scoring" if _alert_cat else "centroid_fallback"
+            except Exception as _exc:
+                print(f"[SOC] tab3 live scoring failed: {_exc}")
 
     # Step 3b: baseline — Day-1 bootstrap centroids (display-only; no live scorer mutation)
-    try:
-        _br = _get_baseline_scorer().score(_np.full(6, 0.5), _cat_idx)
-        baseline_conf   = round(float(_br.confidence), 4)
-        baseline_action = _br.action_name
-    except Exception as _exc:
-        print(f"[SOC] tab3 baseline scoring failed: {_exc}")
+    if not _unclassified_alert:
+        try:
+            _br = _get_baseline_scorer().score(_np.full(6, 0.5), _cat_idx)
+            baseline_conf   = round(float(_br.confidence), 4)
+            baseline_action = _br.action_name
+        except Exception as _exc:
+            print(f"[SOC] tab3 baseline scoring failed: {_exc}")
+    else:
+        baseline_action = "unclassified"
 
     # Step 4: get override_rate for rationale — same predicate as Tab 1 verified_map
-    rec_category = _alert_cat or "credential_access"
-    override_rate = 15.0
-    try:
-        _ov_rows = await neo4j_client.run_query(
-            f"MATCH (d:Decision) "
-            f"WHERE d.category = '{rec_category}' AND d.outcome IS NOT NULL "
-            "RETURN count(d) AS verified, "
-            "sum(CASE WHEN d.correct = false THEN 1 ELSE 0 END) AS overrides",
-            {},
-        )
-        if _ov_rows:
-            _v = int(_ov_rows[0].get("verified") or 0)
-            _o = int(_ov_rows[0].get("overrides") or 0)
-            if _v > 0:
-                override_rate = round(_o / _v * 100, 1)
-    except Exception as _exc:
-        print(f"[SOC] tab3 override_rate query failed: {_exc}")
+    rec_category = "unclassified" if _unclassified_alert else (_alert_cat or "credential_access")
+    override_rate = 0.0 if _unclassified_alert else 15.0
+    if not _unclassified_alert:
+        try:
+            _ov_rows = await neo4j_client.run_query(
+                f"MATCH (d:Decision) "
+                f"WHERE d.category = '{rec_category}' AND d.outcome IS NOT NULL "
+                "RETURN count(d) AS verified, "
+                "sum(CASE WHEN d.correct = false THEN 1 ELSE 0 END) AS overrides",
+                {},
+            )
+            if _ov_rows:
+                _v = int(_ov_rows[0].get("verified") or 0)
+                _o = int(_ov_rows[0].get("overrides") or 0)
+                if _v > 0:
+                    override_rate = round(_o / _v * 100, 1)
+        except Exception as _exc:
+            print(f"[SOC] tab3 override_rate query failed: {_exc}")
 
     total_verified = 0
     try:

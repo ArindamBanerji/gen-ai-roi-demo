@@ -83,8 +83,8 @@ def _map_sentinel_category(raw_category: str) -> str:
         return "insider_threat"
     if "cloud" in raw_lower or "azure" in raw_lower or "aws" in raw_lower:
         return "cloud_infrastructure"
-    logger.warning("[Sentinel] Unknown category %r → credential_access", raw_category)
-    return "credential_access"
+    logger.warning("[Sentinel] Unknown category %r → unclassified", raw_category)
+    return "unclassified"
 
 
 # ---------------------------------------------------------------------------

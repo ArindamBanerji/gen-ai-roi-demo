@@ -286,14 +286,14 @@ ALERT_TYPE_CATEGORY_MAP: dict = {
     "cloud_infrastructure":              "cloud_infrastructure",   # category name used as alert_type
 }
 
-DEFAULT_CATEGORY = "credential_access"  # emergency fallback only
+UNCLASSIFIED_CATEGORY = "unclassified"
 
 
-def resolve_alert_category(alert_type: str) -> str:
+def resolve_alert_category(alert_type: str | None) -> str:
     """Map an alert_type string to its SOC category.
 
     Uses ALERT_TYPE_CATEGORY_MAP for explicit mapping.
-    Falls back to DEFAULT_CATEGORY with ERROR logging if unmapped.
+    Returns ``unclassified`` with warning logging if unmapped.
 
     This function is the SINGLE routing point. Never resolve alert_type
     to category anywhere else in the codebase.
@@ -301,16 +301,17 @@ def resolve_alert_category(alert_type: str) -> str:
     import logging
     _logger = logging.getLogger(__name__)
 
-    category = ALERT_TYPE_CATEGORY_MAP.get(alert_type)
+    normalized = (alert_type or "").strip()
+    category = ALERT_TYPE_CATEGORY_MAP.get(normalized)
     if category is None:
-        _logger.error(
-            "ROUTING_FAILURE: alert_type=%r has no mapping in "
-            "ALERT_TYPE_CATEGORY_MAP. Using fallback %r. "
-            "Add this alert_type to ALERT_TYPE_CATEGORY_MAP in config.py.",
+        _logger.warning(
+            "ROUTING_UNCLASSIFIED: alert_type=%r has no mapping in "
+            "ALERT_TYPE_CATEGORY_MAP. Returning %r; this alert must not be "
+            "scored against SOC centroids until mapped.",
             alert_type,
-            DEFAULT_CATEGORY,
+            UNCLASSIFIED_CATEGORY,
         )
-        category = DEFAULT_CATEGORY
+        category = UNCLASSIFIED_CATEGORY
     return category
 
 

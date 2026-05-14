@@ -167,6 +167,22 @@ async def analyze_alert(request: ProcessAlertRequest):
         # ====================================================================
         alert_type = context.get("alert_type") or "unknown"
         situation_analysis = analyze_situation(alert_type, context)
+        from app.domains.soc.config import resolve_alert_category
+        alert_category = resolve_alert_category(alert_type)
+        if alert_category == "unclassified":
+            logger.warning(
+                "[TRIAGE] Unclassified alert_type=%r for alert_id=%s; skipping ProfileScorer",
+                alert_type,
+                alert_id,
+            )
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "unclassified_alert_type",
+                    "alert_type": alert_type,
+                    "message": "Alert type is not mapped to a scorable SOC category.",
+                },
+            )
 
         # ====================================================================
         # Step 4: GAE Scoring Pipeline (GAE-2d — replaces agent.decide())
@@ -190,8 +206,6 @@ async def analyze_alert(request: ProcessAlertRequest):
         # v5.0: ProfileScorer centroid-proximity scoring (EXP-E1 validated L2, τ=0.1)
         _cfg = SOCDomainConfig()
         # CORR-1: resolve alert_type → category via explicit map (not direct equality)
-        from app.domains.soc.config import resolve_alert_category
-        alert_category = resolve_alert_category(alert_type)
         _cat_idx = _cfg.get_category_index(alert_category)
         _scoring_result = _scorer.score(f.flatten(), category_index=_cat_idx)
         triage_entropy = _scoring_result.entropy if hasattr(_scoring_result, 'entropy') else None
@@ -1201,7 +1215,11 @@ async def report_decision_outcome(request: OutcomeRequest):
                             _vetoed = _rl_bool(record.get("explored_but_referred"))
                             _executed = _rl_bool(record.get("exploration_executed"))
                             _explored_action = record.get("explored_action") or action_name
-                            if _explored and _executed and not _vetoed and _explored_action in SCORER_ACTIONS:
+                            if (
+                                _explored and _executed and not _vetoed
+                                and _explored_action in SCORER_ACTIONS
+                                and _resolved_category != "unclassified"
+                            ):
                                 from app.domains.soc.config import SOCDomainConfig as _SDC_rl
                                 from app.services.rl_engine import get_exploration_policy
 
@@ -1240,6 +1258,12 @@ async def report_decision_outcome(request: OutcomeRequest):
                 if LEARNING_ENABLED and action_name in SCORER_ACTIONS:
                     from app.domains.soc.config import resolve_alert_category, SOCDomainConfig as _SDC_out
                     _cat_name_out = resolve_alert_category(alert_type_for_cat)
+                    if _cat_name_out == "unclassified":
+                        logger.warning(
+                            "[GAE][LEARN] Skipping ProfileScorer.update for unclassified alert_type=%r",
+                            alert_type_for_cat,
+                        )
+                        raise ValueError("unclassified alert type is not scorable")
                     _cat_idx_out  = _SDC_out().get_category_index(_cat_name_out)
 
                     _analyst_action = request.analyst_action
@@ -1361,6 +1385,12 @@ async def report_decision_outcome(request: OutcomeRequest):
                     from app.domains.soc.config import resolve_alert_category as _resolve_cat
                     _snap = _get_snap()
                     _cat_snap = _resolve_cat(alert_type_for_cat)
+                    if _cat_snap == "unclassified":
+                        logger.warning(
+                            "[SNAPSHOT] Skipping unclassified alert_type=%r",
+                            alert_type_for_cat,
+                        )
+                        raise ValueError("unclassified alert type is not snapshottable")
                     _was_override = bool(
                         request.analyst_action
                         and request.analyst_action != action_name

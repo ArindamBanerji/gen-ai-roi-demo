@@ -54,6 +54,15 @@ async def _score_alert(
 
     raw_category = alert_payload.get("category") or alert_payload.get("alert_type") or "unknown"
     category = resolve_alert_category(raw_category)
+    if category == "unclassified":
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "unclassified_alert_type",
+                "alert_type": raw_category,
+                "message": "Alert type is not mapped to a scorable SOC category.",
+            },
+        )
     alert_payload.setdefault("category", category)
     alert_payload.setdefault("alert_type", raw_category)
 
