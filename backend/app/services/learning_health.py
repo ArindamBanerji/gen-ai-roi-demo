@@ -636,7 +636,7 @@ async def compute_verification_health(neo4j_client: Any) -> dict:
 
     Condition 1 — Coverage: verified_decisions / total_decisions >= 0.20
     Condition 2 — Drift: last-7d rate >= prior-7d rate * 0.80
-    Condition 3 — Conservation: GREEN or UNKNOWN (not AMBER/RED)
+    Condition 3 — Conservation: GREEN or CALIBRATING; UNKNOWN is cautious
 
     Status:
       GREEN : all 3 conditions healthy

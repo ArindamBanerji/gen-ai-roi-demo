@@ -89,6 +89,8 @@ SOC_CATEGORIES = [
 # credential_access and lateral_movement are most frequent.
 # cloud_infrastructure and malware_execution are least frequent.
 # Weights must sum to 1.0.
+DEFAULT_CATEGORY = "unclassified"
+
 BOOTSTRAP_CATEGORY_WEIGHTS = {
     "credential_access":    0.30,
     "lateral_movement":     0.20,
@@ -274,6 +276,7 @@ ALERT_TYPE_CATEGORY_MAP: dict = {
 
     # insider_threat
     "insider_threat":               "insider_threat",
+    "insider_threat_detected":      "insider_threat",
     "anomalous_behavior":           "insider_threat",
 
     # cloud_infrastructure

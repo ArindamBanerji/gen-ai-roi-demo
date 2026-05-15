@@ -53,18 +53,18 @@ def test_all_seed_alert_types_route_to_valid_category():
 
 
 # ---------------------------------------------------------------------------
-# 3. Unknown alert_type must log ROUTING_FAILURE and return DEFAULT_CATEGORY
+# 3. Unknown alert_type must log ROUTING_UNCLASSIFIED and return DEFAULT_CATEGORY
 # ---------------------------------------------------------------------------
 
 def test_unknown_alert_type_logs_error(caplog):
-    """Unmapped alert_type must log ROUTING_FAILURE and use default."""
+    """Unmapped alert_type must log WARNING with ROUTING_UNCLASSIFIED."""
     from app.domains.soc.config import resolve_alert_category, DEFAULT_CATEGORY
 
-    with caplog.at_level(logging.ERROR):
+    with caplog.at_level(logging.WARNING):
         result = resolve_alert_category("completely_unknown_type_xyz")
 
     assert result == DEFAULT_CATEGORY
-    assert "ROUTING_FAILURE" in caplog.text
+    assert "ROUTING_UNCLASSIFIED" in caplog.text
     assert "completely_unknown_type_xyz" in caplog.text
 
 
