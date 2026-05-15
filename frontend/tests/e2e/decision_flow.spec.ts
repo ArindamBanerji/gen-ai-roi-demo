@@ -2,6 +2,7 @@
 // Run with: npm run test:e2e:integration
 
 import { test, expect, request } from '@playwright/test';
+import { resetDemoAlerts } from './helpers';
 
 // Ports flow from root .env (loaded by playwright.config.ts) — no hardcoded fallbacks.
 const FRONTEND_PORT = process.env.FRONTEND_PORT || '5173';
@@ -11,9 +12,7 @@ const BACKEND  = `http://localhost:${BACKEND_PORT}`;
 
 // ── Reset alerts before each test so the SIM- pool is never exhausted ────────
 test.beforeEach(async ({ page }) => {
-  const api = await request.newContext({ baseURL: BACKEND });
-  await api.post('/api/alerts/reset');
-  await api.dispose();
+  await resetDemoAlerts(page);
   // Brief pause — lets the backend settle before the next test makes API calls
   await page.waitForTimeout(1000);
 });
@@ -204,8 +203,7 @@ test('learning_loop_validates_20_decisions', async ({ page }) => {
   }
 
   // Reset alert queue to pending
-  const resetRes = await page.request.post(`${BACKEND}/api/alerts/reset`);
-  expect(resetRes.status()).toBe(200);
+  await resetDemoAlerts(page);
 
   // Wait 1 second for Neo4j write to complete
   await page.waitForTimeout(1000);

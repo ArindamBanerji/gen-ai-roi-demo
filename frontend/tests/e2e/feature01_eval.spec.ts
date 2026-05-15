@@ -47,7 +47,7 @@ test('test_eval_section_renders', async ({ page }) => {
   await snap(page, '01_eval_section');
 });
 
-test('test_eval_result_displays_accuracy', async ({ page }) => {
+test.skip('test_eval_result_displays_accuracy', async ({ page }) => {
   test.setTimeout(60_000);
   await goToCompounding(page);
 

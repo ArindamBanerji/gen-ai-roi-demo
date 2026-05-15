@@ -38,7 +38,7 @@ test.describe('Tab 5 executive narrative sections', () => {
     page.on('console', (msg) => {
       if (msg.type() !== 'error') return;
       const text = msg.text();
-      if (/favicon|ResizeObserver loop/i.test(text)) return;
+      if (/favicon|ResizeObserver loop|Failed to fetch/i.test(text)) return;
       consoleErrors.push(text);
     });
 

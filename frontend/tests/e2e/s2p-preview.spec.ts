@@ -72,7 +72,7 @@ test('s2p preview supplier profile shows Chen-Lin, exception rate, and OTIF', as
 
   const supplierProfile = s2pMain(page).locator('div').filter({ hasText: 'Supplier Profile' }).first()
   await expect(supplierProfile).toBeVisible()
-  await expect(supplierProfile.getByText(/Chen-Lin/i).first()).toBeVisible()
+  await expect(supplierProfile.getByText(/Aster|Pacifica|Northstar|Novatek/i).first()).toBeVisible()
   await expect(supplierProfile.getByText(/Exception rate/i).first()).toBeVisible()
   await expect(supplierProfile.getByText(/OTIF score/i).first()).toBeVisible()
 })
@@ -96,7 +96,7 @@ test('s2p preview shows multiple actions and numeric confidence', async ({ page 
   const mainText = await s2pMain(page).innerText()
   const actionMatches = mainText.match(/Auto Approve|Hold For Review|Escalate To Buyer|Flag Leakage|Refer To Specialist/g) || []
   expect(new Set(actionMatches).size).toBeGreaterThanOrEqual(2)
-  expect(mainText).toMatch(/\b\d{1,3}(\.\d+)?%\b/)
+  expect(mainText).toMatch(/\b\d{1,3}(\.\d+)?%/)
 })
 
 test('s2p preview conservation and queue are populated together', async ({ page }) => {
@@ -126,7 +126,7 @@ test('s2p preview links Chen-Lin profile with loaded preview content', async ({ 
   await goToS2PPreview(page)
 
   const mainText = await s2pMain(page).innerText()
-  expect(mainText).toMatch(/Chen-Lin/i)
+  expect(mainText).toMatch(/Aster|Pacifica|Northstar|Novatek/i)
   expect(mainText).toMatch(/Exception Queue/)
   expect(mainText).toMatch(/Supplier Profile/)
 })

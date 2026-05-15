@@ -90,7 +90,7 @@ test('test_balance_sheet_loads_categories', async ({ page }) => {
 
   if (categoryVisible) {
     // SOC has 6 categories — verify 6 data rows.
-    const rows = page.locator('table tbody tr');
+    const rows = page.getByTestId('learning-balance-category-row');
     const rowCount = await rows.count().catch(() => 0);
     console.log(`Balance sheet table rows: ${rowCount} (expect 6)`);
     expect(rowCount).toBe(6);

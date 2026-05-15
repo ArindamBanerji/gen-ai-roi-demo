@@ -3,7 +3,7 @@ ROI Calculator API - v2.5 Feature
 Accepts prospect-specific SOC inputs and returns projected savings.
 """
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Dict, Any
 
 
@@ -53,7 +53,8 @@ class ROIRequest(BaseModel):
         description="Average cost per escalation (USD)"
     )
 
-    @validator('current_auto_close_pct')
+    @field_validator('current_auto_close_pct')
+    @classmethod
     def validate_percentage(cls, v):
         """Ensure percentage is in valid range"""
         if v < 0.0 or v > 0.95:

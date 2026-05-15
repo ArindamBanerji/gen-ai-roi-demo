@@ -561,12 +561,12 @@ test.describe('Tab 4 – Decision Economics (extended)', () => {
     const roiBtn = page.getByText(/Calculate.*ROI|Calculate Your ROI/i).first();
     await expect(roiBtn).toBeVisible({ timeout: 10_000 });
     await roiBtn.click();
-    await expect(page.getByText(/ROI Calculator/i)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('heading', { name: /ROI Calculator/i })).toBeVisible({ timeout: 5_000 });
   });
 
   test('alerts_per_day input present in ROI modal', async ({ page }) => {
     await page.getByText(/Calculate.*ROI|Calculate Your ROI/i).first().click();
-    await expect(page.getByText(/ROI Calculator/i)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('heading', { name: /ROI Calculator/i })).toBeVisible({ timeout: 5_000 });
     const input = page.locator('input[type="number"]').first();
     await expect(input).toBeVisible({ timeout: 5_000 });
   });

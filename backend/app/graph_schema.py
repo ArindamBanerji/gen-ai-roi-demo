@@ -164,8 +164,9 @@ GRAPH_CONTRACT = {
         },
         {
             "name": "demo_alerts_exist",
-            "query": "MATCH (a:Alert {status: 'pending'}) RETURN count(a) AS n",
-            "expected_min": 25,
+            "query": "MATCH (a:Alert) WHERE a.origin = '" + DEMO_ORIGIN + "' "
+                     "RETURN count(a) AS n",
+            "expected_min": 80,
         },
         {
             "name": "no_null_categories",
@@ -602,7 +603,7 @@ async def seed_graph(json_path, clean=False, client=None):
         if (i + 1) % 100 == 0:
             print("  " + str(i + 1) + "/" + str(len(alerts)) + " alerts...")
 
-    # ── Phase 6: Demo Alerts (30) ─────────────────────────────────────
+    # ── Phase 6: Demo Alerts (102) ─────────────────────────────────────
     print("[6/9] Creating " + str(len(demo_alerts)) + " demo Alerts...")
     for a in demo_alerts:
         await client.run_query(

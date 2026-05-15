@@ -32,7 +32,7 @@ export default defineConfig({
   workers: 1,
   reporter: 'list',
   use: {
-    baseURL: `http://localhost:${FRONTEND_PORT}`,
+    baseURL: `http://127.0.0.1:${FRONTEND_PORT}`,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'off',

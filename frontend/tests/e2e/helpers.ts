@@ -6,13 +6,15 @@
  * Never hardcode port numbers here.
  */
 
-import { Page } from '@playwright/test';
+import { expect, type APIRequestContext, type Page } from '@playwright/test';
 
 const FRONTEND_PORT = process.env.FRONTEND_PORT || '5173';
 const BACKEND_PORT  = process.env.BACKEND_PORT  || '8001';
 
-export const FRONTEND = `http://localhost:${FRONTEND_PORT}`;
-export const BACKEND  = `http://localhost:${BACKEND_PORT}`;
+export const FRONTEND = `http://127.0.0.1:${FRONTEND_PORT}`;
+export const BACKEND  = `http://127.0.0.1:${BACKEND_PORT}`;
+
+type ResetTarget = APIRequestContext | Page;
 
 // Alert card selector — matches both SIM-* and ALERT-* IDs.
 const ALERT_CARD_RE = /ALERT-|SIM-/i;
@@ -25,6 +27,20 @@ const TAB_NAMES: Record<number, RegExp> = {
   4: /Compounding|Decision Economics/i,
   5: /Executive Narrative/i,
 };
+
+function hasPageRequest(target: ResetTarget): target is Page {
+  return 'request' in target;
+}
+
+/**
+ * Reset demo alerts to pending through the backend reset endpoint.
+ * Accepts either the Playwright request fixture or a Page.
+ */
+export async function resetDemoAlerts(target: ResetTarget): Promise<void> {
+  const requestContext = hasPageRequest(target) ? target.request : target;
+  const response = await requestContext.post(`${BACKEND}/api/alerts/reset`);
+  expect(response.status()).toBe(200);
+}
 
 /**
  * Click the numbered tab button and wait for the nav button to become active.

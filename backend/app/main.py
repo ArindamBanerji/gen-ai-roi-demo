@@ -3,6 +3,7 @@ SOC Copilot Demo - FastAPI Backend
 Main application entry point with CORS and router registration.
 """
 import logging
+import os as _cors_os
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,15 +23,25 @@ app = FastAPI(
     version="5.0.0",
 )
 
-import os as _cors_os
-_allowed_origins = _cors_os.getenv(
-    "ALLOWED_ORIGINS",
-    "http://localhost:5173,http://localhost:8001",
-).split(",")
+DEFAULT_CORS_ORIGINS = (
+    "http://localhost:5173,"
+    "http://localhost:5174,"
+    "http://localhost:5175,"
+    "http://localhost:5176,"
+    "http://localhost:5177"
+)
+
+
+def _cors_origins() -> list[str]:
+    return [
+        origin.strip()
+        for origin in _cors_os.environ.get("CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",")
+        if origin.strip()
+    ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_allowed_origins,
+    allow_origins=_cors_origins(),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Content-Type", "Authorization"],

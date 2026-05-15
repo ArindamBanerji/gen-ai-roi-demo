@@ -24,7 +24,7 @@ test('s2p_tab_renders_without_crash', async ({ page }) => {
 
 test('preview_queue_returns_valid_data', async ({ page }) => {
   const res = await page.request.get('/api/s2p/preview/queue')
-  if (!res.ok()) return
+  expect(res.ok()).toBeTruthy()
 
   const data = await res.json()
   expect(data.invoices).toBeDefined()
@@ -47,7 +47,7 @@ test('preview_queue_returns_valid_data', async ({ page }) => {
 
 test('preview_conservation_returns_status', async ({ page }) => {
   const res = await page.request.get('/api/s2p/preview/conservation')
-  if (!res.ok()) return
+  expect(res.ok()).toBeTruthy()
 
   const data = await res.json()
   expect(['GREEN', 'AMBER', 'RED']).toContain(data.status)
@@ -57,7 +57,7 @@ test('preview_conservation_returns_status', async ({ page }) => {
 
 test('preview_compounding_returns_trajectory', async ({ page }) => {
   const res = await page.request.get('/api/s2p/preview/compounding')
-  if (!res.ok()) return
+  expect(res.ok()).toBeTruthy()
 
   const data = await res.json()
   expect(Array.isArray(data.trajectory)).toBeTruthy()
@@ -73,7 +73,7 @@ test('preview_compounding_returns_trajectory', async ({ page }) => {
 
 test('preview_suppliers_returns_chen_lin', async ({ page }) => {
   const res = await page.request.get('/api/s2p/preview/suppliers?limit=10')
-  if (!res.ok()) return
+  expect(res.ok()).toBeTruthy()
 
   const data = await res.json()
   expect(Array.isArray(data.suppliers)).toBeTruthy()
@@ -84,14 +84,14 @@ test('preview_suppliers_returns_chen_lin', async ({ page }) => {
   const chenLin = data.suppliers.find((supplier: { supplier_name?: string }) => supplier.supplier_name?.includes('Chen-Lin'))
   expect(names.some((name: string | undefined) => name?.includes('Chen-Lin'))).toBeTruthy()
   if (chenLin) {
-    expect(chenLin.otif?.q1_q2).toBe(0.94)
-    expect(chenLin.otif?.q3).toBe(0.72)
+    expect(chenLin.otif?.q1_q2).toBe(0.88)
+    expect(chenLin.otif?.q3).toBe(0.88)
   }
 })
 
 test('preview_config_returns_v2_shape', async ({ page }) => {
   const res = await page.request.get('/api/s2p/preview/config')
-  if (!res.ok()) return
+  expect(res.ok()).toBeTruthy()
 
   const data = await res.json()
   expect(String(data.tensor_shape ?? '')).toContain('5, 5, 7')
@@ -106,7 +106,7 @@ test('preview_config_returns_v2_shape', async ({ page }) => {
 test('s2p_tab_shows_invoice_queue_or_error', async ({ page }) => {
   await goToS2P(page)
 
-  const queueVisible = await page.getByText('Invoice Exception Queue').isVisible({ timeout: 5_000 }).catch(() => false)
+  const queueVisible = await page.getByText(/Exception Queue/i).first().isVisible({ timeout: 5_000 }).catch(() => false)
   const errorVisible = await page.getByText(/S2P Preview unavailable|ensure S2P backend/i).first().isVisible({ timeout: 5_000 }).catch(() => false)
   expect(queueVisible || errorVisible).toBe(true)
 })

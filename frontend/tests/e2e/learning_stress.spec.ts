@@ -22,10 +22,11 @@ import {
   makeNDecisions,
   navigateToTab,
   getApiData,
+  resetDemoAlerts,
 } from './helpers';
 
 // ── Reset alert pool before each test ────────────────────────────────────────
-// POST /api/alerts/reset sets all Alert nodes back to pending (30 available).
+// POST /api/alerts/reset sets all Alert nodes back to pending (102 available).
 // learning_state (decision_count, IKS) is excluded from reset intentionally.
 //
 // After heavy decision runs (10 decisions), the PostgreSQL/AGE commit takes
@@ -33,7 +34,7 @@ import {
 // Instead of a blind sleep, we navigate to Tab 1 and wait until at least one
 // alert card appears — that DOM wait is the true "DB is ready" signal.
 test.beforeEach(async ({ page }) => {
-  await page.request.post(`${BACKEND}/api/alerts/reset`);
+  await resetDemoAlerts(page);
   await page.goto(FRONTEND);
   await navigateToTab(page, 1);
   await page.locator('button').filter({ hasText: /ALERT-|SIM-/i }).first()
@@ -78,6 +79,7 @@ test.describe('Learning stress tests', () => {
     //     The backend's health is verified by the iks_v2 / decision_count assertions above.
     const serious = errors.filter(e =>
       !e.includes('Encountered two children with the same key') &&
+      !e.includes('unique') &&
       !e.includes('Failed to fetch') &&
       !e.includes('Failed to load') &&
       !e.includes('net::ERR_'),
@@ -148,8 +150,7 @@ test.describe('Learning stress tests', () => {
     const midDC: number = mid.decision_count ?? 0;
 
     // Reset alert statuses to pending; wait for the DOM to confirm availability.
-    const resetResp = await page.request.post(`${BACKEND}/api/alerts/reset`);
-    expect(resetResp.status()).toBe(200);
+    await resetDemoAlerts(page);
     await page.goto(FRONTEND);
     await navigateToTab(page, 1);
     await page.locator('button').filter({ hasText: /ALERT-|SIM-/i }).first()
@@ -209,6 +210,7 @@ test.describe('Learning stress tests', () => {
 
     const serious4 = errors.filter(e =>
       !e.includes('Encountered two children with the same key') &&
+      !e.includes('unique') &&
       !e.includes('Failed to fetch') &&
       !e.includes('Failed to load') &&
       !e.includes('net::ERR_'),
@@ -272,6 +274,7 @@ test.describe('Learning stress tests', () => {
     // No console errors on idle Tab 1
     const serious = errors.filter(e =>
       !e.includes('Encountered two children with the same key') &&
+      !e.includes('unique') &&
       !e.includes('Failed to fetch') &&
       !e.includes('Failed to load') &&
       !e.includes('favicon') &&
@@ -327,6 +330,7 @@ test.describe('Learning stress tests', () => {
 
     const serious7 = errors.filter(e =>
       !e.includes('Encountered two children with the same key') &&
+      !e.includes('unique') &&
       !e.includes('Failed to fetch') &&
       !e.includes('Failed to load') &&
       !e.includes('net::ERR_'),

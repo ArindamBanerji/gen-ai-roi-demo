@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
-const S2P_API = env?.VITE_S2P_API_URL || 'http://localhost:8002'
+const S2P_API = env?.VITE_S2P_API_URL || ''
 
 interface QueueException {
   invoice_id?: string
@@ -212,7 +212,7 @@ export default function S2PPreviewTab() {
     return (
       <div className="rounded-lg border border-red-500/30 bg-soc-card p-6">
         <h2 className="text-lg font-semibold text-red-300">S2P Preview unavailable</h2>
-        <p className="mt-2 text-sm text-gray-400">Start the S2P backend on port 8002, then retry this tab.</p>
+        <p className="mt-2 text-sm text-gray-400">S2P preview data is temporarily unavailable. Retry this tab after the API is reachable.</p>
         <p className="mt-3 font-mono text-xs text-gray-500">{error}</p>
       </div>
     )

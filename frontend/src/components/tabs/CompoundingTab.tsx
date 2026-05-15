@@ -1835,7 +1835,7 @@ export default function CompoundingTab() {
                       </thead>
                       <tbody className="divide-y divide-gray-100 bg-white">
                         {learningBalanceCategories.map((item) => (
-                          <tr key={item.category}>
+                          <tr key={item.category} data-testid="learning-balance-category-row">
                             <td className="px-4 py-3 font-medium text-gray-900">{item.category}</td>
                             <td className="px-4 py-3">
                               <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${bandBadgeClass(item.epistemic_band)}`}>
