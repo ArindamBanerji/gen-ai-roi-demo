@@ -1,7 +1,7 @@
 """Cross-tab consistency tests — automated regression for narrative contradictions.
 
-Requires: backend running at localhost:8001 with AGE seeded.
-Run: python -m pytest tests/test_cross_tab_consistency.py -v --timeout=120
+Requires: backend running at 127.0.0.1:8001 with AGE seeded.
+Run: python -m pytest tests/test_cross_tab_consistency.py -v --timeout=120 --run-live-backend
 """
 
 import re
@@ -10,7 +10,10 @@ import warnings
 import pytest
 import requests
 
-BASE = "http://localhost:8001"
+pytestmark = pytest.mark.live_backend
+
+BASE = "http://127.0.0.1:8001"
+HTTP_TIMEOUT = 60
 
 SOC_CATEGORIES = {
     "credential_access", "malware_execution", "lateral_movement",
@@ -19,25 +22,25 @@ SOC_CATEGORIES = {
 
 
 def _tab(n: int) -> dict:
-    resp = requests.get(f"{BASE}/api/soc/tab/{n}/content", timeout=10)
+    resp = requests.get(f"{BASE}/api/soc/tab/{n}/content", timeout=HTTP_TIMEOUT)
     assert resp.status_code == 200, f"Tab {n} returned {resp.status_code}"
     return resp.json().get("content", {})
 
 
 def _evidence_room() -> dict:
-    resp = requests.get(f"{BASE}/api/soc/evidence-room", timeout=10)
+    resp = requests.get(f"{BASE}/api/soc/evidence-room", timeout=HTTP_TIMEOUT)
     assert resp.status_code == 200
     return resp.json()
 
 
 def _evolution_summary() -> dict:
-    resp = requests.get(f"{BASE}/api/evolution/summary", timeout=10)
+    resp = requests.get(f"{BASE}/api/evolution/summary", timeout=HTTP_TIMEOUT)
     assert resp.status_code == 200
     return resp.json()
 
 
 def _governance_summary() -> dict:
-    resp = requests.get(f"{BASE}/api/governance/summary", timeout=10)
+    resp = requests.get(f"{BASE}/api/governance/summary", timeout=HTTP_TIMEOUT)
     assert resp.status_code == 200
     return resp.json()
 

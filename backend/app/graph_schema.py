@@ -414,6 +414,20 @@ def _validate_json(data):
         raise ValueError("JSON validation failed:\n  " + "\n  ".join(errors))
 
 
+def _validate_seed_data(data):
+    """Run full deterministic seed validation before any graph mutation."""
+    from app.seed.validate import validate_seed
+
+    result = validate_seed(data)
+    if result.errors:
+        preview = "\n  ".join(result.errors[:10])
+        remaining = len(result.errors) - 10
+        suffix = ""
+        if remaining > 0:
+            suffix = "\n  ... and " + str(remaining) + " more errors"
+        raise ValueError("Seed validation failed:\n  " + preview + suffix)
+
+
 # ---------------------------------------------------------------------------
 # seed_graph()
 # ---------------------------------------------------------------------------
@@ -440,6 +454,7 @@ async def seed_graph(json_path, clean=False, client=None):
 
     # Validate JSON before touching the graph
     print("[SEED] Validating JSON structure...")
+    _validate_seed_data(data)
     _validate_json(data)
     print("[SEED] JSON valid.")
 

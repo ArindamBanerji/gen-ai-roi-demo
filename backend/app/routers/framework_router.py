@@ -771,6 +771,84 @@ async def learning_balance_sheet():
 # FEATURE-05: Factor Analysis
 # ============================================================================
 
+def compute_factor_contribution(dk_weights, factor_names) -> tuple[list[dict], str]:
+    import numpy as np
+
+    names = list(factor_names)
+
+    def _uniform() -> tuple[list[dict], str]:
+        if not names:
+            return [], "uniform"
+        pct = round(100.0 / len(names), 2)
+        percentages = [pct for _ in names]
+        percentages[-1] = round(100.0 - sum(percentages[:-1]), 2)
+        return [
+            {
+                "name": name,
+                "index": idx,
+                "contribution_pct": percentages[idx],
+                "signal_strength": (
+                    "high" if idx < 2 else "medium" if idx < 4 else "low"
+                ),
+                "rank": idx + 1,
+            }
+            for idx, name in enumerate(names)
+        ], "uniform"
+
+    if dk_weights is None:
+        return _uniform()
+
+    try:
+        weights = np.asarray(dk_weights, dtype=float)
+    except (TypeError, ValueError):
+        return _uniform()
+
+    if weights.ndim == 1 and weights.shape[0] == len(names):
+        importance = np.abs(weights)
+    elif weights.ndim == 2 and weights.shape[1] == len(names):
+        importance = np.mean(np.abs(weights), axis=0)
+    else:
+        return _uniform()
+
+    total = float(np.sum(importance))
+    if not np.isfinite(total) or total <= 0.0:
+        return _uniform()
+
+    ordered = sorted(
+        [
+            {
+                "name": names[idx],
+                "index": idx,
+                "importance": float(importance[idx]),
+            }
+            for idx in range(len(names))
+        ],
+        key=lambda item: (-item["importance"], item["index"]),
+    )
+
+    percentages = [
+        round((item["importance"] / total) * 100.0, 2)
+        for item in ordered
+    ]
+    if percentages:
+        percentages[-1] = round(100.0 - sum(percentages[:-1]), 2)
+
+    factors = []
+    for rank, item in enumerate(ordered, start=1):
+        factors.append(
+            {
+                "name": item["name"],
+                "index": item["index"],
+                "contribution_pct": percentages[rank - 1],
+                "signal_strength": (
+                    "high" if rank <= 2 else "medium" if rank <= 4 else "low"
+                ),
+                "rank": rank,
+            }
+        )
+    return factors, "dk_weights"
+
+
 @router.get("/soc/factor-analysis")
 async def factor_analysis():
     from app.services.factor_analysis import run_factor_analysis
@@ -814,6 +892,30 @@ async def factor_analysis_summary():
         "recommendation": recommendation,
         "bootstrap_improved": bootstrap_improved,
         "generated_at": result["generated_at"],
+    }
+
+
+@router.get("/soc/factor-contribution")
+async def factor_contribution():
+    from app.domains.soc.config import SOCDomainConfig
+    from app.services.factor_analysis import _kernel_weights_for_scorer
+    from app.services.gae_state import get_profile_scorer
+
+    factor_names = [factor.id for factor in SOCDomainConfig().factors]
+    dk_weights = None
+    try:
+        scorer = get_profile_scorer()
+        if scorer is not None:
+            dk_weights = _kernel_weights_for_scorer(scorer)
+    except Exception:
+        dk_weights = None
+
+    factors, method = compute_factor_contribution(dk_weights, factor_names)
+    return {
+        "factors": factors,
+        "method": method,
+        "top_factor": factors[0]["name"] if factors else None,
+        "weakest_factor": factors[-1]["name"] if factors else None,
     }
 
 

@@ -264,6 +264,12 @@ async def rebuild_chain_from_graph(client: Any) -> int:
         n = 0
         for row in rows:
             did = str(row.get("decision_id") or "")
+            ts_ms = row.get("ts")
+            ts_iso = (
+                datetime.fromtimestamp(float(ts_ms) / 1000, tz=timezone.utc).isoformat()
+                if ts_ms is not None
+                else datetime.now(timezone.utc).isoformat()
+            )
             _LEDGER.append(
                 decision_id=did,
                 alert_id=str(row.get("alert_id") or ""),
@@ -273,6 +279,7 @@ async def rebuild_chain_from_graph(client: Any) -> int:
                 outcome=row.get("correct", "unknown"),
                 analyst_override=False,
                 centroid_state_hash="",
+                timestamp=ts_iso,
             )
             if row.get("category"):
                 _SITUATION_TYPES[did] = str(row["category"])

@@ -82,7 +82,23 @@ async def root():
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy"}
+    from app.services import rl_engine
+    from app.services.posterior_store import PosteriorStore
+
+    store = getattr(rl_engine, "_posterior_store", None)
+    if store is None:
+        store = PosteriorStore()
+    try:
+        posterior_health = store.health_check()
+    except Exception as exc:
+        posterior_health = {"healthy": False, "error": str(exc)}
+
+    return {
+        "status": "healthy",
+        "components": {
+            "posterior_store": posterior_health,
+        },
+    }
 
 # Router imports
 from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae, admin, simulation, evaluation, judgment, framework_router, eval_router, governance_router, whatif_router, time_machine_router, discoveries_router, platform

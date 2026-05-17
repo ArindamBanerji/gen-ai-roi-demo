@@ -107,6 +107,21 @@ class PosteriorStore:
         except Exception as exc:
             log.warning("[PosteriorStore] clear failed: %s", exc)
 
+    def health_check(self) -> dict[str, Any]:
+        """Return storage health without mutating posterior state."""
+        try:
+            self._ping_storage()
+        except Exception as exc:
+            return {"healthy": False, "error": str(exc)}
+        return {"healthy": True}
+
+    def _ping_storage(self) -> None:
+        import psycopg
+
+        with psycopg.connect(self._dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+
     def _ensure_table(self) -> None:
         if self._table_ready:
             return
@@ -127,4 +142,3 @@ class PosteriorStore:
                     """
                 )
         self._table_ready = True
-

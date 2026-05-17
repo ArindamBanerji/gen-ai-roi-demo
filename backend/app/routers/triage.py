@@ -37,6 +37,7 @@ from app.domains.soc.config import (
     SOC_CATEGORY_CONFIDENCE_FLOORS,
     SOC_AGENT_ZONE_ELEVATED,
     LEARNING_ENABLED,
+    N_FACTORS,
 )
 from app.domains.soc.orchestrator import compute_factor_vector
 from gae.scoring import score_alert
@@ -45,6 +46,21 @@ logger = logging.getLogger(__name__)
 
 
 router = APIRouter()
+
+
+def _validate_scoring_factor_vector(factor_vector) -> np.ndarray:
+    if factor_vector is None:
+        raise ValueError(f"factor_vector must have {N_FACTORS} elements, got None")
+    try:
+        vector = np.asarray(factor_vector, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"factor_vector must have {N_FACTORS} elements, got invalid") from exc
+    actual = int(vector.size)
+    if actual != N_FACTORS:
+        raise ValueError(f"factor_vector must have {N_FACTORS} elements, got {actual}")
+    if not np.all(np.isfinite(vector)):
+        raise ValueError(f"factor_vector must have {N_FACTORS} finite elements")
+    return vector.reshape(1, -1)
 
 
 def _rl_soc_config():
@@ -1172,84 +1188,80 @@ async def report_decision_outcome(request: OutcomeRequest):
                 reward_result = None
                 _rl_reward_ledger = None
 
-            if fv is None:
-                print(f"[GAE] Decision node found but factor_vector is NULL — skipping weight update")
-                _ref_ls = get_learning_state()
-                if _ref_ls:
-                    _ref_ls.decision_count += 1
-                    save_learning_state()
+            from app.domains.soc.config import SCORER_ACTIONS
 
-            if fv is not None:
-                f = np.array(fv, dtype=np.float64).reshape(1, -1)
-                from app.domains.soc.config import SCORER_ACTIONS
-
-                # refer_to_analyst is a routing decision, not a classification
-                # action.  ProfileScorer has A=4 (SCORER_ACTIONS); skip learning.
-                if action_name not in SCORER_ACTIONS:
+            # refer_to_analyst is a routing decision, not a classification
+            # action.  ProfileScorer has A=4 (SCORER_ACTIONS); skip learning.
+            if action_name not in SCORER_ACTIONS:
+                if fv is None:
+                    print(f"[GAE] Decision node found but factor_vector is NULL — skipping weight update")
+                else:
                     print(
                         f"[GAE] Skipping learning update for routing action "
                         f"{action_name!r} (not in SCORER_ACTIONS)"
                     )
-                    wu = None
-                    # Still count this verified outcome so decision_count reflects
-                    # all verified decisions, not only scorable actions.
-                    _ref_ls = get_learning_state()
+                wu = None
+                # Still count this verified outcome so decision_count reflects
+                # all verified decisions, not only scorable actions.
+                _ref_ls = get_learning_state()
+                if _ref_ls:
                     _ref_ls.decision_count += 1
                     save_learning_state()
-                else:
-                    action_index = list(SCORER_ACTIONS).index(action_name)
-                    learning_state = get_learning_state()
-                    wu = learning_state.update(
-                        action_index=action_index,
-                        action_name=action_name,
-                        outcome=outcome_int,
-                        f=f,
-                        confidence_at_decision=confidence_at_decision,
+            else:
+                f = _validate_scoring_factor_vector(fv)
+                action_index = list(SCORER_ACTIONS).index(action_name)
+                learning_state = get_learning_state()
+                wu = learning_state.update(
+                    action_index=action_index,
+                    action_name=action_name,
+                    outcome=outcome_int,
+                    f=f,
+                    confidence_at_decision=confidence_at_decision,
+                )
+                save_learning_state()
+
+                try:
+                    _soc_cfg_rl = _rl_soc_config()
+                    if getattr(_soc_cfg_rl, "RL_EXPLORATION_ENABLED", False):
+                        _explored = _rl_bool(record.get("explored"))
+                        _vetoed = _rl_bool(record.get("explored_but_referred"))
+                        _executed = _rl_bool(record.get("exploration_executed"))
+                        _explored_action = record.get("explored_action") or action_name
+                        if (
+                            _explored and _executed and not _vetoed
+                            and _explored_action in SCORER_ACTIONS
+                            and _resolved_category != "unclassified"
+                        ):
+                            from app.domains.soc.config import SOCDomainConfig as _SDC_rl
+                            from app.services.rl_engine import get_exploration_policy
+
+                            _posterior_cat_idx = _SDC_rl().get_category_index(_resolved_category)
+                            _posterior_action_idx = list(SCORER_ACTIONS).index(_explored_action)
+                            get_exploration_policy().update_posterior(
+                                _posterior_cat_idx,
+                                _posterior_action_idx,
+                                correct_bool,
+                            )
+                            _rl_posterior_updated = True
+                except Exception as _rl_posterior_exc:
+                    logger.warning("[RL] Posterior update failed: %s", _rl_posterior_exc)
+
+                # SOC-Q3 / DRIFT-01: Wire conservation status → scorer auto-pause.
+                # auto_pause_active (14+ RED days) overrides current status to RED
+                # so that a brief GREEN window cannot clear an accumulated freeze.
+                # FIX 1: fail-closed — if health check throws, block learning (treat as RED).
+                _conservation_block = False
+                _eff_status = "GREEN"
+                try:
+                    from app.services.learning_health import LearningHealthMonitor
+                    _health = await LearningHealthMonitor.evaluate(neo4j_client)
+                    _eff_status = (
+                        "RED" if _health.get("auto_pause_active")
+                        else _health.get("status", "GREEN")
                     )
-                    save_learning_state()
-
-                    try:
-                        _soc_cfg_rl = _rl_soc_config()
-                        if getattr(_soc_cfg_rl, "RL_EXPLORATION_ENABLED", False):
-                            _explored = _rl_bool(record.get("explored"))
-                            _vetoed = _rl_bool(record.get("explored_but_referred"))
-                            _executed = _rl_bool(record.get("exploration_executed"))
-                            _explored_action = record.get("explored_action") or action_name
-                            if (
-                                _explored and _executed and not _vetoed
-                                and _explored_action in SCORER_ACTIONS
-                                and _resolved_category != "unclassified"
-                            ):
-                                from app.domains.soc.config import SOCDomainConfig as _SDC_rl
-                                from app.services.rl_engine import get_exploration_policy
-
-                                _posterior_cat_idx = _SDC_rl().get_category_index(_resolved_category)
-                                _posterior_action_idx = list(SCORER_ACTIONS).index(_explored_action)
-                                get_exploration_policy().update_posterior(
-                                    _posterior_cat_idx,
-                                    _posterior_action_idx,
-                                    correct_bool,
-                                )
-                                _rl_posterior_updated = True
-                    except Exception as _rl_posterior_exc:
-                        logger.warning("[RL] Posterior update failed: %s", _rl_posterior_exc)
-
-                    # SOC-Q3 / DRIFT-01: Wire conservation status → scorer auto-pause.
-                    # auto_pause_active (14+ RED days) overrides current status to RED
-                    # so that a brief GREEN window cannot clear an accumulated freeze.
-                    # FIX 1: fail-closed — if health check throws, block learning (treat as RED).
-                    _conservation_block = False
-                    _eff_status = "GREEN"
-                    try:
-                        from app.services.learning_health import LearningHealthMonitor
-                        _health = await LearningHealthMonitor.evaluate(neo4j_client)
-                        _eff_status = (
-                            "RED" if _health.get("auto_pause_active")
-                            else _health.get("status", "GREEN")
-                        )
-                    except Exception as _cse:
-                        logger.warning("Conservation status update failed: %s", _cse)
-                        _conservation_block = True  # fail-closed: unknown health → block
+                except Exception as _cse:
+                    logger.warning("Conservation status update failed: %s", _cse)
+                    _conservation_block = True  # fail-closed: unknown health → block
 
                 # CORR-2 fix: ProfileScorer.update() — gated by LEARNING_ENABLED (default False).
                 # gt_action_index = analyst's actual chosen action when provided;
@@ -1644,6 +1656,8 @@ async def report_decision_outcome(request: OutcomeRequest):
         return response_body
 
     except HTTPException:
+        raise
+    except ValueError:
         raise
     except Exception as e:
         print(f"[ERROR] Failed to process outcome: {e}")

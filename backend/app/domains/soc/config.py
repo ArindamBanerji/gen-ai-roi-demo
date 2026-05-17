@@ -805,6 +805,7 @@ def compute_theta_min(alpha: float, V: float) -> float:
     Formula: 23.53 / (alpha * V)
     Returns >1.0 for impossible deployments (V*alpha < 20/day).
     Validated: V=200, alpha=0.25 → 0.4706 ≈ 0.467 ✓
+    Here alpha is analyst override rate, not learning rate or penalty ratio.
 
     Note: the GAE library already provides gae.calibration.derive_theta_min()
     (η × N_half² / T_max) for the learning-rate form of the same threshold.

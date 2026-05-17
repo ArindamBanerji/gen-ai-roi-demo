@@ -40,6 +40,7 @@ AUTO_PAUSE_RED_DAYS:   int = 14
 # counter keeps resetting on intermittent GREEN days.
 AUTO_PAUSE_LOOKBACK_DAYS: int = 30  # ~2× threshold; covers 3-4× q_window at V=200
 WINDOW_DECISIONS:      int = 50    # rolling window for alpha/q estimation
+CONSERVATIVE_THETA_MIN: float = 1_000_000_000.0
 
 
 def _is_learning_enabled(default: bool = True) -> bool:
@@ -72,13 +73,14 @@ class LearningHealthMonitor:
     def _extract_components(
         history: list, window: int = WINDOW_DECISIONS, q_window: int = 400
     ) -> dict:
-        """Extract alpha, q, V from verified WeightUpdate history.
+        """Extract legacy health components from verified WeightUpdate history.
 
         Returns
         -------
         dict with keys: alpha (float), q (float), V (float), n (int)
-            alpha — mean effective learning rate over the last `window`
-                    verified decisions (responsive)
+            alpha — legacy mean effective learning rate over the last `window`
+                    verified decisions. This value is kept only as historical
+                    diagnostics and must not be used as theta_min alpha.
             q     — fraction of the last `q_window` verified decisions with
                     outcome == +1 (stable rolling verified accuracy)
             V     — decisions per day over the last `window` verified
@@ -122,6 +124,60 @@ class LearningHealthMonitor:
 
         return {"alpha": alpha, "q": q, "V": V, "n": len(history)}
 
+    @staticmethod
+    async def _apply_override_rate_components(comps: dict, neo4j_service: Any = None) -> dict:
+        """Replace legacy alpha with canonical analyst override-rate alpha.
+
+        Canonical conservation uses alpha as the fraction of verified decisions
+        where the analyst overrode the system recommendation.  It is not the
+        GAE learning rate and not any asymmetric penalty ratio.
+        """
+        updated = dict(comps)
+        updated["alpha_source"] = "override_rate_unavailable"
+
+        stats = None
+        if neo4j_service is not None and hasattr(neo4j_service, "compute_outcome_stats"):
+            try:
+                candidate = await neo4j_service.compute_outcome_stats()
+                if isinstance(candidate, dict):
+                    stats = candidate
+                    updated["alpha_source"] = "graph_outcome_stats"
+            except Exception as exc:
+                log.debug("[HEALTH] outcome stats query failed: %s", exc)
+
+        if stats is None:
+            try:
+                from app.state.graph_snapshot import get_snapshot
+
+                snap = get_snapshot()
+                stats = {
+                    "override_rate": getattr(snap, "override_rate", 0.0),
+                    "override_quality": getattr(snap, "override_quality", 0.0),
+                }
+                updated["alpha_source"] = "graph_snapshot"
+            except Exception as exc:
+                log.debug("[HEALTH] graph snapshot unavailable for alpha: %s", exc)
+
+        if stats is None:
+            # Legacy alpha_effective is a learning-rate trace, not analyst
+            # override rate. Treat missing override evidence conservatively
+            # while retaining legacy q as diagnostic verified accuracy.
+            updated["alpha"] = 0.0
+            updated["override_rate"] = None
+            updated["override_quality"] = None
+            return updated
+
+        alpha = max(0.0, min(1.0, float(stats.get("override_rate") or 0.0)))
+        override_quality = max(0.0, min(1.0, float(stats.get("override_quality") or 0.0)))
+        updated["alpha"] = alpha
+        if alpha <= 0.0:
+            updated["q"] = 0.0
+        elif override_quality > 0.0:
+            updated["q"] = override_quality
+        updated["override_rate"] = alpha
+        updated["override_quality"] = override_quality
+        return updated
+
     # -------------------------------------------------------------------------
     # Signal computation
     # -------------------------------------------------------------------------
@@ -143,19 +199,10 @@ class LearningHealthMonitor:
         if not cal_window:
             return 0.0, 0.0
 
-        signals: list[float] = []
-        for i in range(0, len(cal_window), 10):
-            chunk = cal_window[max(0, i - WINDOW_DECISIONS) : i + 1]
-            if chunk:
-                c = LearningHealthMonitor._extract_components(
-                    chunk, window=len(chunk), q_window=len(chunk)
-                )
-                signals.append(LearningHealthMonitor._compute_signal(c["alpha"], c["q"], c["V"]))
-
-        if not signals:
-            return 0.0, 0.0
-
-        return float(np.mean(signals)), float(np.std(signals))
+        # WeightUpdate history only has alpha_effective, a legacy learning-rate
+        # trace. Without historical override-rate evidence, relative floors are
+        # unavailable rather than learning-rate-derived.
+        return 0.0, 0.0
 
     # -------------------------------------------------------------------------
     # Main evaluation
@@ -194,11 +241,17 @@ class LearningHealthMonitor:
         decision_count = getattr(state, "decision_count", len(history))
 
         comps          = LearningHealthMonitor._extract_components(history)
+        comps          = await LearningHealthMonitor._apply_override_rate_components(
+            comps, neo4j_service
+        )
         alpha, q, V    = comps["alpha"], comps["q"], comps["V"]
-        try:
-            theta_min = compute_theta_min(alpha, V)
-        except ValueError:
-            theta_min = derive_theta_min()
+        if alpha <= 0 or V <= 0:
+            theta_min = CONSERVATIVE_THETA_MIN
+        else:
+            try:
+                theta_min = compute_theta_min(alpha, V)
+            except ValueError:
+                theta_min = derive_theta_min()
         cc             = check_conservation(alpha, q, V, theta_min)
         signal         = LearningHealthMonitor._compute_signal(alpha, q, V)
 

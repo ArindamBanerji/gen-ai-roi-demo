@@ -153,12 +153,12 @@ def test_is_learning_enabled_fails_open_on_import_failure():
 
 
 # ---------------------------------------------------------------------------
-# Test 4 — GREEN: conservation satisfied, signal within baselines
+# Test 4 — RED: no graph override-rate evidence uses conservative fallback
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_evaluate_green():
-    # Build a large history with healthy alpha/q/V and mostly correct outcomes.
+    # Healthy legacy learning history is diagnostic only without override-rate evidence.
     history = [_make_wu(alpha=0.02, conf=0.80, outcome=1, ts=f"2026-01-01T{i//60:02d}:{i%60:02d}:00")
                for i in range(400)]
     state   = _make_state(decision_count=400, history=history)
@@ -166,11 +166,13 @@ async def test_evaluate_green():
     with patch("app.services.learning_health.get_learning_state", return_value=state):
         result = await LearningHealthMonitor.evaluate(neo4j_service=None)
 
-    assert result["status"] == "GREEN"
-    assert result["conservation"]["passed"] is True
-    assert result["signal"] > 0
+    assert result["status"] == "RED"
+    assert result["conservation"]["passed"] is False
+    assert result["signal"] == 0.0
+    assert result["components"]["alpha_source"] == "override_rate_unavailable"
+    assert result["components"]["alpha"] == 0.0
     assert result["components"]["q"] == pytest.approx(1.0)
-    assert "healthy" in result["interpretation"].lower()
+    assert "violation" in result["interpretation"].lower()
 
 
 # ---------------------------------------------------------------------------

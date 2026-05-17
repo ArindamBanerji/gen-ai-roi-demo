@@ -23,6 +23,7 @@ import OutcomeFeedback from '../OutcomeFeedback'
 import PolicyConflict from '../PolicyConflict'
 import LearningStatePanel from '../LearningStatePanel'
 import ClusterHistoryPanel, { type ClusterHistoryData } from '../ClusterHistoryPanel'
+import FactorContributionPanel from '../FactorContributionPanel'
 
 interface Alert {
   id: string
@@ -1201,6 +1202,8 @@ export default function AlertTriageTab() {
                       </div>
                     )
                   })}
+
+                  <FactorContributionPanel />
 
                   {decisionFactors.kernel_note && (
                     <div className="pt-3 border-t border-gray-800">

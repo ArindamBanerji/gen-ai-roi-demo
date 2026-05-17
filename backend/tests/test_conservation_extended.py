@@ -84,13 +84,18 @@ async def test_evaluate_calibrating_below_threshold():
 
 @pytest.mark.asyncio
 async def test_evaluate_green_with_high_quality():
-    """500 all-correct decisions → status is GREEN or AMBER (never RED)."""
+    """No graph override-rate evidence stays conservative despite good history."""
     history = [_make_wu(outcome=1, alpha=0.1) for _ in range(500)]
     mock_state = _make_state(decision_count=500, history=history)
     with patch("app.services.learning_health.get_learning_state",
                return_value=mock_state):
         result = await LearningHealthMonitor.evaluate()
-    assert result["status"] in ("GREEN", "AMBER")
+    assert result["status"] == "RED"
+    assert result["components"]["alpha_source"] == "override_rate_unavailable"
+    assert result["components"]["alpha"] == 0.0
+    assert result["components"]["q"] == 1.0
+    assert result["signal"] == 0.0
+    assert result["conservation"]["passed"] is False
 
 
 @pytest.mark.asyncio
