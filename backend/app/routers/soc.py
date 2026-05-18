@@ -2861,6 +2861,10 @@ def _reset_baseline_scorer_cache() -> None:
     _BOOTSTRAP_CENTROIDS_CACHE = None
 
 
+def reset_baseline_caches() -> None:
+    _reset_baseline_scorer_cache()
+
+
 def _uniform_baseline_centroids():
     import numpy as _np_b
     return _np_b.full((N_CATEGORIES, N_ACTIONS, N_FACTORS), 0.5, dtype=_np_b.float64)

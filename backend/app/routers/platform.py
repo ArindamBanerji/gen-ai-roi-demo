@@ -219,6 +219,15 @@ def _reset_rl_exploration_cache() -> None:
     _RL_EXPLORATION_CACHE = None
 
 
+def reset_platform_caches() -> None:
+    _reset_cross_signal_cache()
+    _reset_domain_table_cache()
+    _reset_warm_start_cache()
+    _reset_chain_credit_cache()
+    _reset_rl_reward_cache()
+    _reset_rl_exploration_cache()
+
+
 @router.get("/cross-signals")
 async def get_cross_signals() -> dict[str, Any]:
     signals = _load_cross_signals()

@@ -2,6 +2,7 @@
 SOC Copilot Demo - FastAPI Backend
 Main application entry point with CORS and router registration.
 """
+from contextlib import asynccontextmanager
 import logging
 import os as _cors_os
 
@@ -17,10 +18,19 @@ logger = logging.getLogger(__name__)
 # Copy ../.env.example to ../.env and fill in credentials before starting
 load_dotenv(dotenv_path="../.env")
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await startup_event()
+    yield
+    await shutdown_event()
+
+
 app = FastAPI(
     title="SOC Copilot Demo API",
     description="AI-augmented Security Operations Center with Runtime Evolution",
     version="5.0.0",
+    lifespan=lifespan,
 )
 
 DEFAULT_CORS_ORIGINS = (
@@ -130,8 +140,6 @@ app.include_router(servicenow_router)
 from app.routers.auth import router as auth_router
 app.include_router(auth_router)
 
-# Lifecycle events
-@app.on_event("startup")
 async def startup_event():
     """Initialize connections on startup"""
     from app.auth.config import load_auth_config as _load_auth_config
@@ -394,6 +402,7 @@ async def startup_event():
     from app.services.audit import reset_audit_state
     from app.services.evolver import reset_evolver_state
     from app.services.triage import reset_confidence_history, seed_confidence_history
+    from app.services.rl_engine import reset_rl_state
     from app.services.servicenow_mock import get_servicenow_mock
     state_manager.register("feedback",            reset_feedback_state)
     state_manager.register("trust",               reset_trust_state)
@@ -402,6 +411,9 @@ async def startup_event():
     state_manager.register("evolver",             reset_evolver_state)
     state_manager.register("confidence_history",  reset_confidence_history)
     state_manager.register("learning_state",      reset_learning_state)
+    state_manager.register("rl_engine",           reset_rl_state)
+    state_manager.register("platform_caches",     platform.reset_platform_caches)
+    state_manager.register("baseline_caches",     soc.reset_baseline_caches)
     state_manager.register("servicenow_mock",     get_servicenow_mock().reset)
 
     # Pre-populate demo charts (previously done at module import).
@@ -458,7 +470,6 @@ async def startup_event():
     except Exception as _sentinel_exc:
         logger.warning("[Sentinel] Poller startup failed (non-blocking): %s", _sentinel_exc)
 
-@app.on_event("shutdown")
 async def shutdown_event():
     """Close connections on shutdown"""
     try:

@@ -13,10 +13,16 @@ from typing import Any, Optional
 
 import numpy as np
 
-from gae.calibration import check_conservation, compute_theta_min, derive_theta_min
+from gae.calibration import check_conservation
 from gae.snr import compute_snr_report
 
-from app.domains.soc.config import SCORER_ACTIONS, SOC_CATEGORIES, SOC_FACTORS, SOC_FACTOR_SIGMA
+from app.domains.soc.config import (
+    SCORER_ACTIONS,
+    SOC_CATEGORIES,
+    SOC_FACTORS,
+    SOC_FACTOR_SIGMA,
+    compute_theta_min,
+)
 from app.services.gae_state import get_profile_scorer
 from app.services.learning_health import AUTO_PAUSE_RED_DAYS
 
@@ -139,18 +145,11 @@ def _compute_current_ceiling_estimate() -> float | None:
 
 
 def run_whatif(scenario: WhatIfScenario) -> WhatIfResult:
-    try:
-        theta_min = float(compute_theta_min(scenario.alpha, scenario.V))
-    except ValueError:
-        theta_min = float(
-            derive_theta_min(
-                eta=scenario.eta,
-                n_half=scenario.n_half,
-                t_max_days=scenario.t_max_days,
-            )
-        )
+    override_rate = float(scenario.alpha)
+    verified_volume = float(scenario.V)
+    theta_min = float(compute_theta_min(override_rate, verified_volume))
 
-    alpha_v = float(scenario.alpha * scenario.V)
+    alpha_v = float(override_rate * verified_volume)
     q_threshold = float("inf") if alpha_v <= 0 else theta_min / alpha_v
     horizon_days = max(0, int(scenario.horizon_days))
     warnings = _build_warnings(scenario, q_threshold)
