@@ -1,3 +1,4 @@
+import inspect
 from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
@@ -64,6 +65,55 @@ def test_known_alert_type_can_use_default_category_registry_variant():
     assert evolver.get_prompt_variant("anomalous_login") == "TRAVEL_CONTEXT_v3"
 
 
+def test_get_prompt_variant_accepts_category():
+    evolver.CATEGORY_PROMPT_STATS["credential_access"] = {
+        "CATEGORY_PROMPT_v1": {"success": 3, "total": 3, "success_rate": 1.0}
+    }
+
+    assert evolver.get_prompt_variant() == "DEFAULT_v1"
+    assert evolver.get_prompt_variant("anomalous_login") == "CATEGORY_PROMPT_v1"
+    assert evolver.get_prompt_variant(category="credential_access") == "CATEGORY_PROMPT_v1"
+
+
+def test_category_specific_selection_can_differ_from_global():
+    evolver.ACTIVE_PROMPTS["anomalous_login"] = "GLOBAL_PROMPT_v1"
+    evolver.PROMPT_STATS["GLOBAL_PROMPT_v1"] = {
+        "success": 95,
+        "total": 100,
+        "success_rate": 0.95,
+    }
+    evolver.CATEGORY_PROMPT_STATS["credential_access"] = {
+        "CATEGORY_PROMPT_v1": {"success": 5, "total": 5, "success_rate": 1.0}
+    }
+
+    assert evolver.get_prompt_variant("anomalous_login") == "CATEGORY_PROMPT_v1"
+    assert evolver.get_prompt_variant("anomalous_login") != evolver.ACTIVE_PROMPTS["anomalous_login"]
+
+
+def test_category_selection_uses_ucb_not_raw_success_rate_only():
+    evolver.CATEGORY_PROMPT_STATS["credential_access"] = {
+        "HIGHER_RAW_RATE_v1": {"success": 80, "total": 100, "success_rate": 0.80},
+        "LOWER_RAW_RATE_FEWER_TRIALS_v1": {
+            "success": 3,
+            "total": 4,
+            "success_rate": 0.75,
+        },
+    }
+
+    assert (
+        evolver.get_prompt_variant(category="credential_access")
+        == "LOWER_RAW_RATE_FEWER_TRIALS_v1"
+    )
+
+
+def test_no_category_falls_back_to_global():
+    assert evolver.get_prompt_variant() == "DEFAULT_v1"
+
+
+def test_cold_start_category_falls_back_to_global():
+    assert evolver.get_prompt_variant("anomalous_login", category="credential_access") == "TRAVEL_CONTEXT_v2"
+
+
 def test_get_prompt_stats_merges_registry_and_legacy_stats():
     registry.register_variant(_active_prompt_variant())
 
@@ -88,7 +138,22 @@ def test_record_decision_outcome_still_updates_legacy_stats():
     assert evolver.WEIGHT_HISTORY[-1]["trigger"] == "MIGRATION_PROMPT_v1"
 
 
-def test_check_for_promotion_preserves_legacy_behavior():
+def test_record_decision_outcome_tracks_category_stats():
+    evolver.record_decision_outcome(
+        "DEC-CATEGORY",
+        "CATEGORY_PROMPT_v1",
+        True,
+        alert_type="anomalous_login",
+        category="credential_access",
+    )
+
+    global_stats = evolver.PROMPT_STATS["CATEGORY_PROMPT_v1"]
+    category_stats = evolver.CATEGORY_PROMPT_STATS["credential_access"]["CATEGORY_PROMPT_v1"]
+    assert global_stats == {"success": 1, "total": 1, "success_rate": 1.0}
+    assert category_stats == {"success": 1, "total": 1, "success_rate": 1.0}
+
+
+def test_promotion_gate_unchanged_global():
     evolver.ACTIVE_PROMPTS["migration"] = "MIGRATION_v1"
     evolver.PROMPT_STATS["MIGRATION_v1"] = {
         "success": 5,
@@ -109,15 +174,29 @@ def test_check_for_promotion_preserves_legacy_behavior():
     assert evolver.ACTIVE_PROMPTS["migration"] == "MIGRATION_v2"
 
 
-def test_reset_evolver_state_clears_registry_and_ledger():
+def test_evolver_reset_clears_category_stats():
     registry.register_variant(_active_prompt_variant())
+    evolver.CATEGORY_PROMPT_STATS["credential_access"] = {
+        "CATEGORY_PROMPT_v1": {"success": 1, "total": 1, "success_rate": 1.0}
+    }
 
     with patch("gae.evolution.reset_evolution_ledger") as reset_ledger:
         evolver.reset_evolver_state()
 
     reset_ledger.assert_called_once()
     assert registry.get_all_variants() == []
+    assert evolver.CATEGORY_PROMPT_STATS == {}
     assert evolver.get_prompt_variant("anomalous_login") == "TRAVEL_CONTEXT_v2"
+
+
+def test_triage_passes_correct_category_field_non_blocking():
+    from app.routers import triage
+
+    source = inspect.getsource(triage)
+    assert "alert_category = resolve_alert_category(alert_type)" in source
+    assert "category=alert_category" in source
+    assert "_shadow_asyncio.create_task" in source
+    assert "await maybe_shadow_compare" not in source
 
 
 def test_evolution_router_get_deployments_still_works(monkeypatch):

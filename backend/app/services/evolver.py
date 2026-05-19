@@ -5,6 +5,7 @@ Agent Evolver - Prompt Variant Performance Tracking
 The Agent Evolver demonstrates Loop 2: "Smarter ACROSS decisions"
 by tracking which prompt variants perform best and promoting winners.
 """
+import math
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
@@ -22,6 +23,10 @@ PROMPT_STATS: Dict[str, Dict[str, Any]] = {
     "PHISHING_RESPONSE_v2": {"success": 12, "total": 15, "success_rate": 0.80},
 }
 
+# Tracks prompt performance within canonical SOC categories for context-aware
+# selection. Promotion continues to use the global PROMPT_STATS table.
+CATEGORY_PROMPT_STATS: Dict[str, Dict[str, Dict[str, Any]]] = {}
+
 # Tracks which variant is currently active for each alert type
 ACTIVE_PROMPTS: Dict[str, str] = {
     "anomalous_login": "TRAVEL_CONTEXT_v2",
@@ -33,6 +38,8 @@ RECENT_PROMOTIONS: Dict[str, Dict[str, Any]] = {}
 
 # F4a: Weight matrix evolution history — one snapshot appended per decision outcome
 WEIGHT_HISTORY: List[Dict[str, Any]] = []
+
+_UCB_EXPLORATION = 1.0
 
 
 # ============================================================================
@@ -73,27 +80,85 @@ def _resolve_registry_category(alert_type: str) -> Optional[str]:
     return ALERT_TYPE_CATEGORY_MAP.get(alert_type or "")
 
 
-def get_prompt_variant(alert_type: str) -> str:
-    """
-    Get the currently active prompt variant for an alert type.
+def _normalize_category(
+    alert_type: Optional[str] = None,
+    category: Optional[str] = None,
+) -> Optional[str]:
+    """Return a canonical SOC category, or None when input is unmapped."""
+    try:
+        from app.domains.soc.config import (
+            ALERT_TYPE_CATEGORY_MAP,
+            SOC_CATEGORIES,
+            UNCLASSIFIED_CATEGORY,
+        )
+    except Exception:
+        return None
 
-    Args:
-        alert_type: Type of alert (anomalous_login, phishing, etc.)
+    candidate = (category or "").strip()
+    if candidate:
+        if candidate in SOC_CATEGORIES:
+            return candidate
+        mapped = ALERT_TYPE_CATEGORY_MAP.get(candidate)
+        if mapped and mapped != UNCLASSIFIED_CATEGORY:
+            return mapped
+        return None
 
-    Returns:
-        Name of the active prompt variant
-    """
+    mapped = ALERT_TYPE_CATEGORY_MAP.get((alert_type or "").strip())
+    if mapped and mapped != UNCLASSIFIED_CATEGORY:
+        return mapped
+    return None
+
+
+def _select_category_ucb_variant(category: Optional[str]) -> Optional[str]:
+    """Select the best category-local prompt variant using finite UCB scores."""
+    if not category:
+        return None
+
+    category_stats = CATEGORY_PROMPT_STATS.get(category)
+    if not category_stats:
+        return None
+
+    category_total = sum(
+        int(stats.get("total", 0) or 0) for stats in category_stats.values()
+    )
+    if category_total <= 0:
+        return None
+
+    best_variant: Optional[str] = None
+    best_score = float("-inf")
+    log_total = math.log(max(category_total, 2))
+    for variant_name, stats in category_stats.items():
+        total = int(stats.get("total", 0) or 0)
+        if total <= 0:
+            continue
+        success = float(stats.get("success", 0) or 0)
+        mean = success / total
+        score = mean + _UCB_EXPLORATION * math.sqrt(log_total / total)
+        if score > best_score:
+            best_score = score
+            best_variant = variant_name
+
+    return best_variant
+
+
+def _legacy_prompt_variant(
+    alert_type: Optional[str],
+    resolved_category: Optional[str],
+) -> str:
     from gae.evolution import ARTIFACT_PROMPT_MODULE
     from app.services.variant_registry import get_active_variant_for_category
 
-    resolved_category = _resolve_registry_category(alert_type)
     registry_variant = None
     if resolved_category is not None:
         registry_variant = get_active_variant_for_category(
             resolved_category,
             ARTIFACT_PROMPT_MODULE,
         )
-        if registry_variant is None and resolved_category != alert_type:
+        if (
+            registry_variant is None
+            and alert_type is not None
+            and resolved_category != alert_type
+        ):
             registry_variant = get_active_variant_for_category(
                 alert_type,
                 ARTIFACT_PROMPT_MODULE,
@@ -105,7 +170,32 @@ def get_prompt_variant(alert_type: str) -> str:
             or registry_variant.variant_id
         )
 
-    return ACTIVE_PROMPTS.get(alert_type, "DEFAULT_v1")
+    if alert_type is not None:
+        return ACTIVE_PROMPTS.get(alert_type, "DEFAULT_v1")
+    return "DEFAULT_v1"
+
+
+def get_prompt_variant(
+    alert_type: Optional[str] = None,
+    *,
+    category: Optional[str] = None,
+) -> str:
+    """
+    Get the currently active prompt variant for an alert type.
+
+    Args:
+        alert_type: Type of alert (anomalous_login, phishing, etc.)
+        category: Optional canonical SOC category for context-aware selection.
+
+    Returns:
+        Name of the active prompt variant
+    """
+    resolved_category = _normalize_category(alert_type, category)
+    category_variant = _select_category_ucb_variant(resolved_category)
+    if category_variant is not None:
+        return category_variant
+
+    return _legacy_prompt_variant(alert_type, resolved_category)
 
 
 def get_prompt_stats() -> Dict[str, Dict[str, Any]]:
@@ -146,6 +236,7 @@ def record_decision_outcome(
     prompt_variant: str,
     success: bool,
     alert_type: str = "unknown",
+    category: Optional[str] = None,
 ) -> None:
     """
     Record the outcome of a decision using a specific prompt variant.
@@ -157,6 +248,7 @@ def record_decision_outcome(
         prompt_variant: Name of the prompt variant used
         success:       Whether the decision was successful
         alert_type:    Alert type that triggered this decision (for history filtering)
+        category:      Optional canonical SOC category for context-aware stats
     """
     if prompt_variant not in PROMPT_STATS:
         # Initialize new variant
@@ -174,6 +266,22 @@ def record_decision_outcome(
 
     # Recalculate success rate
     stats["success_rate"] = stats["success"] / stats["total"] if stats["total"] > 0 else 0.0
+
+    resolved_category = _normalize_category(alert_type, category)
+    if resolved_category is not None:
+        category_stats = CATEGORY_PROMPT_STATS.setdefault(resolved_category, {})
+        variant_stats = category_stats.setdefault(
+            prompt_variant,
+            {"success": 0, "total": 0, "success_rate": 0.0},
+        )
+        variant_stats["total"] += 1
+        if success:
+            variant_stats["success"] += 1
+        variant_stats["success_rate"] = (
+            variant_stats["success"] / variant_stats["total"]
+            if variant_stats["total"] > 0
+            else 0.0
+        )
 
     # F4a: Snapshot the full weight matrix after each update
     WEIGHT_HISTORY.append({
@@ -457,6 +565,7 @@ def reset_evolver_state() -> None:
     })
 
     RECENT_PROMOTIONS.clear()
+    CATEGORY_PROMPT_STATS.clear()
     WEIGHT_HISTORY.clear()
     from gae.evolution import reset_evolution_ledger
     from app.services.promotion_gate import reset_promotion_gate

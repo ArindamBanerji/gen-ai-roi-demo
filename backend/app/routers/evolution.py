@@ -310,9 +310,15 @@ async def process_alert(request: ProcessAlertRequest):
         # Step 9: Agent Evolver (Loop 2: Smarter ACROSS decisions)
         # ====================================================================
 
-        prompt_variant = evolver.get_prompt_variant(alert_type)
+        prompt_variant = evolver.get_prompt_variant(alert_type, category=_cat_name)
         success = eval_result["overall_passed"]
-        evolver.record_decision_outcome(decision_id, prompt_variant, success, alert_type=alert_type)
+        evolver.record_decision_outcome(
+            decision_id,
+            prompt_variant,
+            success,
+            alert_type=alert_type,
+            category=_cat_name,
+        )
         evolver.check_for_promotion(alert_type)
         prompt_evolution = evolver.get_evolution_summary(alert_type)
 
