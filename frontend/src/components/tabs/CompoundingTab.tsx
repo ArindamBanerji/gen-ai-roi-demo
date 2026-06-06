@@ -28,7 +28,7 @@ import {
   getAuditDecisions, verifyAuditChain, getGAEConvergence,
   getGAEConfidenceTrajectory, getGAETrustCurve, getGAEBeforeAfter,
   getEvolutionEvents, getCentroidEvolution, getProfileState,
-  uploadEvalCSV, fetchEvalTemplates,
+  uploadEvalCSV, fetchEvalTemplates, fetchLearningHealth,
 } from '../../lib/api'
 import { domainConfig } from '../../lib/domain'
 import { ensureArray } from '../../lib/guards'
@@ -246,6 +246,20 @@ interface EvidenceRoomData {
     entries: number
     status: 'VERIFIED' | 'BROKEN'
   }
+}
+
+interface LearningHealthData {
+  status?: string
+  signal?: number
+  theta_min?: number
+  components?: {
+    override_rate?: number | null
+    alpha?: number | null
+    q?: number | null
+    V?: number | null
+    n?: number | null
+  }
+  auto_pause_active?: boolean
 }
 
 // ============================================================================
@@ -652,6 +666,7 @@ export default function CompoundingTab() {
 
   // — FEATURE-09: Evidence Room —
   const [evidenceRoom, setEvidenceRoom] = useState<EvidenceRoomData | null>(null)
+  const [learningHealth, setLearningHealth] = useState<LearningHealthData | null>(null)
   const [evidenceRoomLoading, setEvidenceRoomLoading] = useState(false)
   const [evidenceRoomError, setEvidenceRoomError] = useState<string | null>(null)
   const [evidenceExporting, setEvidenceExporting] = useState(false)
@@ -742,9 +757,17 @@ export default function CompoundingTab() {
         throw new Error('Evidence Room response shape is invalid')
       }
       setEvidenceRoom(payload)
+      try {
+        const health = await fetchLearningHealth() as LearningHealthData
+        setLearningHealth(health)
+      } catch (healthError) {
+        console.debug('[CompoundingTab] Learning health unavailable for override rate:', healthError)
+        setLearningHealth(null)
+      }
     } catch (error) {
       console.error('[CompoundingTab] Failed to load Evidence Room:', error)
       setEvidenceRoom(null)
+      setLearningHealth(null)
       setEvidenceRoomError('Evidence Room unavailable')
     } finally {
       setEvidenceRoomLoading(false)
@@ -1097,6 +1120,11 @@ export default function CompoundingTab() {
   const evidenceOverrides = evidenceRoom?.override_analysis.overrides ?? 0
   const evidenceConfirmationPct = evidenceTotal > 0 ? Math.max(0, Math.min(100, (evidenceConfirmations / evidenceTotal) * 100)) : 0
   const evidenceOverridePct = evidenceTotal > 0 ? Math.max(0, Math.min(100, (evidenceOverrides / evidenceTotal) * 100)) : 0
+  const liveOverrideRateRaw = learningHealth?.components?.override_rate
+  const liveOverrideRate = typeof liveOverrideRateRaw === 'number' && Number.isFinite(liveOverrideRateRaw)
+    ? Math.max(0, Math.min(1, liveOverrideRateRaw > 1 ? liveOverrideRateRaw / 100 : liveOverrideRateRaw))
+    : (evidenceRoom?.override_analysis.override_rate ?? 0)
+  const liveOverrideRatePct = Math.round(liveOverrideRate * 100)
 
   const bandBadgeClass = (band: string) => {
     switch (band) {
@@ -2344,7 +2372,7 @@ export default function CompoundingTab() {
               </div>
               <div className="mb-2 flex items-center justify-between text-xs text-gray-400">
                 <span>Confirmation vs override ratio</span>
-                <span>{Math.round((evidenceRoom?.override_analysis.override_rate ?? 0) * 100)}% override rate</span>
+                <span>{liveOverrideRatePct}% override rate</span>
               </div>
               <div className="h-3 overflow-hidden rounded-full bg-slate-700">
                 <div className="flex h-full">

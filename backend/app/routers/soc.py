@@ -22,6 +22,7 @@ from app.models.responses import (
     LearningStateResponse,
 )
 from app.domains.soc.config import (
+    DEFAULT_CATEGORY,
     N_ACTIONS,
     N_CATEGORIES,
     N_FACTORS,
@@ -1126,7 +1127,7 @@ async def explain_decision(decision_id: str):
 
     row      = rows[0]
     fv_raw   = row.get("factor_vector")
-    category = row.get("category") or "credential_access"
+    category = row.get("category") or DEFAULT_CATEGORY
     action   = row.get("action") or "investigate"
     conf     = float(row.get("confidence") or 0.0)
 
@@ -3029,7 +3030,7 @@ async def _tab3_content() -> dict:
         baseline_action = "unclassified"
 
     # Step 4: get override_rate for rationale — same predicate as Tab 1 verified_map
-    rec_category = "unclassified" if _unclassified_alert else (_alert_cat or "credential_access")
+    rec_category = "unclassified" if _unclassified_alert else (_alert_cat or DEFAULT_CATEGORY)
     override_rate = 0.0 if _unclassified_alert else 15.0
     if not _unclassified_alert:
         try:

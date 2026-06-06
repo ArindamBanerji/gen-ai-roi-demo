@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import sys
+from pathlib import Path
 
 import pytest
 from fastapi import HTTPException
@@ -10,9 +11,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 
 def test_unmapped_type_returns_unclassified():
-    from app.domains.soc.config import resolve_alert_category
+    from app.domains.soc.config import DEFAULT_CATEGORY, resolve_alert_category
 
-    assert resolve_alert_category("totally_unknown_xyz") == "unclassified"
+    assert DEFAULT_CATEGORY != "credential_access"
+    assert resolve_alert_category("totally_unknown_xyz") == DEFAULT_CATEGORY
 
 
 def test_known_types_still_resolve():
@@ -145,3 +147,25 @@ def test_tab3_unclassified_alert_skips_live_and_baseline_scorers(monkeypatch):
     assert recommendation["baseline_action"] == "unclassified"
     assert "unclassified alerts" in recommendation["rationale"]
     assert not any("d.category = 'unclassified'" in query for query in fake_client.queries)
+
+
+def test_soc_router_uses_default_category_for_unknown_sentinel_lookup():
+    from app.domains.soc.config import DEFAULT_CATEGORY
+    from app.routers import soc
+
+    assert soc.SENTINEL_TO_INTERNAL.get("unknown_vendor_alert_type", DEFAULT_CATEGORY) == DEFAULT_CATEGORY
+
+
+def test_soc_router_has_no_hardcoded_credential_access_fallbacks():
+    source = (Path(__file__).parents[1] / "app" / "routers" / "soc.py").read_text(encoding="utf-8")
+
+    assert 'or "credential_access"' not in source
+    assert "or 'credential_access'" not in source
+    assert 'get(sentinel_type, "credential_access")' not in source
+
+
+def test_variant_generator_has_no_hardcoded_credential_access_fallbacks():
+    source = (Path(__file__).parents[1] / "app" / "services" / "variant_generator.py").read_text(encoding="utf-8")
+
+    assert 'default="credential_access"' not in source
+    assert 'or "credential_access"' not in source

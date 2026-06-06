@@ -20,13 +20,14 @@ Reference: docs/project_status_and_plan_v3_part2.md P9
 from __future__ import annotations
 
 import logging
+import asyncio
 from datetime import datetime
 from typing import Any, Optional
 
 import numpy as np
 from gae.calibration import compute_theta_min, derive_theta_min, check_conservation
 
-from app.services.gae_state import get_learning_state
+from app.services.gae_state import get_learning_state, get_learning_store
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ AUTO_PAUSE_RED_DAYS:   int = 14
 AUTO_PAUSE_LOOKBACK_DAYS: int = 30  # ~2× threshold; covers 3-4× q_window at V=200
 WINDOW_DECISIONS:      int = 50    # rolling window for alpha/q estimation
 CONSERVATIVE_THETA_MIN: float = 1_000_000_000.0
+_L5_CONSERVATION_STORE_LOCK = asyncio.Lock()
 
 
 def _is_learning_enabled(default: bool = True) -> bool:
@@ -333,7 +335,7 @@ class LearningHealthMonitor:
         red_days          = await LearningHealthMonitor._count_red_days(neo4j_service)
         auto_pause_active = red_days >= AUTO_PAUSE_RED_DAYS
 
-        return {
+        result = {
             "status":            status,
             "signal":            round(signal, 6),
             "theta_min":         round(theta_min, 6),
@@ -355,6 +357,8 @@ class LearningHealthMonitor:
             "health_source":     "learning_health",
             "status_reason":     None,
         }
+        await _persist_l5_conservation_state(result)
+        return result
 
     # -------------------------------------------------------------------------
     # RED-day counting
@@ -421,6 +425,100 @@ class LearningHealthMonitor:
 
 def _round_comps(comps: dict) -> dict:
     return {k: (round(v, 4) if isinstance(v, float) else v) for k, v in comps.items()}
+
+
+def _soc_categories_total() -> int:
+    try:
+        from app.domains.soc.config import N_CATEGORIES
+
+        return int(N_CATEGORIES)
+    except Exception:
+        return 6
+
+
+def _resolve_categories_with_data(health: dict, categories_total: int) -> int | None:
+    components = health.get("components") or {}
+    value = health.get("categories_with_data", components.get("categories_with_data"))
+    if value is None:
+        return None
+
+    try:
+        categories_with_data = int(value)
+    except (TypeError, ValueError):
+        return None
+
+    if categories_with_data < 0 or categories_with_data > categories_total:
+        return None
+    return categories_with_data
+
+
+async def _persist_l5_conservation_state(health: dict) -> None:
+    """Persist SOC conservation state when an optional L5 store is available."""
+    status = str(health.get("status") or "").upper()
+    if status not in {"GREEN", "AMBER", "RED"}:
+        return
+
+    categories_total = _soc_categories_total()
+    categories_with_data = _resolve_categories_with_data(health, categories_total)
+    if categories_with_data is None:
+        log.debug(
+            "[HEALTH][L5] Conservation state skipped for soc: "
+            "categories_with_data unavailable"
+        )
+        return
+
+    store = get_learning_store()
+    if store is None:
+        return
+
+    async with _L5_CONSERVATION_STORE_LOCK:
+        try:
+            old_state = store.get_conservation_state("soc")
+        except Exception as exc:
+            log.warning(
+                "[HEALTH][L5] Conservation state read failed; skipping persistence "
+                "(domain=soc, status=%s, error_type=%s)",
+                status,
+                type(exc).__name__,
+            )
+            return
+
+        old_status = None
+        if isinstance(old_state, dict):
+            candidate = old_state.get("status")
+            old_status = str(candidate).upper() if candidate is not None else None
+
+        components = health.get("components") or {}
+        baseline_product = float(health.get("baseline") or 0.0)
+        baseline_std = float(health.get("baseline_std") or 0.0)
+        relative_threshold = baseline_product - (
+            LearningHealthMonitor.AMBER_SIGMA * baseline_std
+        )
+
+        try:
+            store.update_conservation_state(
+                domain="soc",
+                status=status,
+                alpha=float(components.get("alpha") or 0.0),
+                q=float(components.get("q") or 0.0),
+                V=int(float(components.get("V") or 0.0)),
+                theta_min=float(health["theta_min"]),
+                product=float(health["signal"]),
+                categories_total=categories_total,
+                categories_with_data=categories_with_data,
+                baseline_product=baseline_product,
+                relative_threshold=relative_threshold,
+                complacency_flag="false",
+                caused_by_decision_id=None,
+                old_status=old_status,
+            )
+        except Exception as exc:
+            log.warning(
+                "[HEALTH][L5] Conservation state update failed "
+                "(domain=soc, status=%s, error_type=%s)",
+                status,
+                type(exc).__name__,
+            )
 
 
 # ---------------------------------------------------------------------------

@@ -19,6 +19,7 @@ from gae.evolution import (
     record_evolution_event,
 )
 from app.services import variant_registry as default_registry
+from app.domains.soc.config import DEFAULT_CATEGORY
 from app.services.variant_registry import CANDIDATE, VariantRecord
 
 log = logging.getLogger(__name__)
@@ -327,7 +328,7 @@ class CampaignEscalateRule:
             campaign_id = discovered_campaign_id or "C-007"
             evidence = dict(discovery)
             evidence.setdefault("campaign_id", campaign_id)
-            category = _first_string(discovery.get("category"), default="credential_access")
+            category = _first_string(discovery.get("category"), default=DEFAULT_CATEGORY)
             return GraphSignal(
                 rule_id=self.rule_id,
                 trigger_id=campaign_id,
@@ -642,7 +643,7 @@ class PlateauContextRule:
 
     def generate_variant(self, signal: GraphSignal) -> VariantRecord:
         config = {
-            "category": signal.category or "credential_access",
+            "category": signal.category or DEFAULT_CATEGORY,
             "current_accuracy": round(_as_float(signal.evidence.get("current_accuracy"), 0.83), 4),
             "theta_target": 0.85,
             "traversal_add": "campaign_correlation",

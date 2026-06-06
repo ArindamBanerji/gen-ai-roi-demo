@@ -16,6 +16,7 @@ Reference: docs/soc_copilot_design_v1.md §14.
 import asyncio
 import json
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
@@ -80,6 +81,7 @@ def _S(val) -> str:
 
 _STATE_PATH = Path(__file__).parent.parent / "data" / "gae_learning_state.json"
 _learning_state: Optional[LearningState] = None
+_learning_store: Optional[object] = None
 _bootstrap_metadata: Optional[dict] = None
 _bootstrap_result: Optional[BootstrapResult] = None   # CORR-3: exposed for bootstrap_neo4j writer
 
@@ -139,6 +141,32 @@ def _read_checkpoint_metadata() -> dict:
 # Public API
 # ---------------------------------------------------------------------------
 
+def _load_age_learning_store_adapter():
+    from ci_platform.graph.age_sdk_adapter import AGEGraphStoreAdapter
+
+    return AGEGraphStoreAdapter
+
+
+def _init_learning_store() -> object | None:
+    dsn = (os.environ.get("GRAPH_DSN") or "").strip()
+    if not dsn:
+        return None
+
+    graph_name = (os.environ.get("AGE_GRAPH_NAME") or "soc_graph").strip() or "soc_graph"
+    try:
+        adapter_cls = _load_age_learning_store_adapter()
+        store = adapter_cls(dsn=dsn, graph_name=graph_name)
+        log.info("[GAE] SOC L5 learning store initialized (graph=%s, domain=soc)", graph_name)
+        return store
+    except Exception as exc:
+        log.warning(
+            "[GAE] SOC L5 learning store unavailable (graph=%s, domain=soc, error_type=%s)",
+            graph_name,
+            type(exc).__name__,
+        )
+        return None
+
+
 def init_learning_state() -> LearningState:
     """
     Initialize the live LearningState with bootstrap calibration.
@@ -150,7 +178,7 @@ def init_learning_state() -> LearningState:
 
     Called once in main.py startup_event().
     """
-    global _learning_state, _bootstrap_metadata, _bootstrap_result
+    global _learning_state, _learning_store, _bootstrap_metadata, _bootstrap_result
 
     from app.domains.soc.config import SOCDomainConfig
     _soc_cfg = SOCDomainConfig()
@@ -232,7 +260,14 @@ def init_learning_state() -> LearningState:
     if needs_bootstrap:
         save_learning_state()
 
+    _learning_store = _init_learning_store()
+
     return _learning_state
+
+
+def get_learning_store():
+    """Return optional L5 learning store for SOC AGE persistence."""
+    return _learning_store
 
 
 def get_profile_scorer():
