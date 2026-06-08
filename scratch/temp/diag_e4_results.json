@@ -1,0 +1,2176 @@
+{
+  "alert_ids": [
+    "DIAG-E4-CRED-001",
+    "DIAG-E4-CRED-002",
+    "DIAG-E4-CRED-003",
+    "DIAG-E4-CRED-004",
+    "DIAG-E4-CRED-005"
+  ],
+  "base_url": "http://127.0.0.1:8001",
+  "decision_ids": [
+    "c4b4e9fa-b2cd-48f8-abd4-619bbfa98d33",
+    "37b8b697-3b92-4d10-a215-c100602708b6",
+    "56018fa9-7c74-44bd-847b-ae330335a077",
+    "17452968-d5c8-4627-a47c-e7db4e947f74",
+    "6d03cdb4-2522-4919-8be3-9a0eecf37d8a"
+  ],
+  "graph": "soc_graph_diag_e4",
+  "loops": [
+    {
+      "alert_id": "DIAG-E4-CRED-001",
+      "analyze": {
+        "action": "investigate",
+        "category": "credential_access",
+        "confidence": 0.8770461205137833,
+        "decision_id": "c4b4e9fa-b2cd-48f8-abd4-619bbfa98d33",
+        "decision_method": "gae_scoring",
+        "factor_vector": [
+          0.825,
+          1.0,
+          0.0,
+          0.4,
+          0.7,
+          0.6666666666666666
+        ],
+        "factor_vector_len": 6,
+        "referral": {
+          "audit_summary": "No referral rules triggered.",
+          "reasons": [],
+          "should_refer": false
+        },
+        "routing_zone": "agent_zone"
+      },
+      "analyze_status": 200,
+      "outcome": {
+        "centroid_update": {
+          "action_index": 1,
+          "action_name": "investigate",
+          "category_index": 0,
+          "category_name": "credential_access",
+          "centroid_delta_norm": 0.012247448713915891,
+          "correct": true
+        },
+        "correct": null,
+        "l5_centroid_persisted": true,
+        "l5_persistence": {
+          "conservation_status": "GREEN",
+          "conservation_status_reason": "learning_health_calibrating",
+          "l5_centroid_persisted": true,
+          "l5_persistence_skipped_reason": null,
+          "l5_persistence_source": "profile_scorer",
+          "l5_shaped_by_attempted": true,
+          "raw_conservation_status": "CALIBRATING"
+        },
+        "l5_persistence_skipped_reason": null,
+        "outcome": "correct",
+        "outcome_id": null,
+        "verification": null
+      },
+      "outcome_status": 200,
+      "raw_analyze_body": {
+        "alert": {
+          "_age_id": 1688849860263937,
+          "alert_id": "DIAG-E4-CRED-001",
+          "alert_type": "anomalous_login",
+          "asset_id": "DIAG-E4-CRED-001-ASSET",
+          "attack_pattern_id": "",
+          "c9b_proof": true,
+          "category": "credential_access",
+          "device_fingerprint_match": false,
+          "id": "DIAG-E4-CRED-001",
+          "mfa_completed": false,
+          "origin": "c9b_seed",
+          "severity": "critical",
+          "source": "c9b_seed",
+          "source_location": "c9b-seed-zone-e4-1",
+          "status": "pending",
+          "timestamp_epoch": 1725000000001,
+          "user_id": "DIAG-E4-CRED-001-USER",
+          "vpn_provider": "c9b_seed"
+        },
+        "analysis": {
+          "root_cause": "Anomalous anomalous_login from c9b-seed-zone-e4-1",
+          "severity_assessment": "CRITICAL severity based on context"
+        },
+        "attack_tactic": "Initial Access",
+        "attack_technique": "T1078",
+        "cluster_history": {
+          "current_position": 1,
+          "per_action": {},
+          "per_category": {},
+          "precision": 0.0,
+          "recent": [],
+          "source_user": "DIAG-E4-CRED-001-USER",
+          "total_prior": 0,
+          "trend": "new",
+          "trend_detail": "No prior verified decisions for this user."
+        },
+        "composite_gate": {
+          "approval_score": 0.4473,
+          "auto_approve": false,
+          "reason_codes": [
+            "cat_count 1 < 50 (maturity gate)"
+          ]
+        },
+        "context": {
+          "key_facts": [],
+          "nodes_count": 47,
+          "patterns_matched": 0,
+          "subgraphs_traversed": [
+            "User Profile",
+            "Asset Inventory",
+            "Travel Calendar",
+            "Pattern Library",
+            "Playbook Registry"
+          ]
+        },
+        "decision_method": "gae_scoring",
+        "gae_scoring": {
+          "action_probabilities": {
+            "escalate": 0.03208,
+            "investigate": 0.877046,
+            "monitor": 0.084343,
+            "suppress": 0.006531
+          },
+          "ambiguous": false,
+          "decision_id": "c4b4e9fa-b2cd-48f8-abd4-619bbfa98d33",
+          "decision_method": "ProfileScorer centroid-proximity scoring (n_factors \u00d7 5 actions \u00d7 n_categories, L2 kernel \u03c4=0.1, EXP-E1 validated)",
+          "factor_names": [
+            "privileged_identity_context",
+            "asset_criticality",
+            "threat_intel_enrichment",
+            "pattern_history",
+            "time_anomaly",
+            "device_trust"
+          ],
+          "factor_vector": [
+            0.825,
+            1.0,
+            0.0,
+            0.4,
+            0.7,
+            0.6666666666666666
+          ],
+          "low_confidence": false,
+          "routing_zone": "agent_zone",
+          "softmax_sum": 1.0,
+          "temperature": 0.1
+        },
+        "graph_data": {
+          "nodes": [
+            {
+              "id": "DIAG-E4-CRED-001",
+              "label": "DIAG-E4-CRED-001",
+              "properties": {
+                "alert_type": "anomalous_login",
+                "severity": "critical"
+              },
+              "type": "Alert"
+            },
+            {
+              "id": "DIAG-E4-CRED-001-USER",
+              "label": "C9B Proof User 1",
+              "properties": {
+                "risk_score": 0.92,
+                "title": null
+              },
+              "type": "User"
+            },
+            {
+              "id": "DIAG-E4-CRED-001-ASSET",
+              "label": "c9b-proof-e4-1",
+              "properties": {
+                "criticality": "critical"
+              },
+              "type": "Asset"
+            }
+          ],
+          "relationships": [
+            {
+              "source": "DIAG-E4-CRED-001",
+              "target": "DIAG-E4-CRED-001-USER",
+              "type": "INVOLVES"
+            },
+            {
+              "source": "DIAG-E4-CRED-001",
+              "target": "DIAG-E4-CRED-001-ASSET",
+              "type": "DETECTED_ON"
+            }
+          ]
+        },
+        "narrative": "DIAG-E4-CRED-001 classified as Travel Login Anomaly (T1078 \u00b7 Initial Access, 65% confidence). Graph traversal consulted 47 nodes across 5 subgraphs (User Profile, Asset Inventory, Travel Calendar +2 more). Dominant signal: anomalous login signal (calibrated to 65% classification confidence by the pattern library). Recommended action: Investigate further (87% agent confidence). This recommendation is calibrated from 19 verified outcomes across all alert categories.",
+        "provenance": {
+          "action": "investigate",
+          "category": "credential_access",
+          "decision_id": "c4b4e9fa-b2cd-48f8-abd4-619bbfa98d33",
+          "factors": [
+            {
+              "computation_method": "Security context read: user_risk_score, user_title, mfa_completed, device_fingerprint_match",
+              "explanation": "Privileged or high-risk identity context detected (score=0.82). Elevated role or weak session trust signals raise risk.",
+              "factor_name": "privileged_identity_context",
+              "factor_value": 0.825,
+              "graph_nodes_consulted": [
+                "User",
+                "Identity",
+                "Device"
+              ]
+            },
+            {
+              "computation_method": "Graph traversal: (Alert)-[:DETECTED_ON]->(Asset)-[:STORES]->(DataClass)",
+              "explanation": "Critical asset detected (score=1.00). CRITICAL criticality level with sensitive data classification.",
+              "factor_name": "asset_criticality",
+              "factor_value": 1.0,
+              "graph_nodes_consulted": [
+                "Alert",
+                "Asset",
+                "DataClass"
+              ]
+            },
+            {
+              "computation_method": "Graph traversal: (ThreatIntel)-[:ASSOCIATED_WITH]->(Alert)",
+              "explanation": "No threat intelligence match (score=0.00). Alert source/destination not present in any IOC feed.",
+              "factor_name": "threat_intel_enrichment",
+              "factor_value": 0.0,
+              "graph_nodes_consulted": [
+                "ThreatIntel",
+                "Alert"
+              ]
+            },
+            {
+              "computation_method": "Graph traversal: (Decision)-[:DECIDED_ON]->(Alert) WHERE outcome IS NOT NULL \u2014 last 100 decisions for this alert_type",
+              "explanation": "Low historical accuracy (score=0.40). Prior decisions for this alert type had high error rate.",
+              "factor_name": "pattern_history",
+              "factor_value": 0.4,
+              "graph_nodes_consulted": [
+                "Decision",
+                "Alert"
+              ]
+            },
+            {
+              "computation_method": "Alert property read: business_hours_login, weekend_login [TD-014]. Future: (User)-[:ACTIVE_AT]->(TimeSlot) traversal.",
+              "explanation": "After-hours activity (score=0.70). Login or activity outside standard business hours.",
+              "factor_name": "time_anomaly",
+              "factor_value": 0.7,
+              "graph_nodes_consulted": [
+                "Alert"
+              ]
+            },
+            {
+              "computation_method": "Alert property read: mfa_completed, device_fingerprint_match, vpn [TD-015]. Future: (Alert)-[:USES_DEVICE]->(Device) traversal.",
+              "explanation": "Partially trusted device (score=0.67). Two trust signals missing \u2014 verify device before acting.",
+              "factor_name": "device_trust",
+              "factor_value": 0.6667,
+              "graph_nodes_consulted": [
+                "Alert"
+              ]
+            }
+          ],
+          "total_nodes_consulted": 8
+        },
+        "recommendation": {
+          "action": "investigate",
+          "confidence": 0.8770461205137833,
+          "decision_id": "c4b4e9fa-b2cd-48f8-abd4-619bbfa98d33",
+          "pattern_id": null,
+          "playbook_id": null,
+          "reasoning": "Alert requires additional analyst review. Context gathered from 47 graph nodes. Escalating to Tier 2 for manual investigation.",
+          "routing_zone": "agent_zone"
+        },
+        "referral": {
+          "audit_summary": "No referral rules triggered.",
+          "reasons": [],
+          "should_refer": false
+        },
+        "referral_debug": {
+          "r2_sequence_count": 0,
+          "r7_cross_category_count": 0,
+          "rules_evaluated": [
+            "R1",
+            "R2",
+            "R3",
+            "R4",
+            "R5",
+            "R6",
+            "R7"
+          ],
+          "rules_fired": []
+        },
+        "situation_analysis": {
+          "decision_economics": {
+            "cost_avoided": "$127 analyst cost avoided per alert",
+            "monthly_projection": "At ~200 similar alerts/month: 149 analyst-hours and $25,400 saved",
+            "time_saved": "44 minutes vs manual triage"
+          },
+          "factors_detected": [
+            "anomalous_login_signal",
+            "mfa_not_completed",
+            "unrecognised_device",
+            "unconfirmed_travel_context"
+          ],
+          "mitre_tactic": "Initial Access",
+          "mitre_technique": "T1078",
+          "options_evaluated": [
+            {
+              "action": "false_positive_close",
+              "estimated_analyst_cost": 0.0,
+              "estimated_resolution_time": "3 seconds",
+              "factors": [
+                "privileged_identity_context",
+                "mfa_ok",
+                "device_known"
+              ],
+              "risk_if_wrong": "Low \u2014 auto-reopen if flagged",
+              "score": 0.92
+            },
+            {
+              "action": "escalate_tier2",
+              "estimated_analyst_cost": 127.0,
+              "estimated_resolution_time": "45 minutes",
+              "factors": [
+                "verify_travel_legitimacy"
+              ],
+              "risk_if_wrong": "None \u2014 human reviews",
+              "score": 0.06
+            },
+            {
+              "action": "enrich_and_wait",
+              "estimated_analyst_cost": 43.0,
+              "estimated_resolution_time": "15 minutes",
+              "factors": [
+                "monitor_additional_activity"
+              ],
+              "risk_if_wrong": "Low \u2014 delayed but monitored",
+              "score": 0.02
+            }
+          ],
+          "selected_option": "false_positive_close",
+          "selection_reasoning": "Travel record confirms user location. All authentication factors align with legitimate access.",
+          "situation_confidence": 0.65,
+          "situation_type": "travel_login_anomaly"
+        }
+      },
+      "raw_outcome_body": {
+        "alert_id": "DIAG-E4-CRED-001",
+        "centroid_update": {
+          "action_index": 1,
+          "action_name": "investigate",
+          "category_index": 0,
+          "category_name": "credential_access",
+          "centroid_delta_norm": 0.012247448713915891,
+          "correct": true
+        },
+        "consequence": "Pattern strengthened. Added to precedent library.",
+        "graph_updates": [
+          {
+            "after": 0.853,
+            "before": 0.85,
+            "direction": "strengthened",
+            "entity": "PAT-CRED-001",
+            "field": "confidence"
+          },
+          {
+            "after": 0.86,
+            "before": 0.84,
+            "direction": "strengthened",
+            "entity": "User->CredentialStore",
+            "field": "weight"
+          },
+          {
+            "after": 55.0,
+            "before": 54.0,
+            "direction": "strengthened",
+            "entity": "PAT-CRED-001",
+            "field": "precedent_count"
+          }
+        ],
+        "l5_centroid_persisted": true,
+        "l5_persistence": {
+          "conservation_status": "GREEN",
+          "conservation_status_reason": "learning_health_calibrating",
+          "l5_centroid_persisted": true,
+          "l5_persistence_skipped_reason": null,
+          "l5_persistence_source": "profile_scorer",
+          "l5_shaped_by_attempted": true,
+          "raw_conservation_status": "CALIBRATING"
+        },
+        "l5_persistence_skipped_reason": null,
+        "l5_shaped_by_attempted": true,
+        "narrative": "Decision confirmed correct. Pattern PAT-CRED-001 confidence increased to 85.3% (+0.3 points). This decision has been added to the precedent library (55 validated decisions). The system is now slightly more confident in auto-closing similar alerts of this type.",
+        "next_alerts_override": null,
+        "outcome": "correct"
+      }
+    },
+    {
+      "alert_id": "DIAG-E4-CRED-002",
+      "analyze": {
+        "action": "investigate",
+        "category": "credential_access",
+        "confidence": 0.9102820463848372,
+        "decision_id": "37b8b697-3b92-4d10-a215-c100602708b6",
+        "decision_method": "gae_scoring",
+        "factor_vector": [
+          0.825,
+          1.0,
+          0.0,
+          0.4,
+          0.7,
+          0.6666666666666666
+        ],
+        "factor_vector_len": 6,
+        "referral": {
+          "audit_summary": "No referral rules triggered.",
+          "reasons": [],
+          "should_refer": false
+        },
+        "routing_zone": "agent_zone"
+      },
+      "analyze_status": 200,
+      "outcome": {
+        "centroid_update": {
+          "action_index": 1,
+          "action_name": "investigate",
+          "category_index": 0,
+          "category_name": "credential_access",
+          "centroid_delta_norm": 0.012247448713915891,
+          "correct": true
+        },
+        "correct": null,
+        "l5_centroid_persisted": true,
+        "l5_persistence": {
+          "conservation_status": "GREEN",
+          "conservation_status_reason": "learning_health_calibrating",
+          "l5_centroid_persisted": true,
+          "l5_persistence_skipped_reason": null,
+          "l5_persistence_source": "profile_scorer",
+          "l5_shaped_by_attempted": true,
+          "raw_conservation_status": "CALIBRATING"
+        },
+        "l5_persistence_skipped_reason": null,
+        "outcome": "correct",
+        "outcome_id": null,
+        "verification": null
+      },
+      "outcome_status": 200,
+      "raw_analyze_body": {
+        "alert": {
+          "_age_id": 1688849860263938,
+          "alert_id": "DIAG-E4-CRED-002",
+          "alert_type": "anomalous_login",
+          "asset_id": "DIAG-E4-CRED-002-ASSET",
+          "attack_pattern_id": "",
+          "c9b_proof": true,
+          "category": "credential_access",
+          "device_fingerprint_match": false,
+          "id": "DIAG-E4-CRED-002",
+          "mfa_completed": false,
+          "origin": "c9b_seed",
+          "severity": "critical",
+          "source": "c9b_seed",
+          "source_location": "c9b-seed-zone-e4-2",
+          "status": "pending",
+          "timestamp_epoch": 1725000000002,
+          "user_id": "DIAG-E4-CRED-002-USER",
+          "vpn_provider": "c9b_seed"
+        },
+        "analysis": {
+          "root_cause": "Anomalous anomalous_login from c9b-seed-zone-e4-2",
+          "severity_assessment": "CRITICAL severity based on context"
+        },
+        "attack_tactic": "Initial Access",
+        "attack_technique": "T1078",
+        "cluster_history": {
+          "current_position": 1,
+          "per_action": {},
+          "per_category": {},
+          "precision": 0.0,
+          "recent": [],
+          "source_user": "DIAG-E4-CRED-002-USER",
+          "total_prior": 0,
+          "trend": "new",
+          "trend_detail": "No prior verified decisions for this user."
+        },
+        "composite_gate": {
+          "approval_score": 0.4733,
+          "auto_approve": false,
+          "reason_codes": [
+            "cat_count 2 < 50 (maturity gate)"
+          ]
+        },
+        "context": {
+          "key_facts": [],
+          "nodes_count": 47,
+          "patterns_matched": 0,
+          "subgraphs_traversed": [
+            "User Profile",
+            "Asset Inventory",
+            "Travel Calendar",
+            "Pattern Library",
+            "Playbook Registry"
+          ]
+        },
+        "decision_method": "gae_scoring",
+        "gae_scoring": {
+          "action_probabilities": {
+            "escalate": 0.023408,
+            "investigate": 0.910282,
+            "monitor": 0.061544,
+            "suppress": 0.004766
+          },
+          "ambiguous": false,
+          "decision_id": "37b8b697-3b92-4d10-a215-c100602708b6",
+          "decision_method": "ProfileScorer centroid-proximity scoring (n_factors \u00d7 5 actions \u00d7 n_categories, L2 kernel \u03c4=0.1, EXP-E1 validated)",
+          "factor_names": [
+            "privileged_identity_context",
+            "asset_criticality",
+            "threat_intel_enrichment",
+            "pattern_history",
+            "time_anomaly",
+            "device_trust"
+          ],
+          "factor_vector": [
+            0.825,
+            1.0,
+            0.0,
+            0.4,
+            0.7,
+            0.6666666666666666
+          ],
+          "low_confidence": false,
+          "routing_zone": "agent_zone",
+          "softmax_sum": 1.0,
+          "temperature": 0.1
+        },
+        "graph_data": {
+          "nodes": [
+            {
+              "id": "DIAG-E4-CRED-002",
+              "label": "DIAG-E4-CRED-002",
+              "properties": {
+                "alert_type": "anomalous_login",
+                "severity": "critical"
+              },
+              "type": "Alert"
+            },
+            {
+              "id": "DIAG-E4-CRED-002-USER",
+              "label": "C9B Proof User 2",
+              "properties": {
+                "risk_score": 0.92,
+                "title": null
+              },
+              "type": "User"
+            },
+            {
+              "id": "DIAG-E4-CRED-002-ASSET",
+              "label": "c9b-proof-e4-2",
+              "properties": {
+                "criticality": "critical"
+              },
+              "type": "Asset"
+            }
+          ],
+          "relationships": [
+            {
+              "source": "DIAG-E4-CRED-002",
+              "target": "DIAG-E4-CRED-002-USER",
+              "type": "INVOLVES"
+            },
+            {
+              "source": "DIAG-E4-CRED-002",
+              "target": "DIAG-E4-CRED-002-ASSET",
+              "type": "DETECTED_ON"
+            }
+          ]
+        },
+        "narrative": "DIAG-E4-CRED-002 classified as Travel Login Anomaly (T1078 \u00b7 Initial Access, 65% confidence). Graph traversal consulted 47 nodes across 5 subgraphs (User Profile, Asset Inventory, Travel Calendar +2 more). Dominant signal: anomalous login signal (calibrated to 65% classification confidence by the pattern library). Recommended action: Investigate further (91% agent confidence). This recommendation is calibrated from 20 verified outcomes across all alert categories.",
+        "provenance": {
+          "action": "investigate",
+          "category": "credential_access",
+          "decision_id": "37b8b697-3b92-4d10-a215-c100602708b6",
+          "factors": [
+            {
+              "computation_method": "Security context read: user_risk_score, user_title, mfa_completed, device_fingerprint_match",
+              "explanation": "Privileged or high-risk identity context detected (score=0.82). Elevated role or weak session trust signals raise risk.",
+              "factor_name": "privileged_identity_context",
+              "factor_value": 0.825,
+              "graph_nodes_consulted": [
+                "User",
+                "Identity",
+                "Device"
+              ]
+            },
+            {
+              "computation_method": "Graph traversal: (Alert)-[:DETECTED_ON]->(Asset)-[:STORES]->(DataClass)",
+              "explanation": "Critical asset detected (score=1.00). CRITICAL criticality level with sensitive data classification.",
+              "factor_name": "asset_criticality",
+              "factor_value": 1.0,
+              "graph_nodes_consulted": [
+                "Alert",
+                "Asset",
+                "DataClass"
+              ]
+            },
+            {
+              "computation_method": "Graph traversal: (ThreatIntel)-[:ASSOCIATED_WITH]->(Alert)",
+              "explanation": "No threat intelligence match (score=0.00). Alert source/destination not present in any IOC feed.",
+              "factor_name": "threat_intel_enrichment",
+              "factor_value": 0.0,
+              "graph_nodes_consulted": [
+                "ThreatIntel",
+                "Alert"
+              ]
+            },
+            {
+              "computation_method": "Graph traversal: (Decision)-[:DECIDED_ON]->(Alert) WHERE outcome IS NOT NULL \u2014 last 100 decisions for this alert_type",
+              "explanation": "Low historical accuracy (score=0.40). Prior decisions for this alert type had high error rate.",
+              "factor_name": "pattern_history",
+              "factor_value": 0.4,
+              "graph_nodes_consulted": [
+                "Decision",
+                "Alert"
+              ]
+            },
+            {
+              "computation_method": "Alert property read: business_hours_login, weekend_login [TD-014]. Future: (User)-[:ACTIVE_AT]->(TimeSlot) traversal.",
+              "explanation": "After-hours activity (score=0.70). Login or activity outside standard business hours.",
+              "factor_name": "time_anomaly",
+              "factor_value": 0.7,
+              "graph_nodes_consulted": [
+                "Alert"
+              ]
+            },
+            {
+              "computation_method": "Alert property read: mfa_completed, device_fingerprint_match, vpn [TD-015]. Future: (Alert)-[:USES_DEVICE]->(Device) traversal.",
+              "explanation": "Partially trusted device (score=0.67). Two trust signals missing \u2014 verify device before acting.",
+              "factor_name": "device_trust",
+              "factor_value": 0.6667,
+              "graph_nodes_consulted": [
+                "Alert"
+              ]
+            }
+          ],
+          "total_nodes_consulted": 8
+        },
+        "recommendation": {
+          "action": "investigate",
+          "confidence": 0.9102820463848372,
+          "decision_id": "37b8b697-3b92-4d10-a215-c100602708b6",
+          "pattern_id": null,
+          "playbook_id": null,
+          "reasoning": "Alert requires additional analyst review. Context gathered from 47 graph nodes. Escalating to Tier 2 for manual investigation.",
+          "routing_zone": "agent_zone"
+        },
+        "referral": {
+          "audit_summary": "No referral rules triggered.",
+          "reasons": [],
+          "should_refer": false
+        },
+        "referral_debug": {
+          "r2_sequence_count": 0,
+          "r7_cross_category_count": 0,
+          "rules_evaluated": [
+            "R1",
+            "R2",
+            "R3",
+            "R4",
+            "R5",
+            "R6",
+            "R7"
+          ],
+          "rules_fired": []
+        },
+        "situation_analysis": {
+          "decision_economics": {
+            "cost_avoided": "$127 analyst cost avoided per alert",
+            "monthly_projection": "At ~200 similar alerts/month: 149 analyst-hours and $25,400 saved",
+            "time_saved": "44 minutes vs manual triage"
+          },
+          "factors_detected": [
+            "anomalous_login_signal",
+            "mfa_not_completed",
+            "unrecognised_device",
+            "unconfirmed_travel_context"
+          ],
+          "mitre_tactic": "Initial Access",
+          "mitre_technique": "T1078",
+          "options_evaluated": [
+            {
+              "action": "false_positive_close",
+              "estimated_analyst_cost": 0.0,
+              "estimated_resolution_time": "3 seconds",
+              "factors": [
+                "privileged_identity_context",
+                "mfa_ok",
+                "device_known"
+              ],
+              "risk_if_wrong": "Low \u2014 auto-reopen if flagged",
+              "score": 0.92
+            },
+            {
+              "action": "escalate_tier2",
+              "estimated_analyst_cost": 127.0,
+              "estimated_resolution_time": "45 minutes",
+              "factors": [
+                "verify_travel_legitimacy"
+              ],
+              "risk_if_wrong": "None \u2014 human reviews",
+              "score": 0.06
+            },
+            {
+              "action": "enrich_and_wait",
+              "estimated_analyst_cost": 43.0,
+              "estimated_resolution_time": "15 minutes",
+              "factors": [
+                "monitor_additional_activity"
+              ],
+              "risk_if_wrong": "Low \u2014 delayed but monitored",
+              "score": 0.02
+            }
+          ],
+          "selected_option": "false_positive_close",
+          "selection_reasoning": "Travel record confirms user location. All authentication factors align with legitimate access.",
+          "situation_confidence": 0.65,
+          "situation_type": "travel_login_anomaly"
+        }
+      },
+      "raw_outcome_body": {
+        "alert_id": "DIAG-E4-CRED-002",
+        "centroid_update": {
+          "action_index": 1,
+          "action_name": "investigate",
+          "category_index": 0,
+          "category_name": "credential_access",
+          "centroid_delta_norm": 0.012247448713915891,
+          "correct": true
+        },
+        "consequence": "Pattern strengthened. Added to precedent library.",
+        "graph_updates": [
+          {
+            "after": 0.856,
+            "before": 0.853,
+            "direction": "strengthened",
+            "entity": "PAT-CRED-001",
+            "field": "confidence"
+          },
+          {
+            "after": 0.88,
+            "before": 0.86,
+            "direction": "strengthened",
+            "entity": "User->CredentialStore",
+            "field": "weight"
+          },
+          {
+            "after": 56.0,
+            "before": 55.0,
+            "direction": "strengthened",
+            "entity": "PAT-CRED-001",
+            "field": "precedent_count"
+          }
+        ],
+        "l5_centroid_persisted": true,
+        "l5_persistence": {
+          "conservation_status": "GREEN",
+          "conservation_status_reason": "learning_health_calibrating",
+          "l5_centroid_persisted": true,
+          "l5_persistence_skipped_reason": null,
+          "l5_persistence_source": "profile_scorer",
+          "l5_shaped_by_attempted": true,
+          "raw_conservation_status": "CALIBRATING"
+        },
+        "l5_persistence_skipped_reason": null,
+        "l5_shaped_by_attempted": true,
+        "narrative": "Decision confirmed correct. Pattern PAT-CRED-001 confidence increased to 85.6% (+0.3 points). This decision has been added to the precedent library (56 validated decisions). The system is now slightly more confident in auto-closing similar alerts of this type.",
+        "next_alerts_override": null,
+        "outcome": "correct"
+      }
+    },
+    {
+      "alert_id": "DIAG-E4-CRED-003",
+      "analyze": {
+        "action": "investigate",
+        "category": "credential_access",
+        "confidence": 0.934466659781363,
+        "decision_id": "56018fa9-7c74-44bd-847b-ae330335a077",
+        "decision_method": "gae_scoring",
+        "factor_vector": [
+          0.825,
+          1.0,
+          0.0,
+          0.4,
+          0.7,
+          0.6666666666666666
+        ],
+        "factor_vector_len": 6,
+        "referral": {
+          "audit_summary": "No referral rules triggered.",
+          "reasons": [],
+          "should_refer": false
+        },
+        "routing_zone": "agent_zone"
+      },
+      "analyze_status": 200,
+      "outcome": {
+        "centroid_update": {
+          "action_index": 1,
+          "action_name": "investigate",
+          "category_index": 0,
+          "category_name": "credential_access",
+          "centroid_delta_norm": 0.012247448713915891,
+          "correct": true
+        },
+        "correct": null,
+        "l5_centroid_persisted": true,
+        "l5_persistence": {
+          "conservation_status": "GREEN",
+          "conservation_status_reason": "learning_health_calibrating",
+          "l5_centroid_persisted": true,
+          "l5_persistence_skipped_reason": null,
+          "l5_persistence_source": "profile_scorer",
+          "l5_shaped_by_attempted": true,
+          "raw_conservation_status": "CALIBRATING"
+        },
+        "l5_persistence_skipped_reason": null,
+        "outcome": "correct",
+        "outcome_id": null,
+        "verification": null
+      },
+      "outcome_status": 200,
+      "raw_analyze_body": {
+        "alert": {
+          "_age_id": 1688849860263939,
+          "alert_id": "DIAG-E4-CRED-003",
+          "alert_type": "anomalous_login",
+          "asset_id": "DIAG-E4-CRED-003-ASSET",
+          "attack_pattern_id": "",
+          "c9b_proof": true,
+          "category": "credential_access",
+          "device_fingerprint_match": false,
+          "id": "DIAG-E4-CRED-003",
+          "mfa_completed": false,
+          "origin": "c9b_seed",
+          "severity": "critical",
+          "source": "c9b_seed",
+          "source_location": "c9b-seed-zone-e4-3",
+          "status": "pending",
+          "timestamp_epoch": 1725000000003,
+          "user_id": "DIAG-E4-CRED-003-USER",
+          "vpn_provider": "c9b_seed"
+        },
+        "analysis": {
+          "root_cause": "Anomalous anomalous_login from c9b-seed-zone-e4-3",
+          "severity_assessment": "CRITICAL severity based on context"
+        },
+        "attack_tactic": "Initial Access",
+        "attack_technique": "T1078",
+        "cluster_history": {
+          "current_position": 1,
+          "per_action": {},
+          "per_category": {},
+          "precision": 0.0,
+          "recent": [],
+          "source_user": "DIAG-E4-CRED-003-USER",
+          "total_prior": 0,
+          "trend": "new",
+          "trend_detail": "No prior verified decisions for this user."
+        },
+        "composite_gate": {
+          "approval_score": 0.4953,
+          "auto_approve": false,
+          "reason_codes": [
+            "cat_count 3 < 50 (maturity gate)"
+          ]
+        },
+        "context": {
+          "key_facts": [],
+          "nodes_count": 47,
+          "patterns_matched": 0,
+          "subgraphs_traversed": [
+            "User Profile",
+            "Asset Inventory",
+            "Travel Calendar",
+            "Pattern Library",
+            "Playbook Registry"
+          ]
+        },
+        "decision_method": "gae_scoring",
+        "gae_scoring": {
+          "action_probabilities": {
+            "escalate": 0.017098,
+            "investigate": 0.934467,
+            "monitor": 0.044954,
+            "suppress": 0.003481
+          },
+          "ambiguous": false,
+          "decision_id": "56018fa9-7c74-44bd-847b-ae330335a077",
+          "decision_method": "ProfileScorer centroid-proximity scoring (n_factors \u00d7 5 actions \u00d7 n_categories, L2 kernel \u03c4=0.1, EXP-E1 validated)",
+          "factor_names": [
+            "privileged_identity_context",
+            "asset_criticality",
+            "threat_intel_enrichment",
+            "pattern_history",
+            "time_anomaly",
+            "device_trust"
+          ],
+          "factor_vector": [
+            0.825,
+            1.0,
+            0.0,
+            0.4,
+            0.7,
+            0.6666666666666666
+          ],
+          "low_confidence": false,
+          "routing_zone": "agent_zone",
+          "softmax_sum": 1.0,
+          "temperature": 0.1
+        },
+        "graph_data": {
+          "nodes": [
+            {
+              "id": "DIAG-E4-CRED-003",
+              "label": "DIAG-E4-CRED-003",
+              "properties": {
+                "alert_type": "anomalous_login",
+                "severity": "critical"
+              },
+              "type": "Alert"
+            },
+            {
+              "id": "DIAG-E4-CRED-003-USER",
+              "label": "C9B Proof User 3",
+              "properties": {
+                "risk_score": 0.92,
+                "title": null
+              },
+              "type": "User"
+            },
+            {
+              "id": "DIAG-E4-CRED-003-ASSET",
+              "label": "c9b-proof-e4-3",
+              "properties": {
+                "criticality": "critical"
+              },
+              "type": "Asset"
+            }
+          ],
+          "relationships": [
+            {
+              "source": "DIAG-E4-CRED-003",
+              "target": "DIAG-E4-CRED-003-USER",
+              "type": "INVOLVES"
+            },
+            {
+              "source": "DIAG-E4-CRED-003",
+              "target": "DIAG-E4-CRED-003-ASSET",
+              "type": "DETECTED_ON"
+            }
+          ]
+        },
+        "narrative": "DIAG-E4-CRED-003 classified as Travel Login Anomaly (T1078 \u00b7 Initial Access, 65% confidence). Graph traversal consulted 47 nodes across 5 subgraphs (User Profile, Asset Inventory, Travel Calendar +2 more). Dominant signal: anomalous login signal (calibrated to 65% classification confidence by the pattern library). Recommended action: Investigate further (93% agent confidence). This recommendation is calibrated from 21 verified outcomes across all alert categories.",
+        "provenance": {
+          "action": "investigate",
+          "category": "credential_access",
+          "decision_id": "56018fa9-7c74-44bd-847b-ae330335a077",
+          "factors": [
+            {
+              "computation_method": "Security context read: user_risk_score, user_title, mfa_completed, device_fingerprint_match",
+              "explanation": "Privileged or high-risk identity context detected (score=0.82). Elevated role or weak session trust signals raise risk.",
+              "factor_name": "privileged_identity_context",
+              "factor_value": 0.825,
+              "graph_nodes_consulted": [
+                "User",
+                "Identity",
+                "Device"
+              ]
+            },
+            {
+              "computation_method": "Graph traversal: (Alert)-[:DETECTED_ON]->(Asset)-[:STORES]->(DataClass)",
+              "explanation": "Critical asset detected (score=1.00). CRITICAL criticality level with sensitive data classification.",
+              "factor_name": "asset_criticality",
+              "factor_value": 1.0,
+              "graph_nodes_consulted": [
+                "Alert",
+                "Asset",
+                "DataClass"
+              ]
+            },
+            {
+              "computation_method": "Graph traversal: (ThreatIntel)-[:ASSOCIATED_WITH]->(Alert)",
+              "explanation": "No threat intelligence match (score=0.00). Alert source/destination not present in any IOC feed.",
+              "factor_name": "threat_intel_enrichment",
+              "factor_value": 0.0,
+              "graph_nodes_consulted": [
+                "ThreatIntel",
+                "Alert"
+              ]
+            },
+            {
+              "computation_method": "Graph traversal: (Decision)-[:DECIDED_ON]->(Alert) WHERE outcome IS NOT NULL \u2014 last 100 decisions for this alert_type",
+              "explanation": "Low historical accuracy (score=0.40). Prior decisions for this alert type had high error rate.",
+              "factor_name": "pattern_history",
+              "factor_value": 0.4,
+              "graph_nodes_consulted": [
+                "Decision",
+                "Alert"
+              ]
+            },
+            {
+              "computation_method": "Alert property read: business_hours_login, weekend_login [TD-014]. Future: (User)-[:ACTIVE_AT]->(TimeSlot) traversal.",
+              "explanation": "After-hours activity (score=0.70). Login or activity outside standard business hours.",
+              "factor_name": "time_anomaly",
+              "factor_value": 0.7,
+              "graph_nodes_consulted": [
+                "Alert"
+              ]
+            },
+            {
+              "computation_method": "Alert property read: mfa_completed, device_fingerprint_match, vpn [TD-015]. Future: (Alert)-[:USES_DEVICE]->(Device) traversal.",
+              "explanation": "Partially trusted device (score=0.67). Two trust signals missing \u2014 verify device before acting.",
+              "factor_name": "device_trust",
+              "factor_value": 0.6667,
+              "graph_nodes_consulted": [
+                "Alert"
+              ]
+            }
+          ],
+          "total_nodes_consulted": 8
+        },
+        "recommendation": {
+          "action": "investigate",
+          "confidence": 0.934466659781363,
+          "decision_id": "56018fa9-7c74-44bd-847b-ae330335a077",
+          "pattern_id": null,
+          "playbook_id": null,
+          "reasoning": "Alert requires additional analyst review. Context gathered from 47 graph nodes. Escalating to Tier 2 for manual investigation.",
+          "routing_zone": "agent_zone"
+        },
+        "referral": {
+          "audit_summary": "No referral rules triggered.",
+          "reasons": [],
+          "should_refer": false
+        },
+        "referral_debug": {
+          "r2_sequence_count": 0,
+          "r7_cross_category_count": 0,
+          "rules_evaluated": [
+            "R1",
+            "R2",
+            "R3",
+            "R4",
+            "R5",
+            "R6",
+            "R7"
+          ],
+          "rules_fired": []
+        },
+        "situation_analysis": {
+          "decision_economics": {
+            "cost_avoided": "$127 analyst cost avoided per alert",
+            "monthly_projection": "At ~200 similar alerts/month: 149 analyst-hours and $25,400 saved",
+            "time_saved": "44 minutes vs manual triage"
+          },
+          "factors_detected": [
+            "anomalous_login_signal",
+            "mfa_not_completed",
+            "unrecognised_device",
+            "unconfirmed_travel_context"
+          ],
+          "mitre_tactic": "Initial Access",
+          "mitre_technique": "T1078",
+          "options_evaluated": [
+            {
+              "action": "false_positive_close",
+              "estimated_analyst_cost": 0.0,
+              "estimated_resolution_time": "3 seconds",
+              "factors": [
+                "privileged_identity_context",
+                "mfa_ok",
+                "device_known"
+              ],
+              "risk_if_wrong": "Low \u2014 auto-reopen if flagged",
+              "score": 0.92
+            },
+            {
+              "action": "escalate_tier2",
+              "estimated_analyst_cost": 127.0,
+              "estimated_resolution_time": "45 minutes",
+              "factors": [
+                "verify_travel_legitimacy"
+              ],
+              "risk_if_wrong": "None \u2014 human reviews",
+              "score": 0.06
+            },
+            {
+              "action": "enrich_and_wait",
+              "estimated_analyst_cost": 43.0,
+              "estimated_resolution_time": "15 minutes",
+              "factors": [
+                "monitor_additional_activity"
+              ],
+              "risk_if_wrong": "Low \u2014 delayed but monitored",
+              "score": 0.02
+            }
+          ],
+          "selected_option": "false_positive_close",
+          "selection_reasoning": "Travel record confirms user location. All authentication factors align with legitimate access.",
+          "situation_confidence": 0.65,
+          "situation_type": "travel_login_anomaly"
+        }
+      },
+      "raw_outcome_body": {
+        "alert_id": "DIAG-E4-CRED-003",
+        "centroid_update": {
+          "action_index": 1,
+          "action_name": "investigate",
+          "category_index": 0,
+          "category_name": "credential_access",
+          "centroid_delta_norm": 0.012247448713915891,
+          "correct": true
+        },
+        "consequence": "Pattern strengthened. Added to precedent library.",
+        "graph_updates": [
+          {
+            "after": 0.859,
+            "before": 0.856,
+            "direction": "strengthened",
+            "entity": "PAT-CRED-001",
+            "field": "confidence"
+          },
+          {
+            "after": 0.9,
+            "before": 0.88,
+            "direction": "strengthened",
+            "entity": "User->CredentialStore",
+            "field": "weight"
+          },
+          {
+            "after": 57.0,
+            "before": 56.0,
+            "direction": "strengthened",
+            "entity": "PAT-CRED-001",
+            "field": "precedent_count"
+          }
+        ],
+        "l5_centroid_persisted": true,
+        "l5_persistence": {
+          "conservation_status": "GREEN",
+          "conservation_status_reason": "learning_health_calibrating",
+          "l5_centroid_persisted": true,
+          "l5_persistence_skipped_reason": null,
+          "l5_persistence_source": "profile_scorer",
+          "l5_shaped_by_attempted": true,
+          "raw_conservation_status": "CALIBRATING"
+        },
+        "l5_persistence_skipped_reason": null,
+        "l5_shaped_by_attempted": true,
+        "narrative": "Decision confirmed correct. Pattern PAT-CRED-001 confidence increased to 85.9% (+0.3 points). This decision has been added to the precedent library (57 validated decisions). The system is now slightly more confident in auto-closing similar alerts of this type.",
+        "next_alerts_override": null,
+        "outcome": "correct"
+      }
+    },
+    {
+      "alert_id": "DIAG-E4-CRED-004",
+      "analyze": {
+        "action": "investigate",
+        "category": "credential_access",
+        "confidence": 0.9519262035604401,
+        "decision_id": "17452968-d5c8-4627-a47c-e7db4e947f74",
+        "decision_method": "gae_scoring",
+        "factor_vector": [
+          0.825,
+          1.0,
+          0.0,
+          0.4,
+          0.7,
+          0.6666666666666666
+        ],
+        "factor_vector_len": 6,
+        "referral": {
+          "audit_summary": "No referral rules triggered.",
+          "reasons": [],
+          "should_refer": false
+        },
+        "routing_zone": "auto_approve"
+      },
+      "analyze_status": 200,
+      "outcome": {
+        "centroid_update": {
+          "action_index": 1,
+          "action_name": "investigate",
+          "category_index": 0,
+          "category_name": "credential_access",
+          "centroid_delta_norm": 0.012247448713915891,
+          "correct": true
+        },
+        "correct": null,
+        "l5_centroid_persisted": true,
+        "l5_persistence": {
+          "conservation_status": "GREEN",
+          "conservation_status_reason": "learning_health_calibrating",
+          "l5_centroid_persisted": true,
+          "l5_persistence_skipped_reason": null,
+          "l5_persistence_source": "profile_scorer",
+          "l5_shaped_by_attempted": true,
+          "raw_conservation_status": "CALIBRATING"
+        },
+        "l5_persistence_skipped_reason": null,
+        "outcome": "correct",
+        "outcome_id": null,
+        "verification": null
+      },
+      "outcome_status": 200,
+      "raw_analyze_body": {
+        "alert": {
+          "_age_id": 1688849860263940,
+          "alert_id": "DIAG-E4-CRED-004",
+          "alert_type": "anomalous_login",
+          "asset_id": "DIAG-E4-CRED-004-ASSET",
+          "attack_pattern_id": "",
+          "c9b_proof": true,
+          "category": "credential_access",
+          "device_fingerprint_match": false,
+          "id": "DIAG-E4-CRED-004",
+          "mfa_completed": false,
+          "origin": "c9b_seed",
+          "severity": "critical",
+          "source": "c9b_seed",
+          "source_location": "c9b-seed-zone-e4-4",
+          "status": "pending",
+          "timestamp_epoch": 1725000000004,
+          "user_id": "DIAG-E4-CRED-004-USER",
+          "vpn_provider": "c9b_seed"
+        },
+        "analysis": {
+          "root_cause": "Anomalous anomalous_login from c9b-seed-zone-e4-4",
+          "severity_assessment": "CRITICAL severity based on context"
+        },
+        "attack_tactic": "Initial Access",
+        "attack_technique": "T1078",
+        "cluster_history": {
+          "current_position": 1,
+          "per_action": {},
+          "per_category": {},
+          "precision": 0.0,
+          "recent": [],
+          "source_user": "DIAG-E4-CRED-004-USER",
+          "total_prior": 0,
+          "trend": "new",
+          "trend_detail": "No prior verified decisions for this user."
+        },
+        "composite_gate": {
+          "approval_score": 0.514,
+          "auto_approve": false,
+          "reason_codes": [
+            "cat_count 4 < 50 (maturity gate)"
+          ]
+        },
+        "context": {
+          "key_facts": [],
+          "nodes_count": 47,
+          "patterns_matched": 0,
+          "subgraphs_traversed": [
+            "User Profile",
+            "Asset Inventory",
+            "Travel Calendar",
+            "Pattern Library",
+            "Playbook Registry"
+          ]
+        },
+        "decision_method": "gae_scoring",
+        "gae_scoring": {
+          "action_probabilities": {
+            "escalate": 0.012543,
+            "investigate": 0.951926,
+            "monitor": 0.032977,
+            "suppress": 0.002554
+          },
+          "ambiguous": false,
+          "decision_id": "17452968-d5c8-4627-a47c-e7db4e947f74",
+          "decision_method": "ProfileScorer centroid-proximity scoring (n_factors \u00d7 5 actions \u00d7 n_categories, L2 kernel \u03c4=0.1, EXP-E1 validated)",
+          "factor_names": [
+            "privileged_identity_context",
+            "asset_criticality",
+            "threat_intel_enrichment",
+            "pattern_history",
+            "time_anomaly",
+            "device_trust"
+          ],
+          "factor_vector": [
+            0.825,
+            1.0,
+            0.0,
+            0.4,
+            0.7,
+            0.6666666666666666
+          ],
+          "low_confidence": false,
+          "routing_zone": "auto_approve",
+          "softmax_sum": 1.0,
+          "temperature": 0.1
+        },
+        "graph_data": {
+          "nodes": [
+            {
+              "id": "DIAG-E4-CRED-004",
+              "label": "DIAG-E4-CRED-004",
+              "properties": {
+                "alert_type": "anomalous_login",
+                "severity": "critical"
+              },
+              "type": "Alert"
+            },
+            {
+              "id": "DIAG-E4-CRED-004-USER",
+              "label": "C9B Proof User 4",
+              "properties": {
+                "risk_score": 0.92,
+                "title": null
+              },
+              "type": "User"
+            },
+            {
+              "id": "DIAG-E4-CRED-004-ASSET",
+              "label": "c9b-proof-e4-4",
+              "properties": {
+                "criticality": "critical"
+              },
+              "type": "Asset"
+            }
+          ],
+          "relationships": [
+            {
+              "source": "DIAG-E4-CRED-004",
+              "target": "DIAG-E4-CRED-004-USER",
+              "type": "INVOLVES"
+            },
+            {
+              "source": "DIAG-E4-CRED-004",
+              "target": "DIAG-E4-CRED-004-ASSET",
+              "type": "DETECTED_ON"
+            }
+          ]
+        },
+        "narrative": "DIAG-E4-CRED-004 classified as Travel Login Anomaly (T1078 \u00b7 Initial Access, 65% confidence). Graph traversal consulted 47 nodes across 5 subgraphs (User Profile, Asset Inventory, Travel Calendar +2 more). Dominant signal: anomalous login signal (calibrated to 65% classification confidence by the pattern library). Recommended action: Investigate further (95% agent confidence). This recommendation is calibrated from 22 verified outcomes across all alert categories.",
+        "provenance": {
+          "action": "investigate",
+          "category": "credential_access",
+          "decision_id": "17452968-d5c8-4627-a47c-e7db4e947f74",
+          "factors": [
+            {
+              "computation_method": "Security context read: user_risk_score, user_title, mfa_completed, device_fingerprint_match",
+              "explanation": "Privileged or high-risk identity context detected (score=0.82). Elevated role or weak session trust signals raise risk.",
+              "factor_name": "privileged_identity_context",
+              "factor_value": 0.825,
+              "graph_nodes_consulted": [
+                "User",
+                "Identity",
+                "Device"
+              ]
+            },
+            {
+              "computation_method": "Graph traversal: (Alert)-[:DETECTED_ON]->(Asset)-[:STORES]->(DataClass)",
+              "explanation": "Critical asset detected (score=1.00). CRITICAL criticality level with sensitive data classification.",
+              "factor_name": "asset_criticality",
+              "factor_value": 1.0,
+              "graph_nodes_consulted": [
+                "Alert",
+                "Asset",
+                "DataClass"
+              ]
+            },
+            {
+              "computation_method": "Graph traversal: (ThreatIntel)-[:ASSOCIATED_WITH]->(Alert)",
+              "explanation": "No threat intelligence match (score=0.00). Alert source/destination not present in any IOC feed.",
+              "factor_name": "threat_intel_enrichment",
+              "factor_value": 0.0,
+              "graph_nodes_consulted": [
+                "ThreatIntel",
+                "Alert"
+              ]
+            },
+            {
+              "computation_method": "Graph traversal: (Decision)-[:DECIDED_ON]->(Alert) WHERE outcome IS NOT NULL \u2014 last 100 decisions for this alert_type",
+              "explanation": "Low historical accuracy (score=0.40). Prior decisions for this alert type had high error rate.",
+              "factor_name": "pattern_history",
+              "factor_value": 0.4,
+              "graph_nodes_consulted": [
+                "Decision",
+                "Alert"
+              ]
+            },
+            {
+              "computation_method": "Alert property read: business_hours_login, weekend_login [TD-014]. Future: (User)-[:ACTIVE_AT]->(TimeSlot) traversal.",
+              "explanation": "After-hours activity (score=0.70). Login or activity outside standard business hours.",
+              "factor_name": "time_anomaly",
+              "factor_value": 0.7,
+              "graph_nodes_consulted": [
+                "Alert"
+              ]
+            },
+            {
+              "computation_method": "Alert property read: mfa_completed, device_fingerprint_match, vpn [TD-015]. Future: (Alert)-[:USES_DEVICE]->(Device) traversal.",
+              "explanation": "Partially trusted device (score=0.67). Two trust signals missing \u2014 verify device before acting.",
+              "factor_name": "device_trust",
+              "factor_value": 0.6667,
+              "graph_nodes_consulted": [
+                "Alert"
+              ]
+            }
+          ],
+          "total_nodes_consulted": 8
+        },
+        "recommendation": {
+          "action": "investigate",
+          "confidence": 0.9519262035604401,
+          "decision_id": "17452968-d5c8-4627-a47c-e7db4e947f74",
+          "pattern_id": null,
+          "playbook_id": null,
+          "reasoning": "Alert requires additional analyst review. Context gathered from 47 graph nodes. Escalating to Tier 2 for manual investigation.",
+          "routing_zone": "auto_approve"
+        },
+        "referral": {
+          "audit_summary": "No referral rules triggered.",
+          "reasons": [],
+          "should_refer": false
+        },
+        "referral_debug": {
+          "r2_sequence_count": 0,
+          "r7_cross_category_count": 0,
+          "rules_evaluated": [
+            "R1",
+            "R2",
+            "R3",
+            "R4",
+            "R5",
+            "R6",
+            "R7"
+          ],
+          "rules_fired": []
+        },
+        "situation_analysis": {
+          "decision_economics": {
+            "cost_avoided": "$127 analyst cost avoided per alert",
+            "monthly_projection": "At ~200 similar alerts/month: 149 analyst-hours and $25,400 saved",
+            "time_saved": "44 minutes vs manual triage"
+          },
+          "factors_detected": [
+            "anomalous_login_signal",
+            "mfa_not_completed",
+            "unrecognised_device",
+            "unconfirmed_travel_context"
+          ],
+          "mitre_tactic": "Initial Access",
+          "mitre_technique": "T1078",
+          "options_evaluated": [
+            {
+              "action": "false_positive_close",
+              "estimated_analyst_cost": 0.0,
+              "estimated_resolution_time": "3 seconds",
+              "factors": [
+                "privileged_identity_context",
+                "mfa_ok",
+                "device_known"
+              ],
+              "risk_if_wrong": "Low \u2014 auto-reopen if flagged",
+              "score": 0.92
+            },
+            {
+              "action": "escalate_tier2",
+              "estimated_analyst_cost": 127.0,
+              "estimated_resolution_time": "45 minutes",
+              "factors": [
+                "verify_travel_legitimacy"
+              ],
+              "risk_if_wrong": "None \u2014 human reviews",
+              "score": 0.06
+            },
+            {
+              "action": "enrich_and_wait",
+              "estimated_analyst_cost": 43.0,
+              "estimated_resolution_time": "15 minutes",
+              "factors": [
+                "monitor_additional_activity"
+              ],
+              "risk_if_wrong": "Low \u2014 delayed but monitored",
+              "score": 0.02
+            }
+          ],
+          "selected_option": "false_positive_close",
+          "selection_reasoning": "Travel record confirms user location. All authentication factors align with legitimate access.",
+          "situation_confidence": 0.65,
+          "situation_type": "travel_login_anomaly"
+        }
+      },
+      "raw_outcome_body": {
+        "alert_id": "DIAG-E4-CRED-004",
+        "centroid_update": {
+          "action_index": 1,
+          "action_name": "investigate",
+          "category_index": 0,
+          "category_name": "credential_access",
+          "centroid_delta_norm": 0.012247448713915891,
+          "correct": true
+        },
+        "consequence": "Pattern strengthened. Added to precedent library.",
+        "graph_updates": [
+          {
+            "after": 0.862,
+            "before": 0.859,
+            "direction": "strengthened",
+            "entity": "PAT-CRED-001",
+            "field": "confidence"
+          },
+          {
+            "after": 0.92,
+            "before": 0.9,
+            "direction": "strengthened",
+            "entity": "User->CredentialStore",
+            "field": "weight"
+          },
+          {
+            "after": 58.0,
+            "before": 57.0,
+            "direction": "strengthened",
+            "entity": "PAT-CRED-001",
+            "field": "precedent_count"
+          }
+        ],
+        "l5_centroid_persisted": true,
+        "l5_persistence": {
+          "conservation_status": "GREEN",
+          "conservation_status_reason": "learning_health_calibrating",
+          "l5_centroid_persisted": true,
+          "l5_persistence_skipped_reason": null,
+          "l5_persistence_source": "profile_scorer",
+          "l5_shaped_by_attempted": true,
+          "raw_conservation_status": "CALIBRATING"
+        },
+        "l5_persistence_skipped_reason": null,
+        "l5_shaped_by_attempted": true,
+        "narrative": "Decision confirmed correct. Pattern PAT-CRED-001 confidence increased to 86.2% (+0.3 points). This decision has been added to the precedent library (58 validated decisions). The system is now slightly more confident in auto-closing similar alerts of this type.",
+        "next_alerts_override": null,
+        "outcome": "correct"
+      }
+    },
+    {
+      "alert_id": "DIAG-E4-CRED-005",
+      "analyze": {
+        "action": "investigate",
+        "category": "credential_access",
+        "confidence": 0.964500221047202,
+        "decision_id": "6d03cdb4-2522-4919-8be3-9a0eecf37d8a",
+        "decision_method": "gae_scoring",
+        "factor_vector": [
+          0.825,
+          1.0,
+          0.0,
+          0.39999999999999997,
+          0.7,
+          0.6666666666666666
+        ],
+        "factor_vector_len": 6,
+        "referral": {
+          "audit_summary": "No referral rules triggered.",
+          "reasons": [],
+          "should_refer": false
+        },
+        "routing_zone": "auto_approve"
+      },
+      "analyze_status": 200,
+      "outcome": {
+        "centroid_update": {
+          "action_index": 1,
+          "action_name": "investigate",
+          "category_index": 0,
+          "category_name": "credential_access",
+          "centroid_delta_norm": 0.012247448713915891,
+          "correct": true
+        },
+        "correct": null,
+        "l5_centroid_persisted": true,
+        "l5_persistence": {
+          "conservation_status": "GREEN",
+          "conservation_status_reason": "learning_health_calibrating",
+          "l5_centroid_persisted": true,
+          "l5_persistence_skipped_reason": null,
+          "l5_persistence_source": "profile_scorer",
+          "l5_shaped_by_attempted": true,
+          "raw_conservation_status": "CALIBRATING"
+        },
+        "l5_persistence_skipped_reason": null,
+        "outcome": "correct",
+        "outcome_id": null,
+        "verification": null
+      },
+      "outcome_status": 200,
+      "raw_analyze_body": {
+        "alert": {
+          "_age_id": 1688849860263941,
+          "alert_id": "DIAG-E4-CRED-005",
+          "alert_type": "anomalous_login",
+          "asset_id": "DIAG-E4-CRED-005-ASSET",
+          "attack_pattern_id": "",
+          "c9b_proof": true,
+          "category": "credential_access",
+          "device_fingerprint_match": false,
+          "id": "DIAG-E4-CRED-005",
+          "mfa_completed": false,
+          "origin": "c9b_seed",
+          "severity": "critical",
+          "source": "c9b_seed",
+          "source_location": "c9b-seed-zone-e4-5",
+          "status": "pending",
+          "timestamp_epoch": 1725000000005,
+          "user_id": "DIAG-E4-CRED-005-USER",
+          "vpn_provider": "c9b_seed"
+        },
+        "analysis": {
+          "root_cause": "Anomalous anomalous_login from c9b-seed-zone-e4-5",
+          "severity_assessment": "CRITICAL severity based on context"
+        },
+        "attack_tactic": "Initial Access",
+        "attack_technique": "T1078",
+        "cluster_history": {
+          "current_position": 1,
+          "per_action": {},
+          "per_category": {},
+          "precision": 0.0,
+          "recent": [],
+          "source_user": "DIAG-E4-CRED-005-USER",
+          "total_prior": 0,
+          "trend": "new",
+          "trend_detail": "No prior verified decisions for this user."
+        },
+        "composite_gate": {
+          "approval_score": 0.5305,
+          "auto_approve": false,
+          "reason_codes": [
+            "cat_count 5 < 50 (maturity gate)"
+          ]
+        },
+        "context": {
+          "key_facts": [],
+          "nodes_count": 47,
+          "patterns_matched": 0,
+          "subgraphs_traversed": [
+            "User Profile",
+            "Asset Inventory",
+            "Travel Calendar",
+            "Pattern Library",
+            "Playbook Registry"
+          ]
+        },
+        "decision_method": "gae_scoring",
+        "gae_scoring": {
+          "action_probabilities": {
+            "escalate": 0.009262,
+            "investigate": 0.9645,
+            "monitor": 0.024352,
+            "suppress": 0.001886
+          },
+          "ambiguous": false,
+          "decision_id": "6d03cdb4-2522-4919-8be3-9a0eecf37d8a",
+          "decision_method": "ProfileScorer centroid-proximity scoring (n_factors \u00d7 5 actions \u00d7 n_categories, L2 kernel \u03c4=0.1, EXP-E1 validated)",
+          "factor_names": [
+            "privileged_identity_context",
+            "asset_criticality",
+            "threat_intel_enrichment",
+            "pattern_history",
+            "time_anomaly",
+            "device_trust"
+          ],
+          "factor_vector": [
+            0.825,
+            1.0,
+            0.0,
+            0.39999999999999997,
+            0.7,
+            0.6666666666666666
+          ],
+          "low_confidence": false,
+          "routing_zone": "auto_approve",
+          "softmax_sum": 1.0,
+          "temperature": 0.1
+        },
+        "graph_data": {
+          "nodes": [
+            {
+              "id": "DIAG-E4-CRED-005",
+              "label": "DIAG-E4-CRED-005",
+              "properties": {
+                "alert_type": "anomalous_login",
+                "severity": "critical"
+              },
+              "type": "Alert"
+            },
+            {
+              "id": "DIAG-E4-CRED-005-USER",
+              "label": "C9B Proof User 5",
+              "properties": {
+                "risk_score": 0.92,
+                "title": null
+              },
+              "type": "User"
+            },
+            {
+              "id": "DIAG-E4-CRED-005-ASSET",
+              "label": "c9b-proof-e4-5",
+              "properties": {
+                "criticality": "critical"
+              },
+              "type": "Asset"
+            }
+          ],
+          "relationships": [
+            {
+              "source": "DIAG-E4-CRED-005",
+              "target": "DIAG-E4-CRED-005-USER",
+              "type": "INVOLVES"
+            },
+            {
+              "source": "DIAG-E4-CRED-005",
+              "target": "DIAG-E4-CRED-005-ASSET",
+              "type": "DETECTED_ON"
+            }
+          ]
+        },
+        "narrative": "DIAG-E4-CRED-005 classified as Travel Login Anomaly (T1078 \u00b7 Initial Access, 65% confidence). Graph traversal consulted 47 nodes across 5 subgraphs (User Profile, Asset Inventory, Travel Calendar +2 more). Dominant signal: anomalous login signal (calibrated to 65% classification confidence by the pattern library). Recommended action: Investigate further (96% agent confidence). This recommendation is calibrated from 23 verified outcomes across all alert categories.",
+        "provenance": {
+          "action": "investigate",
+          "category": "credential_access",
+          "decision_id": "6d03cdb4-2522-4919-8be3-9a0eecf37d8a",
+          "factors": [
+            {
+              "computation_method": "Security context read: user_risk_score, user_title, mfa_completed, device_fingerprint_match",
+              "explanation": "Privileged or high-risk identity context detected (score=0.82). Elevated role or weak session trust signals raise risk.",
+              "factor_name": "privileged_identity_context",
+              "factor_value": 0.825,
+              "graph_nodes_consulted": [
+                "User",
+                "Identity",
+                "Device"
+              ]
+            },
+            {
+              "computation_method": "Graph traversal: (Alert)-[:DETECTED_ON]->(Asset)-[:STORES]->(DataClass)",
+              "explanation": "Critical asset detected (score=1.00). CRITICAL criticality level with sensitive data classification.",
+              "factor_name": "asset_criticality",
+              "factor_value": 1.0,
+              "graph_nodes_consulted": [
+                "Alert",
+                "Asset",
+                "DataClass"
+              ]
+            },
+            {
+              "computation_method": "Graph traversal: (ThreatIntel)-[:ASSOCIATED_WITH]->(Alert)",
+              "explanation": "No threat intelligence match (score=0.00). Alert source/destination not present in any IOC feed.",
+              "factor_name": "threat_intel_enrichment",
+              "factor_value": 0.0,
+              "graph_nodes_consulted": [
+                "ThreatIntel",
+                "Alert"
+              ]
+            },
+            {
+              "computation_method": "Graph traversal: (Decision)-[:DECIDED_ON]->(Alert) WHERE outcome IS NOT NULL \u2014 last 100 decisions for this alert_type",
+              "explanation": "Low historical accuracy (score=0.40). Prior decisions for this alert type had high error rate.",
+              "factor_name": "pattern_history",
+              "factor_value": 0.4,
+              "graph_nodes_consulted": [
+                "Decision",
+                "Alert"
+              ]
+            },
+            {
+              "computation_method": "Alert property read: business_hours_login, weekend_login [TD-014]. Future: (User)-[:ACTIVE_AT]->(TimeSlot) traversal.",
+              "explanation": "After-hours activity (score=0.70). Login or activity outside standard business hours.",
+              "factor_name": "time_anomaly",
+              "factor_value": 0.7,
+              "graph_nodes_consulted": [
+                "Alert"
+              ]
+            },
+            {
+              "computation_method": "Alert property read: mfa_completed, device_fingerprint_match, vpn [TD-015]. Future: (Alert)-[:USES_DEVICE]->(Device) traversal.",
+              "explanation": "Partially trusted device (score=0.67). Two trust signals missing \u2014 verify device before acting.",
+              "factor_name": "device_trust",
+              "factor_value": 0.6667,
+              "graph_nodes_consulted": [
+                "Alert"
+              ]
+            }
+          ],
+          "total_nodes_consulted": 8
+        },
+        "recommendation": {
+          "action": "investigate",
+          "confidence": 0.964500221047202,
+          "decision_id": "6d03cdb4-2522-4919-8be3-9a0eecf37d8a",
+          "pattern_id": null,
+          "playbook_id": null,
+          "reasoning": "Alert requires additional analyst review. Context gathered from 47 graph nodes. Escalating to Tier 2 for manual investigation.",
+          "routing_zone": "auto_approve"
+        },
+        "referral": {
+          "audit_summary": "No referral rules triggered.",
+          "reasons": [],
+          "should_refer": false
+        },
+        "referral_debug": {
+          "r2_sequence_count": 0,
+          "r7_cross_category_count": 0,
+          "rules_evaluated": [
+            "R1",
+            "R2",
+            "R3",
+            "R4",
+            "R5",
+            "R6",
+            "R7"
+          ],
+          "rules_fired": []
+        },
+        "situation_analysis": {
+          "decision_economics": {
+            "cost_avoided": "$127 analyst cost avoided per alert",
+            "monthly_projection": "At ~200 similar alerts/month: 149 analyst-hours and $25,400 saved",
+            "time_saved": "44 minutes vs manual triage"
+          },
+          "factors_detected": [
+            "anomalous_login_signal",
+            "mfa_not_completed",
+            "unrecognised_device",
+            "unconfirmed_travel_context"
+          ],
+          "mitre_tactic": "Initial Access",
+          "mitre_technique": "T1078",
+          "options_evaluated": [
+            {
+              "action": "false_positive_close",
+              "estimated_analyst_cost": 0.0,
+              "estimated_resolution_time": "3 seconds",
+              "factors": [
+                "privileged_identity_context",
+                "mfa_ok",
+                "device_known"
+              ],
+              "risk_if_wrong": "Low \u2014 auto-reopen if flagged",
+              "score": 0.92
+            },
+            {
+              "action": "escalate_tier2",
+              "estimated_analyst_cost": 127.0,
+              "estimated_resolution_time": "45 minutes",
+              "factors": [
+                "verify_travel_legitimacy"
+              ],
+              "risk_if_wrong": "None \u2014 human reviews",
+              "score": 0.06
+            },
+            {
+              "action": "enrich_and_wait",
+              "estimated_analyst_cost": 43.0,
+              "estimated_resolution_time": "15 minutes",
+              "factors": [
+                "monitor_additional_activity"
+              ],
+              "risk_if_wrong": "Low \u2014 delayed but monitored",
+              "score": 0.02
+            }
+          ],
+          "selected_option": "false_positive_close",
+          "selection_reasoning": "Travel record confirms user location. All authentication factors align with legitimate access.",
+          "situation_confidence": 0.65,
+          "situation_type": "travel_login_anomaly"
+        }
+      },
+      "raw_outcome_body": {
+        "alert_id": "DIAG-E4-CRED-005",
+        "centroid_update": {
+          "action_index": 1,
+          "action_name": "investigate",
+          "category_index": 0,
+          "category_name": "credential_access",
+          "centroid_delta_norm": 0.012247448713915891,
+          "correct": true
+        },
+        "consequence": "Pattern strengthened. Added to precedent library.",
+        "graph_updates": [
+          {
+            "after": 0.865,
+            "before": 0.862,
+            "direction": "strengthened",
+            "entity": "PAT-CRED-001",
+            "field": "confidence"
+          },
+          {
+            "after": 0.9400000000000001,
+            "before": 0.92,
+            "direction": "strengthened",
+            "entity": "User->CredentialStore",
+            "field": "weight"
+          },
+          {
+            "after": 59.0,
+            "before": 58.0,
+            "direction": "strengthened",
+            "entity": "PAT-CRED-001",
+            "field": "precedent_count"
+          }
+        ],
+        "l5_centroid_persisted": true,
+        "l5_persistence": {
+          "conservation_status": "GREEN",
+          "conservation_status_reason": "learning_health_calibrating",
+          "l5_centroid_persisted": true,
+          "l5_persistence_skipped_reason": null,
+          "l5_persistence_source": "profile_scorer",
+          "l5_shaped_by_attempted": true,
+          "raw_conservation_status": "CALIBRATING"
+        },
+        "l5_persistence_skipped_reason": null,
+        "l5_shaped_by_attempted": true,
+        "narrative": "Decision confirmed correct. Pattern PAT-CRED-001 confidence increased to 86.5% (+0.3 points). This decision has been added to the precedent library (59 validated decisions). The system is now slightly more confident in auto-closing similar alerts of this type.",
+        "next_alerts_override": null,
+        "outcome": "correct"
+      }
+    }
+  ],
+  "readback": {
+    "counts": {
+      "decisions_domain": 5,
+      "diag_caused_l5_centroid": 1,
+      "diag_shaped_by": 1,
+      "l5_centroid": 1,
+      "l5_conservation": 0,
+      "l5_dk_weight": 0,
+      "non_referral": 5,
+      "outcomes_posted": 5,
+      "shaped_by": 1
+    },
+    "raw": {
+      "decision_rows": [
+        {
+          "action": "investigate",
+          "alert_id": "DIAG-E4-CRED-001",
+          "category": "credential_access",
+          "confidence": 0.8770461205137833,
+          "correct": true,
+          "decision_id": "c4b4e9fa-b2cd-48f8-abd4-619bbfa98d33",
+          "factor_vector": [
+            0.825,
+            1.0,
+            0.0,
+            0.4,
+            0.7,
+            0.6666666666666666
+          ],
+          "outcome": "correct",
+          "verified_at_epoch": 1780941609867
+        },
+        {
+          "action": "investigate",
+          "alert_id": "DIAG-E4-CRED-002",
+          "category": "credential_access",
+          "confidence": 0.9102820463848372,
+          "correct": true,
+          "decision_id": "37b8b697-3b92-4d10-a215-c100602708b6",
+          "factor_vector": [
+            0.825,
+            1.0,
+            0.0,
+            0.4,
+            0.7,
+            0.6666666666666666
+          ],
+          "outcome": "correct",
+          "verified_at_epoch": 1780941612966
+        },
+        {
+          "action": "investigate",
+          "alert_id": "DIAG-E4-CRED-003",
+          "category": "credential_access",
+          "confidence": 0.934466659781363,
+          "correct": true,
+          "decision_id": "56018fa9-7c74-44bd-847b-ae330335a077",
+          "factor_vector": [
+            0.825,
+            1.0,
+            0.0,
+            0.4,
+            0.7,
+            0.6666666666666666
+          ],
+          "outcome": "correct",
+          "verified_at_epoch": 1780941616236
+        },
+        {
+          "action": "investigate",
+          "alert_id": "DIAG-E4-CRED-004",
+          "category": "credential_access",
+          "confidence": 0.9519262035604401,
+          "correct": true,
+          "decision_id": "17452968-d5c8-4627-a47c-e7db4e947f74",
+          "factor_vector": [
+            0.825,
+            1.0,
+            0.0,
+            0.4,
+            0.7,
+            0.6666666666666666
+          ],
+          "outcome": "correct",
+          "verified_at_epoch": 1780941619532
+        },
+        {
+          "action": "investigate",
+          "alert_id": "DIAG-E4-CRED-005",
+          "category": "credential_access",
+          "confidence": 0.964500221047202,
+          "correct": true,
+          "decision_id": "6d03cdb4-2522-4919-8be3-9a0eecf37d8a",
+          "factor_vector": [
+            0.825,
+            1.0,
+            0.0,
+            0.39999999999999997,
+            0.7,
+            0.6666666666666666
+          ],
+          "outcome": "correct",
+          "verified_at_epoch": 1780941623035
+        }
+      ],
+      "decisions_domain": [
+        {
+          "cnt": 5
+        }
+      ],
+      "diag_caused_l5_centroid": [
+        {
+          "cnt": 1
+        }
+      ],
+      "diag_l5_rows": [
+        {
+          "action": "investigate",
+          "category": "credential_access",
+          "caused_by_decision_id": "6d03cdb4-2522-4919-8be3-9a0eecf37d8a",
+          "delta_norm": 0.012247448713915901,
+          "domain": "soc"
+        }
+      ],
+      "diag_shaped_by": [
+        {
+          "cnt": 1
+        }
+      ],
+      "diag_shaped_rows": [
+        {
+          "action": "investigate",
+          "alert_id": "DIAG-E4-CRED-005",
+          "category": "credential_access",
+          "caused_by_decision_id": "6d03cdb4-2522-4919-8be3-9a0eecf37d8a",
+          "decision_id": "6d03cdb4-2522-4919-8be3-9a0eecf37d8a"
+        }
+      ],
+      "l5_centroid": [
+        {
+          "cnt": 1
+        }
+      ],
+      "l5_conservation": [
+        {
+          "cnt": 0
+        }
+      ],
+      "l5_dk_weight": [
+        {
+          "cnt": 0
+        }
+      ],
+      "non_referral": [
+        {
+          "cnt": 5
+        }
+      ],
+      "outcomes_posted": [
+        {
+          "cnt": 5
+        }
+      ],
+      "shaped_by": [
+        {
+          "cnt": 1
+        }
+      ]
+    }
+  },
+  "seed": {
+    "created": 5,
+    "existing": 0,
+    "seeded": [
+      {
+        "alert_id": "DIAG-E4-CRED-001",
+        "alert_type": "anomalous_login",
+        "asset_criticality": "critical",
+        "asset_id": "DIAG-E4-CRED-001-ASSET",
+        "category": "credential_access",
+        "device_fingerprint_match": false,
+        "mfa_completed": false,
+        "risk_score": 0.92,
+        "severity": "critical",
+        "user_id": "DIAG-E4-CRED-001-USER"
+      },
+      {
+        "alert_id": "DIAG-E4-CRED-002",
+        "alert_type": "anomalous_login",
+        "asset_criticality": "critical",
+        "asset_id": "DIAG-E4-CRED-002-ASSET",
+        "category": "credential_access",
+        "device_fingerprint_match": false,
+        "mfa_completed": false,
+        "risk_score": 0.92,
+        "severity": "critical",
+        "user_id": "DIAG-E4-CRED-002-USER"
+      },
+      {
+        "alert_id": "DIAG-E4-CRED-003",
+        "alert_type": "anomalous_login",
+        "asset_criticality": "critical",
+        "asset_id": "DIAG-E4-CRED-003-ASSET",
+        "category": "credential_access",
+        "device_fingerprint_match": false,
+        "mfa_completed": false,
+        "risk_score": 0.92,
+        "severity": "critical",
+        "user_id": "DIAG-E4-CRED-003-USER"
+      },
+      {
+        "alert_id": "DIAG-E4-CRED-004",
+        "alert_type": "anomalous_login",
+        "asset_criticality": "critical",
+        "asset_id": "DIAG-E4-CRED-004-ASSET",
+        "category": "credential_access",
+        "device_fingerprint_match": false,
+        "mfa_completed": false,
+        "risk_score": 0.92,
+        "severity": "critical",
+        "user_id": "DIAG-E4-CRED-004-USER"
+      },
+      {
+        "alert_id": "DIAG-E4-CRED-005",
+        "alert_type": "anomalous_login",
+        "asset_criticality": "critical",
+        "asset_id": "DIAG-E4-CRED-005-ASSET",
+        "category": "credential_access",
+        "device_fingerprint_match": false,
+        "mfa_completed": false,
+        "risk_score": 0.92,
+        "severity": "critical",
+        "user_id": "DIAG-E4-CRED-005-USER"
+      }
+    ]
+  }
+}
