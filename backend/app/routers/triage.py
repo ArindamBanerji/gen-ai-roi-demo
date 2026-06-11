@@ -2,10 +2,14 @@
 Alert Triage API - Tab 3
 Graph-based reasoning and closed-loop execution
 """
+import contextlib
 import json
 import logging
+import os
+import time
 from fastapi import APIRouter, HTTPException
-from typing import List, Dict, Any
+from pathlib import Path
+from typing import List, Dict, Any, Iterator
 from datetime import datetime
 import uuid
 
@@ -18,6 +22,8 @@ from app.services.policy import detect_policy_conflicts, get_conflict_history
 from app.services.triage import get_decision_factors, append_confidence_snapshot
 from app.services.audit import record_decision
 from app.services.event_bus import event_bus, DecisionMade, OutcomeVerified, GraphMutated
+from app.services.soc_context_split import split_soc_security_context
+from ci_platform.copilot_core import EntityCache, EntityContextCacheAdapter
 
 
 def _node_id(entity: dict, prefix: str = "") -> str:
@@ -37,12 +43,315 @@ from app.domains.soc.config import (
     SOC_CATEGORY_CONFIDENCE_FLOORS,
     SOC_AGENT_ZONE_ELEVATED,
     LEARNING_ENABLED,
+    is_learning_enabled,
     N_FACTORS,
 )
 from app.domains.soc.orchestrator import compute_factor_vector
 from gae.scoring import score_alert
 
 logger = logging.getLogger(__name__)
+
+
+_SOC_PERF_FALSE_VALUES = {"", "0", "false", "no", "off"}
+_SOC_ENTITY_CACHE_FALSE_VALUES = _SOC_PERF_FALSE_VALUES
+_SOC_DECISION_PIPELINE_SHADOW_FALSE_VALUES = _SOC_PERF_FALSE_VALUES
+_SOC_ENTITY_CACHE = EntityCache(max_size=4096, source="soc.entity_context_cache")
+_SOC_ENTITY_CONTEXT_CACHE = EntityContextCacheAdapter(_SOC_ENTITY_CACHE, enabled=True)
+_SOC_PERF_ALWAYS_SUMMARY_PHASES = {
+    "analyze_request_total",
+    "outcome_request_total",
+}
+
+
+def _soc_perf_repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def _soc_perf_enabled() -> bool:
+    return os.getenv("SOC_PERF_TRACE_ENABLED", "false").strip().lower() not in _SOC_PERF_FALSE_VALUES
+
+
+def _soc_entity_cache_enabled() -> bool:
+    return os.getenv("USE_ENTITY_CACHE", "false").strip().lower() not in _SOC_ENTITY_CACHE_FALSE_VALUES
+
+
+def _soc_decision_pipeline_shadow_enabled() -> bool:
+    return (
+        os.getenv("USE_SOC_DECISION_PIPELINE_SHADOW", "false").strip().lower()
+        not in _SOC_DECISION_PIPELINE_SHADOW_FALSE_VALUES
+    )
+
+
+def _soc_entity_cache_diagnostics() -> Dict[str, Any]:
+    stats = _SOC_ENTITY_CONTEXT_CACHE.stats()
+    status = _SOC_ENTITY_CONTEXT_CACHE.get_status()
+    return {
+        "enabled": _soc_entity_cache_enabled(),
+        "adapter_enabled": status.enabled,
+        "hits": stats.hits,
+        "misses": stats.misses,
+        "loads": stats.loads,
+        "invalidations": stats.invalidations,
+        "evictions": stats.evictions,
+        "size": stats.size,
+        "max_size": stats.max_size,
+    }
+
+
+def _soc_reset_entity_cache_for_tests() -> None:
+    global _SOC_ENTITY_CACHE, _SOC_ENTITY_CONTEXT_CACHE
+    _SOC_ENTITY_CACHE = EntityCache(max_size=4096, source="soc.entity_context_cache")
+    _SOC_ENTITY_CONTEXT_CACHE = EntityContextCacheAdapter(_SOC_ENTITY_CACHE, enabled=True)
+
+
+def _soc_invalidate_entity_context(domain: str, kind: str, identifier: str) -> bool:
+    return _SOC_ENTITY_CONTEXT_CACHE.invalidate(domain, kind, identifier)
+
+
+async def _soc_maybe_attach_decision_pipeline_shadow(
+    response: Dict[str, Any],
+    *,
+    alert_data: Dict[str, Any],
+    context: Dict[str, Any],
+) -> Dict[str, Any]:
+    if not _soc_decision_pipeline_shadow_enabled():
+        return response
+
+    from app.services.soc_domain_profile import run_soc_decision_pipeline_shadow
+
+    try:
+        shadow = await run_soc_decision_pipeline_shadow(
+            response,
+            alert=alert_data,
+            context=context,
+        )
+    except Exception as exc:
+        shadow = {
+            "enabled": True,
+            "matched": False,
+            "status": "shadow_failed",
+            "error_type": type(exc).__name__,
+            "error": "shadow pipeline unavailable",
+            "differences": [],
+            "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch",
+            ],
+            "field_coverage": [],
+            "phase_order": [],
+            "background_status": {},
+            "persistence_strategy": "shadow_noop",
+            "side_effects": {
+                "decision_writes": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0,
+                "counter_updates": 0,
+                "graph_mutations": 0,
+            },
+        }
+    diagnostics = dict(response.get("_diagnostics") or {})
+    diagnostics["soc_decision_pipeline_shadow"] = shadow
+    response["_diagnostics"] = diagnostics
+    return response
+
+
+async def _soc_get_security_context_for_analyze(alert_id: str) -> Dict[str, Any]:
+    if not _soc_entity_cache_enabled():
+        return await neo4j_client.get_security_context(alert_id)
+
+    flat_context = await neo4j_client.get_security_context(alert_id)
+    split = split_soc_security_context(flat_context)
+    if split.cache_key is None:
+        return split.recompose_for_current_route()
+
+    async def _stable_entity_loader() -> Dict[str, Any]:
+        return dict(split.stable_entity)
+
+    stable_entity = await _SOC_ENTITY_CONTEXT_CACHE.get_context(
+        split.cache_key.domain,
+        split.cache_key.kind,
+        split.cache_key.identifier,
+        _stable_entity_loader,
+        metadata={"route": "/api/alert/analyze", "context_bucket": "stable_entity"},
+        source="soc.analyze.security_context_split",
+    )
+    return {
+        **split.fresh_alert,
+        **dict(stable_entity or {}),
+        **split.non_cacheable,
+        **split.ambiguous,
+    }
+
+
+def _soc_perf_trace_level() -> str:
+    level = os.getenv("SOC_PERF_TRACE_LEVEL", "summary").strip().lower()
+    return level if level in {"summary", "detailed"} else "summary"
+
+
+def _soc_perf_output_path() -> Path:
+    raw = os.getenv("SOC_PERF_TRACE_OUTPUT", "scratch/temp/soc_perf_trace.jsonl")
+    path = Path(raw)
+    return path if path.is_absolute() else _soc_perf_repo_root() / path
+
+
+def _soc_perf_slow_ms() -> float:
+    try:
+        return float(os.getenv("SOC_PERF_TRACE_SLOW_MS", "500"))
+    except ValueError:
+        return 500.0
+
+
+def _soc_perf_safe_value(key: str, value: Any) -> Any:
+    key_l = key.lower()
+    if any(secret in key_l for secret in ("password", "secret", "token", "authorization", "dsn")):
+        return "***"
+    if "factor_vector" in key_l or key_l in {"f", "fv", "vector"}:
+        try:
+            return {"len": len(value)}
+        except Exception:
+            return "<redacted>"
+    if "cypher" in key_l or "query" in key_l:
+        return "<redacted>"
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    if isinstance(value, (list, tuple, set)):
+        return {"len": len(value)}
+    if isinstance(value, dict):
+        return {str(k): _soc_perf_safe_value(str(k), v) for k, v in value.items()}
+    return str(value)
+
+
+def _soc_perf_sanitize_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        str(key): _soc_perf_safe_value(str(key), value)
+        for key, value in (metadata or {}).items()
+        if value is not None
+    }
+
+
+def _soc_perf_start() -> float:
+    return time.perf_counter()
+
+
+def _soc_perf_emit_duration(
+    phase: str,
+    started: float,
+    *,
+    route: str,
+    status: str = "ok",
+    exception_type: str | None = None,
+    alert_id: str | None = None,
+    decision_id: str | None = None,
+    category: str | None = None,
+    action: str | None = None,
+    **metadata: Any,
+) -> None:
+    if not _soc_perf_enabled():
+        return
+    duration_ms = (time.perf_counter() - started) * 1000.0
+    if (
+        _soc_perf_trace_level() != "detailed"
+        and phase not in _SOC_PERF_ALWAYS_SUMMARY_PHASES
+        and duration_ms < _soc_perf_slow_ms()
+    ):
+        return
+    event = {
+        "event_type": "phase_timing",
+        "phase": phase,
+        "route": route,
+        "duration_ms": round(duration_ms, 3),
+        "status": status,
+        "exception_type": exception_type,
+        "graph_name": os.getenv("AGE_GRAPH_NAME"),
+        "alert_id": alert_id,
+        "decision_id": decision_id,
+        "category": category,
+        "action": action,
+        "metadata": _soc_perf_sanitize_metadata(metadata),
+        "timestamp_epoch_ms": int(time.time() * 1000),
+    }
+    try:
+        output_path = _soc_perf_output_path()
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with output_path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(event, sort_keys=True) + "\n")
+    except Exception:
+        pass
+
+
+@contextlib.contextmanager
+def _soc_perf_phase(
+    phase: str,
+    *,
+    route: str,
+    alert_id: str | None = None,
+    decision_id: str | None = None,
+    category: str | None = None,
+    action: str | None = None,
+    **metadata: Any,
+) -> Iterator[None]:
+    started = _soc_perf_start()
+    status = "ok"
+    exception_type = None
+    try:
+        yield
+    except Exception as exc:
+        status = "error"
+        exception_type = type(exc).__name__
+        raise
+    finally:
+        _soc_perf_emit_duration(
+            phase,
+            started,
+            route=route,
+            status=status,
+            exception_type=exception_type,
+            alert_id=alert_id,
+            decision_id=decision_id,
+            category=category,
+            action=action,
+            **metadata,
+        )
+
+
+def _soc_learning_enabled() -> bool:
+    """Runtime SOC learning gate with legacy route-level monkeypatch support."""
+    from app.domains.soc import config as _soc_config
+
+    if LEARNING_ENABLED != _soc_config.LEARNING_ENABLED:
+        return bool(LEARNING_ENABLED)
+    return is_learning_enabled()
+
+
+def _soc_effective_conservation_status(health: Dict[str, Any]) -> tuple[str, str | None]:
+    """Return the ProfileScorer pause status without hard-freezing calibration runs."""
+    raw_status = str((health or {}).get("status") or "GREEN").upper()
+    if bool((health or {}).get("auto_pause_active")):
+        return "RED", "auto_pause_active"
+
+    if raw_status == "CALIBRATING":
+        return "GREEN", "learning_health_calibrating"
+
+    components = (health or {}).get("components") or {}
+    verified = components.get("verified_decisions", components.get("n"))
+    try:
+        verified_count = int(verified) if verified is not None else None
+    except (TypeError, ValueError):
+        verified_count = None
+
+    if raw_status in {"AMBER", "RED"} and verified_count is not None:
+        try:
+            from app.services.learning_health import CALIBRATION_DECISIONS
+        except Exception:
+            CALIBRATION_DECISIONS = 300
+        if verified_count < int(CALIBRATION_DECISIONS):
+            return "GREEN", f"under_calibrated_soc_conservation_{raw_status.lower()}"
+
+    return raw_status, None
 
 
 router = APIRouter()
@@ -143,29 +452,39 @@ async def analyze_alert(request: ProcessAlertRequest):
     Writes Decision node to Neo4j after scoring.  Emits DecisionMade +
     GraphMutated events (design principle: every graph mutation emits events).
     """
+    _perf_route = "/api/alert/analyze"
+    _perf_alert_id = getattr(request, "alert_id", None)
+    _perf_total_started = _soc_perf_start()
+    _perf_total_status = "ok"
+    _perf_total_exception = None
 
     # Guard: ProfileScorer must be attached before any scoring attempt
-    from app.services.gae_state import get_profile_scorer as _get_scorer, init_learning_state as _init_ls
-    _scorer = _get_scorer()
-    if _scorer is None:
-        try:
-            _init_ls()
-            _scorer = _get_scorer()
-        except Exception:
-            pass
-    if _scorer is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Scorer not ready — backend restarting or reset in progress"
-        )
+    with _soc_perf_phase("scorer_readiness", route=_perf_route, alert_id=_perf_alert_id):
+        from app.services.gae_state import get_profile_scorer as _get_scorer, init_learning_state as _init_ls
+        _scorer = _get_scorer()
+        if _scorer is None:
+            try:
+                _init_ls()
+                _scorer = _get_scorer()
+            except Exception:
+                pass
+        if _scorer is None:
+            _perf_total_status = "error"
+            _perf_total_exception = "HTTPException"
+            raise HTTPException(
+                status_code=503,
+                detail="Scorer not ready — backend restarting or reset in progress"
+            )
 
     try:
-        alert_id = request.alert_id
+        with _soc_perf_phase("request_parse", route=_perf_route, alert_id=_perf_alert_id):
+            alert_id = request.alert_id
 
         # ====================================================================
         # Step 1: Get full alert details
         # ====================================================================
-        alert_data = await neo4j_client.get_alert(alert_id)
+        with _soc_perf_phase("alert_lookup", route=_perf_route, alert_id=alert_id):
+            alert_data = await neo4j_client.get_alert(alert_id)
 
         if not alert_data:
             raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
@@ -173,7 +492,8 @@ async def analyze_alert(request: ProcessAlertRequest):
         # ====================================================================
         # Step 2: Get security context (47 nodes) — kept for key_facts/narrative
         # ====================================================================
-        context = await neo4j_client.get_security_context(alert_id)
+        with _soc_perf_phase("security_context_lookup", route=_perf_route, alert_id=alert_id):
+            context = await _soc_get_security_context_for_analyze(alert_id)
 
         if not context:
             raise HTTPException(status_code=404, detail=f"Context for {alert_id} not found")
@@ -181,10 +501,11 @@ async def analyze_alert(request: ProcessAlertRequest):
         # ====================================================================
         # Step 3: Situation Analysis (Loop 1: Context Intelligence)
         # ====================================================================
-        alert_type = context.get("alert_type") or "unknown"
-        situation_analysis = analyze_situation(alert_type, context)
-        from app.domains.soc.config import resolve_alert_category
-        alert_category = resolve_alert_category(alert_type)
+        with _soc_perf_phase("category_resolution", route=_perf_route, alert_id=alert_id):
+            alert_type = context.get("alert_type") or "unknown"
+            situation_analysis = analyze_situation(alert_type, context)
+            from app.domains.soc.config import resolve_alert_category
+            alert_category = resolve_alert_category(alert_type)
         if alert_category == "unclassified":
             logger.warning(
                 "[TRIAGE] Unclassified alert_type=%r for alert_id=%s; skipping ProfileScorer",
@@ -206,50 +527,76 @@ async def analyze_alert(request: ProcessAlertRequest):
         # 4a. Compute factor vector via orchestrator (FactorComputers → Neo4j, one per factor)
         # 4b. score_alert: Eq. 4  P(action|alert) = softmax(f·Wᵀ / τ)
         # ====================================================================
-        print(f"[GAE] Computing factor vector for {alert_id}...")
-        computers = SOCDomainConfig.get_factor_computers()
-        f = await compute_factor_vector(alert_data, computers, neo4j_client)
-        f_2d = f.reshape(1, -1)  # kept for legacy reference; ProfileScorer uses f.flatten()
+        with _soc_perf_phase(
+            "factor_vector_construction",
+            route=_perf_route,
+            alert_id=alert_id,
+            category=alert_category,
+        ):
+            print(f"[GAE] Computing factor vector for {alert_id}...")
+            computers = SOCDomainConfig.get_factor_computers()
+            f = await compute_factor_vector(alert_data, computers, neo4j_client)
+            f_2d = f.reshape(1, -1)  # kept for legacy reference; ProfileScorer uses f.flatten()
 
         # DEPRECATED v5.0: W-matrix scoring replaced by ProfileScorer
         # W       = get_learning_state().W
         # scoring = score_alert(f_2d, W, actions, tau)
 
-        from app.domains.soc.config import SCORER_ACTIONS
-        scorer_actions = list(SCORER_ACTIONS)  # A=4 classification actions (ProfileScorer axis-1)
-        tau     = SOCDomainConfig.get_temperature()  # τ=0.1 (V3B validated, ECE=0.036)
+        with _soc_perf_phase(
+            "scorer_decision",
+            route=_perf_route,
+            alert_id=alert_id,
+            category=alert_category,
+            factor_vector_len=len(f.flatten()),
+        ):
+            from app.domains.soc.config import SCORER_ACTIONS
+            scorer_actions = list(SCORER_ACTIONS)  # A=4 classification actions (ProfileScorer axis-1)
+            tau     = SOCDomainConfig.get_temperature()  # τ=0.1 (V3B validated, ECE=0.036)
 
-        # v5.0: ProfileScorer centroid-proximity scoring (EXP-E1 validated L2, τ=0.1)
-        _cfg = SOCDomainConfig()
-        # CORR-1: resolve alert_type → category via explicit map (not direct equality)
-        _cat_idx = _cfg.get_category_index(alert_category)
-        _scoring_result = _scorer.score(f.flatten(), category_index=_cat_idx)
-        triage_entropy = _scoring_result.entropy if hasattr(_scoring_result, 'entropy') else None
-        triage_confidence_gap = _scoring_result.confidence_gap if hasattr(_scoring_result, 'confidence_gap') else None
+            # v5.0: ProfileScorer centroid-proximity scoring (EXP-E1 validated L2, τ=0.1)
+            _cfg = SOCDomainConfig()
+            # CORR-1: resolve alert_type → category via explicit map (not direct equality)
+            _cat_idx = _cfg.get_category_index(alert_category)
+            _scoring_result = _scorer.score(f.flatten(), category_index=_cat_idx)
+            triage_entropy = _scoring_result.entropy if hasattr(_scoring_result, 'entropy') else None
+            triage_confidence_gap = _scoring_result.confidence_gap if hasattr(_scoring_result, 'confidence_gap') else None
 
         # Phase 0b gate: scorer outputs A=4 (escalate/investigate/suppress/monitor).
         # refer_to_analyst is NOT a scorer action — the gate adds it when confidence
         # is below CONFIDENCE_THRESHOLD (0.70).  This replaces the v5.5 ReferralPolicy
         # centroid-proximity gate and raises accuracy ceiling from 80.6% → ~90-95%.
-        from app.services.composite_gate import CompositeDiscriminant as _CGD
-        selected_action = _scoring_result.action_name
-        confidence = _scoring_result.confidence
+        with _soc_perf_phase(
+            "post_scorer_confidence_gate",
+            route=_perf_route,
+            alert_id=alert_id,
+            category=alert_category,
+        ):
+            from app.services.composite_gate import CompositeDiscriminant as _CGD
+            selected_action = _scoring_result.action_name
+            confidence = _scoring_result.confidence
 
-        _refer_threshold = _CGD.CATEGORY_CONFIDENCE_THRESHOLDS.get(
-            alert_category, _CGD.CONFIDENCE_THRESHOLD
-        )
-        if confidence < _refer_threshold:
-            selected_action = "refer_to_analyst"
-            logger.info(
-                "[TRIAGE-Phase0b] conf=%.3f < %.2f — gate overrides to refer_to_analyst (cat=%s)",
-                confidence, _refer_threshold, alert_category,
+            _refer_threshold = _CGD.CATEGORY_CONFIDENCE_THRESHOLDS.get(
+                alert_category, _CGD.CONFIDENCE_THRESHOLD
             )
+            if confidence < _refer_threshold:
+                selected_action = "refer_to_analyst"
+                logger.info(
+                    "[TRIAGE-Phase0b] conf=%.3f < %.2f — gate overrides to refer_to_analyst (cat=%s)",
+                    confidence, _refer_threshold, alert_category,
+                )
 
         # v5.0 routing: auto-approve / agent zone / human review
-        _threshold = SOC_AUTO_APPROVE_THRESHOLDS.get(selected_action)
-        _cat_floor = SOC_CATEGORY_CONFIDENCE_FLOORS.get(alert_category, _threshold)
-        _effective_threshold = _cat_floor if _cat_floor else _threshold
-        _elevated = SOC_AGENT_ZONE_ELEVATED.get(alert_category, False)
+        with _soc_perf_phase(
+            "routing_threshold_lookup",
+            route=_perf_route,
+            alert_id=alert_id,
+            category=alert_category,
+            action=selected_action,
+        ):
+            _threshold = SOC_AUTO_APPROVE_THRESHOLDS.get(selected_action)
+            _cat_floor = SOC_CATEGORY_CONFIDENCE_FLOORS.get(alert_category, _threshold)
+            _effective_threshold = _cat_floor if _cat_floor else _threshold
+            _elevated = SOC_AGENT_ZONE_ELEVATED.get(alert_category, False)
 
         _rl_exploration_decision = None
         _rl_original_action_name = _scoring_result.action_name
@@ -258,63 +605,77 @@ async def analyze_alert(request: ProcessAlertRequest):
         _rl_exploration_executed = False
         _rl_decision_method = "gae_scoring"
         try:
-            _soc_cfg_rl = _rl_soc_config()
-            if (
-                getattr(_soc_cfg_rl, "RL_EXPLORATION_ENABLED", False)
-                and selected_action in scorer_actions
+            with _soc_perf_phase(
+                "rl_exploration_proposal",
+                route=_perf_route,
+                alert_id=alert_id,
+                category=alert_category,
+                action=selected_action,
             ):
-                _headroom_ratio = 0.0
-                try:
-                    from app.services.learning_health import LearningHealthMonitor as _RLHealth
-
-                    _health = await _RLHealth.evaluate(neo4j_client)
-                    _headroom_ratio = float(
-                        (_health.get("conservation") or {}).get("headroom") or 0.0
-                    )
-                except Exception as _rl_health_exc:
-                    logger.warning("[RL] Exploration health check failed: %s", _rl_health_exc)
-                from app.services.rl_engine import get_exploration_policy
-
-                _scorer_probs = _scoring_result.probabilities.tolist()[:len(scorer_actions)]
-                _rl_exploration_decision = get_exploration_policy().propose(
-                    _scorer_probs,
-                    _cat_idx,
-                    _headroom_ratio,
-                )
+                _soc_cfg_rl = _rl_soc_config()
                 if (
-                    _rl_exploration_decision.explored
-                    and _rl_exploration_decision.explored_action is not None
-                    and 0 <= _rl_exploration_decision.explored_action < len(scorer_actions)
+                    getattr(_soc_cfg_rl, "RL_EXPLORATION_ENABLED", False)
+                    and selected_action in scorer_actions
                 ):
-                    _rl_explored_action_name = scorer_actions[
-                        _rl_exploration_decision.explored_action
-                    ]
-                    if LEARNING_ENABLED:
-                        selected_action = _rl_explored_action_name
-                        _rl_exploration_executed = True
-                        _rl_decision_method = "gae_scoring_explored"
-                    else:
-                        _rl_decision_method = "gae_scoring_explore_proposed"
+                    _headroom_ratio = 0.0
+                    try:
+                        from app.services.learning_health import LearningHealthMonitor as _RLHealth
+
+                        _health = await _RLHealth.evaluate(neo4j_client)
+                        _headroom_ratio = float(
+                            (_health.get("conservation") or {}).get("headroom") or 0.0
+                        )
+                    except Exception as _rl_health_exc:
+                        logger.warning("[RL] Exploration health check failed: %s", _rl_health_exc)
+                    from app.services.rl_engine import get_exploration_policy
+
+                    _scorer_probs = _scoring_result.probabilities.tolist()[:len(scorer_actions)]
+                    _rl_exploration_decision = get_exploration_policy().propose(
+                        _scorer_probs,
+                        _cat_idx,
+                        _headroom_ratio,
+                    )
+                    if (
+                        _rl_exploration_decision.explored
+                        and _rl_exploration_decision.explored_action is not None
+                        and 0 <= _rl_exploration_decision.explored_action < len(scorer_actions)
+                    ):
+                        _rl_explored_action_name = scorer_actions[
+                            _rl_exploration_decision.explored_action
+                        ]
+                        if _soc_learning_enabled():
+                            selected_action = _rl_explored_action_name
+                            _rl_exploration_executed = True
+                            _rl_decision_method = "gae_scoring_explored"
+                        else:
+                            _rl_decision_method = "gae_scoring_explore_proposed"
         except Exception as _rl_explore_exc:
             logger.warning("[RL] Exploration proposal failed: %s", _rl_explore_exc)
             _rl_exploration_decision = None
             _rl_explored_action_name = None
             _rl_exploration_executed = False
 
-        if selected_action == "refer_to_analyst":
-            routing_zone = "human_review"   # graduated dispatch — always routes to human
-        elif selected_action == "monitor":
-            routing_zone = "agent_zone"   # monitor never auto-approved
-        elif _elevated:
-            routing_zone = "agent_zone"   # malware_execution + cloud_infra elevated
-        elif _effective_threshold and confidence >= _effective_threshold:
-            routing_zone = "auto_approve"
-        elif confidence >= 0.60:
-            routing_zone = "agent_zone"
-        else:
-            routing_zone = "human_review"
+        with _soc_perf_phase(
+            "routing_zone_resolution",
+            route=_perf_route,
+            alert_id=alert_id,
+            category=alert_category,
+            action=selected_action,
+        ):
+            if selected_action == "refer_to_analyst":
+                routing_zone = "human_review"   # graduated dispatch — always routes to human
+            elif selected_action == "monitor":
+                routing_zone = "agent_zone"   # monitor never auto-approved
+            elif _elevated:
+                routing_zone = "agent_zone"   # malware_execution + cloud_infra elevated
+            elif _effective_threshold and confidence >= _effective_threshold:
+                routing_zone = "auto_approve"
+            elif confidence >= 0.60:
+                routing_zone = "agent_zone"
+            else:
+                routing_zone = "human_review"
 
-        fv_list = f.flatten().tolist()   # JSON-serializable, stored in Decision node (R4)
+            fv_list = f.flatten().tolist()   # JSON-serializable, stored in Decision node (R4)
 
         # ====================================================================
         # Step 4b: Referral VETO — independent of ProfileScorer (EXP-REFER-LAYERED)
@@ -327,10 +688,17 @@ async def analyze_alert(request: ProcessAlertRequest):
         from app.services.referral_rules import get_soc_referral_rules
 
         # R2/R7: query Decision nodes for sequence and cross-category counts
-        _source_id = alert_data.get('source_location')
-        _user_id   = context.get('user_id')
-        _sequence_count       = await neo4j_client.get_sequence_count(_source_id)
-        _cross_category_count = await neo4j_client.get_cross_category_count(_user_id)
+        with _soc_perf_phase(
+            "referral_history_counts",
+            route=_perf_route,
+            alert_id=alert_id,
+            category=alert_category,
+            action=selected_action,
+        ):
+            _source_id = alert_data.get('source_location')
+            _user_id   = context.get('user_id')
+            _sequence_count       = await neo4j_client.get_sequence_count(_source_id)
+            _cross_category_count = await neo4j_client.get_cross_category_count(_user_id)
         # Referral runs before Decision creation so final-action side effects are
         # safe. The DB helpers count persisted Decisions only, so include the
         # current candidate decision in-memory to preserve previous R2/R7 semantics.
@@ -342,47 +710,56 @@ async def analyze_alert(request: ProcessAlertRequest):
             _user_id, _cross_category_count, _referral_cross_category_count,
         )
 
-        _alert_context = {
-            # R1: executive account
-            'identity_tier':        alert_data.get('identity_tier', 'standard'),
-            # R2: rapid succession — live Neo4j count
-            'sequence_count':       _referral_sequence_count,
-            # R3: compliance mandate
-            'category':             alert_category,
-            'compliance_mode':      False,
-            # R4: high value data
-            'asset_criticality':    fv_list[1] if len(fv_list) > 1 else 0.0,
-            'stage1_action':        _scoring_result.action_name,
-            # R5: active incident
-            'incident_active':      False,
-            # R6: new asset
-            'asset_age_days':       alert_data.get('asset_age_days', 365),
-            # R7: cross-category — live Neo4j count
-            'cross_category_count': _referral_cross_category_count,
-            # full factor vector for future rules
-            'factor_values':        fv_list,
-        }
+        with _soc_perf_phase(
+            "referral_gate_evaluation",
+            route=_perf_route,
+            alert_id=alert_id,
+            category=alert_category,
+            action=selected_action,
+            sequence_count=_referral_sequence_count,
+            cross_category_count=_referral_cross_category_count,
+        ):
+            _alert_context = {
+                # R1: executive account
+                'identity_tier':        alert_data.get('identity_tier', 'standard'),
+                # R2: rapid succession — live Neo4j count
+                'sequence_count':       _referral_sequence_count,
+                # R3: compliance mandate
+                'category':             alert_category,
+                'compliance_mode':      False,
+                # R4: high value data
+                'asset_criticality':    fv_list[1] if len(fv_list) > 1 else 0.0,
+                'stage1_action':        _scoring_result.action_name,
+                # R5: active incident
+                'incident_active':      False,
+                # R6: new asset
+                'asset_age_days':       alert_data.get('asset_age_days', 365),
+                # R7: cross-category — live Neo4j count
+                'cross_category_count': _referral_cross_category_count,
+                # full factor vector for future rules
+                'factor_values':        fv_list,
+            }
 
-        _referral_engine = ReferralEngine(rules=get_soc_referral_rules())
-        _referral = _referral_engine.evaluate(_alert_context)
+            _referral_engine = ReferralEngine(rules=get_soc_referral_rules())
+            _referral = _referral_engine.evaluate(_alert_context)
 
-        if _referral.should_refer:
-            selected_action = "refer_to_analyst"
-            routing_zone = "human_review"
-            if _rl_exploration_decision and _rl_exploration_decision.explored:
-                _rl_explored_but_referred = True
-                _rl_exploration_executed = False
-            logger.info(
-                "[TRIAGE-Referral] VETO fired — rules=%s audit=%s",
-                _referral.reason_codes,
-                _referral.audit_summary,
-            )
+            if _referral.should_refer:
+                selected_action = "refer_to_analyst"
+                routing_zone = "human_review"
+                if _rl_exploration_decision and _rl_exploration_decision.explored:
+                    _rl_explored_but_referred = True
+                    _rl_exploration_executed = False
+                logger.info(
+                    "[TRIAGE-Referral] VETO fired — rules=%s audit=%s",
+                    _referral.reason_codes,
+                    _referral.audit_summary,
+                )
 
-        _referral_payload = {
-            'should_refer':  _referral.should_refer,
-            'reasons':       _referral.reason_codes,
-            'audit_summary': _referral.audit_summary,
-        }
+            _referral_payload = {
+                'should_refer':  _referral.should_refer,
+                'reasons':       _referral.reason_codes,
+                'audit_summary': _referral.audit_summary,
+            }
 
         logger.info(
             "[TRIAGE-v5] action=%s conf=%.3f zone=%s",
@@ -392,7 +769,14 @@ async def analyze_alert(request: ProcessAlertRequest):
               f"f={[round(v, 3) for v in fv_list]}")
 
         # Generate reasoning using GAE-selected action
-        reasoning = await narrator.generate_reasoning(alert_type, selected_action, context)
+        with _soc_perf_phase(
+            "reasoning_generation",
+            route=_perf_route,
+            alert_id=alert_id,
+            category=alert_category,
+            action=selected_action,
+        ):
+            reasoning = await narrator.generate_reasoning(alert_type, selected_action, context)
 
         # ====================================================================
         # Step 5: Write Decision node to Neo4j (R4 — f(t) stored in graph)
@@ -404,74 +788,108 @@ async def analyze_alert(request: ProcessAlertRequest):
         # ====================================================================
         decision_id = str(uuid.uuid4())
         _ts_analyze = int(datetime.utcnow().timestamp() * 1000)
-        await neo4j_client.run_query(
-            f"""
-            MATCH (a:Alert {{alert_id: {_S(alert_id)}}})
-            CREATE (d:Decision {{
-                decision_id:           {_S(decision_id)},
-                action:                {_S(selected_action)},
-                confidence:            {confidence},
-                factor_vector:         {_S(json.dumps(fv_list))},
-                category:              {_S(alert_category)},
-                source_id:             {_S(alert_data.get("source_location", ""))},
-                user_id:               {_S(context.get("user_id", ""))},
-                timestamp_epoch:       {_ts_analyze},
-                outcome:               null,
-                triage_entropy:        {triage_entropy},
-                triage_confidence_gap: {triage_confidence_gap}
-            }})
-            CREATE (d)-[:DECIDED_ON]->(a)
-            """
-        )
+        with _soc_perf_phase(
+            "decision_node_and_edge_write",
+            route=_perf_route,
+            alert_id=alert_id,
+            decision_id=decision_id,
+            category=alert_category,
+            action=selected_action,
+            factor_vector_len=len(fv_list),
+        ):
+            await neo4j_client.run_query(
+                f"""
+                MATCH (a:Alert {{alert_id: {_S(alert_id)}}})
+                CREATE (d:Decision {{
+                    decision_id:           {_S(decision_id)},
+                    domain:                'soc',
+                    action:                {_S(selected_action)},
+                    confidence:            {confidence},
+                    factor_vector:         {_S(json.dumps(fv_list))},
+                    category:              {_S(alert_category)},
+                    source_id:             {_S(alert_data.get("source_location", ""))},
+                    user_id:               {_S(context.get("user_id", ""))},
+                    timestamp_epoch:       {_ts_analyze},
+                    outcome:               null,
+                    triage_entropy:        {triage_entropy},
+                    triage_confidence_gap: {triage_confidence_gap}
+                }})
+                CREATE (d)-[:DECIDED_ON]->(a)
+                """
+            )
         print(f"[GAE] Decision node written: id={decision_id} [:DECIDED_ON] {alert_id}")
 
-        _audit_rec_analyze = await record_decision(
+        with _soc_perf_phase(
+            "audit_write",
+            route=_perf_route,
             alert_id=alert_id,
-            situation_type=situation_analysis.situation_type,
-            action_taken=selected_action,
-            factors=[c.name for c in computers],
-            confidence=confidence,
-            kernel_type="unknown",
-            noise_zone="unknown",
-            conservation_status="unknown",
-        )
-        _entry_hash_analyze = _audit_rec_analyze.get("hash", "")
-        _chain_index_analyze = _audit_rec_analyze.get("chain_index", -1)
-        if _entry_hash_analyze:
-            await neo4j_client.run_query(
-                f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
-                f"SET d.entry_hash = {_S(_entry_hash_analyze)}, "
-                f"d.decision_chain_index = {_chain_index_analyze}"
+            decision_id=decision_id,
+            category=alert_category,
+            action=selected_action,
+        ):
+            _audit_rec_analyze = await record_decision(
+                alert_id=alert_id,
+                situation_type=situation_analysis.situation_type,
+                action_taken=selected_action,
+                factors=[c.name for c in computers],
+                confidence=confidence,
+                kernel_type="unknown",
+                noise_zone="unknown",
+                conservation_status="unknown",
             )
+            _entry_hash_analyze = _audit_rec_analyze.get("hash", "")
+            _chain_index_analyze = _audit_rec_analyze.get("chain_index", -1)
+            if _entry_hash_analyze:
+                await neo4j_client.run_query(
+                    f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
+                    f"SET d.entry_hash = {_S(_entry_hash_analyze)}, "
+                    f"d.decision_chain_index = {_chain_index_analyze}"
+                )
 
         # F4b: Record confidence snapshot for trajectory tracking
         # Placed AFTER successful graph write — prevents phantom entries on failure.
-        append_confidence_snapshot(
-            alert_id       = alert_id,
-            alert_type     = alert_type,
-            situation_type = situation_analysis.situation_type,
-            confidence     = confidence,
-        )
+        with _soc_perf_phase(
+            "metadata_logging_snapshot_write",
+            route=_perf_route,
+            alert_id=alert_id,
+            decision_id=decision_id,
+            category=alert_category,
+            action=selected_action,
+        ):
+            append_confidence_snapshot(
+                alert_id       = alert_id,
+                alert_type     = alert_type,
+                situation_type = situation_analysis.situation_type,
+                confidence     = confidence,
+            )
 
         # ====================================================================
         # Step 5b: Campaign correlation (F6) — non-blocking
         # ====================================================================
         try:
-            from app.domains.soc.campaigns import (
-                CampaignCorrelationEngine, CampaignRepository, CampaignMatcher,
-            )
-            _camp_config = SOCDomainConfig.get_campaign_config()
-            _camp_engine = CampaignCorrelationEngine(_camp_config)
-            _camp_repo = CampaignRepository(neo4j_client)
-            _camp_matcher = CampaignMatcher(
-                neo4j_client, _camp_config, _camp_engine, _camp_repo
-            )
-            _campaign_id = await _camp_matcher.check_alert(alert_id)
-            if _campaign_id:
-                await neo4j_client.run_query(
-                    f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
-                    f"SET d.campaign_id = {_S(_campaign_id)}"
+            with _soc_perf_phase(
+                "campaign_correlation",
+                route=_perf_route,
+                alert_id=alert_id,
+                decision_id=decision_id,
+                category=alert_category,
+                action=selected_action,
+            ):
+                from app.domains.soc.campaigns import (
+                    CampaignCorrelationEngine, CampaignRepository, CampaignMatcher,
                 )
+                _camp_config = SOCDomainConfig.get_campaign_config()
+                _camp_engine = CampaignCorrelationEngine(_camp_config)
+                _camp_repo = CampaignRepository(neo4j_client)
+                _camp_matcher = CampaignMatcher(
+                    neo4j_client, _camp_config, _camp_engine, _camp_repo
+                )
+                _campaign_id = await _camp_matcher.check_alert(alert_id)
+                if _campaign_id:
+                    await neo4j_client.run_query(
+                        f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
+                        f"SET d.campaign_id = {_S(_campaign_id)}"
+                    )
         except Exception as _camp_exc:
             logger.warning("[TRIAGE] Campaign wiring failed for %s: %s", alert_id, _camp_exc)
 
@@ -490,18 +908,27 @@ async def analyze_alert(request: ProcessAlertRequest):
             and selected_action in ("escalate", "investigate")
             and _incident_id
         ):
-            from app.connectors.sentinel_real import get_sentinel_connector as _get_sentinel
-            import asyncio as _asyncio
-            _sentinel_connector = _get_sentinel()
-            _asyncio.create_task(
-                _sentinel_connector.push_incident_update(
-                    incident_id=_incident_id,
-                    action=selected_action,
-                    confidence=confidence,
-                    decision_id=decision_id,
-                    campaign_id=locals().get("_campaign_id"),
+            with _soc_perf_phase(
+                "sentinel_writeback_schedule",
+                route=_perf_route,
+                alert_id=alert_id,
+                decision_id=decision_id,
+                category=alert_category,
+                action=selected_action,
+                has_incident_id=bool(_incident_id),
+            ):
+                from app.connectors.sentinel_real import get_sentinel_connector as _get_sentinel
+                import asyncio as _asyncio
+                _sentinel_connector = _get_sentinel()
+                _asyncio.create_task(
+                    _sentinel_connector.push_incident_update(
+                        incident_id=_incident_id,
+                        action=selected_action,
+                        confidence=confidence,
+                        decision_id=decision_id,
+                        campaign_id=locals().get("_campaign_id"),
+                    )
                 )
-            )
             logger.info(
                 "[Sentinel-WB] fire-and-forget scheduled — incident=%s action=%s conf=%.3f",
                 _incident_id, selected_action, confidence,
@@ -510,16 +937,24 @@ async def analyze_alert(request: ProcessAlertRequest):
         # ====================================================================
         # Step 6: Emit events (every graph mutation MUST emit events)
         # ====================================================================
-        await event_bus.emit(DecisionMade(
-            alert_id      = alert_id,
-            action        = selected_action,
-            confidence    = confidence,
-            factor_vector = tuple(fv_list),
-        ))
-        await event_bus.emit(GraphMutated(
-            mutation_type     = "decision",
-            affected_entities = (alert_id,),
-        ))
+        with _soc_perf_phase(
+            "decision_event_emit",
+            route=_perf_route,
+            alert_id=alert_id,
+            decision_id=decision_id,
+            category=alert_category,
+            action=selected_action,
+        ):
+            await event_bus.emit(DecisionMade(
+                alert_id      = alert_id,
+                action        = selected_action,
+                confidence    = confidence,
+                factor_vector = tuple(fv_list),
+            ))
+            await event_bus.emit(GraphMutated(
+                mutation_type     = "decision",
+                affected_entities = (alert_id,),
+            ))
 
         # ====================================================================
         # Step 7: Composite discriminant gate (Phase 5 / DISC-1)
@@ -527,18 +962,27 @@ async def analyze_alert(request: ProcessAlertRequest):
         from app.services.composite_gate import CompositeDiscriminant
         from app.services.shadow_mode import ShadowModeService
         try:
-            _composite = await CompositeDiscriminant.evaluate(
-                score_result=_scoring_result,
+            with _soc_perf_phase(
+                "composite_gate_evaluation",
+                route=_perf_route,
+                alert_id=alert_id,
+                decision_id=decision_id,
                 category=alert_category,
-                factor_vector=f.flatten(),
-                decision_position=0.0,
-                neo4j_service=neo4j_client,
-            )
-            if _composite["auto_approve"] and not ShadowModeService.SHADOW_ENABLED:
-                await neo4j_client.run_query(
-                    f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
-                    "SET d.auto_approved = true"
+                action=selected_action,
+                factor_vector_len=len(fv_list),
+            ):
+                _composite = await CompositeDiscriminant.evaluate(
+                    score_result=_scoring_result,
+                    category=alert_category,
+                    factor_vector=f.flatten(),
+                    decision_position=0.0,
+                    neo4j_service=neo4j_client,
                 )
+                if _composite["auto_approve"] and not ShadowModeService.SHADOW_ENABLED:
+                    await neo4j_client.run_query(
+                        f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
+                        "SET d.auto_approved = true"
+                    )
         except Exception as _cg_exc:
             logger.warning("[TRIAGE] composite gate failed: %s", _cg_exc)
             _composite = {
@@ -553,29 +997,38 @@ async def analyze_alert(request: ProcessAlertRequest):
         # ====================================================================
         from app.services.provenance import ProvenanceService
         try:
-            _prov = ProvenanceService.build_provenance(
+            with _soc_perf_phase(
+                "provenance_build",
+                route=_perf_route,
+                alert_id=alert_id,
                 decision_id=decision_id,
-                factor_names=[c.name for c in computers],
-                factor_values=fv_list,
                 category=alert_category,
                 action=selected_action,
-            )
-            _provenance_payload = {
-                "decision_id":           _prov.decision_id,
-                "category":              _prov.category,
-                "action":                _prov.action,
-                "total_nodes_consulted": _prov.total_nodes_consulted,
-                "factors": [
-                    {
-                        "factor_name":           fp.factor_name,
-                        "factor_value":          fp.factor_value,
-                        "computation_method":    fp.computation_method,
-                        "graph_nodes_consulted": fp.graph_nodes_consulted,
-                        "explanation":           fp.explanation,
-                    }
-                    for fp in _prov.factors
-                ],
-            }
+                factor_count=len(fv_list),
+            ):
+                _prov = ProvenanceService.build_provenance(
+                    decision_id=decision_id,
+                    factor_names=[c.name for c in computers],
+                    factor_values=fv_list,
+                    category=alert_category,
+                    action=selected_action,
+                )
+                _provenance_payload = {
+                    "decision_id":           _prov.decision_id,
+                    "category":              _prov.category,
+                    "action":                _prov.action,
+                    "total_nodes_consulted": _prov.total_nodes_consulted,
+                    "factors": [
+                        {
+                            "factor_name":           fp.factor_name,
+                            "factor_value":          fp.factor_value,
+                            "computation_method":    fp.computation_method,
+                            "graph_nodes_consulted": fp.graph_nodes_consulted,
+                            "explanation":           fp.explanation,
+                        }
+                        for fp in _prov.factors
+                    ],
+                }
         except Exception as _prov_exc:
             logger.warning("[TRIAGE] provenance build failed: %s", _prov_exc)
             _provenance_payload = {"decision_id": decision_id, "factors": [], "error": str(_prov_exc)}
@@ -583,70 +1036,105 @@ async def analyze_alert(request: ProcessAlertRequest):
         # ====================================================================
         # Step 8: Get graph data for visualization
         # ====================================================================
-        graph_data = await get_graph_data(alert_id)
+        with _soc_perf_phase(
+            "graph_visualization_fetch",
+            route=_perf_route,
+            alert_id=alert_id,
+            decision_id=decision_id,
+            category=alert_category,
+            action=selected_action,
+        ):
+            graph_data = await get_graph_data(alert_id)
 
         # ====================================================================
         # Step 8: Extract key facts from context
         # ====================================================================
-        key_facts = []
+        with _soc_perf_phase(
+            "response_context_enrichment",
+            route=_perf_route,
+            alert_id=alert_id,
+            decision_id=decision_id,
+            category=alert_category,
+            action=selected_action,
+            factor_count=len(fv_list),
+        ):
+            key_facts = []
 
-        if context.get("user_traveling"):
-            key_facts.append({
-                "source": "TravelContext",
-                "fact": f"User traveling to {context.get('travel_destination')}"
-            })
+            if context.get("user_traveling"):
+                key_facts.append({
+                    "source": "TravelContext",
+                    "fact": f"User traveling to {context.get('travel_destination')}"
+                })
 
-        if context.get("pattern_id"):
-            key_facts.append({
-                "source": "AttackPattern",
-                "fact": f"Pattern {context.get('pattern_id')} matched ({context.get('pattern_count')} occurrences)"
-            })
+            if context.get("pattern_id"):
+                key_facts.append({
+                    "source": "AttackPattern",
+                    "fact": f"Pattern {context.get('pattern_id')} matched ({context.get('pattern_count')} occurrences)"
+                })
 
-        if context.get("mfa_completed"):
-            key_facts.append({
-                "source": "Alert",
-                "fact": "MFA authentication completed"
-            })
+            if context.get("mfa_completed"):
+                key_facts.append({
+                    "source": "Alert",
+                    "fact": "MFA authentication completed"
+                })
 
-        # Build action_probabilities dict for verification + frontend display
-        probs_flat = _scoring_result.probabilities.tolist()
-        action_probabilities = {a: round(p, 6) for a, p in zip(scorer_actions, probs_flat)}
+            # Build action_probabilities dict for verification + frontend display
+            probs_flat = _scoring_result.probabilities.tolist()
+            action_probabilities = {a: round(p, 6) for a, p in zip(scorer_actions, probs_flat)}
 
-        # Scoring quality flags
-        max_prob = max(probs_flat)
-        sorted_probs = sorted(probs_flat, reverse=True)
-        low_confidence = max_prob < 0.25
-        ambiguous      = (
-            len(sorted_probs) >= 2 and
-            (sorted_probs[0] - sorted_probs[1]) < 0.05
-        )
+            # Scoring quality flags
+            max_prob = max(probs_flat)
+            sorted_probs = sorted(probs_flat, reverse=True)
+            low_confidence = max_prob < 0.25
+            ambiguous      = (
+                len(sorted_probs) >= 2 and
+                (sorted_probs[0] - sorted_probs[1]) < 0.05
+            )
 
         if _rl_exploration_decision and _rl_exploration_decision.explored:
             try:
-                _meta_ts = int(datetime.utcnow().timestamp() * 1000)
-                await neo4j_client.run_query(
-                    f"""
-                    MATCH (d:Decision {{decision_id: {_S(decision_id)}}})
-                    SET d.action                  = {_S(selected_action)},
-                        d.explored                = true,
-                        d.exploration_rate        = {float(_rl_exploration_decision.exploration_rate)},
-                        d.original_action         = {_S(_rl_original_action_name)},
-                        d.explored_action         = {_S(_rl_explored_action_name or '')},
-                        d.explored_but_referred   = {'true' if _rl_explored_but_referred else 'false'},
-                        d.exploration_executed    = {'true' if _rl_exploration_executed else 'false'},
-                        d.exploration_reason      = {_S(_rl_exploration_decision.reason)},
-                        d.exploration_updated_at  = {_meta_ts}
-                    """
-                )
+                with _soc_perf_phase(
+                    "rl_exploration_metadata_write",
+                    route=_perf_route,
+                    alert_id=alert_id,
+                    decision_id=decision_id,
+                    category=alert_category,
+                    action=selected_action,
+                ):
+                    _meta_ts = int(datetime.utcnow().timestamp() * 1000)
+                    await neo4j_client.run_query(
+                        f"""
+                        MATCH (d:Decision {{decision_id: {_S(decision_id)}}})
+                        SET d.action                  = {_S(selected_action)},
+                            d.explored                = true,
+                            d.exploration_rate        = {float(_rl_exploration_decision.exploration_rate)},
+                            d.original_action         = {_S(_rl_original_action_name)},
+                            d.explored_action         = {_S(_rl_explored_action_name or '')},
+                            d.explored_but_referred   = {'true' if _rl_explored_but_referred else 'false'},
+                            d.exploration_executed    = {'true' if _rl_exploration_executed else 'false'},
+                            d.exploration_reason      = {_S(_rl_exploration_decision.reason)},
+                            d.exploration_updated_at  = {_meta_ts}
+                        """
+                    )
             except Exception as _rl_meta_exc:
                 logger.warning("[RL] Exploration metadata write failed: %s", _rl_meta_exc)
 
-        _referral_debug = {
-            'r2_sequence_count':       _sequence_count,
-            'r7_cross_category_count': _cross_category_count,
-            'rules_evaluated':         [r.rule_id for r in get_soc_referral_rules()],
-            'rules_fired':             list(_referral.reason_codes),
-        }
+        with _soc_perf_phase(
+            "referral_debug_build",
+            route=_perf_route,
+            alert_id=alert_id,
+            decision_id=decision_id,
+            category=alert_category,
+            action=selected_action,
+            sequence_count=_sequence_count,
+            cross_category_count=_cross_category_count,
+        ):
+            _referral_debug = {
+                'r2_sequence_count':       _sequence_count,
+                'r7_cross_category_count': _cross_category_count,
+                'rules_evaluated':         [r.rule_id for r in get_soc_referral_rules()],
+                'rules_fired':             list(_referral.reason_codes),
+            }
 
         # ====================================================================
         # Step 8c: AE-02 per-variant shadow comparison — fire-and-forget
@@ -655,21 +1143,29 @@ async def analyze_alert(request: ProcessAlertRequest):
         from app.services.variant_registry import SHADOW as _AE_SHADOW, get_all_variants as _ae_variants
         import asyncio as _shadow_asyncio
 
-        _has_shadow_variant = any(
-            variant.artifact_type in SHADOW_TESTABLE_ARTIFACTS
-            and (variant.category == alert_category or variant.category is None)
-            for variant in _ae_variants(status_filter=_AE_SHADOW)
-        )
-        if _has_shadow_variant:
-            _shadow_asyncio.create_task(
-                maybe_shadow_compare(
-                    alert_id=alert_id,
-                    category=alert_category,
-                    production_action=selected_action,
-                    production_confidence=confidence,
-                    alert_data=alert_data,
-                )
+        with _soc_perf_phase(
+            "shadow_compare_schedule",
+            route=_perf_route,
+            alert_id=alert_id,
+            decision_id=decision_id,
+            category=alert_category,
+            action=selected_action,
+        ):
+            _has_shadow_variant = any(
+                variant.artifact_type in SHADOW_TESTABLE_ARTIFACTS
+                and (variant.category == alert_category or variant.category is None)
+                for variant in _ae_variants(status_filter=_AE_SHADOW)
             )
+            if _has_shadow_variant:
+                _shadow_asyncio.create_task(
+                    maybe_shadow_compare(
+                        alert_id=alert_id,
+                        category=alert_category,
+                        production_action=selected_action,
+                        production_confidence=confidence,
+                        alert_data=alert_data,
+                    )
+                )
 
         # ====================================================================
         # Build Response — existing structure preserved; gae_scoring added
@@ -685,18 +1181,27 @@ async def analyze_alert(request: ProcessAlertRequest):
 
         _cluster_history_payload = None
         try:
-            from app.services.cluster_history import get_cluster_history as _get_cluster_history
+            with _soc_perf_phase(
+                "cluster_history_fetch",
+                route=_perf_route,
+                alert_id=alert_id,
+                decision_id=decision_id,
+                category=alert_category,
+                action=selected_action,
+            ):
+                from app.services.cluster_history import get_cluster_history as _get_cluster_history
 
-            _cluster_history = await _get_cluster_history(
-                source_user=context.get("user_id") or alert_data.get("user_id"),
-                current_decision_id=decision_id,
-                graph_client=neo4j_client,
-            )
-            if _cluster_history is not None:
-                _cluster_history_payload = dataclasses.asdict(_cluster_history)
+                _cluster_history = await _get_cluster_history(
+                    source_user=context.get("user_id") or alert_data.get("user_id"),
+                    current_decision_id=decision_id,
+                    graph_client=neo4j_client,
+                )
+                if _cluster_history is not None:
+                    _cluster_history_payload = dataclasses.asdict(_cluster_history)
         except Exception as _cluster_exc:
             logger.warning("[TRIAGE] Cluster history failed for %s: %s", alert_id, _cluster_exc)
 
+        _perf_response_started = _soc_perf_start()
         response = {
             "alert": alert_data,
             "attack_technique": attack_technique,
@@ -754,45 +1259,101 @@ async def analyze_alert(request: ProcessAlertRequest):
         # ====================================================================
         # NAR-1: Build calibration_context and generate structured narrative
         # ====================================================================
-        _ls = get_learning_state()
-        _factor_names_list = [c.name for c in computers]
-        _factors_for_narr  = [
-            {"name": n, "value": v}
-            for n, v in zip(_factor_names_list, fv_list)
-        ]
-        _top_f = (
-            max(_factors_for_narr, key=lambda x: x["value"])
-            if _factors_for_narr else {}
-        )
-        _bot_f = (
-            min(_factors_for_narr, key=lambda x: x["value"])
-            if _factors_for_narr else {}
-        )
-        calibration_context = {
-            "decision_count": _ls.decision_count,  # SOURCE: in-memory LearningState (resets on restart)
-            "category_count": _ls.decision_count,  # SOURCE: in-memory LearningState (resets on restart)
-            "category":       alert_category,
-            "top_factor":     _top_f,
-            "bottom_factor":  _bot_f,
-        }
-        _alert_for_narr = {**alert_data, **situation_analysis.model_dump()}
-        _decision_for_narr = {
-            "action":     selected_action,
-            "confidence": confidence,
-            "pattern_id": context.get("pattern_id"),
-        }
-        response["narrative"] = get_narrative_provider().generate(
-            _alert_for_narr, _decision_for_narr, _factors_for_narr, calibration_context
+        with _soc_perf_phase(
+            "narrative_context_build",
+            route=_perf_route,
+            alert_id=alert_id,
+            decision_id=decision_id,
+            category=alert_category,
+            action=selected_action,
+            factor_count=len(fv_list),
+        ):
+            _ls = get_learning_state()
+            _factor_names_list = [c.name for c in computers]
+            _factors_for_narr  = [
+                {"name": n, "value": v}
+                for n, v in zip(_factor_names_list, fv_list)
+            ]
+            _top_f = (
+                max(_factors_for_narr, key=lambda x: x["value"])
+                if _factors_for_narr else {}
+            )
+            _bot_f = (
+                min(_factors_for_narr, key=lambda x: x["value"])
+                if _factors_for_narr else {}
+            )
+            calibration_context = {
+                "decision_count": _ls.decision_count,  # SOURCE: in-memory LearningState (resets on restart)
+                "category_count": _ls.decision_count,  # SOURCE: in-memory LearningState (resets on restart)
+                "category":       alert_category,
+                "top_factor":     _top_f,
+                "bottom_factor":  _bot_f,
+            }
+            _alert_for_narr = {**alert_data, **situation_analysis.model_dump()}
+            _decision_for_narr = {
+                "action":     selected_action,
+                "confidence": confidence,
+                "pattern_id": context.get("pattern_id"),
+            }
+        with _soc_perf_phase(
+            "narrative_generation",
+            route=_perf_route,
+            alert_id=alert_id,
+            decision_id=decision_id,
+            category=alert_category,
+            action=selected_action,
+            factor_count=len(_factors_for_narr),
+        ):
+            response["narrative"] = get_narrative_provider().generate(
+                _alert_for_narr, _decision_for_narr, _factors_for_narr, calibration_context
+            )
+        with _soc_perf_phase(
+            "decision_pipeline_shadow_compare",
+            route=_perf_route,
+            alert_id=alert_id,
+            decision_id=decision_id,
+            category=alert_category,
+            action=selected_action,
+        ):
+            response = await _soc_maybe_attach_decision_pipeline_shadow(
+                response,
+                alert_data=alert_data,
+                context=context,
+            )
+        _soc_perf_emit_duration(
+            "response_serialization",
+            _perf_response_started,
+            route=_perf_route,
+            alert_id=alert_id,
+            decision_id=decision_id,
+            category=alert_category,
+            action=selected_action,
         )
         return response
 
-    except HTTPException:
+    except HTTPException as exc:
+        _perf_total_status = "error"
+        _perf_total_exception = type(exc).__name__
         raise
     except Exception as e:
+        _perf_total_status = "error"
+        _perf_total_exception = type(e).__name__
         print(f"[ERROR] Failed to analyze alert: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+    finally:
+        _soc_perf_emit_duration(
+            "analyze_request_total",
+            _perf_total_started,
+            route=_perf_route,
+            status=_perf_total_status,
+            exception_type=_perf_total_exception,
+            alert_id=_perf_alert_id,
+            decision_id=locals().get("decision_id"),
+            category=locals().get("alert_category"),
+            action=locals().get("selected_action"),
+        )
 
 
 # ============================================================================
@@ -1040,15 +1601,35 @@ async def report_decision_outcome(request: OutcomeRequest):
     """
     print(f"[FEEDBACK] POST /alert/outcome called for {request.alert_id}")
     print(f"[FEEDBACK] Outcome: {request.outcome}")
+    _perf_route = "/api/alert/outcome"
+    _perf_alert_id = getattr(request, "alert_id", None)
+    _perf_decision_id = getattr(request, "decision_id", None)
+    _perf_total_started = _soc_perf_start()
+    _perf_total_status = "ok"
+    _perf_total_exception = None
 
     try:
+        with _soc_perf_phase(
+            "request_parse",
+            route=_perf_route,
+            alert_id=_perf_alert_id,
+            decision_id=_perf_decision_id,
+        ):
+            _perf_outcome_label = request.outcome
+
         # Check if feedback already given
-        status = get_feedback_status(request.alert_id)
-        if status["has_feedback"]:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Feedback already provided for {request.alert_id}. Outcome cannot be changed."
-            )
+        with _soc_perf_phase(
+            "duplicate_feedback_guard",
+            route=_perf_route,
+            alert_id=request.alert_id,
+            decision_id=request.decision_id,
+        ):
+            status = get_feedback_status(request.alert_id)
+            if status["has_feedback"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Feedback already provided for {request.alert_id}. Outcome cannot be changed."
+                )
 
         # ====================================================================
         # GAE-3a: Retrieve f(t) from Decision node, apply Hebbian learning
@@ -1062,6 +1643,15 @@ async def report_decision_outcome(request: OutcomeRequest):
         outcome_label = request.outcome   # "correct" | "incorrect"
 
         centroid_update_payload = None  # populated below if wu.centroid_update is present
+        l5_persistence_status = {
+            "l5_centroid_persisted": False,
+            "l5_shaped_by_attempted": False,
+            "l5_persistence_skipped_reason": "not_attempted",
+            "l5_persistence_source": None,
+            "conservation_status": None,
+            "raw_conservation_status": None,
+            "conservation_status_reason": None,
+        }
         _resolved_category = ""  # BACKLOG-047: category for process_outcome()
 
         # Per-analyst η: identity from SAML JWT "sub" claim; "anonymous" when auth is off
@@ -1075,27 +1665,34 @@ async def report_decision_outcome(request: OutcomeRequest):
         reward_result = None
         _rl_reward_ledger = None
         _rl_posterior_updated = False
-        gae_result = await neo4j_client.run_query(
-            f"""
-            MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
-            OPTIONAL MATCH (d)-[:DECIDED_ON]->(a:Alert)
-            SET d.outcome           = {_S(outcome_label)},
-                d.correct           = {'true' if correct_bool else 'false'},
-                d.verified_at_epoch = {_ts_outcome},
-                d.override_comment  = {_S(request.override_comment or '')},
-                d.verified_by       = {_S(analyst_id)}
-            RETURN d.factor_vector AS factor_vector,
-                   d.action        AS action,
-                   d.confidence    AS confidence,
-                   d.campaign_id    AS campaign_id,
-                   d.explored       AS explored,
-                   d.explored_but_referred AS explored_but_referred,
-                   d.exploration_executed AS exploration_executed,
-                   d.explored_action AS explored_action,
-                   a.category      AS category,
-                   coalesce(a.alert_type, 'unknown') AS alert_type
-            """
-        )
+        with _soc_perf_phase(
+            "decision_lookup_and_outcome_update",
+            route=_perf_route,
+            alert_id=request.alert_id,
+            decision_id=request.decision_id,
+            action=getattr(request, "analyst_action", None),
+        ):
+            gae_result = await neo4j_client.run_query(
+                f"""
+                MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
+                OPTIONAL MATCH (d)-[:DECIDED_ON]->(a:Alert)
+                SET d.outcome           = {_S(outcome_label)},
+                    d.correct           = {'true' if correct_bool else 'false'},
+                    d.verified_at_epoch = {_ts_outcome},
+                    d.override_comment  = {_S(request.override_comment or '')},
+                    d.verified_by       = {_S(analyst_id)}
+                RETURN d.factor_vector AS factor_vector,
+                       d.action        AS action,
+                       d.confidence    AS confidence,
+                       d.campaign_id    AS campaign_id,
+                       d.explored       AS explored,
+                       d.explored_but_referred AS explored_but_referred,
+                       d.exploration_executed AS exploration_executed,
+                       d.explored_action AS explored_action,
+                       a.category      AS category,
+                       coalesce(a.alert_type, 'unknown') AS alert_type
+                """
+            )
         if not gae_result:
             raise HTTPException(
                 status_code=404,
@@ -1107,31 +1704,43 @@ async def report_decision_outcome(request: OutcomeRequest):
 
         # Audit chain — record outcome as separate event
         try:
-            from app.framework.audit import record_outcome as _audit_outcome
-            _outcome_rec = await _audit_outcome(
+            with _soc_perf_phase(
+                "outcome_audit_write",
+                route=_perf_route,
+                alert_id=request.alert_id,
                 decision_id=request.decision_id,
-                outcome=outcome_label,
-                analyst_override=(request.analyst_action is not None),
-            )
-            if _outcome_rec:
-                _oc_hash = _outcome_rec.get("hash", "")
-                _oc_idx = _outcome_rec.get("chain_index", -1)
-                await neo4j_client.run_query(
-                    f"MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}}) "
-                    f"SET d.outcome_entry_hash = {_S(_oc_hash)}, "
-                    f"d.outcome_chain_index = {_oc_idx}"
+            ):
+                from app.framework.audit import record_outcome as _audit_outcome
+                _outcome_rec = await _audit_outcome(
+                    decision_id=request.decision_id,
+                    outcome=outcome_label,
+                    analyst_override=(request.analyst_action is not None),
                 )
+                if _outcome_rec:
+                    _oc_hash = _outcome_rec.get("hash", "")
+                    _oc_idx = _outcome_rec.get("chain_index", -1)
+                    await neo4j_client.run_query(
+                        f"MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}}) "
+                        f"SET d.outcome_entry_hash = {_S(_oc_hash)}, "
+                        f"d.outcome_chain_index = {_oc_idx}"
+                    )
         except Exception as _e:
             logger.warning("[AUDIT] Outcome audit failed: %s", _e)
 
         # Per-analyst η: query verified outcome history for this analyst
         if analyst_id != "anonymous":
             try:
-                _q_rows = await neo4j_client.run_query(
-                    f"MATCH (d:Decision) "
-                    f"WHERE d.verified_by = {_S(analyst_id)} AND d.correct IS NOT NULL "
-                    f"RETURN d.correct AS correct"
-                )
+                with _soc_perf_phase(
+                    "analyst_history_scan",
+                    route=_perf_route,
+                    alert_id=request.alert_id,
+                    decision_id=request.decision_id,
+                ):
+                    _q_rows = await neo4j_client.run_query(
+                        f"MATCH (d:Decision) "
+                        f"WHERE d.verified_by = {_S(analyst_id)} AND d.correct IS NOT NULL "
+                        f"RETURN d.correct AS correct"
+                    )
                 if len(_q_rows) >= 5:
                     _total = len(_q_rows)
                     _correct_cnt = sum(1 for r in _q_rows if r.get("correct") is True)
@@ -1193,6 +1802,7 @@ async def report_decision_outcome(request: OutcomeRequest):
             # refer_to_analyst is a routing decision, not a classification
             # action.  ProfileScorer has A=4 (SCORER_ACTIONS); skip learning.
             if action_name not in SCORER_ACTIONS:
+                l5_persistence_status["l5_persistence_skipped_reason"] = "routing_action_not_scorable"
                 if fv is None:
                     print(f"[GAE] Decision node found but factor_vector is NULL — skipping weight update")
                 else:
@@ -1203,22 +1813,38 @@ async def report_decision_outcome(request: OutcomeRequest):
                 wu = None
                 # Still count this verified outcome so decision_count reflects
                 # all verified decisions, not only scorable actions.
-                _ref_ls = get_learning_state()
-                if _ref_ls:
-                    _ref_ls.decision_count += 1
-                    save_learning_state()
+                with _soc_perf_phase(
+                    "learning_state_update",
+                    route=_perf_route,
+                    alert_id=request.alert_id,
+                    decision_id=request.decision_id,
+                    category=_resolved_category,
+                    action=action_name,
+                ):
+                    _ref_ls = get_learning_state()
+                    if _ref_ls:
+                        _ref_ls.decision_count += 1
+                        save_learning_state()
             else:
-                f = _validate_scoring_factor_vector(fv)
-                action_index = list(SCORER_ACTIONS).index(action_name)
-                learning_state = get_learning_state()
-                wu = learning_state.update(
-                    action_index=action_index,
-                    action_name=action_name,
-                    outcome=outcome_int,
-                    f=f,
-                    confidence_at_decision=confidence_at_decision,
-                )
-                save_learning_state()
+                with _soc_perf_phase(
+                    "learning_state_update",
+                    route=_perf_route,
+                    alert_id=request.alert_id,
+                    decision_id=request.decision_id,
+                    category=_resolved_category,
+                    action=action_name,
+                ):
+                    f = _validate_scoring_factor_vector(fv)
+                    action_index = list(SCORER_ACTIONS).index(action_name)
+                    learning_state = get_learning_state()
+                    wu = learning_state.update(
+                        action_index=action_index,
+                        action_name=action_name,
+                        outcome=outcome_int,
+                        f=f,
+                        confidence_at_decision=confidence_at_decision,
+                    )
+                    save_learning_state()
 
                 try:
                     _soc_cfg_rl = _rl_soc_config()
@@ -1253,12 +1879,30 @@ async def report_decision_outcome(request: OutcomeRequest):
                 _conservation_block = False
                 _eff_status = "GREEN"
                 try:
-                    from app.services.learning_health import LearningHealthMonitor
-                    _health = await LearningHealthMonitor.evaluate(neo4j_client)
-                    _eff_status = (
-                        "RED" if _health.get("auto_pause_active")
-                        else _health.get("status", "GREEN")
-                    )
+                    with _soc_perf_phase(
+                        "conservation_monitor",
+                        route=_perf_route,
+                        alert_id=request.alert_id,
+                        decision_id=request.decision_id,
+                        category=_resolved_category,
+                        action=action_name,
+                    ):
+                        from app.services.learning_health import LearningHealthMonitor
+                        with _soc_perf_phase(
+                            "l5_conservation_write",
+                            route=_perf_route,
+                            alert_id=request.alert_id,
+                            decision_id=request.decision_id,
+                            category=_resolved_category,
+                            action=action_name,
+                        ):
+                            _health = await LearningHealthMonitor.evaluate(neo4j_client)
+                        _eff_status, _eff_reason = _soc_effective_conservation_status(_health)
+                        l5_persistence_status["conservation_status"] = _eff_status
+                        l5_persistence_status["raw_conservation_status"] = str(
+                            _health.get("status", "GREEN")
+                        ).upper()
+                        l5_persistence_status["conservation_status_reason"] = _eff_reason
                 except Exception as _cse:
                     logger.warning("Conservation status update failed: %s", _cse)
                     _conservation_block = True  # fail-closed: unknown health → block
@@ -1267,7 +1911,10 @@ async def report_decision_outcome(request: OutcomeRequest):
                 # gt_action_index = analyst's actual chosen action when provided;
                 # falls back to predicted action_index only when analyst_action is absent.
                 # is_correct is re-derived from the comparison so it stays consistent.
-                if LEARNING_ENABLED and action_name in SCORER_ACTIONS:
+                _soc_learning_active = _soc_learning_enabled()
+                if not _soc_learning_active and action_name in SCORER_ACTIONS:
+                    l5_persistence_status["l5_persistence_skipped_reason"] = "soc_learning_disabled"
+                if _soc_learning_active and action_name in SCORER_ACTIONS:
                     from app.domains.soc.config import resolve_alert_category, SOCDomainConfig as _SDC_out
                     _cat_name_out = resolve_alert_category(alert_type_for_cat)
                     if _cat_name_out == "unclassified":
@@ -1290,17 +1937,33 @@ async def report_decision_outcome(request: OutcomeRequest):
                         _gt_idx  = action_index
                         _correct = correct_bool
 
-                    from app.services.gae_state import acquire_scorer as _acquire_scorer, guarded_update as _guarded_update
+                    from app.services.gae_state import (
+                        acquire_scorer as _acquire_scorer,
+                        get_soc_centroid as _get_soc_centroid,
+                        guarded_update as _guarded_update,
+                        persist_soc_centroid as _persist_soc_centroid,
+                        persist_soc_dk_weights as _persist_soc_dk_weights,
+                        update_dk_welford_tracker as _update_dk_welford_tracker,
+                    )
                     if _conservation_block:
                         logger.warning("[B5] Conservation check failed — learning blocked (fail-closed)")
+                        l5_persistence_status["l5_persistence_skipped_reason"] = "conservation_check_failed"
                     else:
                         _cu = None
+                        _guard_block_reason = None
                         # D-05: acquire lock and capture scorer atomically so a concurrent
                         # reset cannot replace _learning_state between capture and update.
                         async with _acquire_scorer() as _ps_out:
                             _orig_eta_out = getattr(_ps_out, "eta", None)
                             _orig_eta_neg_out = getattr(_ps_out, "eta_neg", None)
                             _orig_eta_override_out = getattr(_ps_out, "eta_override", None)
+                            _pre_centroids = {
+                                action_index: _get_soc_centroid(_ps_out, _cat_idx_out, action_index)
+                            }
+                            if _gt_idx != action_index:
+                                _pre_centroids[_gt_idx] = _get_soc_centroid(
+                                    _ps_out, _cat_idx_out, _gt_idx
+                                )
                             try:
                                 if _analyst_eta is not None:
                                     _ps_out.eta_override = _analyst_eta
@@ -1327,15 +1990,109 @@ async def report_decision_outcome(request: OutcomeRequest):
                                     _ps_out.set_conservation_status(_eff_status)
                                 # DRIFT-03: route through guarded_update() so D3/D2/D7
                                 # spike guards AND conservation freeze are enforced.
-                                _cu = _guarded_update(
-                                    _ps_out,
-                                    f=f.flatten(),
-                                    category_index=_cat_idx_out,
-                                    action_index=action_index,
-                                    correct=_correct,
-                                    category_name=_cat_name_out,
-                                    gt_action_index=_gt_idx,
-                                )
+                                with _soc_perf_phase(
+                                    "profile_scorer_update",
+                                    route=_perf_route,
+                                    alert_id=request.alert_id,
+                                    decision_id=request.decision_id,
+                                    category=_cat_name_out,
+                                    action=action_name,
+                                    factor_vector_len=len(f.flatten()),
+                                ):
+                                    _cu = _guarded_update(
+                                        _ps_out,
+                                        f=f.flatten(),
+                                        category_index=_cat_idx_out,
+                                        action_index=action_index,
+                                        correct=_correct,
+                                        category_name=_cat_name_out,
+                                        gt_action_index=_gt_idx,
+                                    )
+                                if _cu is not None:
+                                    _actual_action_index = _gt_idx
+                                    _actual_action_name = _scorer_acts[_actual_action_index]
+                                    l5_persistence_status["l5_persistence_source"] = "profile_scorer"
+                                    try:
+                                        with _soc_perf_phase(
+                                            "l5_dk_weight_write",
+                                            route=_perf_route,
+                                            alert_id=request.alert_id,
+                                            decision_id=request.decision_id,
+                                            category=_cat_name_out,
+                                            action=_actual_action_name,
+                                        ):
+                                            _update_dk_welford_tracker(f.flatten(), bool(_correct))
+                                    except Exception as _welford_exc:
+                                        logger.warning(
+                                            "[GAE][LEARN] SOC DK Welford update failed: %s",
+                                            _welford_exc,
+                                        )
+                                    _reestimate_ok = False
+                                    try:
+                                        _reestimate_dk = getattr(_ps_out, "reestimate_dk", None)
+                                        if callable(_reestimate_dk):
+                                            _reestimate_dk()
+                                            _reestimate_ok = True
+                                    except Exception as _dk_exc:
+                                        logger.warning(
+                                            "[GAE][LEARN] SOC DK reestimate failed: %s",
+                                            _dk_exc,
+                                        )
+                                    try:
+                                        with _soc_perf_phase(
+                                            "l5_centroid_write",
+                                            route=_perf_route,
+                                            alert_id=request.alert_id,
+                                            decision_id=request.decision_id,
+                                            category=getattr(_cu, "category_name", _cat_name_out),
+                                            action=_actual_action_name,
+                                        ):
+                                            _centroid_persisted = _persist_soc_centroid(
+                                                scorer=_ps_out,
+                                                category=getattr(_cu, "category_name", _cat_name_out),
+                                                category_index=getattr(_cu, "category_index", _cat_idx_out),
+                                                action=_actual_action_name,
+                                                action_index=_actual_action_index,
+                                                caused_by_decision_id=request.decision_id,
+                                                pre_centroid=_pre_centroids.get(
+                                                    _actual_action_index
+                                                ),
+                                                logger=logger,
+                                            )
+                                        l5_persistence_status["l5_centroid_persisted"] = bool(
+                                            _centroid_persisted
+                                        )
+                                        l5_persistence_status["l5_shaped_by_attempted"] = bool(
+                                            _centroid_persisted and request.decision_id
+                                        )
+                                        l5_persistence_status["l5_persistence_skipped_reason"] = (
+                                            None if _centroid_persisted
+                                            else "persist_soc_centroid_returned_false"
+                                        )
+                                    except Exception as _centroid_exc:
+                                        logger.warning(
+                                            "[GAE][LEARN] SOC L5 centroid persistence failed: %s",
+                                            _centroid_exc,
+                                        )
+                                        l5_persistence_status["l5_persistence_skipped_reason"] = (
+                                            "persist_soc_centroid_exception"
+                                        )
+                                    if _reestimate_ok:
+                                        try:
+                                            with _soc_perf_phase(
+                                                "l5_dk_weight_write",
+                                                route=_perf_route,
+                                                alert_id=request.alert_id,
+                                                decision_id=request.decision_id,
+                                                category=_cat_name_out,
+                                                action=action_name,
+                                            ):
+                                                _persist_soc_dk_weights(_ps_out, logger=logger)
+                                        except Exception as _dk_persist_exc:
+                                            logger.warning(
+                                                "[GAE][LEARN] SOC L5 DK persistence failed: %s",
+                                                _dk_persist_exc,
+                                            )
                             finally:
                                 if _orig_eta_out is not None and hasattr(_ps_out, "eta"):
                                     _ps_out.eta = _orig_eta_out
@@ -1344,6 +2101,11 @@ async def report_decision_outcome(request: OutcomeRequest):
                                 if hasattr(_ps_out, "eta_override"):
                                     _ps_out.eta_override = _orig_eta_override_out
                         if _cu is None:
+                            if "_ps_out" in locals() and getattr(_ps_out, "is_paused", False):
+                                _guard_block_reason = "conservation_paused"
+                            if not _guard_block_reason:
+                                _guard_block_reason = "guarded_update_returned_none"
+                            l5_persistence_status["l5_persistence_skipped_reason"] = _guard_block_reason
                             logger.info("[GAE][LEARN] Update blocked by conservation/spike/freeze guard")
                         else:
                             print(
@@ -1355,8 +2117,16 @@ async def report_decision_outcome(request: OutcomeRequest):
 
                 # Change 5: ProfileSnapshot every 50 decisions
                 if wu is not None:
-                    from app.services.snapshots import maybe_write_profile_snapshot
-                    await maybe_write_profile_snapshot(learning_state.decision_count)
+                    with _soc_perf_phase(
+                        "snapshot_evolution_logging",
+                        route=_perf_route,
+                        alert_id=request.alert_id,
+                        decision_id=request.decision_id,
+                        category=_resolved_category,
+                        action=action_name,
+                    ):
+                        from app.services.snapshots import maybe_write_profile_snapshot
+                        await maybe_write_profile_snapshot(learning_state.decision_count)
 
                 if wu and wu.centroid_update is not None:
                     cu = wu.centroid_update
@@ -1487,35 +2257,43 @@ async def report_decision_outcome(request: OutcomeRequest):
                 _triggered_evolution_written = False
                 if correct_bool and action_name in SCORER_ACTIONS:
                     try:
-                        _evo_id = f"EVO-{uuid.uuid4().hex[:4].upper()}"
-                        _evo_ts = int(datetime.utcnow().timestamp() * 1000)
-                        _evo_dec_num = int(learning_state.decision_count)
-                        _evo_ph = float(fv[3]) if (isinstance(fv, list) and len(fv) > 3) else 0.4
-                        await neo4j_client.run_query(
-                            f"""
-                            MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
-                            CREATE (evo:EvolutionEvent {{
-                                id:              {_S(_evo_id)},
-                                event_type:      'verified_outcome',
-                                triggered_by:    {_S(request.decision_id)},
-                                category:        {_S(_resolved_category)},
-                                correct:         true,
-                                action:          {_S(action_name)},
-                                timestamp_epoch: {_evo_ts}
-                            }})
-                            CREATE (d)-[:TRIGGERED_EVOLUTION {{
-                                timestamp_epoch: {_evo_ts},
-                                decision_id:     {_S(request.decision_id)},
-                                category:        {_S(_resolved_category)},
-                                correct:         true,
-                                action:          {_S(action_name)}
-                            }}]->(evo)
-                            SET d.verified_correct  = true,
-                                d.factor_snapshot   = {_S(json.dumps(fv if isinstance(fv, list) else []))},
-                                d.decision_number   = {_evo_dec_num},
-                                d.action_index      = {action_index}
-                            """
-                        )
+                        with _soc_perf_phase(
+                            "snapshot_evolution_logging",
+                            route=_perf_route,
+                            alert_id=request.alert_id,
+                            decision_id=request.decision_id,
+                            category=_resolved_category,
+                            action=action_name,
+                        ):
+                            _evo_id = f"EVO-{uuid.uuid4().hex[:4].upper()}"
+                            _evo_ts = int(datetime.utcnow().timestamp() * 1000)
+                            _evo_dec_num = int(learning_state.decision_count)
+                            _evo_ph = float(fv[3]) if (isinstance(fv, list) and len(fv) > 3) else 0.4
+                            await neo4j_client.run_query(
+                                f"""
+                                MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
+                                CREATE (evo:EvolutionEvent {{
+                                    id:              {_S(_evo_id)},
+                                    event_type:      'verified_outcome',
+                                    triggered_by:    {_S(request.decision_id)},
+                                    category:        {_S(_resolved_category)},
+                                    correct:         true,
+                                    action:          {_S(action_name)},
+                                    timestamp_epoch: {_evo_ts}
+                                }})
+                                CREATE (d)-[:TRIGGERED_EVOLUTION {{
+                                    timestamp_epoch: {_evo_ts},
+                                    decision_id:     {_S(request.decision_id)},
+                                    category:        {_S(_resolved_category)},
+                                    correct:         true,
+                                    action:          {_S(action_name)}
+                                }}]->(evo)
+                                SET d.verified_correct  = true,
+                                    d.factor_snapshot   = {_S(json.dumps(fv if isinstance(fv, list) else []))},
+                                    d.decision_number   = {_evo_dec_num},
+                                    d.action_index      = {action_index}
+                                """
+                            )
                         _triggered_evolution_written = True
                         await event_bus.emit(GraphMutated(
                             mutation_type="evolution",
@@ -1651,21 +2429,57 @@ async def report_decision_outcome(request: OutcomeRequest):
             except Exception as _sn_exc:
                 logger.warning("ServiceNow mock creation failed: %s", _sn_exc)
 
-        response_body = result.model_dump()
-        response_body["centroid_update"] = centroid_update_payload
+        with _soc_perf_phase(
+            "response_serialization",
+            route=_perf_route,
+            alert_id=request.alert_id,
+            decision_id=request.decision_id,
+            category=_resolved_category,
+            action=locals().get("action_name"),
+        ):
+            response_body = result.model_dump()
+            response_body["centroid_update"] = centroid_update_payload
+            response_body["l5_centroid_persisted"] = l5_persistence_status[
+                "l5_centroid_persisted"
+            ]
+            response_body["l5_shaped_by_attempted"] = l5_persistence_status[
+                "l5_shaped_by_attempted"
+            ]
+            response_body["l5_persistence_skipped_reason"] = l5_persistence_status[
+                "l5_persistence_skipped_reason"
+            ]
+            response_body["l5_persistence"] = l5_persistence_status
         return response_body
 
-    except HTTPException:
+    except HTTPException as exc:
+        _perf_total_status = "error"
+        _perf_total_exception = type(exc).__name__
         raise
-    except ValueError:
+    except ValueError as exc:
+        _perf_total_status = "error"
+        _perf_total_exception = type(exc).__name__
         raise
     except Exception as e:
+        _perf_total_status = "error"
+        _perf_total_exception = type(e).__name__
         print(f"[ERROR] Failed to process outcome: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(
             status_code=500,
             detail=f"Failed to process outcome: {str(e)}"
+        )
+    finally:
+        _soc_perf_emit_duration(
+            "outcome_request_total",
+            _perf_total_started,
+            route=_perf_route,
+            status=_perf_total_status,
+            exception_type=_perf_total_exception,
+            alert_id=_perf_alert_id,
+            decision_id=_perf_decision_id,
+            category=locals().get("_resolved_category"),
+            action=locals().get("action_name"),
         )
 
 

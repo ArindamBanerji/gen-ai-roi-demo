@@ -1,0 +1,406 @@
+from __future__ import annotations
+
+import argparse
+import asyncio
+import json
+import os
+import re
+import sys
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any
+
+
+CATEGORY_ALERT_TYPES = {
+    "credential_access": "anomalous_login",
+    "malware_execution": "malware_detection",
+    "lateral_movement": "lateral_movement",
+    "data_exfiltration": "data_exfiltration",
+    "insider_threat": "insider_threat",
+    "cloud_infrastructure": "cloud_infrastructure",
+}
+
+
+def _find_projects_root() -> Path:
+    here = Path(__file__).resolve()
+    for parent in [here.parent, *here.parents]:
+        if (parent / "gen-ai-roi-demo-v4-v50").exists() and (parent / "ci-platform").exists():
+            return parent
+    return here.parents[2]
+
+
+def _bootstrap_paths() -> tuple[Path, Path]:
+    projects_root = _find_projects_root()
+    repo_root = projects_root / "gen-ai-roi-demo-v4-v50"
+    for path in (repo_root / "backend", projects_root / "ci-platform"):
+        text = str(path)
+        if text not in sys.path:
+            sys.path.insert(0, text)
+    return projects_root, repo_root
+
+
+PROJECTS_ROOT, REPO_ROOT = _bootstrap_paths()
+
+
+def redact_dsn(dsn: str | None) -> str | None:
+    if not dsn:
+        return dsn
+    return re.sub(r"(://[^:/@]+:)([^@]+)(@)", r"\1***\3", dsn)
+
+
+def is_passwordless_graph_dsn(dsn: str | None) -> bool:
+    if not dsn:
+        return True
+    match = re.search(r"^[a-zA-Z][a-zA-Z0-9+.-]*://([^/@:]+)(?::([^@]*))?@", dsn)
+    return bool(match and not match.group(2))
+
+
+def choose_database_url(database_url: str | None, graph_dsn: str | None) -> tuple[str | None, str]:
+    if database_url:
+        reason = "DATABASE_URL"
+        if graph_dsn and is_passwordless_graph_dsn(graph_dsn):
+            reason += " (ignored passwordless GRAPH_DSN)"
+        return database_url, reason
+    if graph_dsn and not is_passwordless_graph_dsn(graph_dsn):
+        return graph_dsn, "GRAPH_DSN"
+    return None, "missing DATABASE_URL; GRAPH_DSN is unset or passwordless"
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Seed SOC C9B Alert inputs for route-based live proof.")
+    parser.add_argument("--count", type=int, default=210)
+    parser.add_argument("--prefix", default="C9B-SOC")
+    parser.add_argument("--database-url", default=os.getenv("DATABASE_URL"))
+    parser.add_argument("--graph-name", default=os.getenv("AGE_GRAPH_NAME", "soc_graph_c9b"))
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--verbose", action="store_true")
+    args = parser.parse_args(argv)
+    if args.count < 1:
+        parser.error("--count must be >= 1")
+    return args
+
+
+@dataclass(frozen=True)
+class AlertSpec:
+    alert_id: str
+    user_id: str
+    asset_id: str
+    category: str
+    alert_type: str
+    severity: str
+    timestamp_epoch: int
+    source_location: str
+    risk_score: float
+    criticality: str
+    mfa_completed: bool
+    device_fingerprint_match: bool
+
+
+@dataclass
+class SeedSummary:
+    created: int
+    existing: int
+    planned: int
+    prefix: str
+    first_alert_id: str
+    last_alert_id: str
+    graph_name: str
+    database_url: str | None
+    dsn_source: str
+    dry_run: bool
+
+
+def deterministic_alert_id(prefix: str, index: int) -> str:
+    return f"{prefix}-{index:04d}"
+
+
+def build_alert_spec(prefix: str, index: int) -> AlertSpec:
+    categories = list(CATEGORY_ALERT_TYPES)
+    category = categories[(index - 1) % len(categories)]
+    severity = ["low", "medium", "high", "critical"][index % 4]
+    if category == "credential_access":
+        severity = "critical"
+    criticality_by_severity = {
+        "low": "low",
+        "medium": "medium",
+        "high": "high",
+        "critical": "critical",
+    }
+    return AlertSpec(
+        alert_id=deterministic_alert_id(prefix, index),
+        user_id=f"{prefix}-USER-{index:04d}",
+        asset_id=f"{prefix}-ASSET-{index:04d}",
+        category=category,
+        alert_type=CATEGORY_ALERT_TYPES[category],
+        severity=severity,
+        timestamp_epoch=1_725_000_000_000 + index,
+        source_location=f"c9b-seed-zone-{index % 6}",
+        risk_score=0.92 if category == "credential_access" else round(0.35 + ((index % 6) * 0.08), 3),
+        criticality=criticality_by_severity[severity],
+        mfa_completed=False if category == "credential_access" else index % 3 == 0,
+        device_fingerprint_match=False if category == "credential_access" else index % 4 != 0,
+    )
+
+
+def _literal(value: Any) -> str:
+    from app.graph_schema import _S
+
+    return _S(value)
+
+
+def _props(properties: dict[str, Any]) -> str:
+    return ", ".join(f"{key}: {_literal(value)}" for key, value in properties.items())
+
+
+async def _scalar_count(client: Any, query: str) -> int:
+    rows = await client.run_query(query)
+    if not rows:
+        return 0
+    return int(rows[0].get("cnt") or 0)
+
+
+async def _node_exists(client: Any, label: str, key: str, value: str) -> bool:
+    return (
+        await _scalar_count(
+            client,
+            f"MATCH (n:{label} {{{key}: {_literal(value)}}}) RETURN count(n) AS cnt",
+        )
+        > 0
+    )
+
+
+async def _edge_exists(
+    client: Any,
+    from_label: str,
+    from_key: str,
+    from_value: str,
+    edge_type: str,
+    to_label: str,
+    to_key: str,
+    to_value: str,
+) -> bool:
+    query = (
+        f"MATCH (a:{from_label} {{{from_key}: {_literal(from_value)}}})"
+        f"-[r:{edge_type}]->"
+        f"(b:{to_label} {{{to_key}: {_literal(to_value)}}}) "
+        "RETURN count(r) AS cnt"
+    )
+    return await _scalar_count(client, query) > 0
+
+
+async def _create_node_if_missing(
+    client: Any,
+    label: str,
+    key: str,
+    value: str,
+    properties: dict[str, Any],
+) -> bool:
+    if await _node_exists(client, label, key, value):
+        return False
+    await client.run_query(f"CREATE (n:{label} {{{_props(properties)}}})")
+    return True
+
+
+async def _create_edge_if_missing(
+    client: Any,
+    from_label: str,
+    from_key: str,
+    from_value: str,
+    edge_type: str,
+    to_label: str,
+    to_key: str,
+    to_value: str,
+) -> bool:
+    if await _edge_exists(client, from_label, from_key, from_value, edge_type, to_label, to_key, to_value):
+        return False
+    await client.run_query(
+        f"MATCH (a:{from_label} {{{from_key}: {_literal(from_value)}}}), "
+        f"(b:{to_label} {{{to_key}: {_literal(to_value)}}}) "
+        f"CREATE (a)-[:{edge_type}]->(b)"
+    )
+    return True
+
+
+async def seed_alerts(
+    client: Any,
+    *,
+    count: int,
+    prefix: str,
+    graph_name: str,
+    database_url: str | None,
+    dsn_source: str,
+    dry_run: bool,
+    verbose: bool = False,
+) -> SeedSummary:
+    specs = [build_alert_spec(prefix, index) for index in range(1, count + 1)]
+    if dry_run:
+        return SeedSummary(
+            created=0,
+            existing=0,
+            planned=count,
+            prefix=prefix,
+            first_alert_id=specs[0].alert_id,
+            last_alert_id=specs[-1].alert_id,
+            graph_name=graph_name,
+            database_url=redact_dsn(database_url),
+            dsn_source=dsn_source,
+            dry_run=True,
+        )
+
+    created = 0
+    existing = 0
+    for spec in specs:
+        alert_exists = await _node_exists(client, "Alert", "alert_id", spec.alert_id)
+        if alert_exists:
+            existing += 1
+        else:
+            await _create_node_if_missing(
+                client,
+                "User",
+                "user_id",
+                spec.user_id,
+                {
+                    "user_id": spec.user_id,
+                    "id": spec.user_id,
+                    "name": f"C9B Proof User {spec.user_id[-4:]}",
+                    "origin": "c9b_seed",
+                    "department": "SOC",
+                    "risk_level": spec.severity,
+                    "risk_score": spec.risk_score,
+                    "c9b_proof": True,
+                },
+            )
+            await _create_node_if_missing(
+                client,
+                "Asset",
+                "asset_id",
+                spec.asset_id,
+                {
+                    "asset_id": spec.asset_id,
+                    "id": spec.asset_id,
+                    "hostname": f"c9b-proof-{spec.asset_id[-4:]}",
+                    "criticality": spec.criticality,
+                    "origin": "c9b_seed",
+                    "asset_type": "workload",
+                    "business_unit": "security",
+                    "c9b_proof": True,
+                },
+            )
+            await client.run_query(
+                "CREATE (a:Alert {"
+                + _props(
+                    {
+                        "alert_id": spec.alert_id,
+                        "id": spec.alert_id,
+                        "category": spec.category,
+                        "severity": spec.severity,
+                        "alert_type": spec.alert_type,
+                        "status": "pending",
+                        "origin": "c9b_seed",
+                        "source": "c9b_seed",
+                        "c9b_proof": True,
+                        "timestamp_epoch": spec.timestamp_epoch,
+                        "source_location": spec.source_location,
+                        "user_id": spec.user_id,
+                        "asset_id": spec.asset_id,
+                        "attack_pattern_id": "",
+                        "mfa_completed": spec.mfa_completed,
+                        "device_fingerprint_match": spec.device_fingerprint_match,
+                        "vpn_provider": "c9b_seed",
+                    }
+                )
+                + "})"
+            )
+            created += 1
+            if verbose:
+                print(f"created {spec.alert_id}")
+
+        await _create_edge_if_missing(
+            client,
+            "Alert",
+            "alert_id",
+            spec.alert_id,
+            "INVOLVES",
+            "User",
+            "user_id",
+            spec.user_id,
+        )
+        await _create_edge_if_missing(
+            client,
+            "Alert",
+            "alert_id",
+            spec.alert_id,
+            "DETECTED_ON",
+            "Asset",
+            "asset_id",
+            spec.asset_id,
+        )
+
+    return SeedSummary(
+        created=created,
+        existing=existing,
+        planned=count,
+        prefix=prefix,
+        first_alert_id=specs[0].alert_id,
+        last_alert_id=specs[-1].alert_id,
+        graph_name=graph_name,
+        database_url=redact_dsn(database_url),
+        dsn_source=dsn_source,
+        dry_run=False,
+    )
+
+
+async def _run(args: argparse.Namespace) -> SeedSummary:
+    dsn, source = choose_database_url(args.database_url, os.getenv("GRAPH_DSN"))
+    if dsn is None:
+        return SeedSummary(
+            created=0,
+            existing=0,
+            planned=args.count,
+            prefix=args.prefix,
+            first_alert_id=deterministic_alert_id(args.prefix, 1),
+            last_alert_id=deterministic_alert_id(args.prefix, args.count),
+            graph_name=args.graph_name,
+            database_url=None,
+            dsn_source=source,
+            dry_run=args.dry_run,
+        )
+    from ci_platform.graph.age_client import AGEClient
+
+    client = AGEClient(dsn=dsn, graph_name=args.graph_name)
+    await client.ensure_graph()
+    return await seed_alerts(
+        client,
+        count=args.count,
+        prefix=args.prefix,
+        graph_name=args.graph_name,
+        database_url=dsn,
+        dsn_source=source,
+        dry_run=args.dry_run,
+        verbose=args.verbose,
+    )
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    summary = asyncio.run(_run(args))
+    payload = asdict(summary)
+    if args.json:
+        print(json.dumps(payload, sort_keys=True))
+    else:
+        print("SOC C9B Alert input seed")
+        print(f"graph: {summary.graph_name}")
+        print(f"dsn: {summary.database_url}")
+        print(f"dsn_source: {summary.dsn_source}")
+        print(f"prefix: {summary.prefix}")
+        print(f"planned: {summary.planned}")
+        print(f"created: {summary.created}")
+        print(f"existing: {summary.existing}")
+        print(f"range: {summary.first_alert_id}..{summary.last_alert_id}")
+        print(f"dry_run: {summary.dry_run}")
+    return 0 if summary.database_url or args.dry_run else 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

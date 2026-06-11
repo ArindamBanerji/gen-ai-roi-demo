@@ -1,0 +1,236 @@
+{
+  "started_epoch": 1780996244.5098069,
+  "graph_name": "soc_graph_phasec_smoke_1",
+  "backend_url": "http://127.0.0.1:8001",
+  "prefix": "PHASEC-SMOKE",
+  "runner_ci_platform_import_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform\\ci_platform\\graph\\age_graph_store.py",
+  "runner_graph_dsn_redacted": "host=localhost port=5433 dbname=soc_copilot user=postgres password=***",
+  "runner_age_env": {
+    "GRAPH_BACKEND": "age",
+    "GRAPH_DSN": "host=localhost port=5433 dbname=soc_copilot user=postgres password=***",
+    "AGE_GRAPH_NAME": "soc_graph_phasec_smoke_1"
+  },
+  "runner_age_readback_status": "ok",
+  "runner_age_readback_attempts": 1,
+  "runner_age_error": null,
+  "rule40_validated": true,
+  "backend_contract": {
+    "mode": "user_asserted",
+    "graph_name": "soc_graph_phasec_smoke_1",
+    "graph_dsn_redacted": "host=localhost port=5433 dbname=soc_copilot user=postgres password=***",
+    "ci_platform_import_path": null,
+    "statement": "Backend import path cannot be directly introspected without a debug endpoint; proof assumes backend was launched by run_soc_diag_backend.ps1 or demo.py --diag-mode with matching graph/env."
+  },
+  "health": {
+    "status": "healthy",
+    "components": {
+      "posterior_store": {
+        "healthy": true
+      }
+    }
+  },
+  "dry_run": false,
+  "scenario": "sanity-one-alert",
+  "scenario_config": {
+    "name": "sanity-one-alert",
+    "target_category": "credential_access",
+    "target_outcomes": 1,
+    "max_attempts": 1,
+    "allowed_actions": [
+      "escalate",
+      "investigate",
+      "monitor",
+      "suppress"
+    ],
+    "skip_actions": [
+      "refer_to_analyst"
+    ],
+    "milestones": [
+      1
+    ],
+    "input_provider": "fixed_c9b_stream",
+    "pass_criteria": [
+      "target_outcomes"
+    ]
+  },
+  "mode": "streaming",
+  "max_attempts": 1,
+  "seed_count": 1,
+  "target_outcomes": 1,
+  "batch_size": 10,
+  "sanity_count": 0,
+  "seed_strategy": "direct-age",
+  "graph_dsn_source": "--graph-dsn or runner localhost default",
+  "seed_sleep_seconds": 0.15,
+  "attempt_sleep_seconds": 0.05,
+  "batch_sleep_seconds": 2.0,
+  "seed_timeout_seconds": 60.0,
+  "seed_max_retries": 3,
+  "max_seed_failures": 3,
+  "http_timeout_seconds": 120.0,
+  "http_max_retries": 3,
+  "http_retry_backoff_seconds": "1,3,5",
+  "http_retry_backoffs": [
+    1.0,
+    3.0,
+    5.0
+  ],
+  "preflight_seed_count": 5,
+  "seed_contract_source": "duplicated_from_current_seed_contract",
+  "seed_contract_todo": "P3: reuse scripts/soc_c9b_seed_alerts.py when a small proof-mode interface exists.",
+  "seed_shape": {
+    "alert_type": "anomalous_login",
+    "category": "credential_access",
+    "severity": "critical",
+    "risk_score": 0.92,
+    "asset_criticality": "critical",
+    "mfa_completed": false,
+    "device_fingerprint_match": false
+  },
+  "seed_attempted_count": 1,
+  "seed_completed_count": 1,
+  "seeded_alerts": 1,
+  "seed_failures": 0,
+  "seeded_alerts_readback": 1,
+  "current_attempt_index": 1,
+  "current_batch_index": null,
+  "current_batch_start": 1,
+  "current_batch_end": 1,
+  "seed_retries": 0,
+  "last_seed_error": null,
+  "latest_http_error": null,
+  "latest_timeout_recovery_action": null,
+  "analyze_retries": 0,
+  "outcome_retries": 0,
+  "analyze_timeout_recovered_by_readback": 0,
+  "outcome_timeout_recovered_by_readback": 0,
+  "latest_seed_seconds": 0.868,
+  "latest_analyze_seconds": 1.699,
+  "latest_outcome_seconds": 1.601,
+  "latest_readback_seconds": 0.503,
+  "avg_analyze_seconds": 1.699,
+  "avg_outcome_seconds": 1.601,
+  "max_analyze_seconds": 1.699,
+  "max_outcome_seconds": 1.601,
+  "analyze_attempts": 1,
+  "outcome_attempts": 1,
+  "valid_outcomes": 1,
+  "skipped_refer_to_analyst": 0,
+  "other_categories": 0,
+  "other_action_skips": 0,
+  "one_process_loop": true,
+  "latest_alert_id": "PHASEC-SMOKE-0001",
+  "latest_action": "investigate",
+  "latest_confidence": 0.8770461205137833,
+  "progress_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\scratch\\temp\\soc_diag_f_progress.json",
+  "failures": [],
+  "last_successful_phase": "age_readback_completed",
+  "exception": null,
+  "milestones": {
+    "1": {
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": "68841173-1da9-40f2-96b3-bb4df73e5a30",
+      "time_epoch": 1780996249.533922,
+      "readback": {
+        "decisions": 1,
+        "verified": 1,
+        "outcome_present": 1,
+        "l5_centroid": 1,
+        "shaped_by": 1,
+        "l5_dk_weight": 0
+      }
+    }
+  },
+  "progress_readbacks": {
+    "1": {
+      "decisions": 1,
+      "verified": 1,
+      "outcome_present": 1,
+      "l5_centroid": 1,
+      "shaped_by": 1,
+      "l5_dk_weight": 0
+    }
+  },
+  "loops": [
+    {
+      "alert_id": "PHASEC-SMOKE-0001",
+      "analyze_status": 200,
+      "outcome_status": 200,
+      "category": "credential_access",
+      "action": "investigate",
+      "confidence": 0.8770461205137833,
+      "decision_id": "68841173-1da9-40f2-96b3-bb4df73e5a30",
+      "outcome_id": null,
+      "skipped_reason": null,
+      "analyze_recovered_by_readback": false,
+      "outcome_recovered_by_readback": false,
+      "seed_seconds": null,
+      "analyze_seconds": 1.699,
+      "outcome_seconds": 1.601,
+      "analyze_retry_count": 0,
+      "outcome_retry_count": 0
+    }
+  ],
+  "readback": {
+    "decisions": [
+      {
+        "cnt": 1
+      }
+    ],
+    "verified": [
+      {
+        "cnt": 1
+      }
+    ],
+    "outcome_present": [
+      {
+        "cnt": 1
+      }
+    ],
+    "l5_centroid": [
+      {
+        "cnt": 1
+      }
+    ],
+    "shaped_by": [
+      {
+        "cnt": 1
+      }
+    ],
+    "l5_dk_weight": [
+      {
+        "cnt": 0
+      }
+    ],
+    "dk_welford_rows": []
+  },
+  "verdict": "EXTERNAL_DIAGNOSTIC_F_PASS",
+  "exit_code": 0,
+  "proof_passed": true,
+  "criteria_failures": [],
+  "report_json_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_PHASEC-SMOKE.json",
+  "report_md_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_PHASEC-SMOKE.md",
+  "backend_runtime_contract_statement": "Backend import path cannot be directly introspected without a debug endpoint; proof assumes backend was launched by run_soc_diag_backend.ps1 or demo.py --diag-mode with matching graph/env.",
+  "runner_age_readback": [
+    {
+      "total": 1
+    }
+  ],
+  "_seed_seconds_values": [
+    0.868
+  ],
+  "avg_seed_seconds": 0.868,
+  "max_seed_seconds": 0.868,
+  "_analyze_seconds_values": [
+    1.699
+  ],
+  "_outcome_seconds_values": [
+    1.601
+  ],
+  "_readback_seconds_values": [
+    0.521,
+    0.503
+  ],
+  "avg_readback_seconds": 0.512,
+  "max_readback_seconds": 0.521
+}

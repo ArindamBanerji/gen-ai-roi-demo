@@ -1,0 +1,166 @@
+{
+  "started_epoch": 1781040266.549314,
+  "graph_name": "soc_graph_c9b_pre_hotpath_1",
+  "backend_url": "http://127.0.0.1:8001",
+  "prefix": "C9B-PRE-HOTPATH",
+  "runner_ci_platform_import_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform\\ci_platform\\graph\\age_graph_store.py",
+  "runner_graph_dsn_redacted": "host=localhost port=5433 dbname=soc_copilot user=postgres password=***",
+  "runner_age_env": {
+    "GRAPH_BACKEND": "age",
+    "GRAPH_DSN": "host=localhost port=5433 dbname=soc_copilot user=postgres password=***",
+    "AGE_GRAPH_NAME": "soc_graph_c9b_pre_hotpath_1"
+  },
+  "runner_age_readback_status": "ok",
+  "runner_age_readback_attempts": 1,
+  "runner_age_error": null,
+  "rule40_validated": true,
+  "backend_contract": {
+    "mode": "user_asserted",
+    "graph_name": "soc_graph_c9b_pre_hotpath_1",
+    "graph_dsn_redacted": "host=localhost port=5433 dbname=soc_copilot user=postgres password=***",
+    "ci_platform_import_path": null,
+    "statement": "Backend import path cannot be directly introspected without a debug endpoint; proof assumes backend was launched by run_soc_diag_backend.ps1 or demo.py --diag-mode with matching graph/env."
+  },
+  "health": {
+    "status": "healthy",
+    "components": {
+      "posterior_store": {
+        "healthy": true
+      }
+    }
+  },
+  "dry_run": false,
+  "scenario": "diagnostic-f-dk",
+  "scenario_config": {
+    "name": "diagnostic-f-dk",
+    "target_category": "credential_access",
+    "target_outcomes": 250,
+    "max_attempts": 400,
+    "allowed_actions": [
+      "escalate",
+      "investigate",
+      "monitor",
+      "suppress"
+    ],
+    "skip_actions": [
+      "refer_to_analyst"
+    ],
+    "milestones": [
+      195,
+      200,
+      201,
+      205,
+      230,
+      250
+    ],
+    "input_provider": "fixed_c9b_stream",
+    "pass_criteria": [
+      "target_outcomes",
+      "l5_dk_weight",
+      "welford",
+      "dk_n_decisions_used"
+    ]
+  },
+  "mode": "streaming",
+  "max_attempts": 400,
+  "seed_count": 400,
+  "target_outcomes": 250,
+  "batch_size": 10,
+  "sanity_count": 0,
+  "seed_strategy": "direct-age",
+  "graph_dsn_source": "--graph-dsn or runner localhost default",
+  "seed_sleep_seconds": 0.15,
+  "attempt_sleep_seconds": 0.05,
+  "batch_sleep_seconds": 2.0,
+  "seed_timeout_seconds": 60.0,
+  "seed_max_retries": 3,
+  "max_seed_failures": 3,
+  "http_timeout_seconds": 120.0,
+  "http_max_retries": 3,
+  "http_retry_backoff_seconds": "1,3,5",
+  "http_retry_backoffs": [
+    1.0,
+    3.0,
+    5.0
+  ],
+  "preflight_seed_count": 5,
+  "seed_contract_source": "duplicated_from_current_seed_contract",
+  "seed_contract_todo": "P3: reuse scripts/soc_c9b_seed_alerts.py when a small proof-mode interface exists.",
+  "seed_shape": {
+    "alert_type": "anomalous_login",
+    "category": "credential_access",
+    "severity": "critical",
+    "risk_score": 0.92,
+    "asset_criticality": "critical",
+    "mfa_completed": false,
+    "device_fingerprint_match": false
+  },
+  "seed_attempted_count": 1,
+  "seed_completed_count": 1,
+  "seeded_alerts": 1,
+  "seed_failures": 0,
+  "seeded_alerts_readback": 0,
+  "current_attempt_index": 1,
+  "current_batch_index": null,
+  "current_batch_start": 1,
+  "current_batch_end": 1,
+  "seed_retries": 0,
+  "last_seed_error": null,
+  "latest_http_error": null,
+  "latest_timeout_recovery_action": null,
+  "analyze_retries": 0,
+  "outcome_retries": 0,
+  "analyze_timeout_recovered_by_readback": 0,
+  "outcome_timeout_recovered_by_readback": 0,
+  "latest_seed_seconds": 0.919,
+  "latest_analyze_seconds": null,
+  "latest_outcome_seconds": null,
+  "latest_readback_seconds": null,
+  "avg_analyze_seconds": null,
+  "avg_outcome_seconds": null,
+  "max_analyze_seconds": null,
+  "max_outcome_seconds": null,
+  "analyze_attempts": 1,
+  "outcome_attempts": 0,
+  "valid_outcomes": 0,
+  "skipped_refer_to_analyst": 0,
+  "other_categories": 0,
+  "other_action_skips": 0,
+  "one_process_loop": true,
+  "latest_alert_id": null,
+  "latest_action": null,
+  "latest_confidence": null,
+  "progress_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\scratch\\temp\\soc_diag_f_progress.json",
+  "failures": [
+    {
+      "verdict": "ANALYZE_HTTP_FAILURE",
+      "message": "proof analyze failed for C9B-PRE-HOTPATH-0001: HTTP 404 Not Found: {\"detail\":\"Alert C9B-PRE-HOTPATH-0001 not found\"}",
+      "time_epoch": 1781040268.0280848
+    }
+  ],
+  "last_successful_phase": "runner_age_readback_validated",
+  "exception": "proof analyze failed for C9B-PRE-HOTPATH-0001: HTTP 404 Not Found: {\"detail\":\"Alert C9B-PRE-HOTPATH-0001 not found\"}",
+  "milestones": {},
+  "progress_readbacks": {},
+  "loops": [],
+  "readback": null,
+  "verdict": "ANALYZE_HTTP_FAILURE",
+  "exit_code": 1,
+  "proof_passed": false,
+  "criteria_failures": [
+    "proof analyze failed for C9B-PRE-HOTPATH-0001: HTTP 404 Not Found: {\"detail\":\"Alert C9B-PRE-HOTPATH-0001 not found\"}"
+  ],
+  "report_json_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_C9B-PRE-HOTPATH.json",
+  "report_md_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_C9B-PRE-HOTPATH.md",
+  "backend_runtime_contract_statement": "Backend import path cannot be directly introspected without a debug endpoint; proof assumes backend was launched by run_soc_diag_backend.ps1 or demo.py --diag-mode with matching graph/env.",
+  "runner_age_readback": [
+    {
+      "total": 1
+    }
+  ],
+  "_seed_seconds_values": [
+    0.919
+  ],
+  "avg_seed_seconds": 0.919,
+  "max_seed_seconds": 0.919
+}

@@ -29,10 +29,17 @@ class _FakeState:
 
 
 class _FakeGraph:
-    async def compute_outcome_stats(self) -> dict:
-        return {"override_rate": 0.25, "override_quality": 0.80}
+    def __init__(self, rows: list[dict] | None = None):
+        self.rows = rows if rows is not None else [
+            {"category": "credential_access", "verified": 100, "correct": 80, "overrides": 10},
+            {"category": "malware_execution", "verified": 100, "correct": 80, "overrides": 10},
+            {"category": "lateral_movement", "verified": 100, "correct": 80, "overrides": 10},
+            {"category": "data_exfiltration", "verified": 100, "correct": 80, "overrides": 10},
+        ]
 
     async def run_query(self, _query: str) -> list[dict]:
+        if "MATCH (d:Decision)" in _query and "RETURN d.category AS category" in _query:
+            return self.rows
         return [{"red_days": 0}]
 
 
@@ -84,7 +91,7 @@ async def test_l5_conservation_hook_no_store_noop(monkeypatch, healthy_state):
     await learning_health._persist_l5_conservation_state(_with_category_coverage(result))
 
     assert result["status"] == "GREEN"
-    assert result["components"]["alpha"] == pytest.approx(0.25)
+    assert result["components"]["alpha"] == pytest.approx(4 / 6, abs=1e-4)
     assert result["components"]["q"] == pytest.approx(0.80)
 
 
@@ -94,7 +101,6 @@ async def test_l5_conservation_hook_first_write(monkeypatch, healthy_state):
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
 
     result = await LearningHealthMonitor.evaluate(_FakeGraph())
-    await learning_health._persist_l5_conservation_state(_with_category_coverage(result))
 
     assert result["status"] == "GREEN"
     assert len(store.updates) == 1
@@ -102,7 +108,7 @@ async def test_l5_conservation_hook_first_write(monkeypatch, healthy_state):
     assert update["domain"] == "soc"
     assert update["status"] == "GREEN"
     assert update["old_status"] is None
-    assert update["alpha"] == pytest.approx(0.25)
+    assert update["alpha"] == pytest.approx(4 / 6, abs=1e-4)
     assert update["q"] == pytest.approx(0.80)
     assert isinstance(update["V"], int)
     assert update["theta_min"] == pytest.approx(result["theta_min"])
@@ -126,7 +132,6 @@ async def test_l5_conservation_hook_same_status_passes_old_status(monkeypatch, h
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
 
     result = await LearningHealthMonitor.evaluate(_FakeGraph())
-    await learning_health._persist_l5_conservation_state(_with_category_coverage(result))
 
     assert result["status"] == "GREEN"
     assert store.updates[0]["old_status"] == "GREEN"
@@ -139,7 +144,6 @@ async def test_l5_conservation_hook_transition_passes_previous_status(monkeypatc
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
 
     result = await LearningHealthMonitor.evaluate(_FakeGraph())
-    await learning_health._persist_l5_conservation_state(_with_category_coverage(result))
 
     assert result["status"] == "GREEN"
     assert store.updates[0]["old_status"] == "AMBER"
@@ -152,7 +156,6 @@ async def test_l5_conservation_hook_get_failure_skips_write(monkeypatch, healthy
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
 
     result = await LearningHealthMonitor.evaluate(_FakeGraph())
-    await learning_health._persist_l5_conservation_state(_with_category_coverage(result))
 
     assert result["status"] == "GREEN"
     assert store.updates == []
@@ -164,7 +167,6 @@ async def test_l5_conservation_hook_update_failure_non_blocking(monkeypatch, hea
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
 
     result = await LearningHealthMonitor.evaluate(_FakeGraph())
-    await learning_health._persist_l5_conservation_state(_with_category_coverage(result))
 
     assert result["status"] == "GREEN"
 
@@ -176,12 +178,11 @@ async def test_l5_conservation_hook_skips_when_category_coverage_unavailable(
     store = _FakeStore(old_state=None)
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
 
-    result = await LearningHealthMonitor.evaluate(_FakeGraph())
+    result = await LearningHealthMonitor.evaluate(None)
 
     with caplog.at_level(logging.DEBUG):
         await learning_health._persist_l5_conservation_state(result)
 
-    assert result["status"] == "GREEN"
     assert store.updates == []
     assert "categories_with_data unavailable" in caplog.text
 
@@ -193,7 +194,9 @@ async def test_l5_conservation_hook_skips_invalid_category_coverage(
     store = _FakeStore(old_state=None)
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
 
+    monkeypatch.setattr(learning_health, "get_learning_store", lambda: None)
     result = await LearningHealthMonitor.evaluate(_FakeGraph())
+    monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
     await learning_health._persist_l5_conservation_state(
         _with_category_coverage(result, categories_with_data=999)
     )
@@ -218,7 +221,6 @@ async def test_l5_conservation_hook_uses_store_lock(monkeypatch, healthy_state):
     monkeypatch.setattr(learning_health, "_L5_CONSERVATION_STORE_LOCK", _RecordingLock())
 
     result = await LearningHealthMonitor.evaluate(_FakeGraph())
-    await learning_health._persist_l5_conservation_state(_with_category_coverage(result))
 
     assert events == ["enter", "exit"]
     assert len(store.updates) == 1

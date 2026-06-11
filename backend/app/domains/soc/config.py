@@ -11,8 +11,13 @@ Constants are extracted from the existing service files — nothing is invented:
   metrics_config ← routers/metrics.py   BusinessImpact values
 """
 
+import os
+
 import numpy as np
-from gae.profile_scorer import ProfileScorer, build_profile_scorer, KernelType
+from gae.dk_estimator import CoordinateDescentEstimator
+from gae.profile_scorer import LearningStrategy, ProfileScorer, build_profile_scorer, KernelType
+from gae.shrinkage import FixedAlpha
+from gae.two_phase import DecisionCountPolicy
 from gae.calibration import CalibrationProfile
 
 from app.domains.base import (
@@ -59,6 +64,14 @@ SOC_N_ACT           = len(SCORER_ACTIONS)                          # 4
 # Default False (frozen scorer). Set True per-customer after shadow mode
 # validates that learning improves outcomes.
 LEARNING_ENABLED = False
+
+
+def is_learning_enabled() -> bool:
+    """Return whether live SOC centroid/DK learning is enabled."""
+    raw = os.environ.get("SOC_LEARNING_ENABLED")
+    if raw is None:
+        return bool(LEARNING_ENABLED)
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 # Phase 1: graded reward computation + ledger. Defaults False until phase
 # review passes and triage integration is explicitly implemented.
@@ -706,6 +719,11 @@ class SOCDomainConfig(DomainConfig):
             categories=list(SOC_CATEGORIES),
             eta_override=0.01,       # P0 fix: attenuate override learning 5x
             auto_pause_on_amber=True,  # DRIFT-01: enable conservation RED/AMBER freeze
+            learning_strategy=LearningStrategy(
+                phase_policy=DecisionCountPolicy(n=200),
+                dk_estimator=CoordinateDescentEstimator(),
+                shrinkage_schedule=FixedAlpha(0.5),
+            ),
         )
 
     @staticmethod

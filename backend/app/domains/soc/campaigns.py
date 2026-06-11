@@ -19,13 +19,188 @@ Confidence model:
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import List, Optional
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, List, Optional
+import hashlib
 import json as _json
 import logging
+import os
+import time
 import uuid
 
 log = logging.getLogger(__name__)
+
+_TRACE_FALSE_VALUES = {"", "0", "false", "no", "off"}
+_TRACE_MAX_QUERY_EVENTS = 50
+
+
+def _campaign_trace_enabled() -> bool:
+    return os.getenv("SOC_PERF_TRACE_ENABLED", "false").strip().lower() not in _TRACE_FALSE_VALUES
+
+
+def _campaign_trace_output_path() -> Path:
+    raw = os.getenv("SOC_PERF_TRACE_OUTPUT", "scratch/temp/soc_perf_trace.jsonl")
+    path = Path(raw)
+    repo_root = Path(__file__).resolve().parents[4]
+    return path if path.is_absolute() else repo_root / path
+
+
+def _campaign_trace_emit(event: dict[str, Any]) -> None:
+    if not _campaign_trace_enabled():
+        return
+    try:
+        output_path = _campaign_trace_output_path()
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with output_path.open("a", encoding="utf-8") as fh:
+            fh.write(_json.dumps(event, sort_keys=True) + "\n")
+    except Exception:
+        pass
+
+
+class CampaignTraceCollector:
+    """Best-effort campaign-local perf counters. Disabled unless SOC_PERF_TRACE_ENABLED is true."""
+
+    def __init__(self, alert_id: str):
+        self.enabled = _campaign_trace_enabled()
+        self.alert_id = alert_id
+        self.started = time.perf_counter()
+        self.query_count = 0
+        self.read_query_count = 0
+        self.write_query_count = 0
+        self.query_total_ms = 0.0
+        self.query_max_ms = 0.0
+        self.queries: list[dict[str, Any]] = []
+        self.recent_event_count: int | None = None
+        self.member_alert_count: int | None = None
+        self.member_edge_existing_count: int | None = None
+        self.member_edge_missing_count: int | None = None
+        self.member_alert_missing_count: int | None = None
+        self.member_edge_create_chunk_count: int | None = None
+        self.member_edges_created_count: int | None = None
+        self.candidate_campaign_count: int | None = None
+        self.path = "unknown"
+
+    def record_query(
+        self,
+        label: str,
+        kind: str,
+        duration_ms: float,
+        row_count: int | None,
+        status: str,
+        exception_type: str | None = None,
+    ) -> None:
+        if not self.enabled:
+            return
+        self.query_count += 1
+        if kind == "write":
+            self.write_query_count += 1
+        else:
+            self.read_query_count += 1
+        self.query_total_ms += duration_ms
+        self.query_max_ms = max(self.query_max_ms, duration_ms)
+        query_event = {
+            "label": label,
+            "kind": kind,
+            "duration_ms": round(duration_ms, 3),
+            "row_count": row_count,
+            "status": status,
+            "exception_type": exception_type,
+        }
+        if len(self.queries) < _TRACE_MAX_QUERY_EVENTS:
+            self.queries.append(query_event)
+        _campaign_trace_emit(
+            {
+                "event_type": "phase_timing",
+                "phase": f"campaign_query_{label}",
+                "route": "/api/alert/analyze",
+                "duration_ms": round(duration_ms, 3),
+                "status": status,
+                "exception_type": exception_type,
+                "graph_name": os.getenv("AGE_GRAPH_NAME"),
+                "alert_id": self.alert_id,
+                "decision_id": None,
+                "category": None,
+                "action": None,
+                "metadata": {
+                    "query_label": label,
+                    "query_kind": kind,
+                    "row_count": row_count,
+                },
+                "timestamp_epoch_ms": int(time.time() * 1000),
+            }
+        )
+
+    def emit_summary(self, campaign_id: str | None = None) -> None:
+        if not self.enabled:
+            return
+        duration_ms = (time.perf_counter() - self.started) * 1000.0
+        _campaign_trace_emit(
+            {
+                "event_type": "phase_timing",
+                "phase": "campaign_correlation_summary",
+                "route": "/api/alert/analyze",
+                "duration_ms": round(duration_ms, 3),
+                "status": "ok",
+                "exception_type": None,
+                "graph_name": os.getenv("AGE_GRAPH_NAME"),
+                "alert_id": self.alert_id,
+                "decision_id": None,
+                "category": None,
+                "action": None,
+                "metadata": {
+                    "campaign_id_present": bool(campaign_id),
+                    "campaign_query_count": self.query_count,
+                    "campaign_query_total_ms": round(self.query_total_ms, 3),
+                    "campaign_query_max_ms": round(self.query_max_ms, 3),
+                    "read_query_count": self.read_query_count,
+                    "write_query_count": self.write_query_count,
+                    "recent_event_count": self.recent_event_count,
+                    "member_alert_count": self.member_alert_count,
+                    "member_edge_existing_count": self.member_edge_existing_count,
+                    "member_edge_missing_count": self.member_edge_missing_count,
+                    "member_alert_missing_count": self.member_alert_missing_count,
+                    "member_edge_create_chunk_count": self.member_edge_create_chunk_count,
+                    "member_edges_created_count": self.member_edges_created_count,
+                    "candidate_campaign_count": self.candidate_campaign_count,
+                    "path": self.path,
+                    "queries": self.queries,
+                },
+                "timestamp_epoch_ms": int(time.time() * 1000),
+            }
+        )
+
+
+async def _campaign_trace_query(
+    collector: CampaignTraceCollector | None,
+    label: str,
+    kind: str,
+    awaitable,
+):
+    if collector is None or not collector.enabled:
+        return await awaitable
+    started = time.perf_counter()
+    status = "ok"
+    exception_type = None
+    row_count = None
+    try:
+        result = await awaitable
+        if isinstance(result, list):
+            row_count = len(result)
+        return result
+    except Exception as exc:
+        status = "error"
+        exception_type = type(exc).__name__
+        raise
+    finally:
+        collector.record_query(
+            label,
+            kind,
+            (time.perf_counter() - started) * 1000.0,
+            row_count,
+            status,
+            exception_type,
+        )
 
 
 def _S(val) -> str:
@@ -39,6 +214,24 @@ def _S(val) -> str:
     if isinstance(val, (list, tuple)):
         return "'" + _json.dumps(val).replace("'", "\\'") + "'"
     return "'" + str(val).replace("\\", "\\\\").replace("'", "\\'") + "'"
+
+
+def _dedupe_preserve_order(values: List[str]) -> List[str]:
+    seen: set[str] = set()
+    result: List[str] = []
+    for value in values:
+        if value not in seen:
+            seen.add(value)
+            result.append(value)
+    return result
+
+
+def _alert_id_or_predicate(alias: str, alert_ids: List[str]) -> str:
+    return " OR ".join(f"{alias}.alert_id = {_S(alert_id)}" for alert_id in alert_ids)
+
+
+def _chunks(values: List[str], size: int) -> List[List[str]]:
+    return [values[i:i + size] for i in range(0, len(values), size)]
 
 
 def _to_python_dt(value):
@@ -98,6 +291,10 @@ class Campaign:
     member_alert_ids: List[str]
     correlation_window_hours: int
     nl_summary: str
+    rule_type: str = ""
+    derived_entity_key: str = ""
+    category: str = ""
+    time_bucket: int = 0
 
 
 # ── Cypher queries ───────────────────────────────────────────────────────────
@@ -217,6 +414,60 @@ def make_campaign_id(alert_ids: List[str]) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_OID, ",".join(sorted(alert_ids))))
 
 
+def _present(value: Any) -> bool:
+    return value is not None and str(value).strip() != ""
+
+
+def derived_entity_key(event: dict) -> str | None:
+    """Phase 1 L1 campaign entity key with type prefixes to avoid collisions."""
+    for field_name, prefix in (
+        ("source_entity_id", "entity"),
+        ("user_id", "user"),
+        ("asset_id", "asset"),
+        ("source_location", "loc"),
+    ):
+        value = event.get(field_name)
+        if _present(value):
+            return f"{prefix}:{str(value).strip()}"
+    return None
+
+
+def campaign_time_bucket(ts, window_seconds: int) -> int | None:
+    """Epoch-aligned time bucket for Phase 1 campaign identity."""
+    if not window_seconds or window_seconds <= 0 or ts is None:
+        return None
+    if hasattr(ts, "to_native"):
+        ts = ts.to_native()
+    if isinstance(ts, datetime):
+        if ts.tzinfo is None:
+            seconds = ts.replace(tzinfo=timezone.utc).timestamp()
+        else:
+            seconds = ts.timestamp()
+    else:
+        seconds = _ts_to_seconds(ts)
+    return int(seconds // window_seconds)
+
+
+def make_campaign_identity_key(
+    rule_type: str,
+    derived_entity_key: str,
+    category: str,
+    time_bucket: int,
+) -> str:
+    """Stable Phase 1 L1 campaign ID from rule, entity, category, and bucket."""
+    material = (
+        "L1:"
+        + str(rule_type)
+        + "\x00"
+        + str(derived_entity_key)
+        + "\x00"
+        + str(category)
+        + "\x00"
+        + str(int(time_bucket))
+    )
+    return "L1-" + hashlib.sha256(material.encode("utf-8")).hexdigest()[:32]
+
+
 def is_subsequence(needle: tuple, haystack: List[str]) -> bool:
     """Check if needle categories appear in order in haystack."""
     it = iter(haystack)
@@ -309,7 +560,8 @@ class CampaignCorrelationEngine:
     """
     Finds campaigns from alert event data.
     Rule priority: technique_sequence > shared_entity > temporal.
-    Campaign IDs are deterministic — same alert set = same campaign_id.
+    Campaign IDs are stable per Phase 1 L1 identity tuple:
+    rule_type + derived entity + category + epoch-aligned bucket.
     All methods accept plain dicts — no Neo4j dependency in this class.
     Neo4j queries live in CampaignRepository (Step 5).
     """
@@ -323,7 +575,7 @@ class CampaignCorrelationEngine:
         """
         Run all 3 rules against a list of alert events.
         Each event dict must have:
-          alert_id, category, source_entity_id (nullable),
+          alert_id, category, entity fields (nullable),
           ts (datetime), technique_id (nullable), severity
 
         Returns list of Campaign objects. Each alert appears in
@@ -352,15 +604,10 @@ class CampaignCorrelationEngine:
         self, events: List[dict], claimed: set
     ) -> tuple:
         """
-        Rule 2: Group events by source_entity_id. For each group,
-        check if the category sequence contains a known kill chain.
-        Longest matching chain wins (checked first via length sort).
-        One chain match per entity — both loops exit on first match.
+        Rule 2: Phase 1 only permits same-category/entity/bucket L1 campaigns.
+        Cross-category attack-chain semantics are deferred to Level 2.
         """
-        entity_groups: dict = defaultdict(list)
-        for e in events:
-            if e.get("source_entity_id") and e["alert_id"] not in claimed:
-                entity_groups[e["source_entity_id"]].append(e)
+        identity_groups = self._identity_groups(events, claimed)
 
         # Flatten all chains, sorted longest first so greedy match is correct
         all_chains: List[tuple] = []
@@ -369,11 +616,13 @@ class CampaignCorrelationEngine:
         all_chains.sort(key=lambda c: len(c), reverse=True)
 
         new_campaigns: List[Campaign] = []
-        for entity_id, group in entity_groups.items():
+        for (entity_key, _category, _bucket), group in identity_groups.items():
             group_sorted = sorted(group, key=lambda e: e["ts"])
             categories = [e["category"] for e in group_sorted]
 
             for chain in all_chains:
+                if len(set(chain)) != 1:
+                    continue
                 if is_subsequence(chain, categories):
                     matching = self._extract_chain_events(group_sorted, chain)
                     if len(matching) >= self.min_alerts:
@@ -385,10 +634,11 @@ class CampaignCorrelationEngine:
                             matching,
                             trigger_rule="technique_sequence",
                             confidence=CONFIDENCE_TECHNIQUE_SEQUENCE,
-                            shared_entities=[entity_id],
+                            shared_entities=[entity_key],
                         )
-                        new_campaigns.append(campaign)
-                        claimed.update(alert_ids)
+                        if campaign is not None:
+                            new_campaigns.append(campaign)
+                            claimed.update(alert_ids)
                         break  # one chain match per entity — exit chain loop
 
         return new_campaigns, claimed
@@ -397,15 +647,12 @@ class CampaignCorrelationEngine:
         self, events: List[dict], claimed: set
     ) -> tuple:
         """
-        Rule 1: Group unclaimed events by source_entity_id within window.
+        Rule 1: Group unclaimed events by Phase 1 entity/category/bucket.
         """
-        entity_groups: dict = defaultdict(list)
-        for e in events:
-            if e.get("source_entity_id") and e["alert_id"] not in claimed:
-                entity_groups[e["source_entity_id"]].append(e)
+        identity_groups = self._identity_groups(events, claimed)
 
         new_campaigns: List[Campaign] = []
-        for entity_id, group in entity_groups.items():
+        for (entity_key, _category, _bucket), group in identity_groups.items():
             group_sorted = sorted(group, key=lambda e: e["ts"])
             windowed = self._filter_to_window(group_sorted, self.window_seconds)
             if len(windowed) >= self.min_alerts:
@@ -414,10 +661,11 @@ class CampaignCorrelationEngine:
                     windowed,
                     trigger_rule="shared_entity",
                     confidence=CONFIDENCE_SHARED_ENTITY,
-                    shared_entities=[entity_id],
+                    shared_entities=[entity_key],
                 )
-                new_campaigns.append(campaign)
-                claimed.update(alert_ids)
+                if campaign is not None:
+                    new_campaigns.append(campaign)
+                    claimed.update(alert_ids)
 
         return new_campaigns, claimed
 
@@ -425,16 +673,13 @@ class CampaignCorrelationEngine:
         self, events: List[dict], claimed: set
     ) -> tuple:
         """
-        Rule 3: Group unclaimed events by category, then cluster
-        by temporal proximity. No shared entity required.
+        Rule 3: Group unclaimed events by Phase 1 entity/category/bucket,
+        then cluster by temporal proximity.
         """
-        category_groups: dict = defaultdict(list)
-        for e in events:
-            if e["alert_id"] not in claimed:
-                category_groups[e["category"]].append(e)
+        identity_groups = self._identity_groups(events, claimed)
 
         new_campaigns: List[Campaign] = []
-        for category, group in category_groups.items():
+        for (_entity_key, _category, _bucket), group in identity_groups.items():
             group_sorted = sorted(group, key=lambda e: e["ts"])
             clusters = sliding_window_cluster(group_sorted, self.temporal_window)
             for cluster in clusters:
@@ -448,22 +693,38 @@ class CampaignCorrelationEngine:
                         confidence=CONFIDENCE_TEMPORAL,
                         shared_entities=[],
                     )
-                    new_campaigns.append(campaign)
-                    claimed.update(alert_ids)
+                    if campaign is not None:
+                        new_campaigns.append(campaign)
+                        claimed.update(alert_ids)
 
         return new_campaigns, claimed
 
     def _build_campaign(
         self, events: List[dict], trigger_rule: str,
         confidence: float, shared_entities: List[str],
-    ) -> Campaign:
+    ) -> Optional[Campaign]:
+        if not events:
+            return None
+        entity_key = derived_entity_key(events[0])
+        category = events[0].get("category")
+        bucket = campaign_time_bucket(events[0].get("ts"), self.window_seconds)
+        if not entity_key or not category or bucket is None:
+            return None
+        for event in events:
+            if (
+                derived_entity_key(event) != entity_key
+                or event.get("category") != category
+                or campaign_time_bucket(event.get("ts"), self.window_seconds) != bucket
+            ):
+                return None
+
         alert_ids = [e["alert_id"] for e in events]
         cats = [e["category"] for e in events]
         techniques = [e["technique_id"] for e in events if e.get("technique_id")]
         severities = [e.get("severity", "LOW") for e in events]
 
         return Campaign(
-            campaign_id=make_campaign_id(alert_ids),
+            campaign_id=make_campaign_identity_key(trigger_rule, entity_key, category, bucket),
             first_seen=min(e["ts"] for e in events),
             last_seen=max(e["ts"] for e in events),
             alert_count=len(alert_ids),
@@ -477,7 +738,24 @@ class CampaignCorrelationEngine:
             member_alert_ids=alert_ids,
             correlation_window_hours=self.window_seconds // 3600,
             nl_summary=build_nl_summary(events, shared_entities, trigger_rule),
+            rule_type=trigger_rule,
+            derived_entity_key=entity_key,
+            category=category,
+            time_bucket=bucket,
         )
+
+    def _identity_groups(self, events: List[dict], claimed: set) -> dict:
+        groups: dict = defaultdict(list)
+        for event in events:
+            if event["alert_id"] in claimed:
+                continue
+            entity_key = derived_entity_key(event)
+            category = event.get("category")
+            bucket = campaign_time_bucket(event.get("ts"), self.window_seconds)
+            if not entity_key or not category or bucket is None:
+                continue
+            groups[(entity_key, category, bucket)].append(event)
+        return groups
 
     def _extract_chain_events(
         self, events: List[dict], chain: tuple
@@ -536,8 +814,11 @@ class CampaignRepository:
                 MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
                 WHERE d.source_id IS NOT NULL AND d.source_id <> 'synthetic'
                 RETURN a.alert_id AS alert_id,
-                       d.category AS category,
-                       a.source_entity_id AS source_entity_id,
+                       COALESCE(a.category, d.category) AS category,
+                       COALESCE(a.source_entity_id, d.source_id) AS source_entity_id,
+                       a.user_id AS user_id,
+                       a.asset_id AS asset_id,
+                       COALESCE(a.source_location, d.source_id) AS source_location,
                        a.technique_id AS technique_id,
                        d.timestamp_epoch AS ts,
                        COALESCE(a.severity, 'MEDIUM') AS severity,
@@ -550,43 +831,67 @@ class CampaignRepository:
             return []
 
     async def fetch_recent_events(
-        self, window_hours: int = 24
+        self, window_hours: int = 24,
+        trace: CampaignTraceCollector | None = None,
     ) -> List[dict]:
         """
         Fetch recent unclaimed events for real-time matching.
         """
         try:
-            results = await self.neo4j.run_query("""
-                MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
-                WHERE d.timestamp_epoch > $cutoff_epoch
-                RETURN a.alert_id AS alert_id,
-                       d.category AS category,
-                       a.source_entity_id AS source_entity_id,
-                       a.technique_id AS technique_id,
-                       d.timestamp_epoch AS ts,
-                       COALESCE(a.severity, 'MEDIUM') AS severity,
-                       d.decision_id AS decision_id
-                ORDER BY ts
-            """, {"cutoff_epoch": int((datetime.utcnow().timestamp() - window_hours * 3600) * 1000)})
-            return [{**dict(r), "ts": _to_python_dt(r["ts"])} for r in results] if results else []
+            results = await _campaign_trace_query(
+                trace,
+                "fetch_recent_events",
+                "read",
+                self.neo4j.run_query("""
+                    MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
+                    WHERE d.timestamp_epoch > $cutoff_epoch
+                    RETURN a.alert_id AS alert_id,
+                           COALESCE(a.category, d.category) AS category,
+                           COALESCE(a.source_entity_id, d.source_id) AS source_entity_id,
+                           a.user_id AS user_id,
+                           a.asset_id AS asset_id,
+                           COALESCE(a.source_location, d.source_id) AS source_location,
+                           a.technique_id AS technique_id,
+                           d.timestamp_epoch AS ts,
+                           COALESCE(a.severity, 'MEDIUM') AS severity,
+                           d.decision_id AS decision_id
+                    ORDER BY ts
+                """, {"cutoff_epoch": int((datetime.utcnow().timestamp() - window_hours * 3600) * 1000)}),
+            )
+            events = [{**dict(r), "ts": _to_python_dt(r["ts"])} for r in results] if results else []
+            if trace is not None and trace.enabled:
+                trace.recent_event_count = len(events)
+            return events
         except Exception as e:
             log.warning(f"fetch_recent_events failed: {e}")
             return []
 
-    async def fetch_single_alert_event(self, alert_id: str) -> Optional[dict]:
+    async def fetch_single_alert_event(
+        self,
+        alert_id: str,
+        trace: CampaignTraceCollector | None = None,
+    ) -> Optional[dict]:
         """Fetch one alert event by ID."""
         try:
-            results = await self.neo4j.run_query("""
-                MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert {alert_id: $alert_id})
-                RETURN a.alert_id AS alert_id,
-                       d.category AS category,
-                       a.source_entity_id AS source_entity_id,
-                       a.technique_id AS technique_id,
-                       d.timestamp_epoch AS ts,
-                       COALESCE(a.severity, 'MEDIUM') AS severity,
-                       d.decision_id AS decision_id
-                LIMIT 1
-            """, {"alert_id": alert_id})
+            results = await _campaign_trace_query(
+                trace,
+                "fetch_single_alert_event",
+                "read",
+                self.neo4j.run_query("""
+                    MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert {alert_id: $alert_id})
+                    RETURN a.alert_id AS alert_id,
+                           COALESCE(a.category, d.category) AS category,
+                           COALESCE(a.source_entity_id, d.source_id) AS source_entity_id,
+                           a.user_id AS user_id,
+                           a.asset_id AS asset_id,
+                           COALESCE(a.source_location, d.source_id) AS source_location,
+                           a.technique_id AS technique_id,
+                           d.timestamp_epoch AS ts,
+                           COALESCE(a.severity, 'MEDIUM') AS severity,
+                           d.decision_id AS decision_id
+                    LIMIT 1
+                """, {"alert_id": alert_id}),
+            )
             if results:
                 r = dict(results[0])
                 r["ts"] = _to_python_dt(r["ts"])
@@ -596,65 +901,164 @@ class CampaignRepository:
             log.warning(f"fetch_single_alert_event failed: {e}")
             return None
 
-    async def write_campaign(self, campaign: Campaign) -> bool:
+    async def write_campaign(
+        self,
+        campaign: Campaign,
+        trace: CampaignTraceCollector | None = None,
+    ) -> bool:
         """
         Write Campaign node and :MEMBER_OF edges to Neo4j.
         Idempotent — MATCH-then-CREATE (AGE has no MERGE).
         Returns True on success.
         """
         try:
+            if trace is not None and trace.enabled:
+                trace.member_alert_count = len(campaign.member_alert_ids)
             cid = _S(campaign.campaign_id)
             ts = _S(int(datetime.utcnow().timestamp() * 1000))
-            existing = await self.neo4j.run_query(
-                f"MATCH (c:Campaign {{campaign_id: {cid}}}) RETURN c"
+            existing = await _campaign_trace_query(
+                trace,
+                "check_campaign_exists",
+                "read",
+                self.neo4j.run_query(
+                    f"MATCH (c:Campaign {{campaign_id: {cid}}}) RETURN c"
+                ),
             )
             if existing:
-                await self.neo4j.run_query(
-                    f"MATCH (c:Campaign {{campaign_id: {cid}}})"
-                    f" SET c.first_seen = {_S(campaign.first_seen.isoformat())},"
-                    f"     c.last_seen = {_S(campaign.last_seen.isoformat())},"
-                    f"     c.alert_count = {_S(campaign.alert_count)},"
-                    f"     c.category_sequence = {_S(campaign.category_sequence)},"
-                    f"     c.shared_entities = {_S(campaign.shared_entities)},"
-                    f"     c.technique_sequence = {_S(campaign.technique_sequence)},"
-                    f"     c.confidence = {_S(campaign.confidence)},"
-                    f"     c.trigger_rule = {_S(campaign.trigger_rule)},"
-                    f"     c.severity = {_S(campaign.severity)},"
-                    f"     c.correlation_window_hours = {_S(campaign.correlation_window_hours)},"
-                    f"     c.nl_summary = {_S(campaign.nl_summary)},"
-                    f"     c.updated_at_epoch = {ts}"
+                await _campaign_trace_query(
+                    trace,
+                    "update_campaign",
+                    "write",
+                    self.neo4j.run_query(
+                        f"MATCH (c:Campaign {{campaign_id: {cid}}})"
+                        f" SET c.first_seen = {_S(campaign.first_seen.isoformat())},"
+                        f"     c.last_seen = {_S(campaign.last_seen.isoformat())},"
+                        f"     c.alert_count = {_S(campaign.alert_count)},"
+                        f"     c.category_sequence = {_S(campaign.category_sequence)},"
+                        f"     c.shared_entities = {_S(campaign.shared_entities)},"
+                        f"     c.technique_sequence = {_S(campaign.technique_sequence)},"
+                        f"     c.confidence = {_S(campaign.confidence)},"
+                        f"     c.trigger_rule = {_S(campaign.trigger_rule)},"
+                        f"     c.rule_type = {_S(campaign.rule_type or campaign.trigger_rule)},"
+                        f"     c.derived_entity_key = {_S(campaign.derived_entity_key)},"
+                        f"     c.category = {_S(campaign.category)},"
+                        f"     c.time_bucket = {_S(campaign.time_bucket)},"
+                        f"     c.severity = {_S(campaign.severity)},"
+                        f"     c.correlation_window_hours = {_S(campaign.correlation_window_hours)},"
+                        f"     c.nl_summary = {_S(campaign.nl_summary)},"
+                        f"     c.updated_at_epoch = {ts}"
+                    ),
                 )
             else:
-                await self.neo4j.run_query(
-                    f"CREATE (c:Campaign {{"
-                    f" campaign_id: {cid},"
-                    f" first_seen: {_S(campaign.first_seen.isoformat())},"
-                    f" last_seen: {_S(campaign.last_seen.isoformat())},"
-                    f" alert_count: {_S(campaign.alert_count)},"
-                    f" category_sequence: {_S(campaign.category_sequence)},"
-                    f" shared_entities: {_S(campaign.shared_entities)},"
-                    f" technique_sequence: {_S(campaign.technique_sequence)},"
-                    f" confidence: {_S(campaign.confidence)},"
-                    f" trigger_rule: {_S(campaign.trigger_rule)},"
-                    f" severity: {_S(campaign.severity)},"
-                    f" correlation_window_hours: {_S(campaign.correlation_window_hours)},"
-                    f" nl_summary: {_S(campaign.nl_summary)},"
-                    f" updated_at_epoch: {ts}"
-                    f"}})"
+                await _campaign_trace_query(
+                    trace,
+                    "create_campaign",
+                    "write",
+                    self.neo4j.run_query(
+                        f"CREATE (c:Campaign {{"
+                        f" campaign_id: {cid},"
+                        f" first_seen: {_S(campaign.first_seen.isoformat())},"
+                        f" last_seen: {_S(campaign.last_seen.isoformat())},"
+                        f" alert_count: {_S(campaign.alert_count)},"
+                        f" category_sequence: {_S(campaign.category_sequence)},"
+                        f" shared_entities: {_S(campaign.shared_entities)},"
+                        f" technique_sequence: {_S(campaign.technique_sequence)},"
+                        f" confidence: {_S(campaign.confidence)},"
+                        f" trigger_rule: {_S(campaign.trigger_rule)},"
+                        f" rule_type: {_S(campaign.rule_type or campaign.trigger_rule)},"
+                        f" derived_entity_key: {_S(campaign.derived_entity_key)},"
+                        f" category: {_S(campaign.category)},"
+                        f" time_bucket: {_S(campaign.time_bucket)},"
+                        f" severity: {_S(campaign.severity)},"
+                        f" correlation_window_hours: {_S(campaign.correlation_window_hours)},"
+                        f" nl_summary: {_S(campaign.nl_summary)},"
+                        f" updated_at_epoch: {ts}"
+                        f"}})"
+                    ),
                 )
 
-            # Write :MEMBER_OF edges (skip if edge already exists)
-            for alert_id in campaign.member_alert_ids:
-                edge_exists = await self.neo4j.run_query(
-                    f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})"
-                    f"-[:MEMBER_OF]->(c:Campaign {{campaign_id: {cid}}}) RETURN a"
+            # Write :MEMBER_OF edges. AGE has no MERGE in this path, so keep the
+            # existing check-then-create semantics but batch graph round trips.
+            member_alert_ids = _dedupe_preserve_order(campaign.member_alert_ids)
+            if trace is not None and trace.enabled:
+                trace.member_alert_count = len(member_alert_ids)
+            if member_alert_ids:
+                existing_edges = await _campaign_trace_query(
+                    trace,
+                    "member_edges_existing_read",
+                    "read",
+                    self.neo4j.run_query(
+                        f"MATCH (a:Alert)-[:MEMBER_OF]->(c:Campaign {{campaign_id: {cid}}})"
+                        f" WHERE {_alert_id_or_predicate('a', member_alert_ids)}"
+                        f" RETURN a.alert_id AS alert_id"
+                    ),
                 )
-                if not edge_exists:
-                    await self.neo4j.run_query(
-                        f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})"
-                        f" MATCH (c:Campaign {{campaign_id: {cid}}})"
-                        f" CREATE (a)-[:MEMBER_OF]->(c)"
+                existing_edge_ids = {
+                    row.get("alert_id")
+                    for row in (existing_edges or [])
+                    if row.get("alert_id") is not None
+                }
+                missing_edge_ids = [
+                    alert_id for alert_id in member_alert_ids
+                    if alert_id not in existing_edge_ids
+                ]
+
+                if trace is not None and trace.enabled:
+                    trace.member_edge_existing_count = len(existing_edge_ids)
+                    trace.member_edge_missing_count = len(missing_edge_ids)
+
+                existing_alert_ids: set[str] = set()
+                if missing_edge_ids:
+                    existing_alerts = await _campaign_trace_query(
+                        trace,
+                        "member_alert_nodes_read",
+                        "read",
+                        self.neo4j.run_query(
+                            f"MATCH (a:Alert)"
+                            f" WHERE {_alert_id_or_predicate('a', missing_edge_ids)}"
+                            f" RETURN a.alert_id AS alert_id"
+                        ),
                     )
+                    existing_alert_ids = {
+                        row.get("alert_id")
+                        for row in (existing_alerts or [])
+                        if row.get("alert_id") is not None
+                    }
+
+                creatable_ids = [
+                    alert_id for alert_id in missing_edge_ids
+                    if alert_id in existing_alert_ids
+                ]
+
+                if trace is not None and trace.enabled:
+                    trace.member_alert_missing_count = len(missing_edge_ids) - len(creatable_ids)
+                    trace.member_edge_create_chunk_count = len(_chunks(creatable_ids, 25))
+                    trace.member_edges_created_count = 0
+
+                for chunk in _chunks(creatable_ids, 25):
+                    clauses = [f"MATCH (c:Campaign {{campaign_id: {cid}}})"]
+                    create_patterns = []
+                    for idx, alert_id in enumerate(chunk):
+                        alias = f"a{idx}"
+                        clauses.append(f"MATCH ({alias}:Alert {{alert_id: {_S(alert_id)}}})")
+                        create_patterns.append(f"({alias})-[:MEMBER_OF]->(c)")
+                    create_query = (
+                        " ".join(clauses)
+                        + " CREATE "
+                        + ", ".join(create_patterns)
+                        + f" RETURN {_S(len(chunk))} AS created_count"
+                    )
+                    created_rows = await _campaign_trace_query(
+                        trace,
+                        "member_edges_batch_create",
+                        "write",
+                        self.neo4j.run_query(create_query),
+                    )
+                    if trace is not None and trace.enabled:
+                        trace.member_edges_created_count = (
+                            (trace.member_edges_created_count or 0)
+                            + sum(int(row.get("created_count") or 0) for row in (created_rows or []))
+                        )
             return True
         except Exception as e:
             log.error(f"write_campaign failed for {campaign.campaign_id}: {e}")
@@ -739,78 +1143,114 @@ class CampaignMatcher:
         Returns campaign_id if alert joined/created a campaign, else None.
         Non-blocking — Exception → log warning → return None.
         """
+        trace = CampaignTraceCollector(alert_id)
+        campaign_id = None
         try:
-            # 1. Check if alert matches an existing campaign via shared entity
-            existing_campaign_id = await self._find_matching_campaign(alert_id)
-            if existing_campaign_id:
-                await self._add_alert_to_campaign(alert_id, existing_campaign_id)
-                return existing_campaign_id
-
-            # 2. Fetch recent unclaimed events + this new alert
+            # 1. Fetch recent events + this new alert. Phase 1 campaign reuse is
+            # driven by stable identity-keyed candidates and write_campaign's
+            # existing check/update path after the rule_type is known.
             recent = await self.repo.fetch_recent_events(
-                self.config["correlation_window_hours"]
+                self.config["correlation_window_hours"],
+                trace=trace,
             )
             # Ensure the new alert is included
             if not any(e["alert_id"] == alert_id for e in recent):
-                new_event = await self.repo.fetch_single_alert_event(alert_id)
+                new_event = await self.repo.fetch_single_alert_event(alert_id, trace=trace)
                 if new_event:
                     recent.append(new_event)
+                    if trace.enabled:
+                        trace.recent_event_count = len(recent)
 
-            # 3. Run correlation on recent window
+            # 2. Run correlation on recent window
             if len(recent) >= self.config["min_alerts_for_campaign"]:
                 campaigns = self.engine.correlate(recent)
+                if trace.enabled:
+                    trace.candidate_campaign_count = len(campaigns)
                 for c in campaigns:
                     if alert_id in c.member_alert_ids:
-                        await self.repo.write_campaign(c)
-                        return c.campaign_id
+                        trace.path = "new_campaign"
+                        await self.repo.write_campaign(c, trace=trace)
+                        campaign_id = c.campaign_id
+                        return campaign_id
 
+            trace.path = "no_campaign"
             return None
 
         except Exception as e:
             log.warning(f"CampaignMatcher.check_alert({alert_id}) failed: {e}")
+            trace.path = "unknown"
             return None
+        finally:
+            trace.emit_summary(campaign_id)
 
     async def _find_matching_campaign(
-        self, alert_id: str
+        self,
+        alert_id: str,
+        trace: CampaignTraceCollector | None = None,
     ) -> Optional[str]:
         """Find existing open campaign this alert should join."""
         try:
-            results = await self.neo4j.run_query("""
-                MATCH (a_new:Alert {alert_id: $alert_id})
-                MATCH (a_existing:Alert)-[:MEMBER_OF]->(c:Campaign)
-                WHERE a_existing.source_entity_id IS NOT NULL
-                  AND a_existing.source_entity_id = a_new.source_entity_id
-                  AND c.last_seen > $cutoff_epoch
-                RETURN c.campaign_id AS campaign_id
-                ORDER BY c.last_seen DESC LIMIT 1
-            """, {"alert_id": alert_id,
-                  "cutoff_epoch": int((datetime.utcnow().timestamp() - self.config["correlation_window_hours"] * 3600) * 1000)})
+            results = await _campaign_trace_query(
+                trace,
+                "find_matching_campaign",
+                "read",
+                self.neo4j.run_query("""
+                    MATCH (a_new:Alert {alert_id: $alert_id})
+                    MATCH (a_existing:Alert)-[:MEMBER_OF]->(c:Campaign)
+                    WHERE a_existing.source_entity_id IS NOT NULL
+                      AND a_existing.source_entity_id = a_new.source_entity_id
+                      AND c.last_seen > $cutoff_epoch
+                    RETURN c.campaign_id AS campaign_id
+                    ORDER BY c.last_seen DESC LIMIT 1
+                """, {"alert_id": alert_id,
+                      "cutoff_epoch": int((datetime.utcnow().timestamp() - self.config["correlation_window_hours"] * 3600) * 1000)}),
+            )
+            if trace is not None and trace.enabled:
+                trace.candidate_campaign_count = len(results or [])
             return results[0]["campaign_id"] if results else None
         except Exception as e:
             log.warning(f"_find_matching_campaign failed: {e}")
             return None
 
     async def _add_alert_to_campaign(
-        self, alert_id: str, campaign_id: str
+        self,
+        alert_id: str,
+        campaign_id: str,
+        trace: CampaignTraceCollector | None = None,
     ) -> None:
         """Add alert to existing campaign, update last_seen + alert_count."""
         try:
             epoch = _S(int(datetime.utcnow().timestamp() * 1000))
             cid = _S(campaign_id)
             aid = _S(alert_id)
-            await self.neo4j.run_query(
-                f"MATCH (c:Campaign {{campaign_id: {cid}}})"
-                f" SET c.last_seen = {epoch}, c.alert_count = c.alert_count + 1"
+            await _campaign_trace_query(
+                trace,
+                "existing_campaign_update",
+                "write",
+                self.neo4j.run_query(
+                    f"MATCH (c:Campaign {{campaign_id: {cid}}})"
+                    f" SET c.last_seen = {epoch}, c.alert_count = c.alert_count + 1"
+                ),
             )
-            edge_exists = await self.neo4j.run_query(
-                f"MATCH (a:Alert {{alert_id: {aid}}})"
-                f"-[:MEMBER_OF]->(c:Campaign {{campaign_id: {cid}}}) RETURN a"
+            edge_exists = await _campaign_trace_query(
+                trace,
+                "existing_campaign_edge_check",
+                "read",
+                self.neo4j.run_query(
+                    f"MATCH (a:Alert {{alert_id: {aid}}})"
+                    f"-[:MEMBER_OF]->(c:Campaign {{campaign_id: {cid}}}) RETURN a"
+                ),
             )
             if not edge_exists:
-                await self.neo4j.run_query(
-                    f"MATCH (a:Alert {{alert_id: {aid}}})"
-                    f" MATCH (c:Campaign {{campaign_id: {cid}}})"
-                    f" CREATE (a)-[:MEMBER_OF]->(c)"
+                await _campaign_trace_query(
+                    trace,
+                    "existing_campaign_edge_create",
+                    "write",
+                    self.neo4j.run_query(
+                        f"MATCH (a:Alert {{alert_id: {aid}}})"
+                        f" MATCH (c:Campaign {{campaign_id: {cid}}})"
+                        f" CREATE (a)-[:MEMBER_OF]->(c)"
+                    ),
                 )
         except Exception as e:
             log.warning(f"_add_alert_to_campaign failed: {e}")

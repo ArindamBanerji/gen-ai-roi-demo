@@ -1,0 +1,215 @@
+{
+  "title": "SOC Perf 02 Read-Only HTTP and Analyze Route Source Map",
+  "created_at_epoch": 1780992815.8956938,
+  "read_only": true,
+  "no_writes_performed_by_script": true,
+  "graph_name": "soc_graph_diag_f8",
+  "prefix": "DIAG-F8-CRED",
+  "backend_url": "http://127.0.0.1:8001",
+  "graph_dsn_redacted": "host=localhost port=5433 dbname=soc_copilot user=postgres password=***",
+  "rule40_validated": true,
+  "network_split_warnings": [],
+  "reps": 5,
+  "http_timeout": 30.0,
+  "negative_analyze_alert_id": "PERF-NONEXISTENT-DO-NOT-CREATE",
+  "proof_alerts_analyzed": false,
+  "outcome_endpoint_called": false,
+  "measurements": [
+    {
+      "label": "h1_get_health",
+      "reps": 5,
+      "min_s": 0.082434,
+      "max_s": 0.353141,
+      "avg_s": 0.144997,
+      "p50_s": 0.092193,
+      "p95_s": 0.303776,
+      "error": null,
+      "last_result": {
+        "status": 200,
+        "body": "{\"status\":\"healthy\",\"components\":{\"posterior_store\":{\"healthy\":true}}}"
+      }
+    },
+    {
+      "label": "h2_post_analyze_negative_missing_alert",
+      "reps": 5,
+      "min_s": 0.072165,
+      "max_s": 0.159318,
+      "avg_s": 0.097515,
+      "p50_s": 0.081324,
+      "p95_s": 0.146844,
+      "error": null,
+      "last_result": {
+        "status": 404,
+        "body": "{\"detail\":\"Alert PERF-NONEXISTENT-DO-NOT-CREATE not found\"}",
+        "http_error": true
+      }
+    },
+    {
+      "label": "h3_get_alerts_queue",
+      "reps": 5,
+      "min_s": 0.110285,
+      "max_s": 0.143864,
+      "avg_s": 0.127994,
+      "p50_s": 0.123319,
+      "p95_s": 0.142957,
+      "error": null,
+      "last_result": {
+        "status": 200,
+        "body": "{\"alerts\":[{\"id\":\"DIAG-F8-CRED-0250\",\"alert_type\":\"anomalous_login\",\"severity\":\"critical\",\"asset_hostname\":\"diag-f-0250\",\"user_name\":\"Diagnostic User 0250\",\"timestamp\":1725000000250,\"status\":\"pending\",\"source_location\":\"diag-f-zone-4\"},{\"id\":\"DIAG-F8-CRED-0249\",\"alert_type\":\"anomalous_login\",\"severity\":\"critical\",\"asset_hostname\":\"diag-f-0249\",\"user_name\":\"Diagnostic User 0249\",\"timestamp\":1725000000249,\"status\":\"pending\",\"source_location\":\"diag-f-zone-3\"},{\"id\":\"DIAG-F8-CRED-0248\",\"alert_type\":"
+      }
+    },
+    {
+      "label": "h3_get_outcome_status_negative",
+      "reps": 5,
+      "min_s": 0.003175,
+      "max_s": 0.016623,
+      "avg_s": 0.008487,
+      "p50_s": 0.005705,
+      "p95_s": 0.01587,
+      "error": null,
+      "last_result": {
+        "status": 200,
+        "body": "{\"has_feedback\":false,\"can_modify\":true}"
+      }
+    },
+    {
+      "label": "h3_get_policy_history",
+      "reps": 5,
+      "min_s": 0.0026,
+      "max_s": 0.016854,
+      "avg_s": 0.013413,
+      "p50_s": 0.015821,
+      "p95_s": 0.016687,
+      "error": null,
+      "last_result": {
+        "status": 200,
+        "body": "{\"conflicts\":[],\"total_count\":0}"
+      }
+    },
+    {
+      "label": "h3_get_soc_profile",
+      "reps": 5,
+      "min_s": 0.076166,
+      "max_s": 0.154352,
+      "avg_s": 0.101145,
+      "p50_s": 0.095483,
+      "p95_s": 0.143736,
+      "error": null,
+      "last_result": {
+        "status": 200,
+        "body": "{\"categories\":[\"credential_access\",\"malware_execution\",\"lateral_movement\",\"data_exfiltration\",\"insider_threat\",\"cloud_infrastructure\"],\"actions\":[\"escalate\",\"investigate\",\"suppress\",\"monitor\"],\"centroids\":[[[0.75,0.85,0.8,0.6,0.65,0.15],[0.8249686769208007,0.9998247797107019,0.0007329136993329443,0.4000147041874143,0.699975625199219,0.6666192215340231],[0.3,0.25,0.15,0.2,0.25,0.85],[0.2,0.45,0.25,0.35,0.35,0.65]],[[0.75,0.8,0.9,0.55,0.6,0.2],[0.6,0.55,0.75,0.5,0.5,0.4],[0.3,0.2,0.2,0.15,0.2,0.9]"
+      }
+    }
+  ],
+  "source_map": {
+    "analyze_route": {
+      "endpoint": "POST /api/alert/analyze",
+      "definition": "backend/app/routers/triage.py:173",
+      "sequence": [
+        "scorer readiness guard: backend/app/routers/triage.py:184-197",
+        "alert lookup via neo4j_client.get_alert: backend/app/routers/triage.py:202-208",
+        "security context lookup: backend/app/routers/triage.py:210-216",
+        "category resolution before scoring: backend/app/routers/triage.py:221-238",
+        "factor/scorer pipeline: backend/app/routers/triage.py:240-354",
+        "Decision write and DECIDED_ON edge: backend/app/routers/triage.py:435-464",
+        "synchronous audit record and Decision hash SET: backend/app/routers/triage.py:466-483",
+        "additional synchronous Decision metadata SETs/events: backend/app/routers/triage.py:509-667"
+      ],
+      "graph_reads": [
+        "neo4j_client.get_alert(alert_id): backend/app/routers/triage.py:205",
+        "neo4j_client.get_security_context(alert_id): backend/app/routers/triage.py:213",
+        "Decision sequence/cross-category helper calls before referral: backend/app/routers/triage.py:366-373"
+      ],
+      "graph_writes": [
+        "CREATE Decision and DECIDED_ON edge: backend/app/routers/triage.py:444-463",
+        "SET entry_hash/decision_chain_index: backend/app/routers/triage.py:479-483",
+        "additional Decision SETs for snapshots/provenance/exploration: backend/app/routers/triage.py:509-667"
+      ],
+      "negative_path_safety": "For a missing alert, source raises 404 immediately after get_alert returns empty at backend/app/routers/triage.py:205-208, before Decision creation at lines 442-463."
+    },
+    "outcome_route": {
+      "endpoint": "POST /api/alert/outcome",
+      "definition": "backend/app/routers/triage.py:1065",
+      "sequence": [
+        "feedback duplicate guard: backend/app/routers/triage.py:1082-1089",
+        "Decision lookup and outcome/correct SET: backend/app/routers/triage.py:1125-1145",
+        "outcome audit write and Decision hash SET: backend/app/routers/triage.py:1155-1170",
+        "analyst history scan: backend/app/routers/triage.py:1174-1184",
+        "learning_state/ProfileScorer update: backend/app/routers/triage.py:1261-1297",
+        "conservation/DK/L5 centroid path: backend/app/routers/triage.py:1297-1459",
+        "centroid metadata SET and snapshot/distance/evolution writes: backend/app/routers/triage.py:1496-1779"
+      ],
+      "graph_reads": [
+        "Decision lookup by decision_id: backend/app/routers/triage.py:1125-1145",
+        "analyst verified history scan: backend/app/routers/triage.py:1177-1180"
+      ],
+      "graph_writes": [
+        "SET d.outcome/d.correct/d.verified_at_epoch: backend/app/routers/triage.py:1125-1133",
+        "SET outcome_entry_hash/outcome_chain_index: backend/app/routers/triage.py:1166-1170",
+        "persist_soc_centroid/L5 path: backend/app/routers/triage.py:1431-1459",
+        "centroid_delta_norm Decision SET: backend/app/routers/triage.py:1496-1508",
+        "evolution/log/snapshot writes: backend/app/routers/triage.py:1546-1779"
+      ]
+    },
+    "safe_get_routes": [
+      {
+        "label": "h3_get_alerts_queue",
+        "endpoint": "/api/alerts/queue",
+        "source": "backend/app/routers/triage.py:117-137",
+        "reason": "GET route performs MATCH-only pending alert read."
+      },
+      {
+        "label": "h3_get_outcome_status_negative",
+        "endpoint": "/api/alert/outcome/status?alert_id=PERF-NONEXISTENT-DO-NOT-CREATE",
+        "source": "backend/app/routers/triage.py:1821-1838",
+        "reason": "GET feedback status for non-proof alert id."
+      },
+      {
+        "label": "h3_get_policy_history",
+        "endpoint": "/api/alert/policy-history",
+        "source": "backend/app/routers/triage.py:1964-1981",
+        "reason": "GET in-memory policy conflict history."
+      },
+      {
+        "label": "h3_get_soc_profile",
+        "endpoint": "/api/soc/profile",
+        "source": "backend/app/routers/triage.py:1995-2089",
+        "reason": "GET ProfileScorer state; no source-level graph write in route."
+      }
+    ],
+    "skipped_endpoints": [
+      {
+        "endpoint": "POST /api/alert/outcome",
+        "reason": "Always a feedback/write route; forbidden for read-only benchmark."
+      },
+      {
+        "endpoint": "POST /api/alert/analyze for proof alerts",
+        "reason": "Normal analyze path writes Decision nodes and audit metadata."
+      },
+      {
+        "endpoint": "GET /api/alert/policy-check",
+        "reason": "Additional conflict-detection behavior is outside the minimal safe HTTP baseline."
+      }
+    ]
+  },
+  "skipped_endpoints": [
+    {
+      "endpoint": "POST /api/alert/outcome",
+      "reason": "Always a feedback/write route; forbidden for read-only benchmark."
+    },
+    {
+      "endpoint": "POST /api/alert/analyze for proof alerts",
+      "reason": "Normal analyze path writes Decision nodes and audit metadata."
+    },
+    {
+      "endpoint": "GET /api/alert/policy-check",
+      "reason": "Additional conflict-detection behavior is outside the minimal safe HTTP baseline."
+    }
+  ],
+  "safety": {
+    "no_proof_alert_analyzed": true,
+    "no_outcome_endpoint_called": true,
+    "no_writes_performed_by_script": true,
+    "negative_analyze_source_guard": "For a missing alert, source raises 404 immediately after get_alert returns empty at backend/app/routers/triage.py:205-208, before Decision creation at lines 442-463."
+  }
+}

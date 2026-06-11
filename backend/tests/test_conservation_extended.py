@@ -91,7 +91,7 @@ async def test_evaluate_green_with_high_quality():
                return_value=mock_state):
         result = await LearningHealthMonitor.evaluate()
     assert result["status"] == "RED"
-    assert result["components"]["alpha_source"] == "override_rate_unavailable"
+    assert result["components"]["alpha_source"] == "soc_coverage_unavailable"
     assert result["components"]["alpha"] == 0.0
     assert result["components"]["q"] == 1.0
     assert result["signal"] == 0.0

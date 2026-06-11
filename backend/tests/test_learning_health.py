@@ -169,7 +169,7 @@ async def test_evaluate_green():
     assert result["status"] == "RED"
     assert result["conservation"]["passed"] is False
     assert result["signal"] == 0.0
-    assert result["components"]["alpha_source"] == "override_rate_unavailable"
+    assert result["components"]["alpha_source"] == "soc_coverage_unavailable"
     assert result["components"]["alpha"] == 0.0
     assert result["components"]["q"] == pytest.approx(1.0)
     assert "violation" in result["interpretation"].lower()

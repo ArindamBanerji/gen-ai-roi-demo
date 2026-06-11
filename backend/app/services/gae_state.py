@@ -17,11 +17,15 @@ import asyncio
 import json
 import logging
 import os
+import threading
 from contextlib import asynccontextmanager
+from copy import deepcopy
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Optional
 
 import numpy as np
+from copilot_sdk.scoring.dk_persistence import DKWelfordTracker, persist_dk_after_reestimate
 from gae.learning import LearningState, CalibrationProfile
 from gae import bootstrap_calibration, BootstrapResult
 from app.domains.soc.config import (
@@ -82,6 +86,8 @@ def _S(val) -> str:
 _STATE_PATH = Path(__file__).parent.parent / "data" / "gae_learning_state.json"
 _learning_state: Optional[LearningState] = None
 _learning_store: Optional[object] = None
+_dk_welford_tracker: DKWelfordTracker = DKWelfordTracker()
+_dk_welford_lock = threading.Lock()
 _bootstrap_metadata: Optional[dict] = None
 _bootstrap_result: Optional[BootstrapResult] = None   # CORR-3: exposed for bootstrap_neo4j writer
 
@@ -261,6 +267,7 @@ def init_learning_state() -> LearningState:
         save_learning_state()
 
     _learning_store = _init_learning_store()
+    reset_dk_welford_tracker()
 
     return _learning_state
 
@@ -268,6 +275,128 @@ def init_learning_state() -> LearningState:
 def get_learning_store():
     """Return optional L5 learning store for SOC AGE persistence."""
     return _learning_store
+
+
+def reset_dk_welford_tracker() -> None:
+    """Reset process-local SOC DK/Welford audit tracker."""
+    global _dk_welford_tracker
+    with _dk_welford_lock:
+        _dk_welford_tracker = DKWelfordTracker()
+
+
+def get_dk_welford_tracker() -> DKWelfordTracker:
+    """Return the process-local SOC DK/Welford audit tracker."""
+    return _dk_welford_tracker
+
+
+def update_dk_welford_tracker(factor_vector, is_correct: bool) -> None:
+    """Record one SOC verified decision in the Welford audit tracker."""
+    with _dk_welford_lock:
+        _dk_welford_tracker.update(factor_vector, is_correct=is_correct)
+
+
+def _dk_weight_tensor_from_scorer(scorer) -> list[list[float]] | None:
+    get_one = getattr(scorer, "get_dk_weights", None)
+    if not callable(get_one):
+        return None
+    rows: list[list[float]] = []
+    n_categories = int(getattr(scorer, "n_categories", 0) or 0)
+    for category_index in range(n_categories):
+        weights = get_one(category_index)
+        if weights is None:
+            return None
+        rows.append(np.asarray(weights, dtype=np.float64).tolist())
+    return rows
+
+
+def persist_soc_dk_weights(scorer, *, logger: logging.Logger | None = None) -> bool:
+    """Persist current SOC DK weights plus Welford state through the L5 store."""
+    store = get_learning_store()
+    if store is None:
+        return False
+    weights = _dk_weight_tensor_from_scorer(scorer)
+    if weights is None:
+        return False
+    adapter = SimpleNamespace(get_dk_weights=lambda: deepcopy(weights))
+    with _dk_welford_lock:
+        tracker_snapshot = DKWelfordTracker.from_welford_state(
+            _dk_welford_tracker.to_welford_state(),
+            n_confirmed=_dk_welford_tracker.n_confirmed,
+            n_overridden=_dk_welford_tracker.n_overridden,
+        )
+    return persist_dk_after_reestimate(
+        domain="soc",
+        scorer=adapter,
+        learning_store=store,
+        welford_tracker=tracker_snapshot,
+        logger=logger or log,
+    )
+
+
+def get_soc_category_phase(scorer, category_index: int) -> str:
+    """Return canonical SOC ProfileScorer phase for a category."""
+    get_phase = getattr(scorer, "get_phase", None)
+    if not callable(get_phase):
+        return "UNKNOWN"
+    phase = get_phase(category_index)
+    return getattr(phase, "name", str(phase))
+
+
+def get_soc_centroid(scorer, category_index: int, action_index: int) -> list[float] | None:
+    """Return a copy-safe SOC centroid vector."""
+    centroids = getattr(scorer, "centroids", None)
+    if centroids is None:
+        centroids = getattr(scorer, "mu", None)
+    if centroids is None:
+        return None
+    try:
+        return np.asarray(centroids[category_index, action_index], dtype=np.float64).copy().tolist()
+    except Exception:
+        return None
+
+
+def persist_soc_centroid(
+    *,
+    scorer,
+    category: str,
+    category_index: int,
+    action: str,
+    action_index: int,
+    caused_by_decision_id: str,
+    pre_centroid: list[float] | None,
+    logger: logging.Logger | None = None,
+) -> bool:
+    """Persist a SOC L5Centroid runtime write when centroid learning is active."""
+    store = get_learning_store()
+    if store is None or not hasattr(store, "update_centroid"):
+        return False
+    phase = get_soc_category_phase(scorer, category_index)
+    if phase != "MEAN_CONVERGENCE":
+        return False
+    post = get_soc_centroid(scorer, category_index, action_index)
+    if post is None:
+        return False
+    if pre_centroid is None:
+        delta_norm = float(np.linalg.norm(np.asarray(post, dtype=np.float64)))
+    else:
+        delta_norm = float(
+            np.linalg.norm(
+                np.asarray(post, dtype=np.float64) - np.asarray(pre_centroid, dtype=np.float64)
+            )
+        )
+    try:
+        store.update_centroid(
+            domain="soc",
+            category=category,
+            action=action,
+            centroid_vector=post,
+            delta_norm=delta_norm,
+            caused_by_decision_id=caused_by_decision_id,
+        )
+    except Exception as exc:
+        (logger or log).warning("SOC L5 centroid persistence failed: %s", exc)
+        return False
+    return True
 
 
 def get_profile_scorer():

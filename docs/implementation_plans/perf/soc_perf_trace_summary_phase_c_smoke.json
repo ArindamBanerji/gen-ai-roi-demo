@@ -1,0 +1,835 @@
+{
+  "title": "SOC Perf Trace Summary",
+  "trace_jsonl": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\scratch\\temp\\soc_perf_trace_phase_c_smoke.jsonl",
+  "events_loaded": 27,
+  "malformed_lines": 0,
+  "route_filter": null,
+  "phase_filter": null,
+  "top_n": 20,
+  "window_size": 25,
+  "aggregates": {
+    "route": {
+      "/api/alert/analyze": {
+        "count": 12,
+        "min_ms": 0.017,
+        "avg_ms": 198.818,
+        "p50_ms": 41.657,
+        "p95_ms": 944.526,
+        "p99_ms": 1539.895,
+        "max_ms": 1688.737
+      },
+      "/api/alert/outcome": {
+        "count": 15,
+        "min_ms": 0.006,
+        "avg_ms": 215.182,
+        "p50_ms": 1.188,
+        "p95_ms": 816.13,
+        "p99_ms": 1438.437,
+        "max_ms": 1594.014
+      }
+    },
+    "phase": {
+      "alert_lookup": {
+        "count": 1,
+        "min_ms": 79.268,
+        "avg_ms": 79.268,
+        "p50_ms": 79.268,
+        "p95_ms": 79.268,
+        "p99_ms": 79.268,
+        "max_ms": 79.268
+      },
+      "analyze_request_total": {
+        "count": 1,
+        "min_ms": 1688.737,
+        "avg_ms": 1688.737,
+        "p50_ms": 1688.737,
+        "p95_ms": 1688.737,
+        "p99_ms": 1688.737,
+        "max_ms": 1688.737
+      },
+      "audit_write": {
+        "count": 1,
+        "min_ms": 82.685,
+        "avg_ms": 82.685,
+        "p50_ms": 82.685,
+        "p95_ms": 82.685,
+        "p99_ms": 82.685,
+        "max_ms": 82.685
+      },
+      "category_resolution": {
+        "count": 1,
+        "min_ms": 4.045,
+        "avg_ms": 4.045,
+        "p50_ms": 4.045,
+        "p95_ms": 4.045,
+        "p99_ms": 4.045,
+        "max_ms": 4.045
+      },
+      "conservation_monitor": {
+        "count": 1,
+        "min_ms": 430.826,
+        "avg_ms": 430.826,
+        "p50_ms": 430.826,
+        "p95_ms": 430.826,
+        "p99_ms": 430.826,
+        "max_ms": 430.826
+      },
+      "decision_lookup_and_outcome_update": {
+        "count": 1,
+        "min_ms": 83.044,
+        "avg_ms": 83.044,
+        "p50_ms": 83.044,
+        "p95_ms": 83.044,
+        "p99_ms": 83.044,
+        "max_ms": 83.044
+      },
+      "decision_node_and_edge_write": {
+        "count": 1,
+        "min_ms": 105.865,
+        "avg_ms": 105.865,
+        "p50_ms": 105.865,
+        "p95_ms": 105.865,
+        "p99_ms": 105.865,
+        "max_ms": 105.865
+      },
+      "duplicate_feedback_guard": {
+        "count": 1,
+        "min_ms": 0.008,
+        "avg_ms": 0.008,
+        "p50_ms": 0.008,
+        "p95_ms": 0.008,
+        "p99_ms": 0.008,
+        "max_ms": 0.008
+      },
+      "factor_vector_construction": {
+        "count": 1,
+        "min_ms": 335.627,
+        "avg_ms": 335.627,
+        "p50_ms": 335.627,
+        "p95_ms": 335.627,
+        "p99_ms": 335.627,
+        "max_ms": 335.627
+      },
+      "l5_centroid_write": {
+        "count": 1,
+        "min_ms": 482.751,
+        "avg_ms": 482.751,
+        "p50_ms": 482.751,
+        "p95_ms": 482.751,
+        "p99_ms": 482.751,
+        "max_ms": 482.751
+      },
+      "l5_conservation_write": {
+        "count": 1,
+        "min_ms": 428.623,
+        "avg_ms": 428.623,
+        "p50_ms": 428.623,
+        "p95_ms": 428.623,
+        "p99_ms": 428.623,
+        "max_ms": 428.623
+      },
+      "l5_dk_weight_write": {
+        "count": 2,
+        "min_ms": 0.017,
+        "avg_ms": 0.143,
+        "p50_ms": 0.143,
+        "p95_ms": 0.256,
+        "p99_ms": 0.266,
+        "max_ms": 0.269
+      },
+      "learning_state_update": {
+        "count": 1,
+        "min_ms": 108.379,
+        "avg_ms": 108.379,
+        "p50_ms": 108.379,
+        "p95_ms": 108.379,
+        "p99_ms": 108.379,
+        "max_ms": 108.379
+      },
+      "metadata_logging_snapshot_write": {
+        "count": 1,
+        "min_ms": 0.474,
+        "avg_ms": 0.474,
+        "p50_ms": 0.474,
+        "p95_ms": 0.474,
+        "p99_ms": 0.474,
+        "max_ms": 0.474
+      },
+      "outcome_audit_write": {
+        "count": 1,
+        "min_ms": 0.583,
+        "avg_ms": 0.583,
+        "p50_ms": 0.583,
+        "p95_ms": 0.583,
+        "p99_ms": 0.583,
+        "max_ms": 0.583
+      },
+      "outcome_request_total": {
+        "count": 1,
+        "min_ms": 1594.014,
+        "avg_ms": 1594.014,
+        "p50_ms": 1594.014,
+        "p95_ms": 1594.014,
+        "p99_ms": 1594.014,
+        "max_ms": 1594.014
+      },
+      "profile_scorer_update": {
+        "count": 1,
+        "min_ms": 0.143,
+        "avg_ms": 0.143,
+        "p50_ms": 0.143,
+        "p95_ms": 0.143,
+        "p99_ms": 0.143,
+        "max_ms": 0.143
+      },
+      "request_parse": {
+        "count": 2,
+        "min_ms": 0.006,
+        "avg_ms": 0.011,
+        "p50_ms": 0.011,
+        "p95_ms": 0.016,
+        "p99_ms": 0.017,
+        "max_ms": 0.017
+      },
+      "response_serialization": {
+        "count": 2,
+        "min_ms": 0.021,
+        "avg_ms": 0.098,
+        "p50_ms": 0.098,
+        "p95_ms": 0.167,
+        "p99_ms": 0.173,
+        "max_ms": 0.175
+      },
+      "scorer_decision": {
+        "count": 1,
+        "min_ms": 0.353,
+        "avg_ms": 0.353,
+        "p50_ms": 0.353,
+        "p95_ms": 0.353,
+        "p99_ms": 0.353,
+        "max_ms": 0.353
+      },
+      "scorer_readiness": {
+        "count": 1,
+        "min_ms": 0.029,
+        "avg_ms": 0.029,
+        "p50_ms": 0.029,
+        "p95_ms": 0.029,
+        "p99_ms": 0.029,
+        "max_ms": 0.029
+      },
+      "security_context_lookup": {
+        "count": 1,
+        "min_ms": 88.545,
+        "avg_ms": 88.545,
+        "p50_ms": 88.545,
+        "p95_ms": 88.545,
+        "p99_ms": 88.545,
+        "max_ms": 88.545
+      },
+      "snapshot_evolution_logging": {
+        "count": 2,
+        "min_ms": 1.188,
+        "avg_ms": 49.526,
+        "p50_ms": 49.526,
+        "p95_ms": 93.03,
+        "p99_ms": 96.897,
+        "max_ms": 97.864
+      }
+    },
+    "route_phase": {
+      "/api/alert/analyze | alert_lookup": {
+        "count": 1,
+        "min_ms": 79.268,
+        "avg_ms": 79.268,
+        "p50_ms": 79.268,
+        "p95_ms": 79.268,
+        "p99_ms": 79.268,
+        "max_ms": 79.268
+      },
+      "/api/alert/analyze | analyze_request_total": {
+        "count": 1,
+        "min_ms": 1688.737,
+        "avg_ms": 1688.737,
+        "p50_ms": 1688.737,
+        "p95_ms": 1688.737,
+        "p99_ms": 1688.737,
+        "max_ms": 1688.737
+      },
+      "/api/alert/analyze | audit_write": {
+        "count": 1,
+        "min_ms": 82.685,
+        "avg_ms": 82.685,
+        "p50_ms": 82.685,
+        "p95_ms": 82.685,
+        "p99_ms": 82.685,
+        "max_ms": 82.685
+      },
+      "/api/alert/analyze | category_resolution": {
+        "count": 1,
+        "min_ms": 4.045,
+        "avg_ms": 4.045,
+        "p50_ms": 4.045,
+        "p95_ms": 4.045,
+        "p99_ms": 4.045,
+        "max_ms": 4.045
+      },
+      "/api/alert/analyze | decision_node_and_edge_write": {
+        "count": 1,
+        "min_ms": 105.865,
+        "avg_ms": 105.865,
+        "p50_ms": 105.865,
+        "p95_ms": 105.865,
+        "p99_ms": 105.865,
+        "max_ms": 105.865
+      },
+      "/api/alert/analyze | factor_vector_construction": {
+        "count": 1,
+        "min_ms": 335.627,
+        "avg_ms": 335.627,
+        "p50_ms": 335.627,
+        "p95_ms": 335.627,
+        "p99_ms": 335.627,
+        "max_ms": 335.627
+      },
+      "/api/alert/analyze | metadata_logging_snapshot_write": {
+        "count": 1,
+        "min_ms": 0.474,
+        "avg_ms": 0.474,
+        "p50_ms": 0.474,
+        "p95_ms": 0.474,
+        "p99_ms": 0.474,
+        "max_ms": 0.474
+      },
+      "/api/alert/analyze | request_parse": {
+        "count": 1,
+        "min_ms": 0.017,
+        "avg_ms": 0.017,
+        "p50_ms": 0.017,
+        "p95_ms": 0.017,
+        "p99_ms": 0.017,
+        "max_ms": 0.017
+      },
+      "/api/alert/analyze | response_serialization": {
+        "count": 1,
+        "min_ms": 0.175,
+        "avg_ms": 0.175,
+        "p50_ms": 0.175,
+        "p95_ms": 0.175,
+        "p99_ms": 0.175,
+        "max_ms": 0.175
+      },
+      "/api/alert/analyze | scorer_decision": {
+        "count": 1,
+        "min_ms": 0.353,
+        "avg_ms": 0.353,
+        "p50_ms": 0.353,
+        "p95_ms": 0.353,
+        "p99_ms": 0.353,
+        "max_ms": 0.353
+      },
+      "/api/alert/analyze | scorer_readiness": {
+        "count": 1,
+        "min_ms": 0.029,
+        "avg_ms": 0.029,
+        "p50_ms": 0.029,
+        "p95_ms": 0.029,
+        "p99_ms": 0.029,
+        "max_ms": 0.029
+      },
+      "/api/alert/analyze | security_context_lookup": {
+        "count": 1,
+        "min_ms": 88.545,
+        "avg_ms": 88.545,
+        "p50_ms": 88.545,
+        "p95_ms": 88.545,
+        "p99_ms": 88.545,
+        "max_ms": 88.545
+      },
+      "/api/alert/outcome | conservation_monitor": {
+        "count": 1,
+        "min_ms": 430.826,
+        "avg_ms": 430.826,
+        "p50_ms": 430.826,
+        "p95_ms": 430.826,
+        "p99_ms": 430.826,
+        "max_ms": 430.826
+      },
+      "/api/alert/outcome | decision_lookup_and_outcome_update": {
+        "count": 1,
+        "min_ms": 83.044,
+        "avg_ms": 83.044,
+        "p50_ms": 83.044,
+        "p95_ms": 83.044,
+        "p99_ms": 83.044,
+        "max_ms": 83.044
+      },
+      "/api/alert/outcome | duplicate_feedback_guard": {
+        "count": 1,
+        "min_ms": 0.008,
+        "avg_ms": 0.008,
+        "p50_ms": 0.008,
+        "p95_ms": 0.008,
+        "p99_ms": 0.008,
+        "max_ms": 0.008
+      },
+      "/api/alert/outcome | l5_centroid_write": {
+        "count": 1,
+        "min_ms": 482.751,
+        "avg_ms": 482.751,
+        "p50_ms": 482.751,
+        "p95_ms": 482.751,
+        "p99_ms": 482.751,
+        "max_ms": 482.751
+      },
+      "/api/alert/outcome | l5_conservation_write": {
+        "count": 1,
+        "min_ms": 428.623,
+        "avg_ms": 428.623,
+        "p50_ms": 428.623,
+        "p95_ms": 428.623,
+        "p99_ms": 428.623,
+        "max_ms": 428.623
+      },
+      "/api/alert/outcome | l5_dk_weight_write": {
+        "count": 2,
+        "min_ms": 0.017,
+        "avg_ms": 0.143,
+        "p50_ms": 0.143,
+        "p95_ms": 0.256,
+        "p99_ms": 0.266,
+        "max_ms": 0.269
+      },
+      "/api/alert/outcome | learning_state_update": {
+        "count": 1,
+        "min_ms": 108.379,
+        "avg_ms": 108.379,
+        "p50_ms": 108.379,
+        "p95_ms": 108.379,
+        "p99_ms": 108.379,
+        "max_ms": 108.379
+      },
+      "/api/alert/outcome | outcome_audit_write": {
+        "count": 1,
+        "min_ms": 0.583,
+        "avg_ms": 0.583,
+        "p50_ms": 0.583,
+        "p95_ms": 0.583,
+        "p99_ms": 0.583,
+        "max_ms": 0.583
+      },
+      "/api/alert/outcome | outcome_request_total": {
+        "count": 1,
+        "min_ms": 1594.014,
+        "avg_ms": 1594.014,
+        "p50_ms": 1594.014,
+        "p95_ms": 1594.014,
+        "p99_ms": 1594.014,
+        "max_ms": 1594.014
+      },
+      "/api/alert/outcome | profile_scorer_update": {
+        "count": 1,
+        "min_ms": 0.143,
+        "avg_ms": 0.143,
+        "p50_ms": 0.143,
+        "p95_ms": 0.143,
+        "p99_ms": 0.143,
+        "max_ms": 0.143
+      },
+      "/api/alert/outcome | request_parse": {
+        "count": 1,
+        "min_ms": 0.006,
+        "avg_ms": 0.006,
+        "p50_ms": 0.006,
+        "p95_ms": 0.006,
+        "p99_ms": 0.006,
+        "max_ms": 0.006
+      },
+      "/api/alert/outcome | response_serialization": {
+        "count": 1,
+        "min_ms": 0.021,
+        "avg_ms": 0.021,
+        "p50_ms": 0.021,
+        "p95_ms": 0.021,
+        "p99_ms": 0.021,
+        "max_ms": 0.021
+      },
+      "/api/alert/outcome | snapshot_evolution_logging": {
+        "count": 2,
+        "min_ms": 1.188,
+        "avg_ms": 49.526,
+        "p50_ms": 49.526,
+        "p95_ms": 93.03,
+        "p99_ms": 96.897,
+        "max_ms": 97.864
+      }
+    },
+    "graph_name": {
+      "soc_graph_phasec_smoke_1": {
+        "count": 27,
+        "min_ms": 0.006,
+        "avg_ms": 207.909,
+        "p50_ms": 4.045,
+        "p95_ms": 1260.635,
+        "p99_ms": 1664.109,
+        "max_ms": 1688.737
+      }
+    }
+  },
+  "top_slow_events": [
+    {
+      "route": "/api/alert/analyze",
+      "phase": "analyze_request_total",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": "68841173-1da9-40f2-96b3-bb4df73e5a30",
+      "attempt_index": null,
+      "duration_ms": 1688.737,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/outcome",
+      "phase": "outcome_request_total",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": "68841173-1da9-40f2-96b3-bb4df73e5a30",
+      "attempt_index": null,
+      "duration_ms": 1594.014,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/outcome",
+      "phase": "l5_centroid_write",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": "68841173-1da9-40f2-96b3-bb4df73e5a30",
+      "attempt_index": null,
+      "duration_ms": 482.751,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/outcome",
+      "phase": "conservation_monitor",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": "68841173-1da9-40f2-96b3-bb4df73e5a30",
+      "attempt_index": null,
+      "duration_ms": 430.826,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/outcome",
+      "phase": "l5_conservation_write",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": "68841173-1da9-40f2-96b3-bb4df73e5a30",
+      "attempt_index": null,
+      "duration_ms": 428.623,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/analyze",
+      "phase": "factor_vector_construction",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": null,
+      "attempt_index": null,
+      "duration_ms": 335.627,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/outcome",
+      "phase": "learning_state_update",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": "68841173-1da9-40f2-96b3-bb4df73e5a30",
+      "attempt_index": null,
+      "duration_ms": 108.379,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/analyze",
+      "phase": "decision_node_and_edge_write",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": "68841173-1da9-40f2-96b3-bb4df73e5a30",
+      "attempt_index": null,
+      "duration_ms": 105.865,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/outcome",
+      "phase": "snapshot_evolution_logging",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": "68841173-1da9-40f2-96b3-bb4df73e5a30",
+      "attempt_index": null,
+      "duration_ms": 97.864,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/analyze",
+      "phase": "security_context_lookup",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": null,
+      "attempt_index": null,
+      "duration_ms": 88.545,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/outcome",
+      "phase": "decision_lookup_and_outcome_update",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": "68841173-1da9-40f2-96b3-bb4df73e5a30",
+      "attempt_index": null,
+      "duration_ms": 83.044,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/analyze",
+      "phase": "audit_write",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": "68841173-1da9-40f2-96b3-bb4df73e5a30",
+      "attempt_index": null,
+      "duration_ms": 82.685,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/analyze",
+      "phase": "alert_lookup",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": null,
+      "attempt_index": null,
+      "duration_ms": 79.268,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/analyze",
+      "phase": "category_resolution",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": null,
+      "attempt_index": null,
+      "duration_ms": 4.045,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/outcome",
+      "phase": "snapshot_evolution_logging",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": "68841173-1da9-40f2-96b3-bb4df73e5a30",
+      "attempt_index": null,
+      "duration_ms": 1.188,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/outcome",
+      "phase": "outcome_audit_write",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": "68841173-1da9-40f2-96b3-bb4df73e5a30",
+      "attempt_index": null,
+      "duration_ms": 0.583,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/analyze",
+      "phase": "metadata_logging_snapshot_write",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": "68841173-1da9-40f2-96b3-bb4df73e5a30",
+      "attempt_index": null,
+      "duration_ms": 0.474,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/analyze",
+      "phase": "scorer_decision",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": null,
+      "attempt_index": null,
+      "duration_ms": 0.353,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/outcome",
+      "phase": "l5_dk_weight_write",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": "68841173-1da9-40f2-96b3-bb4df73e5a30",
+      "attempt_index": null,
+      "duration_ms": 0.269,
+      "status": "ok"
+    },
+    {
+      "route": "/api/alert/analyze",
+      "phase": "response_serialization",
+      "alert_id": "PHASEC-SMOKE-0001",
+      "decision_id": "68841173-1da9-40f2-96b3-bb4df73e5a30",
+      "attempt_index": null,
+      "duration_ms": 0.175,
+      "status": "ok"
+    }
+  ],
+  "waterfalls": [
+    {
+      "alert_id": "PHASEC-SMOKE-0001",
+      "event_count": 27,
+      "total_observed_ms": 5613.556,
+      "authoritative_total_ms": 1688.737,
+      "phases": [
+        {
+          "route": "/api/alert/analyze",
+          "phase": "scorer_readiness",
+          "duration_ms": 0.029,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/analyze",
+          "phase": "request_parse",
+          "duration_ms": 0.017,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/analyze",
+          "phase": "alert_lookup",
+          "duration_ms": 79.268,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/analyze",
+          "phase": "security_context_lookup",
+          "duration_ms": 88.545,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/analyze",
+          "phase": "category_resolution",
+          "duration_ms": 4.045,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/analyze",
+          "phase": "factor_vector_construction",
+          "duration_ms": 335.627,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/analyze",
+          "phase": "scorer_decision",
+          "duration_ms": 0.353,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/analyze",
+          "phase": "decision_node_and_edge_write",
+          "duration_ms": 105.865,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/analyze",
+          "phase": "audit_write",
+          "duration_ms": 82.685,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/analyze",
+          "phase": "metadata_logging_snapshot_write",
+          "duration_ms": 0.474,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/analyze",
+          "phase": "response_serialization",
+          "duration_ms": 0.175,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/analyze",
+          "phase": "analyze_request_total",
+          "duration_ms": 1688.737,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/outcome",
+          "phase": "request_parse",
+          "duration_ms": 0.006,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/outcome",
+          "phase": "duplicate_feedback_guard",
+          "duration_ms": 0.008,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/outcome",
+          "phase": "decision_lookup_and_outcome_update",
+          "duration_ms": 83.044,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/outcome",
+          "phase": "outcome_audit_write",
+          "duration_ms": 0.583,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/outcome",
+          "phase": "learning_state_update",
+          "duration_ms": 108.379,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/outcome",
+          "phase": "l5_conservation_write",
+          "duration_ms": 428.623,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/outcome",
+          "phase": "conservation_monitor",
+          "duration_ms": 430.826,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/outcome",
+          "phase": "profile_scorer_update",
+          "duration_ms": 0.143,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/outcome",
+          "phase": "l5_dk_weight_write",
+          "duration_ms": 0.269,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/outcome",
+          "phase": "l5_centroid_write",
+          "duration_ms": 482.751,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/outcome",
+          "phase": "l5_dk_weight_write",
+          "duration_ms": 0.017,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/outcome",
+          "phase": "snapshot_evolution_logging",
+          "duration_ms": 1.188,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/outcome",
+          "phase": "snapshot_evolution_logging",
+          "duration_ms": 97.864,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/outcome",
+          "phase": "response_serialization",
+          "duration_ms": 0.021,
+          "status": "ok"
+        },
+        {
+          "route": "/api/alert/outcome",
+          "phase": "outcome_request_total",
+          "duration_ms": 1594.014,
+          "status": "ok"
+        }
+      ]
+    }
+  ],
+  "windows": [],
+  "nested_phase_warning": "Nested phase durations should not be summed blindly. Use analyze_request_total, outcome_request_total, or total_attempt as authoritative totals."
+}

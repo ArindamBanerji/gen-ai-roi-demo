@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 
@@ -19,11 +20,14 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PROJECTS_ROOT = REPO_ROOT.parent
 CI_PLATFORM = PROJECTS_ROOT / "ci-platform"
 BACKEND_ROOT = REPO_ROOT / "backend"
+PERF_DIR = Path(__file__).resolve().parent / "perf"
 DEFAULT_CONTRACT_PATH = REPO_ROOT / "scratch" / "temp" / "soc_diag_backend_contract.json"
 
-for path in (str(CI_PLATFORM), str(BACKEND_ROOT)):
+for path in (str(CI_PLATFORM), str(BACKEND_ROOT), str(PERF_DIR)):
     if path not in sys.path:
         sys.path.insert(0, path)
+
+from soc_perf_trace import get_tracer
 
 
 DEFAULT_DSN = "host=localhost port=5433 dbname=soc_copilot user=postgres password=postgres"
@@ -53,6 +57,11 @@ FAIL_VERDICTS = {
     "INTERRUPTED",
     "UNEXPECTED_RUNTIME_ERROR",
 }
+
+RULE40_HINT = (
+    "RULE #40: Windows-side AGE/PostgreSQL DSNs must use localhost, not 127.0.0.1. "
+    "Only commands running inside WSL2 may use 127.0.0.1."
+)
 
 SCENARIO_NAMES = (
     "diagnostic-e-5-decision",
@@ -179,15 +188,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--target-outcomes", type=int, default=None)
     parser.add_argument("--batch-size", type=int, default=10)
     parser.add_argument("--target-category", default="credential_access")
-    parser.add_argument("--graph-dsn", default=os.getenv("GRAPH_DSN", DEFAULT_DSN))
+    parser.add_argument("--graph-dsn", default=DEFAULT_DSN)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--sanity-count", type=int, default=1)
     parser.add_argument("--seed-sleep-seconds", type=float, default=0.15)
+    parser.add_argument("--seed-visibility-timeout-seconds", type=float, default=10.0)
+    parser.add_argument("--seed-visibility-poll-seconds", type=float, default=0.25)
     parser.add_argument("--attempt-sleep-seconds", type=float, default=0.05)
     parser.add_argument("--batch-sleep-seconds", type=float, default=2.0)
     parser.add_argument("--seed-timeout-seconds", type=float, default=60.0)
     parser.add_argument("--seed-max-retries", type=int, default=3)
     parser.add_argument("--max-seed-failures", type=int, default=3)
+    parser.add_argument("--http-timeout-seconds", type=float, default=120.0)
+    parser.add_argument("--http-max-retries", type=int, default=3)
+    parser.add_argument("--http-retry-backoff-seconds", default="1,3,5")
     parser.add_argument("--preflight-seed-count", type=int, default=5)
     parser.add_argument("--bulk-seed-first", action="store_true", help="Legacy stress mode; default proof mode streams seed/analyze/outcome.")
     parser.add_argument(
@@ -202,6 +216,16 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Record a user assertion instead of requiring the backend contract file.",
     )
+    parser.add_argument(
+        "--expect-age-pool",
+        action="store_true",
+        help="Require the backend contract to show AGE pooled or warm-fallback mode.",
+    )
+    parser.add_argument(
+        "--no-final-summary",
+        action="store_true",
+        help="Suppress the compact final summary block after report files are written.",
+    )
     args = parser.parse_args()
     if args.seed_count is not None and args.max_attempts is not None and args.seed_count != args.max_attempts:
         parser.error("--seed-count is a deprecated alias for --max-attempts; provide only one value or matching values.")
@@ -215,6 +239,7 @@ def parse_args() -> argparse.Namespace:
     if args.max_attempts is None:
         args.max_attempts = args.scenario_config.max_attempts
     args.seed_count = args.max_attempts
+    args.http_retry_backoffs = parse_backoffs(args.http_retry_backoff_seconds)
     return args
 
 
@@ -228,6 +253,41 @@ def redact_dsn(dsn: str | None) -> str | None:
         else:
             parts.append(part)
     return " ".join(parts)
+
+
+def parse_backoffs(value: str) -> list[float]:
+    try:
+        backoffs = [float(part.strip()) for part in str(value).split(",") if part.strip()]
+    except ValueError as exc:
+        raise SystemExit(f"--http-retry-backoff-seconds must be comma-separated numbers, got {value!r}") from exc
+    return backoffs or [1.0, 3.0, 5.0]
+
+
+def configure_runner_age_env(args: argparse.Namespace, payload: dict[str, Any] | None = None) -> None:
+    os.environ["GRAPH_BACKEND"] = "age"
+    os.environ["GRAPH_DSN"] = args.graph_dsn
+    os.environ["AGE_GRAPH_NAME"] = args.graph_name
+    if payload is not None:
+        payload["runner_graph_dsn_redacted"] = redact_dsn(args.graph_dsn)
+        payload["runner_age_env"] = {
+            "GRAPH_BACKEND": "age",
+            "GRAPH_DSN": redact_dsn(args.graph_dsn),
+            "AGE_GRAPH_NAME": args.graph_name,
+        }
+
+
+def validate_rule40_graph_dsn(args: argparse.Namespace, payload: dict[str, Any]) -> None:
+    graph_dsn = str(args.graph_dsn or "")
+    is_windows = os.name == "nt"
+    uses_loopback_ip = "127.0.0.1" in graph_dsn
+    payload["rule40_validated"] = bool(is_windows and not uses_loopback_ip) if is_windows else True
+    if is_windows and uses_loopback_ip:
+        payload["runner_graph_dsn_redacted"] = redact_dsn(graph_dsn)
+        raise DiagnosticFailure(
+            "ENV_VALIDATION_FAILED",
+            f"{RULE40_HINT} Received runner --graph-dsn={redact_dsn(graph_dsn)!r}. "
+            "Use host=localhost for Windows-side runner AGE access.",
+        )
 
 
 def is_relative_to(path: Path, root: Path) -> bool:
@@ -285,6 +345,7 @@ def validate_backend_contract(args: argparse.Namespace, payload: dict[str, Any])
             "graph_name": args.graph_name,
             "graph_dsn_redacted": redact_dsn(args.graph_dsn),
             "ci_platform_import_path": None,
+            "age_pool_expectation": "user_asserted" if args.expect_age_pool else "not_requested",
             "statement": statement,
         }
         payload["backend_contract"] = contract
@@ -306,11 +367,30 @@ def validate_backend_contract(args: argparse.Namespace, payload: dict[str, Any])
     errors: list[str] = []
     if contract.get("graph_name") != args.graph_name:
         errors.append(f"graph_name={contract.get('graph_name')!r} expected {args.graph_name!r}")
+    expected_port = urlparse(args.backend_url).port
+    if expected_port is not None and contract.get("backend_port") != expected_port:
+        errors.append(f"backend_port={contract.get('backend_port')!r} expected {expected_port!r}")
+    expected_dsn = redact_dsn(args.graph_dsn)
+    if contract.get("graph_dsn_redacted") != expected_dsn:
+        errors.append(f"graph_dsn_redacted={contract.get('graph_dsn_redacted')!r} expected {expected_dsn!r}")
+    contract_dsn = str(contract.get("graph_dsn_redacted") or "")
+    if "host=localhost" not in contract_dsn or "port=5433" not in contract_dsn:
+        errors.append(
+            "graph_dsn_redacted must show Rule #40 DSN host=localhost port=5433; "
+            f"received {contract.get('graph_dsn_redacted')!r}"
+        )
     import_path = contract.get("ci_platform_import_path")
     if not import_path or not is_relative_to(Path(str(import_path)), CI_PLATFORM):
         errors.append(f"ci_platform_import_path={import_path!r} expected under {expected_ci}")
     if contract.get("soc_learning_enabled") != "true":
         errors.append(f"soc_learning_enabled={contract.get('soc_learning_enabled')!r} expected 'true'")
+    if args.expect_age_pool:
+        requested = contract.get("age_use_pool_requested", contract.get("age_use_pool"))
+        connection_mode = contract.get("connection_mode")
+        if requested != "true":
+            errors.append(f"age_use_pool_requested={requested!r} expected 'true'")
+        if connection_mode not in {"pooled", "warm_fallback"}:
+            errors.append(f"connection_mode={connection_mode!r} expected 'pooled' or 'warm_fallback'")
     if errors:
         raise DiagnosticFailure("BACKEND_RUNTIME_CONTRACT_UNVERIFIED", "; ".join(errors))
 
@@ -360,6 +440,57 @@ async def node_exists(client: Any, label: str, key: str, value: str) -> bool:
         )
         > 0
     )
+
+
+async def read_alert_visibility(client: Any, aid: str) -> dict[str, Any] | None:
+    rows = await client.run_query(
+        f"MATCH (a:Alert {{alert_id: {_literal(aid)}}}) "
+        "RETURN a.alert_id AS alert_id, a.id AS id, a.category AS category LIMIT 1"
+    )
+    return rows[0] if rows else None
+
+
+async def wait_for_seed_visibility(
+    args: argparse.Namespace,
+    payload: dict[str, Any],
+    aid: str,
+    client: Any,
+) -> dict[str, Any]:
+    timeout_seconds = max(0.0, float(args.seed_visibility_timeout_seconds))
+    poll_seconds = max(0.05, float(args.seed_visibility_poll_seconds))
+    deadline = time.perf_counter() + timeout_seconds
+    attempts = 0
+    last_error: str | None = None
+    payload["seed_visibility_status"] = "checking"
+    payload["seed_visibility_error"] = None
+    while True:
+        attempts += 1
+        payload["seed_visibility_attempts"] = attempts
+        try:
+            # Recreate the AGE client for the first readback and each retry so
+            # visibility is proven from a fresh connection, not the seed writer.
+            read_client = make_age_client(args)
+            row = await read_alert_visibility(read_client, aid)
+            if row:
+                payload["seed_visibility_status"] = "visible"
+                payload["seed_visibility_error"] = None
+                payload["latest_seed_visible_alert_id"] = aid
+                return row
+            last_error = "alert not visible"
+        except Exception as exc:
+            last_error = str(exc)
+            payload["seed_visibility_error"] = last_error
+        if time.perf_counter() >= deadline:
+            payload["seed_visibility_status"] = "timeout"
+            payload["seed_visibility_error"] = last_error
+            raise DiagnosticFailure(
+                "SEED_DATA_ISSUE",
+                "seed visibility timeout "
+                f"graph={args.graph_name!r} runner_graph_dsn={redact_dsn(args.graph_dsn)!r} "
+                f"alert_id={aid!r} attempts={attempts} timeout_seconds={timeout_seconds} "
+                f"last_error={last_error!r}",
+            )
+        await asyncio.sleep(poll_seconds)
 
 
 async def edge_exists(
@@ -514,6 +645,13 @@ class LoopResult:
     decision_id: str | None = None
     outcome_id: str | None = None
     skipped_reason: str | None = None
+    analyze_recovered_by_readback: bool = False
+    outcome_recovered_by_readback: bool = False
+    seed_seconds: float | None = None
+    analyze_seconds: float | None = None
+    outcome_seconds: float | None = None
+    analyze_retry_count: int = 0
+    outcome_retry_count: int = 0
 
 
 def extract_analyze(payload: dict[str, Any]) -> dict[str, Any]:
@@ -533,7 +671,8 @@ def extract_analyze(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-async def final_readback(client: Any, prefix: str) -> dict[str, Any]:
+async def final_readback(client: Any, prefix: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    started = time.perf_counter()
     queries = {
         "decisions": (
             f"MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
@@ -570,15 +709,31 @@ async def final_readback(client: Any, prefix: str) -> dict[str, Any]:
     }
     result: dict[str, Any] = {}
     try:
-        for key, query in queries.items():
-            result[key] = await client.run_query(query)
+        with get_tracer().phase(
+            "final_readback",
+            route="runner",
+            graph_name=str(payload.get("graph_name")) if payload else None,
+            query_label="final_readback",
+            prefix=prefix,
+        ):
+            for key, query in queries.items():
+                result[key] = await client.run_query(query)
     except Exception as exc:
         raise DiagnosticFailure("AGE_GRAPH_READBACK_FAILED", f"AGE readback failed: {exc}") from exc
+    if payload is not None:
+        record_latency(payload, "readback", time.perf_counter() - started)
     return result
 
 
-async def progress_readback(client: Any, prefix: str) -> dict[str, Any]:
-    readback = await final_readback(client, prefix)
+async def progress_readback(client: Any, prefix: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    with get_tracer().phase(
+        "progress_readback",
+        route="runner",
+        graph_name=str(payload.get("graph_name")) if payload else None,
+        query_label="progress_readback",
+        prefix=prefix,
+    ):
+        readback = await final_readback(client, prefix, payload)
     return {
         "decisions": first_count(readback.get("decisions")),
         "verified": first_count(readback.get("verified")),
@@ -587,6 +742,63 @@ async def progress_readback(client: Any, prefix: str) -> dict[str, Any]:
         "shaped_by": first_count(readback.get("shaped_by")),
         "l5_dk_weight": first_count(readback.get("l5_dk_weight")),
     }
+
+
+async def latest_decision_for_alert(client: Any, aid: str) -> dict[str, Any] | None:
+    with get_tracer().phase(
+        "analyze_timeout_readback",
+        route="runner",
+        alert_id=aid,
+        query_label="latest_decision_for_alert",
+    ):
+        rows = await client.run_query(
+            "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
+            f"WHERE a.alert_id = {_literal(aid)} "
+            "RETURN a.category AS category, "
+            "d.decision_id AS decision_id, "
+            "d.action AS action, "
+            "d.confidence AS confidence, "
+            "d.factor_vector AS factor_vector, "
+            "d.outcome AS outcome, "
+            "d.correct AS correct, "
+            "d.verified_at_epoch AS verified_at_epoch, "
+            "d.timestamp_epoch AS timestamp_epoch "
+            "ORDER BY d.timestamp_epoch DESC LIMIT 1"
+        )
+    return rows[0] if rows else None
+
+
+async def outcome_for_decision(client: Any, decision_id: str) -> dict[str, Any] | None:
+    with get_tracer().phase(
+        "outcome_timeout_readback",
+        route="runner",
+        decision_id=decision_id,
+        query_label="outcome_for_decision",
+    ):
+        rows = await client.run_query(
+            f"MATCH (d:Decision {{decision_id: {_literal(decision_id)}}}) "
+            "RETURN d.outcome AS outcome, "
+            "d.correct AS correct, "
+            "d.verified_at_epoch AS verified_at_epoch, "
+            "d.outcome_entry_hash AS outcome_entry_hash"
+        )
+    return rows[0] if rows else None
+
+
+def decision_has_correct_outcome(row: dict[str, Any] | None) -> bool:
+    if not row:
+        return False
+    return row.get("correct") is True or row.get("outcome") == "correct"
+
+
+def record_latency(payload: dict[str, Any], kind: str, seconds: float) -> None:
+    rounded = round(seconds, 3)
+    payload[f"latest_{kind}_seconds"] = rounded
+    values_key = f"_{kind}_seconds_values"
+    values = payload.setdefault(values_key, [])
+    values.append(rounded)
+    payload[f"avg_{kind}_seconds"] = round(sum(values) / len(values), 3)
+    payload[f"max_{kind}_seconds"] = max(values)
 
 
 def first_count(rows: Any) -> int:
@@ -674,6 +886,12 @@ def base_payload(args: argparse.Namespace) -> dict[str, Any]:
         "backend_url": args.backend_url,
         "prefix": args.prefix,
         "runner_ci_platform_import_path": None,
+        "runner_graph_dsn_redacted": redact_dsn(args.graph_dsn),
+        "runner_age_env": None,
+        "runner_age_readback_status": "not_started",
+        "runner_age_readback_attempts": 0,
+        "runner_age_error": None,
+        "rule40_validated": False,
         "backend_contract": None,
         "health": None,
         "dry_run": args.dry_run,
@@ -696,12 +914,19 @@ def base_payload(args: argparse.Namespace) -> dict[str, Any]:
         "batch_size": args.batch_size,
         "sanity_count": args.sanity_count,
         "seed_strategy": args.seed_strategy,
+        "graph_dsn_source": "--graph-dsn or runner localhost default",
         "seed_sleep_seconds": args.seed_sleep_seconds,
+        "seed_visibility_timeout_seconds": args.seed_visibility_timeout_seconds,
+        "seed_visibility_poll_seconds": args.seed_visibility_poll_seconds,
         "attempt_sleep_seconds": args.attempt_sleep_seconds,
         "batch_sleep_seconds": args.batch_sleep_seconds,
         "seed_timeout_seconds": args.seed_timeout_seconds,
         "seed_max_retries": args.seed_max_retries,
         "max_seed_failures": args.max_seed_failures,
+        "http_timeout_seconds": args.http_timeout_seconds,
+        "http_max_retries": args.http_max_retries,
+        "http_retry_backoff_seconds": args.http_retry_backoff_seconds,
+        "http_retry_backoffs": args.http_retry_backoffs,
         "preflight_seed_count": args.preflight_seed_count,
         "seed_contract_source": "duplicated_from_current_seed_contract",
         "seed_contract_todo": "P3: reuse scripts/soc_c9b_seed_alerts.py when a small proof-mode interface exists.",
@@ -719,12 +944,30 @@ def base_payload(args: argparse.Namespace) -> dict[str, Any]:
         "seeded_alerts": 0,
         "seed_failures": 0,
         "seeded_alerts_readback": 0,
+        "seed_visibility_status": "not_started",
+        "seed_visibility_attempts": 0,
+        "seed_visibility_error": None,
+        "latest_seed_visible_alert_id": None,
         "current_attempt_index": None,
         "current_batch_index": None,
         "current_batch_start": None,
         "current_batch_end": None,
         "seed_retries": 0,
         "last_seed_error": None,
+        "latest_http_error": None,
+        "latest_timeout_recovery_action": None,
+        "analyze_retries": 0,
+        "outcome_retries": 0,
+        "analyze_timeout_recovered_by_readback": 0,
+        "outcome_timeout_recovered_by_readback": 0,
+        "latest_seed_seconds": None,
+        "latest_analyze_seconds": None,
+        "latest_outcome_seconds": None,
+        "latest_readback_seconds": None,
+        "avg_analyze_seconds": None,
+        "avg_outcome_seconds": None,
+        "max_analyze_seconds": None,
+        "max_outcome_seconds": None,
         "analyze_attempts": 0,
         "outcome_attempts": 0,
         "valid_outcomes": 0,
@@ -792,7 +1035,33 @@ def progress_snapshot(
         "seed_retries": payload.get("seed_retries", 0),
         "last_seed_error": payload.get("last_seed_error"),
         "seed_strategy": getattr(args, "seed_strategy", None),
+        "runner_graph_dsn_redacted": payload.get("runner_graph_dsn_redacted"),
+        "runner_age_readback_status": payload.get("runner_age_readback_status"),
+        "runner_age_readback_attempts": payload.get("runner_age_readback_attempts"),
+        "runner_age_error": payload.get("runner_age_error"),
+        "rule40_validated": payload.get("rule40_validated"),
+        "http_timeout_seconds": getattr(args, "http_timeout_seconds", None),
+        "http_max_retries": getattr(args, "http_max_retries", None),
+        "http_retry_backoff_seconds": getattr(args, "http_retry_backoff_seconds", None),
+        "analyze_retries": payload.get("analyze_retries", 0),
+        "outcome_retries": payload.get("outcome_retries", 0),
+        "analyze_timeout_recovered_by_readback": payload.get("analyze_timeout_recovered_by_readback", 0),
+        "outcome_timeout_recovered_by_readback": payload.get("outcome_timeout_recovered_by_readback", 0),
+        "latest_http_error": payload.get("latest_http_error"),
+        "latest_timeout_recovery_action": payload.get("latest_timeout_recovery_action"),
+        "latest_seed_seconds": payload.get("latest_seed_seconds"),
+        "latest_analyze_seconds": payload.get("latest_analyze_seconds"),
+        "latest_outcome_seconds": payload.get("latest_outcome_seconds"),
+        "latest_readback_seconds": payload.get("latest_readback_seconds"),
+        "avg_analyze_seconds": payload.get("avg_analyze_seconds"),
+        "avg_outcome_seconds": payload.get("avg_outcome_seconds"),
+        "max_analyze_seconds": payload.get("max_analyze_seconds"),
+        "max_outcome_seconds": payload.get("max_outcome_seconds"),
         "seed_sleep_seconds": getattr(args, "seed_sleep_seconds", None),
+        "seed_visibility_status": payload.get("seed_visibility_status"),
+        "seed_visibility_attempts": payload.get("seed_visibility_attempts"),
+        "seed_visibility_error": payload.get("seed_visibility_error"),
+        "latest_seed_visible_alert_id": payload.get("latest_seed_visible_alert_id"),
         "attempt_sleep_seconds": getattr(args, "attempt_sleep_seconds", None),
         "batch_sleep_seconds": getattr(args, "batch_sleep_seconds", None),
         "max_seed_failures": getattr(args, "max_seed_failures", None),
@@ -857,9 +1126,55 @@ def seed_retry_delay(attempt: int) -> float:
 
 
 def make_age_client(args: argparse.Namespace) -> Any:
+    configure_runner_age_env(args)
     from ci_platform.graph.age_client import AGEClient
 
     return AGEClient(dsn=args.graph_dsn, graph_name=args.graph_name)
+
+
+def _looks_like_missing_graph(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return "does not exist" in message and "graph" in message
+
+
+async def verify_runner_age_readback(args: argparse.Namespace, payload: dict[str, Any]) -> Any:
+    configure_runner_age_env(args, payload)
+    backoffs = [1, 3, 5]
+    ensured_after_missing = False
+    last_error: str | None = None
+    for attempt in range(1, 4):
+        payload["runner_age_readback_attempts"] = attempt
+        client = make_age_client(args)
+        try:
+            rows = await client.run_query("MATCH (n) RETURN count(n) AS total")
+            payload["runner_age_readback_status"] = "ok"
+            payload["runner_age_error"] = None
+            payload["runner_age_readback"] = rows
+            return client
+        except Exception as exc:
+            last_error = str(exc)
+            payload["runner_age_error"] = last_error
+            payload["runner_age_readback_status"] = "retrying"
+            if _looks_like_missing_graph(exc) and not ensured_after_missing:
+                try:
+                    payload["runner_age_readback_status"] = "ensuring_graph"
+                    client = make_age_client(args)
+                    await client.ensure_graph()
+                    ensured_after_missing = True
+                    payload["runner_age_readback_status"] = "graph_ensured_after_missing"
+                    continue
+                except Exception as ensure_exc:
+                    last_error = f"ensure_graph after missing graph failed: {ensure_exc}"
+                    payload["runner_age_error"] = last_error
+            if attempt < 3:
+                await asyncio.sleep(backoffs[attempt - 1])
+    payload["runner_age_readback_status"] = "failed"
+    raise DiagnosticFailure(
+        "AGE_GRAPH_READBACK_FAILED",
+        "runner AGE readback failed "
+        f"graph={args.graph_name!r} runner_graph_dsn={redact_dsn(args.graph_dsn)!r} "
+        f"attempts={payload.get('runner_age_readback_attempts')} error={last_error!r}. {RULE40_HINT}",
+    )
 
 
 async def seed_batch_with_retries(
@@ -933,10 +1248,22 @@ async def seed_one_with_retries(
         try:
             if attempt > 1:
                 client = make_age_client(args)
-            seeded_id = await asyncio.wait_for(
-                seed_one(client, payload, args.prefix, index, args.target_category),
-                timeout=args.seed_timeout_seconds if args.seed_timeout_seconds > 0 else None,
-            )
+            seed_started = time.perf_counter()
+            with get_tracer().phase(
+                "seed_direct_age",
+                route="runner",
+                alert_id=aid,
+                attempt_index=index,
+                graph_name=args.graph_name,
+                retry_count=attempt - 1,
+                prefix=args.prefix,
+                target_category=args.target_category,
+            ):
+                seeded_id = await asyncio.wait_for(
+                    seed_one(client, payload, args.prefix, index, args.target_category),
+                    timeout=args.seed_timeout_seconds if args.seed_timeout_seconds > 0 else None,
+                )
+            record_latency(payload, "seed", time.perf_counter() - seed_started)
             payload["last_seed_error"] = None
             payload["seeded_alerts"] = payload.get("seed_completed_count", 0)
             return client, seeded_id
@@ -958,7 +1285,17 @@ async def seed_one_with_retries(
                 phase="streaming_seed",
                 latest_alert_id=aid,
             )
-            await asyncio.sleep(delay)
+            with get_tracer().phase(
+                "retry_backoff_wait",
+                route="runner",
+                alert_id=aid,
+                attempt_index=index,
+                graph_name=args.graph_name,
+                retry_count=attempt,
+                backoff_seconds=delay,
+                retry_source="seed_direct_age",
+            ):
+                await asyncio.sleep(delay)
     payload["seed_failures"] += 1
     return client, None
 
@@ -992,6 +1329,24 @@ def write_reports(args: argparse.Namespace, payload: dict[str, Any]) -> tuple[Pa
                 f"- seeded_alerts: `{payload.get('seeded_alerts', 0)}`",
                 f"- seed_failures: `{payload.get('seed_failures', 0)}`",
                 f"- seed_strategy: `{payload.get('seed_strategy')}`",
+                f"- runner_graph_dsn_redacted: `{payload.get('runner_graph_dsn_redacted')}`",
+                f"- runner_age_readback_status: `{payload.get('runner_age_readback_status')}`",
+                f"- runner_age_readback_attempts: `{payload.get('runner_age_readback_attempts')}`",
+                f"- runner_age_error: `{payload.get('runner_age_error')}`",
+                f"- rule40_validated: `{payload.get('rule40_validated')}`",
+                f"- http_timeout_seconds: `{payload.get('http_timeout_seconds')}`",
+                f"- http_max_retries: `{payload.get('http_max_retries')}`",
+                f"- http_retry_backoff_seconds: `{payload.get('http_retry_backoff_seconds')}`",
+                f"- analyze_retries: `{payload.get('analyze_retries')}`",
+                f"- outcome_retries: `{payload.get('outcome_retries')}`",
+                f"- analyze_timeout_recovered_by_readback: `{payload.get('analyze_timeout_recovered_by_readback')}`",
+                f"- outcome_timeout_recovered_by_readback: `{payload.get('outcome_timeout_recovered_by_readback')}`",
+                f"- latest_http_error: `{payload.get('latest_http_error')}`",
+                f"- latest_timeout_recovery_action: `{payload.get('latest_timeout_recovery_action')}`",
+                f"- avg_analyze_seconds: `{payload.get('avg_analyze_seconds')}`",
+                f"- avg_outcome_seconds: `{payload.get('avg_outcome_seconds')}`",
+                f"- max_analyze_seconds: `{payload.get('max_analyze_seconds')}`",
+                f"- max_outcome_seconds: `{payload.get('max_outcome_seconds')}`",
                 f"- seed_sleep_seconds: `{payload.get('seed_sleep_seconds')}`",
                 f"- attempt_sleep_seconds: `{payload.get('attempt_sleep_seconds')}`",
                 f"- batch_sleep_seconds: `{payload.get('batch_sleep_seconds')}`",
@@ -1021,7 +1376,8 @@ def write_reports(args: argparse.Namespace, payload: dict[str, Any]) -> tuple[Pa
                 "- `soc_graph_diag_f3` is contaminated by an analyze-only failed run.",
                 "- `soc_graph_diag_f4` is contaminated by a partial seed failure.",
                 "- `soc_graph_diag_f5` is contaminated by a partial seed failure.",
-                "- Next clean proof graph should be `soc_graph_diag_f6` with prefix `DIAG-F6-CRED`.",
+                "- `soc_graph_diag_f6` is contaminated by a partial 160-outcome timeout run.",
+                "- Next clean proof graph should be `soc_graph_diag_f7` with prefix `DIAG-F7-CRED`.",
             ]
         )
         + "\n",
@@ -1041,28 +1397,98 @@ def _http_error_message(exc: HTTPError) -> str:
 async def run_analyze_outcome_pair(
     args: argparse.Namespace,
     payload: dict[str, Any],
+    client: Any,
     aid: str,
     *,
     phase: str,
     print_outcome_status: bool = False,
 ) -> LoopResult:
     item = LoopResult(alert_id=aid)
-    try:
-        payload["analyze_attempts"] += 1
-        status, analyze_payload = http_json(
-            "POST",
-            f"{args.backend_url.rstrip('/')}/api/alert/analyze",
-            {"alert_id": aid},
-        )
-        item.analyze_status = status
-    except HTTPError as exc:
-        raise DiagnosticFailure("ANALYZE_HTTP_FAILURE", f"{phase} analyze failed for {aid}: {_http_error_message(exc)}") from exc
-    except (URLError, TimeoutError) as exc:
-        raise DiagnosticFailure("ANALYZE_HTTP_FAILURE", f"{phase} analyze failed for {aid}: {exc}") from exc
-    except Exception as exc:
-        raise DiagnosticFailure("UNEXPECTED_RUNTIME_ERROR", f"{phase} analyze failed for {aid}: {exc}") from exc
-
-    parsed = extract_analyze(analyze_payload)
+    payload["analyze_attempts"] += 1
+    parsed: dict[str, Any] | None = None
+    analyze_started = time.perf_counter()
+    for http_attempt in range(0, args.http_max_retries + 1):
+        try:
+            with get_tracer().phase(
+                "analyze_http_request",
+                route="/api/alert/analyze",
+                alert_id=aid,
+                attempt_index=payload.get("current_attempt_index"),
+                graph_name=args.graph_name,
+                retry_count=http_attempt,
+                scenario=args.scenario_config.name,
+                target_outcomes=args.target_outcomes,
+                valid_outcomes_before=payload.get("valid_outcomes"),
+            ):
+                status, analyze_payload = http_json(
+                    "POST",
+                    f"{args.backend_url.rstrip('/')}/api/alert/analyze",
+                    {"alert_id": aid},
+                    timeout=args.http_timeout_seconds,
+                )
+            item.analyze_status = status
+            parsed = extract_analyze(analyze_payload)
+            break
+        except HTTPError as exc:
+            raise DiagnosticFailure("ANALYZE_HTTP_FAILURE", f"{phase} analyze failed for {aid}: {_http_error_message(exc)}") from exc
+        except (URLError, TimeoutError) as exc:
+            payload["latest_http_error"] = f"analyze {aid}: {exc}"
+            try:
+                decision_row = await latest_decision_for_alert(client, aid)
+            except Exception as readback_exc:
+                decision_row = None
+                payload["latest_timeout_recovery_action"] = f"analyze readback failed: {readback_exc}"
+            if decision_row:
+                parsed = {
+                    "category": decision_row.get("category"),
+                    "action": decision_row.get("action"),
+                    "confidence": decision_row.get("confidence"),
+                    "decision_id": decision_row.get("decision_id"),
+                    "factor_vector": decision_row.get("factor_vector"),
+                }
+                item.analyze_recovered_by_readback = True
+                payload["analyze_timeout_recovered_by_readback"] += 1
+                payload["latest_timeout_recovery_action"] = f"analyze recovered by AGE readback for {aid}"
+                log_progress(
+                    args,
+                    payload,
+                    "ANALYZE_TIMEOUT_RECOVERED",
+                    f"[SOC DIAG F] analyze timeout recovered by readback alert_id={aid} decision_id={parsed.get('decision_id')}",
+                    phase=phase,
+                    latest_alert_id=aid,
+                )
+                break
+            if http_attempt >= args.http_max_retries:
+                raise DiagnosticFailure("ANALYZE_HTTP_FAILURE", f"{phase} analyze failed for {aid}: {exc}") from exc
+            item.analyze_retry_count += 1
+            payload["analyze_retries"] += 1
+            backoff = args.http_retry_backoffs[min(http_attempt, len(args.http_retry_backoffs) - 1)]
+            payload["latest_timeout_recovery_action"] = f"analyze retry after readback found no Decision for {aid}"
+            log_progress(
+                args,
+                payload,
+                "ANALYZE_HTTP_RETRY",
+                f"[SOC DIAG F] analyze retry {item.analyze_retry_count}/{args.http_max_retries} alert_id={aid} error={exc} backoff={backoff}s",
+                phase=phase,
+                latest_alert_id=aid,
+            )
+            with get_tracer().phase(
+                "retry_backoff_wait",
+                route="runner",
+                alert_id=aid,
+                attempt_index=payload.get("current_attempt_index"),
+                graph_name=args.graph_name,
+                retry_count=item.analyze_retry_count,
+                backoff_seconds=backoff,
+                retry_source="analyze_http_request",
+            ):
+                await asyncio.sleep(backoff)
+        except Exception as exc:
+            raise DiagnosticFailure("UNEXPECTED_RUNTIME_ERROR", f"{phase} analyze failed for {aid}: {exc}") from exc
+    record_latency(payload, "analyze", time.perf_counter() - analyze_started)
+    item.analyze_seconds = payload.get("latest_analyze_seconds")
+    if parsed is None:
+        raise DiagnosticFailure("ANALYZE_HTTP_FAILURE", f"{phase} analyze failed for {aid}: no analyze payload or readback")
     item.category = parsed["category"]
     item.action = parsed["action"]
     item.confidence = parsed["confidence"]
@@ -1088,38 +1514,129 @@ async def run_analyze_outcome_pair(
         item.skipped_reason = "missing decision_id"
         return item
 
-    try:
-        payload["outcome_attempts"] += 1
-        outcome_body = {
-            "alert_id": aid,
-            "decision_id": item.decision_id,
-            "outcome": "correct",
-            "analyst_action": item.action,
-        }
-        outcome_status, outcome_payload = http_json(
-            "POST",
-            f"{args.backend_url.rstrip('/')}/api/alert/outcome",
-            outcome_body,
-        )
-        item.outcome_status = outcome_status
-        item.outcome_id = nested_get(outcome_payload, ("outcome_id",), ("hash",))
-        payload["valid_outcomes"] += 1
-        if print_outcome_status:
-            print(
-                f"[SOC DIAG F] {phase} outcome POST status={outcome_status} "
-                f"alert_id={aid} decision_id={item.decision_id} "
-                f"valid_outcomes={payload['valid_outcomes']}",
-                flush=True,
+    payload["outcome_attempts"] += 1
+    outcome_body = {
+        "alert_id": aid,
+        "decision_id": item.decision_id,
+        "outcome": "correct",
+        "analyst_action": item.action,
+    }
+    outcome_started = time.perf_counter()
+    for http_attempt in range(0, args.http_max_retries + 1):
+        try:
+            with get_tracer().phase(
+                "outcome_http_request",
+                route="/api/alert/outcome",
+                alert_id=aid,
+                decision_id=item.decision_id,
+                attempt_index=payload.get("current_attempt_index"),
+                graph_name=args.graph_name,
+                retry_count=http_attempt,
+                scenario=args.scenario_config.name,
+                valid_outcomes_before=payload.get("valid_outcomes"),
+            ):
+                outcome_status, outcome_payload = http_json(
+                    "POST",
+                    f"{args.backend_url.rstrip('/')}/api/alert/outcome",
+                    outcome_body,
+                    timeout=args.http_timeout_seconds,
+                )
+            item.outcome_status = outcome_status
+            item.outcome_id = nested_get(outcome_payload, ("outcome_id",), ("hash",))
+            payload["valid_outcomes"] += 1
+            if print_outcome_status:
+                print(
+                    f"[SOC DIAG F] {phase} outcome POST status={outcome_status} "
+                    f"alert_id={aid} decision_id={item.decision_id} "
+                    f"valid_outcomes={payload['valid_outcomes']}",
+                    flush=True,
+                )
+            record_latency(payload, "outcome", time.perf_counter() - outcome_started)
+            item.outcome_seconds = payload.get("latest_outcome_seconds")
+            return item
+        except HTTPError as exc:
+            message = _http_error_message(exc)
+            payload["latest_http_error"] = f"outcome {aid}: {message}"
+            if "already" in message.lower() or "duplicate" in message.lower():
+                outcome_row = await outcome_for_decision(client, item.decision_id)
+                if decision_has_correct_outcome(outcome_row):
+                    item.outcome_status = exc.code
+                    item.outcome_recovered_by_readback = True
+                    payload["outcome_timeout_recovered_by_readback"] += 1
+                    payload["valid_outcomes"] += 1
+                    payload["latest_timeout_recovery_action"] = f"duplicate outcome response verified by AGE readback for {aid}"
+                    log_progress(
+                        args,
+                        payload,
+                        "OUTCOME_TIMEOUT_RECOVERED",
+                        f"[SOC DIAG F] duplicate outcome response verified by readback alert_id={aid} decision_id={item.decision_id}",
+                        phase=phase,
+                        latest_alert_id=aid,
+                        latest_action=item.action,
+                        latest_confidence=item.confidence,
+                    )
+                    record_latency(payload, "outcome", time.perf_counter() - outcome_started)
+                    item.outcome_seconds = payload.get("latest_outcome_seconds")
+                    return item
+            raise DiagnosticFailure("OUTCOME_HTTP_FAILURE", f"{phase} outcome failed for {aid}: {message}") from exc
+        except (URLError, TimeoutError) as exc:
+            payload["latest_http_error"] = f"outcome {aid}: {exc}"
+            try:
+                outcome_row = await outcome_for_decision(client, item.decision_id)
+            except Exception as readback_exc:
+                outcome_row = None
+                payload["latest_timeout_recovery_action"] = f"outcome readback failed: {readback_exc}"
+            if decision_has_correct_outcome(outcome_row):
+                item.outcome_recovered_by_readback = True
+                payload["outcome_timeout_recovered_by_readback"] += 1
+                payload["valid_outcomes"] += 1
+                payload["latest_timeout_recovery_action"] = f"outcome recovered by AGE readback for {aid}"
+                log_progress(
+                    args,
+                    payload,
+                    "OUTCOME_TIMEOUT_RECOVERED",
+                    f"[SOC DIAG F] outcome timeout recovered by readback alert_id={aid} decision_id={item.decision_id}",
+                    phase=phase,
+                    latest_alert_id=aid,
+                    latest_action=item.action,
+                    latest_confidence=item.confidence,
+                )
+                record_latency(payload, "outcome", time.perf_counter() - outcome_started)
+                item.outcome_seconds = payload.get("latest_outcome_seconds")
+                return item
+            if http_attempt >= args.http_max_retries:
+                raise DiagnosticFailure("OUTCOME_HTTP_FAILURE", f"{phase} outcome failed for {aid}: {exc}") from exc
+            item.outcome_retry_count += 1
+            payload["outcome_retries"] += 1
+            backoff = args.http_retry_backoffs[min(http_attempt, len(args.http_retry_backoffs) - 1)]
+            payload["latest_timeout_recovery_action"] = f"outcome retry after readback found no recorded outcome for {aid}"
+            log_progress(
+                args,
+                payload,
+                "OUTCOME_HTTP_RETRY",
+                f"[SOC DIAG F] outcome retry {item.outcome_retry_count}/{args.http_max_retries} alert_id={aid} error={exc} backoff={backoff}s",
+                phase=phase,
+                latest_alert_id=aid,
+                latest_action=item.action,
+                latest_confidence=item.confidence,
             )
-        return item
-    except HTTPError as exc:
-        raise DiagnosticFailure("OUTCOME_HTTP_FAILURE", f"{phase} outcome failed for {aid}: {_http_error_message(exc)}") from exc
-    except (URLError, TimeoutError) as exc:
-        raise DiagnosticFailure("OUTCOME_HTTP_FAILURE", f"{phase} outcome failed for {aid}: {exc}") from exc
-    except DiagnosticFailure:
-        raise
-    except Exception as exc:
-        raise DiagnosticFailure("UNEXPECTED_RUNTIME_ERROR", f"{phase} outcome failed for {aid}: {exc}") from exc
+            with get_tracer().phase(
+                "retry_backoff_wait",
+                route="runner",
+                alert_id=aid,
+                decision_id=item.decision_id,
+                attempt_index=payload.get("current_attempt_index"),
+                graph_name=args.graph_name,
+                retry_count=item.outcome_retry_count,
+                backoff_seconds=backoff,
+                retry_source="outcome_http_request",
+            ):
+                await asyncio.sleep(backoff)
+        except DiagnosticFailure:
+            raise
+        except Exception as exc:
+            raise DiagnosticFailure("UNEXPECTED_RUNTIME_ERROR", f"{phase} outcome failed for {aid}: {exc}") from exc
+    raise DiagnosticFailure("OUTCOME_HTTP_FAILURE", f"{phase} outcome failed for {aid}: exhausted retry loop")
 
 
 async def run_diagnostic(args: argparse.Namespace, payload: dict[str, Any]) -> dict[str, Any]:
@@ -1136,6 +1653,8 @@ async def run_diagnostic(args: argparse.Namespace, payload: dict[str, Any]) -> d
         ),
         phase="initializing",
     )
+    validate_rule40_graph_dsn(args, payload)
+    configure_runner_age_env(args, payload)
     payload["runner_ci_platform_import_path"] = source_ci_platform_import_path()
     payload["last_successful_phase"] = "runner_env_validated"
     validate_backend_contract(args, payload)
@@ -1157,12 +1676,19 @@ async def run_diagnostic(args: argparse.Namespace, payload: dict[str, Any]) -> d
             f"seed_strategy={args.seed_strategy!r} is not implemented for Diagnostic F proof yet",
         )
 
-    client = make_age_client(args)
-    try:
-        await client.ensure_graph()
-    except Exception as exc:
-        raise DiagnosticFailure("AGE_GRAPH_READBACK_FAILED", f"ensure_graph failed: {exc}") from exc
-    payload["last_successful_phase"] = "age_graph_ensured"
+    client = await verify_runner_age_readback(args, payload)
+    payload["last_successful_phase"] = "runner_age_readback_validated"
+    log_progress(
+        args,
+        payload,
+        "CONTRACT_VERIFIED",
+        (
+            "[SOC DIAG F] runner AGE readback OK "
+            f"graph={args.graph_name} dsn={redact_dsn(args.graph_dsn)} "
+            f"attempts={payload.get('runner_age_readback_attempts')}"
+        ),
+        phase="runner_age_readback_validated",
+    )
 
     if args.dry_run:
         payload["dry_run_plan"] = {
@@ -1207,8 +1733,9 @@ async def run_diagnostic(args: argparse.Namespace, payload: dict[str, Any]) -> d
                     "SEED_RUNTIME_FAILURE",
                     f"seed-only smoke failed for {alert_id(args.prefix, 1)}: {payload.get('last_seed_error')}",
                 )
+            await wait_for_seed_visibility(args, payload, seeded_id, client)
             payload["seeded_alerts_readback"] = await read_alert_count(client, args.prefix)
-            payload["readback"] = await final_readback(client, args.prefix)
+            payload["readback"] = await final_readback(client, args.prefix, payload)
             payload["last_successful_phase"] = "seed_only_completed"
             progress_snapshot(
                 args,
@@ -1236,141 +1763,153 @@ async def run_diagnostic(args: argparse.Namespace, payload: dict[str, Any]) -> d
 
             aid = alert_id(args.prefix, index)
             payload["current_attempt_index"] = index
-            client, seeded_id = await seed_one_with_retries(args, payload, client, index=index)
-            if seeded_id is None:
-                message = (
-                    f"seed failed for {aid}: failures={payload['seed_failures']} "
-                    f"max_seed_failures={args.max_seed_failures} error={payload.get('last_seed_error')}"
-                )
-                log_progress(
-                    args,
-                    payload,
-                    "ATTEMPT_OK",
-                    f"[SOC DIAG F] {message}",
-                    phase="streaming_seed",
-                    latest_alert_id=aid,
-                )
-                if payload["seed_failures"] >= args.max_seed_failures:
-                    raise DiagnosticFailure("SEED_RUNTIME_FAILURE", message)
-                if args.attempt_sleep_seconds > 0:
-                    await asyncio.sleep(args.attempt_sleep_seconds)
-                continue
-
-            before_valid = payload["valid_outcomes"]
-            item = await run_analyze_outcome_pair(
-                args,
-                payload,
-                aid,
-                phase="sanity" if index <= sanity_required else "proof",
-                print_outcome_status=(index <= sanity_required or payload["valid_outcomes"] == 0),
-            )
-            payload["loops"].append(asdict(item))
-            gained_valid = payload["valid_outcomes"] > before_valid
-
-            if index <= sanity_required:
-                print(
-                    (
-                        f"[SOC DIAG F] sanity attempt={index} alert_id={aid} "
-                        f"category={item.category} action={item.action} "
-                        f"decision_id={item.decision_id} outcome_status={item.outcome_status} "
-                        f"valid={gained_valid}"
-                    ),
-                    flush=True,
-                )
-                if gained_valid:
-                    sanity_valid += 1
-                else:
-                    raise DiagnosticFailure(
-                        "SEED_DATA_ISSUE",
-                        f"sanity failed for {aid}: category={item.category!r} action={item.action!r} reason={item.skipped_reason!r}",
+            with get_tracer().phase(
+                "total_attempt",
+                route="runner",
+                alert_id=aid,
+                attempt_index=index,
+                graph_name=args.graph_name,
+                scenario=args.scenario_config.name,
+                target_outcomes=args.target_outcomes,
+                valid_outcomes_before=payload.get("valid_outcomes"),
+            ):
+                client, seeded_id = await seed_one_with_retries(args, payload, client, index=index)
+                if seeded_id is None:
+                    message = (
+                        f"seed failed for {aid}: failures={payload['seed_failures']} "
+                        f"max_seed_failures={args.max_seed_failures} error={payload.get('last_seed_error')}"
                     )
-                if index == sanity_required:
-                    if sanity_valid < 1:
-                        raise DiagnosticFailure("SEED_DATA_ISSUE", "sanity did not produce a valid target outcome")
-                    payload["last_successful_phase"] = "sanity_completed"
                     log_progress(
                         args,
                         payload,
-                        "SANITY_PASSED",
-                        f"[SOC DIAG F] sanity PASS valid_outcomes={payload['valid_outcomes']}",
-                        phase="sanity_completed",
+                        "ATTEMPT_OK",
+                        f"[SOC DIAG F] {message}",
+                        phase="streaming_seed",
+                        latest_alert_id=aid,
+                    )
+                    if payload["seed_failures"] >= args.max_seed_failures:
+                        raise DiagnosticFailure("SEED_RUNTIME_FAILURE", message)
+                    if args.attempt_sleep_seconds > 0:
+                        await asyncio.sleep(args.attempt_sleep_seconds)
+                    continue
+
+                await wait_for_seed_visibility(args, payload, aid, client)
+                before_valid = payload["valid_outcomes"]
+                item = await run_analyze_outcome_pair(
+                    args,
+                    payload,
+                    client,
+                    aid,
+                    phase="sanity" if index <= sanity_required else "proof",
+                    print_outcome_status=(index <= sanity_required or payload["valid_outcomes"] == 0),
+                )
+                payload["loops"].append(asdict(item))
+                gained_valid = payload["valid_outcomes"] > before_valid
+
+                if index <= sanity_required:
+                    print(
+                        (
+                            f"[SOC DIAG F] sanity attempt={index} alert_id={aid} "
+                            f"category={item.category} action={item.action} "
+                            f"decision_id={item.decision_id} outcome_status={item.outcome_status} "
+                            f"valid={gained_valid}"
+                        ),
+                        flush=True,
+                    )
+                    if gained_valid:
+                        sanity_valid += 1
+                    else:
+                        raise DiagnosticFailure(
+                            "SEED_DATA_ISSUE",
+                            f"sanity failed for {aid}: category={item.category!r} action={item.action!r} reason={item.skipped_reason!r}",
+                        )
+                    if index == sanity_required:
+                        if sanity_valid < 1:
+                            raise DiagnosticFailure("SEED_DATA_ISSUE", "sanity did not produce a valid target outcome")
+                        payload["last_successful_phase"] = "sanity_completed"
+                        log_progress(
+                            args,
+                            payload,
+                            "SANITY_PASSED",
+                            f"[SOC DIAG F] sanity PASS valid_outcomes={payload['valid_outcomes']}",
+                            phase="sanity_completed",
+                            latest_alert_id=aid,
+                            latest_action=item.action,
+                            latest_confidence=item.confidence,
+                        )
+
+                if gained_valid and payload["valid_outcomes"] in args.scenario_config.milestones:
+                    rb = await progress_readback(client, args.prefix, payload)
+                    payload["progress_readbacks"][str(payload["valid_outcomes"])] = rb
+                    payload["milestones"][str(payload["valid_outcomes"])] = {
+                        "alert_id": aid,
+                        "decision_id": item.decision_id,
+                        "time_epoch": time.time(),
+                        "readback": rb,
+                    }
+                    log_progress(
+                        args,
+                        payload,
+                        "MILESTONE_REACHED",
+                        (
+                            f"[SOC DIAG F] milestone {payload['valid_outcomes']} "
+                            f"attempt={index} alert_id={aid} outcome_status={item.outcome_status} "
+                            f"action={item.action} confidence={item.confidence} "
+                            f"readback={rb} elapsed={elapsed(payload)}s"
+                        ),
+                        phase="streaming_proof",
+                        latest_alert_id=aid,
+                        latest_action=item.action,
+                        latest_confidence=item.confidence,
+                        milestone=payload["valid_outcomes"],
+                    )
+                elif gained_valid and payload["valid_outcomes"] % 25 == 0:
+                    rb = await progress_readback(client, args.prefix, payload)
+                    payload["progress_readbacks"][str(payload["valid_outcomes"])] = rb
+                    log_progress(
+                        args,
+                        payload,
+                        "OUTCOME_OK",
+                        (
+                            f"[SOC DIAG F] progress valid={payload['valid_outcomes']} "
+                            f"attempts={payload['analyze_attempts']} current_attempt={index} latest={aid} "
+                            f"outcome_status={item.outcome_status} action={item.action} "
+                            f"confidence={item.confidence} skipped_referral={payload['skipped_refer_to_analyst']} "
+                            f"other_categories={payload['other_categories']} other_action_skips={payload['other_action_skips']} "
+                            f"seed_failures={payload['seed_failures']} readback={rb} elapsed={elapsed(payload)}s"
+                        ),
+                        phase="streaming_proof",
+                        latest_alert_id=aid,
+                        latest_action=item.action,
+                        latest_confidence=item.confidence,
+                    )
+                elif gained_valid:
+                    progress_snapshot(
+                        args,
+                        payload,
+                        "OUTCOME_OK",
+                        phase="streaming_proof",
+                        latest_alert_id=aid,
+                        latest_action=item.action,
+                        latest_confidence=item.confidence,
+                    )
+                else:
+                    progress_snapshot(
+                        args,
+                        payload,
+                        "ATTEMPT_OK",
+                        phase="streaming_proof",
                         latest_alert_id=aid,
                         latest_action=item.action,
                         latest_confidence=item.confidence,
                     )
 
-            if gained_valid and payload["valid_outcomes"] in args.scenario_config.milestones:
-                rb = await progress_readback(client, args.prefix)
-                payload["progress_readbacks"][str(payload["valid_outcomes"])] = rb
-                payload["milestones"][str(payload["valid_outcomes"])] = {
-                    "alert_id": aid,
-                    "decision_id": item.decision_id,
-                    "time_epoch": time.time(),
-                    "readback": rb,
-                }
-                log_progress(
-                    args,
-                    payload,
-                    "MILESTONE_REACHED",
-                    (
-                        f"[SOC DIAG F] milestone {payload['valid_outcomes']} "
-                        f"attempt={index} alert_id={aid} outcome_status={item.outcome_status} "
-                        f"action={item.action} confidence={item.confidence} "
-                        f"readback={rb} elapsed={elapsed(payload)}s"
-                    ),
-                    phase="streaming_proof",
-                    latest_alert_id=aid,
-                    latest_action=item.action,
-                    latest_confidence=item.confidence,
-                    milestone=payload["valid_outcomes"],
-                )
-            elif gained_valid and payload["valid_outcomes"] % 25 == 0:
-                rb = await progress_readback(client, args.prefix)
-                payload["progress_readbacks"][str(payload["valid_outcomes"])] = rb
-                log_progress(
-                    args,
-                    payload,
-                    "OUTCOME_OK",
-                    (
-                        f"[SOC DIAG F] progress valid={payload['valid_outcomes']} "
-                        f"attempts={payload['analyze_attempts']} current_attempt={index} latest={aid} "
-                        f"outcome_status={item.outcome_status} action={item.action} "
-                        f"confidence={item.confidence} skipped_referral={payload['skipped_refer_to_analyst']} "
-                        f"other_categories={payload['other_categories']} other_action_skips={payload['other_action_skips']} "
-                        f"seed_failures={payload['seed_failures']} readback={rb} elapsed={elapsed(payload)}s"
-                    ),
-                    phase="streaming_proof",
-                    latest_alert_id=aid,
-                    latest_action=item.action,
-                    latest_confidence=item.confidence,
-                )
-            elif gained_valid:
-                progress_snapshot(
-                    args,
-                    payload,
-                    "OUTCOME_OK",
-                    phase="streaming_proof",
-                    latest_alert_id=aid,
-                    latest_action=item.action,
-                    latest_confidence=item.confidence,
-                )
-            else:
-                progress_snapshot(
-                    args,
-                    payload,
-                    "ATTEMPT_OK",
-                    phase="streaming_proof",
-                    latest_alert_id=aid,
-                    latest_action=item.action,
-                    latest_confidence=item.confidence,
-                )
-
-            if args.attempt_sleep_seconds > 0 and payload["valid_outcomes"] < args.target_outcomes:
-                await asyncio.sleep(args.attempt_sleep_seconds)
+                if args.attempt_sleep_seconds > 0 and payload["valid_outcomes"] < args.target_outcomes:
+                    await asyncio.sleep(args.attempt_sleep_seconds)
 
         payload["last_successful_phase"] = "streaming_loop_completed"
         payload["seeded_alerts_readback"] = await read_alert_count(client, args.prefix)
-        payload["readback"] = await final_readback(client, args.prefix)
+        payload["readback"] = await final_readback(client, args.prefix, payload)
         payload["last_successful_phase"] = "age_readback_completed"
         return payload
 
@@ -1483,6 +2022,7 @@ async def run_diagnostic(args: argparse.Namespace, payload: dict[str, Any]) -> d
             item = await run_analyze_outcome_pair(
                 args,
                 payload,
+                client,
                 aid,
                 phase="sanity",
                 print_outcome_status=True,
@@ -1525,12 +2065,13 @@ async def run_diagnostic(args: argparse.Namespace, payload: dict[str, Any]) -> d
             item = await run_analyze_outcome_pair(
                 args,
                 payload,
+                client,
                 aid,
                 phase="proof",
                 print_outcome_status=payload["valid_outcomes"] == 0,
             )
             if payload["valid_outcomes"] > before_valid and payload["valid_outcomes"] in args.scenario_config.milestones:
-                rb = await progress_readback(client, args.prefix)
+                rb = await progress_readback(client, args.prefix, payload)
                 payload["progress_readbacks"][str(payload["valid_outcomes"])] = rb
                 payload["milestones"][str(payload["valid_outcomes"])] = {
                     "alert_id": aid,
@@ -1555,7 +2096,7 @@ async def run_diagnostic(args: argparse.Namespace, payload: dict[str, Any]) -> d
                     milestone=payload["valid_outcomes"],
                 )
             elif payload["valid_outcomes"] > before_valid and payload["valid_outcomes"] % 25 == 0:
-                rb = await progress_readback(client, args.prefix)
+                rb = await progress_readback(client, args.prefix, payload)
                 payload["progress_readbacks"][str(payload["valid_outcomes"])] = rb
                 log_progress(
                     args,
@@ -1583,7 +2124,7 @@ async def run_diagnostic(args: argparse.Namespace, payload: dict[str, Any]) -> d
             raise DiagnosticFailure("UNEXPECTED_RUNTIME_ERROR", f"loop failed for {aid}: {exc}") from exc
 
     payload["last_successful_phase"] = "loop_completed"
-    payload["readback"] = await final_readback(client, args.prefix)
+    payload["readback"] = await final_readback(client, args.prefix, payload)
     payload["last_successful_phase"] = "age_readback_completed"
     return payload
 
@@ -1647,7 +2188,15 @@ def main() -> None:
         phase="writing_report",
         verdict=result.get("verdict"),
     )
-    json_path, md_path = write_reports(args, result)
+    with get_tracer().phase(
+        "report_write",
+        route="runner",
+        graph_name=args.graph_name,
+        prefix=args.prefix,
+        verdict=result.get("verdict"),
+        exit_code=result.get("exit_code"),
+    ):
+        json_path, md_path = write_reports(args, result)
     final_status = "PASS" if result.get("verdict") == PASS_VERDICT else "FAIL"
     if result.get("verdict") == "INTERRUPTED":
         final_status = "INTERRUPTED"
@@ -1673,7 +2222,14 @@ def main() -> None:
         ),
         flush=True,
     )
-    print(json.dumps({"result": result, "json_report": str(json_path), "md_report": str(md_path)}, indent=2, default=str), flush=True)
+    if not args.no_final_summary:
+        try:
+            from summarize_soc_diag_report import print_summary
+
+            print()
+            print_summary(result, json_report=json_path, md_report=md_path)
+        except Exception as exc:
+            print(f"WARNING: compact summary generation failed: {exc}", flush=True)
     sys.exit(int(result.get("exit_code") or 0))
 
 

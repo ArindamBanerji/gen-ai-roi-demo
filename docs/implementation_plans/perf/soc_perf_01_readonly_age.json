@@ -1,0 +1,326 @@
+{
+  "title": "SOC Perf 01 Read-Only AGE Benchmark",
+  "created_at_epoch": 1780996495.7366455,
+  "read_only": true,
+  "no_writes_performed": true,
+  "graph_name": "soc_graph_diag_f8",
+  "prefix": "DIAG-F8-CRED",
+  "graph_dsn_redacted": "host=localhost port=5433 dbname=soc_copilot user=postgres password=***",
+  "rule40_validated": true,
+  "reps": 10,
+  "alert_id_early": "DIAG-F8-CRED-0001",
+  "alert_id_late": "DIAG-F8-CRED-0250",
+  "early_decision_id_found": true,
+  "late_decision_id_found": true,
+  "measurements": [
+    {
+      "label": "tier_a_fresh_client_return_1",
+      "reps": 10,
+      "min_s": 0.06582,
+      "max_s": 0.099435,
+      "avg_s": 0.07679,
+      "p50_s": 0.073044,
+      "p95_s": 0.093334,
+      "error": null,
+      "last_result": [
+        {
+          "ok": 1
+        }
+      ]
+    },
+    {
+      "label": "tier_a_warm_client_return_1",
+      "reps": 10,
+      "min_s": 0.063804,
+      "max_s": 0.088896,
+      "avg_s": 0.072755,
+      "p50_s": 0.070388,
+      "p95_s": 0.085589,
+      "error": null,
+      "last_result": [
+        {
+          "ok": 1
+        }
+      ]
+    },
+    {
+      "label": "tier_a_warm_count_nodes",
+      "reps": 10,
+      "min_s": 0.069681,
+      "max_s": 0.09228,
+      "avg_s": 0.078248,
+      "p50_s": 0.078095,
+      "p95_s": 0.089096,
+      "error": null,
+      "last_result": [
+        {
+          "total": 1758
+        }
+      ]
+    },
+    {
+      "label": "tier_b_alert_exact_early",
+      "reps": 10,
+      "min_s": 0.065342,
+      "max_s": 0.081624,
+      "avg_s": 0.072164,
+      "p50_s": 0.070943,
+      "p95_s": 0.07892,
+      "error": null,
+      "last_result": [
+        {
+          "cnt": 1
+        }
+      ]
+    },
+    {
+      "label": "tier_b_alert_exact_late",
+      "reps": 10,
+      "min_s": 0.06656,
+      "max_s": 0.092563,
+      "avg_s": 0.077239,
+      "p50_s": 0.076884,
+      "p95_s": 0.089056,
+      "error": null,
+      "last_result": [
+        {
+          "cnt": 1
+        }
+      ]
+    },
+    {
+      "label": "tier_b_decision_join_early",
+      "reps": 10,
+      "min_s": 0.060689,
+      "max_s": 0.085329,
+      "avg_s": 0.07712,
+      "p50_s": 0.078423,
+      "p95_s": 0.08424,
+      "error": null,
+      "last_result": [
+        {
+          "cnt": 1
+        }
+      ]
+    },
+    {
+      "label": "tier_b_decision_join_late",
+      "reps": 10,
+      "min_s": 0.074484,
+      "max_s": 0.09046,
+      "avg_s": 0.082716,
+      "p50_s": 0.082136,
+      "p95_s": 0.089803,
+      "error": null,
+      "last_result": [
+        {
+          "cnt": 1
+        }
+      ]
+    },
+    {
+      "label": "tier_b_decision_by_id_early",
+      "reps": 10,
+      "min_s": 0.064856,
+      "max_s": 0.100327,
+      "avg_s": 0.077865,
+      "p50_s": 0.076687,
+      "p95_s": 0.094832,
+      "error": null,
+      "last_result": [
+        {
+          "cnt": 1
+        }
+      ]
+    },
+    {
+      "label": "tier_b_decision_by_id_late",
+      "reps": 10,
+      "min_s": 0.073589,
+      "max_s": 0.10118,
+      "avg_s": 0.083889,
+      "p50_s": 0.080113,
+      "p95_s": 0.097491,
+      "error": null,
+      "last_result": [
+        {
+          "cnt": 1
+        }
+      ]
+    },
+    {
+      "label": "tier_c_alerts_prefix_count",
+      "reps": 10,
+      "min_s": 0.064313,
+      "max_s": 0.095581,
+      "avg_s": 0.083342,
+      "p50_s": 0.088996,
+      "p95_s": 0.094959,
+      "error": null,
+      "last_result": [
+        {
+          "cnt": 250
+        }
+      ]
+    },
+    {
+      "label": "tier_c_decisions_prefix_count",
+      "reps": 10,
+      "min_s": 0.063053,
+      "max_s": 0.099104,
+      "avg_s": 0.077865,
+      "p50_s": 0.076059,
+      "p95_s": 0.095254,
+      "error": null,
+      "last_result": [
+        {
+          "cnt": 250
+        }
+      ]
+    },
+    {
+      "label": "tier_c_verified_prefix_count",
+      "reps": 10,
+      "min_s": 0.0625,
+      "max_s": 0.105766,
+      "avg_s": 0.078571,
+      "p50_s": 0.078068,
+      "p95_s": 0.097001,
+      "error": null,
+      "last_result": [
+        {
+          "cnt": 250
+        }
+      ]
+    },
+    {
+      "label": "tier_c_outcome_present_prefix_count",
+      "reps": 10,
+      "min_s": 0.058597,
+      "max_s": 0.089637,
+      "avg_s": 0.069116,
+      "p50_s": 0.066206,
+      "p95_s": 0.085226,
+      "error": null,
+      "last_result": [
+        {
+          "cnt": 250
+        }
+      ]
+    },
+    {
+      "label": "tier_d_l5_centroid_count",
+      "reps": 10,
+      "min_s": 0.065435,
+      "max_s": 0.081604,
+      "avg_s": 0.070369,
+      "p50_s": 0.069723,
+      "p95_s": 0.077758,
+      "error": null,
+      "last_result": [
+        {
+          "cnt": 1
+        }
+      ]
+    },
+    {
+      "label": "tier_d_shaped_by_count",
+      "reps": 10,
+      "min_s": 0.062531,
+      "max_s": 0.087466,
+      "avg_s": 0.073208,
+      "p50_s": 0.072594,
+      "p95_s": 0.084536,
+      "error": null,
+      "last_result": [
+        {
+          "cnt": 1
+        }
+      ]
+    },
+    {
+      "label": "tier_d_l5_dk_weight_count",
+      "reps": 10,
+      "min_s": 0.066349,
+      "max_s": 0.084377,
+      "avg_s": 0.076226,
+      "p50_s": 0.076843,
+      "p95_s": 0.082777,
+      "error": null,
+      "last_result": [
+        {
+          "cnt": 1
+        }
+      ]
+    },
+    {
+      "label": "tier_d_dk_welford_read",
+      "reps": 10,
+      "min_s": 0.057441,
+      "max_s": 0.077739,
+      "avg_s": 0.068987,
+      "p50_s": 0.068809,
+      "p95_s": 0.076233,
+      "error": null,
+      "last_result": [
+        {
+          "max_n_decisions_used": 250,
+          "confirmed_mean_count": 1,
+          "confirmed_m2_count": 1,
+          "overridden_mean_count": 1,
+          "overridden_m2_count": 1,
+          "all_mean_count": 1,
+          "all_m2_count": 1
+        }
+      ]
+    },
+    {
+      "label": "tier_d_count_all_nodes",
+      "reps": 10,
+      "min_s": 0.065398,
+      "max_s": 0.095431,
+      "avg_s": 0.078821,
+      "p50_s": 0.077591,
+      "p95_s": 0.094214,
+      "error": null,
+      "last_result": [
+        {
+          "total": 1758
+        }
+      ]
+    },
+    {
+      "label": "tier_d_count_all_edges",
+      "reps": 10,
+      "min_s": 0.103222,
+      "max_s": 0.266304,
+      "avg_s": 0.13413,
+      "p50_s": 0.117012,
+      "p95_s": 0.214585,
+      "error": null,
+      "last_result": [
+        {
+          "total": 32375
+        }
+      ]
+    }
+  ],
+  "diagnosis": {
+    "fresh_warm_ratio": 1.055,
+    "point_lookup_avg_s": 0.078499,
+    "point_lookup_slow": false,
+    "prefix_scan_avg_s": 0.077224,
+    "prefix_scan_ratio": 0.984,
+    "likely_root_cause_candidates": [
+      "no_age_read_only_gate_exceeded_by_script_01"
+    ]
+  },
+  "safety": {
+    "read_only": true,
+    "graph_name": "soc_graph_diag_f8",
+    "rule40_validated": true,
+    "no_writes_performed": true,
+    "analyze_endpoint_called": false,
+    "outcome_endpoint_called": false
+  }
+}

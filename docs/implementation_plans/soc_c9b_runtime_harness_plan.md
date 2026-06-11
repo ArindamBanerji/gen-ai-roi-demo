@@ -1,0 +1,106 @@
+# SOC C9B Runtime Harness Plan
+
+Date: 2026-06-08
+Model: gpt-5.3
+Task Type: Runtime harness implementation
+
+## Purpose
+SOC C9B live proofs now depend on a precise runtime contract: source `ci-platform`, AGE graph isolation, SOC learning enabled, and one uninterrupted backend process. Codex shell sessions do not reliably preserve `PYTHONPATH` or long-running process state, so Diagnostic E/F execution needs deterministic launch scripts that can be run manually outside Codex.
+
+## Runtime Problem
+- Diagnostic E passes when the backend imports source `ci-platform`.
+- L5-UPSERT fixed repeated current-state L5 updates in `AGEGraphStore`.
+- Diagnostic F previously failed before proving DK because runtime execution was split and seeding/loop state was not reproducible.
+- Long proof runs should not rely on inherited shell state from Codex.
+
+## demo.py Diagnostic Command
+From `copilot-sdk`:
+
+```powershell
+python demo.py --soc --diag-mode --backend-only --graph-name soc_graph_diag_f2 --learning-enabled --source-ci-platform --ensure-graph --no-browser
+```
+
+The diagnostic mode is opt-in and only affects SOC launch. It sets AGE backend variables, prepends source `ci-platform` and SOC backend paths to `PYTHONPATH`, verifies the active `ci_platform.graph.age_graph_store` import path, optionally ensures the graph, and prints the graph/import/learning status before uvicorn startup.
+
+## PowerShell Backend Command
+From `gen-ai-roi-demo-v4-v50` or any shell:
+
+```powershell
+.\scripts\diagnostics\run_soc_diag_backend.ps1 -GraphName soc_graph_diag_f2 -Port 8001
+```
+
+The script starts uvicorn in the foreground with:
+- `GRAPH_BACKEND=age`
+- `AGE_GRAPH_NAME=<GraphName>`
+- `SOC_LEARNING_ENABLED=true`
+- `PYTHONPATH=<source ci-platform>;<backend>`
+
+It verifies source `ci-platform`, ensures the graph, redacts the password when printing the DSN, and does not start frontend processes.
+
+It also writes a runtime contract file:
+
+```text
+scratch/temp/soc_diag_backend_contract.json
+```
+
+The contract records graph name, backend port, redacted DSN, `SOC_LEARNING_ENABLED`, `PYTHONPATH`, source `ci-platform` import path, and launch time. Diagnostic F runners must verify this contract or explicitly record a user assertion before treating backend health as sufficient.
+
+The backend contract validates backend runtime only. The external proof runner owns its own direct AGE/PostgreSQL connection through `--graph-dsn`; it does not parse or reuse the contract's redacted DSN. On this Windows 11 mirrored WSL2 setup, Rule #40 applies: Windows-side AGE/PostgreSQL DSNs must use `localhost`, not `127.0.0.1`. Backend HTTP URLs are separate from AGE/PostgreSQL DSNs.
+
+## Diagnostic F Runner Command
+After Diagnostic E passes and the backend is running with the same graph:
+
+```powershell
+python .\scripts\diagnostics\run_soc_diag_f.py --scenario diagnostic-f-dk --graph-name soc_graph_diag_f7 --graph-dsn "host=localhost port=5433 dbname=soc_copilot user=postgres password=postgres" --backend-url http://localhost:8001 --prefix DIAG-F7-CRED --max-attempts 300 --target-outcomes 250 --sanity-count 1
+```
+
+Dry-run validation:
+
+```powershell
+python .\scripts\diagnostics\run_soc_diag_f.py --scenario diagnostic-f-dk --graph-name soc_graph_diag_f7_dryrun --graph-dsn "host=localhost port=5433 dbname=soc_copilot user=postgres password=postgres" --backend-url http://localhost:8001 --dry-run --max-attempts 5
+```
+
+The external proof runner is now scenario-based. The default scenario is `diagnostic-f-dk`; other supported scenarios include `diagnostic-e-5-decision`, `c9b-final-proof`, `sanity-one-alert`, `seed-only-smoke`, `l5-centroid-proof`, and `dk-threshold-proof`. The default proof mode uses a streaming seed -> analyze -> outcome pipeline in one Python process. It seeds one alert, analyzes it, posts outcome immediately for valid target-category non-referral actions, and stops as soon as `--target-outcomes` is reached. `--max-attempts` is an upper bound, not a required upfront seed count. `--seed-count` remains a deprecated alias for `--max-attempts` for older commands.
+
+Bulk seeding is no longer the proof default because repeated runs failed before the analyze/outcome loop. `--bulk-seed-first` remains available only as a legacy stress mode. The streaming default uses `--seed-sleep-seconds 0.15`, `--attempt-sleep-seconds 0.05`, bounded transient seed retries, and `--max-seed-failures 3`. Seed failures are counted per attempt; exceeding the threshold fails the proof with `SEED_RUNTIME_FAILURE`.
+
+The runner writes a JSON and Markdown report for PASS, FAIL, dry-run, and partial failure cases. It exits non-zero for unmet proof criteria or runtime failures. A zero-exit dry-run is only an environment/script validation and must not be treated as a Diagnostic F pass.
+
+Diagnostic F passes only when the report verdict is:
+
+```text
+EXTERNAL_DIAGNOSTIC_F_PASS
+```
+
+For `diagnostic-f-dk`, required pass evidence includes target-category outcomes at or above the requested target, one uninterrupted streaming process, `L5DKWeight > 0`, Welford fields present in AGE readback, and maximum `L5DKWeight.n_decisions_used >= target_outcomes`. Missing contract, persistent seed/runtime failure, missed target outcomes, missing DK weight, missing Welford fields, or insufficient DK decision count produce explicit failure verdicts.
+
+## Graph Naming Sequence
+- Diagnostic E after L5-UPSERT: `soc_graph_diag_e4`
+- Diagnostic F harness attempts:
+  - `soc_graph_diag_f3` is contaminated by an analyze-only failed run.
+  - `soc_graph_diag_f4` is contaminated by a partial seed failure.
+  - `soc_graph_diag_f5` is contaminated by a partial seed failure.
+  - `soc_graph_diag_f6` is contaminated by a partial 160-outcome run that ended on an analyze HTTP timeout.
+  - Next clean Diagnostic F graph: `soc_graph_diag_f7`.
+- Final C9B proof should use a fresh graph after F passes.
+
+## Execution Rules
+- Do not run Diagnostic F until Diagnostic E passes on the corrected runtime.
+- Do not run final C9B until Diagnostic F proves DK phase transition and `L5DKWeight`/Welford persistence.
+- Use fresh ID prefixes per run.
+- Do not use production/default SOC graphs.
+- Prefer manual foreground execution for long proofs; Codex should not be the primary executor for Diagnostic F.
+- Do not accept a runner dry-run as proof; only `EXTERNAL_DIAGNOSTIC_F_PASS` in the full-run report is proof.
+- If `/health` is OK but runner AGE readback fails, check `--graph-dsn` and Rule #40 first.
+- If analyze or outcome HTTP times out, the runner must query AGE before retrying. Analyze recovery can only use a real Decision linked to that alert, and outcome recovery can only count after Decision readback proves `outcome="correct"` or `correct=true`.
+
+## Diagnostic F Runner Safety Update
+- The runner performs an explicit sanity phase before the long loop. Each sanity step must complete analyze and immediate outcome POST before proof continues.
+- Valid target outcomes are counted only after `/api/alert/outcome` returns success with `analyst_action` set to the scorer action.
+- The runner writes `scratch/temp/soc_diag_f_progress.json` after startup, contract verification, streaming attempts, sanity result, proof progress, milestones, failures, interruptions, and final verdict.
+- Ctrl+C should produce an `INTERRUPTED` verdict, a partial JSON/Markdown report, and a non-zero exit.
+- Every 25 valid target outcomes, the runner prints progress and AGE readback counts for prefix Decisions, verified/correct outcomes, L5Centroid, SHAPED_BY, and L5DKWeight.
+- Graph `soc_graph_diag_f3` is contaminated by an analyze-only failed run and must not be reused for proof.
+- Graph `soc_graph_diag_f4` is contaminated by a partial seed failure at 111 completed seed attempts and must not be reused for proof.
+- Graph `soc_graph_diag_f5` is contaminated by a partial seed failure during upfront bulk seeding and must not be reused for proof.
+- Graph `soc_graph_diag_f6` is contaminated by a partial 160-outcome run that ended on an analyze HTTP timeout and must not be reused for proof. The next Diagnostic F attempt should use `soc_graph_diag_f7` with prefix `DIAG-F7-CRED`.

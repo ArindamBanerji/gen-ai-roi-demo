@@ -127,57 +127,57 @@ class LearningHealthMonitor:
         return {"alpha": alpha, "q": q, "V": V, "n": len(history)}
 
     @staticmethod
-    async def _apply_override_rate_components(comps: dict, neo4j_service: Any = None) -> dict:
-        """Replace legacy alpha with canonical analyst override-rate alpha.
+    async def _apply_soc_conservation_components(comps: dict, neo4j_service: Any = None) -> dict:
+        """Replace legacy components with SOC verified coverage statistics.
 
-        Canonical conservation uses alpha as the fraction of verified decisions
-        where the analyst overrode the system recommendation.  It is not the
-        GAE learning rate and not any asymmetric penalty ratio.
+        SOC-3/#132 defines alpha as cumulative verified category coverage, not
+        override rate and not the GAE learning-rate trace. V and q are computed
+        from verified decisions only so preview/ghost decisions cannot inflate
+        the conservation signal.
         """
         updated = dict(comps)
-        updated["alpha_source"] = "override_rate_unavailable"
+        updated["alpha_source"] = "soc_coverage_unavailable"
 
-        stats = None
-        if neo4j_service is not None and hasattr(neo4j_service, "compute_outcome_stats"):
-            try:
-                candidate = await neo4j_service.compute_outcome_stats()
-                if isinstance(candidate, dict):
-                    stats = candidate
-                    updated["alpha_source"] = "graph_outcome_stats"
-            except Exception as exc:
-                log.debug("[HEALTH] outcome stats query failed: %s", exc)
+        stats = await _query_soc_verified_conservation_stats(neo4j_service)
 
         if stats is None:
-            try:
-                from app.state.graph_snapshot import get_snapshot
-
-                snap = get_snapshot()
-                stats = {
-                    "override_rate": getattr(snap, "override_rate", 0.0),
-                    "override_quality": getattr(snap, "override_quality", 0.0),
-                }
-                updated["alpha_source"] = "graph_snapshot"
-            except Exception as exc:
-                log.debug("[HEALTH] graph snapshot unavailable for alpha: %s", exc)
-
-        if stats is None:
-            # Legacy alpha_effective is a learning-rate trace, not analyst
-            # override rate. Treat missing override evidence conservatively
-            # while retaining legacy q as diagnostic verified accuracy.
+            # Legacy alpha_effective is a learning-rate trace. Treat missing
+            # verified coverage evidence conservatively while retaining legacy q
+            # as diagnostic verified accuracy.
             updated["alpha"] = 0.0
+            updated["categories_total"] = _soc_categories_total()
+            updated["categories_with_data"] = None
+            updated["verified_decisions"] = None
+            updated["correct_verified_decisions"] = None
             updated["override_rate"] = None
-            updated["override_quality"] = None
+            updated["complacency_advisory"] = False
             return updated
 
-        alpha = max(0.0, min(1.0, float(stats.get("override_rate") or 0.0)))
-        override_quality = max(0.0, min(1.0, float(stats.get("override_quality") or 0.0)))
+        categories_total = int(stats.get("categories_total") or _soc_categories_total())
+        categories_with_data = int(stats.get("categories_with_data") or 0)
+        verified = int(stats.get("verified_decisions") or 0)
+        correct = int(stats.get("correct_verified_decisions") or 0)
+        overrides = int(stats.get("overrides") or 0)
+
+        alpha = (
+            max(0.0, min(1.0, categories_with_data / categories_total))
+            if categories_total > 0
+            else 0.0
+        )
+        q = max(0.0, min(1.0, correct / verified)) if verified > 0 else 0.0
+        override_rate = max(0.0, min(1.0, overrides / verified)) if verified > 0 else 0.0
+
         updated["alpha"] = alpha
-        if alpha <= 0.0:
-            updated["q"] = 0.0
-        elif override_quality > 0.0:
-            updated["q"] = override_quality
-        updated["override_rate"] = alpha
-        updated["override_quality"] = override_quality
+        updated["q"] = q
+        updated["V"] = float(verified)
+        updated["n"] = verified
+        updated["categories_total"] = categories_total
+        updated["categories_with_data"] = categories_with_data
+        updated["verified_decisions"] = verified
+        updated["correct_verified_decisions"] = correct
+        updated["override_rate"] = override_rate
+        updated["complacency_advisory"] = verified >= 200 and override_rate < 0.02
+        updated["alpha_source"] = "soc_verified_category_coverage"
         return updated
 
     # -------------------------------------------------------------------------
@@ -243,7 +243,7 @@ class LearningHealthMonitor:
         decision_count = getattr(state, "decision_count", len(history))
 
         comps          = LearningHealthMonitor._extract_components(history)
-        comps          = await LearningHealthMonitor._apply_override_rate_components(
+        comps          = await LearningHealthMonitor._apply_soc_conservation_components(
             comps, neo4j_service
         )
         alpha, q, V    = comps["alpha"], comps["q"], comps["V"]
@@ -255,6 +255,7 @@ class LearningHealthMonitor:
             except ValueError:
                 theta_min = derive_theta_min()
         cc             = check_conservation(alpha, q, V, theta_min)
+        conservation_passed = bool(cc.passed and alpha > 0 and V > 0)
         signal         = LearningHealthMonitor._compute_signal(alpha, q, V)
 
         learning_enabled = _is_learning_enabled()
@@ -298,7 +299,7 @@ class LearningHealthMonitor:
                 "signal":            round(signal, 6),
                 "theta_min":         round(theta_min, 6),
                 "conservation":      {
-                    "passed":   cc.passed,
+                      "passed":   conservation_passed,
                     "status":   cc.status,
                     "headroom": round(cc.headroom, 4),
                 },
@@ -324,7 +325,7 @@ class LearningHealthMonitor:
         amber_floor = baseline - LearningHealthMonitor.AMBER_SIGMA * baseline_std
         red_floor   = baseline - LearningHealthMonitor.RED_SIGMA   * baseline_std
 
-        if not cc.passed or signal < red_floor:
+        if not conservation_passed or signal < red_floor:
             status = "RED"
         elif signal < amber_floor:
             status = "AMBER"
@@ -340,7 +341,7 @@ class LearningHealthMonitor:
             "signal":            round(signal, 6),
             "theta_min":         round(theta_min, 6),
             "conservation":      {
-                "passed":   cc.passed,
+                  "passed":   conservation_passed,
                 "status":   cc.status,
                 "headroom": round(cc.headroom, 4),
             },
@@ -356,7 +357,14 @@ class LearningHealthMonitor:
             "learning_enabled":  learning_enabled,
             "health_source":     "learning_health",
             "status_reason":     None,
+            "complacency_advisory": bool(comps.get("complacency_advisory", False)),
         }
+        if result["complacency_advisory"]:
+            log.info(
+                "[HEALTH] SOC complacency advisory: override_rate=%.4f over %d verified decisions",
+                float(comps.get("override_rate") or 0.0),
+                int(comps.get("verified_decisions") or 0),
+            )
         await _persist_l5_conservation_state(result)
         return result
 
@@ -433,7 +441,83 @@ def _soc_categories_total() -> int:
 
         return int(N_CATEGORIES)
     except Exception:
-        return 6
+          return 6
+
+
+def _soc_category_names() -> set[str]:
+    try:
+        from app.domains.soc.config import SOC_CATEGORIES
+
+        return {str(category) for category in SOC_CATEGORIES}
+    except Exception:
+        return {
+            "credential_access",
+            "malware_execution",
+            "lateral_movement",
+            "data_exfiltration",
+            "insider_threat",
+            "cloud_infrastructure",
+        }
+
+
+def _coerce_int(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+async def _query_soc_verified_conservation_stats(neo4j_service: Any = None) -> dict | None:
+    if neo4j_service is None or not hasattr(neo4j_service, "run_query"):
+        return None
+
+    valid_categories = _soc_category_names()
+    category_literals = ", ".join(
+        "'" + category.replace("\\", "\\\\").replace("'", "\\'") + "'"
+        for category in sorted(valid_categories)
+    )
+
+    try:
+        rows = await neo4j_service.run_query(
+            f"""
+            MATCH (d:Decision)
+            WHERE (d.domain = 'soc' OR d.domain IS NULL)
+              AND d.verified_at_epoch IS NOT NULL
+              AND (d.status IS NOT NULL OR d.outcome IS NOT NULL)
+              AND d.category IN [{category_literals}]
+            RETURN d.category AS category,
+                   count(d) AS verified,
+                   sum(CASE WHEN d.correct = true OR d.outcome = 'correct' THEN 1 ELSE 0 END) AS correct,
+                   sum(CASE WHEN d.was_override = true THEN 1 ELSE 0 END) AS overrides
+            """
+        )
+    except Exception as exc:
+        log.debug("[HEALTH] SOC verified conservation query failed: %s", exc)
+        return None
+
+    categories_with_data: set[str] = set()
+    verified = 0
+    correct = 0
+    overrides = 0
+    for row in rows or []:
+        category = row.get("category")
+        if category not in valid_categories:
+            continue
+        row_verified = _coerce_int(row.get("verified"))
+        if row_verified <= 0:
+            continue
+        categories_with_data.add(str(category))
+        verified += row_verified
+        correct += _coerce_int(row.get("correct"))
+        overrides += _coerce_int(row.get("overrides"))
+
+    return {
+        "categories_total": _soc_categories_total(),
+        "categories_with_data": len(categories_with_data),
+        "verified_decisions": verified,
+        "correct_verified_decisions": correct,
+        "overrides": overrides,
+    }
 
 
 def _resolve_categories_with_data(health: dict, categories_total: int) -> int | None:
@@ -508,7 +592,7 @@ async def _persist_l5_conservation_state(health: dict) -> None:
                 categories_with_data=categories_with_data,
                 baseline_product=baseline_product,
                 relative_threshold=relative_threshold,
-                complacency_flag="false",
+                  complacency_flag="true" if health.get("complacency_advisory") else "false",
                 caused_by_decision_id=None,
                 old_status=old_status,
             )

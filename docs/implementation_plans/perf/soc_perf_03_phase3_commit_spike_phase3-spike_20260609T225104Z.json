@@ -1,0 +1,72 @@
+{
+  "run_id": "PHASE3-SPIKE-20260609T225104Z-06d78ffe",
+  "title": "SOC Phase-3 Committed Transaction Spike",
+  "graph_name": "soc_graph_phase3_commit_spike_1",
+  "graph_created": false,
+  "graph_dsn_redacted": "host=localhost port=5433 dbname=soc_copilot user=postgres password=***",
+  "dsn_warning": "",
+  "prefix": "PHASE3-SPIKE",
+  "spike_type": "phase3_commit_measurement",
+  "reps": 10,
+  "warmup": 1,
+  "psycopg_pool_available": false,
+  "connection_model": "single warm psycopg connection reused for measurement transactions",
+  "committed_ms": [
+    12.120800005504861,
+    7.526200002757832,
+    7.149199984269217,
+    8.55340002453886,
+    10.956599988276139,
+    10.2259999839589,
+    9.293499984778464,
+    7.191000011516735,
+    7.652600004803389,
+    7.152900012442842
+  ],
+  "rollback_ms": [
+    4.286899988073856,
+    3.1205999839585274,
+    3.65659999079071,
+    4.034000012325123,
+    4.1535000200383365,
+    3.6891000054311007,
+    3.704600007040426,
+    3.6925000022165477,
+    3.5820000048261136,
+    4.704699997091666
+  ],
+  "committed_summary": {
+    "count": 10,
+    "avg_ms": 8.782220000284724,
+    "p50_ms": 8.103000014671125,
+    "p95_ms": 11.596909997751935,
+    "max_ms": 12.120800005504861,
+    "min_ms": 7.149199984269217
+  },
+  "rollback_summary": {
+    "count": 10,
+    "avg_ms": 3.8624500011792406,
+    "p50_ms": 3.698550004628487,
+    "p95_ms": 4.516689993033651,
+    "max_ms": 4.704699997091666,
+    "min_ms": 3.1205999839585274
+  },
+  "commit_overhead_estimate_ms": 4.919769999105483,
+  "committed_readback": {
+    "synthetic_nodes": 21,
+    "synthetic_edges": 20
+  },
+  "cleanup": {
+    "performed": true,
+    "before_nodes": 21,
+    "before_edges": 20,
+    "after_nodes": 0,
+    "after_edges": 0
+  },
+  "storage_caveat": "WSL2 dev-box fsync/WAL behavior may differ from pilot storage; re-confirm before buyer-facing claims.",
+  "interpretation": {
+    "committed_measurement": "diagnostic-only committed Phase-3-like AGE transaction cost",
+    "rollback_measurement": "secondary context only",
+    "buyer_facing_latency_claim": "not supported by this diagnostic alone"
+  }
+}

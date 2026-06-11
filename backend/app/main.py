@@ -81,6 +81,18 @@ async def auth_middleware(request: Request, call_next):
 app.add_middleware(PIIRedactionMiddleware)
 
 
+def _safe_entity_cache_health() -> dict:
+    try:
+        from app.routers import triage
+
+        return triage._soc_entity_cache_diagnostics()
+    except Exception as exc:
+        return {
+            "available": False,
+            "error": type(exc).__name__,
+        }
+
+
 # Health check endpoint
 @app.get("/")
 async def root():
@@ -107,6 +119,7 @@ async def health():
         "status": "healthy",
         "components": {
             "posterior_store": posterior_health,
+            "entity_cache": _safe_entity_cache_health(),
         },
     }
 
