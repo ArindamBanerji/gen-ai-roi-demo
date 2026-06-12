@@ -7,35 +7,32 @@ route handlers to serve pipeline output or change SOC analyze behavior.
 from __future__ import annotations
 
 import os
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Mapping
 
+logger = logging.getLogger(__name__)
+
 
 class RouteExecutionMode(str, Enum):
     CANONICAL_ONLY = "canonical_only"
-    SHADOW_ONLY = "shadow_only"
-    PIPELINE_READ_ONLY = "pipeline_read_only"
+    SHADOW = "shadow"
     PIPELINE_SERVED = "pipeline_served"
-    HYBRID_FAST_PATH = "hybrid_fast_path"
-    FALLBACK_TO_CANONICAL = "fallback_to_canonical"
     DISABLED = "disabled"
 
 
 CANONICAL_COPILOTS = frozenset({"soc", "trading", "purchasing", "dataops", "s2p"})
-DIAGNOSTIC_ONLY_MODES = frozenset(
-    {
-        RouteExecutionMode.SHADOW_ONLY,
-        RouteExecutionMode.PIPELINE_READ_ONLY,
-    }
-)
-BLOCKED_FUTURE_MODES = frozenset(
-    {
-        RouteExecutionMode.PIPELINE_SERVED,
-        RouteExecutionMode.HYBRID_FAST_PATH,
-        RouteExecutionMode.FALLBACK_TO_CANONICAL,
-    }
-)
+_MODE_ALIASES = {
+    "canonical_only": RouteExecutionMode.CANONICAL_ONLY,
+    "shadow": RouteExecutionMode.SHADOW,
+    "shadow_only": RouteExecutionMode.SHADOW,
+    "pipeline_read_only": RouteExecutionMode.SHADOW,
+    "pipeline_served": RouteExecutionMode.PIPELINE_SERVED,
+    "disabled": RouteExecutionMode.DISABLED,
+}
+_DISABLED_DEPRECATED_MODES = frozenset({"hybrid_fast_path", "fallback_to_canonical"})
+_DEPRECATED_MODE_NAMES = frozenset({"shadow_only", "pipeline_read_only", *_DISABLED_DEPRECATED_MODES})
 
 
 @dataclass(frozen=True)
@@ -99,9 +96,38 @@ class RoutePolicyResolver:
                 reason="no route mode configured; default canonical route remains served",
             )
 
-        try:
-            requested_mode = RouteExecutionMode(raw_mode.strip().lower())
-        except ValueError:
+        raw_mode_normalized = raw_mode.strip().lower()
+        warning: tuple[str, ...] = ()
+        if raw_mode_normalized in _DEPRECATED_MODE_NAMES:
+            message = f"deprecated route mode alias used: {raw_mode_normalized}"
+            logger.warning(message)
+            warning = (message,)
+
+        if raw_mode_normalized in _DISABLED_DEPRECATED_MODES:
+            return RouteDecision(
+                copilot=normalized_copilot,
+                route_name=route_name,
+                selected_mode=RouteExecutionMode.DISABLED,
+                requested_mode=RouteExecutionMode.DISABLED,
+                config_source=source,
+                reason=f"{raw_mode_normalized} is deprecated and disabled; fail closed",
+                served_output_source="none",
+                diagnostic_evaluation_source="none",
+                diagnostics_enabled=True,
+                side_effect_policy="blocked_no_side_effects",
+                benchmark_gate_status={
+                    "approved_for_serving": False,
+                    "required": "supported_route_mode",
+                    "passed": False,
+                },
+                fallback_state="fail_closed",
+                warnings=warning,
+                errors=(f"deprecated route mode disabled: {raw_mode_normalized}",),
+                approved_for_serving=False,
+            )
+
+        requested_mode = _MODE_ALIASES.get(raw_mode_normalized)
+        if requested_mode is None:
             return RouteDecision(
                 copilot=normalized_copilot,
                 route_name=route_name,
@@ -128,32 +154,32 @@ class RoutePolicyResolver:
                 requested_mode=requested_mode,
             )
 
-        if requested_mode in DIAGNOSTIC_ONLY_MODES:
+        if requested_mode is RouteExecutionMode.SHADOW:
             return RouteDecision(
                 copilot=normalized_copilot,
                 route_name=route_name,
                 selected_mode=requested_mode,
                 requested_mode=requested_mode,
                 config_source=source,
-                reason=f"{requested_mode.value} is diagnostic-only in the policy skeleton",
+                reason="shadow mode is diagnostic-only in the policy skeleton",
                 served_output_source="canonical_route",
                 diagnostic_evaluation_source="pipeline_diagnostic",
                 diagnostics_enabled=True,
                 side_effect_policy="diagnostic_zero_side_effects",
                 benchmark_gate_status={"approved_for_serving": False, "skeleton_only": True},
                 fallback_state="none",
-                warnings=("served output remains canonical in Package 5E Prompt 1",),
+                warnings=warning + ("served output remains canonical in Package 5E Prompt 1",),
                 approved_for_serving=False,
             )
 
-        if requested_mode in BLOCKED_FUTURE_MODES:
+        if requested_mode is RouteExecutionMode.PIPELINE_SERVED:
             return RouteDecision(
                 copilot=normalized_copilot,
                 route_name=route_name,
-                selected_mode=RouteExecutionMode.DISABLED,
+                selected_mode=RouteExecutionMode.PIPELINE_SERVED,
                 requested_mode=requested_mode,
                 config_source=source,
-                reason=f"{requested_mode.value} requires a separate approval package",
+                reason="pipeline_served requires a separate approval package and benchmark gates",
                 served_output_source="none",
                 diagnostic_evaluation_source="none",
                 diagnostics_enabled=True,
@@ -164,7 +190,7 @@ class RoutePolicyResolver:
                     "passed": False,
                 },
                 fallback_state="fail_closed",
-                errors=(f"{requested_mode.value} is not active in Package 5E Prompt 1",),
+                errors=("pipeline_served is not active in Package 5E Prompt 1",),
                 approved_for_serving=False,
             )
 

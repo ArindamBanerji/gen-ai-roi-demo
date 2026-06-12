@@ -801,6 +801,23 @@ def record_latency(payload: dict[str, Any], kind: str, seconds: float) -> None:
     payload[f"max_{kind}_seconds"] = max(values)
 
 
+def _percentile(sorted_vals: list[float], pct: float) -> float | None:
+    if not sorted_vals:
+        return None
+    k = (len(sorted_vals) - 1) * pct
+    f = int(k)
+    c = min(f + 1, len(sorted_vals) - 1)
+    return sorted_vals[f] + (k - f) * (sorted_vals[c] - sorted_vals[f])
+
+
+def add_percentile_metrics(payload: dict[str, Any]) -> None:
+    for kind in ("analyze", "outcome"):
+        values = sorted(payload.get(f"_{kind}_seconds_values") or [])
+        for label, pct in (("p50", 0.50), ("p95", 0.95), ("p99", 0.99)):
+            value = _percentile(values, pct)
+            payload[f"{label}_{kind}_seconds"] = round(value, 3) if value is not None else None
+
+
 def first_count(rows: Any) -> int:
     if not isinstance(rows, list) or not rows:
         return 0
@@ -968,6 +985,12 @@ def base_payload(args: argparse.Namespace) -> dict[str, Any]:
         "avg_outcome_seconds": None,
         "max_analyze_seconds": None,
         "max_outcome_seconds": None,
+        "p50_analyze_seconds": None,
+        "p95_analyze_seconds": None,
+        "p99_analyze_seconds": None,
+        "p50_outcome_seconds": None,
+        "p95_outcome_seconds": None,
+        "p99_outcome_seconds": None,
         "analyze_attempts": 0,
         "outcome_attempts": 0,
         "valid_outcomes": 0,
@@ -1301,6 +1324,7 @@ async def seed_one_with_retries(
 
 
 def write_reports(args: argparse.Namespace, payload: dict[str, Any]) -> tuple[Path, Path]:
+    add_percentile_metrics(payload)
     args.report_dir.mkdir(parents=True, exist_ok=True)
     safe_prefix = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in args.prefix)
     json_path = args.report_dir / f"soc_c9b_diag_f_runner_{safe_prefix}.json"
@@ -1347,6 +1371,12 @@ def write_reports(args: argparse.Namespace, payload: dict[str, Any]) -> tuple[Pa
                 f"- avg_outcome_seconds: `{payload.get('avg_outcome_seconds')}`",
                 f"- max_analyze_seconds: `{payload.get('max_analyze_seconds')}`",
                 f"- max_outcome_seconds: `{payload.get('max_outcome_seconds')}`",
+                f"- p50_analyze_seconds: `{payload.get('p50_analyze_seconds')}`",
+                f"- p95_analyze_seconds: `{payload.get('p95_analyze_seconds')}`",
+                f"- p99_analyze_seconds: `{payload.get('p99_analyze_seconds')}`",
+                f"- p50_outcome_seconds: `{payload.get('p50_outcome_seconds')}`",
+                f"- p95_outcome_seconds: `{payload.get('p95_outcome_seconds')}`",
+                f"- p99_outcome_seconds: `{payload.get('p99_outcome_seconds')}`",
                 f"- seed_sleep_seconds: `{payload.get('seed_sleep_seconds')}`",
                 f"- attempt_sleep_seconds: `{payload.get('attempt_sleep_seconds')}`",
                 f"- batch_sleep_seconds: `{payload.get('batch_sleep_seconds')}`",

@@ -1,3 +1,5 @@
+import logging
+
 from app.services.route_policy import (
     CANONICAL_COPILOTS,
     RouteExecutionMode,
@@ -10,13 +12,22 @@ from app.services.route_policy import (
 def test_route_execution_mode_contains_planned_values():
     assert {mode.value for mode in RouteExecutionMode} == {
         "canonical_only",
-        "shadow_only",
-        "pipeline_read_only",
+        "shadow",
         "pipeline_served",
-        "hybrid_fast_path",
-        "fallback_to_canonical",
         "disabled",
     }
+
+
+def test_all_valid_route_execution_modes_parse():
+    for mode in RouteExecutionMode:
+        decision = resolve_route_policy(
+            copilot="soc",
+            route_name="analyze",
+            env={"SOC_ROUTE_MODE": mode.value},
+        )
+
+        assert decision.selected_mode is mode
+        assert decision.requested_mode is mode
 
 
 def test_absent_soc_route_mode_defaults_to_canonical_only():
@@ -105,12 +116,12 @@ def test_per_copilot_default_policy_is_canonical_only():
 
 
 def test_soc_mode_is_not_inherited_by_other_copilots():
-    env = {"SOC_ROUTE_MODE": "shadow_only"}
+    env = {"SOC_ROUTE_MODE": "shadow"}
 
     soc_decision = resolve_route_policy(copilot="soc", route_name="analyze", env=env)
     trading_decision = resolve_route_policy(copilot="trading", route_name="analyze", env=env)
 
-    assert soc_decision.selected_mode is RouteExecutionMode.SHADOW_ONLY
+    assert soc_decision.selected_mode is RouteExecutionMode.SHADOW
     assert trading_decision.selected_mode is RouteExecutionMode.CANONICAL_ONLY
 
 
@@ -137,31 +148,71 @@ def test_pipeline_served_is_explicit_but_blocked_without_approval():
     )
 
     assert decision.requested_mode is RouteExecutionMode.PIPELINE_SERVED
-    assert decision.selected_mode is RouteExecutionMode.DISABLED
+    assert decision.selected_mode is RouteExecutionMode.PIPELINE_SERVED
     assert decision.approved_for_serving is False
     assert decision.is_blocked is True
     assert decision.served_output_source == "none"
     assert decision.benchmark_gate_status["passed"] is False
 
 
-def test_future_modes_are_represented_but_not_active_by_default():
-    resolver = RoutePolicyResolver(env={})
+def test_old_state_names_map_to_current_modes_with_warnings(caplog):
+    caplog.set_level(logging.WARNING)
 
-    for mode in (
-        RouteExecutionMode.HYBRID_FAST_PATH,
-        RouteExecutionMode.FALLBACK_TO_CANONICAL,
-    ):
-        decision = RoutePolicyResolver(env={"SOC_ROUTE_MODE": mode.value}).resolve(
+    expected = {
+        "shadow_only": RouteExecutionMode.SHADOW,
+        "pipeline_read_only": RouteExecutionMode.SHADOW,
+    }
+    for old_name, expected_mode in expected.items():
+        decision = resolve_route_policy(
             copilot="soc",
             route_name="analyze",
+            env={"SOC_ROUTE_MODE": old_name},
         )
 
-        assert decision.requested_mode is mode
+        assert decision.selected_mode is expected_mode
+        assert decision.requested_mode is expected_mode
+        assert decision.served_output_source == "canonical_route"
+        assert any(old_name in warning for warning in decision.warnings)
+
+    assert "deprecated route mode alias used: shadow_only" in caplog.text
+    assert "deprecated route mode alias used: pipeline_read_only" in caplog.text
+
+
+def test_removed_future_state_names_fail_closed_with_warnings(caplog):
+    caplog.set_level(logging.WARNING)
+
+    for old_name in ("hybrid_fast_path", "fallback_to_canonical"):
+        decision = resolve_route_policy(
+            copilot="soc",
+            route_name="analyze",
+            env={"SOC_ROUTE_MODE": old_name},
+        )
+
         assert decision.selected_mode is RouteExecutionMode.DISABLED
+        assert decision.requested_mode is RouteExecutionMode.DISABLED
         assert decision.is_blocked is True
+        assert decision.served_output_source == "none"
+        assert decision.fallback_state == "fail_closed"
+        assert decision.errors == (f"deprecated route mode disabled: {old_name}",)
+        assert any(old_name in warning for warning in decision.warnings)
+
+    assert "deprecated route mode alias used: hybrid_fast_path" in caplog.text
+    assert "deprecated route mode alias used: fallback_to_canonical" in caplog.text
+
+
+def test_shadow_mode_is_represented_but_not_active_by_default():
+    resolver = RoutePolicyResolver(env={})
 
     default_decision = resolver.resolve(copilot="soc", route_name="analyze")
     assert default_decision.selected_mode is RouteExecutionMode.CANONICAL_ONLY
+
+    shadow_decision = RoutePolicyResolver(env={"SOC_ROUTE_MODE": "shadow"}).resolve(
+        copilot="soc",
+        route_name="analyze",
+    )
+    assert shadow_decision.selected_mode is RouteExecutionMode.SHADOW
+    assert shadow_decision.served_output_source == "canonical_route"
+    assert shadow_decision.approved_for_serving is False
 
 
 def test_disabled_mode_is_explicit_fail_closed():
@@ -180,7 +231,7 @@ def test_disabled_mode_is_explicit_fail_closed():
 
 def test_future_multi_copilot_policy_can_select_copilot_without_soc_inheritance():
     env = {
-        "SOC_ROUTE_MODE": "shadow_only",
+        "SOC_ROUTE_MODE": "shadow",
         "COPILOT_ROUTE_POLICY": "trading:canonical_only,purchasing:pipeline_read_only",
     }
 
@@ -189,13 +240,13 @@ def test_future_multi_copilot_policy_can_select_copilot_without_soc_inheritance(
     dataops = resolve_route_policy(copilot="dataops", route_name="analyze", env=env)
 
     assert trading.selected_mode is RouteExecutionMode.CANONICAL_ONLY
-    assert purchasing.selected_mode is RouteExecutionMode.PIPELINE_READ_ONLY
+    assert purchasing.selected_mode is RouteExecutionMode.SHADOW
     assert purchasing.served_output_source == "canonical_route"
     assert dataops.selected_mode is RouteExecutionMode.CANONICAL_ONLY
 
 
 def test_parse_copilot_route_policy():
-    assert parse_copilot_route_policy("soc:shadow_only, trading:canonical_only") == {
-        "soc": "shadow_only",
+    assert parse_copilot_route_policy("soc:shadow, trading:canonical_only") == {
+        "soc": "shadow",
         "trading": "canonical_only",
     }
