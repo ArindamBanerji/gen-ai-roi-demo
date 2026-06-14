@@ -1,0 +1,67 @@
+# SOC C9B Diagnostic F Runner Result
+
+- verdict: `EXTERNAL_DIAGNOSTIC_F_PASS`
+- exit_code: `0`
+- proof_passed: `True`
+- graph: `soc_graph_a1_scale_500_1`
+- prefix: `A1SCALE500`
+- dry_run: `False`
+- scenario: `diagnostic-f-dk`
+- mode: `streaming`
+- input_provider: `fixed_c9b_stream`
+- pass_criteria: `['target_outcomes', 'l5_dk_weight', 'welford', 'dk_n_decisions_used']`
+- max_attempts: `800`
+- seed_attempted_count: `500`
+- seed_completed_count: `500`
+- seeded_alerts: `500`
+- seed_failures: `0`
+- seed_strategy: `direct-age`
+- runner_graph_dsn_redacted: `host=localhost port=5433 dbname=soc_copilot user=postgres password=***`
+- runner_age_readback_status: `ok`
+- runner_age_readback_attempts: `1`
+- runner_age_error: `None`
+- rule40_validated: `True`
+- http_timeout_seconds: `120.0`
+- http_max_retries: `3`
+- http_retry_backoff_seconds: `1,3,5`
+- analyze_retries: `0`
+- outcome_retries: `0`
+- analyze_timeout_recovered_by_readback: `0`
+- outcome_timeout_recovered_by_readback: `0`
+- latest_http_error: `None`
+- latest_timeout_recovery_action: `None`
+- avg_analyze_seconds: `0.236`
+- avg_outcome_seconds: `0.474`
+- max_analyze_seconds: `0.964`
+- max_outcome_seconds: `3.706`
+- seed_sleep_seconds: `0.15`
+- attempt_sleep_seconds: `0.05`
+- batch_sleep_seconds: `2.0`
+- max_seed_failures: `3`
+- preflight_seed_count: `5`
+- current_attempt_index: `500`
+- current_batch_index: `None`
+- current_batch_start: `500`
+- current_batch_end: `500`
+- seed_retries: `0`
+- last_seed_error: `None`
+- analyze_attempts: `500`
+- outcome_attempts: `500`
+- valid_outcomes: `500`
+- skipped_refer_to_analyst: `0`
+- other_categories: `0`
+- other_action_skips: `0`
+- last_successful_phase: `age_readback_completed`
+- criteria_failures: `[]`
+- exception: `None`
+- backend_contract_statement: `Backend import path cannot be directly introspected without a debug endpoint; proof assumes backend was launched by run_soc_diag_backend.ps1 or demo.py --diag-mode with matching graph/env.`
+- report_json: `C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\docs\implementation_plans\soc_c9b_diag_f_runner_A1SCALE500.json`
+- report_md: `C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\docs\implementation_plans\soc_c9b_diag_f_runner_A1SCALE500.md`
+- progress_json: `C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\scratch\temp\soc_diag_f_progress.json`
+
+## Graph Hygiene
+- `soc_graph_diag_f3` is contaminated by an analyze-only failed run.
+- `soc_graph_diag_f4` is contaminated by a partial seed failure.
+- `soc_graph_diag_f5` is contaminated by a partial seed failure.
+- `soc_graph_diag_f6` is contaminated by a partial 160-outcome timeout run.
+- Next clean proof graph should be `soc_graph_diag_f7` with prefix `DIAG-F7-CRED`.

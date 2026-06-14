@@ -25,6 +25,7 @@ DEFAULT_BACKEND_URL = "http://127.0.0.1:{port}"
 PHASE_FALSE = "false_baseline"
 PHASE_TRUE = "true_compare"
 PHASE_PROOF = "proof_250"
+PHASE_PROOF_ALIAS = "proof"
 PHASES = (PHASE_FALSE, PHASE_TRUE, PHASE_PROOF)
 
 COMPARABLE_FIELDS = (
@@ -101,6 +102,9 @@ class RunnerConfig:
     strict_contract: bool
     contract_path: Path
     readiness_timeout_seconds: float
+    proof_target_outcomes: int = 250
+    proof_max_attempts: int = 300
+    proof_prefix: str | None = None
 
 
 def parse_env_assignments(raw: str | None) -> dict[str, str]:
@@ -127,6 +131,8 @@ def resolve_phases(phase: str, *, run_250: bool) -> tuple[str, ...]:
         if run_250:
             phases.append(PHASE_PROOF)
         return tuple(phases)
+    if phase == PHASE_PROOF_ALIAS:
+        return (PHASE_PROOF,)
     if phase not in PHASES:
         raise ValueError(f"unsupported phase {phase!r}")
     if phase == PHASE_PROOF and not run_250:
@@ -147,7 +153,7 @@ def phase_plan(config: RunnerConfig) -> list[PhaseConfig]:
             plan.append(PhaseConfig(phase, config.true_graph, dict(config.true_env)))
         elif phase == PHASE_PROOF:
             if not config.proof_graph:
-                raise ValueError("--proof-graph is required for proof_250")
+                raise ValueError("--proof-graph is required for proof/proof_250")
             plan.append(PhaseConfig(phase, config.proof_graph, dict(config.proof_env)))
         else:
             raise ValueError(f"unsupported phase {phase!r}")
@@ -482,8 +488,11 @@ def parse_proof_summary_text(text: str) -> dict[str, Any]:
         "dk_welford_rows",
         "max_n_decisions_used",
         "avg_analyze_seconds",
+        "p95_analyze_seconds",
         "max_analyze_seconds",
         "avg_outcome_seconds",
+        "p95_outcome_seconds",
+        "max_outcome_seconds",
         "graph_truth_proof_authority_preserved",
     )
     parsed: dict[str, Any] = {}
@@ -507,7 +516,12 @@ def parse_proof_summary_text(text: str) -> dict[str, Any]:
     return parsed
 
 
-def validate_proof_output(stdout: str, *, returncode: int) -> dict[str, Any]:
+def validate_proof_output(
+    stdout: str,
+    *,
+    returncode: int,
+    expected_target_outcomes: int = 250,
+) -> dict[str, Any]:
     summary = parse_proof_summary_text(stdout)
     errors: list[str] = []
     if returncode != 0:
@@ -515,10 +529,10 @@ def validate_proof_output(stdout: str, *, returncode: int) -> dict[str, Any]:
     if "EXTERNAL_DIAGNOSTIC_F_PASS" not in stdout:
         errors.append("EXTERNAL_DIAGNOSTIC_F_PASS missing")
     expected = {
-        "valid_outcomes": 250,
+        "valid_outcomes": expected_target_outcomes,
         "l5_dk_weight": 1,
         "dk_welford_rows": 1,
-        "max_n_decisions_used": 250,
+        "max_n_decisions_used": expected_target_outcomes,
     }
     for key, value in expected.items():
         if key not in summary:
@@ -534,11 +548,21 @@ def validate_proof_output(stdout: str, *, returncode: int) -> dict[str, Any]:
         "summary": summary,
         "expected": {
             "verdict": "EXTERNAL_DIAGNOSTIC_F_PASS",
-            "valid_outcomes": 250,
+            "valid_outcomes": expected_target_outcomes,
             "l5_dk_weight": 1,
             "dk_welford_rows": 1,
-            "max_n_decisions_used": 250,
+            "max_n_decisions_used": expected_target_outcomes,
             "graph_truth_proof_authority_preserved": True,
+        },
+        "timing": {
+            "avg_analyze_seconds": summary.get("avg_analyze_seconds"),
+            "p95_analyze_seconds": summary.get("p95_analyze_seconds"),
+            "p95_analyze_status": "emitted" if "p95_analyze_seconds" in summary else "not_emitted",
+            "max_analyze_seconds": summary.get("max_analyze_seconds"),
+            "avg_outcome_seconds": summary.get("avg_outcome_seconds"),
+            "p95_outcome_seconds": summary.get("p95_outcome_seconds"),
+            "p95_outcome_status": "emitted" if "p95_outcome_seconds" in summary else "not_emitted",
+            "max_outcome_seconds": summary.get("max_outcome_seconds"),
         },
     }
 
@@ -791,7 +815,7 @@ def write_failure_artifact(
     }
     if extra:
         artifact.update(extra)
-    write_json(config.out_dir / artifact_name(phase.name), artifact)
+    write_json(config.out_dir / artifact_name(phase.name, config.proof_target_outcomes), artifact)
     return artifact
 
 
@@ -873,14 +897,22 @@ def capture_workloads(
     return result
 
 
-def artifact_name(phase: str) -> str:
+def artifact_name(phase: str, proof_target_outcomes: int = 250) -> str:
     if phase == PHASE_FALSE:
         return "route_validation_false_baseline.json"
     if phase == PHASE_TRUE:
         return "route_validation_true_compare.json"
     if phase == PHASE_PROOF:
-        return "route_validation_250_summary.json"
+        return f"route_validation_{proof_target_outcomes}_summary.json"
     raise ValueError(f"unsupported phase {phase!r}")
+
+
+def proof_prefix(config: RunnerConfig) -> str:
+    if config.proof_prefix:
+        return config.proof_prefix
+    if config.phases == (PHASE_PROOF,):
+        return config.prefix
+    return f"{config.prefix}{config.proof_target_outcomes}"
 
 
 def run_route_phase(phase: PhaseConfig, config: RunnerConfig) -> dict[str, Any]:
@@ -967,6 +999,8 @@ def run_proof_phase(phase: PhaseConfig, config: RunnerConfig) -> dict[str, Any]:
             backend_url=backend_url,
             phase_started_at=started_at,
         )
+        target_outcomes = config.proof_target_outcomes
+        max_attempts = config.proof_max_attempts
         command = [
             sys.executable,
             str(REPO_ROOT / "scripts" / "diagnostics" / "run_soc_diag_f.py"),
@@ -977,11 +1011,11 @@ def run_proof_phase(phase: PhaseConfig, config: RunnerConfig) -> dict[str, Any]:
             "--backend-url",
             backend_url,
             "--prefix",
-            f"{config.prefix}250",
+            proof_prefix(config),
             "--target-outcomes",
-            "250",
+            str(target_outcomes),
             "--max-attempts",
-            "300",
+            str(max_attempts),
             "--backend-contract",
             str(config.contract_path),
             "--expect-age-pool",
@@ -989,25 +1023,34 @@ def run_proof_phase(phase: PhaseConfig, config: RunnerConfig) -> dict[str, Any]:
         env = os.environ.copy()
         env.update(phase.env)
         completed = subprocess.run(command, cwd=REPO_ROOT, env=env, capture_output=True, text=True, check=False)
-        proof_validation = validate_proof_output(completed.stdout, returncode=completed.returncode)
+        proof_validation = validate_proof_output(
+            completed.stdout,
+            returncode=completed.returncode,
+            expected_target_outcomes=target_outcomes,
+        )
         proof = {
             "phase": phase.name,
             "status": "PASS" if proof_validation["passed"] else "FAIL",
             "graph": phase.graph,
             "env": dict(phase.env),
             "prefix": config.prefix,
+            "proof_prefix": proof_prefix(config),
             "count": config.count,
+            "proof_target_outcomes": target_outcomes,
+            "proof_max_attempts": max_attempts,
             "started_at": datetime.fromtimestamp(started_at, tz=timezone.utc).isoformat(),
             "contract_path": str(config.contract_path),
+            "proof_artifact_path": str(config.out_dir / artifact_name(phase.name, target_outcomes)),
             "returncode": completed.returncode,
             "contract": contract_status,
             "stdout_tail": completed.stdout[-4000:],
             "stderr_tail": completed.stderr[-4000:],
             "proof_validation": proof_validation,
+            "timing": proof_validation["timing"],
             "failed_checks": list(proof_validation["errors"]),
             "performance_ledger": PERFORMANCE_LEDGER,
         }
-        write_json(config.out_dir / artifact_name(phase.name), proof)
+        write_json(config.out_dir / artifact_name(phase.name, target_outcomes), proof)
         return proof
     except Exception as exc:
         return write_failure_artifact(phase, config, started_at=started_at, error=exc)
@@ -1078,6 +1121,9 @@ def collect_profile_summary(artifact: Mapping[str, Any]) -> dict[str, Any]:
 def build_final_summary(results: Mapping[str, Any]) -> dict[str, Any]:
     comparison = results.get("comparison", {})
     proof = results.get(PHASE_PROOF, {})
+    proof_validation = proof.get("proof_validation", {}) if isinstance(proof, Mapping) else {}
+    proof_summary = proof_validation.get("summary", {}) if isinstance(proof_validation, Mapping) else {}
+    proof_timing = proof_validation.get("timing", {}) if isinstance(proof_validation, Mapping) else {}
     failed_phase = None
     failed_error_type = None
     failed_error = None
@@ -1115,6 +1161,21 @@ def build_final_summary(results: Mapping[str, Any]) -> dict[str, Any]:
         "parity_status": comparison.get("status"),
         "diagnostics_status": comparison.get("diagnostics_summary"),
         "proof_status": proof.get("status"),
+        "proof_target_outcomes": proof.get("proof_target_outcomes"),
+        "proof_max_attempts": proof.get("proof_max_attempts"),
+        "proof_artifact_path": proof.get("proof_artifact_path"),
+        "proof_metrics": {
+            "valid_outcomes": proof_summary.get("valid_outcomes"),
+            "avg_analyze_seconds": proof_timing.get("avg_analyze_seconds"),
+            "p95_analyze_seconds": proof_timing.get("p95_analyze_seconds"),
+            "p95_analyze_status": proof_timing.get("p95_analyze_status"),
+            "max_analyze_seconds": proof_timing.get("max_analyze_seconds"),
+            "avg_outcome_seconds": proof_timing.get("avg_outcome_seconds"),
+            "p95_outcome_seconds": proof_timing.get("p95_outcome_seconds"),
+            "p95_outcome_status": proof_timing.get("p95_outcome_status"),
+            "max_outcome_seconds": proof_timing.get("max_outcome_seconds"),
+            "criteria_failures": proof.get("failed_checks"),
+        } if isinstance(proof, Mapping) and proof else None,
         "failed_phase": failed_phase,
         "failed_error_type": failed_error_type,
         "failed_error": failed_error,
@@ -1143,16 +1204,27 @@ def blocked_phase_artifact(
         "failed_checks": [reason],
         "performance_ledger": PERFORMANCE_LEDGER,
     }
-    write_json(config.out_dir / artifact_name(phase.name), artifact)
+    write_json(config.out_dir / artifact_name(phase.name, config.proof_target_outcomes), artifact)
     return artifact
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run configurable SOC route architecture validation phases.")
+    parser = argparse.ArgumentParser(
+        description="Run configurable SOC route architecture validation phases.",
+        epilog=(
+            "run_soc_diag_f.py is T2/proof-only and expects an already-running backend "
+            "plus a matching contract. Use this lifecycle-owned runner for A1 scale "
+            "measurements with --phase proof/--proof-target-outcomes."
+        ),
+    )
     parser.add_argument("--port", type=int, default=8001)
     parser.add_argument("--prefix", default="P5DSHADOW")
     parser.add_argument("--count", type=int, default=5)
-    parser.add_argument("--phase", choices=("false_baseline", "true_compare", "proof_250", "all"), default="all")
+    parser.add_argument(
+        "--phase",
+        choices=("false_baseline", "true_compare", "proof", "proof_250", "all"),
+        default="all",
+    )
     parser.add_argument("--false-graph")
     parser.add_argument("--true-graph")
     parser.add_argument("--proof-graph")
@@ -1163,6 +1235,9 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--workloads", default="unique_once,repeat_same,mixed_reuse")
     parser.add_argument("--repeat-count", type=int, default=5)
     parser.add_argument("--run-250", action="store_true")
+    parser.add_argument("--proof-target-outcomes", type=int, default=250)
+    parser.add_argument("--proof-max-attempts", type=int, default=300)
+    parser.add_argument("--proof-prefix")
     parser.add_argument("--strict-contract", action="store_true", default=True)
     parser.add_argument("--out-dir", type=Path, default=REPO_ROOT / "scratch" / "temp")
     parser.add_argument("--graph-dsn", default=DEFAULT_GRAPH_DSN)
@@ -1172,6 +1247,14 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 
 def config_from_args(args: argparse.Namespace) -> RunnerConfig:
+    if args.run_250 and args.proof_target_outcomes != 250:
+        raise ValueError("--run-250 cannot be combined with --proof-target-outcomes other than 250; use --phase proof")
+    if args.proof_target_outcomes <= 0:
+        raise ValueError("--proof-target-outcomes must be positive")
+    if args.proof_max_attempts <= 0:
+        raise ValueError("--proof-max-attempts must be positive")
+    if args.proof_max_attempts < args.proof_target_outcomes:
+        raise ValueError("--proof-max-attempts must be >= --proof-target-outcomes")
     phases = resolve_phases(args.phase, run_250=args.run_250)
     return RunnerConfig(
         port=args.port,
@@ -1193,6 +1276,9 @@ def config_from_args(args: argparse.Namespace) -> RunnerConfig:
         strict_contract=args.strict_contract,
         contract_path=args.backend_contract,
         readiness_timeout_seconds=args.readiness_timeout_seconds,
+        proof_target_outcomes=args.proof_target_outcomes,
+        proof_max_attempts=args.proof_max_attempts,
+        proof_prefix=args.proof_prefix,
     )
 
 

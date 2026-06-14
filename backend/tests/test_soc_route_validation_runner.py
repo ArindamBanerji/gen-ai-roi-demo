@@ -811,6 +811,287 @@ def test_summary_generation_and_performance_ledger():
     assert summary["performance_ledger"]["buyer_facing_claim_allowed"] is False
 
 
+def test_default_proof_target_remains_250():
+    runner = load_runner()
+
+    config = runner.config_from_args(
+        runner.parse_args(
+            [
+                "--phase",
+                "proof",
+                "--proof-graph",
+                "proof_graph",
+            ]
+        )
+    )
+
+    assert config.phases == ("proof_250",)
+    assert config.proof_target_outcomes == 250
+    assert config.proof_max_attempts == 300
+    assert runner.artifact_name("proof_250", config.proof_target_outcomes) == "route_validation_250_summary.json"
+
+
+def test_proof_phase_alias_matches_proof_250():
+    runner = load_runner()
+
+    proof = runner.config_from_args(
+        runner.parse_args(["--phase", "proof", "--proof-graph", "proof_graph"])
+    )
+    proof_250 = runner.config_from_args(
+        runner.parse_args(["--phase", "proof_250", "--proof-graph", "proof_graph"])
+    )
+
+    assert proof.phases == proof_250.phases == ("proof_250",)
+
+
+def test_run_250_rejects_non_250_target():
+    runner = load_runner()
+
+    args = runner.parse_args(
+        [
+            "--phase",
+            "all",
+            "--run-250",
+            "--proof-target-outcomes",
+            "500",
+            "--false-graph",
+            "false_graph",
+            "--true-graph",
+            "true_graph",
+            "--proof-graph",
+            "proof_graph",
+        ]
+    )
+
+    with pytest.raises(ValueError, match="--run-250"):
+        runner.config_from_args(args)
+
+
+def test_proof_target_500_and_max_attempts_are_passed_to_diag_runner(tmp_path, monkeypatch):
+    runner = load_runner()
+    phase = runner.PhaseConfig("proof_250", "proof_graph_500", {"AGE_USE_POOL": "true"})
+    config = runner.RunnerConfig(
+        port=8001,
+        prefix="A1SCALE500",
+        count=5,
+        phases=("proof_250",),
+        compare_profile="generic",
+        workloads=("unique_once",),
+        repeat_count=1,
+        false_graph=None,
+        true_graph=None,
+        proof_graph="proof_graph_500",
+        false_env={},
+        true_env={},
+        proof_env=phase.env,
+        out_dir=tmp_path,
+        graph_dsn="dsn",
+        run_250=False,
+        strict_contract=True,
+        contract_path=tmp_path / "contract.json",
+        readiness_timeout_seconds=1.0,
+        proof_target_outcomes=500,
+        proof_max_attempts=800,
+    )
+    captured = {}
+    lifecycle = {"stop_stale": False, "clear_contract": False, "stop_backend": False}
+
+    class DummyProcess:
+        pass
+
+    class Completed:
+        returncode = 0
+        stdout = "\n".join(
+            [
+                "EXTERNAL_DIAGNOSTIC_F_PASS",
+                "- valid_outcomes: `500`",
+                "- l5_dk_weight: `1`",
+                "- dk_welford_rows: `1`",
+                "- max_n_decisions_used: `500`",
+                "- avg_analyze_seconds: `0.113`",
+                "- max_analyze_seconds: `0.878`",
+                "- avg_outcome_seconds: `0.310`",
+                "- max_outcome_seconds: `0.605`",
+            ]
+        )
+        stderr = ""
+
+    monkeypatch.setattr(runner, "stop_stale_backend", lambda _port: lifecycle.__setitem__("stop_stale", True))
+    monkeypatch.setattr(
+        runner,
+        "clear_contract_path",
+        lambda _path: lifecycle.__setitem__("clear_contract", True) or {"cleared": True},
+    )
+    monkeypatch.setattr(runner, "start_backend", lambda *_args, **_kwargs: DummyProcess())
+    monkeypatch.setattr(
+        runner,
+        "await_backend_readiness",
+        lambda *_args, **_kwargs: (
+            {"ok": True},
+            {},
+            {"verified": True, "errors": [], "path": str(config.contract_path)},
+        ),
+    )
+    monkeypatch.setattr(runner, "stop_backend", lambda _process: lifecycle.__setitem__("stop_backend", True))
+
+    def fake_run(command, **_kwargs):
+        captured["command"] = command
+        return Completed()
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+
+    artifact = runner.run_proof_phase(phase, config)
+
+    command = captured["command"]
+    assert command[command.index("--target-outcomes") + 1] == "500"
+    assert command[command.index("--max-attempts") + 1] == "800"
+    assert command[command.index("--prefix") + 1] == "A1SCALE500"
+    assert artifact["status"] == "PASS"
+    assert artifact["proof_target_outcomes"] == 500
+    assert artifact["proof_max_attempts"] == 800
+    assert artifact["proof_artifact_path"].endswith("route_validation_500_summary.json")
+    assert artifact["timing"]["p95_analyze_seconds"] is None
+    assert artifact["timing"]["p95_analyze_status"] == "not_emitted"
+    assert (tmp_path / "route_validation_500_summary.json").exists()
+    assert lifecycle == {"stop_stale": True, "clear_contract": True, "stop_backend": True}
+
+
+def test_proof_target_1000_and_max_attempts_are_passed_to_diag_runner(tmp_path, monkeypatch):
+    runner = load_runner()
+    phase = runner.PhaseConfig("proof_250", "proof_graph_1000", {"AGE_USE_POOL": "true"})
+    config = runner.RunnerConfig(
+        port=8001,
+        prefix="A1SCALE1000",
+        count=5,
+        phases=("proof_250",),
+        compare_profile="generic",
+        workloads=("unique_once",),
+        repeat_count=1,
+        false_graph=None,
+        true_graph=None,
+        proof_graph="proof_graph_1000",
+        false_env={},
+        true_env={},
+        proof_env=phase.env,
+        out_dir=tmp_path,
+        graph_dsn="dsn",
+        run_250=False,
+        strict_contract=True,
+        contract_path=tmp_path / "contract.json",
+        readiness_timeout_seconds=1.0,
+        proof_target_outcomes=1000,
+        proof_max_attempts=1500,
+    )
+    captured = {}
+
+    class DummyProcess:
+        pass
+
+    class Completed:
+        returncode = 0
+        stdout = "\n".join(
+            [
+                "EXTERNAL_DIAGNOSTIC_F_PASS",
+                "- valid_outcomes: `1000`",
+                "- l5_dk_weight: `1`",
+                "- dk_welford_rows: `1`",
+                "- max_n_decisions_used: `1000`",
+            ]
+        )
+        stderr = ""
+
+    monkeypatch.setattr(runner, "stop_stale_backend", lambda _port: None)
+    monkeypatch.setattr(runner, "clear_contract_path", lambda _path: {"cleared": True})
+    monkeypatch.setattr(runner, "start_backend", lambda *_args, **_kwargs: DummyProcess())
+    monkeypatch.setattr(
+        runner,
+        "await_backend_readiness",
+        lambda *_args, **_kwargs: (
+            {"ok": True},
+            {},
+            {"verified": True, "errors": [], "path": str(config.contract_path)},
+        ),
+    )
+    monkeypatch.setattr(runner, "stop_backend", lambda _process: None)
+
+    def fake_run(command, **_kwargs):
+        captured["command"] = command
+        return Completed()
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+
+    artifact = runner.run_proof_phase(phase, config)
+
+    command = captured["command"]
+    assert command[command.index("--target-outcomes") + 1] == "1000"
+    assert command[command.index("--max-attempts") + 1] == "1500"
+    assert command[command.index("--prefix") + 1] == "A1SCALE1000"
+    assert artifact["status"] == "PASS"
+    assert artifact["proof_artifact_path"].endswith("route_validation_1000_summary.json")
+
+
+def test_proof_target_1000_uses_configured_invariants_and_artifact_name():
+    runner = load_runner()
+    stdout = "\n".join(
+        [
+            "EXTERNAL_DIAGNOSTIC_F_PASS",
+            "- valid_outcomes: `1000`",
+            "- l5_dk_weight: `1`",
+            "- dk_welford_rows: `1`",
+            "- max_n_decisions_used: `1000`",
+        ]
+    )
+
+    validation = runner.validate_proof_output(
+        stdout,
+        returncode=0,
+        expected_target_outcomes=1000,
+    )
+
+    assert validation["passed"] is True
+    assert validation["expected"]["valid_outcomes"] == 1000
+    assert validation["expected"]["max_n_decisions_used"] == 1000
+    assert runner.artifact_name("proof_250", 1000) == "route_validation_1000_summary.json"
+
+
+def test_final_summary_includes_configurable_proof_metrics():
+    runner = load_runner()
+
+    summary = runner.build_final_summary(
+        {
+            "proof_250": {
+                "status": "PASS",
+                "graph": "proof_graph",
+                "contract": {"verified": True},
+                "proof_target_outcomes": 500,
+                "proof_max_attempts": 800,
+                "proof_artifact_path": "scratch/temp/route_validation_500_summary.json",
+                "proof_validation": {
+                    "summary": {"valid_outcomes": 500},
+                    "timing": {
+                        "avg_analyze_seconds": 0.113,
+                        "p95_analyze_seconds": None,
+                        "p95_analyze_status": "not_emitted",
+                        "max_analyze_seconds": 0.878,
+                        "avg_outcome_seconds": 0.31,
+                        "p95_outcome_seconds": None,
+                        "p95_outcome_status": "not_emitted",
+                        "max_outcome_seconds": 0.605,
+                    },
+                },
+                "failed_checks": [],
+            }
+        }
+    )
+
+    assert summary["status"] == "PASS"
+    assert summary["proof_target_outcomes"] == 500
+    assert summary["proof_max_attempts"] == 800
+    assert summary["proof_artifact_path"] == "scratch/temp/route_validation_500_summary.json"
+    assert summary["proof_metrics"]["valid_outcomes"] == 500
+    assert summary["proof_metrics"]["p95_analyze_status"] == "not_emitted"
+
+
 def test_final_summary_includes_primary_failure_details():
     runner = load_runner()
 
