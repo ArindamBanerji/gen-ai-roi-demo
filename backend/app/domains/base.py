@@ -1,121 +1,129 @@
-"""Abstract interface for domain modules. Every domain (SOC, Supply Chain, etc.) implements this."""
+"""Domain configuration base classes.
+
+Three shared dataclasses (DomainAction, DomainFactor, DomainSituationType)
+are re-exported from copilot_sdk.domains.base - the SDK canonical source.
+These are frozen dataclasses with defaults. All SOC construction sites
+provide all fields, so frozen + defaults is compatible.
+
+Two SOC-specific dataclasses (DomainPolicy, PromptVariant) remain local.
+Their fields are SOC-specific and do not belong in the SDK.
+See design_sdk_domain_unification_v2.md for rationale.
+
+DomainConfig ABC remains local - it defines the SOC domain contract
+with abstract methods for seed queries, graph templates, narration,
+and metrics that are not generic across copilots.
+"""
+
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import Dict, List
 
-
-@dataclass
-class DomainAction:
-    """One possible action the system can take."""
-    id: str              # "false_positive_close", "auto_approve_po"
-    label: str           # "Close as False Positive", "Auto-Approve PO"
-    time_saved_min: float
-    cost_dollars: float
-    risk_level: str      # "low", "medium", "high", "critical"
-
-
-@dataclass
-class DomainFactor:
-    """One scoring factor in the decision vector."""
-    id: str              # "travel_match", "price_variance"
-    label: str           # "Travel Match", "Price Variance"
-    description: str
-
-
-@dataclass
-class DomainSituationType:
-    """One situation classification type."""
-    id: str              # "TRAVEL_LOGIN_ANOMALY", "SUPPLY_RISK"
-    label: str           # "Travel Login Anomaly", "Supply Risk"
-    description: str
-    color: str           # hex color for UI badge, e.g. "#3B82F6"
+from copilot_sdk.domains.base import (  # noqa: F401
+    DomainAction,
+    DomainFactor,
+    DomainSituationType,
+)
 
 
 @dataclass
 class DomainPolicy:
-    """One policy in the domain's policy registry."""
-    id: str              # "POLICY-SOC-003"
-    name: str            # "Auto-Close Travel Anomalies"
-    rule: str            # human-readable rule description
-    priority: int        # lower number = higher priority
-    action_override: str # which action this policy forces
+    """SOC-specific policy metadata.
+
+    Fields: name, rule, priority, action_override.
+    Not generic - other copilots' policies have different fields.
+    Note: runtime policy engine uses app.domains.soc.policies (plain dicts),
+    not this dataclass. This is metadata for counts and warm-up only.
+    """
+
+    id: str
+    name: str
+    rule: str
+    priority: int
+    action_override: str
 
 
 @dataclass
 class PromptVariant:
-    """One prompt variant tracked by the AgentEvolver."""
-    id: str              # "TRAVEL_CONTEXT_v1"
-    category: str        # "anomalous_login", "phishing"
-    version: int         # 1, 2
-    description: str     # "Base travel context prompt"
+    """SOC-specific prompt variant metadata.
+
+    Fields: category, version, description.
+    Not consumed by SDK PromptVariantEvolver (which uses PromptEvolverConfig).
+    This is metadata for warm-up only.
+    """
+
+    id: str
+    category: str
+    version: int
+    description: str
 
 
 class DomainConfig(ABC):
-    """Every domain implements this interface.
+    """SOC domain contract.
 
-    The framework (core/) calls these methods/properties.
-    The domain module (domains/soc/, domains/supply_chain/) provides the content.
+    Defines abstract properties for domain identity, metadata lists,
+    and SOC-specific methods (seed queries, graph templates, narration).
+
+    SDK copilots use BaseDomainConfig (copilot_sdk.domains.base) instead.
+    BaseDomainConfig is concrete with no abstract methods.
     """
 
     @property
     @abstractmethod
-    def name(self) -> str:
-        """Short identifier. 'soc', 'supply_chain'"""
+    def name(self) -> str: ...
 
     @property
     @abstractmethod
-    def display_name(self) -> str:
-        """Human-readable. 'SOC Copilot', 'Procurement Copilot'"""
+    def display_name(self) -> str: ...
 
     @property
     @abstractmethod
-    def trigger_entity(self) -> str:
-        """Primary entity that triggers decisions. 'Alert' for SOC, 'PurchaseOrder' for S2P."""
+    def trigger_entity(self) -> str: ...
 
     @property
     @abstractmethod
-    def factors(self) -> List[DomainFactor]:
-        """The scoring factors (dimensions of the factor vector f)."""
+    def factors(self) -> List[DomainFactor]: ...
 
     @property
     @abstractmethod
-    def actions(self) -> List[DomainAction]:
-        """The possible actions (columns of the weight matrix W)."""
+    def actions(self) -> List[DomainAction]: ...
 
     @property
     @abstractmethod
-    def situation_types(self) -> List[DomainSituationType]:
-        """The situation classifications."""
+    def situation_types(self) -> List[DomainSituationType]: ...
 
     @property
     @abstractmethod
-    def policies(self) -> List[DomainPolicy]:
-        """Domain policy registry."""
+    def policies(self) -> List[DomainPolicy]: ...
 
     @property
     @abstractmethod
-    def asymmetry_ratio(self) -> float:
-        """Penalty multiplier for incorrect decisions. 20.0 for SOC."""
+    def asymmetry_ratio(self) -> float: ...
 
     @property
     @abstractmethod
-    def prompt_variants(self) -> List[PromptVariant]:
-        """Prompt variants tracked by the AgentEvolver."""
+    def prompt_variants(self) -> List[PromptVariant]: ...
 
     @property
     @abstractmethod
-    def metrics_config(self) -> Dict:
-        """Business impact numbers for Tab 4. Keys: hrs_saved_monthly, cost_avoided_quarterly, mttr_reduction_pct, backlog_eliminated."""
+    def metrics_config(self) -> Dict: ...
 
     @abstractmethod
-    def get_seed_queries(self) -> List[str]:
-        """Cypher queries to seed the demo graph for this domain."""
+    def get_seed_queries(self) -> List[str]: ...
 
     @abstractmethod
-    def get_graph_query_templates(self) -> Dict[str, str]:
-        """Named Cypher query templates. Key=query_name, Value=Cypher string."""
+    def get_graph_query_templates(self) -> Dict[str, str]: ...
 
     @abstractmethod
-    def get_narration_templates(self) -> Dict[str, str]:
-        """LLM prompt templates for reasoning narration. Key=alert_type, Value=template."""
+    def get_narration_templates(self) -> Dict[str, str]: ...
+
+
+__all__ = [
+    "DomainAction",
+    "DomainFactor",
+    "DomainSituationType",
+    "DomainPolicy",
+    "PromptVariant",
+    "DomainConfig",
+]
