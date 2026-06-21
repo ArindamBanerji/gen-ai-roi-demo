@@ -218,7 +218,7 @@ def test_check_alert_reuses_stable_campaign_identity_after_correlation():
             ]
 
         async def fetch_single_alert_event(self, *_args, **_kwargs):
-            return None
+            return _event("alert-new", user_id="user-1", minutes=1)
 
         async def write_campaign(self, campaign, trace=None):
             self.written.append(campaign)
@@ -226,7 +226,7 @@ def test_check_alert_reuses_stable_campaign_identity_after_correlation():
 
     engine = CampaignCorrelationEngine(DEFAULT_CONFIG)
     repo = StubRepo()
-    matcher = CampaignMatcher(None, DEFAULT_CONFIG, engine, repo)
+    matcher = CampaignMatcher(None, DEFAULT_CONFIG, engine, repo, background=False)
 
     result = run(matcher.check_alert("alert-new"))
 
@@ -260,13 +260,13 @@ def test_check_alert_returns_none_when_no_campaign():
 
 
 # ============================================================================
-# Test 4 — write_campaign is idempotent (MERGE safe to call twice)
+# Test 4 — write_campaign is idempotent (MATCH-then-CREATE safe to call twice)
 # ============================================================================
 
 def test_repository_write_campaign_is_idempotent():
     """
-    write_campaign uses MERGE — calling it twice with the same campaign_id
-    must succeed both times (return True). No unique-constraint violation.
+    Phase 1 write_campaign uses AGE-safe MATCH-then-CREATE semantics. Calling
+    it twice with the same campaign_id must succeed without duplicate edges.
     """
     mock_neo4j = AsyncMock()
     mock_neo4j.run_query.return_value = None
@@ -291,7 +291,7 @@ def test_repository_write_campaign_is_idempotent():
     )
 
     result1 = run(repo.write_campaign(campaign))
-    result2 = run(repo.write_campaign(campaign))  # second write — MERGE is safe
+    result2 = run(repo.write_campaign(campaign))  # second write is idempotent
 
     assert result1 is True, f"First write_campaign must return True. Got: {result1!r}"
     assert result2 is True, f"Second write_campaign must return True. Got: {result2!r}"

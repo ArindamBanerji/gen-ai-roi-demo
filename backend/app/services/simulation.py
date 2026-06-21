@@ -19,7 +19,9 @@ import uuid
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Callable, Coroutine, Dict, List, Optional
+from typing import Any, Callable, Coroutine, Dict, List, Optional, cast
+
+logger: Any
 
 import numpy as np
 
@@ -262,9 +264,9 @@ class SimulationOrchestrator:
             # Step 1: Pick alert (round-robin across categories)
             # ------------------------------------------------------------------
             alert_meta          = alert_pool[step % len(alert_pool)]
-            alert_id            = alert_meta.get("alert_id") or alert_meta.get("id")
-            category            = alert_meta.get("category") or alert_meta.get("alert_type", "unknown")
-            ground_truth_action = alert_meta.get("ground_truth_action", "investigate")
+            alert_id            = cast(str, alert_meta.get("alert_id") or alert_meta.get("id"))
+            category            = cast(str, alert_meta.get("category") or alert_meta.get("alert_type", "unknown"))
+            ground_truth_action = cast(str, alert_meta.get("ground_truth_action", "investigate"))
 
             # ------------------------------------------------------------------
             # Step 2: Fetch full alert data from Neo4j
@@ -278,7 +280,7 @@ class SimulationOrchestrator:
                 # Synthetic fallback: use pool dict itself as alert_data
                 alert_data = dict(alert_meta)
 
-            alert_type = alert_data.get("alert_type") or category
+            alert_type = cast(str, alert_data.get("alert_type") or category)
 
             # ------------------------------------------------------------------
             # Step 3: Situation analysis

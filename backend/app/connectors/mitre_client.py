@@ -6,7 +6,7 @@ import json
 import time
 import urllib.request
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 class MITREClient:
@@ -61,7 +61,7 @@ class MITREClient:
     def _load_bundle(self) -> dict:
         cache_path = self._cache_path()
         if cache_path and self._cache_fresh(cache_path):
-            return json.loads(cache_path.read_text(encoding="utf-8"))
+            return cast(dict, json.loads(cache_path.read_text(encoding="utf-8")))
 
         data = self._fetch_json()
         if cache_path:
@@ -71,7 +71,7 @@ class MITREClient:
 
     def _fetch_json(self) -> dict:
         with urllib.request.urlopen(self.ENTERPRISE_URL, timeout=30) as response:
-            return json.loads(response.read().decode("utf-8"))
+            return cast(dict, json.loads(response.read().decode("utf-8")))
 
     def _cache_path(self) -> Path | None:
         if not self._cache_dir:
@@ -131,7 +131,7 @@ class MITREClient:
         for ref in obj.get("external_references", []):
             external_id = ref.get("external_id")
             if external_id:
-                return external_id
+                return cast(str, external_id)
         return None
 
     @staticmethod
@@ -139,7 +139,7 @@ class MITREClient:
         for ref in obj.get("external_references", []):
             url = ref.get("url")
             if url:
-                return url
+                return cast(str, url)
         return None
 
     @staticmethod

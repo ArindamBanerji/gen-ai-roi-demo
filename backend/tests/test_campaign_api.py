@@ -95,7 +95,8 @@ def test_recorrelate_returns_counts():
 def test_recorrelate_is_idempotent():
     """
     Calling recorrelate twice must not crash or produce negative counts.
-    The second call is safe because write_campaign uses MERGE — idempotent.
+    The second call is safe because write_campaign is idempotent under the
+    Phase 1 AGE-safe MATCH-then-CREATE path.
     """
     r1 = client.post("/api/soc/campaigns/recorrelate")
     r2 = client.post("/api/soc/campaigns/recorrelate")

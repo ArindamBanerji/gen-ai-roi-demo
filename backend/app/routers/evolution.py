@@ -5,7 +5,7 @@ Tab 2 endpoints: Deployment registry, eval gates, TRIGGERED_EVOLUTION
 import dataclasses
 
 from fastapi import APIRouter, HTTPException, Query
-from typing import Optional
+from typing import Any, Optional
 from datetime import datetime
 import uuid
 import time
@@ -270,7 +270,7 @@ async def process_alert(request: ProcessAlertRequest):
         # Step 7 & 8: Check for TRIGGERED_EVOLUTION (THE KEY DIFFERENTIATOR)
         # ====================================================================
 
-        triggered_evolution = {"occurred": False}
+        triggered_evolution: dict[str, Any] = {"occurred": False}
 
         # Only trigger evolution if gates passed
         if eval_result["overall_passed"]:

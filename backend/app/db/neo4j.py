@@ -9,7 +9,7 @@ Default is neo4j — zero behaviour change unless env var is set.
 import logging
 import os
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, cast
 from contextlib import asynccontextmanager
 import pathlib as _pathlib
 
@@ -60,16 +60,16 @@ class Neo4jClient:
 
     async def run_query(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Run a Cypher query and return results"""
-        async with self.session() as session:
+        async with cast(Any, self).session() as session:
             result = await session.run(query, parameters or {})
             records = await result.data()
-            return records
+            return cast(List[Dict[str, Any]], records)
 
     # ========================================================================
     # Security Context Queries
     # ========================================================================
 
-    async def get_security_context(self, alert_id: str) -> Dict[str, Any]:
+    async def get_security_context(self, alert_id: str) -> Optional[Dict[str, Any]]:
         """
         Get full security context for an alert by traversing the graph.
         This is the "47 nodes consulted" query.
@@ -280,7 +280,7 @@ class Neo4jClient:
             "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
         })
 
-        return result[0]["event_id"] if result else event_id
+        return cast(str, result[0]["event_id"]) if result else event_id
 
     # ========================================================================
     # Deployment Queries

@@ -75,7 +75,7 @@ def build_bootstrap_decisions(
     categories: List[str],
     decisions_per_category: Dict[str, int],
     seed: int = _BOOTSTRAP_SEED,
-    weights: Dict[str, float] = None,    # optional: recompute distribution from weights
+    weights: Dict[str, float] | None = None,    # optional: recompute distribution from weights
 ) -> List[Dict[str, Any]]:
     """
     Build Decision record dicts representing bootstrap calibration decisions.

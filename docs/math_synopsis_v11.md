@@ -198,7 +198,7 @@ compound rather than conflict. [CHANGED v11]
 P(a|f,c) = softmax(−K(f, μ[c,a,:]) / τ)
 ```
 
-- f ∈ [0,1]^d: factor vector from graph traversal (d=6 for SOC, d=8 for S2P)
+- f ∈ [0,1]^d: factor vector from the domain evidence path (SOC may use graph traversal; S2P currently uses read-only context-builder inputs until native G12/AGE traversal ships)
 - μ[c,a,:] ∈ [0,1]^d: profile centroid for category c, action a
 - K: kernel function. See kernel table below.
 - τ = 0.1: temperature (V3B validated, ECE=0.036). Fixed. Never change.

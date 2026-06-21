@@ -114,3 +114,31 @@ def test_campaign_detail_returns_attack_progression():
     assert "stages" in detail["attack_progression"], (
         f"Missing 'stages' in attack_progression: {detail['attack_progression']}"
     )
+
+
+def test_campaign_list_ids_are_detail_readable():
+    """
+    Every non-empty campaign_id returned by the list endpoint must resolve
+    through the detail endpoint with the same canonical campaign_id.
+    """
+    client.post("/api/soc/campaigns/recorrelate")
+
+    list_resp = client.get("/api/soc/campaigns")
+    assert list_resp.status_code == 200
+    campaigns = list_resp.json().get("campaigns", [])
+
+    if not campaigns:
+        pytest.skip("no campaigns in test graph")
+
+    for campaign in campaigns:
+        campaign_id = campaign.get("campaign_id")
+        if not campaign_id:
+            continue
+        detail_resp = client.get(f"/api/soc/campaigns/{campaign_id}")
+        assert detail_resp.status_code == 200, (
+            f"List returned campaign_id={campaign_id}, but detail returned "
+            f"{detail_resp.status_code}: {detail_resp.text[:200]}"
+        )
+        detail = detail_resp.json()
+        assert detail["campaign_id"] == campaign_id
+        assert all(d.get("alert_id") for d in detail.get("decisions", []))

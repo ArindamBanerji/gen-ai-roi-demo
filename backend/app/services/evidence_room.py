@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, cast
 
 log = logging.getLogger(__name__)
 
@@ -90,19 +90,19 @@ class EvidenceRoomService:
         audit_trail, hash_chain, rows = await self._collect_audit(export=False)
         conservation = await self._collect_conservation()
         override_analysis = await self._collect_override_analysis(rows)
-        return _json_safe({
+        return cast(dict[str, Any], _json_safe({
             "generated_at": _now_iso(),
             "audit_trail": audit_trail,
             "conservation": conservation,
             "override_analysis": override_analysis,
             "hash_chain": hash_chain,
-        })
+        }))
 
     async def export_evidence_pack(self) -> dict[str, Any]:
         audit_trail, hash_chain, rows = await self._collect_audit(export=True)
         conservation = await self._collect_conservation()
         override_analysis = await self._collect_override_analysis(rows)
-        return _json_safe({
+        return cast(dict[str, Any], _json_safe({
             "generated_at": _now_iso(),
             "export_metadata": {
                 "exported_at": _now_iso(),
@@ -113,7 +113,7 @@ class EvidenceRoomService:
             "conservation": conservation,
             "override_analysis": override_analysis,
             "hash_chain": hash_chain,
-        })
+        }))
 
     async def _collect_audit(self, export: bool) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
         try:

@@ -26,7 +26,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, cast
 
 import numpy as np
 
@@ -358,7 +358,7 @@ async def _compute_delta_7d(current_iks: float) -> float:
         mu_str = rows[0].get("mu", "[]")
         mu_oldest = np.array(json.loads(mu_str), dtype=np.float64)
         oldest_result = compute_iks(mu_oldest, mu_zero)
-        return round(current_iks - oldest_result["current"], 1)
+        return cast(float, round(current_iks - cast(Any, oldest_result["current"]), 1))
     except Exception as exc:
         log.debug("[IKS] delta_7d computation failed: %s", exc)
         return 0.0

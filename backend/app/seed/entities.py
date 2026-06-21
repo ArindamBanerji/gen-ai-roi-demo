@@ -4,7 +4,7 @@ import copy
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from app.seed.config import SeedConfig
 
@@ -38,7 +38,7 @@ class EntityTemplates:
 
 def load_existing_seed(path: Path | str = DEFAULT_SEED_PATH) -> dict[str, Any]:
     with open(path, encoding="utf-8") as fh:
-        return json.load(fh)
+        return cast(dict[str, Any], json.load(fh))
 
 
 def load_curated_templates(data: dict[str, Any] | None = None) -> EntityTemplates:

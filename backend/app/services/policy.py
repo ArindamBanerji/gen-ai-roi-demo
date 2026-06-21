@@ -5,7 +5,7 @@ priority and security-first principles.
 
 Answers the CISO question: "What happens when two policies conflict?"
 """
-from typing import Dict, Any, List, Optional, Literal
+from typing import Dict, Any, List, Optional, Literal, cast
 from datetime import datetime
 from pydantic import BaseModel
 import random
@@ -264,13 +264,15 @@ if __name__ == "__main__":
     print(f"  Conflict: {r1.has_conflict}")
     print(f"  Policies applied: {[p.id for p in r1.policies_applied]}")
     if r1.has_conflict:
-        print(f"  Winner: {r1.resolution.winning_policy}")
-        print(f"  Loser: {r1.resolution.losing_policy}")
-        print(f"  Audit ID: {r1.resolution.audit_id}")
+        resolution = cast(PolicyResolution, r1.resolution)
+        print(f"  Winner: {resolution.winning_policy}")
+        print(f"  Loser: {resolution.losing_policy}")
+        print(f"  Audit ID: {resolution.audit_id}")
 
     assert r1.has_conflict, "ALERT-7823 should have a conflict!"
     assert len(r1.policies_applied) == 2, "Should match 2 policies"
-    assert r1.resolution.winning_policy == "POL-ESCALATE-HIGH-RISK", "High-risk policy should win"
+    resolution = cast(PolicyResolution, r1.resolution)
+    assert resolution.winning_policy == "POL-ESCALATE-HIGH-RISK", "High-risk policy should win"
     print("  [PASS] Test 1 passed!\n")
 
     # Test ALERT-7824 (no conflict)

@@ -22,7 +22,7 @@ from contextlib import asynccontextmanager
 from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Optional
+from typing import Any, Optional, cast
 
 import numpy as np
 from copilot_sdk.scoring.dk_persistence import DKWelfordTracker, persist_dk_after_reestimate
@@ -163,7 +163,7 @@ def _init_learning_store() -> object | None:
         adapter_cls = _load_age_learning_store_adapter()
         store = adapter_cls(dsn=dsn, graph_name=graph_name)
         log.info("[GAE] SOC L5 learning store initialized (graph=%s, domain=soc)", graph_name)
-        return store
+        return cast(object, store)
     except Exception as exc:
         log.warning(
             "[GAE] SOC L5 learning store unavailable (graph=%s, domain=soc, error_type=%s)",
@@ -324,13 +324,13 @@ def persist_soc_dk_weights(scorer, *, logger: logging.Logger | None = None) -> b
             n_confirmed=_dk_welford_tracker.n_confirmed,
             n_overridden=_dk_welford_tracker.n_overridden,
         )
-    return persist_dk_after_reestimate(
+    return cast(bool, persist_dk_after_reestimate(
         domain="soc",
         scorer=adapter,
         learning_store=store,
         welford_tracker=tracker_snapshot,
         logger=logger or log,
-    )
+    ))
 
 
 def get_soc_category_phase(scorer, category_index: int) -> str:
@@ -339,7 +339,7 @@ def get_soc_category_phase(scorer, category_index: int) -> str:
     if not callable(get_phase):
         return "UNKNOWN"
     phase = get_phase(category_index)
-    return getattr(phase, "name", str(phase))
+    return cast(str, getattr(phase, "name", str(phase)))
 
 
 def get_soc_centroid(scorer, category_index: int, action_index: int) -> list[float] | None:
@@ -350,7 +350,7 @@ def get_soc_centroid(scorer, category_index: int, action_index: int) -> list[flo
     if centroids is None:
         return None
     try:
-        return np.asarray(centroids[category_index, action_index], dtype=np.float64).copy().tolist()
+        return cast(list[float], np.asarray(centroids[category_index, action_index], dtype=np.float64).copy().tolist())
     except Exception:
         return None
 
@@ -630,7 +630,7 @@ def load_centroid_backup(backup_id: str | None = None) -> dict:
         path = d / f"{backup_id}.json"
     if not path.exists():
         raise FileNotFoundError(f"Backup not found: {path}")
-    return json.loads(path.read_text())
+    return cast(dict[Any, Any], json.loads(path.read_text()))
 
 
 # =============================================================================

@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 import uuid as _uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 log = logging.getLogger(__name__)
 
@@ -84,7 +84,7 @@ class ThreatIndicatorService:
                 f" RETURN ti.id AS id"
             )
             if result:
-                return result[0]["id"]
+                return cast(str, result[0]["id"])
             # Step B — CREATE (node does not exist yet)
             node_id = str(_uuid.uuid4())
             result = await neo4j_service.run_query(
@@ -99,7 +99,7 @@ class ThreatIndicatorService:
                 f" last_seen: {now_s}"
                 f"}}) RETURN ti.id AS id"
             )
-            return result[0]["id"] if result else node_id
+            return cast(str, result[0]["id"]) if result else node_id
         except Exception as exc:
             log.warning(
                 "[THREAT-INDICATOR] upsert failed indicator_value=%r: %s",

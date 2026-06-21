@@ -18,7 +18,7 @@ Endpoint:
 """
 import asyncio
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from app.db.neo4j import neo4j_client
 
@@ -198,6 +198,7 @@ async def _build_threat_intel_factor(alert_id: str) -> Dict[str, Any]:
             best_val = val
             best_row = row
 
+    best_row = cast(Dict[str, Any], best_row)
     sev_str    = (best_row.get("severity") or "none").lower()
     source     = best_row.get("source", "unknown")
     ioc_val    = best_row.get("ioc_value", "unknown")

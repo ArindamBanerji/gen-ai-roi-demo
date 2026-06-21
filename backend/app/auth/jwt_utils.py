@@ -1,7 +1,7 @@
 import jwt
 import time
 import logging
-from typing import Optional, List
+from typing import Any, Optional, List, cast
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ def verify_jwt(token: str, config) -> Optional[dict]:
         if "role" not in payload:
             log.debug("JWT missing 'role' claim")
             return None
-        return payload
+        return cast(dict[Any, Any], payload)
     except jwt.ExpiredSignatureError:
         log.debug("JWT expired")
         return None

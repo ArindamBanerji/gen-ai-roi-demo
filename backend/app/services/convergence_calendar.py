@@ -4,6 +4,8 @@ convergence_calendar.py — Convergence Calendar service (L-08).
 SOC-specific calendar builder. Pure math lives in app.framework.convergence_math.
 """
 
+from typing import Literal
+
 from app.framework.convergence_math import (  # noqa: F401
     predict_n_half,
     decisions_to_days,
@@ -19,7 +21,7 @@ def build_convergence_calendar(
     sigma_per_factor: dict,
     q_bar: float,
     V: float,
-    kernel: str,
+    kernel: Literal["l2", "diagonal"],
     decisions_per_factor: dict,
     alpha: float = 0.25,
 ) -> dict:

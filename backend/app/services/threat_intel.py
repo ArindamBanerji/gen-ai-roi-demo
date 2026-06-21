@@ -29,7 +29,7 @@ async def refresh_threat_intel() -> Dict[str, Any]:
     # Prefer the registered singleton so stats stay consistent across callers;
     # fall back to a fresh instance if the registry isn't populated yet
     # (e.g. during unit tests or early startup).
-    connector: PulsediveConnector = (
+    connector: Any = (
         connector_registry.get("pulsedive") or PulsediveConnector()
     )
 

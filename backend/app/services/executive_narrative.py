@@ -160,7 +160,7 @@ class ExecutiveNarrative:
     def __init__(self, db_client):
         self.db = db_client
 
-    def generate_weekly(self, week_ending: str = None) -> Dict:
+    def generate_weekly(self, week_ending: Optional[str] = None) -> Dict:
         """
         Weekly digest with three sections + headline.
         If week_ending is None, use current date.

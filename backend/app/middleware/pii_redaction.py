@@ -13,7 +13,7 @@ import json
 import logging
 import os
 import time
-from typing import Callable
+from typing import Callable, cast
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -72,14 +72,14 @@ class PIIRedactionMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         if not _is_enabled() or _should_skip(request.url.path):
-            return await call_next(request)
+            return cast(Response, await call_next(request))
 
         response = await call_next(request)
         content_type = response.headers.get("content-type", "")
         if "application/json" not in content_type.lower():
-            return response
+            return cast(Response, response)
         if response.headers.get("content-encoding"):
-            return response
+            return cast(Response, response)
 
         started_at = time.perf_counter()
         body_bytes = await _read_body(response)

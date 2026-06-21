@@ -112,9 +112,22 @@ def _patch_common_outcome(monkeypatch, record=None):
     return fake_neo4j, learning_state
 
 
-async def _call_outcome():
+async def _call_outcome(outcome="correct", analyst_action=None):
     return await triage.report_decision_outcome(
-        OutcomeRequest(alert_id="ALERT-RL", decision_id="D-RL", outcome="correct")
+        OutcomeRequest(
+            alert_id="ALERT-RL",
+            decision_id="D-RL",
+            outcome=outcome,
+            analyst_action=analyst_action,
+        )
+    )
+
+
+def _outcome_decision_update_query(fake_neo4j):
+    return next(
+        query
+        for query in fake_neo4j.queries
+        if "d.analyst_action" in query and "d.was_override" in query
     )
 
 
@@ -129,6 +142,67 @@ async def test_reward_computation_fires_on_outcome_when_flag_enabled(monkeypatch
     assert len(entries) == 1
     assert entries[0]["decision_id"] == "D-RL"
     assert entries[0]["graded_reward"] > 0
+
+
+@pytest.mark.asyncio
+async def test_outcome_persists_analyst_action_override_measurement_fields(monkeypatch):
+    fake_neo4j, _learning_state = _patch_common_outcome(monkeypatch)
+
+    await _call_outcome(outcome="incorrect", analyst_action="suppress")
+
+    query = _outcome_decision_update_query(fake_neo4j)
+    assert "d.outcome           = 'incorrect'" in query
+    assert "d.correct           = false" in query
+    assert "d.analyst_action    = 'suppress'" in query
+    assert "d.final_action      = 'suppress'" in query
+    assert "d.recommended_action = d.action" in query
+    assert "ELSE d.action <> 'suppress'" in query
+    assert "d.quality_signal    = 0.0" in query
+
+
+@pytest.mark.asyncio
+async def test_outcome_persists_non_override_measurement_fields(monkeypatch):
+    fake_neo4j, _learning_state = _patch_common_outcome(monkeypatch)
+
+    await _call_outcome(outcome="correct", analyst_action="escalate")
+
+    query = _outcome_decision_update_query(fake_neo4j)
+    assert "d.analyst_action    = 'escalate'" in query
+    assert "d.final_action      = 'escalate'" in query
+    assert "ELSE d.action <> 'escalate'" in query
+    assert "d.quality_signal    = 1.0" in query
+
+
+@pytest.mark.asyncio
+async def test_outcome_without_analyst_action_does_not_fabricate_action(monkeypatch):
+    fake_neo4j, _learning_state = _patch_common_outcome(monkeypatch)
+
+    await _call_outcome(outcome="correct", analyst_action=None)
+
+    query = _outcome_decision_update_query(fake_neo4j)
+    assert "d.outcome           = 'correct'" in query
+    assert "d.correct           = true" in query
+    assert "d.analyst_action    = null" in query
+    assert "d.final_action      = null" in query
+    assert "WHEN null IS NULL THEN false" in query
+    assert "d.quality_signal    = 1.0" in query
+
+
+@pytest.mark.asyncio
+async def test_campaign_measurement_fields_share_decision_node_with_cohort_flags(monkeypatch):
+    fake_neo4j, _learning_state = _patch_common_outcome(
+        monkeypatch,
+        _decision_record(campaign_id="L1-campaign"),
+    )
+
+    await _call_outcome(outcome="correct", analyst_action="escalate")
+
+    query = _outcome_decision_update_query(fake_neo4j)
+    assert "MATCH (d:Decision {decision_id: 'D-RL'})" in query
+    assert "d.analyst_action    = 'escalate'" in query
+    assert "d.was_override" in query
+    assert "d.quality_signal    = 1.0" in query
+    assert any("d.campaign_id    AS campaign_id" in q for q in fake_neo4j.queries)
 
 
 @pytest.mark.asyncio
@@ -372,12 +446,147 @@ def _patch_common_analyze(
     return fake_neo4j
 
 
+def _patch_campaign_check(monkeypatch, *, campaign_id=None, context=None, suppressed=False):
+    class FakeCampaignEngine:
+        def __init__(self, _config):
+            self.config = _config
+
+    class FakeCampaignRepository:
+        def __init__(self, _client):
+            self.client = _client
+
+    class FakeCampaignMatcher:
+        def __init__(self, *_args, **_kwargs):
+            self.async_state = SimpleNamespace(
+                get_campaign_context=lambda cid: context if cid == campaign_id else None,
+                get_temporal_context=lambda cid: getattr(context, "temporal_context", None)
+                if cid == campaign_id
+                else None,
+            )
+
+        async def check_alert(self, _alert_id):
+            return campaign_id
+
+    monkeypatch.setattr(
+        "app.domains.soc.campaigns.CampaignCorrelationEngine",
+        FakeCampaignEngine,
+    )
+    monkeypatch.setattr(
+        "app.domains.soc.campaigns.CampaignRepository",
+        FakeCampaignRepository,
+    )
+    monkeypatch.setattr(
+        "app.domains.soc.campaigns.CampaignMatcher",
+        FakeCampaignMatcher,
+    )
+    monkeypatch.setattr(
+        "app.services.soc_situation_pattern.banner_suppressed",
+        lambda alert_id, holdout_pct=15: suppressed,
+    )
+
+
 def _decision_creation_query(fake_neo4j):
     return next(
         query
         for query in fake_neo4j.queries
         if "CREATE (d:Decision" in query
     )
+
+
+def _campaign_flag_query(fake_neo4j):
+    return next(
+        query
+        for query in fake_neo4j.queries
+        if "d.is_campaign_alert" in query
+        and "d.campaign_context_shown" in query
+    )
+
+
+@pytest.mark.asyncio
+async def test_campaign_context_treatment_response_and_decision_flags(monkeypatch):
+    fake_neo4j = _patch_common_analyze(monkeypatch)
+    _patch_campaign_check(
+        monkeypatch,
+        campaign_id="campaign-1",
+        context=SimpleNamespace(
+            campaign_id="campaign-1",
+            category="credential_access",
+            first_seen="2026-06-18T10:00:00",
+            member_count=3,
+        ),
+        suppressed=False,
+    )
+
+    response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
+
+    payload = response["campaign_context"]
+    assert payload["campaign_id"] == "campaign-1"
+    assert payload["source"] == "graph_store_cached"
+    assert payload["category"] == "credential_access"
+    assert payload["member_count"] == 3
+    assert "Consider escalating the campaign" in payload["advisory"]
+    flag_query = _campaign_flag_query(fake_neo4j)
+    assert "d.campaign_id = 'campaign-1'" in flag_query
+    assert "d.is_campaign_alert = true" in flag_query
+    assert "d.campaign_context_shown = true" in flag_query
+    assert "d.campaign_advisory_version = 'phase4_temporal_v1'" in flag_query
+
+
+@pytest.mark.asyncio
+async def test_campaign_context_suppressed_response_and_decision_flags(monkeypatch):
+    fake_neo4j = _patch_common_analyze(monkeypatch)
+    _patch_campaign_check(
+        monkeypatch,
+        campaign_id="campaign-1",
+        context=SimpleNamespace(
+            campaign_id="campaign-1",
+            category="credential_access",
+            first_seen="2026-06-18T10:00:00",
+            member_count=3,
+        ),
+        suppressed=True,
+    )
+
+    response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
+
+    assert response["campaign_context"] is None
+    flag_query = _campaign_flag_query(fake_neo4j)
+    assert "d.campaign_id = 'campaign-1'" in flag_query
+    assert "d.is_campaign_alert = true" in flag_query
+    assert "d.campaign_context_shown = false" in flag_query
+    assert "d.campaign_advisory_version = 'phase4_temporal_v1'" in flag_query
+
+
+@pytest.mark.asyncio
+async def test_campaign_context_isolated_response_and_decision_flags(monkeypatch):
+    fake_neo4j = _patch_common_analyze(monkeypatch)
+    _patch_campaign_check(monkeypatch, campaign_id=None)
+
+    response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
+
+    assert response["campaign_context"] is None
+    flag_query = _campaign_flag_query(fake_neo4j)
+    assert "d.campaign_id =" not in flag_query
+    assert "d.is_campaign_alert = false" in flag_query
+    assert "d.campaign_context_shown = false" in flag_query
+
+
+@pytest.mark.asyncio
+async def test_campaign_context_cold_cache_response(monkeypatch):
+    fake_neo4j = _patch_common_analyze(monkeypatch)
+    _patch_campaign_check(monkeypatch, campaign_id="campaign-cold", context=None)
+
+    response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
+
+    payload = response["campaign_context"]
+    assert payload["campaign_id"] == "campaign-cold"
+    assert payload["source"] == "graph_store_cached"
+    assert payload["status"] == "cold_cache"
+    assert "Emerging campaign pattern" in payload["advisory"]
+    flag_query = _campaign_flag_query(fake_neo4j)
+    assert "d.is_campaign_alert = true" in flag_query
+    assert "d.campaign_context_shown = true" in flag_query
+    assert "d.campaign_advisory_version = 'phase4_temporal_v1'" in flag_query
 
 
 @pytest.mark.asyncio

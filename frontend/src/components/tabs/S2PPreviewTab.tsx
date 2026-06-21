@@ -45,6 +45,8 @@ interface SupplierProfile {
   otif?: { q1_q2?: number; q3?: number }
   avg_invoice_amount?: number
   recent_trend?: string
+  risk_level?: string
+  intelligence?: SupplierIntelligence
 }
 
 interface SuppliersResponse {
@@ -57,6 +59,74 @@ interface PreviewData {
   queue: QueueResponse
   conservation: ConservationResponse
   suppliers: SuppliersResponse
+  profile?: SupplierProfile | null
+}
+
+interface ProvenancedMetric {
+  value?: unknown
+  source?: string
+  provenance_tier?: string
+  provenance_label?: string
+  measured?: boolean
+  verified?: boolean
+  source_count?: number
+  label?: string
+  warning?: string
+}
+
+interface SupplierIntelligenceDepth {
+  headline_tier?: string
+  label?: string
+  metrics_past_threshold?: number
+  metrics_total?: number
+  per_metric?: Record<string, { tier?: string; count?: number; source_count?: number }>
+  trajectory?: Record<string, unknown>
+}
+
+interface SupplierIntelligenceRisk {
+  tier?: string
+  basis?: string
+  basis_detail?: string
+  source_count?: number
+  reason?: string
+  warnings?: string[]
+  contributing_metrics?: Array<Record<string, unknown>>
+}
+
+interface SupplierIntelligenceCaught {
+  count?: number
+  flagged_invoice_value?: number
+  currency?: string
+  source?: string
+  label?: string
+  caveat?: string
+  warnings?: string[]
+}
+
+interface EconomicExposure {
+  amount?: number
+  currency?: string
+  computation?: string
+  source_breakdown?: Record<string, unknown>
+  caveat?: string
+  warnings?: string[]
+}
+
+interface BehavioralMetrics {
+  learned?: Record<string, ProvenancedMetric>
+  context?: Record<string, ProvenancedMetric>
+  unavailable?: string[] | Record<string, unknown>
+  warnings?: string[]
+}
+
+interface SupplierIntelligence {
+  depth?: SupplierIntelligenceDepth
+  risk?: SupplierIntelligenceRisk
+  caught?: SupplierIntelligenceCaught
+  behavioral_metrics?: BehavioralMetrics
+  economic_exposure?: EconomicExposure | { last_quarter?: EconomicExposure } | null
+  new_manager_summary?: string
+  warnings?: string[]
 }
 
 const curve = [
@@ -98,6 +168,17 @@ function formatPct(value: unknown, digits = 0): string {
   return `${pct.toFixed(digits)}%`
 }
 
+function formatMetricValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return 'Unavailable'
+  if (typeof value === 'number') {
+    if (Math.abs(value) <= 1) return formatPct(value, 1)
+    return value.toLocaleString()
+  }
+  if (typeof value === 'boolean') return value ? 'yes' : 'no'
+  if (typeof value === 'object') return JSON.stringify(value)
+  return String(value)
+}
+
 function supplierName(supplier: SupplierProfile): string {
   return supplier.name || supplier.supplier_name || supplier.supplier_id || 'Unknown supplier'
 }
@@ -112,10 +193,260 @@ function supplierOtif(supplier: SupplierProfile): number {
   return toNumber(supplier.otif_score ?? supplier.otif?.q3 ?? supplier.otif?.q1_q2)
 }
 
+function metricRows(metrics?: Record<string, ProvenancedMetric>): Array<[string, ProvenancedMetric]> {
+  return Object.entries(metrics || {}).sort(([left], [right]) => left.localeCompare(right))
+}
+
+function exposureBlock(intelligence?: SupplierIntelligence): EconomicExposure | null {
+  const exposure = intelligence?.economic_exposure
+  if (!exposure) return null
+  if ('last_quarter' in exposure) return exposure.last_quarter || null
+  return exposure as EconomicExposure
+}
+
+function safeCaveat(text?: string): string {
+  if (!text) return 'Exposure is a mixed-source estimate, not confirmed savings.'
+  return text
+    .replace(/\bROI\b/gi, 'return claim')
+    .replace(/recovered dollars/gi, 'recovery claim')
+}
+
 async function fetchJson<T>(path: string): Promise<T> {
   const response = await fetch(`${S2P_API}${path}`)
   if (!response.ok) throw new Error(`S2P preview request failed: ${response.status}`)
   return response.json() as Promise<T>
+}
+
+function Badge({ children, tone = 'gray' }: { children: string; tone?: 'blue' | 'green' | 'yellow' | 'gray' | 'red' }) {
+  const classes = {
+    blue: 'border-blue-500/40 bg-blue-500/10 text-blue-200',
+    green: 'border-green-500/40 bg-green-500/10 text-green-200',
+    yellow: 'border-yellow-500/40 bg-yellow-500/10 text-yellow-200',
+    gray: 'border-gray-700 bg-slate-900 text-gray-300',
+    red: 'border-red-500/40 bg-red-500/10 text-red-200',
+  }[tone]
+  return <span className={`rounded border px-2 py-1 text-[11px] font-semibold uppercase tracking-wide ${classes}`}>{children}</span>
+}
+
+function MetricCard({ name, metric, kind }: { name: string; metric: ProvenancedMetric; kind: 'learned' | 'context' }) {
+  const learned = kind === 'learned'
+  return (
+    <div className="rounded border border-gray-800 bg-slate-950/60 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-xs font-semibold text-gray-100">{formatLabel(name)}</div>
+          <div className="mt-1 font-mono text-sm text-gray-200">{formatMetricValue(metric.value)}</div>
+        </div>
+        <Badge tone={learned ? 'green' : 'yellow'}>{learned ? 'learned' : 'context'}</Badge>
+      </div>
+      <div className="mt-2 space-y-1 text-[11px] leading-4 text-gray-500">
+        <div>
+          {metric.source || (learned ? 'verified_outcomes' : 'context')} · {metric.provenance_tier || (learned ? 'learned' : 'context')}
+        </div>
+        <div>measured {metric.measured ? 'yes' : 'no'} · verified {metric.verified ? 'yes' : 'no'}</div>
+        {metric.source_count !== undefined && <div>{metric.source_count.toLocaleString()} source rows</div>}
+        {(metric.provenance_label || metric.label || metric.warning) && (
+          <div className="text-gray-400">{metric.provenance_label || metric.label || metric.warning}</div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SupplierIntelligenceProfilePanel({ profile }: { profile?: SupplierProfile | null }) {
+  const intelligence = profile?.intelligence
+  const depth = intelligence?.depth
+  const risk = intelligence?.risk
+  const caught = intelligence?.caught
+  const learnedRows = metricRows(intelligence?.behavioral_metrics?.learned)
+  const contextRows = metricRows(intelligence?.behavioral_metrics?.context)
+  const unavailable = intelligence?.behavioral_metrics?.unavailable
+  const exposure = exposureBlock(intelligence)
+  const canonicalRisk = risk?.tier || 'integration_pending'
+  const sourceCount = risk?.source_count ?? learnedRows.find(([, metric]) => metric.source_count !== undefined)?.[1].source_count
+
+  if (!profile || !intelligence) {
+    return (
+      <div className="rounded-lg border border-gray-800 bg-soc-card p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold text-gray-100">Supplier Intelligence Profile</h3>
+          <Badge tone="gray">integration pending</Badge>
+        </div>
+        <p className="mt-3 text-sm leading-6 text-gray-400">
+          Supplier intelligence is not available yet. Process verified decisions to build learned supplier evidence.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <section className="rounded-lg border border-emerald-500/20 bg-soc-card" aria-label="Supplier Intelligence Profile">
+      <div className="border-b border-gray-800 px-5 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-base font-semibold text-gray-100">Supplier Intelligence Profile</h3>
+            <p className="mt-1 text-xs text-gray-500">{supplierName(profile)} · compiled from verified outcomes and context sources</p>
+          </div>
+          <Badge tone="green">buyer visible</Badge>
+        </div>
+        {intelligence.new_manager_summary && (
+          <p className="mt-4 rounded border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm leading-6 text-emerald-100">
+            {intelligence.new_manager_summary}
+          </p>
+        )}
+      </div>
+
+      <div className="grid gap-5 p-5 xl:grid-cols-[0.95fr_1.05fr]">
+        <div className="space-y-5">
+          <div className="rounded-lg border border-gray-800 bg-slate-950/60 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <h4 className="text-sm font-semibold text-gray-100">Intelligence Depth</h4>
+              <Badge tone="blue">{formatLabel(depth?.headline_tier, 'none')}</Badge>
+            </div>
+            <p className="mt-2 text-sm text-gray-300">{depth?.label || '0 of 0 metrics past threshold'}</p>
+            <div className="mt-3 h-2 overflow-hidden rounded bg-slate-800">
+              <div
+                className="h-full rounded bg-emerald-400"
+                style={{
+                  width: `${Math.min(100, Math.round((toNumber(depth?.metrics_past_threshold) / Math.max(1, toNumber(depth?.metrics_total, 1))) * 100))}%`,
+                }}
+              />
+            </div>
+            <div className="mt-4 space-y-2">
+              {Object.entries(depth?.per_metric || {}).map(([name, metric]) => (
+                <div key={name} className="flex items-center justify-between rounded border border-gray-800 bg-slate-900 px-3 py-2 text-xs">
+                  <span className="text-gray-300">{formatLabel(name)}</span>
+                  <span className="font-mono text-gray-400">
+                    {formatLabel(metric.tier)} · {toNumber(metric.count ?? metric.source_count).toLocaleString()} verified decisions
+                  </span>
+                </div>
+              ))}
+              {Object.keys(depth?.per_metric || {}).length === 0 && (
+                <div className="rounded border border-gray-800 bg-slate-900 px-3 py-2 text-xs text-gray-500">
+                  No verified metric depth yet.
+                </div>
+              )}
+            </div>
+            {depth?.trajectory && Object.keys(depth.trajectory).length > 0 && (
+              <div className="mt-4 rounded border border-blue-500/20 bg-blue-500/10 p-3 text-xs text-blue-100">
+                Projection: {JSON.stringify(depth.trajectory)}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-gray-800 bg-slate-950/60 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <h4 className="text-sm font-semibold text-gray-100">Risk with Basis</h4>
+              <Badge tone={canonicalRisk === 'high' ? 'red' : canonicalRisk === 'low' ? 'green' : 'yellow'}>
+                {formatLabel(canonicalRisk)}
+              </Badge>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+              <div className="rounded border border-gray-800 bg-slate-900 p-3">
+                <div className="text-gray-500">Basis</div>
+                <div className="mt-1 text-gray-100">{formatLabel(risk?.basis, 'integration pending')}</div>
+              </div>
+              <div className="rounded border border-gray-800 bg-slate-900 p-3">
+                <div className="text-gray-500">Source count</div>
+                <div className="mt-1 font-mono text-gray-100">{sourceCount !== undefined ? sourceCount.toLocaleString() : '0'}</div>
+              </div>
+            </div>
+            {(risk?.reason || risk?.basis_detail) && <p className="mt-3 text-xs leading-5 text-gray-400">{risk.reason || risk.basis_detail}</p>}
+            {profile.risk_level && (
+              <p className="mt-3 text-xs leading-5 text-gray-500">
+                Legacy context risk level: {profile.risk_level}. Supplier intelligence risk above is canonical.
+              </p>
+            )}
+            {(risk?.warnings || intelligence.warnings || []).map((warning) => (
+              <p key={warning} className="mt-2 text-xs text-yellow-200">{formatLabel(warning)}</p>
+            ))}
+          </div>
+
+          <div className="rounded-lg border border-gray-800 bg-slate-950/60 p-4">
+            <h4 className="text-sm font-semibold text-gray-100">What the System Caught</h4>
+            <div className="mt-3 flex items-end justify-between gap-3">
+              <div>
+                <div className="font-mono text-2xl text-gray-100">{toNumber(caught?.count).toLocaleString()}</div>
+                <div className="text-xs text-gray-500">verified caught discrepancies</div>
+              </div>
+              {caught?.flagged_invoice_value !== undefined && (
+                <div className="text-right">
+                  <div className="font-mono text-lg text-yellow-200">{formatCurrency(caught.flagged_invoice_value)}</div>
+                  <div className="text-xs text-gray-500">{caught.currency || 'USD'} flagged invoice value</div>
+                </div>
+              )}
+            </div>
+            <p className="mt-3 text-xs leading-5 text-gray-400">
+              {toNumber(caught?.count) > 0
+                ? caught?.label || 'Confirmed discrepancies from verified outcomes.'
+                : 'No verified caught discrepancies yet. This does not mean there are no supplier issues.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-5">
+          <div className="rounded-lg border border-gray-800 bg-slate-950/60 p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h4 className="text-sm font-semibold text-gray-100">Learned / Verified Metrics</h4>
+              <Badge tone="green">learned</Badge>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {learnedRows.map(([name, metric]) => <MetricCard key={name} name={name} metric={metric} kind="learned" />)}
+              {learnedRows.length === 0 && (
+                <div className="rounded border border-gray-800 bg-slate-900 p-3 text-xs text-gray-500">
+                  No learned verified metrics yet.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-800 bg-slate-950/60 p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h4 className="text-sm font-semibold text-gray-100">Context / Fixture Metrics</h4>
+              <Badge tone="yellow">integration pending</Badge>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {contextRows.map(([name, metric]) => <MetricCard key={name} name={name} metric={metric} kind="context" />)}
+              {contextRows.length === 0 && (
+                <div className="rounded border border-gray-800 bg-slate-900 p-3 text-xs text-gray-500">
+                  No context metrics returned.
+                </div>
+              )}
+            </div>
+            {Array.isArray(unavailable) && unavailable.length > 0 && (
+              <div className="mt-3 rounded border border-gray-800 bg-slate-900 p-3 text-xs text-gray-500">
+                Unavailable: {unavailable.map((item) => formatLabel(item)).join(', ')}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-gray-800 bg-slate-950/60 p-4">
+            <h4 className="text-sm font-semibold text-gray-100">Economic Exposure</h4>
+            {exposure ? (
+              <>
+                <div className="mt-3 font-mono text-2xl text-gray-100">{formatCurrency(exposure.amount)}</div>
+                {exposure.computation && <p className="mt-2 text-xs text-gray-400">{exposure.computation}</p>}
+                <p className="mt-3 rounded border border-yellow-500/20 bg-yellow-500/10 p-3 text-xs leading-5 text-yellow-100">
+                  {safeCaveat(exposure.caveat)}
+                </p>
+                {exposure.source_breakdown && (
+                  <div className="mt-3 grid gap-2 text-xs">
+                    {Object.entries(exposure.source_breakdown).map(([name, value]) => (
+                      <div key={name} className="rounded border border-gray-800 bg-slate-900 px-3 py-2 text-gray-400">
+                        {formatLabel(name)}: {formatMetricValue(value)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="mt-3 text-sm text-gray-400">Economic exposure unavailable. Connect verified amount sources before using exposure for escalation.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
 }
 
 function CurveChart() {
@@ -180,7 +511,14 @@ export default function S2PPreviewTab() {
           fetchJson<ConservationResponse>('/api/s2p/preview/conservation'),
           fetchJson<SuppliersResponse>('/api/s2p/preview/suppliers'),
         ])
-        if (!cancelled) setData({ queue, conservation, suppliers })
+        const supplierRows = suppliers.suppliers || []
+        const chenLin = supplierRows.find((supplier) => /chen-lin/i.test(supplierName(supplier)))
+        const selectedSupplier = chenLin || supplierRows[0]
+        let profile: SupplierProfile | null = null
+        if (selectedSupplier?.supplier_id) {
+          profile = await fetchJson<SupplierProfile>(`/api/s2p/suppliers/${encodeURIComponent(selectedSupplier.supplier_id)}/profile`).catch(() => null)
+        }
+        if (!cancelled) setData({ queue, conservation, suppliers, profile })
       } catch (err) {
         if (!cancelled) {
           setData(null)
@@ -199,6 +537,7 @@ export default function S2PPreviewTab() {
   const version = data?.queue.engine_version || data?.conservation.engine_version || data?.suppliers.engine_version || 'v0.7.23'
   const exceptions = data?.queue.exceptions || []
   const suppliers = useMemo(() => data?.suppliers.suppliers || [], [data?.suppliers.suppliers])
+  const intelligenceProfile = data?.profile
   const preferredSuppliers = useMemo(() => {
     const chenLin = suppliers.find((supplier) => /chen-lin/i.test(supplierName(supplier)))
     return chenLin ? [chenLin, ...suppliers.filter((supplier) => supplier !== chenLin)] : suppliers
@@ -344,6 +683,8 @@ export default function S2PPreviewTab() {
           </div>
         </div>
       </div>
+
+      <SupplierIntelligenceProfilePanel profile={intelligenceProfile} />
 
       <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-5 text-center text-sm text-blue-100">
         The engine is domain-agnostic. The intelligence is firm-specific.

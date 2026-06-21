@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -105,7 +105,7 @@ def _coerce_tensor(payload: dict[str, Any], snapshot_id: str) -> np.ndarray:
         raise SnapshotCorruptError(f"Snapshot {snapshot_id} tensor parse failed: {exc}") from exc
 
     shape = payload.get("shape")
-    if list(tensor.shape) != list(shape):
+    if list(tensor.shape) != list(cast(Any, shape)):
         raise SnapshotCorruptError(
             f"Snapshot {snapshot_id} shape mismatch: payload={shape}, actual={list(tensor.shape)}"
         )

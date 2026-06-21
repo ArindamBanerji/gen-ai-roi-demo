@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, cast
 
 from app.domains.soc.config import ALERT_TYPE_CATEGORY_MAP, SOC_CATEGORIES
 from app.seed.config import SeedConfig
@@ -18,7 +18,7 @@ SOURCE_LOCATIONS = (
 
 
 def category_to_alert_types() -> dict[str, list[str]]:
-    grouped = {cat: [] for cat in SOC_CATEGORIES}
+    grouped: dict[str, list[str]] = {cat: [] for cat in SOC_CATEGORIES}
     for alert_type, category in ALERT_TYPE_CATEGORY_MAP.items():
         if category in grouped:
             grouped[category].append(alert_type)
@@ -86,8 +86,8 @@ def _pattern_for_category(
 ) -> str:
     matching = [p["pattern_id"] for p in attack_patterns if p.get("category") == category]
     if matching:
-        return matching[index % len(matching)]
-    return attack_patterns[index % len(attack_patterns)]["pattern_id"] if attack_patterns else ""
+        return cast(str, matching[index % len(matching)])
+    return cast(str, attack_patterns[index % len(attack_patterns)]["pattern_id"]) if attack_patterns else ""
 
 
 def _indicator_ids(

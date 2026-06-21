@@ -11,7 +11,7 @@ import logging
 import re
 from importlib import util as importlib_util
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -152,8 +152,8 @@ def _age_literal(value: Any) -> str:
     if isinstance(value, (int, float)):
         return str(value)
     if isinstance(value, (list, tuple, dict)):
-        return _S(json.dumps(value))
-    return _S(value)
+        return cast(str, _S(json.dumps(value)))
+    return cast(str, _S(value))
 
 
 def _props_clause(props: Dict[str, Any]) -> str:
@@ -189,7 +189,7 @@ async def _write_manifest_to_graph(
 
     nodes = list(getattr(manifest, "nodes", []) or [])
     relationships = list(getattr(manifest, "relationships", []) or [])
-    summary = {
+    summary: dict[str, Any] = {
         "nodes_attempted": len(nodes),
         "nodes_written": 0,
         "relationships_attempted": len(relationships),

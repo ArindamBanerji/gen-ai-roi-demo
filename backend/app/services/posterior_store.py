@@ -59,6 +59,7 @@ class PosteriorStore:
                     )
             import psycopg
 
+            conn: Any
             with psycopg.connect(self._dsn) as conn:
                 with conn.cursor() as cur:
                     cur.execute("DELETE FROM rl_posteriors")
@@ -80,6 +81,7 @@ class PosteriorStore:
             self._ensure_table()
             import psycopg
 
+            conn: Any
             with psycopg.connect(self._dsn) as conn:
                 with conn.cursor() as cur:
                     cur.execute("SELECT category, action, alpha, beta FROM rl_posteriors")
@@ -101,6 +103,7 @@ class PosteriorStore:
             self._ensure_table()
             import psycopg
 
+            conn: Any
             with psycopg.connect(self._dsn) as conn:
                 with conn.cursor() as cur:
                     cur.execute("DELETE FROM rl_posteriors")
@@ -118,6 +121,7 @@ class PosteriorStore:
     def _ping_storage(self) -> None:
         import psycopg
 
+        conn: Any
         with psycopg.connect(self._dsn) as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT 1")
@@ -127,6 +131,7 @@ class PosteriorStore:
             return
         import psycopg
 
+        conn: Any
         with psycopg.connect(self._dsn) as conn:
             with conn.cursor() as cur:
                 cur.execute(

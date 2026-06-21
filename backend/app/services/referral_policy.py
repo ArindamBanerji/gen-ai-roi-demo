@@ -15,7 +15,7 @@ the caller should fall back to the second-best action via get_fallback_action().
 """
 
 import numpy as np
-from typing import Optional
+from typing import Any, Optional
 
 # Action index for refer_to_analyst in SOC_ACTIONS
 REFER_ACTION_INDEX = 4
@@ -34,7 +34,7 @@ MARGIN_THRESHOLD = 0.20
 # These represent "red flag" combinations where referral is too risky.
 # Factor indices: 1=asset_criticality, 2=threat_intel_enrichment,
 #                 3=pattern_history, 4=time_anomaly
-CATEGORY_OVERRIDES = {
+CATEGORY_OVERRIDES: dict[str, dict[str, Any]] = {
     "malware_execution": {
         "condition": "threat_intel_enrichment > threshold",
         "factor_index": 2,

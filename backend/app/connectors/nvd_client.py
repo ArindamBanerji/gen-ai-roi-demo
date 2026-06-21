@@ -9,7 +9,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Mapping
+from typing import Mapping, cast
 
 
 class NVDClient:
@@ -46,7 +46,7 @@ class NVDClient:
             request.add_header("apiKey", self._api_key)
 
         with urllib.request.urlopen(request, timeout=30) as response:
-            payload = json.loads(response.read().decode("utf-8"))
+            payload = cast(dict, json.loads(response.read().decode("utf-8")))
             delay = self.rate_limit_delay(response.headers)
             if delay > 0:
                 time.sleep(min(delay, 30))
@@ -108,7 +108,7 @@ class NVDClient:
     def _english_description(cve: dict) -> str:
         for desc in cve.get("descriptions", []):
             if desc.get("lang") == "en":
-                return desc.get("value", "")
+                return cast(str, desc.get("value", ""))
         return ""
 
     @staticmethod

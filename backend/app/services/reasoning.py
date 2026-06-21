@@ -6,7 +6,7 @@ The LLM's ONLY job: Generate a 2-3 sentence justification AFTER the agent decide
 This is narration, not decision-making.
 """
 import os
-from typing import Dict, Any
+from typing import Dict, Any, cast
 
 
 class ReasoningNarrator:
@@ -71,7 +71,7 @@ Sound like an experienced security analyst.
 
         try:
             response = await self.model.generate_content_async(prompt)
-            return response.text.strip()
+            return cast(str, response.text).strip()
         except Exception as e:
             # Fallback reasoning if LLM fails
             return self._fallback_reasoning(action, context)

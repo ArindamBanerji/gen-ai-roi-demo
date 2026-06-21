@@ -9,7 +9,7 @@ import os
 import time
 from fastapi import APIRouter, HTTPException
 from pathlib import Path
-from typing import List, Dict, Any, Iterator
+from typing import List, Dict, Any, Iterator, cast
 from datetime import datetime
 import uuid
 
@@ -23,6 +23,7 @@ from app.services.triage import get_decision_factors, append_confidence_snapshot
 from app.services.audit import record_decision
 from app.services.event_bus import event_bus, DecisionMade, OutcomeVerified, GraphMutated
 from app.services.soc_context_split import split_soc_security_context
+from app.services.soc_situation_pattern import build_campaign_context_payload
 from ci_platform.copilot_core import EntityCache, EntityContextCacheAdapter
 
 
@@ -105,7 +106,7 @@ def _soc_reset_entity_cache_for_tests() -> None:
 
 
 def _soc_invalidate_entity_context(domain: str, kind: str, identifier: str) -> bool:
-    return _SOC_ENTITY_CONTEXT_CACHE.invalidate(domain, kind, identifier)
+    return cast(bool, _SOC_ENTITY_CONTEXT_CACHE.invalidate(domain, kind, identifier))
 
 
 async def _soc_maybe_attach_decision_pipeline_shadow(
@@ -161,9 +162,9 @@ async def _soc_maybe_attach_decision_pipeline_shadow(
 
 async def _soc_get_security_context_for_analyze(alert_id: str) -> Dict[str, Any]:
     if not _soc_entity_cache_enabled():
-        return await neo4j_client.get_security_context(alert_id)
+        return cast(Dict[str, Any], await neo4j_client.get_security_context(alert_id))
 
-    flat_context = await neo4j_client.get_security_context(alert_id)
+    flat_context = cast(Dict[str, Any], await neo4j_client.get_security_context(alert_id))
     split = split_soc_security_context(flat_context)
     if split.cache_key is None:
         return split.recompose_for_current_route()
@@ -866,6 +867,12 @@ async def analyze_alert(request: ProcessAlertRequest):
         # ====================================================================
         # Step 5b: Campaign correlation (F6) — non-blocking
         # ====================================================================
+        _campaign_id = None
+        _campaign_context_payload = None
+        _campaign_context_flags: dict[str, bool | str | None] = {
+            "is_campaign_alert": False,
+            "campaign_context_shown": False,
+        }
         try:
             with _soc_perf_phase(
                 "campaign_correlation",
@@ -885,13 +892,35 @@ async def analyze_alert(request: ProcessAlertRequest):
                     neo4j_client, _camp_config, _camp_engine, _camp_repo
                 )
                 _campaign_id = await _camp_matcher.check_alert(alert_id)
-                if _campaign_id:
-                    await neo4j_client.run_query(
-                        f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
-                        f"SET d.campaign_id = {_S(_campaign_id)}"
-                    )
+                _campaign_context_payload, _campaign_context_flags = build_campaign_context_payload(
+                    campaign_id=_campaign_id,
+                    async_state=_camp_matcher.async_state,
+                    alert_id=alert_id,
+                )
         except Exception as _camp_exc:
             logger.warning("[TRIAGE] Campaign wiring failed for %s: %s", alert_id, _camp_exc)
+        try:
+            _campaign_set_clauses = [
+                f"d.is_campaign_alert = {_S(_campaign_context_flags['is_campaign_alert'])}",
+                f"d.campaign_context_shown = {_S(_campaign_context_flags['campaign_context_shown'])}",
+            ]
+            if _campaign_id:
+                _campaign_set_clauses.insert(0, f"d.campaign_id = {_S(_campaign_id)}")
+            if _campaign_context_flags.get("is_campaign_alert"):
+                _campaign_set_clauses.append(
+                    "d.campaign_advisory_version = "
+                    f"{_S(_campaign_context_flags.get('campaign_advisory_version'))}"
+                )
+            await neo4j_client.run_query(
+                f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
+                f"SET {', '.join(_campaign_set_clauses)}"
+            )
+        except Exception as _camp_flag_exc:
+            logger.warning(
+                "[TRIAGE] Campaign Decision flag write failed for %s: %s",
+                alert_id,
+                _camp_flag_exc,
+            )
 
         # ====================================================================
         # Step 5c: Sentinel write-back (Block 7.1) — fire-and-forget
@@ -1244,6 +1273,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             },
             "graph_data": graph_data,
             "situation_analysis": situation_analysis.model_dump(),
+            "campaign_context": _campaign_context_payload,
             "composite_gate": {
                 "auto_approve":   _composite["auto_approve"],
                 "approval_score": _composite["approval_score"],
@@ -1656,7 +1686,7 @@ async def report_decision_outcome(request: OutcomeRequest):
 
         # Per-analyst η: identity from SAML JWT "sub" claim; "anonymous" when auth is off
         try:
-            analyst_id = (request.state.user or {}).get("sub", "anonymous")
+            analyst_id = (cast(Any, request).state.user or {}).get("sub", "anonymous")
         except AttributeError:
             analyst_id = "anonymous"
         _analyst_eta = None  # populated below after quality lookup
@@ -1680,7 +1710,15 @@ async def report_decision_outcome(request: OutcomeRequest):
                     d.correct           = {'true' if correct_bool else 'false'},
                     d.verified_at_epoch = {_ts_outcome},
                     d.override_comment  = {_S(request.override_comment or '')},
-                    d.verified_by       = {_S(analyst_id)}
+                    d.verified_by       = {_S(analyst_id)},
+                    d.analyst_action    = {_S(request.analyst_action)},
+                    d.final_action      = {_S(request.analyst_action)},
+                    d.recommended_action = d.action,
+                    d.was_override      = CASE
+                        WHEN {_S(request.analyst_action)} IS NULL THEN false
+                        ELSE d.action <> {_S(request.analyst_action)}
+                    END,
+                    d.quality_signal    = {1.0 if correct_bool else 0.0}
                 RETURN d.factor_vector AS factor_vector,
                        d.action        AS action,
                        d.confidence    AS confidence,
@@ -2609,8 +2647,9 @@ async def check_policy_conflicts(alert_id: str):
 
         print(f"[POLICY] Conflict detected: {result.has_conflict}")
         if result.has_conflict:
+            resolution = cast(Any, result.resolution)
             print(f"[POLICY] Policies in conflict: {[p.id for p in result.conflicting_policies]}")
-            print(f"[POLICY] Winner: {result.resolution.winning_policy}")
+            print(f"[POLICY] Winner: {resolution.winning_policy}")
         else:
             print(f"[POLICY] Policies applied: {[p.id for p in result.policies_applied]}")
 

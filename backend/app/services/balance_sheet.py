@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 _log = logging.getLogger(__name__)
 
@@ -146,7 +146,7 @@ async def _safe_auto_approve_stats() -> dict[str, Any]:
     try:
         from app.routers.framework_router import auto_approve_stats
 
-        return await auto_approve_stats()
+        return cast(dict[str, Any], await auto_approve_stats())
     except Exception as exc:
         _log.warning("auto_approve_coverage_pct(balance_sheet): stats fetch failed — returning 0.0 (source=fallback): %s", exc)
         return {"by_category": {}, "coverage_pct": 0.0, "total_decisions": 0, "auto_approved": 0}

@@ -1,8 +1,9 @@
 """
 tests/test_campaign_engine.py — F6 CampaignCorrelationEngine test suite.
 
-8 tests covering rule priority, kill-chain detection, shared-entity grouping,
-temporal clustering, no-false-positive guard, de-duplication, and determinism.
+8 tests covering Phase 1 campaign identity authority: category/entity/bucket
+separation, no no-entity campaigns, no-false-positive guard, de-duplication,
+and stable deterministic identity.
 
 Run from backend/:
     pytest tests/test_campaign_engine.py -v
@@ -41,14 +42,13 @@ DEFAULT_CONFIG = {
 
 
 # ============================================================================
-# Test 1 — Rule 2: technique_sequence detects 2-stage kill chain
+# Test 1 — Phase 1 defers cross-category kill-chain campaigns
 # ============================================================================
 
-def test_rule2_technique_sequence_detects_kill_chain():
+def test_phase1_defers_two_stage_cross_category_kill_chain():
     """
-    credential_access → lateral_movement on the same entity matches
-    'credential_then_lateral'. trigger_rule must be 'technique_sequence'
-    and confidence must be 0.85.
+    Phase 1 L1 campaigns are bounded by category as part of stable identity.
+    Cross-category attack-chain semantics are deferred to Level 2 / Phase 4.
     """
     events = [
         make_event("a1", "credential_access", 0,   source_entity_id="ip-1"),
@@ -57,26 +57,17 @@ def test_rule2_technique_sequence_detects_kill_chain():
     engine = CampaignCorrelationEngine(DEFAULT_CONFIG)
     campaigns = engine.correlate(events)
 
-    assert len(campaigns) == 1, (
-        f"Expected 1 campaign for 2-stage kill chain. Got {len(campaigns)}"
-    )
-    assert campaigns[0].trigger_rule == "technique_sequence", (
-        f"Expected trigger_rule='technique_sequence'. Got: {campaigns[0].trigger_rule!r}"
-    )
-    assert campaigns[0].confidence == 0.85, (
-        f"Expected confidence=0.85. Got: {campaigns[0].confidence}"
-    )
+    assert campaigns == []
 
 
 # ============================================================================
-# Test 2 — Rule 2: three-stage kill chain (credential → lateral → exfil)
+# Test 2 — Phase 1 does not create L1 multi-category attack chains
 # ============================================================================
 
-def test_rule2_three_stage_kill_chain():
+def test_phase1_defers_three_stage_cross_category_kill_chain():
     """
-    credential_access → lateral_movement → data_exfiltration matches
-    'credential_then_lateral_then_exfil'. Both endpoints must appear in
-    category_sequence.
+    Same-entity, multi-category chains must not be merged into one L1 Campaign.
+    CONTINUES/AttackChain-style continuity is later-phase work.
     """
     events = [
         make_event("a1", "credential_access", 0,   source_entity_id="ip-1"),
@@ -86,17 +77,7 @@ def test_rule2_three_stage_kill_chain():
     engine = CampaignCorrelationEngine(DEFAULT_CONFIG)
     campaigns = engine.correlate(events)
 
-    assert len(campaigns) == 1, (
-        f"Expected 1 campaign for 3-stage kill chain. Got {len(campaigns)}"
-    )
-    assert "credential_access" in campaigns[0].category_sequence, (
-        f"category_sequence must include 'credential_access'. "
-        f"Got: {campaigns[0].category_sequence}"
-    )
-    assert "data_exfiltration" in campaigns[0].category_sequence, (
-        f"category_sequence must include 'data_exfiltration'. "
-        f"Got: {campaigns[0].category_sequence}"
-    )
+    assert campaigns == []
 
 
 # ============================================================================
@@ -105,13 +86,12 @@ def test_rule2_three_stage_kill_chain():
 
 def test_rule1_shared_entity_groups_alerts():
     """
-    Two alerts on the same entity (user-x) with no kill-chain match.
-    Must produce 1 campaign with user-x in shared_entities.
-    trigger_rule may be technique_sequence (if chain matched) or shared_entity.
+    Two same-category alerts on the same entity produce one Phase 1 L1 campaign.
+    MEMBER_OF is the canonical live edge for this materialized campaign.
     """
     events = [
-        make_event("a1", "credential_access",    0,  source_entity_id="user-x"),
-        make_event("a2", "cloud_infrastructure", 30, source_entity_id="user-x"),
+        make_event("a1", "credential_access", 0,  source_entity_id="user-x"),
+        make_event("a2", "credential_access", 30, source_entity_id="user-x"),
     ]
     engine = CampaignCorrelationEngine(DEFAULT_CONFIG)
     campaigns = engine.correlate(events)
@@ -119,23 +99,23 @@ def test_rule1_shared_entity_groups_alerts():
     assert len(campaigns) == 1, (
         f"Expected 1 campaign for 2 alerts on same entity. Got {len(campaigns)}"
     )
-    assert campaigns[0].trigger_rule in ("technique_sequence", "shared_entity"), (
+    assert campaigns[0].trigger_rule in ("technique_sequence", "shared_entity", "temporal"), (
         f"Unexpected trigger_rule: {campaigns[0].trigger_rule!r}"
     )
-    assert "user-x" in campaigns[0].shared_entities, (
-        f"shared_entities must contain 'user-x'. Got: {campaigns[0].shared_entities}"
+    assert campaigns[0].derived_entity_key == "entity:user-x", (
+        f"Expected type-prefixed derived entity. Got: {campaigns[0].derived_entity_key}"
     )
+    assert campaigns[0].category == "credential_access"
 
 
 # ============================================================================
-# Test 4 — Rule 3: temporal clusters same-category alerts
+# Test 4 — Phase 1 skips no-entity temporal clusters
 # ============================================================================
 
 def test_rule3_temporal_clusters_same_category():
     """
-    3 credential_access alerts with no entity — falls through to temporal rule.
-    All within 60-minute window → 1 cluster → 1 campaign.
-    trigger_rule must be 'temporal', confidence must be 0.45.
+    Phase 1 requires a derived entity key. No-entity temporal clusters are not
+    materialized as Campaign nodes.
     """
     events = [
         make_event("a1", "credential_access", 0,  source_entity_id=None),
@@ -145,15 +125,7 @@ def test_rule3_temporal_clusters_same_category():
     engine = CampaignCorrelationEngine(DEFAULT_CONFIG)
     campaigns = engine.correlate(events)
 
-    assert len(campaigns) == 1, (
-        f"Expected 1 temporal campaign. Got {len(campaigns)}"
-    )
-    assert campaigns[0].trigger_rule == "temporal", (
-        f"Expected trigger_rule='temporal'. Got: {campaigns[0].trigger_rule!r}"
-    )
-    assert campaigns[0].confidence == 0.45, (
-        f"Expected confidence=0.45 for temporal rule. Got: {campaigns[0].confidence}"
-    )
+    assert campaigns == []
 
 
 # ============================================================================
@@ -209,12 +181,13 @@ def test_each_alert_in_at_most_one_campaign():
 
 def test_campaign_id_deterministic():
     """
-    Running correlate() twice on the same events must produce campaigns with
-    identical campaign_ids — UUID5 from sorted alert_ids is deterministic.
+    Running correlate() twice on the same Phase 1 identity tuple must produce
+    identical campaign_ids. Identity is stable tuple-derived, not member-set
+    derived, so the ID remains stable as members grow.
     """
     events = [
         make_event("a1", "credential_access", 0,  source_entity_id="ip-1"),
-        make_event("a2", "lateral_movement",  60, source_entity_id="ip-1"),
+        make_event("a2", "credential_access", 60, source_entity_id="ip-1"),
     ]
     engine = CampaignCorrelationEngine(DEFAULT_CONFIG)
     campaigns1 = engine.correlate(events)
@@ -227,16 +200,20 @@ def test_campaign_id_deterministic():
         f"Campaign ID must be deterministic. "
         f"Run 1: {campaigns1[0].campaign_id}, Run 2: {campaigns2[0].campaign_id}"
     )
+    grown_campaign = engine.correlate(events + [
+        make_event("a3", "credential_access", 90, source_entity_id="ip-1"),
+    ])[0]
+    assert grown_campaign.campaign_id == campaigns1[0].campaign_id
 
 
 # ============================================================================
-# Test 8 — Temporal window respects config (split into 2 clusters)
+# Test 8 — No-entity temporal windows do not create Phase 1 campaigns
 # ============================================================================
 
 def test_temporal_window_respects_config():
     """
-    With temporal_window_minutes=10, a 20-minute gap between pairs must
-    produce 2 separate campaigns (two clusters of 2).
+    Temporal clustering alone is not enough in Phase 1. Without a derived
+    entity key, even close same-category alerts are left unmaterialized.
     """
     config = {**DEFAULT_CONFIG, "temporal_window_minutes": 10}
     events = [
@@ -248,8 +225,4 @@ def test_temporal_window_respects_config():
     engine = CampaignCorrelationEngine(config)
     campaigns = engine.correlate(events)
 
-    assert len(campaigns) == 2, (
-        f"Expected 2 temporal clusters (gap=20min > window=10min). "
-        f"Got {len(campaigns)}: "
-        f"{[(c.member_alert_ids, c.trigger_rule) for c in campaigns]}"
-    )
+    assert campaigns == []

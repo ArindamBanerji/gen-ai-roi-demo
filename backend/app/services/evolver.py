@@ -5,7 +5,7 @@ The SOC service keeps the historical public module API used by routers/tests, wh
 delegating prompt variant selection, outcome stats, and promotion decisions to the
 SDK PromptVariantEvolver.
 """
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from pydantic import BaseModel
 
@@ -36,8 +36,8 @@ def _initial_active_prompts() -> Dict[str, str]:
 
 # Legacy SOC-facing compatibility mirrors. Routers use functions, but existing
 # tests and demos also inspect/mutate these maps directly.
-PROMPT_STATS: Dict[str, Dict[str, float]] = _initial_prompt_stats()
-CATEGORY_PROMPT_STATS: Dict[str, Dict[str, Dict[str, float]]] = {}
+PROMPT_STATS: Dict[str, Dict[str, Any]] = _initial_prompt_stats()
+CATEGORY_PROMPT_STATS: Dict[str, Dict[str, Dict[str, Any]]] = {}
 ACTIVE_PROMPTS: Dict[str, str] = _initial_active_prompts()
 RECENT_PROMOTIONS: Dict[str, Dict[str, Any]] = {}
 WEIGHT_HISTORY: List[Dict[str, Any]] = []
@@ -228,10 +228,10 @@ def _normalize_category(
     if alert_type:
         mapped = ALERT_TYPE_CATEGORY_MAP.get(alert_type)
         if mapped in valid_names:
-            return mapped
+            return cast(str, mapped)
 
     if category:
-        return getattr(category, "name", category)
+        return cast(str, getattr(category, "name", category))
 
     return UNCLASSIFIED_CATEGORY if alert_type else None
 
@@ -249,7 +249,7 @@ def _select_category_ucb_variant(category: Optional[str]) -> Optional[str]:
         variant_id: _evolver.store.get_category_stats(category, variant_id)
         for variant_id in variant_ids
     }
-    return _evolver._select_ucb(stats_by_variant, variant_ids)
+    return cast(Optional[str], _evolver._select_ucb(stats_by_variant, variant_ids))
 
 
 def _legacy_prompt_variant(
@@ -279,8 +279,8 @@ def _legacy_prompt_variant(
                 for attr in ("prompt_id_variant", "prompt_variant", "variant_id"):
                     value = artifact.get(attr)
                     if value:
-                        return value
-                return module.variant_id
+                        return cast(str, value)
+                return cast(str, module.variant_id)
     except Exception:
         pass
 

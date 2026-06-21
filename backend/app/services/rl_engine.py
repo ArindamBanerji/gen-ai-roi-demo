@@ -12,7 +12,7 @@ import math
 import random
 import time
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 from app.domains.soc.severity import get_severity_weights
 
@@ -474,7 +474,7 @@ class CreditAssigner:
             if decision_id == source_decision_id:
                 continue
             try:
-                decision_number = int(row.get("decision_number"))
+                decision_number = int(cast(Any, row.get("decision_number")))
             except (TypeError, ValueError):
                 continue
             age = max(0, current_number - decision_number)

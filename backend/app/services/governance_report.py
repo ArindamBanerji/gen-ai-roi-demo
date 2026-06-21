@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 from app.db.neo4j import neo4j_client
@@ -133,19 +133,19 @@ async def _collect_centroid_export() -> dict[str, Any]:
 async def _collect_tab2_evidence() -> dict[str, Any]:
     from app.routers.soc import _tab2_content
 
-    return await _tab2_content()
+    return cast(dict[str, Any], await _tab2_content())
 
 
 async def _collect_executive_narrative() -> dict[str, Any]:
     from app.services.executive_narrative import build_executive_narrative_async
 
-    return await build_executive_narrative_async(neo4j_client)
+    return cast(dict[str, Any], await build_executive_narrative_async(neo4j_client))
 
 
 async def _collect_auto_approve_stats() -> dict[str, Any]:
     from app.routers.framework_router import auto_approve_stats
 
-    return await auto_approve_stats()
+    return cast(dict[str, Any], await auto_approve_stats())
 
 
 async def _collect_epistemic_state() -> dict[str, Any]:
@@ -164,7 +164,7 @@ async def _collect_epistemic_state() -> dict[str, Any]:
 async def _collect_analyst_benchmarking() -> dict[str, Any]:
     from app.routers.soc import get_analyst_benchmarking
 
-    return await get_analyst_benchmarking()
+    return cast(dict[str, Any], await get_analyst_benchmarking())
 
 
 async def generate_governance_report() -> GovernanceReport:
@@ -177,11 +177,12 @@ async def generate_governance_report() -> GovernanceReport:
     epistemic_state = await _collect_epistemic_state()
     analyst_benchmarking = await _collect_analyst_benchmarking()
 
-    decision_count = int(
+    decision_count = int(cast(
+        Any,
         epistemic_state.get("total_verified")
         or audit_decisions.get("total")
-        or auto_approve.get("total_decisions", 0)
-    )
+        or auto_approve.get("total_decisions", 0),
+    ))
     learning_status = learning_health.get("status", "UNKNOWN")
     pre_activation = bool(learning_health.get("pre_activation", False))
     art9_summary = "Controls that monitor learning quality, trigger safeguards, and disclose known residual risks."

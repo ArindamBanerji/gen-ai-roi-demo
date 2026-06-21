@@ -1,7 +1,7 @@
 """
 tests/test_campaign_schema.py — F6 Campaign schema test suite.
 
-7 tests covering pure-Python helpers: make_campaign_id, is_subsequence,
+7 tests covering pure-Python helpers: make_campaign_identity_key, is_subsequence,
 derive_severity, sliding_window_cluster, compute_confidence.
 
 Run from backend/:
@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from datetime import datetime, timedelta
 
 from app.domains.soc.campaigns import (
-    make_campaign_id,
+    make_campaign_identity_key,
     is_subsequence,
     derive_severity,
     sliding_window_cluster,
@@ -28,21 +28,26 @@ from app.domains.soc.campaigns import (
 
 
 # ============================================================================
-# Test 1 — make_campaign_id is order-independent
+# Test 1 — Phase 1 campaign identity is tuple-stable
 # ============================================================================
 
-def test_make_campaign_id_deterministic():
+def test_make_campaign_identity_key_deterministic_and_member_independent():
     """
-    UUID5 is derived from sorted alert IDs, so input order must not matter.
-    Two calls with the same IDs in different order must produce the same ID.
+    Phase 1 campaign IDs are derived from rule/entity/category/bucket, not the
+    member alert set. Adding members therefore cannot change the ID.
     """
-    id1 = make_campaign_id(["a", "b", "c"])
-    id2 = make_campaign_id(["c", "a", "b"])
+    id1 = make_campaign_identity_key("shared_entity", "user:U1", "credential_access", 493112)
+    id2 = make_campaign_identity_key("shared_entity", "user:U1", "credential_access", 493112)
+    different_category = make_campaign_identity_key(
+        "shared_entity", "user:U1", "lateral_movement", 493112
+    )
 
     assert id1 == id2, (
-        f"make_campaign_id must be order-independent (sorts before uuid5). "
+        f"make_campaign_identity_key must be deterministic for the same tuple. "
         f"Got id1={id1!r}, id2={id2!r}"
     )
+    assert id1 != different_category
+    assert id1.startswith("L1-")
 
 
 # ============================================================================

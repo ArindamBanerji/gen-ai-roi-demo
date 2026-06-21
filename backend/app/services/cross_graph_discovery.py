@@ -14,7 +14,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, cast
 
 import numpy as np
 
@@ -410,7 +410,7 @@ class DiscoveryService:
 
     @staticmethod
     def _copy_envelope(envelope: dict[str, Any]) -> dict[str, Any]:
-        return json.loads(json.dumps(envelope))
+        return cast(dict[str, Any], json.loads(json.dumps(envelope)))
 
     def _stale_envelope(
         self,
@@ -512,7 +512,7 @@ class DiscoveryService:
 
         # Pre-filter to qualifying entities before fetching TI
         def _qualify(rows: list[dict[str, Any]]) -> list[tuple]:
-            result = []
+            result: list[tuple[Any, ...]] = []
             for row in rows or []:
                 filtered = self._aligned_alert_rows(row, baseline_cutoff, as_of_epoch_ms)
                 alert_ids = [item["alert_id"] for item in filtered]

@@ -14,6 +14,8 @@ Reference: docs/soc_copilot_design_v5_6_part1.md §23.3
 
 from __future__ import annotations
 
+from typing import cast
+
 
 # ---------------------------------------------------------------------------
 # _SafeMap: safe context wrapper — missing keys render as "[N/A]"
@@ -319,7 +321,7 @@ class NLTemplateEngine:
         Missing context keys render as "[N/A]" — never raises KeyError.
         """
         template = self._L1_MAP.get(category, self.L1_GENERIC)
-        return template.format_map(self._safe(context))
+        return cast(str, template).format_map(self._safe(context))
 
     def render_l1_refer(self, context: dict) -> str:
         """Render the refer-to-analyst L1 template."""
@@ -344,7 +346,7 @@ class NLTemplateEngine:
                 f"RISK_POSTURE, AUTO_APPROVE_BREAKDOWN, IKS_NARRATIVE, "
                 f"SHADOW_STATUS, THREAT_GRAPH"
             )
-        return template.format_map(self._safe(context))
+        return cast(str, template).format_map(self._safe(context))
 
     def render_l3(self, template_name: str, context: dict) -> str:
         """Render a named L3 template.
@@ -359,7 +361,7 @@ class NLTemplateEngine:
                 f"Valid names: DECISION_RECORD, LEARNING_EVENT, CENTROID_STATE, "
                 f"DRIFT_ALERT, RESET_EVENT, OVERRIDE_RECORD, WEEKLY_AUDIT, MODEL_CARD"
             )
-        return template.format_map(self._safe(context))
+        return cast(str, template).format_map(self._safe(context))
 
     def render_shadow_disagreement(self, decision: dict, alert: dict) -> str:
         """Generate an explanation for a shadow-mode disagreement entry."""

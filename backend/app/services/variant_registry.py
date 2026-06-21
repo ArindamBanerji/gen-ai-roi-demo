@@ -13,7 +13,7 @@ import logging
 import time
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from gae.evolution import (
     ARTIFACT_CONTEXT_POLICY,
@@ -45,7 +45,7 @@ VALID_STATUSES = {
     ROLLED_BACK,
 }
 
-_VALID_TRANSITIONS = {
+_VALID_TRANSITIONS: dict[str, set[str]] = {
     CANDIDATE: {SHADOW, REJECTED},
     SHADOW: {ACTIVE, REJECTED},
     ACTIVE: {ROLLED_BACK},
@@ -53,7 +53,7 @@ _VALID_TRANSITIONS = {
     ROLLED_BACK: set(),
 }
 
-_DEDUP_STATUSES = {CANDIDATE, SHADOW, ACTIVE}
+_DEDUP_STATUSES: set[str] = {CANDIDATE, SHADOW, ACTIVE}
 _REGISTRY: dict[str, "VariantRecord"] = {}
 
 
@@ -151,6 +151,7 @@ def _record_from_created(row: dict[str, Any]) -> VariantRecord | None:
     artifact_type = _first_string(_row_value(row, "artifact_type"))
     if not variant_id or artifact_type not in VALID_ARTIFACT_TYPES:
         return None
+    artifact_type = cast(str, artifact_type)
 
     after_state = _parse_json_state(_row_value(row, "after_state"))
     metadata = _parse_json_state(_row_value(row, "metadata"))

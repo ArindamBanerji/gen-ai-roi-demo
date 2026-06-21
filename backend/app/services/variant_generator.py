@@ -7,7 +7,7 @@ import logging
 import re
 import time
 from dataclasses import dataclass
-from typing import Any, Optional, Protocol
+from typing import Any, Optional, Protocol, overload
 
 from gae.evolution import (
     ARTIFACT_CONTEXT_POLICY,
@@ -133,7 +133,17 @@ def _record(
     )
 
 
+@overload
 def _first_string(*values: Any, default: str = "") -> str:
+    ...
+
+
+@overload
+def _first_string(*values: Any, default: None) -> str | None:
+    ...
+
+
+def _first_string(*values: Any, default: str | None = "") -> str | None:
     for value in values:
         if value is None:
             continue

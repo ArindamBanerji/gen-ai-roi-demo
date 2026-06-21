@@ -12,7 +12,7 @@ import logging
 import time
 from dataclasses import dataclass
 from statistics import pstdev
-from typing import Any, Optional
+from typing import Any, Optional, overload
 
 from gae.evolution import (
     PROMOTION_APPROVED,
@@ -55,7 +55,17 @@ class PromotionResult:
     gate_evidence: Optional[dict[str, Any]] = None
 
 
+@overload
 def _as_float(value: Any, default: float = 0.0) -> float:
+    ...
+
+
+@overload
+def _as_float(value: Any, default: None) -> float | None:
+    ...
+
+
+def _as_float(value: Any, default: float | None = 0.0) -> float | None:
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -102,8 +112,11 @@ def _production_q() -> float | None:
     components = _get_health_components()
     if components is None:
         return None
+    value = components.get("q")
+    if value is None:
+        return None
     try:
-        return float(components.get("q"))
+        return float(value)
     except (TypeError, ValueError):
         return None
 

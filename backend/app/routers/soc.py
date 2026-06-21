@@ -365,7 +365,7 @@ def match_metric(question: str) -> Optional[str]:
 
     # Return highest scoring metric
     if scores:
-        return max(scores, key=scores.get)
+        return max(scores, key=lambda metric_id: scores[metric_id])
 
     return None
 
@@ -1773,16 +1773,20 @@ def _format_campaign_detail(raw: dict) -> dict:
 
     # Build attack_progression
     stage_map = {}
+    valid_decisions = []
     for d in (decisions or []):
         if not isinstance(d, dict):
             continue
+        if not d.get("alert_id"):
+            continue
+        valid_decisions.append(d)
         cat = d.get("category", "unknown")
         if cat not in stage_map:
             stage_map[cat] = {"category": cat, "count": 0,
                               "first_seen": d.get("timestamp")}
         stage_map[cat]["count"] += 1
 
-    formatted["decisions"] = decisions
+    formatted["decisions"] = valid_decisions
     formatted["attack_progression"] = {"stages": list(stage_map.values())}
     try:
         formatted["duration_hours"] = round(
@@ -2955,7 +2959,11 @@ async def _tab3_content() -> dict:
         })
 
     # Best factor = highest kernel_weight
-    top_factor = max(factor_breakdown, key=lambda x: x["kernel_weight"], default={})
+    top_factor: dict[str, Any] = max(
+        factor_breakdown,
+        key=lambda x: x["kernel_weight"],
+        default={},
+    )
 
     # Derive recommendation from a live pending alert (or centroid fallback)
     import numpy as _np
