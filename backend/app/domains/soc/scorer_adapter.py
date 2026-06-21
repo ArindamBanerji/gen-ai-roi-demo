@@ -94,22 +94,20 @@ class SOCCompoundingScorerAdapter:
         return self._scorer.get_phase(category_index)
 
     def get_dk_weights(self, category_index: int | None = None) -> Any:
-        """Return legacy per-category weights or new whole-tensor weights."""
+        """Return raw ProfileScorer DK weights."""
         if category_index is not None:
             return self._scorer.get_dk_weights(category_index)
-        return self._compound.get_dk_weights()
+        return self._scorer._dk_weights
 
     def category_count(self, category_index: int) -> int:
         """Return observed update count for one category."""
         return int(np.asarray(self._scorer.counts[category_index]).sum())
 
-    @property
-    def compound(self) -> CompoundingScorer:
-        """Expose the wrapped ``CompoundingScorer`` for gradual migration."""
-        return self._compound
-
     def get_centroid(self, category: str, action: str) -> list[float] | None:
-        return self._compound.get_centroid(category, action)
+        category_index = self._scorer.categories.index(category)
+        action_index = self._scorer.actions.index(action)
+        return self._scorer.mu[category_index][action_index].tolist()
 
     def get_category_phase(self, category: str) -> str:
-        return self._compound.get_category_phase(category)
+        category_index = self._scorer.categories.index(category)
+        return self._scorer.get_phase(category_index)

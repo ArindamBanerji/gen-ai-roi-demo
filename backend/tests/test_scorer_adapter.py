@@ -7,7 +7,6 @@ import pytest
 
 from app.domains.soc.config import SCORER_ACTIONS, SOC_CATEGORIES, SOCDomainConfig
 from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
-from copilot_sdk.scoring.scorer import CompoundingScorer
 
 
 def _raw_scorer():
@@ -26,16 +25,18 @@ def _vector(seed: int = 0) -> np.ndarray:
 def test_adapter_creates_compound_scorer():
     scorer = _adapter()
 
-    assert isinstance(scorer.compound, CompoundingScorer)
-    assert scorer._scorer is scorer.compound._scorer
+    assert scorer._compound is not None
+    assert scorer._scorer is scorer._compound._scorer
+    assert not hasattr(scorer, "compound")
 
 
 def test_adapter_uses_soc_preset():
     scorer = _adapter()
 
-    assert scorer.compound._preset.name == "soc"
+    assert scorer._compound._preset.name == "soc"
     assert scorer.centroids.shape == (6, 4, 6)
     assert scorer.actions == list(SCORER_ACTIONS)
+    assert scorer.categories == list(SOC_CATEGORIES)
 
 
 def test_adapter_score_matches_raw():
@@ -114,12 +115,6 @@ def test_adapter_centroids_setter_delegates():
     scorer.centroids = replacement
 
     np.testing.assert_allclose(scorer._scorer.centroids, replacement)
-
-
-def test_adapter_compound_accessible():
-    scorer = _adapter()
-
-    assert isinstance(scorer.compound, CompoundingScorer)
 
 
 def test_adapter_get_dk_weights():
