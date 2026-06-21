@@ -3,12 +3,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from app.connectors.mitre_client import MITREClient
 from app.connectors.nvd_client import NVDClient
 from app.connectors.threat_intel_provider import (
     MockThreatIntelProvider,
     ThreatIntelProvider,
 )
+
+pytestmark = pytest.mark.no_data_guard
 
 
 class FailingMITREClient:

@@ -9,6 +9,8 @@ from app.oracle import (
     compute_lift,
 )
 
+pytestmark = pytest.mark.no_data_guard
+
 
 def test_oracle_deterministic() -> None:
     first = [AnalystOracle(seed=7).synthetic_outcome(shown=True) for _ in range(5)]

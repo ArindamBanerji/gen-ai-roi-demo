@@ -37,6 +37,10 @@ def pytest_configure(config):
         "markers",
         "neo4j: mark test as requiring a live Neo4j connection",
     )
+    config.addinivalue_line(
+        "markers",
+        "no_data_guard: mark synthetic/unit tests as independent of zero-day persistent decisions",
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -46,6 +50,11 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "neo4j" in item.keywords:
             item.add_marker(skip_neo4j)
+
+
+def _all_selected_tests_skip_persistent_data_guard(request) -> bool:
+    items = getattr(request.session, "items", [])
+    return bool(items) and all("no_data_guard" in item.keywords for item in items)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -64,6 +73,10 @@ def verify_persistent_data(request):
     """
     import asyncio
     import os as _os
+
+    if _all_selected_tests_skip_persistent_data_guard(request):
+        yield
+        return
 
     if _os.getenv("GRAPH_BACKEND") != "age":
         yield

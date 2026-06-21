@@ -16,6 +16,8 @@ from app.oracle.pipeline_test import (
     compute_lift,
 )
 
+pytestmark = pytest.mark.no_data_guard
+
 
 def test_analyst_oracle_satisfies_sdk_protocol():
     oracle = AnalystOracle()
