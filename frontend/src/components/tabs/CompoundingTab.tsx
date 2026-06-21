@@ -40,6 +40,7 @@ import {
 import ROICalculatorModal from '../ROICalculator'
 import SimulationPanel from '../SimulationPanel'
 import ThreeChannelPanel from '../ThreeChannelPanel'
+import CohortStatusPanel from '../CohortStatusPanel'
 
 // ============================================================================
 // Custom Hook: Counter Animation
@@ -1202,6 +1203,8 @@ export default function CompoundingTab() {
           </button>
         </div>
       </div>
+
+      <CohortStatusPanel />
 
       {/* ── 1. Business Impact Banner — PROJECTED ──────────────────────────── */}
       {data.business_impact && (

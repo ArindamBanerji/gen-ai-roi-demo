@@ -211,6 +211,43 @@ export async function getCompoundingMetrics(weeks: number = 4) {
   return fetchJSON(`/metrics/compounding?weeks=${weeks}`)
 }
 
+export type CohortStatusState = 'INSTRUMENT_VALIDATED' | 'ACCUMULATING' | 'MEASURED'
+
+export interface CohortStatusResponse {
+  state: CohortStatusState
+  instrument: {
+    validated?: boolean
+    provenance?: string
+    source_artifact?: string
+    experiments?: Array<{
+      name?: string
+      injected_lift?: number
+      recovered_lift?: number
+      pass?: boolean
+    }>
+  }
+  real: {
+    treatment_n?: number
+    control_n?: number
+    threshold_k?: number
+    lift?: number | null
+    provenance?: string
+    status?: string
+  }
+  structure?: {
+    present?: boolean
+    treatment_n?: number
+    control_n?: number
+    split_balanced?: boolean | null
+    join_ok?: boolean | null
+    provenance?: string
+  }
+}
+
+export async function getCohortStatus() {
+  return fetchJSON<CohortStatusResponse>('/campaign/cohort-status')
+}
+
 export async function uploadEvalCSV(file: File) {
   const formData = new FormData()
   formData.append('file', file)
