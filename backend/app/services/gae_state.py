@@ -186,9 +186,8 @@ def init_learning_state() -> LearningState:
     """
     global _learning_state, _learning_store, _bootstrap_metadata, _bootstrap_result
 
-    from app.domains.soc.config import SOCDomainConfig
-    _soc_cfg = SOCDomainConfig()
-    _profile_scorer = _soc_cfg.build_profile_scorer()
+    from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
+    _profile_scorer = SOCCompoundingScorerAdapter()
     assert _profile_scorer.eta_override is not None, (
         "ProfileScorer constructed without eta_override. "
         "SOC requires eta_override=0.01 (P0 fix — prevents "
