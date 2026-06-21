@@ -1874,15 +1874,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                 ):
                     f = _validate_scoring_factor_vector(fv)
                     action_index = list(SCORER_ACTIONS).index(action_name)
-                    learning_state = get_learning_state()
-                    wu = learning_state.update(
-                        action_index=action_index,
-                        action_name=action_name,
-                        outcome=outcome_int,
-                        f=f,
-                        confidence_at_decision=confidence_at_decision,
-                    )
-                    save_learning_state()
+                    wu = None
 
                 try:
                     _soc_cfg_rl = _rl_soc_config()
@@ -2162,9 +2154,9 @@ async def report_decision_outcome(request: OutcomeRequest):
                         decision_id=request.decision_id,
                         category=_resolved_category,
                         action=action_name,
-                    ):
-                        from app.services.snapshots import maybe_write_profile_snapshot
-                        await maybe_write_profile_snapshot(learning_state.decision_count)
+                        ):
+                            from app.services.snapshots import maybe_write_profile_snapshot
+                            await maybe_write_profile_snapshot(get_learning_state().decision_count)
 
                 if wu and wu.centroid_update is not None:
                     cu = wu.centroid_update
@@ -2305,7 +2297,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                         ):
                             _evo_id = f"EVO-{uuid.uuid4().hex[:4].upper()}"
                             _evo_ts = int(datetime.utcnow().timestamp() * 1000)
-                            _evo_dec_num = int(learning_state.decision_count)
+                            _evo_dec_num = int(get_learning_state().decision_count)
                             _evo_ph = float(fv[3]) if (isinstance(fv, list) and len(fv) > 3) else 0.4
                             await neo4j_client.run_query(
                                 f"""
@@ -2362,7 +2354,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                             source_decision_id=request.decision_id,
                             category=_resolved_category,
                             action_index=action_index,
-                            current_decision_number=int(learning_state.decision_count),
+                            current_decision_number=int(get_learning_state().decision_count),
                             reward=(
                                 reward_result.graded_reward
                                 if reward_result is not None

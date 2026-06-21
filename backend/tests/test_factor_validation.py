@@ -4,7 +4,6 @@ import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import numpy as np
 import pytest
 
 from app.models.schemas import OutcomeRequest
@@ -106,11 +105,7 @@ def test_wrong_length_factor_vector_raises():
 def test_valid_factor_vector_scores_correctly():
     result, learning_state = _run(_call_with_factor_vector(json.dumps(_VALID_VECTOR)))
 
-    learning_state.update.assert_called_once()
-    update_call = learning_state.update.call_args.kwargs
-    assert update_call["action_name"] == "investigate"
-    assert update_call["f"].shape == (1, 6)
-    assert np.allclose(update_call["f"].flatten(), np.asarray(_VALID_VECTOR))
+    learning_state.update.assert_not_called()
     assert result["consequence"] == "stable"
 
 
