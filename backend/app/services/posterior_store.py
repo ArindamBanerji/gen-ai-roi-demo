@@ -14,6 +14,7 @@ from typing import Any
 log = logging.getLogger(__name__)
 
 DEFAULT_POSTERIOR_DSN = "postgresql://postgres:postgres@localhost:5433/soc_copilot?connect_timeout=5"
+POSTERIOR_HEALTH_CONNECT_TIMEOUT_SECONDS = 2
 
 
 def _default_posteriors(n_categories: int, n_actions: int) -> dict[str, list[list[float]]]:
@@ -122,7 +123,10 @@ class PosteriorStore:
         import psycopg
 
         conn: Any
-        with psycopg.connect(self._dsn) as conn:
+        with psycopg.connect(
+            self._dsn,
+            connect_timeout=POSTERIOR_HEALTH_CONNECT_TIMEOUT_SECONDS,
+        ) as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT 1")
 
