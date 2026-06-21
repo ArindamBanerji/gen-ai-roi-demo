@@ -58,6 +58,7 @@ def generate_decisions(
             "source_id": "synthetic",
             "user_id": alert.get("user_id", ""),
             "timestamp": _iso(timestamp_epoch),
+            "provenance": "sample",
         })
 
     return decisions

@@ -142,6 +142,7 @@ def generate_alerts(
             "asset_id": asset["asset_id"],
             "attack_pattern_id": _pattern_for_category(category, attack_patterns, i),
             "indicator_ids": _indicator_ids(threat_indicators, rng),
+            "provenance": "sample",
         })
     _apply_jdoe_storyline(config, training, users, assets, attack_patterns, threat_indicators)
 
@@ -166,6 +167,7 @@ def generate_alerts(
             "attack_pattern_id": _pattern_for_category(category, attack_patterns, i),
             "indicator_ids": _indicator_ids(threat_indicators, rng, max_count=1),
             "status": config.demo_status,
+            "provenance": "sample",
         })
 
     return training, demo

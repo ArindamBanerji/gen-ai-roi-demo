@@ -4,7 +4,7 @@
     "label": "Healthcare / Hospital System",
     "description": "Large hospital network with strict HIPAA compliance requirements, high-sensitivity patient data, and 24/7 SOC coverage.",
     "V": 150,
-    "alpha": 0.30,
+    "alpha": 0.3,
     "analyst_hourly_cost": 90,
     "regulatory_multiplier": 1.4,
     "notes": "Regulatory multiplier reflects HIPAA breach cost exposure and mandatory 72-hour notification window.",
@@ -14,7 +14,8 @@
       "data_exfiltration",
       "lateral_movement",
       "cloud_infrastructure"
-    ]
+    ],
+    "provenance": "sample"
   },
   "finserv": {
     "id": "finserv",
@@ -31,14 +32,15 @@
       "data_exfiltration",
       "lateral_movement",
       "cloud_infrastructure"
-    ]
+    ],
+    "provenance": "sample"
   },
   "manufacturing": {
     "id": "manufacturing",
     "label": "Manufacturing / OT Environment",
     "description": "Industrial manufacturer with OT/IT convergence, CISA critical infrastructure classification, and lean SOC team.",
     "V": 80,
-    "alpha": 0.20,
+    "alpha": 0.2,
     "analyst_hourly_cost": 75,
     "regulatory_multiplier": 1.2,
     "notes": "Lower V reflects OT alert volume. Lean SOC team means higher per-alert analyst time and slower phase-3 qualification.",
@@ -48,7 +50,8 @@
       "insider_threat",
       "cloud_infrastructure",
       "credential_access"
-    ]
+    ],
+    "provenance": "sample"
   },
   "generic": {
     "id": "generic",
@@ -66,6 +69,7 @@
       "data_exfiltration",
       "insider_threat",
       "cloud_infrastructure"
-    ]
+    ],
+    "provenance": "sample"
   }
 }

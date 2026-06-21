@@ -20,7 +20,8 @@
       "asset_criticality",
       "threat_intel_enrichment",
       "device_trust"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-CA-02",
@@ -43,7 +44,8 @@
       "travel_match",
       "asset_criticality",
       "threat_intel_enrichment"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-CA-03",
@@ -65,7 +67,8 @@
     "dominant_factors": [
       "asset_criticality",
       "threat_intel_enrichment"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-CA-04",
@@ -86,7 +89,8 @@
     "description": "Low-risk credential event from managed corporate device with no threat intel signals.",
     "dominant_factors": [
       "device_trust"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-CA-05",
@@ -107,7 +111,8 @@
     "description": "Routine credential access from trusted enrolled device during business hours.",
     "dominant_factors": [
       "device_trust"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-CA-06",
@@ -129,7 +134,8 @@
     "dominant_factors": [
       "asset_criticality",
       "device_trust"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-TI-01",
@@ -151,7 +157,8 @@
     "dominant_factors": [
       "threat_intel_enrichment",
       "asset_criticality"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-TI-02",
@@ -174,7 +181,8 @@
       "threat_intel_enrichment",
       "asset_criticality",
       "travel_match"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-TI-03",
@@ -195,7 +203,8 @@
     "description": "Confirmed IOC match on lower-criticality asset \u00e2\u20ac\u201d investigate before escalating.",
     "dominant_factors": [
       "threat_intel_enrichment"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-TI-04",
@@ -217,7 +226,8 @@
     "dominant_factors": [
       "device_trust",
       "threat_intel_enrichment"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-TI-05",
@@ -238,7 +248,8 @@
     "description": "IOC feed noise on non-critical asset from enrolled corporate device.",
     "dominant_factors": [
       "device_trust"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-TI-06",
@@ -259,7 +270,8 @@
     "description": "Low-confidence IOC match on medium-criticality asset \u00e2\u20ac\u201d monitor for recurrence.",
     "dominant_factors": [
       "threat_intel_enrichment"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-LM-01",
@@ -281,7 +293,8 @@
     "dominant_factors": [
       "pattern_history",
       "asset_criticality"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-LM-02",
@@ -304,7 +317,8 @@
       "asset_criticality",
       "threat_intel_enrichment",
       "pattern_history"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-LM-03",
@@ -326,7 +340,8 @@
     "dominant_factors": [
       "pattern_history",
       "asset_criticality"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-LM-04",
@@ -348,7 +363,8 @@
     "dominant_factors": [
       "travel_match",
       "device_trust"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-LM-05",
@@ -370,7 +386,8 @@
     "dominant_factors": [
       "travel_match",
       "device_trust"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-LM-06",
@@ -391,7 +408,8 @@
     "description": "Single-hop lateral movement to low-risk asset with no threat intelligence signal.",
     "dominant_factors": [
       "pattern_history"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-DE-01",
@@ -414,7 +432,8 @@
       "asset_criticality",
       "time_anomaly",
       "threat_intel_enrichment"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-DE-02",
@@ -436,7 +455,8 @@
     "dominant_factors": [
       "asset_criticality",
       "pattern_history"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-DE-03",
@@ -458,7 +478,8 @@
     "dominant_factors": [
       "asset_criticality",
       "time_anomaly"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-DE-04",
@@ -479,7 +500,8 @@
     "description": "Authorized backup transfer from low-criticality asset on fully trusted device.",
     "dominant_factors": [
       "device_trust"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-DE-05",
@@ -500,7 +522,8 @@
     "description": "Routine scheduled export from non-critical data store on managed device.",
     "dominant_factors": [
       "device_trust"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-DE-06",
@@ -521,7 +544,8 @@
     "description": "Moderate data transfer on medium-criticality asset \u00e2\u20ac\u201d no IOC, monitor for volume increase.",
     "dominant_factors": [
       "asset_criticality"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-IT-01",
@@ -544,7 +568,8 @@
       "pattern_history",
       "time_anomaly",
       "device_trust"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-IT-02",
@@ -567,7 +592,8 @@
       "asset_criticality",
       "pattern_history",
       "time_anomaly"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-IT-03",
@@ -589,7 +615,8 @@
     "dominant_factors": [
       "pattern_history",
       "asset_criticality"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-IT-04",
@@ -610,7 +637,8 @@
     "description": "Explainable after-hours access \u00e2\u20ac\u201d manager-approved project on trusted device.",
     "dominant_factors": [
       "device_trust"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-IT-05",
@@ -631,7 +659,8 @@
     "description": "Low-risk access pattern from enrolled device with no historical anomalies.",
     "dominant_factors": [
       "device_trust"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-IT-06",
@@ -652,7 +681,8 @@
     "description": "Weak insider behavioral signals on medium-value asset \u00e2\u20ac\u201d monitor for escalation.",
     "dominant_factors": [
       "pattern_history"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-CI-01",
@@ -675,7 +705,8 @@
       "asset_criticality",
       "threat_intel_enrichment",
       "time_anomaly"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-CI-02",
@@ -697,7 +728,8 @@
     "dominant_factors": [
       "asset_criticality",
       "threat_intel_enrichment"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-CI-03",
@@ -719,7 +751,8 @@
     "dominant_factors": [
       "asset_criticality",
       "time_anomaly"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-CI-04",
@@ -740,7 +773,8 @@
     "description": "Scheduled maintenance window activity from trusted CI/CD pipeline service account.",
     "dominant_factors": [
       "device_trust"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-CI-05",
@@ -761,7 +795,8 @@
     "description": "Routine cloud resource scaling event from compliant deployment pipeline.",
     "dominant_factors": [
       "device_trust"
-    ]
+    ],
+    "provenance": "sample"
   },
   {
     "scenario_id": "SOC-CI-06",
@@ -782,6 +817,7 @@
     "description": "Low-risk cloud configuration change on non-critical resource \u00e2\u20ac\u201d monitor for drift.",
     "dominant_factors": [
       "asset_criticality"
-    ]
+    ],
+    "provenance": "sample"
   }
 ]

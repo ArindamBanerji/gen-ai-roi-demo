@@ -52,6 +52,7 @@ def derive_metadata(data: dict[str, Any], config: SeedConfig) -> dict[str, Any]:
         "p_correct_by_cat": p_correct_by_cat,
         "rng_seed": config.seed,
         "seed_hash": compute_seed_hash(data),
+        "provenance": "sample",
         "overall_correct_rate": round(correct / total_decisions, 3)
         if total_decisions
         else 0.0,
