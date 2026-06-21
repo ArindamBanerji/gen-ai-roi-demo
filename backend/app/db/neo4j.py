@@ -58,9 +58,18 @@ class Neo4jClient:
             await self._driver.close()
             self._driver = None
 
+    @asynccontextmanager
+    async def session(self):
+        """Context manager for Neo4j sessions."""
+        if not self._driver:
+            await self.connect()
+
+        async with self._driver.session() as session:
+            yield session
+
     async def run_query(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Run a Cypher query and return results"""
-        async with cast(Any, self).session() as session:
+        async with self.session() as session:
             result = await session.run(query, parameters or {})
             records = await result.data()
             return cast(List[Dict[str, Any]], records)

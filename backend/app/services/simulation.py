@@ -13,6 +13,7 @@ Reference: docs/soc_copilot_design_v1.md §14 (GAE pipeline).
 
 import asyncio
 import json
+import logging
 import random
 import time
 import uuid
@@ -21,7 +22,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Coroutine, Dict, List, Optional, cast
 
-logger: Any
+logger = logging.getLogger(__name__)
 
 import numpy as np
 
