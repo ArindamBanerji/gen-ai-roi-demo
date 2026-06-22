@@ -1,5 +1,5 @@
 """
-tests/test_enrichment_advisor.py — Enrichment advisor (expected_permanent_gap_pp).
+tests/test_enrichment_advisor.py -- Enrichment advisor (expected_permanent_gap_pp).
 
 4 tests validating ranked_factors and top_opportunity shapes, plus
 sigma-scaling invariant.
@@ -58,7 +58,7 @@ def test_ranked_factors_gap_pp_is_float():
 def test_top_opportunity_has_expected_permanent_gap_pp():
     """
     top_opportunity must include expected_permanent_gap_pp and must match
-    the first element of ranked_factors (highest sigma → highest gap).
+    the first element of ranked_factors (highest sigma -> highest gap).
     """
     advice = get_enrichment_advice()
     top = advice["top_opportunity"]
@@ -81,7 +81,7 @@ def test_top_opportunity_has_expected_permanent_gap_pp():
 def test_permanent_gap_pp_scales_with_sigma():
     """
     High-sigma factor must have higher expected_permanent_gap_pp than low-sigma.
-    get_permanent_gap_pp(0.28) > get_permanent_gap_pp(0.07) — invariant.
+    get_permanent_gap_pp(0.28) > get_permanent_gap_pp(0.07) -- invariant.
     """
     high_gap = get_permanent_gap_pp(0.28)
     low_gap  = get_permanent_gap_pp(0.07)
@@ -99,7 +99,7 @@ def test_permanent_gap_pp_scales_with_sigma():
 
 def test_ioc_coverage_band_assignment():
     """
-    Band boundaries: ≥0.40 → strong, ≥0.20 → moderate, else → sparse.
+    Band boundaries: >=0.40 -> strong, >=0.20 -> moderate, else -> sparse.
     """
     assert _ioc_coverage_band(0.45) == "strong", "0.45 must be strong"
     assert _ioc_coverage_band(0.40) == "strong", "0.40 boundary must be strong"

@@ -2,7 +2,7 @@
 Tests verifying SOC audit service wiring to ci_platform Evidence Ledger.
 
 Coverage:
-  test_soc_audit_uses_ci_platform_ledger — records are backed by LedgerEntry,
+  test_soc_audit_uses_ci_platform_ledger -- records are backed by LedgerEntry,
     hash chain is sealed, and epistemic fields round-trip correctly.
 """
 import asyncio
@@ -21,7 +21,7 @@ def test_soc_audit_uses_ci_platform_ledger():
     ledger, and the returned SOC dict carries the three epistemic fields.
 
     This proves the wiring is real: the hash chain implementation lives in
-    ci_platform only — no duplicate in SOC.
+    ci_platform only -- no duplicate in SOC.
     """
     # Start clean
     _run(audit_module.reset_audit_state())
@@ -67,7 +67,7 @@ def test_soc_audit_uses_ci_platform_ledger():
 def test_epistemic_fields_never_none_in_normal_path():
     """
     SOC-2 regression: record_decision() called without explicit epistemic args
-    must NOT produce None fields — the 'unknown' fallback string is required at
+    must NOT produce None fields -- the 'unknown' fallback string is required at
     call sites (triage.py and simulation.py) per EU AI Act Art. 15 compliance.
 
     This test simulates the normal triage/simulation call signature (no kernel_type

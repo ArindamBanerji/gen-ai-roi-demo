@@ -16,7 +16,7 @@ import pytest
 # ---------------------------------------------------------------------------
 
 def test_s2p_scorer_independent_shape():
-    """S2P tensor shape (5 categories × 8 actions × 6 factors) scores correctly."""
+    """S2P tensor shape (5 categories x 8 actions x 6 factors) scores correctly."""
     from gae.profile_scorer import ProfileScorer
     scorer = ProfileScorer(
         mu=np.full((5, 8, 6), 0.5),

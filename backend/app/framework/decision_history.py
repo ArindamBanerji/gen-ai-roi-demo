@@ -1,5 +1,5 @@
 """
-DecisionHistoryService — per-category decision counts and rolling accuracy.
+DecisionHistoryService -- per-category decision counts and rolling accuracy.
 
 Provides cat_count and rolling_accuracy for CompositeDiscriminant maturity gate.
 Queries the last 100 decisions per category (recency-weighted).
@@ -29,9 +29,9 @@ class DecisionHistoryService:
         Returns
         -------
         {
-            "cat_count":        int   — total decisions in category (up to 100)
-            "rolling_accuracy": float — correct / verified, defaults 0.5 if none
-            "verified_count":   int   — decisions with a known outcome
+            "cat_count":        int   -- total decisions in category (up to 100)
+            "rolling_accuracy": float -- correct / verified, defaults 0.5 if none
+            "verified_count":   int   -- decisions with a known outcome
         }
         """
         try:

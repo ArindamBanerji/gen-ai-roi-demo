@@ -1,6 +1,6 @@
 """
-Block 9.4 — D7 Spike update cap tests.
-Coupled to D3 — cap only enforced when volume spike is active.
+Block 9.4 -- D7 Spike update cap tests.
+Coupled to D3 -- cap only enforced when volume spike is active.
 No live Neo4j required.
 """
 import os
@@ -42,7 +42,7 @@ def _reset_all():
 def test_no_cap_when_no_spike():
     """
     increment_spike_counter() returns True unconditionally when no spike.
-    Call far more than any cap would allow — must always pass.
+    Call far more than any cap would allow -- must always pass.
     """
     _reset_all()
     set_spike_cap(10)   # cap would be 15 if spike were active
@@ -61,7 +61,7 @@ def test_no_cap_when_no_spike():
 # ---------------------------------------------------------------------------
 
 def test_cap_set_from_baseline():
-    """set_spike_cap(baseline_daily) stores int(1.5 × baseline_daily)."""
+    """set_spike_cap(baseline_daily) stores int(1.5 x baseline_daily)."""
     _reset_all()
 
     set_spike_cap(100.0)

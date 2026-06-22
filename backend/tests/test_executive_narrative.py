@@ -110,7 +110,7 @@ def test_f12_endpoint_returns_required_keys():
 
 
 def test_f12_metrics_block_numeric():
-    """metrics values must all be numeric (empty graph → zeros)."""
+    """metrics values must all be numeric (empty graph -> zeros)."""
     r = _client.get("/api/soc/executive-narrative")
     assert r.status_code == 200
     m = r.json()["metrics"]
@@ -368,7 +368,7 @@ def test_category_accuracy_uses_verified_outcomes_not_pending_denominator():
 
 
 def test_narrative_reads_verified_decisions():
-    """mock Neo4j returning 50 verified decisions → metrics.decisions_verified == 50."""
+    """mock Neo4j returning 50 verified decisions -> metrics.decisions_verified == 50."""
     fake = _make_narrative_neo4j(verified=50, correct=40, campaigns=0, alerts=100)
     result = asyncio.run(build_executive_narrative_async(fake))
     assert result["metrics"]["decisions_verified"] == 50, (
@@ -377,7 +377,7 @@ def test_narrative_reads_verified_decisions():
 
 
 def test_narrative_campaigns():
-    """mock 3 campaigns → metrics.campaigns_detected == 3."""
+    """mock 3 campaigns -> metrics.campaigns_detected == 3."""
     fake = _make_narrative_neo4j(verified=10, correct=8, campaigns=3, alerts=50)
     result = asyncio.run(build_executive_narrative_async(fake))
     assert result["metrics"]["campaigns_detected"] == 3, (

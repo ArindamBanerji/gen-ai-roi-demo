@@ -1,5 +1,5 @@
 """
-Block 2.1 — Centroid tensor PITR backup tests.
+Block 2.1 -- Centroid tensor PITR backup tests.
 """
 import hashlib
 import json
@@ -162,7 +162,7 @@ def test_list_backups_returns_files(tmp_path):
 
         backups = list_centroid_backups()
 
-    assert len(backups) >= 2, f"Expected ≥2 backups, got {len(backups)}"
+    assert len(backups) >= 2, f"Expected >=2 backups, got {len(backups)}"
     ids = {b["backup_id"] for b in backups}
     assert p1["backup_id"] in ids
     assert p2["backup_id"] in ids

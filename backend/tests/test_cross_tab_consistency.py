@@ -1,4 +1,4 @@
-"""Cross-tab consistency tests — automated regression for narrative contradictions.
+"""Cross-tab consistency tests -- automated regression for narrative contradictions.
 
 Requires: backend running at 127.0.0.1:8001 with AGE seeded.
 Run: python -m pytest tests/test_cross_tab_consistency.py -v --timeout=120 --run-live-backend

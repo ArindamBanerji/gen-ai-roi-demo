@@ -1,15 +1,15 @@
 """
-NLTemplateEngine — 24 deterministic NL templates across 3 layers (§23.3).
+NLTemplateEngine -- 24 deterministic NL templates across 3 layers (Sec.23.3).
 
-Layer 1 (L1): per-decision explanations — Tab 3 and shadow disagreements.
-Layer 2 (L2): CISO-level summaries — Tab 5 Section 1 and Tab 2 narrative.
-Layer 3 (L3): compliance records — evidence export, audit reports.
+Layer 1 (L1): per-decision explanations -- Tab 3 and shadow disagreements.
+Layer 2 (L2): CISO-level summaries -- Tab 5 Section 1 and Tab 2 narrative.
+Layer 3 (L3): compliance records -- evidence export, audit reports.
 
-All templates are rendered deterministically via format_map — no LLM calls.
+All templates are rendered deterministically via format_map -- no LLM calls.
 Missing context keys are rendered as "[N/A]" via _SafeMap so the output
 never contains unresolved "{...}" placeholders.
 
-Reference: docs/soc_copilot_design_v5_6_part1.md §23.3
+Reference: docs/soc_copilot_design_v5_6_part1.md Sec.23.3
 """
 
 from __future__ import annotations
@@ -120,7 +120,7 @@ class NLTemplateEngine:
     )
 
     L1_REFER_TO_ANALYST = (
-        "Confidence {confidence:.0%} — below {category} threshold ({threshold:.0%}). "
+        "Confidence {confidence:.0%} -- below {category} threshold ({threshold:.0%}). "
         "Dominant signal: {dominant_factor_explanation}. "
         "Refer to tier-1 analyst for 3-minute pre-analyzed review. "
         "Pre-analysis: {rationale}."
@@ -142,7 +142,7 @@ class NLTemplateEngine:
     # ── LAYER 2: CISO Weekly (Tab 5 Section 1 + Tab 2) ───────────────────────
 
     L2_WEEKLY_SUMMARY = (
-        "This week: {total_alerts} alerts processed — "
+        "This week: {total_alerts} alerts processed -- "
         "{auto_approved} auto-approved ({auto_approve_rate:.1%}), "
         "{escalated} escalated, "
         "{human_review} required analyst override."
@@ -184,7 +184,7 @@ class NLTemplateEngine:
     L2_SHADOW_STATUS = (
         "Shadow mode: {days_active} days active, {decisions_recorded} decisions observed. "
         "Agreement rate: {agreement_rate:.1%}. "
-        "Shadow report ready — review before activating live mode."
+        "Shadow report ready -- review before activating live mode."
     )
 
     L2_THREAT_GRAPH = (
@@ -318,7 +318,7 @@ class NLTemplateEngine:
         """Render the L1 per-decision template for *category*.
 
         Falls back to L1_GENERIC for unrecognised categories.
-        Missing context keys render as "[N/A]" — never raises KeyError.
+        Missing context keys render as "[N/A]" -- never raises KeyError.
         """
         template = self._L1_MAP.get(category, self.L1_GENERIC)
         return cast(str, template).format_map(self._safe(context))

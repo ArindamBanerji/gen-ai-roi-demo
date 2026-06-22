@@ -1,5 +1,5 @@
 """
-Tests for Block 4.2 — Real Sentinel Connector.
+Tests for Block 4.2 -- Real Sentinel Connector.
 
 Covers the normalization functions, category mapping, and
 the GET /api/sentinel/alerts endpoint.
@@ -113,4 +113,4 @@ def test_sentinel_mock_connector_still_passes():
     # runs when Neo4j event loop interference occurs — endpoint is not broken.
     resp = client.get("/api/alerts/queue")
     assert resp.status_code in (200, 500), \
-        f"Unexpected status {resp.status_code} — endpoint may be missing"
+        f"Unexpected status {resp.status_code} -- endpoint may be missing"

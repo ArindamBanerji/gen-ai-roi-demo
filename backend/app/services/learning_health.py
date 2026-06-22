@@ -39,7 +39,7 @@ AUTO_PAUSE_RED_DAYS:   int = 14
 # must use the same temporal model. Consecutive-only counting creates a semantic
 # mismatch: a system can breach the rolling conservation signal while the consecutive
 # counter keeps resetting on intermittent GREEN days.
-AUTO_PAUSE_LOOKBACK_DAYS: int = 30  # ~2× threshold; covers 3-4× q_window at V=200
+AUTO_PAUSE_LOOKBACK_DAYS: int = 30  # ~2x threshold; covers 3-4x q_window at V=200
 WINDOW_DECISIONS:      int = 50    # rolling window for alpha/q estimation
 CONSERVATIVE_THETA_MIN: float = 1_000_000_000.0
 _L5_CONSERVATION_STORE_LOCK = asyncio.Lock()
@@ -80,12 +80,12 @@ class LearningHealthMonitor:
         Returns
         -------
         dict with keys: alpha (float), q (float), V (float), n (int)
-            alpha — legacy mean effective learning rate over the last `window`
+            alpha -- legacy mean effective learning rate over the last `window`
                     verified decisions. This value is kept only as historical
                     diagnostics and must not be used as theta_min alpha.
-            q     — fraction of the last `q_window` verified decisions with
+            q     -- fraction of the last `q_window` verified decisions with
                     outcome == +1 (stable rolling verified accuracy)
-            V     — decisions per day over the last `window` verified
+            V     -- decisions per day over the last `window` verified
                     decisions; falls back to raw count
 
         Notes
@@ -282,7 +282,7 @@ class LearningHealthMonitor:
                 "red_days":          0,
                 "auto_pause_active": False,
                 "interpretation":    (
-                    f"Pre-activation — learning is disabled with {decision_count} "
+                    f"Pre-activation -- learning is disabled with {decision_count} "
                     "decisions recorded but no live learning history. Conservation "
                     "cannot be evaluated until learning is enabled."
                 ),
@@ -309,7 +309,7 @@ class LearningHealthMonitor:
                 "red_days":          0,
                 "auto_pause_active": False,
                 "interpretation":    (
-                    f"Calibrating — {decision_count} decisions recorded "
+                    f"Calibrating -- {decision_count} decisions recorded "
                     f"(target: {CALIBRATION_DECISIONS} / ~{CALIBRATION_DAYS} days)"
                 ),
                 "pre_activation":    False,
@@ -377,8 +377,8 @@ class LearningHealthMonitor:
         """
         Count distinct RED-status days in the 30-day lookback window.
 
-        Cumulative, not consecutive — matches the rolling-aggregate semantics of
-        the conservation law (α, q, V use rolling windows, not consecutive runs).
+        Cumulative, not consecutive -- matches the rolling-aggregate semantics of
+        the conservation law (alpha, q, V use rolling windows, not consecutive runs).
         Returns 0 if neo4j_service is None or the query fails.
         """
         if neo4j_service is None:
@@ -408,21 +408,21 @@ class LearningHealthMonitor:
     @staticmethod
     def _interpret(status: str, signal: float, theta_min: float, red_days: int) -> str:
         if status == "GREEN":
-            return "Conservation law satisfied — learning system is healthy"
+            return "Conservation law satisfied -- learning system is healthy"
         if status == "AMBER":
             return (
                 f"Signal degraded below baseline-{LearningHealthMonitor.AMBER_SIGMA}sigma "
-                f"(signal={signal:.4f}) — monitor closely"
+                f"(signal={signal:.4f}) -- monitor closely"
             )
         if status == "RED":
             if red_days >= AUTO_PAUSE_RED_DAYS:
                 return (
                     f"AUTO-PAUSE active: {red_days} RED days >= {AUTO_PAUSE_RED_DAYS} threshold "
-                    "— learning updates suspended"
+                    "-- learning updates suspended"
                 )
             return (
                 f"Conservation violation (signal={signal:.4f} < theta_min={theta_min:.4f}) "
-                f"— {red_days} RED day(s) accumulated"
+                f"-- {red_days} RED day(s) accumulated"
             )
         return f"Status: {status}"
 
@@ -617,17 +617,17 @@ async def compute_volume_baseline(neo4j_client: Any) -> dict:
     Compute rolling 30-day alert volume baseline from Alert nodes.
 
     Groups alerts into daily buckets using timestamp_epoch.
-    spike_sigma comes from GateConfig — 5.0 before N_min, 3.0 after.
+    spike_sigma comes from GateConfig -- 5.0 before N_min, 3.0 after.
 
     Returns
     -------
     dict:
-      daily_mean      : float  — mean daily alert count over window
-      daily_std       : float  — std of daily counts (floor=1.0)
-      spike_threshold : float  — mean + spike_sigma * std
-      spike_sigma     : float  — 5.0 (conservative) or 3.0 (calibrated)
-      window_days     : int    — 30
-      data_points     : int    — number of days with at least one alert
+      daily_mean      : float  -- mean daily alert count over window
+      daily_std       : float  -- std of daily counts (floor=1.0)
+      spike_threshold : float  -- mean + spike_sigma * std
+      spike_sigma     : float  -- 5.0 (conservative) or 3.0 (calibrated)
+      window_days     : int    -- 30
+      data_points     : int    -- number of days with at least one alert
     """
     import time as _time
     from app.domains.soc.config import GateConfig
@@ -684,7 +684,7 @@ async def detect_volume_spike(neo4j_client: Any, today_count: int) -> dict:
     Parameters
     ----------
     neo4j_client : async Neo4j client
-    today_count  : int — number of alerts received so far today
+    today_count  : int -- number of alerts received so far today
 
     Returns
     -------
@@ -722,14 +722,14 @@ async def detect_volume_spike(neo4j_client: Any, today_count: int) -> dict:
 # Block 9.3 — Category freeze (volume spikes only)
 # ---------------------------------------------------------------------------
 
-_FREEZE_MULTIPLIER = 2.0   # freeze when today_share > 2× baseline_share
+_FREEZE_MULTIPLIER = 2.0   # freeze when today_share > 2x baseline_share
 
 
 async def compute_category_baseline(neo4j_client: Any) -> dict[str, float]:
     """
     Compute 30-day baseline category distribution of Alert nodes.
 
-    Returns fractional share per category (sums to ≈1.0).
+    Returns fractional share per category (sums to ~=1.0).
     Returns {} when no alert data is available.
 
     Example: {"credential_access": 0.35, "lateral_movement": 0.15, ...}
@@ -768,15 +768,15 @@ async def detect_frozen_categories(
     Return list of category names to freeze during the current spike.
 
     Only meaningful when a volume spike is active (D3 coupled constraint).
-    Returns [] immediately if no spike is active — do not freeze on other signals.
+    Returns [] immediately if no spike is active -- do not freeze on other signals.
 
     A category is frozen when its share of today's alerts exceeds
-    _FREEZE_MULTIPLIER (2×) its 30-day baseline share.
+    _FREEZE_MULTIPLIER (2x) its 30-day baseline share.
 
     Parameters
     ----------
     neo4j_client          : async Neo4j client
-    today_category_counts : dict[str, int] — alert counts by category for today
+    today_category_counts : dict[str, int] -- alert counts by category for today
 
     Returns
     -------
@@ -804,7 +804,7 @@ async def detect_frozen_categories(
 
         if today_share > _FREEZE_MULTIPLIER * baseline_share:
             log.warning(
-                "[D2] Freezing category '%s': today_share=%.3f > %.1f × baseline=%.3f",
+                "[D2] Freezing category '%s': today_share=%.3f > %.1f x baseline=%.3f",
                 category, today_share, _FREEZE_MULTIPLIER, baseline_share,
             )
             frozen.append(category)
@@ -830,7 +830,7 @@ async def compute_analyst_precision(neo4j_client: Any) -> dict[str, float]:
 
     Returns
     -------
-    dict mapping analyst name → precision (correct / total), e.g.
+    dict mapping analyst name -> precision (correct / total), e.g.
       {"analyst_a": 0.82, "analyst_b": 0.71}
     """
     try:
@@ -869,9 +869,9 @@ async def compute_verification_health(neo4j_client: Any) -> dict:
     """
     Compute verification rate health across 3 conditions.
 
-    Condition 1 — Coverage: verified_decisions / total_decisions >= 0.20
-    Condition 2 — Drift: last-7d rate >= prior-7d rate * 0.80
-    Condition 3 — Conservation: GREEN or CALIBRATING; UNKNOWN is cautious
+    Condition 1 -- Coverage: verified_decisions / total_decisions >= 0.20
+    Condition 2 -- Drift: last-7d rate >= prior-7d rate * 0.80
+    Condition 3 -- Conservation: GREEN or CALIBRATING; UNKNOWN is cautious
 
     Status:
       GREEN : all 3 conditions healthy

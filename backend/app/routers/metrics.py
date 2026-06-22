@@ -117,14 +117,14 @@ def generate_compounding_data(weeks: int = 4) -> CompoundingResponse:
         EvolutionEvent(
             id="EVO-0891",
             event_type="pattern_confidence_increase",
-            description="PAT-TRAVEL: 91% → 94%",
+            description="PAT-TRAVEL: 91% -> 94%",
             timestamp=(datetime.now() - timedelta(hours=2)).isoformat(),
             triggered_by="DECISION-7823"
         ),
         EvolutionEvent(
             id="EVO-0890",
             event_type="auto_close_threshold_tuned",
-            description="Travel: 88% → 90%",
+            description="Travel: 88% -> 90%",
             timestamp=(datetime.now() - timedelta(days=1)).isoformat(),
             triggered_by="DECISION-7819"
         ),
@@ -147,9 +147,9 @@ def generate_compounding_data(weeks: int = 4) -> CompoundingResponse:
     # Business impact summary (computed from Week 1 vs Week 4 improvement)
     # These are reasonable projections for CISO/CFO reporting
     business_impact = BusinessImpact(
-        analyst_hours_saved_monthly=847,  # ~200 auto-closed alerts × 45 min manual review avoided
-        cost_avoided_quarterly=127000,    # analyst_hours × $50/hr × 3 months
-        mttr_reduction_pct=75,            # MTTR improved from 12.4 min → 3.1 min
+        analyst_hours_saved_monthly=847,  # ~200 auto-closed alerts x 45 min manual review avoided
+        cost_avoided_quarterly=127000,    # analyst_hours x $50/hr x 3 months
+        mttr_reduction_pct=75,            # MTTR improved from 12.4 min -> 3.1 min
         alert_backlog_eliminated_monthly=2400  # alerts no longer waiting for human review
     )
 
@@ -288,7 +288,7 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
                     "event_type": str(r.get("action", "decision")),
                     "description": (
                         f"{str(r.get('action', '?')).upper()} on "
-                        f"{str(r.get('alert_id', '?'))} — "
+                        f"{str(r.get('alert_id', '?'))} -- "
                         f"conf: {float(r.get('confidence') or 0):.0%}"
                     ),
                     "timestamp": str(r.get("ts", datetime.now().isoformat())),
@@ -319,10 +319,10 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
 @router.post("/demo/seed")
 async def seed_neo4j():
     """
-    Legacy seed endpoint — blocked on AGE backend.
+    Legacy seed endpoint -- blocked on AGE backend.
     seed_neo4j.py wipes the entire graph (all nodes, all labels). Use seed_zero_day.py.
     """
-    print("[DEMO] /demo/seed blocked — seed_neo4j.py is LEGACY on AGE backend.")
+    print("[DEMO] /demo/seed blocked -- seed_neo4j.py is LEGACY on AGE backend.")
     return {
         "status": "disabled",
         "message": (
@@ -410,9 +410,9 @@ async def reseed_demo_data():
     Also resets all in-memory state (audit trail, evolver stats, feedback).
 
     Returns {success, alert_count} for minimal, actionable feedback.
-    Never raises HTTPException — caller inspects the success flag instead.
+    Never raises HTTPException -- caller inspects the success flag instead.
     """
-    print("[RESEED] /demo/reseed blocked — seed_neo4j.py is LEGACY on AGE backend.")
+    print("[RESEED] /demo/reseed blocked -- seed_neo4j.py is LEGACY on AGE backend.")
     return {
         "success": False,
         "message": (
@@ -486,7 +486,7 @@ async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
             return {
                 "events": [],
                 "estimated": False,
-                "note": "No decisions recorded yet — process alerts to see evolution",
+                "note": "No decisions recorded yet -- process alerts to see evolution",
                 "total": 0,
             }
         _NULLS = (None, "None", "")
@@ -501,7 +501,7 @@ async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
                 "event_type": str(r.get("action", "decision")),
                 "description": (
                     f"{str(r.get('action', '?')).upper()} on "
-                    f"{str(r.get('alert_id', '?'))} — "
+                    f"{str(r.get('alert_id', '?'))} -- "
                     f"conf: {float(r.get('confidence') or 0):.0%}"
                 ),
                 "timestamp": str(r.get("ts", datetime.now().isoformat())),
@@ -540,7 +540,7 @@ async def get_weekly_trends():
                 "data": [],
                 "estimated": True,
                 "note": (
-                    "Weekly trends require decision history — "
+                    "Weekly trends require decision history -- "
                     "make decisions to populate"
                 ),
             }
@@ -984,7 +984,7 @@ async def get_confidence_trajectory_endpoint():
     trajectory = get_confidence_trajectory()
     total = sum(len(v) for v in trajectory.values())
     print(
-        f"[METRICS] GET /metrics/confidence-trajectory — "
+        f"[METRICS] GET /metrics/confidence-trajectory -- "
         f"total={total}, types={list(trajectory.keys())}"
     )
     return {

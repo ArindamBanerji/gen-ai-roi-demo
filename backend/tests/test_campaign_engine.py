@@ -1,5 +1,5 @@
 """
-tests/test_campaign_engine.py — F6 CampaignCorrelationEngine test suite.
+tests/test_campaign_engine.py -- F6 CampaignCorrelationEngine test suite.
 
 8 tests covering Phase 1 campaign identity authority: category/entity/bucket
 separation, no no-entity campaigns, no-false-positive guard, de-duplication,
@@ -135,7 +135,7 @@ def test_rule3_temporal_clusters_same_category():
 def test_no_false_campaign_for_unrelated_alerts():
     """
     3 alerts on 3 different entities, no sequence, no temporal proximity
-    (different categories) → no campaign should be produced.
+    (different categories) -> no campaign should be produced.
     """
     events = [
         make_event("a1", "credential_access", 0, source_entity_id="ip-1"),
@@ -170,7 +170,7 @@ def test_each_alert_in_at_most_one_campaign():
 
     all_member_ids = [aid for c in campaigns for aid in c.member_alert_ids]
     assert len(all_member_ids) == len(set(all_member_ids)), (
-        f"Duplicate alert_ids across campaigns — each alert must belong to at most one. "
+        f"Duplicate alert_ids across campaigns -- each alert must belong to at most one. "
         f"All IDs: {all_member_ids}"
     )
 

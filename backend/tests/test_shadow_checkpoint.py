@@ -2,14 +2,14 @@
 Tests for Phase 4: ShadowModeService, CheckpointService, and their API endpoints.
 
 Coverage:
-  test_shadow_toggle                  — POST toggle enables/disables shadow mode
-  test_shadow_report_empty            — GET report with no shadow decisions → totals = 0
-  test_checkpoint_create_and_list     — create checkpoint, list returns it
-  test_checkpoint_rollback            — rollback restores state and sets frozen=True
-  test_freeze_unfreeze                — POST freeze/unfreeze returns correct frozen flag
-  test_shadow_analyst_action          — POST analyst-action returns recorded=True
-  test_learning_state_shows_frozen    — freeze then learning-state shows frozen=True
-  test_shadow_report_with_decisions   — shadow report computes agreement rate correctly
+  test_shadow_toggle                  -- POST toggle enables/disables shadow mode
+  test_shadow_report_empty            -- GET report with no shadow decisions -> totals = 0
+  test_checkpoint_create_and_list     -- create checkpoint, list returns it
+  test_checkpoint_rollback            -- rollback restores state and sets frozen=True
+  test_freeze_unfreeze                -- POST freeze/unfreeze returns correct frozen flag
+  test_shadow_analyst_action          -- POST analyst-action returns recorded=True
+  test_learning_state_shows_frozen    -- freeze then learning-state shows frozen=True
+  test_shadow_report_with_decisions   -- shadow report computes agreement rate correctly
 """
 
 import asyncio

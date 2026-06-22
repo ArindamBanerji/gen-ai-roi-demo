@@ -1,5 +1,5 @@
 """
-Block 2.3 — Centroid export tests.
+Block 2.3 -- Centroid export tests.
 Requires Block 2.2 (bootstrap_centroids). No live Neo4j required.
 """
 import asyncio
@@ -78,7 +78,7 @@ def test_export_has_10_fields():
 
 def test_sha256_computed_correctly():
     """sha256 must equal SHA-256 of canonical JSON of current_mu."""
-    mock = _neo4j_with_bootstrap(None)   # no bootstrap — irrelevant for sha256
+    mock = _neo4j_with_bootstrap(None)   # no bootstrap -- irrelevant for sha256
     export = _run(build_centroid_export(get_profile_scorer(), mock))
 
     canonical = json.dumps({"mu": export["current_mu"]}, sort_keys=True)
@@ -98,7 +98,7 @@ def test_drift_computed_when_bootstrap_present():
     """
     drift_from_bootstrap = mean(|current_mu - bootstrap_mu|).
     When bootstrap == current, drift = 0.0.
-    When bootstrap is perturbed by +0.1, drift ≈ 0.1.
+    When bootstrap is perturbed by +0.1, drift ~= 0.1.
     """
     scorer = get_profile_scorer()
 
@@ -120,7 +120,7 @@ def test_drift_computed_when_bootstrap_present():
 
 def test_drift_none_when_no_bootstrap():
     """drift_from_bootstrap must be None when DeploymentState has no bootstrap."""
-    mock = _neo4j_with_bootstrap(None)   # no rows → get_bootstrap_centroids returns None
+    mock = _neo4j_with_bootstrap(None)   # no rows -> get_bootstrap_centroids returns None
     export = _run(build_centroid_export(get_profile_scorer(), mock))
 
     assert export["drift_from_bootstrap"] is None,  "Expected None drift without bootstrap"
@@ -209,7 +209,7 @@ def test_centroid_export_returns_200():
 def test_centroid_export_has_ten_fields():
     data = _endpoint_data()
     if not _scorer_ready(data):
-        pytest.skip("ProfileScorer not initialized — skipping field check")
+        pytest.skip("ProfileScorer not initialized -- skipping field check")
 
     required = [
         "exported_at", "export_version", "tensor_shape",
@@ -227,7 +227,7 @@ def test_centroid_export_has_ten_fields():
 def test_centroid_export_tensor_shape_correct():
     data = _endpoint_data()
     if not _scorer_ready(data):
-        pytest.skip("ProfileScorer not initialized — skipping shape check")
+        pytest.skip("ProfileScorer not initialized -- skipping shape check")
 
     assert data["tensor_shape"] == [6, 4, 6]
     assert len(data["categories"]) == 6
@@ -242,7 +242,7 @@ def test_centroid_export_tensor_shape_correct():
 def test_centroid_export_centroids_have_six_factors():
     data = _endpoint_data()
     if not _scorer_ready(data):
-        pytest.skip("ProfileScorer not initialized — skipping centroids check")
+        pytest.skip("ProfileScorer not initialized -- skipping centroids check")
 
     for cat in data["categories"]:
         assert cat in data["centroids"], f"Category missing from centroids: {cat}"
@@ -260,7 +260,7 @@ def test_centroid_export_centroids_have_six_factors():
 def test_centroid_export_checksum_is_string():
     data = _endpoint_data()
     if not _scorer_ready(data):
-        pytest.skip("ProfileScorer not initialized — skipping checksum check")
+        pytest.skip("ProfileScorer not initialized -- skipping checksum check")
 
     assert isinstance(data["checksum"], str)
     assert len(data["checksum"]) == 64  # SHA-256 hex

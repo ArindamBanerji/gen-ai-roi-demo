@@ -1,16 +1,16 @@
 """
-CrowdStrikeMockConnector — UCL connector simulating CrowdStrike Falcon EDR.
+CrowdStrikeMockConnector -- UCL connector simulating CrowdStrike Falcon EDR.
 
 No real API key required. All device records are hardcoded to match the
 canonical demo assets seeded by seed_neo4j.py.
 
 Behaviour:
-  refresh()  — writes :CrowdStrikeEnrichment nodes and
+  refresh()  -- writes :CrowdStrikeEnrichment nodes and
                (Asset)-[:EDR_MANAGED_BY]->(CrowdStrikeEnrichment) edges.
                MERGE throughout so calling refresh() twice is idempotent.
-  health_check() — always healthy (no external dependency).
+  health_check() -- always healthy (no external dependency).
 
-AWS-PROD-ACCOUNT is intentionally absent — cloud accounts do not run the
+AWS-PROD-ACCOUNT is intentionally absent -- cloud accounts do not run the
 Falcon sensor.
 """
 import json as _json
@@ -81,13 +81,13 @@ class CrowdStrikeMockConnector(UCLConnector):
     UCL connector for CrowdStrike Falcon EDR (mock/demo mode).
 
     Writes :CrowdStrikeEnrichment nodes linked to existing :Asset nodes
-    via [:EDR_MANAGED_BY] relationships.  All data is hardcoded — no API
+    via [:EDR_MANAGED_BY] relationships.  All data is hardcoded -- no API
     key or network access required.
     """
 
     name        = "crowdstrike"
     source_type = "edr"
-    description = "CrowdStrike Falcon EDR — device inventory, prevention status, sensor version (mock)"
+    description = "CrowdStrike Falcon EDR -- device inventory, prevention status, sensor version (mock)"
 
     # ------------------------------------------------------------------
     # UCLConnector.refresh()
@@ -182,7 +182,7 @@ class CrowdStrikeMockConnector(UCLConnector):
                     else:
                         print(
                             f"[CROWDSTRIKE] No Asset found for hostname={device['hostname']} "
-                            f"— skipping EDR_MANAGED_BY edge"
+                            f"-- skipping EDR_MANAGED_BY edge"
                         )
             except Exception as exc:
                 print(f"[CROWDSTRIKE] Failed to link {device['hostname']}: {exc}")
@@ -203,7 +203,7 @@ class CrowdStrikeMockConnector(UCLConnector):
         ]
 
         print(
-            f"[CROWDSTRIKE] refresh complete — "
+            f"[CROWDSTRIKE] refresh complete -- "
             f"{indicators_ingested} devices ingested, "
             f"{relationships_created} EDR_MANAGED_BY edges created"
         )
@@ -222,12 +222,12 @@ class CrowdStrikeMockConnector(UCLConnector):
 
     async def health_check(self) -> HealthStatus:
         """
-        Always healthy — mock connector requires no API key or network access.
+        Always healthy -- mock connector requires no API key or network access.
         """
         return HealthStatus(
             healthy=True,
             source=self.name,
-            message="Mock connector — no API key required",
+            message="Mock connector -- no API key required",
         )
 
     # ------------------------------------------------------------------

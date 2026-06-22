@@ -39,21 +39,21 @@ CATEGORY_OVERRIDES: dict[str, dict[str, Any]] = {
         "condition": "threat_intel_enrichment > threshold",
         "factor_index": 2,
         "threshold": 0.50,
-        "override_reason": "Strong IOC signal — investigate, never refer",
+        "override_reason": "Strong IOC signal -- investigate, never refer",
     },
     "data_exfiltration": {
         "condition": "asset_criticality > t1 AND time_anomaly > t2",
         "factor_indices": [1, 4],
         "thresholds": [0.70, 0.60],
         "logic": "AND",
-        "override_reason": "High-value asset + timing anomaly — investigate/escalate",
+        "override_reason": "High-value asset + timing anomaly -- investigate/escalate",
     },
     "insider_threat": {
         "condition": "pattern_history > t1 AND time_anomaly > t2",
         "factor_indices": [3, 4],
         "thresholds": [0.70, 0.70],
         "logic": "AND",
-        "override_reason": "Strong behavioral deviation + timing — investigate/escalate",
+        "override_reason": "Strong behavioral deviation + timing -- investigate/escalate",
     },
 }
 

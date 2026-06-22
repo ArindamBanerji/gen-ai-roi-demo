@@ -1,5 +1,5 @@
 """
-tests/test_campaign_phase3_async.py — Campaign Phase 3 async materialization.
+tests/test_campaign_phase3_async.py -- Campaign Phase 3 async materialization.
 
 Phase 3 changes when seed/campaign writes run, not how the 1b-2 locked
 materialization path writes graph data.

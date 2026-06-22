@@ -1,10 +1,10 @@
 """
-ProfileSnapshot service — persists centroid state to Neo4j every 50 decisions.
+ProfileSnapshot service -- persists centroid state to Neo4j every 50 decisions.
 
-A ProfileSnapshot node captures the full μ tensor at a point in time so that
+A ProfileSnapshot node captures the full mu tensor at a point in time so that
 IKS trend computation has historical anchor points to compare against.
 
-Reference: docs/soc_copilot_design_v1.md §14 (IKS / ProfileSnapshot).
+Reference: docs/soc_copilot_design_v1.md Sec.14 (IKS / ProfileSnapshot).
 """
 
 import logging
@@ -35,7 +35,7 @@ async def maybe_write_profile_snapshot(decision_count: int) -> None:
 
 
 async def _write_profile_snapshot(decision_count: int) -> None:
-    """Write one ProfileSnapshot node capturing the current μ tensor."""
+    """Write one ProfileSnapshot node capturing the current mu tensor."""
     try:
         from app.db.neo4j import neo4j_client
         from app.services.gae_state import get_profile_scorer

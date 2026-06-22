@@ -1,11 +1,11 @@
 """
-CheckpointService — centroid checkpoint and rollback (TD-033, Phase 4 §17.5).
+CheckpointService -- centroid checkpoint and rollback (TD-033, Phase 4 Sec.17.5).
 
 Creates immutable snapshots of the ProfileScorer centroid tensor (mu) in Neo4j.
 Rollback restores a snapshot and freezes the scorer to prevent further drift.
-CISO Q4 answer: "What if it's wrong?" — instant revert to any prior checkpoint.
+CISO Q4 answer: "What if it's wrong?" -- instant revert to any prior checkpoint.
 
-Reference: docs/soc_copilot_design_v5_6_part2.md §17.5
+Reference: docs/soc_copilot_design_v5_6_part2.md Sec.17.5
 """
 
 from __future__ import annotations
@@ -34,13 +34,13 @@ class CheckpointService:
 
         Parameters
         ----------
-        scorer : ProfileScorer — source of mu, counts, decision_count
+        scorer : ProfileScorer -- source of mu, counts, decision_count
         neo4j_service : object with async run_query
-        reason : str — label stored on the node (e.g. "pre-learning-activation")
+        reason : str -- label stored on the node (e.g. "pre-learning-activation")
 
         Returns
         -------
-        str — the new checkpoint_id (UUID)
+        str -- the new checkpoint_id (UUID)
         """
         checkpoint_id  = str(uuid.uuid4())
         mu_snapshot    = scorer.centroids.tolist()
@@ -107,8 +107,8 @@ class CheckpointService:
 
         Parameters
         ----------
-        checkpoint_id : str — UUID of the target Checkpoint node
-        scorer : ProfileScorer — will have mu (and counts) mutated in-place
+        checkpoint_id : str -- UUID of the target Checkpoint node
+        scorer : ProfileScorer -- will have mu (and counts) mutated in-place
         neo4j_service : object with async run_query
 
         Returns
@@ -135,11 +135,11 @@ class CheckpointService:
             mu_restored = np.array(json.loads(mu_str), dtype=np.float64)
             if not np.isfinite(mu_restored).all():
                 log.error(
-                    "[CHECKPOINT] mu_snapshot contains NaN or Inf — rollback aborted: id=%s",
+                    "[CHECKPOINT] mu_snapshot contains NaN or Inf -- rollback aborted: id=%s",
                     checkpoint_id,
                 )
                 return {
-                    "error": "Checkpoint contains NaN or Inf values — rollback aborted",
+                    "error": "Checkpoint contains NaN or Inf values -- rollback aborted",
                     "checkpoint_id": checkpoint_id,
                 }
             scorer.centroids = mu_restored
@@ -155,7 +155,7 @@ class CheckpointService:
                 if np.isfinite(counts_restored).all():
                     scorer.counts[:] = counts_restored
                 else:
-                    log.warning("[CHECKPOINT] counts_snapshot contains NaN or Inf — skipped")
+                    log.warning("[CHECKPOINT] counts_snapshot contains NaN or Inf -- skipped")
             except Exception as exc:
                 log.debug("[CHECKPOINT] counts restore skipped: %s", exc)
 
@@ -163,7 +163,7 @@ class CheckpointService:
         restored_dc = int(cp.get("decision_count") or 0)
 
         log.info(
-            "[CHECKPOINT] Rolled back to id=%s (decision_count=%d) — scorer frozen",
+            "[CHECKPOINT] Rolled back to id=%s (decision_count=%d) -- scorer frozen",
             checkpoint_id, restored_dc,
         )
         return {

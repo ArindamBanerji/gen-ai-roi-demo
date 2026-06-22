@@ -2,14 +2,14 @@
 Tests for Phase 5: CompositeDiscriminant, DecisionHistoryService, and endpoints.
 
 Coverage:
-  test_composite_evaluate_low_confidence    — confidence < 0.70 → False
-  test_composite_evaluate_low_cat_count     — cat_count < 50 → False (maturity gate)
-  test_composite_evaluate_all_pass          — all gates pass → True, reason_codes=["all gates passed"]
-  test_composite_suppress_safety            — suppress action, confidence=0.80 → False
-  test_composite_features_computed          — all 13 features present
-  test_auto_approve_stats_endpoint          — GET /api/soc/auto-approve-stats structure
-  test_analyze_includes_composite_gate      — POST /api/alert/analyze includes composite_gate
-  test_decision_history_empty_category      — empty category → cat_count=0, rolling_accuracy=0.5
+  test_composite_evaluate_low_confidence    -- confidence < 0.70 -> False
+  test_composite_evaluate_low_cat_count     -- cat_count < 50 -> False (maturity gate)
+  test_composite_evaluate_all_pass          -- all gates pass -> True, reason_codes=["all gates passed"]
+  test_composite_suppress_safety            -- suppress action, confidence=0.80 -> False
+  test_composite_features_computed          -- all 13 features present
+  test_auto_approve_stats_endpoint          -- GET /api/soc/auto-approve-stats structure
+  test_analyze_includes_composite_gate      -- POST /api/alert/analyze includes composite_gate
+  test_decision_history_empty_category      -- empty category -> cat_count=0, rolling_accuracy=0.5
 """
 
 import asyncio
@@ -80,7 +80,7 @@ def _cat_stats_neo4j(cat_count: int, correct: int = 0, verified: int = 0):
 # ---------------------------------------------------------------------------
 
 def test_composite_evaluate_low_confidence():
-    """confidence < CONFIDENCE_THRESHOLD (0.70) → auto_approve=False."""
+    """confidence < CONFIDENCE_THRESHOLD (0.70) -> auto_approve=False."""
     f = [0.5] * 6
     result_sr = _make_score_result(action_index=0, confidence=0.50)
     neo4j = _cat_stats_neo4j(cat_count=100, correct=90, verified=100)
@@ -100,7 +100,7 @@ def test_composite_evaluate_low_confidence():
 # ---------------------------------------------------------------------------
 
 def test_composite_evaluate_low_cat_count():
-    """cat_count < MIN_CAT_COUNT (50) → auto_approve=False even with high confidence."""
+    """cat_count < MIN_CAT_COUNT (50) -> auto_approve=False even with high confidence."""
     f = [0.8, 0.9, 0.1, 0.7, 0.8, 0.2]
     result_sr = _make_score_result(action_index=0, confidence=0.90)
     neo4j = _cat_stats_neo4j(cat_count=10)
@@ -120,7 +120,7 @@ def test_composite_evaluate_low_cat_count():
 # ---------------------------------------------------------------------------
 
 def test_composite_evaluate_all_pass():
-    """With confidence=0.85, large margin, cat_count=100 → auto_approve=True."""
+    """With confidence=0.85, large margin, cat_count=100 -> auto_approve=True."""
     # action_index=0 (escalate), high confidence, clear margin from other actions
     probs = np.array([0.85, 0.10, 0.02, 0.02, 0.01])
     distances = np.array([0.10, 0.50, 0.60, 0.65, 0.70])
@@ -148,7 +148,7 @@ def test_composite_evaluate_all_pass():
 # ---------------------------------------------------------------------------
 
 def test_composite_suppress_safety():
-    """suppress action with confidence=0.80 → auto_approve=False (needs >= 0.95)."""
+    """suppress action with confidence=0.80 -> auto_approve=False (needs >= 0.95)."""
     from app.domains.soc.config import SOC_ACTIONS
     suppress_idx = SOC_ACTIONS.index("suppress")  # index 2
 
@@ -293,7 +293,7 @@ def test_analyze_includes_composite_gate():
 # ---------------------------------------------------------------------------
 
 def test_decision_history_empty_category():
-    """Query a category with no decisions → cat_count=0, rolling_accuracy=0.5."""
+    """Query a category with no decisions -> cat_count=0, rolling_accuracy=0.5."""
     async def run_query(query, params=None):
         return [{"cat_count": 0, "correct_count": 0, "verified_count": 0}]
 

@@ -1,16 +1,16 @@
 """
-Investigation Narrative Service — NAR-1
+Investigation Narrative Service -- NAR-1
 
 NarrativeProvider Protocol with two concrete implementations:
   - TemplateNarrativeProvider (default): deterministic, no external deps
   - OllamaNarrativeProvider:            Ollama REST API, falls back to template
 
-Usage (new path — preferred):
+Usage (new path -- preferred):
     from app.services.narrative import get_narrative_provider
     narrative = get_narrative_provider().generate(alert, decision, factors, calibration_context)
 
 Design decisions:
-  - Protocol is structural (runtime_checkable) — no ABC overhead.
+  - Protocol is structural (runtime_checkable) -- no ABC overhead.
   - TemplateNarrativeProvider preserves all F3a sentence logic.
   - Mandatory calibration sentence added as the final sentence (NAR-1).
   - OllamaNarrativeProvider wraps httpx with a 10-second timeout; any
@@ -24,7 +24,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
 
-from app.framework.narrative_base import (  # noqa: F401 — re-exported for callers
+from app.framework.narrative_base import (  # noqa: F401 -- re-exported for callers
     NarrativeProvider,
     create_narrative_provider,
     get_narrative_provider,
@@ -188,7 +188,7 @@ def _build_sentence1(
     if mitre_technique:
         return (
             f"{alert_id} classified as {situation_label} "
-            f"({mitre_technique} · {mitre_tactic}, {pct}% confidence)."
+            f"({mitre_technique} * {mitre_tactic}, {pct}% confidence)."
         )
     return f"{alert_id} classified as {situation_label} ({pct}% confidence)."
 
@@ -261,7 +261,7 @@ class TemplateNarrativeProvider:
                                  Keys: id, alert_type, situation_type, situation_confidence,
                                        factors_detected, mitre_technique, mitre_tactic.
             decision:            Dict with keys: action, confidence, pattern_id.
-            factors:             List of {"name": str, "value": float} — GAE factor vector.
+            factors:             List of {"name": str, "value": float} -- GAE factor vector.
             calibration_context: Dict with: decision_count, category_count, category,
                                             top_factor, bottom_factor.
         Returns:

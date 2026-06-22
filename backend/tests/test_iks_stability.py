@@ -4,7 +4,7 @@ POST /api/alerts/reset (demo-cycle reset).
 
 Root cause: reset_all() was calling reset_learning_state(), which wiped
 ProfileScorer centroids and rebuilt a fresh scorer with mu = mu_0,
-making drift-based IKS return 0 → 2.5.
+making drift-based IKS return 0 -> 2.5.
 
 Fix: reset_demo_alerts() now calls reset_except(["learning_state"]),
 preserving the ProfileScorer across demo resets.
@@ -41,11 +41,11 @@ def _neo4j_reset_mock():
 # ---------------------------------------------------------------------------
 
 def test_alerts_reset_preserves_profile_scorer():
-    """ProfileScorer must still be attached after a demo reset — BACKLOG-020."""
+    """ProfileScorer must still be attached after a demo reset -- BACKLOG-020."""
     ls_before = client.get("/api/soc/learning-state").json()
     iks_before = ls_before.get("iks_v2", 0.0)
     if iks_before == 0.0:
-        pytest.skip("ProfileScorer not initialized — no IKS data")
+        pytest.skip("ProfileScorer not initialized -- no IKS data")
 
     with patch("app.routers.triage.neo4j_client", _neo4j_reset_mock()):
         resp = client.post("/api/alerts/reset")
@@ -53,7 +53,7 @@ def test_alerts_reset_preserves_profile_scorer():
 
     ls_after = client.get("/api/soc/learning-state").json()
     assert ls_after.get("iks_v2", 0.0) > 0.0, (
-        "BACKLOG-020: ProfileScorer was reset after /api/alerts/reset — "
+        "BACKLOG-020: ProfileScorer was reset after /api/alerts/reset -- "
         "IKS dropped to zero (learning state wiped)"
     )
 
@@ -63,11 +63,11 @@ def test_alerts_reset_preserves_profile_scorer():
 # ---------------------------------------------------------------------------
 
 def test_alerts_reset_does_not_collapse_iks():
-    """IKS must not drop to near-zero after POST /api/alerts/reset — BACKLOG-020."""
+    """IKS must not drop to near-zero after POST /api/alerts/reset -- BACKLOG-020."""
     ls_before = client.get("/api/soc/learning-state").json()
     iks_before = ls_before.get("iks_v2", 0.0)
     if iks_before == 0.0:
-        pytest.skip("ProfileScorer not initialized — no IKS data")
+        pytest.skip("ProfileScorer not initialized -- no IKS data")
 
     with patch("app.routers.triage.neo4j_client", _neo4j_reset_mock()):
         resp = client.post("/api/alerts/reset")
@@ -77,7 +77,7 @@ def test_alerts_reset_does_not_collapse_iks():
     iks_after = ls_after.get("iks_v2", 0.0)
 
     assert iks_after >= iks_before - 5.0, (
-        f"BACKLOG-020: IKS collapsed {iks_before:.1f}→{iks_after:.1f} "
+        f"BACKLOG-020: IKS collapsed {iks_before:.1f}->{iks_after:.1f} "
         "after /api/alerts/reset"
     )
 
@@ -130,7 +130,7 @@ def test_state_manager_reset_except_empty_skip_calls_all():
 # ---------------------------------------------------------------------------
 
 def test_iks_stable_after_learning_decisions():
-    """IKS must not collapse after learning loop runs — BACKLOG-020.
+    """IKS must not collapse after learning loop runs -- BACKLOG-020.
 
     Simulates the key invariant: a sequence of demo resets (which the
     E2E learning loop triggers via beforeEach) must not clobber the
@@ -139,7 +139,7 @@ def test_iks_stable_after_learning_decisions():
     ls_before = client.get("/api/soc/learning-state").json()
     iks_before = ls_before.get("iks_v2", 0.0)
     if iks_before == 0.0:
-        pytest.skip("ProfileScorer not initialized — no IKS data")
+        pytest.skip("ProfileScorer not initialized -- no IKS data")
     assert iks_before >= 0, f"IKS must be non-negative before test: {iks_before}"
 
     # Simulate 5 demo-cycle resets (what beforeEach + explicit reset trigger)
@@ -153,8 +153,8 @@ def test_iks_stable_after_learning_decisions():
     iks_after = ls_after.get("iks_v2", 0.0)
 
     assert iks_after >= iks_before - 10, (
-        f"BACKLOG-020: IKS dropped {iks_before:.1f}→{iks_after:.1f} "
-        "after 5 demo resets — learning state was wiped"
+        f"BACKLOG-020: IKS dropped {iks_before:.1f}->{iks_after:.1f} "
+        "after 5 demo resets -- learning state was wiped"
     )
 
 
@@ -163,7 +163,7 @@ def test_iks_stable_after_learning_decisions():
 # ---------------------------------------------------------------------------
 
 def test_iks_above_70_after_alerts_reset():
-    """IKS must stay > 70 after /api/alerts/reset — demo readiness gate.
+    """IKS must stay > 70 after /api/alerts/reset -- demo readiness gate.
 
     Regression for BACKLOG-020 part 2: verifies that all reset paths
     (triage, metrics demo/reset-all, metrics demo/reseed) preserve the
@@ -172,7 +172,7 @@ def test_iks_above_70_after_alerts_reset():
     ls_before = client.get("/api/soc/learning-state").json()
     iks_before = ls_before.get("iks_v2", 0.0)
     if iks_before <= 70:
-        pytest.skip(f"IKS baseline is {iks_before:.1f} ≤ 70 — bootstrap not complete")
+        pytest.skip(f"IKS baseline is {iks_before:.1f} <= 70 -- bootstrap not complete")
 
     with patch("app.routers.triage.neo4j_client", _neo4j_reset_mock()):
         resp = client.post("/api/alerts/reset")
@@ -209,4 +209,4 @@ def test_alerts_reset_preserves_iks_above_threshold():
     assert iks_after > 0, \
         f"BACKLOG-020: IKS dropped to zero after reset (was {iks_before})"
     assert iks_after == iks_before, \
-        f"BACKLOG-020: IKS changed after reset: {iks_before} → {iks_after}"
+        f"BACKLOG-020: IKS changed after reset: {iks_before} -> {iks_after}"

@@ -1,8 +1,8 @@
 """
-tests/test_write_roundtrips.py — Response-model and write-path roundtrip tests.
+tests/test_write_roundtrips.py -- Response-model and write-path roundtrip tests.
 
 15 tests covering:
-  - All 9 response_model endpoints return 200 (model mismatch → 500)
+  - All 9 response_model endpoints return 200 (model mismatch -> 500)
   - ProfileScorer shape (6, 4, 6)
   - SCORER_ACTIONS has 4 items, no refer_to_analyst
   - Alert queue items use 'id' field
@@ -116,7 +116,7 @@ def test_response_model_centroid_support():
 # =============================================================================
 
 def test_profile_scorer_shape_6_4_6():
-    """ProfileScorer centroids must have shape (6, 4, 6) — 6 categories, 4 actions, 6 factors."""
+    """ProfileScorer centroids must have shape (6, 4, 6) -- 6 categories, 4 actions, 6 factors."""
     r = client.get("/api/soc/profile")
     assert r.status_code == 200
     centroids = r.json()["centroids"]

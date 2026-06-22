@@ -1,5 +1,5 @@
 """
-PatternHistoryFactorComputer — W2 read path tests.
+PatternHistoryFactorComputer -- W2 read path tests.
 
 Verifies:
   - Fallback (0.40) when no TRIGGERED_EVOLUTION edges exist
@@ -43,7 +43,7 @@ def run(coro):
 # ---------------------------------------------------------------------------
 
 def test_pattern_history_fallback_when_no_edges():
-    """Empty Neo4j results → fallback value 0.40."""
+    """Empty Neo4j results -> fallback value 0.40."""
     from app.domains.soc.factors import PatternHistoryFactorComputer
 
     computer = PatternHistoryFactorComputer()
@@ -56,7 +56,7 @@ def test_pattern_history_fallback_when_no_edges():
 
 
 def test_pattern_history_uses_triggered_evolution_edges():
-    """5 decisions with pattern_value=0.80 (same decision_num) → result ≈ 0.80."""
+    """5 decisions with pattern_value=0.80 (same decision_num) -> result ~= 0.80."""
     from app.domains.soc.factors import PatternHistoryFactorComputer
 
     computer = PatternHistoryFactorComputer()
@@ -82,7 +82,7 @@ def test_pattern_history_recency_weighting():
     2 decisions:
       decision_num=100, pattern_value=0.90  (recent, weight=1.0)
       decision_num=70,  pattern_value=0.40  (30 decisions ago, weight=0.5)
-    Expected: (0.90×1.0 + 0.40×0.5) / 1.5 ≈ 0.733
+    Expected: (0.90x1.0 + 0.40x0.5) / 1.5 ~= 0.733
     """
     from app.domains.soc.factors import PatternHistoryFactorComputer
 
@@ -97,12 +97,12 @@ def test_pattern_history_recency_weighting():
 
     result = run(computer.compute(alert, neo4j, action_index=0))
 
-    expected = (0.90 * 1.0 + 0.40 * 0.5) / 1.5  # ≈ 0.7333
+    expected = (0.90 * 1.0 + 0.40 * 0.5) / 1.5  # ~= 0.7333
     assert abs(result - expected) < 0.01
 
 
 def test_pattern_history_clips_to_unit_interval():
-    """pattern_value=1.20 (out of bounds) → result clamped to ≤ 1.0."""
+    """pattern_value=1.20 (out of bounds) -> result clamped to <= 1.0."""
     from app.domains.soc.factors import PatternHistoryFactorComputer
 
     computer = PatternHistoryFactorComputer()

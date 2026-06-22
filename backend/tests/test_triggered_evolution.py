@@ -1,5 +1,5 @@
 """
-test_triggered_evolution.py — TRIGGERED_EVOLUTION edge creation tests.
+test_triggered_evolution.py -- TRIGGERED_EVOLUTION edge creation tests.
 
 Tests that the triage outcome path creates (Decision)-[:TRIGGERED_EVOLUTION]->
 (EvolutionEvent) edges for verified correct outcomes on SCORER_ACTIONS.
@@ -67,7 +67,7 @@ def _make_learning_state():
     ls                = MagicMock()
     ls.decision_count = 100
     ls.W              = np.ones((4, 6))
-    ls.update.return_value = None   # wu=None → skips centroid/snapshot blocks
+    ls.update.return_value = None   # wu=None -> skips centroid/snapshot blocks
     return ls
 
 
@@ -180,15 +180,15 @@ def test_evolution_edge_has_required_properties():
         "can find this Decision via d.verified_correct = true"
     )
     assert "action_index" in q, (
-        "SET d.action_index must be present — PatternHistoryFactorComputer "
+        "SET d.action_index must be present -- PatternHistoryFactorComputer "
         "filters by d.action_index = $action_index in its action-specific path"
     )
     assert "factor_snapshot" in q, (
-        "SET d.factor_snapshot must be present — PatternHistoryFactorComputer "
+        "SET d.factor_snapshot must be present -- PatternHistoryFactorComputer "
         "reads d.factor_snapshot[3] for the pattern_history feature value"
     )
     assert "decision_number" in q, (
-        "SET d.decision_number must be present — used for recency weighting "
+        "SET d.decision_number must be present -- used for recency weighting "
         "in PatternHistoryFactorComputer"
     )
 
@@ -196,7 +196,7 @@ def test_evolution_edge_has_required_properties():
 def test_evolution_edge_failure_does_not_block_outcome():
     """
     When the TRIGGERED_EVOLUTION graph write raises, the outcome response
-    must still succeed. Edge creation is fire-and-forget — non-blocking.
+    must still succeed. Edge creation is fire-and-forget -- non-blocking.
     """
     neo4j = _make_neo4j(action=_SCORER_ACTION, raise_on_evolution=True)
     result = _run(_call(neo4j, outcome="correct"))

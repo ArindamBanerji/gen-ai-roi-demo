@@ -78,8 +78,8 @@ def generate_transparency_page() -> Dict:
                     'content': (
                         'A mathematical constraint (alpha * q * V >= theta_min) ensures '
                         'the two levels compound rather than conflict. If the learning '
-                        'signal thins — due to auto-approve expansion, staffing changes, '
-                        'or any other cause — the system alerts before accuracy degrades. '
+                        'signal thins -- due to auto-approve expansion, staffing changes, '
+                        'or any other cause -- the system alerts before accuracy degrades. '
                         'Check the Learning Health panel for current status.'
                     )
                 },

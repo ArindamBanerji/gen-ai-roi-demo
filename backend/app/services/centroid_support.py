@@ -1,7 +1,7 @@
 """
-app/services/centroid_support.py — Block 3.6 Centroid Support Monitoring.
+app/services/centroid_support.py -- Block 3.6 Centroid Support Monitoring.
 
-Flags when a centroid has moved outside its data support region —
+Flags when a centroid has moved outside its data support region --
 i.e., the system is making decisions on factor combinations it has
 never observed.  Makes the conservation law story concrete in Tab 2.
 
@@ -21,18 +21,18 @@ def compute_centroid_support(
     Check whether live centroids have moved outside their data support region.
 
     A centroid is "outside support" when its distance from mu_zero exceeds
-    threshold_sigma × sigma_per_factor for any factor dimension.
+    threshold_sigma x sigma_per_factor for any factor dimension.
 
     Parameters
     ----------
-    mu               : np.ndarray, shape [C, A, D] — live centroid tensor
-    mu_zero          : np.ndarray, shape [C, A, D] — bootstrap baseline
-    sigma_per_factor : list[float], len D — per-factor sigma values
-    threshold_sigma  : float (default 2.0) — number of sigmas for boundary
+    mu               : np.ndarray, shape [C, A, D] -- live centroid tensor
+    mu_zero          : np.ndarray, shape [C, A, D] -- bootstrap baseline
+    sigma_per_factor : list[float], len D -- per-factor sigma values
+    threshold_sigma  : float (default 2.0) -- number of sigmas for boundary
 
     Returns
     -------
-    dict mapping (c_idx, a_idx) → {
+    dict mapping (c_idx, a_idx) -> {
         "n_factors_outside"    : int,
         "factors_outside"      : list[int],
         "max_deviation_sigma"  : float,

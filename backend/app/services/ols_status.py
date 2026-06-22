@@ -1,5 +1,5 @@
 """
-Re-export stub — implementation moved to app.framework.ols_status.
+Re-export stub -- implementation moved to app.framework.ols_status.
 Preserved for backwards compatibility. Do not add logic here.
 When copilot-sdk is extracted, update callers to import from
 copilot_sdk.ols_status directly.

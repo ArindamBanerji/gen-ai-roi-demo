@@ -1,5 +1,5 @@
 """
-tests/test_threat_intel_pass3.py — ThreatIntelEnrichmentFactor Pass 3 tests.
+tests/test_threat_intel_pass3.py -- ThreatIntelEnrichmentFactor Pass 3 tests.
 
 4 tests validating campaign membership scoring, severity mapping,
 neutral fallback, and non-raising exception handling.
@@ -30,14 +30,14 @@ def run(coro):
 def test_high_severity_campaign_returns_low_value():
     """
     When alert is member of a HIGH severity campaign, Pass 3 must return
-    value=0.05 — the strongest escalate signal (lowest value).
+    value=0.05 -- the strongest escalate signal (lowest value).
     """
     mock_neo4j = AsyncMock()
     mock_neo4j.run_query.return_value = [{
         "confidence": 0.85,
         "severity": "HIGH",
         "campaign_id": "camp-001",
-        "summary": "2 alerts: credential_access → lateral_movement over 6h.",
+        "summary": "2 alerts: credential_access -> lateral_movement over 6h.",
         "trigger_rule": "technique_sequence",
     }]
 
@@ -58,7 +58,7 @@ def test_high_severity_campaign_returns_low_value():
 
 def test_medium_severity_campaign_returns_medium_value():
     """
-    MEDIUM severity campaign → value=0.20 (moderate escalate signal).
+    MEDIUM severity campaign -> value=0.20 (moderate escalate signal).
     """
     mock_neo4j = AsyncMock()
     mock_neo4j.run_query.return_value = [{

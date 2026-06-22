@@ -70,7 +70,7 @@ def test_all_patterns_unique():
 
 def test_backend_import_clean():
     """Backend imports cleanly and category lookup works end-to-end."""
-    from app.main import app  # noqa: F401 — import side-effect check
+    from app.main import app  # noqa: F401 -- import side-effect check
     from app.domains.soc.config import SOCDomainConfig
     cfg = SOCDomainConfig()
     assert cfg.get_pattern_for_category("lateral_movement") == "PAT-LATERAL-001"

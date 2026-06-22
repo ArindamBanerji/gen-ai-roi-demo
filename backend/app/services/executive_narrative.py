@@ -117,7 +117,7 @@ def _build_sections(
             "verified decisions before making category-specific claims."
         )
     elif iks_score < 10.0:
-        learning_content = "Early stage — accumulating decisions before institutional knowledge claims."
+        learning_content = "Early stage -- accumulating decisions before institutional knowledge claims."
     elif iks_score < 20.0:
         learning_content = "Building institutional knowledge from verified decisions and category outcomes."
     else:
@@ -378,7 +378,7 @@ class ExecutiveNarrative:
             pass
 
         if alerts_total == 0 and decisions_verified == 0:
-            return "Weekly digest not yet populated — requires 7 days of live data."
+            return "Weekly digest not yet populated -- requires 7 days of live data."
 
         return (
             f"System processed {alerts_total} alerts, learned from "
@@ -562,7 +562,7 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     # ── headline ─────────────────────────────────────────────────────────────
     if alerts_total == 0 and verified_decisions == 0:
         headline = (
-            "Weekly digest not yet populated — requires 7 days of live data."
+            "Weekly digest not yet populated -- requires 7 days of live data."
         )
     else:
         headline = (
@@ -591,22 +591,22 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
 
     if pre_activation:
         _signal = (
-            "Pre-activation — Conservation law monitoring is configured, "
+            "Pre-activation -- Conservation law monitoring is configured, "
             "but live learning is disabled pending validation"
         )
     else:
         _signal = (
-            "healthy — no intervention required"
+            "healthy -- no intervention required"
             if health_status == "GREEN"
-            else "degraded — learning paused automatically"
+            else "degraded -- learning paused automatically"
         )
     conservation_narrative = (
-        "Conservation law active — analyst override quality monitored "
+        "Conservation law active -- analyst override quality monitored "
         "continuously. 0% quality degradation events missed in validation "
-        "(CLAIM-OLS-01, p90 lead time ≥50 decisions). "
+        "(CLAIM-OLS-01, p90 lead time >=50 decisions). "
         f"Current signal: {_signal}. "
         "Every system decision is logged in a tamper-evident "
-        "Evidence Ledger — full audit trail available for "
+        "Evidence Ledger -- full audit trail available for "
         "regulatory review (EU AI Act Art. 13 compliant)."
     )
 

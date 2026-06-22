@@ -9,8 +9,8 @@ from typing import Dict, Any, List, Optional, Literal
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
 from app.domains.soc.config import SOCDomainConfig
-from app.framework.feedback_store import FEEDBACK_GIVEN  # noqa: F401 — re-exported for callers
-from app.framework.feedback_base import (  # noqa: F401 — re-exported for callers
+from app.framework.feedback_store import FEEDBACK_GIVEN  # noqa: F401 -- re-exported for callers
+from app.framework.feedback_base import (  # noqa: F401 -- re-exported for callers
     TRUST_SCORES,
     TRUST_HISTORY,
     LOW_TRUST_FLAGS,
@@ -34,8 +34,8 @@ _soc_cfg = SOCDomainConfig()
 # Pattern confidence scores (simulated)
 # H7-FIX-1: all 6 SOC categories + legacy demo patterns initialised
 PATTERN_CONFIDENCE = {
-    "PAT-TRAVEL-001":  0.94,   # legacy — kept for backward compat
-    "PAT-PHISH-001":   0.89,   # legacy — kept for backward compat
+    "PAT-TRAVEL-001":  0.94,   # legacy -- kept for backward compat
+    "PAT-PHISH-001":   0.89,   # legacy -- kept for backward compat
     "PAT-CRED-001":    0.85,
     "PAT-THREAT-001":  0.82,
     "PAT-LATERAL-001": 0.80,
@@ -256,7 +256,7 @@ def process_outcome(
             f"to {new_confidence*100:.1f}% ({(new_confidence-old_confidence)*100:.1f} points). "
             f"The system has triggered a threshold review and will route the next 5 "
             f"similar alerts to Tier 2 analysts for manual review. "
-            f"This is self-correction in action — the system learned from this mistake "
+            f"This is self-correction in action -- the system learned from this mistake "
             f"and adjusted its behavior."
         )
 
@@ -338,9 +338,9 @@ def seed_trust_history() -> None:
     Pre-populate TRUST_HISTORY with 12 realistic historical snapshots for
     travel_login_anomaly, telling the asymmetry story from first load:
 
-      Decisions 1–9  : correct  (+0.03 each) → trust rises 0.50 → 0.77
-      Decision  10   : incorrect (−0.60)     → trust crashes   0.77 → 0.17
-      Decisions 11–12: correct  (+0.03 each) → recovery starts 0.17 → 0.23
+      Decisions 1-9  : correct  (+0.03 each) -> trust rises 0.50 -> 0.77
+      Decision  10   : incorrect (-0.60)     -> trust crashes   0.77 -> 0.17
+      Decisions 11-12: correct  (+0.03 each) -> recovery starts 0.17 -> 0.23
 
     Final state: trust=0.23, human_review_required=True.
 
@@ -360,10 +360,10 @@ def seed_trust_history() -> None:
         ("correct",   0.68),   #  6
         ("correct",   0.71),   #  7
         ("correct",   0.74),   #  8
-        ("correct",   0.77),   #  9  ← peak before the crash
-        ("incorrect", 0.17),   # 10  ← one wrong answer wipes 9 correct ones
-        ("correct",   0.20),   # 11  ← slow recovery
-        ("correct",   0.23),   # 12  ← still in danger zone (< 0.3)
+        ("correct",   0.77),   #  9  <- peak before the crash
+        ("incorrect", 0.17),   # 10  <- one wrong answer wipes 9 correct ones
+        ("correct",   0.20),   # 11  <- slow recovery
+        ("correct",   0.23),   # 12  <- still in danger zone (< 0.3)
     ]
 
     base_ts = datetime.now(timezone.utc) - timedelta(hours=12)
@@ -385,7 +385,7 @@ def seed_trust_history() -> None:
     LOW_TRUST_FLAGS[situation_type] = final_trust < 0.3  # True
 
     print(
-        f"[TRUST] Seeded {len(_ENTRIES)} historical trust snapshots for '{situation_type}' — "
+        f"[TRUST] Seeded {len(_ENTRIES)} historical trust snapshots for '{situation_type}' -- "
         f"current trust={final_trust:.2f}, human_review_required={LOW_TRUST_FLAGS[situation_type]}"
     )
 

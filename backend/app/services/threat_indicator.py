@@ -1,5 +1,5 @@
 """
-ThreatIndicatorService — persistent ThreatIndicator nodes with 24h TTL cache.
+ThreatIndicatorService -- persistent ThreatIndicator nodes with 24h TTL cache.
 
 Distinct from the legacy :ThreatIntel nodes (written by connectors/pulsedive.py).
 :ThreatIndicator nodes are managed exclusively by this service and support:
@@ -8,7 +8,7 @@ Distinct from the legacy :ThreatIntel nodes (written by connectors/pulsedive.py)
   - Alert linkage via [:HAS_INDICATOR]
   - Grouped summary (by_type, by_severity)
 
-CISO Q5 answer: "Why not Security Copilot?" → firm-specific threat graph + IOC count.
+CISO Q5 answer: "Why not Security Copilot?" -> firm-specific threat graph + IOC count.
 
 Reference: docs/project_status_and_plan_v3_part2.md Phase 7
 """
@@ -57,7 +57,7 @@ class ThreatIndicatorService:
         name: str,
         neo4j_service: Any,
     ) -> str:
-        """MERGE a ThreatIndicator node. Idempotent — updates timestamp on re-insert.
+        """MERGE a ThreatIndicator node. Idempotent -- updates timestamp on re-insert.
 
         Returns the node ID (UUID).  Returns "" if the write fails.
         """

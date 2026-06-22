@@ -57,7 +57,7 @@ async def test_decision_count_synced_from_neo4j():
 async def test_decision_count_not_downgraded():
     """
     When in-memory count (500) exceeds Neo4j count (100),
-    do NOT overwrite — keep the higher in-memory value.
+    do NOT overwrite -- keep the higher in-memory value.
     """
     final = await _run_sync(neo4j_count=100, initial_ls_count=500)
     assert final == 500, f"Expected 500 (in-memory should not be downgraded), got {final}"

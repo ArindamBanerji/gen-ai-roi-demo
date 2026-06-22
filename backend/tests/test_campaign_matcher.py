@@ -1,7 +1,7 @@
 """
-tests/test_campaign_matcher.py — F6 CampaignRepository + CampaignMatcher tests.
+tests/test_campaign_matcher.py -- F6 CampaignRepository + CampaignMatcher tests.
 
-4 tests using AsyncMock Neo4j — no live database required.
+4 tests using AsyncMock Neo4j -- no live database required.
 
 Run from backend/:
     pytest tests/test_campaign_matcher.py -v
@@ -181,7 +181,7 @@ class FakeNoopMemberCreateGraph(FakeCampaignGraph):
 def test_check_alert_returns_none_on_exception():
     """
     CampaignMatcher.check_alert must never raise.
-    Neo4j failure → log warning → return None.
+    Neo4j failure -> log warning -> return None.
     """
     mock_neo4j = AsyncMock()
     mock_neo4j.run_query.side_effect = Exception("Neo4j down")
@@ -287,7 +287,7 @@ def test_repository_write_campaign_is_idempotent():
         member_decision_ids=[],
         member_alert_ids=["a1", "a2"],
         correlation_window_hours=24,
-        nl_summary="2 alerts: credential_access → lateral_movement over 6h.",
+        nl_summary="2 alerts: credential_access -> lateral_movement over 6h.",
     )
 
     result1 = run(repo.write_campaign(campaign))

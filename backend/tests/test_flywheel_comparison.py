@@ -1,5 +1,5 @@
 """
-tests/test_flywheel_comparison.py — W2 Flywheel Demo Moment (Feature 3) test suite.
+tests/test_flywheel_comparison.py -- W2 Flywheel Demo Moment (Feature 3) test suite.
 
 4 tests validating cold-start suppression, Day-1 snapshot invariants,
 delta computation, and edge-threshold guard.
@@ -47,7 +47,7 @@ def test_day1_snapshot_shows_fallback():
     """
     When edges are present (847 >> threshold), day_1_snapshot must always
     reflect the fallback state: factor_4_value=0.40, triggered_evolution_edges=0.
-    These values are invariant — they represent the pre-W2 baseline.
+    These values are invariant -- they represent the pre-W2 baseline.
     """
     result = build_flywheel_comparison(
         current_edges=847, current_factor_4=0.82,
@@ -101,7 +101,7 @@ def test_panel_suppressed_when_edges_below_threshold():
     """
     With current_edges=9 (below MIN_EDGES_TO_SHOW=10), the panel must be
     suppressed. This boundary test confirms the guard fires at exactly
-    the threshold (9 < 10 → suppressed; 10 >= 10 → not suppressed).
+    the threshold (9 < 10 -> suppressed; 10 >= 10 -> not suppressed).
     """
     result = build_flywheel_comparison(
         current_edges=9, current_factor_4=0.55,
@@ -110,7 +110,7 @@ def test_panel_suppressed_when_edges_below_threshold():
     )
 
     assert result["flywheel_active"] == False, (
-        f"9 < MIN_EDGES_TO_SHOW ({MIN_EDGES_TO_SHOW}) — flywheel_active must be False. "
+        f"9 < MIN_EDGES_TO_SHOW ({MIN_EDGES_TO_SHOW}) -- flywheel_active must be False. "
         f"Got: {result}"
     )
 
@@ -120,7 +120,7 @@ def test_panel_suppressed_when_edges_below_threshold():
 # ============================================================================
 
 def test_flywheel_active_field_name_contract():
-    """Field name contract — frontend depends on this exact key."""
+    """Field name contract -- frontend depends on this exact key."""
     result_suppressed = build_flywheel_comparison(
         current_edges=5, current_factor_4=0.40,
         current_confidence=0.71, current_action="investigate",

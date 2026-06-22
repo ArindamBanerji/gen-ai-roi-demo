@@ -53,7 +53,7 @@ def _factors(**kwargs):
 # ---------------------------------------------------------------------------
 
 def test_refer_all_conditions_pass():
-    """Baseline: refer wins, confidence in band, narrow margin, no override → True."""
+    """Baseline: refer wins, confidence in band, narrow margin, no override -> True."""
     probs = _probs(refer=0.32, escalate=0.25, investigate=0.20, suppress=0.13, monitor=0.10)
     conf = 0.50
     factors = _factors()
@@ -65,7 +65,7 @@ def test_refer_all_conditions_pass():
 # ---------------------------------------------------------------------------
 
 def test_refer_blocked_condition1_low_prob():
-    """refer_to_analyst is not winning and its probability is < 0.15 → False."""
+    """refer_to_analyst is not winning and its probability is < 0.15 -> False."""
     probs = np.array([0.55, 0.25, 0.10, 0.06, 0.04], dtype=np.float64)
     conf = 0.50
     factors = _factors()
@@ -100,7 +100,7 @@ def test_refer_blocked_confidence_too_low():
 # ---------------------------------------------------------------------------
 
 def test_refer_blocked_large_margin():
-    """refer wins but a wide gap exists between top-2 → False."""
+    """refer wins but a wide gap exists between top-2 -> False."""
     probs = np.array([0.05, 0.05, 0.05, 0.05, 0.80], dtype=np.float64)
     conf = 0.50
     factors = _factors()
@@ -112,7 +112,7 @@ def test_refer_blocked_large_margin():
 # ---------------------------------------------------------------------------
 
 def test_refer_blocked_threat_intel_override():
-    """threat_intel_enrichment > 0.50 → override fires → False."""
+    """threat_intel_enrichment > 0.50 -> override fires -> False."""
     probs = _probs(refer=0.32, escalate=0.25, investigate=0.20, suppress=0.13, monitor=0.10)
     conf = 0.50
     factors = _factors(threat_intel_enrichment=0.60)  # above threshold 0.50
@@ -124,7 +124,7 @@ def test_refer_blocked_threat_intel_override():
 # ---------------------------------------------------------------------------
 
 def test_refer_allowed_threat_intel_below_threshold():
-    """threat_intel_enrichment < 0.50 → override does NOT fire → True."""
+    """threat_intel_enrichment < 0.50 -> override does NOT fire -> True."""
     probs = _probs(refer=0.32, escalate=0.25, investigate=0.20, suppress=0.13, monitor=0.10)
     conf = 0.50
     factors = _factors(threat_intel_enrichment=0.40)  # below threshold 0.50
@@ -136,7 +136,7 @@ def test_refer_allowed_threat_intel_below_threshold():
 # ---------------------------------------------------------------------------
 
 def test_refer_blocked_data_exfil_and_override():
-    """asset_criticality > 0.70 AND time_anomaly > 0.60 → AND override fires → False."""
+    """asset_criticality > 0.70 AND time_anomaly > 0.60 -> AND override fires -> False."""
     probs = _probs(refer=0.32, escalate=0.25, investigate=0.20, suppress=0.13, monitor=0.10)
     conf = 0.50
     factors = _factors(asset_criticality=0.80, time_anomaly=0.65)
@@ -148,7 +148,7 @@ def test_refer_blocked_data_exfil_and_override():
 # ---------------------------------------------------------------------------
 
 def test_refer_allowed_data_exfil_partial_override():
-    """asset_criticality > 0.70 but time_anomaly < 0.60 → AND not fully satisfied → True."""
+    """asset_criticality > 0.70 but time_anomaly < 0.60 -> AND not fully satisfied -> True."""
     probs = _probs(refer=0.32, escalate=0.25, investigate=0.20, suppress=0.13, monitor=0.10)
     conf = 0.50
     factors = _factors(asset_criticality=0.80, time_anomaly=0.40)  # time_anomaly below threshold
@@ -160,7 +160,7 @@ def test_refer_allowed_data_exfil_partial_override():
 # ---------------------------------------------------------------------------
 
 def test_get_fallback_returns_best_non_refer():
-    """escalate (index 0) has highest probability → fallback = 0."""
+    """escalate (index 0) has highest probability -> fallback = 0."""
     probs = np.array([0.40, 0.25, 0.15, 0.10, 0.10], dtype=np.float64)
     assert get_fallback_action(probs) == 0
 
@@ -170,7 +170,7 @@ def test_get_fallback_returns_best_non_refer():
 # ---------------------------------------------------------------------------
 
 def test_get_fallback_excludes_refer_index():
-    """refer (index 4) has highest probability; fallback should skip it → investigate (1)."""
+    """refer (index 4) has highest probability; fallback should skip it -> investigate (1)."""
     probs = np.array([0.15, 0.30, 0.20, 0.10, 0.25], dtype=np.float64)
     fb = get_fallback_action(probs)
     assert fb != REFER_ACTION_INDEX

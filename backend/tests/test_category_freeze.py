@@ -1,6 +1,6 @@
 """
-Block 9.3 — D2 Category freeze tests.
-Coupled to D3 spike detector — freeze only activates during volume spikes.
+Block 9.3 -- D2 Category freeze tests.
+Coupled to D3 spike detector -- freeze only activates during volume spikes.
 No live Neo4j required.
 """
 import asyncio
@@ -48,7 +48,7 @@ def test_no_freeze_when_no_spike():
     """
     assert not is_volume_spike_active(), "Precondition: spike should be inactive"
 
-    mock = _neo4j_with_baseline([])    # baseline irrelevant — guard fires first
+    mock = _neo4j_with_baseline([])    # baseline irrelevant -- guard fires first
     today = {"lateral_movement": 100, "malware": 10}
 
     result = _run(detect_frozen_categories(mock, today))
@@ -64,8 +64,8 @@ def test_no_freeze_when_no_spike():
 def test_overrepresented_category_frozen():
     """
     Baseline: lateral_movement = 15% of alerts.
-    Spike day: lateral_movement = 90 / 100 = 90% → 90% > 2 × 15% → freeze.
-    malware:   10 / 100 = 10% vs baseline 50% → not over-represented → no freeze.
+    Spike day: lateral_movement = 90 / 100 = 90% -> 90% > 2 x 15% -> freeze.
+    malware:   10 / 100 = 10% vs baseline 50% -> not over-represented -> no freeze.
     """
     baseline_rows = [
         {"category": "lateral_movement", "cnt": 15},
@@ -95,9 +95,9 @@ def test_overrepresented_category_frozen():
 
 def test_normal_category_not_frozen():
     """
-    All categories within 2× baseline share → no freezes.
+    All categories within 2x baseline share -> no freezes.
     Baseline: lateral_movement=20%, malware=30%, phishing=50%.
-    Today:    lateral_movement=22%, malware=28%, phishing=50% — all within 2×.
+    Today:    lateral_movement=22%, malware=28%, phishing=50% -- all within 2x.
     """
     baseline_rows = [
         {"category": "lateral_movement", "cnt": 20},
@@ -122,8 +122,8 @@ def test_normal_category_not_frozen():
 
 def test_frozen_category_skips_update():
     """
-    is_category_frozen("lateral_movement") = True → guarded_update returns None.
-    is_category_frozen("malware")          = False → guarded_update calls scorer.
+    is_category_frozen("lateral_movement") = True -> guarded_update returns None.
+    is_category_frozen("malware")          = False -> guarded_update calls scorer.
     """
     scorer = MagicMock()
     scorer.update.return_value = MagicMock()   # simulate CentroidUpdate

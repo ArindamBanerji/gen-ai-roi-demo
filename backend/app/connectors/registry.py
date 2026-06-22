@@ -1,5 +1,5 @@
 """
-ConnectorRegistry — Central registry for all UCL data source connectors.
+ConnectorRegistry -- Central registry for all UCL data source connectors.
 
 Usage pattern:
     # 1. In service module (or main.py at startup):
@@ -34,7 +34,7 @@ class ConnectorRegistry:
 
     def register(self, connector: UCLConnector) -> None:
         """
-        Add a connector to the registry (idempotent — last registration wins
+        Add a connector to the registry (idempotent -- last registration wins
         if the same name is registered twice, which is intentional for testing).
         """
         self._connectors[connector.name] = connector
@@ -88,7 +88,7 @@ class ConnectorRegistry:
                 result = await connector.refresh()
                 results.append(result)
                 print(
-                    f"[CONNECTOR] {connector.name} refresh OK — "
+                    f"[CONNECTOR] {connector.name} refresh OK -- "
                     f"ingested={result.indicators_ingested}, "
                     f"relationships={result.relationships_created}"
                 )

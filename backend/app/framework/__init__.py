@@ -1,5 +1,5 @@
 """
-CopilotFramework — domain-agnostic copilot infrastructure.
+CopilotFramework -- domain-agnostic copilot infrastructure.
 
 This package is designed for future extraction to copilot-sdk.
 Discipline rules (enforced for clean extraction):

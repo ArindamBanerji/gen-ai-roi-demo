@@ -1,9 +1,9 @@
 """
-Audit Router — Decision audit trail with JSON/CSV export and chain verification
+Audit Router -- Decision audit trail with JSON/CSV export and chain verification
 
-GET /api/audit/decisions?format=json   → JSON array of all decision records
-GET /api/audit/decisions?format=csv    → CSV file download
-GET /api/audit/verify                  → SHA-256 chain verification result
+GET /api/audit/decisions?format=json   -> JSON array of all decision records
+GET /api/audit/decisions?format=csv    -> CSV file download
+GET /api/audit/verify                  -> SHA-256 chain verification result
 
 CSV columns:
   id, alert_id, timestamp, situation_type, action_taken,
@@ -42,11 +42,11 @@ async def get_audit_decisions(format: str = "json"):
         format: "json" (default) or "csv"
 
     JSON response: { decisions: [...], total: N }
-    CSV response:  attachment download — soc_decision_audit.csv
+    CSV response:  attachment download -- soc_decision_audit.csv
                    factors column uses "|" as delimiter within the cell
                    hash column contains the SHA-256 chain hash for each record
     """
-    print(f"[AUDIT] GET /audit/decisions called — format={format}")
+    print(f"[AUDIT] GET /audit/decisions called -- format={format}")
 
     try:
         # Back-fill from FEEDBACK_GIVEN before returning, so the ledger is
@@ -133,7 +133,7 @@ async def verify_audit_chain():
         await reconstruct_from_memory()
         result = verify_chain()
         print(
-            f"[AUDIT] verify_chain → verified={result['verified']}, "
+            f"[AUDIT] verify_chain -> verified={result['verified']}, "
             f"chain_length={result['chain_length']}"
         )
         return result

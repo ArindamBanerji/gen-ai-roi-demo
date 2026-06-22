@@ -1,5 +1,5 @@
 """
-test_econ1.py — ECON-1 unit tests (no live Neo4j required).
+test_econ1.py -- ECON-1 unit tests (no live Neo4j required).
 
 Tests the /api/soc/economics endpoint added to metrics.py.
 

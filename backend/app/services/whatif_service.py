@@ -1,8 +1,8 @@
 """
-FEATURE-03 What-If Simulator — pure-math conservation projection.
+FEATURE-03 What-If Simulator -- pure-math conservation projection.
 
 v1 intentionally does not touch any live scorer or learning state. It projects
-daily q(t), computes signal α·q·V, and evaluates status via the GAE
+daily q(t), computes signal alpha*q*V, and evaluates status via the GAE
 conservation-law primitives.
 """
 

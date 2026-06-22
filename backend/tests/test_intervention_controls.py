@@ -2,16 +2,16 @@
 Tests for P22: InterventionControls (L-12 consolidated oversight panel).
 
 Coverage:
-  test_freeze_logged                   — freeze returns record with type/initiated_by/timestamp
-  test_unfreeze_logged                 — unfreeze returns record with frozen=False
-  test_rollback_preview                — preview mode returns diff without applying changes
-  test_threshold_below_minimum_rejected — threshold < 0.50 rejected with error key
-  test_threshold_valid                 — valid threshold logged with old and new values
-  test_current_state_has_fields        — state returns all required control fields
-  test_freeze_category_logged          — freeze_category logged with category/frozen
-  test_disable_auto_approve_logged     — disable returns auto_approve_enabled flag
-  test_category_force_review_logged    — force_review logged with category/force_review
-  test_rollback_preview_not_found      — preview on missing snapshot returns error+preview=True
+  test_freeze_logged                   -- freeze returns record with type/initiated_by/timestamp
+  test_unfreeze_logged                 -- unfreeze returns record with frozen=False
+  test_rollback_preview                -- preview mode returns diff without applying changes
+  test_threshold_below_minimum_rejected -- threshold < 0.50 rejected with error key
+  test_threshold_valid                 -- valid threshold logged with old and new values
+  test_current_state_has_fields        -- state returns all required control fields
+  test_freeze_category_logged          -- freeze_category logged with category/frozen
+  test_disable_auto_approve_logged     -- disable returns auto_approve_enabled flag
+  test_category_force_review_logged    -- force_review logged with category/force_review
+  test_rollback_preview_not_found      -- preview on missing snapshot returns error+preview=True
 """
 
 import asyncio

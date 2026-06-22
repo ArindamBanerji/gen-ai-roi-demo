@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Visual smoke test — verify frontend + backend still work after GAE integration.
+Visual smoke test -- verify frontend + backend still work after GAE integration.
 
 Tests the full API surface with one analyze+outcome cycle, then resets
 and checks Tab 2 / compounding endpoints still respond correctly.
@@ -17,7 +17,7 @@ import requests
 from requests.exceptions import RequestException
 
 BASE = "http://localhost:8000"
-TIMEOUT = 45  # seconds — generous for endpoints that hit Neo4j
+TIMEOUT = 45  # seconds -- generous for endpoints that hit Neo4j
 
 # Module-level results list; reset inside main() on each run.
 # Defined here so test() can reference it as a module-level name.
@@ -156,7 +156,7 @@ def main() -> None:
         else:
             _check("Outcome feedback accepted", False, "TIMEOUT")
     else:
-        _check("Outcome feedback accepted", False, "skipped — no decision_id")
+        _check("Outcome feedback accepted", False, "skipped -- no decision_id")
 
     # ============================================================================
     # 11-14. GAE endpoints after one outcome cycle

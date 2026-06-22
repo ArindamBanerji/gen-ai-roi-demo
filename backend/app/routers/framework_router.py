@@ -1,5 +1,5 @@
 """
-CopilotFramework router — domain-agnostic endpoints.
+CopilotFramework router -- domain-agnostic endpoints.
 Any copilot (SOC, S2P, fraud) exposes these endpoints.
 Safe to copy to copilot-sdk.
 
@@ -80,12 +80,12 @@ async def get_centroid_evolution(
     Return centroid drift history from Decision nodes.
     Used by Tab-2 Section A/B and Tab-4 Chart A.
 
-    Drift is the cumulative L2 distance from bootstrap baseline μ₀:
-        drift[c] = ‖μ(t)[c,a,:] − μ₀[c,a,:]‖₂  (mean over actions)
+    Drift is the cumulative L2 distance from bootstrap baseline mu_0:
+        drift[c] = ||mu(t)[c,a,:] - mu_0[c,a,:]||_2  (mean over actions)
 
     Primary path: Decision nodes with centroid_delta_norm set (live triage).
-    Fallback: when primary returns empty, compute current drift from μ₀ using
-    the in-memory ProfileScorer — no Neo4j required. Returns one record per
+    Fallback: when primary returns empty, compute current drift from mu_0 using
+    the in-memory ProfileScorer -- no Neo4j required. Returns one record per
     category (or for the requested category) showing accumulated drift.
     """
     result = []
@@ -239,7 +239,7 @@ async def get_convergence_calendar():
             decisions_per_factor = {f: per for f in SOC_FACTORS}
 
     except RuntimeError:
-        pass  # not yet initialised — stay with defaults
+        pass  # not yet initialised -- stay with defaults
     except Exception as exc:
         print(f"[convergence-calendar] state read failed: {exc}")
 
@@ -549,7 +549,7 @@ async def checkpoint_rollback(request: RollbackRequest):
 
 @router.post("/soc/scorer/freeze")
 async def scorer_freeze():
-    """Freeze the ProfileScorer — stops centroid updates."""
+    """Freeze the ProfileScorer -- stops centroid updates."""
     from app.services.gae_state import get_profile_scorer, get_scorer_lock
     try:
         scorer = get_profile_scorer()
@@ -564,7 +564,7 @@ async def scorer_freeze():
 
 @router.post("/soc/scorer/unfreeze")
 async def scorer_unfreeze():
-    """Unfreeze the ProfileScorer — re-enables centroid updates."""
+    """Unfreeze the ProfileScorer -- re-enables centroid updates."""
     from app.services.gae_state import get_profile_scorer, get_scorer_lock
     try:
         scorer = get_profile_scorer()
@@ -1018,7 +1018,7 @@ async def frozen_roi(
     analyst_hourly_cost: float = 85.0,
     auto_approve_rate: float = 0.04
 ):
-    """Frozen mode ROI — value before learning is enabled."""
+    """Frozen mode ROI -- value before learning is enabled."""
     from app.services.economics import FrozenROICalculator
     calc = FrozenROICalculator(
         analyst_hourly_cost=analyst_hourly_cost,

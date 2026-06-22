@@ -1,5 +1,5 @@
 """
-Block 7.4 — tests for GateConfig self-calibrating gate class.
+Block 7.4 -- tests for GateConfig self-calibrating gate class.
 """
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -12,12 +12,12 @@ from app.domains.soc.config import GateConfig
 ANALYSTS = {"alice": 0.90, "bob": 0.70, "carol": 0.80}
 
 def _conservative():
-    """500 decisions < n_min=1000 → conservative mode."""
+    """500 decisions < n_min=1000 -> conservative mode."""
     return GateConfig(n_decisions=500, V=200.0, alpha=0.25,
                       per_analyst_precision=ANALYSTS)
 
 def _calibrated():
-    """1001 decisions >= n_min=1000 → calibrated mode."""
+    """1001 decisions >= n_min=1000 -> calibrated mode."""
     return GateConfig(n_decisions=1001, V=200.0, alpha=0.25,
                       per_analyst_precision=ANALYSTS)
 
@@ -44,7 +44,7 @@ def test_eta_cap_conservative():
 
 
 def test_eta_cap_calibrated():
-    """vol_std=0.0 → default calibrated cap = 1.5"""
+    """vol_std=0.0 -> default calibrated cap = 1.5"""
     cfg = _calibrated()   # vol_std defaults to 0.0
     assert cfg.eta_cap == 1.5, f"Expected 1.5, got {cfg.eta_cap}"
 

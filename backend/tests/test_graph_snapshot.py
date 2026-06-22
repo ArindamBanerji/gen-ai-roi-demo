@@ -1,6 +1,6 @@
 """
 BACKLOG-020 GraphSnapshot tests.
-All run without a live DB — snapshot logic is pure Python.
+All run without a live DB -- snapshot logic is pure Python.
 """
 import pytest
 from unittest.mock import AsyncMock, MagicMock
@@ -35,7 +35,7 @@ async def test_from_graph_reads_correct_values(mock_graph_client):
 
 @pytest.mark.asyncio
 async def test_restart_idempotent(mock_graph_client):
-    """Two from_graph() calls produce identical snapshots — restart is safe."""
+    """Two from_graph() calls produce identical snapshots -- restart is safe."""
     snap1 = await GraphSnapshot.from_graph(mock_graph_client)
     snap2 = await GraphSnapshot.from_graph(mock_graph_client)
     assert snap1.verified_decisions == snap2.verified_decisions
@@ -67,19 +67,19 @@ def test_on_verified_decision_incorrect_does_not_increment_correct_decisions():
 
 
 def test_on_verified_decision_requires_is_correct():
-    """Omitting is_correct raises TypeError — no silent default any more."""
+    """Omitting is_correct raises TypeError -- no silent default any more."""
     snap = GraphSnapshot()
     try:
         snap.on_verified_decision("lateral_movement", False, 0.0)
         assert False, "Expected TypeError when is_correct is omitted"
     except TypeError:
-        pass  # expected — no default means callers must be explicit
+        pass  # expected -- no default means callers must be explicit
 
 
 def test_on_verified_decision_graph_write_failure_leaves_snapshot_unchanged():
     """
     Snapshot must not update if graph write fails.
-    Simulate by NOT calling on_verified_decision() — caller only
+    Simulate by NOT calling on_verified_decision() -- caller only
     calls it after successful graph write.
     """
     snap = GraphSnapshot(verified_decisions=10)

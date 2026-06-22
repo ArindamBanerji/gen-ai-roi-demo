@@ -1,8 +1,8 @@
 """
-campaigns.py — Multi-Alert Campaign Correlation (F6).
+campaigns.py -- Multi-Alert Campaign Correlation (F6).
 
 Campaign schema, Cypher queries, and pure-Python helper functions.
-No Neo4j calls in this module — all graph I/O lives in the service layer.
+No Neo4j calls in this module -- all graph I/O lives in the service layer.
 
 Confidence model:
   technique_sequence  0.85  (kill-chain pattern matched)
@@ -479,7 +479,7 @@ RETURN
 # ── Helper functions (pure Python, no Neo4j) ─────────────────────────────────
 
 def make_campaign_id(alert_ids: List[str]) -> str:
-    """Deterministic UUID5 from sorted alert IDs — order-independent."""
+    """Deterministic UUID5 from sorted alert IDs -- order-independent."""
     return str(uuid.uuid5(uuid.NAMESPACE_OID, ",".join(sorted(alert_ids))))
 
 
@@ -602,7 +602,7 @@ def _ts_to_seconds(ts) -> float:
     epoch integer in milliseconds (as written by the migrated epoch fields).
     """
     if isinstance(ts, (int, float)):
-        return ts / 1000.0  # epoch millis → seconds
+        return ts / 1000.0  # epoch millis -> seconds
     if hasattr(ts, "to_native"):
         ts = ts.to_native()
     if isinstance(ts, datetime):
@@ -627,12 +627,12 @@ def sliding_window_cluster(alerts: list, window_seconds: int) -> List[list]:
 
 def build_nl_summary(events: list, shared_entities: List[str],
                      trigger_rule: str) -> str:
-    """Deterministic NL summary. No LLM — template only."""
+    """Deterministic NL summary. No LLM -- template only."""
     n = len(events)
     cats = list(dict.fromkeys([e["category"] or "unknown" for e in events]))
     ts_values = [_ts_to_seconds(e["ts"]) for e in events]
     dur_hours = int((max(ts_values) - min(ts_values)) / 3600)
-    cat_str = " → ".join(cats)
+    cat_str = " -> ".join(cats)
     if trigger_rule == "technique_sequence":
         return (f"{n} alerts: {cat_str} over {dur_hours}h. "
                 f"Kill chain pattern detected.")
@@ -674,7 +674,7 @@ class CampaignCorrelationEngine:
     Rule priority: technique_sequence > shared_entity > temporal.
     Campaign IDs are stable per Phase 1 L1 identity tuple:
     rule_type + derived entity + category + epoch-aligned bucket.
-    All methods accept plain dicts — no Neo4j dependency in this class.
+    All methods accept plain dicts -- no Neo4j dependency in this class.
     Neo4j queries live in CampaignRepository (Step 5).
     """
 
@@ -751,7 +751,7 @@ class CampaignCorrelationEngine:
                         if campaign is not None:
                             new_campaigns.append(campaign)
                             claimed.update(alert_ids)
-                        break  # one chain match per entity — exit chain loop
+                        break  # one chain match per entity -- exit chain loop
 
         return new_campaigns, claimed
 
@@ -1488,7 +1488,7 @@ class CampaignRepository:
     ) -> bool:
         """
         Write Campaign node and :MEMBER_OF edges to Neo4j.
-        Idempotent — MATCH-then-CREATE (AGE has no MERGE).
+        Idempotent -- MATCH-then-CREATE (AGE has no MERGE).
         Returns True on success.
         """
         if self._has_transactional_graph_client():
@@ -1812,7 +1812,7 @@ class CampaignMatcher:
     """
     Real-time: called after write_decision_to_graph() on each new alert.
     Checks if new alert joins existing campaign or starts a new one.
-    Never blocks alert processing — all failures are logged and swallowed.
+    Never blocks alert processing -- all failures are logged and swallowed.
     """
 
     def __init__(
@@ -1852,7 +1852,7 @@ class CampaignMatcher:
     async def check_alert(self, alert_id: str) -> Optional[str]:
         """
         Returns campaign_id if alert joined/created a campaign, else None.
-        Non-blocking — Exception → log warning → return None.
+        Non-blocking -- Exception -> log warning -> return None.
         """
         return await self._check_alert_impl(alert_id)
 

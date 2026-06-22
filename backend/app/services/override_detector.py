@@ -1,13 +1,13 @@
 """
-app/services/override_detector.py — SOC override detector service.
+app/services/override_detector.py -- SOC override detector service.
 
 Loads analyst correct-override examples from Neo4j ShadowDecision nodes
 and activates the module-level OverrideDetector singleton when >= 50
 examples are available.
 
 Query filter:
-    agreed = false          — analyst disagreed with AI
-    analyst_correct = true  — analyst was right to disagree
+    agreed = false          -- analyst disagreed with AI
+    analyst_correct = true  -- analyst was right to disagree
     source = 'v_shadow_synthetic_v3'
 
 The singleton is exposed as `override_detector` for import by the
@@ -44,7 +44,7 @@ async def load_from_neo4j(neo4j_client: Any) -> OverrideDetector:
     Query Neo4j for correct-override ShadowDecision nodes and load them
     into the module-level singleton.
 
-    Safe to call multiple times — each call fully replaces the example set.
+    Safe to call multiple times -- each call fully replaces the example set.
 
     Parameters
     ----------
@@ -60,19 +60,19 @@ async def load_from_neo4j(neo4j_client: Any) -> OverrideDetector:
         results = await neo4j_client.run_query(_QUERY, {})
         examples = [dict(r) for r in results] if results else []
     except Exception as exc:
-        log.warning("[OverrideDetector] Neo4j query failed — using empty set: %s", exc)
+        log.warning("[OverrideDetector] Neo4j query failed -- using empty set: %s", exc)
         examples = []
 
     override_detector.load(examples)
 
     if override_detector.activated:
         log.info(
-            "[OverrideDetector] ACTIVATED — %d correct-override examples loaded.",
+            "[OverrideDetector] ACTIVATED -- %d correct-override examples loaded.",
             override_detector.example_count,
         )
     else:
         log.info(
-            "[OverrideDetector] inactive — %d/%d correct-override examples loaded.",
+            "[OverrideDetector] inactive -- %d/%d correct-override examples loaded.",
             override_detector.example_count,
             override_detector._threshold,
         )

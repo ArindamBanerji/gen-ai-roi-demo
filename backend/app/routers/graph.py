@@ -1,19 +1,19 @@
 """
-Graph Intelligence Router — Threat Intel + UCL Connector endpoints
+Graph Intelligence Router -- Threat Intel + UCL Connector endpoints
 
 Existing endpoint (backward compat):
   POST /api/graph/threat-intel/refresh
 
 New endpoints added in C1 (UCL Connector base + registry):
-  GET  /api/graph/connectors               — list all registered connectors + health
-  POST /api/graph/connectors/refresh-all   — refresh all connectors, return combined results
+  GET  /api/graph/connectors               -- list all registered connectors + health
+  POST /api/graph/connectors/refresh-all   -- refresh all connectors, return combined results
 
 New endpoints added in C4a (multi-source aggregation):
-  GET  /api/graph/enrichment/aggregate/{indicator}  — unified enrichment for one indicator
-  GET  /api/graph/enrichment/summary                — unified enrichment for ALL indicators
+  GET  /api/graph/enrichment/aggregate/{indicator}  -- unified enrichment for one indicator
+  GET  /api/graph/enrichment/summary                -- unified enrichment for ALL indicators
 
-New endpoint added in C4b (bug fix — alert-id keyed enrichment):
-  GET  /api/graph/enrichment/by-alert/{alert_id}    — enrichment for a specific alert via graph traversal
+New endpoint added in C4b (bug fix -- alert-id keyed enrichment):
+  GET  /api/graph/enrichment/by-alert/{alert_id}    -- enrichment for a specific alert via graph traversal
 """
 from typing import Any, Dict, List
 
@@ -35,10 +35,10 @@ def _consensus_severity(sources: Dict[str, Dict]) -> str:
     Derive a single severity label from all source-specific values.
 
     Priority order:
-      1. Any source "critical" or "malicious"  → "critical"
-      2. Any source "high"                     → "high"
-      3. All sources "low" or "benign"         → "low"
-      4. Otherwise                             → "medium"
+      1. Any source "critical" or "malicious"  -> "critical"
+      2. Any source "high"                     -> "high"
+      3. All sources "low" or "benign"         -> "low"
+      4. Otherwise                             -> "medium"
     """
     all_values: List[str] = []
     for data in sources.values():
@@ -189,7 +189,7 @@ async def refresh_threat_intel_endpoint():
     try:
         summary = await refresh_threat_intel()
         print(
-            f"[GRAPH] Refresh complete — "
+            f"[GRAPH] Refresh complete -- "
             f"ingested={summary['indicators_ingested']}, "
             f"relationships={summary['relationships_created']}, "
             f"source={summary['source']}"
@@ -282,7 +282,7 @@ async def refresh_all_connectors():
     total_ingested = sum(r.indicators_ingested for r in results)
     total_relationships = sum(r.relationships_created for r in results)
     print(
-        f"[GRAPH] refresh_all complete — "
+        f"[GRAPH] refresh_all complete -- "
         f"sources={len(results)}, "
         f"total_ingested={total_ingested}, "
         f"total_relationships={total_relationships}"
@@ -425,7 +425,7 @@ async def get_enrichment_by_alert(alert_id: str):
       - Only the graph relationship reliably connects alerts to indicators
 
     Always returns HTTP 200.  Use `has_enrichment` / `source_count` to detect
-    the empty state — no 404 is raised.
+    the empty state -- no 404 is raised.
 
     Response shape:
         {

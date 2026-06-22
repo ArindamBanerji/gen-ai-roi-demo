@@ -78,7 +78,7 @@ def test_f9_report_endpoint():
 def test_analyst_benchmarking_per_category_f9_fields():
     data = _benchmarking_data()
     if not _shadow_data_loaded(data):
-        pytest.skip("ShadowDecision data not loaded — skipping F9 field check")
+        pytest.skip("ShadowDecision data not loaded -- skipping F9 field check")
 
     for cat, entry in data["per_category"].items():
         assert "analyst_agreement" in entry, f"Missing analyst_agreement for {cat}"
@@ -96,11 +96,11 @@ def test_analyst_benchmarking_per_category_f9_fields():
 def test_f9_report_total_matches_benchmarking():
     bench = _benchmarking_data()
     if not _shadow_data_loaded(bench):
-        pytest.skip("ShadowDecision data not loaded — skipping total check")
+        pytest.skip("ShadowDecision data not loaded -- skipping total check")
 
     f9 = client.get("/api/soc/f9-report").json()
     if f9.get("total_shadow_decisions", 0) == 0:
-        pytest.skip("f9-report secondary Neo4j call failed (event loop) — skipping total check")
+        pytest.skip("f9-report secondary Neo4j call failed (event loop) -- skipping total check")
     assert f9.get("total_shadow_decisions") == bench.get("total_decisions")
 
 
@@ -111,7 +111,7 @@ def test_f9_report_total_matches_benchmarking():
 def test_analyst_benchmarking_override_precision_valid():
     data = _benchmarking_data()
     if not _shadow_data_loaded(data):
-        pytest.skip("ShadowDecision data not loaded — skipping override_precision check")
+        pytest.skip("ShadowDecision data not loaded -- skipping override_precision check")
 
     for cat, entry in data["per_category"].items():
         op = entry.get("override_precision")

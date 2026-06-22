@@ -1,13 +1,13 @@
 """
-Tests for IKS v2 (§Phase-3).
+Tests for IKS v2 (Sec.Phase-3).
 
 Coverage:
-  test_compute_iks_v2_cold_start            — 0 decisions → low score + cold-start interpretation
-  test_compute_iks_v2_components_bounded    — all components in [0, 100]
-  test_compute_iks_v2_grows_with_decisions  — higher decision count → higher score
-  test_interpret_iks_v2_ranges             — correct interpretation string at each band
-  test_iks_trend_endpoint                  — GET /api/soc/iks-trend valid structure
-  test_learning_state_includes_iks_v2      — GET /api/soc/learning-state includes iks_v2
+  test_compute_iks_v2_cold_start            -- 0 decisions -> low score + cold-start interpretation
+  test_compute_iks_v2_components_bounded    -- all components in [0, 100]
+  test_compute_iks_v2_grows_with_decisions  -- higher decision count -> higher score
+  test_interpret_iks_v2_ranges             -- correct interpretation string at each band
+  test_iks_trend_endpoint                  -- GET /api/soc/iks-trend valid structure
+  test_learning_state_includes_iks_v2      -- GET /api/soc/learning-state includes iks_v2
 """
 
 import asyncio
@@ -203,11 +203,11 @@ def test_iks_reflects_historical_decisions():
     """
     At 2,851 historical decisions IKS v2 must be meaningfully above 50.
 
-    Formula at 2851 (6 cats × 475 each, 75% high-confidence, no verified outcomes):
-      graph_richness    = min(2851/1000, 1) × 100 = 100.0
-      decision_maturity = min(475/100, 1) × 100   = 100.0  (threshold: 100/cat)
-      trust_coverage    = 2138/2851 × 100          ≈ 75.0
-      factor_quality    = 75.0  (mature-system prior: ≥1000 decisions)
+    Formula at 2851 (6 cats x 475 each, 75% high-confidence, no verified outcomes):
+      graph_richness    = min(2851/1000, 1) x 100 = 100.0
+      decision_maturity = min(475/100, 1) x 100   = 100.0  (threshold: 100/cat)
+      trust_coverage    = 2138/2851 x 100          ~= 75.0
+      factor_quality    = 75.0  (mature-system prior: >=1000 decisions)
       iks_v2            = (100 + 100 + 75 + 75) / 4 = 87.5
     """
     _6_cats = {
@@ -222,7 +222,7 @@ def test_iks_reflects_historical_decisions():
         total=2851,
         cat_counts=_6_cats,
         high_conf=2138,   # ~75% of 2851
-        accuracies=[],    # no verified outcomes → uses mature-system prior
+        accuracies=[],    # no verified outcomes -> uses mature-system prior
     )
     result = asyncio.run(compute_iks_v2(fake))
 
@@ -240,14 +240,14 @@ def test_iks_reflects_historical_decisions():
 
 def test_iks_at_537_decisions():
     """
-    At 537 decisions IKS v2 must be in [60, 75] — validating CLAIM-SC-01 (~67).
+    At 537 decisions IKS v2 must be in [60, 75] -- validating CLAIM-SC-01 (~67).
 
-    Formula at 537 (6 cats × 89 each, 75% high-confidence, no verified outcomes):
-      graph_richness    = min(537/1000, 1) × 100 = 53.7
-      decision_maturity = min(89/100, 1) × 100   = 89.0  (89 < 100, not yet saturated)
-      trust_coverage    = 403/537 × 100           ≈ 75.0
+    Formula at 537 (6 cats x 89 each, 75% high-confidence, no verified outcomes):
+      graph_richness    = min(537/1000, 1) x 100 = 53.7
+      decision_maturity = min(89/100, 1) x 100   = 89.0  (89 < 100, not yet saturated)
+      trust_coverage    = 403/537 x 100           ~= 75.0
       factor_quality    = 50.0  (early-stage prior: 537 < 1000 decision threshold)
-      iks_v2            = (53.7 + 89 + 75 + 50) / 4 ≈ 66.9
+      iks_v2            = (53.7 + 89 + 75 + 50) / 4 ~= 66.9
     """
     _6_cats = {
         "travel_login_anomaly":      89,
@@ -261,11 +261,11 @@ def test_iks_at_537_decisions():
         total=537,
         cat_counts=_6_cats,
         high_conf=403,    # ~75% of 537
-        accuracies=[],    # no verified outcomes → uses early-stage 50% prior
+        accuracies=[],    # no verified outcomes -> uses early-stage 50% prior
     )
     result = asyncio.run(compute_iks_v2(fake))
 
     assert 60 <= result["iks_v2"] <= 75, (
-        f"IKS v2 at 537 decisions should be in [60, 75] (CLAIM-SC-01 ≈ 67), "
+        f"IKS v2 at 537 decisions should be in [60, 75] (CLAIM-SC-01 ~= 67), "
         f"got {result['iks_v2']}. Components: {result['components']}"
     )

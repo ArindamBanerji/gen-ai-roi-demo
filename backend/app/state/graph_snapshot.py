@@ -1,5 +1,5 @@
 """
-backend/app/state/graph_snapshot.py — Block 8.5 Phase 7
+backend/app/state/graph_snapshot.py -- Block 8.5 Phase 7
 
 GraphSnapshot: single source of truth for all display-layer statistics
 that have a graph equivalent. Eliminates the LearningState split-read
@@ -9,21 +9,21 @@ Design contract:
     1. On startup: initialize from graph (GraphSnapshot.from_graph())
     2. On verified decision: write graph FIRST, update snapshot AFTER
     3. All tab reads use snapshot (O(1), never a graph query per render)
-    4. If graph write fails → exception → snapshot unchanged → consistent
+    4. If graph write fails -> exception -> snapshot unchanged -> consistent
     5. Silent divergence is structurally impossible
 
 Fields that move FROM LearningState TO here (Phase 7 full wiring):
-    decision_count      → verified_decisions
-    override_rate       → override_rate
-    override_quality    → override_quality
-    category_counts     → category_counts
-    iks_score           → iks_score
+    decision_count      -> verified_decisions
+    override_rate       -> override_rate
+    override_quality    -> override_quality
+    category_counts     -> category_counts
+    iks_score           -> iks_score
 
 Fields that STAY in LearningState (no graph equivalent):
-    centroid_tensor     — centroid sync already explicit
-    frozen_accuracy     — no graph equivalent
-    learning_enabled    — control flag, not a stat
-    conservation_state  — computed from snapshot fields
+    centroid_tensor     -- centroid sync already explicit
+    frozen_accuracy     -- no graph equivalent
+    learning_enabled    -- control flag, not a stat
+    conservation_state  -- computed from snapshot fields
 
 Pattern rule (carry forward to every future feature):
     Any statistic that:
@@ -61,7 +61,7 @@ class GraphSnapshot:
     async def from_graph(cls, graph_client: "Neo4jClient") -> "GraphSnapshot":
         """
         Build snapshot from graph. Called on startup.
-        Closes the restart gap — all stats read from graph, not memory.
+        Closes the restart gap -- all stats read from graph, not memory.
         """
         snap = cls()
 
@@ -181,6 +181,6 @@ def get_snapshot() -> "GraphSnapshot":
     """
     if _snapshot is None:
         raise RuntimeError(
-            "GraphSnapshot not initialized — startup_event() has not run yet."
+            "GraphSnapshot not initialized -- startup_event() has not run yet."
         )
     return _snapshot

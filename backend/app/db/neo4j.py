@@ -4,7 +4,7 @@ Handles all graph queries for the SOC Copilot Demo
 
 Block 8.5: GRAPH_BACKEND switcher.
 Set GRAPH_BACKEND=age in .env to activate PostgreSQL+AGE.
-Default is neo4j — zero behaviour change unless env var is set.
+Default is neo4j -- zero behaviour change unless env var is set.
 """
 import logging
 import os
@@ -186,7 +186,7 @@ class Neo4jClient:
         Create a Decision node atomically with DECIDED_ON edge to Alert.
 
         AGE-compatible: uses inline literals (no $param substitution).
-        Atomic MATCH+CREATE — if Alert is not found, no Decision is created.
+        Atomic MATCH+CREATE -- if Alert is not found, no Decision is created.
         Returns decision_id.
         """
         import json as _json
@@ -302,7 +302,7 @@ class Neo4jClient:
         BACKLOG-020 Phase 1: used on startup to sync LearningState.decision_count
         from the graph so the count survives server restarts.
 
-        Uses d.outcome IS NOT NULL as the verified predicate — this is the field
+        Uses d.outcome IS NOT NULL as the verified predicate -- this is the field
         set by both the triage outcome endpoint and all ingest scripts.
         Falls back gracefully to 0 on any error.
         """
@@ -337,7 +337,7 @@ class Neo4jClient:
         Returns {category: count} for all verified decisions.
 
         Used by GraphSnapshot.from_graph() on startup.
-        Uses d.outcome IS NOT NULL as the verified predicate — same as
+        Uses d.outcome IS NOT NULL as the verified predicate -- same as
         count_verified_decisions().  Returns {} on any error.
         """
         try:
@@ -360,7 +360,7 @@ class Neo4jClient:
 
         was_override is stored as d.was_override (bool) by the outcome endpoint.
         quality_signal is stored as d.quality_signal (float).
-        Both fields may be absent in bootstrap/ingest decisions — CASE guards handle nulls.
+        Both fields may be absent in bootstrap/ingest decisions -- CASE guards handle nulls.
         Returns {"override_rate": 0.0, "override_quality": 0.0} on any error.
         """
         try:
@@ -392,7 +392,7 @@ class Neo4jClient:
         """
         Compute current IKS from the in-memory ProfileScorer centroid tensor.
 
-        Delegates to app.services.iks.compute_iks(mu) — no graph query needed.
+        Delegates to app.services.iks.compute_iks(mu) -- no graph query needed.
         Returns 0.0 if ProfileScorer not yet initialized or on any error.
         """
         try:
@@ -421,10 +421,10 @@ class Neo4jClient:
         Count Decision nodes for the same source within the rolling window.
 
         Used by R2 (RapidSuccessionRule).  Returns 0 on missing source_id or
-        any Neo4j exception — rule must not fire on missing context (P-REF-2).
+        any Neo4j exception -- rule must not fire on missing context (P-REF-2).
         """
         if not source_id:
-            logger.debug("[SEQ-COUNT] source_id is None/empty — returning 0 (P-REF-2)")
+            logger.debug("[SEQ-COUNT] source_id is None/empty -- returning 0 (P-REF-2)")
             return 0
         try:
             result = await self.run_query(
@@ -439,7 +439,7 @@ class Neo4jClient:
             return int(result[0].get("sequence_count") or 0) if result else 0
         except Exception as exc:
             logger.debug(
-                "[SEQ-COUNT] query failed for source_id=%r: %s — returning 0 (P-REF-2)",
+                "[SEQ-COUNT] query failed for source_id=%r: %s -- returning 0 (P-REF-2)",
                 source_id, exc,
             )
             return 0
@@ -450,10 +450,10 @@ class Neo4jClient:
         within the rolling window.
 
         Used by R7 (CrossCategoryRule).  Returns 0 on missing user_id or any
-        Neo4j exception — rule must not fire on missing context (P-REF-2).
+        Neo4j exception -- rule must not fire on missing context (P-REF-2).
         """
         if not user_id:
-            logger.debug("[CROSS-CAT] user_id is None/empty — returning 0 (P-REF-2)")
+            logger.debug("[CROSS-CAT] user_id is None/empty -- returning 0 (P-REF-2)")
             return 0
         try:
             result = await self.run_query(
@@ -468,7 +468,7 @@ class Neo4jClient:
             return int(result[0].get("cross_category_count") or 0) if result else 0
         except Exception as exc:
             logger.debug(
-                "[CROSS-CAT] query failed for user_id=%r: %s — returning 0 (P-REF-2)",
+                "[CROSS-CAT] query failed for user_id=%r: %s -- returning 0 (P-REF-2)",
                 user_id, exc,
             )
             return 0
@@ -487,7 +487,7 @@ if _GRAPH_BACKEND == "age":
         _age_mod._client = None
         neo4j_client = _age_factory()  # type: ignore[assignment]
         print(
-            f"[BACKEND] GRAPH_BACKEND=age — "
+            f"[BACKEND] GRAPH_BACKEND=age -- "
             f"Client={type(neo4j_client).__name__} "
             f"DSN={str(neo4j_client._dsn)[:40]}... "
             f"Graph={neo4j_client._graph}"

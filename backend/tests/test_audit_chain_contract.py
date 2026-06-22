@@ -127,7 +127,7 @@ def test_get_decision_rows_uses_latest_outcome():
     """When a decision has multiple OutcomeEntries the last one wins."""
     rec = _make_decision()
     _run(record_outcome(rec["id"], "correct"))
-    _run(record_outcome(rec["id"], "incorrect"))   # later — should win
+    _run(record_outcome(rec["id"], "incorrect"))   # later -- should win
     rows = get_decision_rows()
     matching = [r for r in rows if r["id"] == rec["id"]]
     assert matching[0]["outcome"] == "incorrect"

@@ -1,5 +1,5 @@
 """
-tests/test_accuracy_trajectory.py — accuracy-trajectory endpoint (C1b).
+tests/test_accuracy_trajectory.py -- accuracy-trajectory endpoint (C1b).
 
 4 tests validating GET /api/soc/accuracy-trajectory.
 

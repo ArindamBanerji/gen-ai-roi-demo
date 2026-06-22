@@ -1,7 +1,7 @@
 """
 Stress test: exercise every destructive path, verify persistent graph data survives.
 
-Uses asyncio.run() — no pytest-asyncio dependency needed.
+Uses asyncio.run() -- no pytest-asyncio dependency needed.
 Tests run against live AGE database.
 
 Skip with: pytest -k "not graph_contract_stress"
@@ -28,7 +28,7 @@ def _run(coro):
 
 @pytest.fixture
 def sm():
-    """Get StateManager connected to AGE — matches router construction pattern."""
+    """Get StateManager connected to AGE -- matches router construction pattern."""
     from app.services.state_manager import StateManager
     from app.services import gae_state, audit as audit_store
     from app.db.neo4j import neo4j_client
@@ -163,13 +163,13 @@ class TestDeletePreservesEverything:
 class TestPreCheckCatchesBadFilters:
 
     def test_unfiltered_deletion_aborted(self, sm):
-        """WHERE 1=1 matches everything — pre-check must abort."""
+        """WHERE 1=1 matches everything -- pre-check must abort."""
         from app.services.state_manager import DataProtectionError
         with pytest.raises(DataProtectionError):
             _run(sm._verify_deletion_safety("WHERE 1=1"))
 
     def test_wrong_field_filter_aborted(self, sm):
-        """d.source doesn't exist — IS NULL matches everything including persistent."""
+        """d.source doesn't exist -- IS NULL matches everything including persistent."""
         from app.services.state_manager import DataProtectionError
         with pytest.raises(DataProtectionError):
             _run(sm._verify_deletion_safety(

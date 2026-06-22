@@ -1,5 +1,5 @@
 """
-ProvenanceService — factor provenance and decision audit trail (Phase 6).
+ProvenanceService -- factor provenance and decision audit trail (Phase 6).
 
 Provides a human-readable explanation of why each factor has its computed value,
 which graph nodes were consulted, and the computation method used.
@@ -93,7 +93,7 @@ def _explain_asset_criticality(value: float) -> Tuple[str, str, List[str]]:
     else:
         explanation = (
             f"Low-criticality asset (score={value:.2f}). "
-            "LOW criticality — reduced blast radius if action is wrong."
+            "LOW criticality -- reduced blast radius if action is wrong."
         )
     return method, explanation, nodes
 
@@ -116,7 +116,7 @@ def _explain_threat_intel_enrichment(value: float) -> Tuple[str, str, List[str]]
     elif value > 0.0:
         explanation = (
             f"Low-severity IOC association (score={value:.2f}). "
-            "Low-confidence threat intel entry — treat as contextual signal."
+            "Low-confidence threat intel entry -- treat as contextual signal."
         )
     else:
         explanation = (
@@ -129,7 +129,7 @@ def _explain_threat_intel_enrichment(value: float) -> Tuple[str, str, List[str]]
 def _explain_pattern_history(value: float) -> Tuple[str, str, List[str]]:
     method = (
         "Graph traversal: (Decision)-[:DECIDED_ON]->(Alert) "
-        "WHERE outcome IS NOT NULL — last 100 decisions for this alert_type"
+        "WHERE outcome IS NOT NULL -- last 100 decisions for this alert_type"
     )
     nodes = ["Decision", "Alert"]
     if value >= 0.8:
@@ -164,7 +164,7 @@ def _explain_time_anomaly(value: float) -> Tuple[str, str, List[str]]:
     if value >= 1.0:
         explanation = (
             "Weekend login detected (score=1.00). "
-            "Activity outside normal business schedule — high time anomaly."
+            "Activity outside normal business schedule -- high time anomaly."
         )
     elif value >= 0.7:
         explanation = (
@@ -203,12 +203,12 @@ def _explain_device_trust(value: float) -> Tuple[str, str, List[str]]:
     elif value <= 0.67:
         explanation = (
             f"Partially trusted device (score={value:.2f}). "
-            "Two trust signals missing — verify device before acting."
+            "Two trust signals missing -- verify device before acting."
         )
     else:
         explanation = (
             f"Untrusted device (score={value:.2f}). "
-            "Multiple trust signals absent — MFA, fingerprint, and/or VPN missing."
+            "Multiple trust signals absent -- MFA, fingerprint, and/or VPN missing."
         )
     return method, explanation, nodes
 
@@ -246,7 +246,7 @@ class ProvenanceService:
         ----------
         decision_id   : UUID string of the Decision node
         factor_names  : ordered list of factor names
-        factor_values : ordered list of factor values (0.0–1.0)
+        factor_values : ordered list of factor values (0.0-1.0)
         category      : alert category (e.g. "credential_access")
         action        : selected action (e.g. "escalate")
 
@@ -263,7 +263,7 @@ class ProvenanceService:
                 method, explanation, nodes = explainer(float(value))
             else:
                 method = "Unknown computation method"
-                explanation = f"Factor {name!r} value={value:.2f} — no explainer registered"
+                explanation = f"Factor {name!r} value={value:.2f} -- no explainer registered"
                 nodes = []
 
             all_nodes.update(nodes)

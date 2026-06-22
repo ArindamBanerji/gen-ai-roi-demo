@@ -1,10 +1,10 @@
 """
-graph_schema.py — Single source of truth for the SOC graph structure.
+graph_schema.py -- Single source of truth for the SOC graph structure.
 
 Three public symbols:
-    GRAPH_CONTRACT  — expected node labels, edge types, counts, invariants
-    verify_graph()  — async check of current graph against the contract
-    seed_graph()    — async create/recreate complete graph from v5 JSON
+    GRAPH_CONTRACT  -- expected node labels, edge types, counts, invariants
+    verify_graph()  -- async check of current graph against the contract
+    seed_graph()    -- async create/recreate complete graph from v5 JSON
 
 Usage:
     python -m app.graph_schema verify
@@ -265,7 +265,7 @@ async def verify_graph(client=None):
                                  set(spec.get("optional_fields", [])))
                         for field in node:
                             if field.startswith("_age_"):
-                                continue  # AGE internal field — always skip
+                                continue  # AGE internal field -- always skip
                             if field not in known:
                                 report["warnings"].append(
                                     label + ": unexpected field '" +

@@ -72,7 +72,7 @@ def test_correct_decisions_move_centroid_toward_action():
         f"5 correct escalate decisions must increase centroid; got delta={delta}"
     )
     assert np.all(delta <= MAX_ETA_DELTA * 5 + 1e-9), (
-        f"Cumulative delta must not exceed MAX_ETA_DELTA×5={MAX_ETA_DELTA * 5:.4f}; "
+        f"Cumulative delta must not exceed MAX_ETA_DELTAx5={MAX_ETA_DELTA * 5:.4f}; "
         f"got max delta={delta.max():.6f}"
     )
 
@@ -83,8 +83,8 @@ def test_correct_decisions_move_centroid_toward_action():
 
 def test_override_decisions_use_asymmetric_eta():
     """
-    η_confirm=0.05 (default), η_override=0.01.
-    Correct update delta must be ~5× larger than override update delta.
+    eta_confirm=0.05 (default), eta_override=0.01.
+    Correct update delta must be ~5x larger than override update delta.
     """
     ETA_CONFIRM  = 0.05
     ETA_OVERRIDE = 0.01
@@ -93,7 +93,7 @@ def test_override_decisions_use_asymmetric_eta():
     scorer_a = _make_scorer()
     mu_before_a = scorer_a.centroids[_CAT_IDX_CRED, _ACT_IDX_ESC, :].copy()
     scorer_a.update(
-        f=_fvec(0.55),   # small gradient → below cap so raw ratio is preserved
+        f=_fvec(0.55),   # small gradient -> below cap so raw ratio is preserved
         category_index=_CAT_IDX_CRED,
         action_index=_ACT_IDX_ESC,
         correct=True,
@@ -127,7 +127,7 @@ def test_override_decisions_use_asymmetric_eta():
     )
     # Expected ratio ≈ 5 (0.05 / 0.01); allow generous tolerance
     assert ratio == pytest.approx(ETA_CONFIRM / ETA_OVERRIDE, rel=0.30), (
-        f"Expected ratio ≈{ETA_CONFIRM / ETA_OVERRIDE:.1f}, got {ratio:.2f}"
+        f"Expected ratio ~={ETA_CONFIRM / ETA_OVERRIDE:.1f}, got {ratio:.2f}"
     )
 
 
@@ -137,7 +137,7 @@ def test_override_decisions_use_asymmetric_eta():
 
 def test_eta_cap_limits_single_update():
     """
-    f=1.0, mu=0.5, η=0.05 → raw delta = 0.05 * 0.5 = 0.025 > MAX_ETA_DELTA.
+    f=1.0, mu=0.5, eta=0.05 -> raw delta = 0.05 * 0.5 = 0.025 > MAX_ETA_DELTA.
     Each coordinate must be capped at exactly MAX_ETA_DELTA = 0.005.
     """
     scorer = _make_scorer()
@@ -193,7 +193,7 @@ def test_centroid_stays_in_bounds_after_many_updates():
 
 def test_incorrect_decisions_do_not_update_centroid():
     """
-    correct=False with gt_action_index=None → push-away path only.
+    correct=False with gt_action_index=None -> push-away path only.
     The *predicted* action's centroid is pushed away (moves), but the
     correct-action centroid is untouched.
 

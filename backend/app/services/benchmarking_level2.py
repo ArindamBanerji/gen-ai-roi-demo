@@ -132,6 +132,6 @@ class Level2BenchmarkingSection:
         if not data.get('conservation_breached'):
             narrative += "The conservation law was never breached during the study."
         else:
-            narrative += "Note: the conservation law was breached — see details above."
+            narrative += "Note: the conservation law was breached -- see details above."
 
         return narrative

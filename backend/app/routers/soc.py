@@ -254,12 +254,12 @@ def get_analyst_efficiency_data() -> List[MetricDataPoint]:
 
 def get_cross_context_travel_risk_data() -> List[MetricDataPoint]:
     """
-    Travel-correlated login risk — 6 data sources correlated in one query.
+    Travel-correlated login risk -- 6 data sources correlated in one query.
     Each row: User | Destination | Auth anomalies | Threat intel | Resolution
     """
     return [
         MetricDataPoint(
-            label="John Smith | Singapore | 3 anomalous logins | Pulsedive: 103.15.42.17 (high risk) | Resolution: false_positive — travel confirmed",
+            label="John Smith | Singapore | 3 anomalous logins | Pulsedive: 103.15.42.17 (high risk) | Resolution: false_positive -- travel confirmed",
             value=0.0,
         ),
         MetricDataPoint(
@@ -267,7 +267,7 @@ def get_cross_context_travel_risk_data() -> List[MetricDataPoint]:
             value=0.0,
         ),
         MetricDataPoint(
-            label="David Park | São Paulo | 2 anomalous logins | GreyNoise: scanning activity from region | Resolution: escalated",
+            label="David Park | Sao Paulo | 2 anomalous logins | GreyNoise: scanning activity from region | Resolution: escalated",
             value=0.0,
         ),
     ]
@@ -275,7 +275,7 @@ def get_cross_context_travel_risk_data() -> List[MetricDataPoint]:
 
 def get_device_trust_gaps_data() -> List[MetricDataPoint]:
     """
-    Unmanaged device access — device × user × asset × risk score in one view.
+    Unmanaged device access -- device x user x asset x risk score in one view.
     Each row: Device | User | Asset accessed | MDM status | User risk | Last MFA
     """
     return [
@@ -300,7 +300,7 @@ def get_device_trust_gaps_data() -> List[MetricDataPoint]:
 
 def get_policy_conflict_landscape_data() -> List[MetricDataPoint]:
     """
-    Policy conflict landscape — proactive governance mapping.
+    Policy conflict landscape -- proactive governance mapping.
     Each row: Policy pair | Co-occurrence count | Impact | Recommendation
     """
     return [
@@ -321,14 +321,14 @@ def get_policy_conflict_landscape_data() -> List[MetricDataPoint]:
 
 def get_threat_intel_coverage_data() -> List[MetricDataPoint]:
     """
-    Threat intel coverage analysis — shows what the system knows and doesn't know.
+    Threat intel coverage analysis -- shows what the system knows and doesn't know.
     Value = alert count; last bar (0) highlights the coverage gap.
     """
     return [
         MetricDataPoint(label="Pulsedive enriched (68%)", value=34.0),
         MetricDataPoint(label="GreyNoise enriched (24%)", value=12.0),
         MetricDataPoint(label="Enriched by both (16%)", value=8.0),
-        MetricDataPoint(label="No enrichment — GAP (32%)", value=16.0),
+        MetricDataPoint(label="No enrichment -- GAP (32%)", value=16.0),
         MetricDataPoint(label="Internal lateral movement (0% coverage)", value=0.0),
     ]
 
@@ -461,7 +461,7 @@ def get_provenance(metric_id: str) -> Provenance:
                 "PolicyEngine (ACCP)",
                 "AlertHistory (SIEM)",
                 "ResolutionLog (ACCP)",
-                "UserProfile (HR — timezone/team)",
+                "UserProfile (HR -- timezone/team)",
             ],
             freshness_hours=1.5,
             query_preview="MATCH (p1:Policy)-[:CONFLICTS_WITH]->(p2:Policy) MATCH (a:Alert)-[:TRIGGERED]->(p1) MATCH (a)-[:TRIGGERED]->(p2) RETURN p1.id, p2.id, count(a) AS co_occurrences ORDER BY co_occurrences DESC",
@@ -951,7 +951,7 @@ async def get_soc_analytics():
                     "value": None,
                     "label": "MTTD",
                     "estimated": True,
-                    "note": "Requires decision timestamps — available after v5.0-beta",
+                    "note": "Requires decision timestamps -- available after v5.0-beta",
                 }
             ],
         }
@@ -971,7 +971,7 @@ async def get_soc_analytics():
                     "value": None,
                     "label": "MTTD",
                     "estimated": True,
-                    "note": "Requires decision timestamps — available after v5.0-beta",
+                    "note": "Requires decision timestamps -- available after v5.0-beta",
                 }
             ],
         }
@@ -1225,23 +1225,23 @@ async def explain_decision(decision_id: str):
         "destination_host":    destination_ip,
         # Factor-derived human-readable context strings
         "travel_context": (
-            f"Privileged identity context {pic_val:.0%} — "
+            f"Privileged identity context {pic_val:.0%} -- "
             f"{'elevated privilege detected' if pic_val > 0.6 else 'standard identity context'}"
         ),
         "time_context": (
-            f"Time anomaly {time_val:.0%} — "
+            f"Time anomaly {time_val:.0%} -- "
             f"{'login outside normal hours' if time_val > 0.5 else 'within normal hours'}"
         ),
         "threat_context": (
-            f"Threat intel {threat_val:.0%} — "
+            f"Threat intel {threat_val:.0%} -- "
             f"{'IOC match found' if threat_val > 0.5 else 'no IOC matches'}"
         ),
         "pattern_context": (
-            f"Pattern history {pattern_val:.0%} — "
+            f"Pattern history {pattern_val:.0%} -- "
             f"{'matches prior behavior' if pattern_val > 0.5 else 'no prior pattern match'}"
         ),
         "device_context": (
-            f"Device trust {device_val:.0%} — "
+            f"Device trust {device_val:.0%} -- "
             f"{'enrolled device' if device_val > 0.5 else 'unregistered device'}"
         ),
         "asset_context":  f"{asset_hostname} ({asset_crit_str} criticality)",
@@ -1386,9 +1386,9 @@ async def onboarding_calendar(
 
     Query parameters
     ----------------
-    alerts_per_day     : int   — total daily alert volume (default 200)
-    verification_rate  : float — fraction of decisions analysts verify (default 0.30)
-    graph_level        : str   — SIEM/graph enrichment tier G1-G4 (default G1)
+    alerts_per_day     : int   -- total daily alert volume (default 200)
+    verification_rate  : float -- fraction of decisions analysts verify (default 0.30)
+    graph_level        : str   -- SIEM/graph enrichment tier G1-G4 (default G1)
     """
     from gae.convergence import generate_onboarding_calendar
     from app.domains.soc.config import BOOTSTRAP_CATEGORY_WEIGHTS, N_FACTORS, SOC_CATEGORIES
@@ -1418,7 +1418,7 @@ async def attack_chains(hours_back: int = 72):
 
     Query parameters
     ----------------
-    hours_back : int — look-back window in hours (default 72)
+    hours_back : int -- look-back window in hours (default 72)
     """
     from app.services.attack_chain import AttackChainService
     service = AttackChainService(neo4j_client)
@@ -1520,7 +1520,7 @@ def _build_eu_ai_act_summary(
 
 @router.get("/soc/transparency")
 async def transparency_page():
-    """L-11: How This System Works — three depth levels.
+    """L-11: How This System Works -- three depth levels.
 
     Level 1 (Analyst): plain language, no equations.
     Level 2 (CISO): convergence, IKS, conservation law.
@@ -1618,7 +1618,7 @@ async def executive_narrative_pdf():
         return Paragraph(str(text), style)
 
     story = [
-        _p('SOC Copilot — Executive Narrative', title_style),
+        _p('SOC Copilot -- Executive Narrative', title_style),
         _p(f"Generated: {data['generated_at']}", body_style),
         Spacer(1, 0.15 * inch),
         _p(data['headline'], body_style),
@@ -1636,7 +1636,7 @@ async def executive_narrative_pdf():
         _p(f"Centroid updates: {data['what_changed']['total_centroid_updates']}", body_style),
     ]
     for shift in data['what_changed'].get('top_shifts', []):
-        story.append(_p(f"  • {shift.get('description', '')}", body_style))
+        story.append(_p(f"  * {shift.get('description', '')}", body_style))
 
     story += [
         Spacer(1, 0.2 * inch),
@@ -1644,7 +1644,7 @@ async def executive_narrative_pdf():
         _p(f"Attack chains: {data['what_discovered']['attack_chains_detected']}", body_style),
     ]
     for s in data['what_discovered'].get('chain_summaries', []):
-        story.append(_p(f"  • {s}", body_style))
+        story.append(_p(f"  * {s}", body_style))
 
     story += [
         Spacer(1, 0.2 * inch),
@@ -1880,7 +1880,7 @@ async def get_accuracy_trajectory():
       - Published reference curve (V-ACC-TRAJ-1b-v2) from constants.py
       - Interpolated current accuracy and progress toward enriched plateau
 
-    Cold-start safe — works with 0 decisions.
+    Cold-start safe -- works with 0 decisions.
     """
     from app.services.accuracy_trajectory import build_accuracy_trajectory
 
@@ -1900,7 +1900,7 @@ async def get_accuracy_trajectory():
             cat = record.get("category") or "unknown"
             live_data[cat] = int(record.get("cnt", 0))
     except Exception:
-        pass  # cold-start safe — empty live_data falls back to reference curve
+        pass  # cold-start safe -- empty live_data falls back to reference curve
 
     return build_accuracy_trajectory(
         live_data=live_data,
@@ -1917,7 +1917,7 @@ async def get_accuracy_trajectory():
 async def recorrelate_campaigns():
     """
     Retroactively correlate all unclaimed alert events into campaigns.
-    Idempotent — MERGE ensures safe repeated calls.
+    Idempotent -- MERGE ensures safe repeated calls.
 
     Response: {campaigns_found, campaigns_written, events_processed}
     """
@@ -1953,7 +1953,7 @@ async def get_analyst_benchmarking():
     F9 analyst benchmarking report derived from V-SHADOW-SYNTHETIC-v3.
 
     Returns overall agreement rate, per-category breakdown (sorted by
-    agreement rate ascending — least agreement first = most interesting),
+    agreement rate ascending -- least agreement first = most interesting),
     per-archetype override precision, and day-level variance.
 
     Returns graceful "accumulating" state if no ShadowDecision nodes exist.
@@ -2026,7 +2026,7 @@ async def get_analyst_benchmarking():
             signal = (
                 f"analysts override AI on {cat.replace('_', ' ')} "
                 f"{override_pct}% of the time despite {ai_pct}% AI accuracy "
-                f"— review these cases carefully"
+                f"-- review these cases carefully"
             )
         else:
             signal = (
@@ -2112,7 +2112,7 @@ async def get_analyst_benchmarking():
         lead_finding = (
             f"Lateral movement: AI accuracy {lm_ai_pct}%, analyst agreement only "
             f"{lm_agree_pct}%. Your analysts override correct AI recommendations "
-            f"on lateral movement — the most commercially differentiated finding "
+            f"on lateral movement -- the most commercially differentiated finding "
             f"in your deployment."
         )
     else:
@@ -2146,7 +2146,7 @@ async def get_analyst_benchmarking():
 @router.get("/soc/f9-report")
 async def get_f9_report():
     """
-    F9 Analyst Benchmarking Report — structured document suitable for export.
+    F9 Analyst Benchmarking Report -- structured document suitable for export.
 
     Wraps get_analyst_benchmarking() and adds report metadata, key_insight,
     and methodology fields.  Returns accumulating status if no ShadowDecision
@@ -2182,7 +2182,7 @@ async def get_enrichment_advisor():
     """
     Return enrichment opportunity rankings with live IOC coverage from Neo4j.
 
-    ioc_coverage = alerts with ≥1 ThreatIndicator / total alerts.
+    ioc_coverage = alerts with >=1 ThreatIndicator / total alerts.
     Falls back to 0.0 if Neo4j is unavailable or graph is empty.
     """
     from app.services.enrichment_advisor import get_enrichment_advice
@@ -2217,18 +2217,18 @@ async def get_enrichment_status():
     timestamp, staleness, trust level, and overall health.
 
     Sources are the actual connectors in this deployment:
-      - Pulsedive     → ThreatIntel nodes          → threat_intel_enrichment
-      - GreyNoise     → GreyNoiseEnrichment nodes   → threat_intel_enrichment
-      - CrowdStrike   → CrowdStrikeEnrichment nodes → asset_criticality
+      - Pulsedive     -> ThreatIntel nodes          -> threat_intel_enrichment
+      - GreyNoise     -> GreyNoiseEnrichment nodes   -> threat_intel_enrichment
+      - CrowdStrike   -> CrowdStrikeEnrichment nodes -> asset_criticality
 
     Staleness thresholds:
       active      : last refresh < 48 h
-      stale       : 48 – 168 h
+      stale       : 48 - 168 h
       unavailable : no data, or > 168 h
 
     Health:
       GREEN : all sources active
-      AMBER : ≥1 source stale, or Neo4j unreachable (graceful fallback)
+      AMBER : >=1 source stale, or Neo4j unreachable (graceful fallback)
       RED   : primary source unavailable or all sources stale
     """
     import time as _time
@@ -2350,10 +2350,10 @@ async def get_enrichment_status():
     statuses = [s["status"] for s in sources]
     if not neo4j_reachable:
         enrichment_health = "AMBER"
-        health_reason = "Neo4j unreachable — enrichment status estimated"
+        health_reason = "Neo4j unreachable -- enrichment status estimated"
     elif all(s == "unavailable" for s in statuses):
         enrichment_health = "RED"
-        health_reason = "All enrichment sources unavailable — run connector refresh"
+        health_reason = "All enrichment sources unavailable -- run connector refresh"
     elif all(s == "active" for s in statuses):
         enrichment_health = "GREEN"
         health_reason = "All sources active and recent"
@@ -2388,7 +2388,7 @@ async def get_reconvergence_log(limit: int = 50):
     EXP-G1 (temporal compounding exponent) requires 90 days of pilot data.
     This endpoint allows operators to confirm data collection is active
     from Day 1.  The logger (app/services/reconvergence_logger.py) is
-    called whenever accuracy drops below threshold and recovers — hook-in
+    called whenever accuracy drops below threshold and recovers -- hook-in
     to triage path is deferred until re-convergence detection is confirmed
     working in production.
     """
@@ -2577,9 +2577,9 @@ def _resolve_category(row: dict) -> str:
 
 
 async def _tab1_content() -> dict:
-    """Tab 1 — Alert Triage: alert_count, top_alert_types, pending_count.
+    """Tab 1 -- Alert Triage: alert_count, top_alert_types, pending_count.
 
-    Fix 1.1: reads a.category (primary) and a.alert_type (fallback) — both internal names.
+    Fix 1.1: reads a.category (primary) and a.alert_type (fallback) -- both internal names.
     Fix 1.2: adds learning_signal + analyst_insight per top alert type.
     """
     alert_count   = 0
@@ -2618,7 +2618,7 @@ async def _tab1_content() -> dict:
 
     # Fix 1.2: fetch per-category verified decisions + override counts in one query
     top_categories = [_resolve_category(r) for r in raw_top]
-    verified_map: dict = {}   # category → {"verified": int, "overrides": int}
+    verified_map: dict = {}   # category -> {"verified": int, "overrides": int}
     if top_categories:
         try:
             _cats_literal = "[" + ", ".join(f"'{c}'" for c in top_categories) + "]"
@@ -2661,7 +2661,7 @@ async def _tab1_content() -> dict:
             # Fix 1.2: learning signal fields
             "learning_signal": (
                 f"Analysts override AI on {category.replace('_', ' ')} "
-                f"{override_rate}% of the time — review carefully."
+                f"{override_rate}% of the time -- review carefully."
             ),
             "analyst_insight": (
                 (
@@ -2669,11 +2669,11 @@ async def _tab1_content() -> dict:
                     f"System confidence: calibrated. "
                     f"Microsoft Copilot for Security uses global threat intelligence "
                     f"shared across all customers. Your {verified_count:,} verified decisions "
-                    f"encode YOUR environment — your asset patterns, your analyst judgment, "
+                    f"encode YOUR environment -- your asset patterns, your analyst judgment, "
                     f"your threat surface. Not reproducible from global data."
                 ) if verified_count >= 100 else (
                     f"Your team has verified {verified_count} {category.replace('_', ' ')} decisions. "
-                    f"System confidence: learning — environment-specific advantage builds "
+                    f"System confidence: learning -- environment-specific advantage builds "
                     f"as decisions are verified."
                 )
             ),
@@ -2689,7 +2689,7 @@ async def _tab1_content() -> dict:
 
 
 async def _tab2_content() -> dict:
-    """Tab 2 — Institutional Intelligence."""
+    """Tab 2 -- Institutional Intelligence."""
     from app.services.iks import compute_iks_v2, compute_visible_iks, interpret_iks_v2
 
     iks_score          = 0.0
@@ -2743,7 +2743,7 @@ async def _tab2_content() -> dict:
     drift_pct = round((drift_alert_count / total_decisions * 100) if total_decisions > 0 else 0.0, 1)
     drift_alert_summary = (
         f"{drift_alert_count} of {total_decisions} decisions triggered drift detection "
-        f"({drift_pct}%). Re-Convergence correction applied automatically — "
+        f"({drift_pct}%). Re-Convergence correction applied automatically -- "
         "no analyst action required. System health: stable."
     )
 
@@ -2751,7 +2751,7 @@ async def _tab2_content() -> dict:
     categories_active = category_accuracy_summary.get("trust_coverage", 0.0)
     trust_pct = round(float(categories_active), 1) if isinstance(categories_active, (int, float)) else 0.0
     trust_coverage_summary = (
-        f"{trust_pct:.1f}% of alert categories have ≥100 verified decisions (trust threshold). "
+        f"{trust_pct:.1f}% of alert categories have >=100 verified decisions (trust threshold). "
         "At current V=200: 80%+ expected by day 270. "
         "Full coverage (all categories): approximately day 365."
     )
@@ -2769,15 +2769,15 @@ async def _tab2_content() -> dict:
 
     decision_count_glossary = {
         "verified_decisions": (
-            f"{verified_decisions:,} — analyst decisions confirmed correct or incorrect "
+            f"{verified_decisions:,} -- analyst decisions confirmed correct or incorrect "
             "in institutional ledger"
         ),
         "switching_cost_threshold": (
-            "537 — decisions required to reach IKS≥67 "
+            "537 -- decisions required to reach IKS>=67 "
             "(formal switching cost plateau)"
         ),
         "override_examples": (
-            "104 — correct analyst overrides used for per-analyst precision weighting"
+            "104 -- correct analyst overrides used for per-analyst precision weighting"
         ),
     }
 
@@ -2791,7 +2791,7 @@ async def _tab2_content() -> dict:
         "decision_count_glossary": decision_count_glossary,   # FIX 2.1
         "calibration_note": (                                 # FIX 3C
             "All quality thresholds self-calibrate to your deployment's "
-            "alert volume and analyst behavior — no manual configuration "
+            "alert volume and analyst behavior -- no manual configuration "
             "required. Calibration activates after sufficient decisions "
             "accumulate per category (Innovation #9: Continuous Calibration)."
         ),
@@ -2844,13 +2844,13 @@ _FACTOR_SIGMA = {factor: _FACTOR_SIGMA_BY_NAME[factor] for factor in SOC_FACTORS
 
 
 def _factor_kernel_weight(sigma: float, all_sigmas: list) -> float:
-    """kernel_weight = (1/σ²) normalised to [0,1] over the factor set."""
+    """kernel_weight = (1/sigma^2) normalised to [0,1] over the factor set."""
     raw = 1.0 / (sigma ** 2) if sigma > 0 else 0.0
     max_raw = max((1.0 / (s ** 2) for s in all_sigmas if s > 0), default=1.0)
     return round(raw / max_raw, 4) if max_raw > 0 else 0.0
 
 
-_BASELINE_SCORER = None  # lazy singleton — bootstrap centroids, never updated
+_BASELINE_SCORER = None  # lazy singleton -- bootstrap centroids, never updated
 _BASELINE_SCORER_SOURCE = "uninitialized"
 _BOOTSTRAP_CENTROIDS_CACHE = None
 _BOOTSTRAP_CENTROIDS_PATH = (
@@ -2919,7 +2919,7 @@ def _get_baseline_scorer():
 
 
 async def _tab3_content() -> dict:
-    """Tab 3 — Alert Detail: factors, recommendation, kernel weights."""
+    """Tab 3 -- Alert Detail: factors, recommendation, kernel weights."""
     from app.domains.soc.config import SOCDomainConfig
     from app.services.gae_state import get_learning_state as _get_ls
 
@@ -2946,11 +2946,11 @@ async def _tab3_content() -> dict:
         sigma = _FACTOR_SIGMA.get(fname, 0.15)
         kw    = _factor_kernel_weight(sigma, all_sigmas)
         if sigma <= 0.10:
-            interp = "High confidence — low noise, full weight"
+            interp = "High confidence -- low noise, full weight"
         elif sigma <= 0.18:
-            interp = "Moderate confidence — standard weight"
+            interp = "Moderate confidence -- standard weight"
         else:
-            interp = f"Auto down-weighted — high noise (σ={sigma})"
+            interp = f"Auto down-weighted -- high noise (sigma={sigma})"
         factor_breakdown.append({
             "name":           fname,
             "sigma":          sigma,
@@ -3070,7 +3070,7 @@ async def _tab3_content() -> dict:
 
     # FIX 2.5 — graph context translation
     graph_context = (
-        f"{graph_node_count:,} institutional knowledge nodes — each representing a "
+        f"{graph_node_count:,} institutional knowledge nodes -- each representing a "
         "validated analyst judgment on a specific alert pattern, entity relationship, "
         "or threat correlation."
     )
@@ -3095,9 +3095,9 @@ async def _tab3_content() -> dict:
             "basis":      rec_basis,
             "rationale": (                               # FIX 3A
                 f"Threat intel enrichment scores at full weight "
-                f"(σ=0.07, highest confidence factor in this alert). "
+                f"(sigma=0.07, highest confidence factor in this alert). "
                 f"No prior match in your verified decision ledger for "
-                f"this exact pattern — system recommends {rec_action} rather "
+                f"this exact pattern -- system recommends {rec_action} rather "
                 f"than auto-approve. "
                 f"Your analysts override AI on {rec_category.replace('_', ' ')} alerts "
                 f"{override_rate:.1f}% of the time: human review is warranted."
@@ -3106,14 +3106,14 @@ async def _tab3_content() -> dict:
         "kernel_note": (                                 # FIX 2.4 (revised)
             "Higher-noise factors are automatically down-weighted by the "
             "DiagonalKernel scoring engine (Innovation #4). "
-            f"device_trust (σ=0.28) contributes {_factor_kernel_weight(0.28, all_sigmas)*100:.0f}% "
-            "of its nominal weight — the system trusts your highest-confidence signals most."
+            f"device_trust (sigma=0.28) contributes {_factor_kernel_weight(0.28, all_sigmas)*100:.0f}% "
+            "of its nominal weight -- the system trusts your highest-confidence signals most."
         ),
     }
 
 
 async def _tab4_content() -> dict:
-    """Tab 4 — Decision Economics: roi_annual_usd, decisions_per_day,
+    """Tab 4 -- Decision Economics: roi_annual_usd, decisions_per_day,
     qualifies_one_quarter, learning_events_count."""
     from app.domains.soc.config import compute_phase3_minimum
 
@@ -3183,12 +3183,12 @@ async def _tab4_content() -> dict:
         "note":   "Full methodology available on request.",
         "calculation": (
             f"{decisions_per_day:.1f} decisions/day "
-            f"× 15 min saved per decision "
-            f"(at current 40% auto-approve rate — full 31 min gap realized "
+            f"x 15 min saved per decision "
+            f"(at current 40% auto-approve rate -- full 31 min gap realized "
             f"at 100% auto-approval) "
-            f"× $75/hr analyst cost ÷ 60 min "
+            f"x $75/hr analyst cost / 60 min "
             f"= ${decisions_per_day * 75 * 0.25:,.0f}/day "
-            f"× 365 days "
+            f"x 365 days "
             f"= ${roi_annual_usd:,.0f} annually."
         ),
     }
@@ -3243,7 +3243,7 @@ async def _tab4_content() -> dict:
 
 
 async def _tab5_content() -> dict:
-    """Tab 5 — Executive Narrative: headline, what_changed, what_discovered, what_system_knows."""
+    """Tab 5 -- Executive Narrative: headline, what_changed, what_discovered, what_system_knows."""
     from app.services.executive_narrative import build_executive_narrative_async
     from app.services.gae_state import get_profile_scorer
 
@@ -3275,13 +3275,13 @@ async def _tab5_content() -> dict:
             "Every analyst decision you verify today teaches the system "
             "to route future matching alerts more accurately. As alert "
             "patterns recur in your environment, the system automatically "
-            "applies what it learned — no retraining, no manual updates. "
+            "applies what it learned -- no retraining, no manual updates. "
             "Current state: pre-activation. Benefit activates on first "
             "recurring pattern in your environment."
         )
         flywheel_detail = (
             "+10.13pp accuracy on pattern-matched alerts (validated, "
-            "p=0.0002, N=30, unconditional — CLAIM-W2). "
+            "p=0.0002, N=30, unconditional -- CLAIM-W2). "
             f"flywheel_edge_count: {flywheel_edge_count}. pre_activation state. "
             "Expected for newly calibrated deployment."
         )
@@ -3290,12 +3290,12 @@ async def _tab5_content() -> dict:
         flywheel_message = (
             "Every analyst decision you verify teaches the system to route "
             "future matching alerts more accurately. Pattern learning is active "
-            f"— {flywheel_edge_count:,} recurring patterns detected and routed "
+            f"-- {flywheel_edge_count:,} recurring patterns detected and routed "
             "with higher accuracy. No retraining, no manual updates required."
         )
         flywheel_detail = (
             "+10.13pp accuracy on pattern-matched alerts (validated, "
-            f"p=0.0002, N=30, unconditional — CLAIM-W2). "
+            f"p=0.0002, N=30, unconditional -- CLAIM-W2). "
             f"flywheel_edge_count: {flywheel_edge_count}. active state."
         )
 
@@ -3311,32 +3311,32 @@ async def _tab5_content() -> dict:
         centroid_summary = (
             f"Centroid tensor {shape}: 144 values encoding institutional "
             f"judgment across {N_CATEGORIES} alert categories, {N_ACTIONS} actions, {N_FACTORS} factors. "
-            f"Mean={mu_mean:.3f} — system judgment calibrated to your environment."
+            f"Mean={mu_mean:.3f} -- system judgment calibrated to your environment."
         )
     else:
-        centroid_summary = "Centroid tensor unavailable — scorer not initialized."
+        centroid_summary = "Centroid tensor unavailable -- scorer not initialized."
 
     # FIX 2.10 — Conservation narrative: claim-backed CISO narrative
     health_status = what_knows_raw.get("health_status", "GREEN")
     pre_activation = bool(what_knows_raw.get("pre_activation", False))
     if pre_activation:
         signal = (
-            "Pre-activation — Conservation law monitoring is configured; "
+            "Pre-activation -- Conservation law monitoring is configured; "
             "live learning is disabled pending validation"
         )
     else:
         signal = (
-            "healthy — no intervention required"
+            "healthy -- no intervention required"
             if health_status == "GREEN"
-            else "degraded — learning paused automatically"
+            else "degraded -- learning paused automatically"
         )
     conservation_narrative = (
-        "Conservation law active — analyst override quality monitored "
+        "Conservation law active -- analyst override quality monitored "
         "continuously. 0% quality degradation events missed in validation "
-        "(CLAIM-OLS-01, p90 lead time ≥50 decisions). "
+        "(CLAIM-OLS-01, p90 lead time >=50 decisions). "
         f"Current signal: {signal}. "
         "Every system decision is logged in a tamper-evident "
-        "Evidence Ledger — full audit trail available for "
+        "Evidence Ledger -- full audit trail available for "
         "regulatory review (EU AI Act Art. 13 compliant)."
     )
 
@@ -3349,7 +3349,7 @@ async def _tab5_content() -> dict:
             "chain_count":    len(what_discovered_raw.get("chain_summaries", [])),
             "mechanism": (                               # FIX 3B addition
                 "The system automatically groups related alerts into attack "
-                "campaigns using graph correlation — surfacing multi-stage "
+                "campaigns using graph correlation -- surfacing multi-stage "
                 "threats that single-alert triage misses. "
                 f"{what_discovered_raw.get('attack_chains_detected', 0)} campaigns and "
                 f"{len(what_discovered_raw.get('chain_summaries', []))} kill chains "
@@ -3382,7 +3382,7 @@ async def _tab5_content() -> dict:
                     {
                         "question": "Show me the compounding curve after 10,000 decisions.",
                         "our_answer": (
-                            f"IKS trajectory: 0 → {iks_score}. "
+                            f"IKS trajectory: 0 -> {iks_score}. "
                             f"{verified_decisions} verified decisions. "
                             f"Accuracy improves with every confirmed decision."
                         ),
@@ -3392,14 +3392,14 @@ async def _tab5_content() -> dict:
                         "our_answer": (
                             "144 centroid values calibrated to YOUR environment. "
                             "DiagonalKernel: device_trust down-weighted to 6% "
-                            "(σ=0.28). threat_intel at full weight (σ=0.07). "
-                            "Your noise fingerprint — not transferable."
+                            "(sigma=0.28). threat_intel at full weight (sigma=0.07). "
+                            "Your noise fingerprint -- not transferable."
                         ),
                     },
                     {
                         "question": "Show me mathematical proof that auto-approval is safe.",
                         "our_answer": (
-                            "Conservation law: α·q·V ≥ θ_min. "
+                            "Conservation law: alpha*q*V >= theta_min. "
                             "Violation triggers automatic pause. "
                             "What-if simulator demonstrates live."
                         ),
@@ -3430,7 +3430,7 @@ _TAB_HANDLERS = {
 @router.get("/soc/tab/{n}/content")
 async def get_tab_content(n: int):
     """
-    Export the text content of tab n (1–5) for V-NARRATIVE-CISO evaluation.
+    Export the text content of tab n (1-5) for V-NARRATIVE-CISO evaluation.
 
     Returns:
       {tab, tab_name, content, generated_at_epoch}
@@ -3438,7 +3438,7 @@ async def get_tab_content(n: int):
     import time as _time
 
     if n not in _TAB_NAMES:
-        raise HTTPException(status_code=404, detail=f"Tab {n} not found — valid range is 1-5")
+        raise HTTPException(status_code=404, detail=f"Tab {n} not found -- valid range is 1-5")
 
     handler = _TAB_HANDLERS[n]
     content = await handler()
@@ -3501,7 +3501,7 @@ async def get_industry_profile(industry: str = "generic"):
 @router.get("/soc/deployment-state")
 async def get_deployment_state():
     """
-    Return the bootstrap centroid tensor (μ₀) stored in the DeploymentState Neo4j node.
+    Return the bootstrap centroid tensor (mu_0) stored in the DeploymentState Neo4j node.
 
     Written at every startup by write_bootstrap_state().
     Returns {mu, shape, stored_at, gae_version} or 404 if not yet stored.
@@ -3511,7 +3511,7 @@ async def get_deployment_state():
     if result is None:
         raise HTTPException(
             status_code=404,
-            detail="DeploymentState not found — server may not have completed startup",
+            detail="DeploymentState not found -- server may not have completed startup",
         )
     return result
 
@@ -3523,7 +3523,7 @@ async def get_deployment_state():
 @router.get("/soc/analyst-eta-weights")
 async def get_analyst_eta_weights_endpoint():
     """
-    Return current per-analyst η weights plus per-analyst precision.
+    Return current per-analyst eta weights plus per-analyst precision.
 
     Before N_min decisions: all weights = 1.0 (conservative/uniform).
     After N_min decisions: precision-weighted in [0.5, 1.5].
@@ -3602,11 +3602,11 @@ _ANALYST_WEIGHT_THRESHOLD = 20   # decisions required for "personalized" status
 @router.get("/soc/analyst-weights")
 async def get_analyst_weights():
     """
-    Return per-analyst η weight information for the Tab 2 Two-Level Judgment view.
+    Return per-analyst eta weight information for the Tab 2 Two-Level Judgment view.
 
     Weight formula: weight = min(1.5, max(0.5, precision / mean_precision))
-    Analysts with < 20 decisions use default weight (1.0) — not personalized.
-    Validated: D5 Spearman r=0.975–1.000 (V-D5).
+    Analysts with < 20 decisions use default weight (1.0) -- not personalized.
+    Validated: D5 Spearman r=0.975-1.000 (V-D5).
 
     Returns
     -------
@@ -3661,7 +3661,7 @@ async def get_analyst_weights():
         prec    = precision.get(analyst, 0.0)
         weight  = weights.get(analyst, 1.0)
         if count < _ANALYST_WEIGHT_THRESHOLD:
-            status = f"default — insufficient decisions (need {_ANALYST_WEIGHT_THRESHOLD}+)"
+            status = f"default -- insufficient decisions (need {_ANALYST_WEIGHT_THRESHOLD}+)"
             weight = 1.0   # enforce default regardless of formula
         else:
             status = "personalized"
@@ -3723,7 +3723,7 @@ async def get_frozen_categories_endpoint():
     """
     Return current frozen categories and 30-day baseline distribution.
 
-    freeze_threshold = 2.0 — category frozen when today_share > 2× baseline.
+    freeze_threshold = 2.0 -- category frozen when today_share > 2x baseline.
     Frozen categories are only set during an active volume spike (D3 coupled).
 
     Returns
@@ -3760,7 +3760,7 @@ async def get_spike_cap_status_endpoint():
     """
     Return current spike update cap status.
 
-    spike_cap = int(1.5 × baseline_daily_mean).
+    spike_cap = int(1.5 x baseline_daily_mean).
     Resets to 0 updates each cadence via reset_spike_counter().
 
     Returns
@@ -3798,18 +3798,18 @@ async def get_centroid_export(format: str = "json"):
     Export the full centroid tensor with provenance metadata (Block 2.3).
 
     Additive schema over build_centroid_export base fields:
-      exported_at           — alias for generated_at_epoch (ms)
-      factors               — factor name list [n_factors]
-      centroids             — dict: category → action → [factor_values]
-      drift_from_bootstrap  — per-category L2 drift dict (overrides scalar)
-      checksum              — SHA-256 of centroids dict (auditable)
-      iks_score             — current IKS (informational)
+      exported_at           -- alias for generated_at_epoch (ms)
+      factors               -- factor name list [n_factors]
+      centroids             -- dict: category -> action -> [factor_values]
+      drift_from_bootstrap  -- per-category L2 drift dict (overrides scalar)
+      checksum              -- SHA-256 of centroids dict (auditable)
+      iks_score             -- current IKS (informational)
 
     Plus all original build_centroid_export fields retained for back-compat:
-      generated_at_epoch, gae_version, sha256, current_mu, bootstrap_mu …
+      generated_at_epoch, gae_version, sha256, current_mu, bootstrap_mu ...
 
-    ?format=json    (default) — full export including all tensor fields
-    ?format=summary           — excludes current_mu, bootstrap_mu, centroids
+    ?format=json    (default) -- full export including all tensor fields
+    ?format=summary           -- excludes current_mu, bootstrap_mu, centroids
 
     Safe degradation: returns {"status": "cold_start"} with 200 if scorer
     is not yet initialized.
@@ -3898,10 +3898,10 @@ async def get_centroid_export(format: str = "json"):
 @router.get("/soc/centroid-heatmap")
 async def get_centroid_heatmap():
     """
-    Heat map data: factor weight per (category × action).
+    Heat map data: factor weight per (category x action).
 
     Returns categories, actions, factors, kernel_weights,
-    heatmap (cat→action→{mean, factors}), noise_fingerprint,
+    heatmap (cat->action->{mean, factors}), noise_fingerprint,
     and interpretation string.
 
     Safe degradation: returns {"status": "cold_start"} with 200 if
@@ -3952,7 +3952,7 @@ async def get_centroid_heatmap():
         elif sigma <= 0.18:
             label = "Moderate confidence"
         else:
-            label = "Auto down-weighted — high noise"
+            label = "Auto down-weighted -- high noise"
         noise_fingerprint[f] = {
             "sigma":         sigma,
             "kernel_weight": kw,
@@ -3997,14 +3997,14 @@ async def get_centroid_support():
 
     Checks whether live centroids have drifted outside the data support
     region defined by the bootstrap baseline (mu_zero).  A centroid is
-    flagged when ≥2 factor dimensions exceed threshold_sigma × σ_factor.
+    flagged when >=2 factor dimensions exceed threshold_sigma x sigma_factor.
 
     Safe degradation: if scorer is None (cold start) or bootstrap is
     unavailable, returns GREEN with an explanatory note.
 
     Health:
       GREEN : warning_count == 0
-      AMBER : 1–3 warnings
+      AMBER : 1-3 warnings
       RED   : 4+ warnings
     """
     import numpy as _np
@@ -4074,7 +4074,7 @@ async def get_centroid_support():
         overall_health = "AMBER"
         interpretation = (
             f"{warning_count} centroid position(s) outside observed range "
-            f"(>{_THRESHOLD}σ). Learning may be extrapolating."
+            f"(>{_THRESHOLD}sigma). Learning may be extrapolating."
         )
     else:
         overall_health = "RED"
@@ -4128,7 +4128,7 @@ async def get_decision_distance_log(limit: int = 50):
     Return last N DecisionDistanceLog entries for EXP-G1 convergence monitoring.
 
     centroid_distance_to_canonical decreases during healthy model convergence
-    (simulation: 3.0→2.4 over 600 decisions).
+    (simulation: 3.0->2.4 over 600 decisions).
     """
     from app.services.reconvergence_logger import read_decision_distance_log
     from app.db.neo4j import neo4j_client
@@ -4163,7 +4163,7 @@ async def get_decision_distance_log(limit: int = 50):
         "convergence_trend": trend,
         "note": (
             "EXP-G1 field 1: centroid_distance must decrease during convergence. "
-            "Simulation baseline: 3.0→2.4 over 600 decisions."
+            "Simulation baseline: 3.0->2.4 over 600 decisions."
         ),
     }
 
@@ -4231,7 +4231,7 @@ async def sentinel_writeback_test(req: _WritebackTestRequest):
     can verify the outward connector is wired correctly.
 
     When Sentinel credentials are not configured the connector returns
-    success=False with error='not_configured' — this is the expected
+    success=False with error='not_configured' -- this is the expected
     no-op result in demo / CI environments.
     """
     from app.connectors.sentinel_real import get_sentinel_connector
@@ -4266,8 +4266,8 @@ async def get_epistemic_state():
 
     Band thresholds:
         novice      < 50 verified decisions
-        learning    50–199
-        calibrating 200–499
+        learning    50-199
+        calibrating 200-499
         expert      500+
 
     Returns:

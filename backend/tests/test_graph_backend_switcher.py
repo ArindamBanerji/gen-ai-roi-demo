@@ -1,5 +1,5 @@
 """
-Block 8.5 Phase 3 — graph backend switcher tests.
+Block 8.5 Phase 3 -- graph backend switcher tests.
 All run with GRAPH_BACKEND=neo4j (default). No live DB required.
 """
 import os
@@ -7,7 +7,7 @@ import importlib
 
 
 def test_default_backend_is_neo4j():
-    """Default GRAPH_BACKEND produces Neo4jClient — no behaviour change.
+    """Default GRAPH_BACKEND produces Neo4jClient -- no behaviour change.
 
     Explicitly sets GRAPH_BACKEND=neo4j in the shell environment so that
     load_dotenv(override=False) inside neo4j.py cannot override it with the
@@ -29,7 +29,7 @@ def test_default_backend_is_neo4j():
 
 def test_age_backend_import_error_without_ci_platform():
     """GRAPH_BACKEND=age without ci-platform[graph] raises ImportError
-    with a helpful message — not a silent failure."""
+    with a helpful message -- not a silent failure."""
     import sys
     graph_mod = sys.modules.pop("ci_platform.graph", None)
     age_mod = sys.modules.pop("ci_platform.graph.age_client", None)
@@ -55,7 +55,7 @@ def test_interface_parity_neo4j_vs_age():
     All 290 call sites depend on this contract.
 
     Note: connect()/close() are Neo4jClient-only (AGEClient uses per-query
-    connections). main.py guards these with hasattr() — intentionally excluded.
+    connections). main.py guards these with hasattr() -- intentionally excluded.
     """
     from app.db.neo4j import Neo4jClient
     from ci_platform.graph.age_client import AGEClient

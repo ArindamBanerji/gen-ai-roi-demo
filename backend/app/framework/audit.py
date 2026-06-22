@@ -1,5 +1,5 @@
 """
-SOC Audit Service — thin adapter over ci_platform Evidence Ledger.
+SOC Audit Service -- thin adapter over ci_platform Evidence Ledger.
 
 Hash-chain implementation lives in ci_platform.audit.evidence_ledger (EvidenceLedger /
 LedgerEntry).  SOC-specific wrappers handle session state and demo defaults.
@@ -9,8 +9,8 @@ EU AI Act Art. 15 epistemic fields (kernel_type, noise_zone, conservation_status
 carried by LedgerEntry and surfaced in the SOC API response.
 
 Two population paths (unchanged from before):
-  1. record_decision() — called proactively when the agent decides
-  2. reconstruct_from_memory() — reads FEEDBACK_GIVEN from feedback_store to
+  1. record_decision() -- called proactively when the agent decides
+  2. reconstruct_from_memory() -- reads FEEDBACK_GIVEN from feedback_store to
       back-fill records for decisions already made in the session
 """
 import asyncio
@@ -30,7 +30,7 @@ _LEDGER: EvidenceLedger = EvidenceLedger()
 _ledger_lock = asyncio.Lock()
 
 # situation_type is SOC-specific (not in LedgerEntry); stored in parallel
-_SITUATION_TYPES: Dict[str, str] = {}   # decision_id → situation_type
+_SITUATION_TYPES: Dict[str, str] = {}   # decision_id -> situation_type
 
 # Epoch archive: each hard-reset snapshot is preserved here so audit history
 # survives demo cycling. Indexed by epoch (0 = oldest).
@@ -175,12 +175,12 @@ async def record_outcome(
 def get_decision_rows() -> List[Dict[str, Any]]:
     """Project mixed chain into one-row-per-decision, most recent first."""
     entries = _LEDGER.entries() if _LEDGER else []
-    # Build outcome lookup: decision_id → latest OutcomeEntry
+    # Build outcome lookup: decision_id -> latest OutcomeEntry
     outcomes: Dict[str, OutcomeEntry] = {}
     for e in entries:
         if isinstance(e, OutcomeEntry):
             outcomes[e.decision_id] = e
-    # Build rows — one per decision, excluding RESET sentinels
+    # Build rows -- one per decision, excluding RESET sentinels
     rows = []
     for e in entries:
         if isinstance(e, LedgerEntry) and e.alert_id != "__RESET__":
@@ -226,7 +226,7 @@ async def reconstruct_from_memory() -> int:
                 )
                 added += 1
             except ValueError:
-                pass  # hash mismatch — skip silently
+                pass  # hash mismatch -- skip silently
 
     print(f"[AUDIT] reconstruct_from_memory: +{added} outcome entries ({len(_LEDGER)} total)")
     return added
@@ -241,7 +241,7 @@ async def rebuild_chain_from_graph(client: Any) -> int:
 
     Uses _LEDGER.append() DIRECTLY (not record_decision) so existing
     decision_ids are preserved and chronological order is maintained.
-    ORDER BY ASC is critical — each append() hashes the previous entry.
+    ORDER BY ASC is critical -- each append() hashes the previous entry.
     """
     rows = await client.run_query(
         "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "

@@ -1,12 +1,12 @@
 """
-app/services/accuracy_trajectory.py — Accuracy trajectory builder.
+app/services/accuracy_trajectory.py -- Accuracy trajectory builder.
 
 Produces the GET /api/soc/accuracy-trajectory response from:
   - app.domains.soc.constants  (published reference curves)
   - live decision counts per category from Neo4j (injected by endpoint)
   - sigma per category (injected by endpoint, defaults to 0.18)
 
-No GAE math here — pure interpolation against reference constants.
+No GAE math here -- pure interpolation against reference constants.
 """
 from __future__ import annotations
 
@@ -68,15 +68,15 @@ def build_trajectory_for_category(
     Build the accuracy-trajectory dict for a single category.
 
     Returns:
-        category           str   — category name
-        decision_count     int   — verified analyst decisions
-        sigma              float — volatility used
-        sigma_band         str   — low / medium / high
-        current_accuracy   float — interpolated cold-start accuracy (fraction)
-        enriched_plateau   float — target accuracy with enrichment
-        permanent_gap_pp   float — expected permanent gap in pp
-        trajectory_points  list  — [{decisions, accuracy}] reference curve points
-        pct_to_enriched    float — progress toward enriched plateau (0–100)
+        category           str   -- category name
+        decision_count     int   -- verified analyst decisions
+        sigma              float -- volatility used
+        sigma_band         str   -- low / medium / high
+        current_accuracy   float -- interpolated cold-start accuracy (fraction)
+        enriched_plateau   float -- target accuracy with enrichment
+        permanent_gap_pp   float -- expected permanent gap in pp
+        trajectory_points  list  -- [{decisions, accuracy}] reference curve points
+        pct_to_enriched    float -- progress toward enriched plateau (0-100)
     """
     band = get_sigma_band(sigma)
     current_acc = _interpolate_accuracy(decision_count, sigma)

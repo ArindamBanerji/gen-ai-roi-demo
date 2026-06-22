@@ -1,6 +1,6 @@
 """
-Block 7.6 — tests for compute_verification_health().
-All tests use AsyncMock for neo4j_client — no live Neo4j required.
+Block 7.6 -- tests for compute_verification_health().
+All tests use AsyncMock for neo4j_client -- no live Neo4j required.
 """
 import asyncio
 import os
@@ -25,7 +25,7 @@ def _neo4j_mock(total=1000, verified=300,
     """
     Build an AsyncMock neo4j_client whose run_query returns realistic data.
 
-    Query dispatch is positional — the order in compute_verification_health:
+    Query dispatch is positional -- the order in compute_verification_health:
       call 0 : total decisions
       call 1 : verified decisions
       call 2 : last-7d window
@@ -60,9 +60,9 @@ def _patch_conservation(status: str):
 
 def test_green_when_all_conditions_met():
     mock, _ = _neo4j_mock(
-        total=1000, verified=300,       # coverage = 0.30 >= 0.20 ✓
+        total=1000, verified=300,       # coverage = 0.30 >= 0.20 [OK]
         last_total=100, last_verified=30,   # last rate = 0.30
-        prior_total=100, prior_verified=30, # prior rate = 0.30 → no drift ✓
+        prior_total=100, prior_verified=30, # prior rate = 0.30 -> no drift [OK]
     )
     with _patch_conservation("GREEN"):
         result = _run(compute_verification_health(mock))
@@ -80,7 +80,7 @@ def test_green_when_all_conditions_met():
 
 def test_amber_when_coverage_low():
     mock, _ = _neo4j_mock(
-        total=1000, verified=100,       # coverage = 0.10 < 0.20 ✗
+        total=1000, verified=100,       # coverage = 0.10 < 0.20 [FAIL]
         last_total=100, last_verified=10,
         prior_total=100, prior_verified=10,
     )
@@ -98,9 +98,9 @@ def test_amber_when_coverage_low():
 
 def test_amber_when_drift_detected():
     mock, _ = _neo4j_mock(
-        total=1000, verified=250,       # coverage 25% ✓
+        total=1000, verified=250,       # coverage 25% [OK]
         last_total=100, last_verified=10,   # last rate = 0.10
-        prior_total=100, prior_verified=30, # prior rate = 0.30 → drop = 67% ✗
+        prior_total=100, prior_verified=30, # prior rate = 0.30 -> drop = 67% [FAIL]
     )
     with _patch_conservation("GREEN"):
         result = _run(compute_verification_health(mock))
@@ -135,11 +135,11 @@ def test_red_when_no_verifications():
 
 def test_status_logic_all_unhealthy_is_red():
     mock, _ = _neo4j_mock(
-        total=1000, verified=50,        # coverage = 0.05 < 0.20 ✗
+        total=1000, verified=50,        # coverage = 0.05 < 0.20 [FAIL]
         last_total=100, last_verified=2,    # last rate = 0.02
-        prior_total=100, prior_verified=20, # prior rate = 0.20 → drop = 90% ✗
+        prior_total=100, prior_verified=20, # prior rate = 0.20 -> drop = 90% [FAIL]
     )
-    with _patch_conservation("RED"):    # conservation AMBER/RED ✗
+    with _patch_conservation("RED"):    # conservation AMBER/RED [FAIL]
         result = _run(compute_verification_health(mock))
 
     assert result["status"] == "RED", f"Expected RED, got {result['status']}"

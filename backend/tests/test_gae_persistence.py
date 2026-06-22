@@ -51,7 +51,7 @@ def test_history_survives_save_and_reload(tmp_path):
     Steps:
     1. Init a fresh LearningState
     2. Append 3 synthetic WeightUpdates to history
-    3. save_learning_state() → writes to tmp file
+    3. save_learning_state() -> writes to tmp file
     4. Call _load_from_file() (simulates server restart)
     5. Assert restored state has len(history)==3 and correct field values
     """
@@ -177,7 +177,7 @@ def test_chart_endpoints_return_data_after_reload(tmp_path):
 
     assert "escalate" in curves, "escalate action should appear in trust curves"
     assert len(curves["escalate"]) == 5
-    assert curves["escalate"][-1]["trust_level"] > 0.50, "5 correct decisions → trust should be above initial 0.50"
+    assert curves["escalate"][-1]["trust_level"] > 0.50, "5 correct decisions -> trust should be above initial 0.50"
 
     # Simulate what gae/before-after endpoint does
     assert len(restored.history) >= 2

@@ -5,20 +5,20 @@ Demonstrates that a second domain can implement DomainConfig without
 touching core/ or domains/soc/.
 
 What is fully defined (smoke-test scope):
-  factors         — 6 scoring dimensions
-  actions         — 5 possible PO dispositions
-  situation_types — 6 situation classifications
-  policies        — 4 policies with one priority-1 conflict pair
-  asymmetry_ratio — 12.0  (procurement mistakes less catastrophic than SOC)
-  prompt_variants — 4 evolver-tracked variants
-  metrics_config  — 4 business impact numbers
+  factors         -- 6 scoring dimensions
+  actions         -- 5 possible PO dispositions
+  situation_types -- 6 situation classifications
+  policies        -- 4 policies with one priority-1 conflict pair
+  asymmetry_ratio -- 12.0  (procurement mistakes less catastrophic than SOC)
+  prompt_variants -- 4 evolver-tracked variants
+  metrics_config  -- 4 business impact numbers
 
 What is NOT yet implemented (raises NotImplementedError):
-  classify_situation() — supply_chain/situations.py not yet created
-  compute_factors()    — supply_chain/factors.py not yet created
-  get_seed_queries()   — supply_chain/seed_neo4j.py not yet created
-  get_graph_query_templates() — supply_chain Cypher templates not yet created
-  get_narration_templates()   — supply_chain LLM prompts not yet created
+  classify_situation() -- supply_chain/situations.py not yet created
+  compute_factors()    -- supply_chain/factors.py not yet created
+  get_seed_queries()   -- supply_chain/seed_neo4j.py not yet created
+  get_graph_query_templates() -- supply_chain Cypher templates not yet created
+  get_narration_templates()   -- supply_chain LLM prompts not yet created
 """
 
 from app.domains.base import (
@@ -59,7 +59,7 @@ class S2PDomainConfig(DomainConfig):
                 id="price_variance",
                 label="Price Variance",
                 description=(
-                    "Unit price deviation from contract benchmark — positive means "
+                    "Unit price deviation from contract benchmark -- positive means "
                     "above contracted rate, triggers cost policy at >10%"
                 ),
             ),
@@ -83,7 +83,7 @@ class S2PDomainConfig(DomainConfig):
                 id="geopolitical_risk",
                 label="Geopolitical Risk",
                 description=(
-                    "Country/region risk index for supplier origin — covers "
+                    "Country/region risk index for supplier origin -- covers "
                     "trade sanctions, tariff exposure, and political instability"
                 ),
             ),
@@ -92,7 +92,7 @@ class S2PDomainConfig(DomainConfig):
                 label="Alternative Availability",
                 description=(
                     "Count and qualification status of alternative suppliers for "
-                    "this SKU — single-source items score 0.0"
+                    "this SKU -- single-source items score 0.0"
                 ),
             ),
             DomainFactor(
@@ -125,8 +125,8 @@ class S2PDomainConfig(DomainConfig):
             DomainAction(
                 id="flag_for_review",
                 label="Flag for Review",
-                time_saved_min=0.0,    # no time saved — adds a review step
-                cost_dollars=95.0,     # ~$95 procurement analyst time (30 min × $190/hr)
+                time_saved_min=0.0,    # no time saved -- adds a review step
+                cost_dollars=95.0,     # ~$95 procurement analyst time (30 min x $190/hr)
                 risk_level="low",
             ),
             DomainAction(
@@ -164,7 +164,7 @@ class S2PDomainConfig(DomainConfig):
                 label="Routine Reorder",
                 description=(
                     "Standard replenishment PO from an approved tier-1 supplier "
-                    "within contracted price — auto-approve eligible"
+                    "within contracted price -- auto-approve eligible"
                 ),
                 color="#3B82F6",   # blue
             ),
@@ -172,7 +172,7 @@ class S2PDomainConfig(DomainConfig):
                 id="PRICE_ANOMALY",
                 label="Price Anomaly",
                 description=(
-                    "Unit price exceeds contract benchmark by >10% — "
+                    "Unit price exceeds contract benchmark by >10% -- "
                     "cost policy review required"
                 ),
                 color="#F97316",   # orange
@@ -182,7 +182,7 @@ class S2PDomainConfig(DomainConfig):
                 label="Supply Risk",
                 description=(
                     "Supplier Z-score below threshold or active geopolitical "
-                    "event affecting supply origin — risk escalation required"
+                    "event affecting supply origin -- risk escalation required"
                 ),
                 color="#EF4444",   # red
             ),
@@ -190,7 +190,7 @@ class S2PDomainConfig(DomainConfig):
                 id="DEMAND_SPIKE",
                 label="Demand Spike",
                 description=(
-                    "PO quantity >2σ above baseline for this SKU/period — "
+                    "PO quantity >2sigma above baseline for this SKU/period -- "
                     "may indicate hoarding, error, or genuine demand surge"
                 ),
                 color="#EAB308",   # yellow
@@ -200,7 +200,7 @@ class S2PDomainConfig(DomainConfig):
                 label="Single Source Dependency",
                 description=(
                     "No qualified alternative supplier exists for this item and "
-                    "single-source share exceeds 70% — dual-sourcing trigger"
+                    "single-source share exceeds 70% -- dual-sourcing trigger"
                 ),
                 color="#A855F7",   # purple
             ),
@@ -253,9 +253,9 @@ class S2PDomainConfig(DomainConfig):
                 name="Review Risky Suppliers",
                 rule=(
                     "Require manual review if supplier credit Z-score "
-                    "is below 2.5 — indicates elevated default/disruption risk"
+                    "is below 2.5 -- indicates elevated default/disruption risk"
                 ),
-                priority=1,              # ← priority 1 (ties with POLICY-DUAL-004)
+                priority=1,              # <- priority 1 (ties with POLICY-DUAL-004)
                 action_override="flag_for_review",
             ),
             DomainPolicy(
@@ -265,7 +265,7 @@ class S2PDomainConfig(DomainConfig):
                     "Trigger dual-sourcing process if single-supplier "
                     "dependency share exceeds 70% for any item"
                 ),
-                priority=1,              # ← priority 1 (ties with POLICY-RISK-003)
+                priority=1,              # <- priority 1 (ties with POLICY-RISK-003)
                 action_override="trigger_dual_sourcing",
             ),
         ]
@@ -292,7 +292,7 @@ class S2PDomainConfig(DomainConfig):
                 id="PO_APPROVAL_v1",
                 category="routine_reorder",
                 version=1,
-                description="Base PO approval prompt — price and supplier tier only",
+                description="Base PO approval prompt -- price and supplier tier only",
             ),
             PromptVariant(
                 id="PO_APPROVAL_v2",
@@ -304,7 +304,7 @@ class S2PDomainConfig(DomainConfig):
                 id="RISK_ASSESSMENT_v1",
                 category="supply_risk",
                 version=1,
-                description="Base supplier risk assessment prompt — Z-score and delivery rate",
+                description="Base supplier risk assessment prompt -- Z-score and delivery rate",
             ),
             PromptVariant(
                 id="RISK_ASSESSMENT_v2",
@@ -327,7 +327,7 @@ class S2PDomainConfig(DomainConfig):
         return {
             "po_auto_approved_monthly": 340,    # POs processed without human touch
             "cost_avoided_quarterly":   210000, # contract savings + overpay prevention
-            "cycle_time_reduction_pct": 65,     # PO cycle time: 4.2 days → 1.5 days
+            "cycle_time_reduction_pct": 65,     # PO cycle time: 4.2 days -> 1.5 days
             "supplier_risk_mitigated":  47,     # at-risk single-source items resolved
         }
 

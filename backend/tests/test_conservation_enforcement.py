@@ -112,7 +112,7 @@ def test_conservation_green_allows_centroid_update():
 
 def test_conservation_auto_pause_freezes_on_red_days():
     """
-    When auto_pause_active is True (≥14 RED days), triage enforces RED
+    When auto_pause_active is True (>=14 RED days), triage enforces RED
     by calling set_conservation_status('RED') regardless of the raw status.
     This test simulates that enforcement: set status=RED directly (as triage
     would after detecting auto_pause_active=True) and verify the scorer freezes.
@@ -221,7 +221,7 @@ def test_conservation_fail_closed_on_health_error():
     Fail-closed pattern (FIX 1): when LearningHealthMonitor.evaluate raises,
     _conservation_block is set True and guarded_update is never called.
 
-    Replicates the triage.py try/except pattern directly — no live handler needed.
+    Replicates the triage.py try/except pattern directly -- no live handler needed.
     """
     _reset_spike_state()
     scorer = _make_scorer("GREEN")
@@ -292,7 +292,7 @@ def test_simulation_respects_conservation_gate():
 
 def test_guarded_update_return_none_when_blocked():
     """
-    guarded_update() must return None — not a CentroidUpdate — when the scorer
+    guarded_update() must return None -- not a CentroidUpdate -- when the scorer
     is paused.  This is the contract that FIX 4 checks in the log path.
     """
     _reset_spike_state()

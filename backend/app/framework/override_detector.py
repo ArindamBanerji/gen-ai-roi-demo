@@ -1,5 +1,5 @@
 """
-OverrideDetector — analyst correct-override pattern detector.
+OverrideDetector -- analyst correct-override pattern detector.
 
 Domain-agnostic. Safe to copy to copilot-sdk.
 
@@ -18,8 +18,8 @@ Usage
 Design notes
 ------------
 - Threshold 50 is the minimum population required for override frequency
-  estimates to be stable (±10 pp at 95% CI for a 50/50 base rate).
-- `load()` is idempotent — re-calling with a fresh query result is safe.
+  estimates to be stable (+/-10 pp at 95% CI for a 50/50 base rate).
+- `load()` is idempotent -- re-calling with a fresh query result is safe.
 - No external dependencies: pure Python, no Neo4j or domain imports here.
 """
 
@@ -70,7 +70,7 @@ class OverrideDetector:
         self._examples = list(examples)
         status = "ACTIVATED" if self.activated else "inactive"
         log.info(
-            "[OverrideDetector] Loaded %d examples — %s (threshold=%d)",
+            "[OverrideDetector] Loaded %d examples -- %s (threshold=%d)",
             len(self._examples), status, self._threshold,
         )
 

@@ -1,5 +1,5 @@
 """
-Domain Registry — Tracks the active domain module for this demo instance.
+Domain Registry -- Tracks the active domain module for this demo instance.
 
 In v4.5+, this returns a DomainConfig object. For v3.2, it's a marker.
 

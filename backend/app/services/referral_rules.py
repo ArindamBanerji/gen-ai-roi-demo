@@ -6,14 +6,14 @@ Each rule implements the gae.referral.ReferralRule protocol:
   - reason: ReferralReason property
   - evaluate(alert_context: dict) -> (bool, dict)
 
-Rules are pure functions — no state, no ML, no side effects.
-Missing context keys → rule does not fire (safe degradation, not dangerous).
+Rules are pure functions -- no state, no ML, no side effects.
+Missing context keys -> rule does not fire (safe degradation, not dangerous).
 
 Validated in EXP-REFER-LAYERED: 72.7% DR, 12% FPR, 978 net min/100 alerts.
 Confidence gate REJECTED for referral (14% precision = active harm).
 Rules are the primary referral mechanism.
 
-Reference: docs/soc_copilot_design_v1.md §referral; EXP-REFER-LAYERED.
+Reference: docs/soc_copilot_design_v1.md Sec.referral; EXP-REFER-LAYERED.
 """
 
 from typing import List, Optional, Tuple
@@ -62,7 +62,7 @@ class RapidSuccessionRule:
     within the recent window.
 
     High-frequency alert generation from a single source is a strong
-    indicator of either an active attack or a misconfigured asset —
+    indicator of either an active attack or a misconfigured asset --
     both warrant analyst review.
     """
 
@@ -137,7 +137,7 @@ class HighValueDataRule:
 
     NOTE: R4 has ~42.6% detection rate (EXP-REFER-COVERAGE) because it
     depends on Stage 1 action prediction. When Stage 1 correctly escalates,
-    R4 does not fire — but the alert is already routed to a human. This is
+    R4 does not fire -- but the alert is already routed to a human. This is
     by design: R4 catches the cases where automation would silently suppress
     or monitor a high-value asset without escalation.
 
@@ -197,7 +197,7 @@ class ActiveIncidentRule:
 
     Alerts arriving during an active incident require analyst judgment
     to determine whether they are part of the same campaign or a
-    separate event — a determination automation cannot safely make.
+    separate event -- a determination automation cannot safely make.
     """
 
     @property

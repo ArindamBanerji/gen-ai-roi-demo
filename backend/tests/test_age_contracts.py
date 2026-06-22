@@ -1,8 +1,8 @@
 """
-test_age_contracts.py — AGE serialization and shape boundary contracts.
+test_age_contracts.py -- AGE serialization and shape boundary contracts.
 
 Verifies that the backend correctly handles Apache AGE's quirks:
-  1. List properties are returned as JSON strings from AGE → backend must decode.
+  1. List properties are returned as JSON strings from AGE -> backend must decode.
   2. Decision nodes use `decision_id`, Alert nodes use `alert_id` (not generic `id`).
   3. SOC_PROFILE_CENTROIDS shape (6,4,6) matches the live ProfileScorer.
   4. API response fields have the correct Python types (int, list, etc.).
@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 def test_campaign_categories_is_list_not_string():
     """
-    GET /api/soc/campaigns → category_sequence must be a Python list, never a
+    GET /api/soc/campaigns -> category_sequence must be a Python list, never a
     raw JSON string.  AGE serializes list properties as strings; _format_campaign()
     must json.loads() them before returning.
     """
@@ -113,7 +113,7 @@ def test_evolution_events_endpoint_uses_decision_id():
     """
     GET /api/metrics/evolution-events must use d.decision_id (not d.id) in its
     Cypher query.  AGE Decision nodes store the identifier in decision_id;
-    querying d.id always returns null → 'DEC-None' duplicate keys.
+    querying d.id always returns null -> 'DEC-None' duplicate keys.
 
     This test inspects the source of the standalone endpoint (H7-FIX-4) to
     confirm the correct property name is used.
@@ -132,10 +132,10 @@ def test_evolution_events_endpoint_uses_decision_id():
 def test_compounding_evolution_uses_correct_property():
     """
     The /compounding endpoint's inline evolution_events query ALSO reads decision
-    nodes.  It should use d.decision_id — not d.id — to avoid 'DEC-None' duplicates.
+    nodes.  It should use d.decision_id -- not d.id -- to avoid 'DEC-None' duplicates.
 
     NOTE: If this test fails it reveals a remaining bug in the inline compounding
-    query (line ~246 in metrics.py).  Do not fix it here — report only.
+    query (line ~246 in metrics.py).  Do not fix it here -- report only.
     """
     import pathlib
 
@@ -151,10 +151,10 @@ def test_compounding_evolution_uses_correct_property():
         f"metrics.py still contains {bad_count} occurrence(s) of 'd.id AS id'. "
         f"These should all be 'd.decision_id AS id'. "
         f"This causes 'DEC-None' duplicate keys in the compounding endpoint. "
-        f"BUG REPORT — do not fix in this file."
+        f"BUG REPORT -- do not fix in this file."
     )
     assert good_count >= 1, (
-        f"metrics.py has no occurrences of 'd.decision_id AS id' — "
+        f"metrics.py has no occurrences of 'd.decision_id AS id' -- "
         f"evolution-events Cypher may be using the wrong property name."
     )
 
@@ -163,7 +163,7 @@ def test_alert_id_property_in_evolution_events_query():
     """
     The evolution-events Cypher must traverse DECIDED_ON and select a.alert_id.
     alert_id is a property of Alert nodes, not Decision nodes.
-    Decision nodes carry no denormalized alert_id field — the relationship is
+    Decision nodes carry no denormalized alert_id field -- the relationship is
     the canonical reference: (d:Decision)-[:DECIDED_ON]->(a:Alert).
     """
     import pathlib
@@ -182,7 +182,7 @@ def test_alert_id_property_in_evolution_events_query():
 def test_soc_profile_centroids_shape():
     """
     SOC_PROFILE_CENTROIDS must have shape (6, 4, 6):
-      6 categories × 4 SCORER_ACTIONS × 6 factors.
+      6 categories x 4 SCORER_ACTIONS x 6 factors.
     refer_to_analyst is excluded (it's a routing gate, not a centroid action).
     """
     from app.domains.soc.config import SOC_PROFILE_CENTROIDS
@@ -252,7 +252,7 @@ def test_detection_engineering_endpoint_no_shape_error():
 
 def test_analytics_correct_decisions_is_integer():
     """
-    GET /api/soc/analytics → correct_decisions must be a Python int, not a
+    GET /api/soc/analytics -> correct_decisions must be a Python int, not a
     string or None.  The Cypher query returns an AGE integer; the backend
     casts with int() before returning.
     """
@@ -272,7 +272,7 @@ def test_analytics_correct_decisions_is_integer():
 
 def test_analytics_total_alerts_is_integer():
     """
-    GET /api/soc/analytics → total_alerts must be int.
+    GET /api/soc/analytics -> total_alerts must be int.
     """
     from fastapi.testclient import TestClient
     from app.main import app
@@ -289,9 +289,9 @@ def test_analytics_total_alerts_is_integer():
 
 def test_executive_narrative_top_shifts_is_list():
     """
-    GET /api/soc/executive-narrative → what_changed.top_shifts must be a list.
+    GET /api/soc/executive-narrative -> what_changed.top_shifts must be a list.
     It is built by appending dicts in executive_narrative.py; if the AGE query
-    fails the list falls back to [] — still a list, never None or a string.
+    fails the list falls back to [] -- still a list, never None or a string.
     """
     from fastapi.testclient import TestClient
     from app.main import app
@@ -310,7 +310,7 @@ def test_executive_narrative_top_shifts_is_list():
 
 def test_threat_landscape_nodes_is_integer():
     """
-    GET /api/soc/threat-landscape → graph_coverage.nodes must be int.
+    GET /api/soc/threat-landscape -> graph_coverage.nodes must be int.
     The Cypher COUNT() returns a numeric; backend wraps in int().
     """
     from fastapi.testclient import TestClient
@@ -328,9 +328,9 @@ def test_threat_landscape_nodes_is_integer():
 
 def test_threat_landscape_source_field_present():
     """
-    GET /api/soc/threat-landscape → source field must be present.
+    GET /api/soc/threat-landscape -> source field must be present.
     On live AGE it is 'age'; on unavailable it is 'unavailable'.
-    Either is acceptable — absence is a bug.
+    Either is acceptable -- absence is a bug.
     """
     from fastapi.testclient import TestClient
     from app.main import app

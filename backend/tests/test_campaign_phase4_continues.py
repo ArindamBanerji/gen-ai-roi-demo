@@ -1,5 +1,5 @@
 """
-tests/test_campaign_phase4_continues.py — Phase 4 temporal CONTINUES edges.
+tests/test_campaign_phase4_continues.py -- Phase 4 temporal CONTINUES edges.
 
 Phase 4 adds advisory temporal context only. It must not affect scorer/tensor
 behavior, create BELONGS_TO, or add hot-path campaign chain reads.

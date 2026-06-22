@@ -1,11 +1,11 @@
 """
-Narrative fix tests — Option A.
+Narrative fix tests -- Option A.
 
 Checks:
   - Tab-2 subtitle is present in RuntimeEvolutionTab.tsx
   - Tab-3 subtitle is present in AlertTriageTab.tsx
   - The string literal "7823" does not appear in the narrative/reasoning
-    service files (narrative.py, reasoning.py) — those must use the alert_id
+    service files (narrative.py, reasoning.py) -- those must use the alert_id
     passed at runtime, never a hardcoded ID.
   - In RuntimeEvolutionTab.tsx the string "7823" appears at most once
     (the DEFAULT_ALERT_ID constant definition). Scattered inline literals
@@ -63,7 +63,7 @@ def test_alert_id_not_hardcoded():
     '7823' must not appear in the narrative/reasoning service files.
     Those files must use the alert_id parameter passed at runtime.
 
-    In RuntimeEvolutionTab.tsx '7823' is allowed exactly once — the
+    In RuntimeEvolutionTab.tsx '7823' is allowed exactly once -- the
     DEFAULT_ALERT_ID constant definition.  Scattered inline literals (the
     original bug) would push the count above 1.
 
@@ -74,7 +74,7 @@ def test_alert_id_not_hardcoded():
         f = _BACKEND_SERVICES / name
         assert f.exists(), f"File not found: {f}"
         assert "7823" not in _read(f), (
-            f"Hardcoded '7823' found in {name} — narrative/reasoning must use "
+            f"Hardcoded '7823' found in {name} -- narrative/reasoning must use "
             "the alert_id parameter, not a hardcoded ID"
         )
 

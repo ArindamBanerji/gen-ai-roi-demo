@@ -2,12 +2,12 @@
 Tests for Phase 8: GraphExplorerService and graph explorer endpoints.
 
 Coverage:
-  test_validate_safe_query         — MATCH query passes validation
-  test_validate_blocks_mutation    — DELETE / CREATE / SET queries fail validation
-  test_top_nodes_endpoint          — GET /api/soc/graph/top-nodes returns nodes list
-  test_graph_summary               — GET /api/soc/graph/summary returns total_nodes > 0
-  test_prebuilt_queries_list       — GET /api/soc/graph/prebuilt-queries returns 5 queries
-  test_prebuilt_query_run          — POST /api/soc/graph/prebuilt/top_risk_users returns rows
+  test_validate_safe_query         -- MATCH query passes validation
+  test_validate_blocks_mutation    -- DELETE / CREATE / SET queries fail validation
+  test_top_nodes_endpoint          -- GET /api/soc/graph/top-nodes returns nodes list
+  test_graph_summary               -- GET /api/soc/graph/summary returns total_nodes > 0
+  test_prebuilt_queries_list       -- GET /api/soc/graph/prebuilt-queries returns 5 queries
+  test_prebuilt_query_run          -- POST /api/soc/graph/prebuilt/top_risk_users returns rows
 """
 
 import pytest

@@ -5,17 +5,17 @@ Safe to copy to copilot-sdk.
 
 Design
 ------
-get_theta() is abstract — each domain provides its own per-category
+get_theta() is abstract -- each domain provides its own per-category
 cosine similarity thresholds (SOC has PROD-3 calibrated values;
 a fraud copilot would have different ones).
 
 All other methods are generic and live here:
-  cosine_similarity()       — directional factor-profile matching
-  _fetch_verified_decisions() — Decision-node retrieval by category
-  get_similar_cases()       — top-k retrieval with θ filtering
-  get_agreement_pct()       — action agreement fraction
+  cosine_similarity()       -- directional factor-profile matching
+  _fetch_verified_decisions() -- Decision-node retrieval by category
+  get_similar_cases()       -- top-k retrieval with theta filtering
+  get_agreement_pct()       -- action agreement fraction
 
-Reference: docs/soc_copilot_design_v5_6_part1.md §23.4
+Reference: docs/soc_copilot_design_v5_6_part1.md Sec.23.4
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ SIMILAR_CASES_MAX_SCAN  = 500   # max verified decisions fetched per query (perf
 # ── Abstract base ────────────────────────────────────────────────────────────
 
 class SimilarCasesBase(abc.ABC):
-    """Case-based reasoning retrieval — domain subclass supplies get_theta()."""
+    """Case-based reasoning retrieval -- domain subclass supplies get_theta()."""
 
     # ── Cosine similarity ────────────────────────────────────────────────────
 
@@ -126,7 +126,7 @@ class SimilarCasesBase(abc.ABC):
         """
         Return up to k similar past Decision nodes for *category*.
 
-        Category filter is non-negotiable — never returns cross-category results.
+        Category filter is non-negotiable -- never returns cross-category results.
         Returns [] if fewer than SIMILAR_CASES_MIN_PRIOR verified decisions exist.
 
         Each returned dict adds a 'similarity' key (float in [0,1]).
@@ -167,7 +167,7 @@ class SimilarCasesBase(abc.ABC):
         """
         Return fraction of *similar_cases* whose action matches *current_action*.
 
-        Returns None when similar_cases is empty (suppressed sidebar — cold start).
+        Returns None when similar_cases is empty (suppressed sidebar -- cold start).
         Caller should then use the fallback template wording:
           "Calibrated from {calibration_count} verified outcomes." (no pct cited).
         """

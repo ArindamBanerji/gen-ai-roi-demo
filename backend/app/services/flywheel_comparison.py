@@ -1,11 +1,11 @@
 """
-flywheel_comparison.py — W2 Flywheel Demo Moment service (Feature 3).
+flywheel_comparison.py -- W2 Flywheel Demo Moment service (Feature 3).
 
 Builds a Day-1 vs Current comparison showing the compounding effect of
 TRIGGERED_EVOLUTION edges accumulated by PatternHistoryFactorComputer.
 
 CLAIM-W2: +10.13pp (p=0.0002). PatternHistoryFactorComputer ships.
-V is NOT a factor — edge count drives enrichment, not volume.
+V is NOT a factor -- edge count drives enrichment, not volume.
 """
 
 from typing import Optional
@@ -35,7 +35,7 @@ def build_flywheel_comparison(
         "factor_4_value": FALLBACK_FACTOR_4,
         "confidence": None,        # unknown at Day 1
         "recommended_action": None,
-        "provenance_summary": "No pattern history available — symmetric prior applied."
+        "provenance_summary": "No pattern history available -- symmetric prior applied."
     }
 
     current = {
@@ -62,7 +62,7 @@ def build_flywheel_comparison(
                 f"The graph learned from {current_edges} analyst decisions. "
                 f"The same alert now scores {abs(confidence_gain)*100:.0f}pp "
                 f"{'higher' if confidence_gain >= 0 else 'lower'} confidence "
-                f"because the W2 flywheel accumulated pattern context — "
+                f"because the W2 flywheel accumulated pattern context -- "
                 f"not because the centroids changed."
             )
         }

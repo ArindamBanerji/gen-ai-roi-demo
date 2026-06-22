@@ -1,12 +1,12 @@
 """
-SIM-3a: Simulation alert pool — 5 categories, 20 alerts.
+SIM-3a: Simulation alert pool -- 5 categories, 20 alerts.
 
 Categories and their GAE factor signatures:
-  credential_access   — TravelMatchFactor HIGH, TimeAnomaly HIGH, DeviceTrust LOW
-  threat_intel_match  — ThreatIntelFactor HIGH, AssetCriticality CRITICAL
-  lateral_movement    — DeviceTrust LOW, AssetCriticality CRITICAL, TimeAnomaly HIGH
-  data_exfiltration   — AssetCriticality+DataClass HIGH, TimeAnomaly HIGH
-  insider_threat      — DeviceTrust HIGH (trusted insider paradox), AssetCriticality HIGH
+  credential_access   -- TravelMatchFactor HIGH, TimeAnomaly HIGH, DeviceTrust LOW
+  threat_intel_match  -- ThreatIntelFactor HIGH, AssetCriticality CRITICAL
+  lateral_movement    -- DeviceTrust LOW, AssetCriticality CRITICAL, TimeAnomaly HIGH
+  data_exfiltration   -- AssetCriticality+DataClass HIGH, TimeAnomaly HIGH
+  insider_threat      -- DeviceTrust HIGH (trusted insider paradox), AssetCriticality HIGH
 
 Oracle success rates reflect how reliably GAE selects the optimal action per category.
 """
@@ -392,11 +392,11 @@ async def seed_simulation_alerts() -> None:
     data are seeded.  Expects neo4j_client to be already connected.
 
     Creates per category:
-      credential_access  → User + TravelRecord + HAS_TRAVEL, Asset, Alert nodes
-      threat_intel_match → User + ThreatIntel + ASSOCIATED_WITH, Asset, Alert nodes
-      lateral_movement   → User (service account), Asset (CRITICAL server), Alert nodes
-      data_exfiltration  → User, Asset + DataClass + STORES (PII), Alert nodes
-      insider_threat     → User, Asset + DataClass + STORES (RESTRICTED), Alert nodes
+      credential_access  -> User + TravelRecord + HAS_TRAVEL, Asset, Alert nodes
+      threat_intel_match -> User + ThreatIntel + ASSOCIATED_WITH, Asset, Alert nodes
+      lateral_movement   -> User (service account), Asset (CRITICAL server), Alert nodes
+      data_exfiltration  -> User, Asset + DataClass + STORES (PII), Alert nodes
+      insider_threat     -> User, Asset + DataClass + STORES (RESTRICTED), Alert nodes
     All Alert nodes include the properties read by TimeAnomalyFactor and
     DeviceTrustFactor directly (business_hours_login, weekend_login,
     mfa_completed, device_fingerprint_match, vpn_provider).
@@ -877,7 +877,7 @@ async def seed_simulation_alerts() -> None:
     await neo4j_client.run_query("""
         MERGE (a:Asset {id: 'SIM-ASSET-DE-01'})
         MERGE (dc:DataClass {id: 'DC-SIM-DE-PII'})
-        SET dc.name           = 'Customer PII — SIM',
+        SET dc.name           = 'Customer PII -- SIM',
             dc.sensitivity    = 'PII',
             dc.classification = 'RESTRICTED'
         MERGE (a)-[:STORES]->(dc)
@@ -885,7 +885,7 @@ async def seed_simulation_alerts() -> None:
     await neo4j_client.run_query("""
         MERGE (a:Asset {id: 'SIM-ASSET-IT-01'})
         MERGE (dc:DataClass {id: 'DC-SIM-IT-HR'})
-        SET dc.name           = 'HR Records — SIM',
+        SET dc.name           = 'HR Records -- SIM',
             dc.sensitivity    = 'RESTRICTED',
             dc.classification = 'CONFIDENTIAL'
         MERGE (a)-[:STORES]->(dc)
@@ -893,7 +893,7 @@ async def seed_simulation_alerts() -> None:
     await neo4j_client.run_query("""
         MERGE (a:Asset {id: 'SIM-ASSET-CA-01'})
         MERGE (dc:DataClass {id: 'DC-SIM-CA-FINANCE'})
-        SET dc.name           = 'Financial Reports — SIM',
+        SET dc.name           = 'Financial Reports -- SIM',
             dc.sensitivity    = 'RESTRICTED',
             dc.classification = 'CONFIDENTIAL'
         MERGE (a)-[:STORES]->(dc)
@@ -932,7 +932,7 @@ async def seed_simulation_alerts() -> None:
         # CORR-1b: refer_to_analyst alert types (SIM-CA-REF-001, SIM-LM-REF-001)
         ('ambiguous_login_location',       'Ambiguous Login Location',
          'Login from unfamiliar location with partial trust signals',   'medium',  'T1078'),
-        ('internal_scan_ambiguous',        'Internal Scan — Ambiguous',
+        ('internal_scan_ambiguous',        'Internal Scan -- Ambiguous',
          'Internal network scan outside scheduled window from trusted host', 'medium', 'T1021'),
     ]:
         await neo4j_client.run_query("""
@@ -1001,4 +1001,4 @@ async def seed_simulation_alerts() -> None:
         """, {"type_id": type_id, "ids": ids})
     print("  [CORR-1b] [:CLASSIFIED_AS] edges merged for all 27 SIM alerts (20 base + 5 CI + 2 refer)")
 
-    print("[CORR-1b] Simulation alert seeding complete — 27 alerts across 6 categories.")
+    print("[CORR-1b] Simulation alert seeding complete -- 27 alerts across 6 categories.")

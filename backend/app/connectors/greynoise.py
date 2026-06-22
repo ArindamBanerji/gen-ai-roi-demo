@@ -1,5 +1,5 @@
 """
-GreyNoiseConnector — UCL connector for GreyNoise IP enrichment.
+GreyNoiseConnector -- UCL connector for GreyNoise IP enrichment.
 
 GreyNoise Community API classifies IPs as malicious, benign, or unknown and
 flags whether they are background internet noise or part of a riot (known
@@ -15,7 +15,7 @@ NOTE: GreyNoise Community only supports IPs, not domains. Domain IOCs in the
 Pulsedive curated list are silently skipped.
 
 After enrichment:
-  c. MERGE :GreyNoiseEnrichment nodes into Neo4j (idempotent — updates
+  c. MERGE :GreyNoiseEnrichment nodes into Neo4j (idempotent -- updates
      refreshed_at if the node already exists).
   d. MERGE :ENRICHED_BY relationships from :ThreatIntel to :GreyNoiseEnrichment.
 """
@@ -61,7 +61,7 @@ GREYNOISE_BASE_URL = "https://api.greynoise.io/v3/community"
 # ============================================================================
 
 DEMO_IPS: List[str] = [
-    "103.15.42.17",    # Singapore IP — ties to ALERT-7823 travel login
+    "103.15.42.17",    # Singapore IP -- ties to ALERT-7823 travel login
     "185.220.101.34",  # Known Tor exit node
     "45.33.32.156",    # Scanning / reconnaissance source
 ]
@@ -139,7 +139,7 @@ async def _fetch_greynoise(
 
         # 404 means GreyNoise has no data for this IP (not malicious = unlisted)
         if resp.status_code == 404:
-            logger.info("[GREYNOISE] No data for %s (404 — unlisted)", ip)
+            logger.info("[GREYNOISE] No data for %s (404 -- unlisted)", ip)
             return None
 
         resp.raise_for_status()
@@ -183,7 +183,7 @@ class GreyNoiseConnector(UCLConnector):
 
     name        = "greynoise"
     source_type = "enrichment"
-    description = "GreyNoise community IP enrichment — classification, noise, riot flags"
+    description = "GreyNoise community IP enrichment -- classification, noise, riot flags"
 
     # ------------------------------------------------------------------
     # UCLConnector.refresh()
@@ -209,7 +209,7 @@ class GreyNoiseConnector(UCLConnector):
         # Step 1 — Live API or hardcoded fallback
         # -------------------------------------------------------------------
         if api_key:
-            print("[GREYNOISE] API key present — attempting live enrichment")
+            print("[GREYNOISE] API key present -- attempting live enrichment")
             async with httpx.AsyncClient() as client:
                 for ip in DEMO_IPS:
                     live_attempted += 1
@@ -230,7 +230,7 @@ class GreyNoiseConnector(UCLConnector):
 
         # Full fallback when no key or every call failed
         if not enriched:
-            print("[GREYNOISE] No live data — using full hardcoded fallback set")
+            print("[GREYNOISE] No live data -- using full hardcoded fallback set")
             enriched = [dict(v) for v in HARDCODED_FALLBACK.values()]
             source = "hardcoded_fallback"
 
@@ -351,7 +351,7 @@ class GreyNoiseConnector(UCLConnector):
         return HealthStatus(
             healthy=False,
             source=self.name,
-            message="GREYNOISE_API_KEY not set — using hardcoded fallback",
+            message="GREYNOISE_API_KEY not set -- using hardcoded fallback",
         )
 
     # ------------------------------------------------------------------

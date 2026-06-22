@@ -1,9 +1,9 @@
 """
-SOC factor orchestrator — async Neo4j → FactorComputer → GAE assembly.
+SOC factor orchestrator -- async Neo4j -> FactorComputer -> GAE assembly.
 
 Calls each FactorComputer in order, then delegates vector assembly to GAE.
 
-Reference: docs/soc_copilot_design_v1.md §5.3.
+Reference: docs/soc_copilot_design_v1.md Sec.5.3.
 """
 
 from gae.contracts import SchemaContract, PropertySpec

@@ -1,12 +1,12 @@
 """
-app/services/reconvergence_logger.py — EXP-G1 data collection.
+app/services/reconvergence_logger.py -- EXP-G1 data collection.
 
 Logs re-convergence events to Neo4j so that the temporal compounding
 exponent (EXP-G1) can be measured when 90 days of pilot data exists.
 
 Design constraints:
-  - NEVER raises — always degrades safely (triage must not be blocked)
-  - Called by re-convergence detection (not yet hooked in — infrastructure only)
+  - NEVER raises -- always degrades safely (triage must not be blocked)
+  - Called by re-convergence detection (not yet hooked in -- infrastructure only)
   - Each event stores the 8 fields required by EXP-G1 analysis
 """
 
@@ -151,11 +151,11 @@ async def log_decision_distance(
     Log per-decision EXP-G1 fields to a DecisionDistanceLog Neo4j node.
 
     Fields logged:
-      centroid_distance_to_canonical — L2 norm(mu - mu_zero), primary γ metric
-      pattern_history_value          — factor_vector[4], W2 enrichment signal
-      alert_category_distribution    — rolling 100-decision category mix
+      centroid_distance_to_canonical -- L2 norm(mu - mu_zero), primary gamma metric
+      pattern_history_value          -- factor_vector[4], W2 enrichment signal
+      alert_category_distribution    -- rolling 100-decision category mix
 
-    Never raises — degrades safely. Returns decision_id on success, None on failure.
+    Never raises -- degrades safely. Returns decision_id on success, None on failure.
     """
     try:
         centroid_distance = float(np.linalg.norm(mu.flatten() - mu_zero.flatten()))

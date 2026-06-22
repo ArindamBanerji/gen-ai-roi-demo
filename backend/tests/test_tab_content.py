@@ -1,6 +1,6 @@
 """
-Step 11.1 — Tab content export endpoint tests.
-All tests mock neo4j_client and service functions — no live Neo4j required.
+Step 11.1 -- Tab content export endpoint tests.
+All tests mock neo4j_client and service functions -- no live Neo4j required.
 """
 import asyncio
 import os
@@ -215,7 +215,7 @@ def test_tab2_has_decision_glossary():
 
     mock_iks = {
         "iks_v2": 71.0,
-        "interpretation": "Calibrated — model has sufficient training signal",
+        "interpretation": "Calibrated -- model has sufficient training signal",
         "components": {"trust_coverage": 50.0},
         "total_decisions": 537,
     }
@@ -259,7 +259,7 @@ def test_tab3_has_recommendation_and_kernel_weights():
     mock_client = AsyncMock()
     mock_client.run_query.side_effect = [
         [{"cnt": 5000}],   # graph node count query
-        [],                # no pending alert → centroid fallback
+        [],                # no pending alert -> centroid fallback
     ]
 
     with patch("app.routers.soc.neo4j_client", mock_client):
@@ -295,7 +295,7 @@ def test_tab3_has_recommendation_and_kernel_weights():
     weights = {item["name"]: item["kernel_weight"] for item in breakdown}
     if "threat_intel_enrichment" in weights:
         assert weights["threat_intel_enrichment"] == max(weights.values()), (
-            "threat_intel_enrichment (σ=0.07) must have the highest kernel weight"
+            "threat_intel_enrichment (sigma=0.07) must have the highest kernel weight"
         )
 
 
@@ -385,7 +385,7 @@ def test_tab5_has_w2_flywheel_claim():
     assert "flywheel_edge_count" in wsk, "Missing flywheel_edge_count (FIX 2.8)"
 
     assert "+10.13pp" in wsk["flywheel_claim"], "flywheel_claim must contain validated stat"
-    assert wsk["flywheel_status"]     == "active", "50 edges → status must be 'active'"
+    assert wsk["flywheel_status"]     == "active", "50 edges -> status must be 'active'"
     assert wsk["flywheel_edge_count"] == 50,        "edge count must match mock"
     assert "50" in wsk["flywheel_message"],          "flywheel_message must reference edge count"
 
@@ -401,7 +401,7 @@ def test_tab5_has_w2_flywheel_claim():
             content_cold = _run(_tab5_content())
 
     wsk_cold = content_cold["what_system_knows"]
-    assert wsk_cold["flywheel_status"]     == "pre_activation", "0 edges → pre_activation"
+    assert wsk_cold["flywheel_status"]     == "pre_activation", "0 edges -> pre_activation"
     assert wsk_cold["flywheel_edge_count"] == 0
     assert "+10.13pp" in wsk_cold["flywheel_claim"]
 
@@ -508,7 +508,7 @@ def test_tab1_alert_types_are_valid_categories():
     mock_client.run_query.side_effect = [
         [{"cnt": 200}],                                          # alert_count
         [{"cnt": 18}],                                           # pending_count
-        [                                                        # top alert types — raw values
+        [                                                        # top alert types -- raw values
             {"category": "anomalous_login",  "alert_type": None, "n": 80},
             {"category": "malware_execution", "alert_type": None, "n": 60},
             {"category": "data_exfil",       "alert_type": "data_exfiltration", "n": 40},
@@ -523,7 +523,7 @@ def test_tab1_alert_types_are_valid_categories():
     assert len(types) > 0, "top_alert_types must not be empty"
     for t in types:
         assert t in VALID_CATEGORIES, (
-            f"alert type {t!r} is not in VALID_CATEGORIES — normalization failed"
+            f"alert type {t!r} is not in VALID_CATEGORIES -- normalization failed"
         )
 
 
@@ -672,7 +672,7 @@ def test_tab5_flywheel_preactivation_reframe():
     wsk = content["what_system_knows"]
 
     assert wsk["flywheel_status"] == "pre_activation", (
-        "0 edges → flywheel_status must be 'pre_activation'"
+        "0 edges -> flywheel_status must be 'pre_activation'"
     )
     assert "pre-activation" in wsk["flywheel_message"], (
         f"flywheel_message must mention 'pre-activation', got: {wsk['flywheel_message']!r}"
@@ -698,7 +698,7 @@ def test_tab5_flywheel_preactivation_reframe():
 # ---------------------------------------------------------------------------
 
 def test_tab1_microsoft_only_above_threshold():
-    """Microsoft Copilot comparison appears only for categories with ≥100 verified decisions."""
+    """Microsoft Copilot comparison appears only for categories with >=100 verified decisions."""
     from app.routers.soc import _tab1_content
 
     # malware_execution with 12 decisions — must NOT mention Microsoft Copilot
@@ -745,7 +745,7 @@ def test_tab1_microsoft_only_above_threshold():
 # ---------------------------------------------------------------------------
 
 def test_tab5_centroid_summary_business_language():
-    """centroid_summary must not contain 'centered near prior' — business translation required."""
+    """centroid_summary must not contain 'centered near prior' -- business translation required."""
     from app.routers.soc import _tab5_content
     from app.services.gae_state import init_learning_state
 
@@ -795,8 +795,8 @@ def test_tab3_recommendation_has_rationale():
     mock_client = AsyncMock()
     mock_client.run_query.side_effect = [
         [{"cnt": 5000}],   # graph node count
-        [],                # no pending alert → centroid fallback
-        [],                # override rate query → falls back to 15.0
+        [],                # no pending alert -> centroid fallback
+        [],                # override rate query -> falls back to 15.0
     ]
 
     with patch("app.routers.soc.neo4j_client", mock_client):
@@ -1194,7 +1194,7 @@ def test_tab5_iks_positive_live():
 
 def test_snapshot_initialized_on_startup():
     """
-    GraphSnapshot is populated at startup — verified_decisions is non-negative.
+    GraphSnapshot is populated at startup -- verified_decisions is non-negative.
     Checks that the learning-state endpoint exposes verified_decisions from snapshot.
     """
     resp = client.get("/api/soc/learning-state")
@@ -1208,7 +1208,7 @@ def test_snapshot_initialized_on_startup():
 async def test_restart_does_not_lose_decision_count():
     """
     Simulates restart: two sequential GraphSnapshot.from_graph() calls
-    return identical verified_decisions — restart is idempotent.
+    return identical verified_decisions -- restart is idempotent.
     """
     from app.state.graph_snapshot import GraphSnapshot
     from unittest.mock import AsyncMock
@@ -1235,7 +1235,7 @@ def test_iks_consistent_tab2_tab5():
     # count bugs) while allowing for minor variation between two independent
     # async compute_iks_v2 calls to the same Neo4j client.
     assert abs(iks_t2 - iks_t5) < 35.0, \
-        f"Tab 2 IKS ({iks_t2}) differs from Tab 5 ({iks_t5}) by > 35 — inconsistent data source"
+        f"Tab 2 IKS ({iks_t2}) differs from Tab 5 ({iks_t5}) by > 35 -- inconsistent data source"
 
 
 def test_roi_arithmetic_consistent():
@@ -1275,7 +1275,7 @@ def test_tab2_iks_matches_interpretation():
 
 
 def test_tab5_categories_calibrated_max_six():
-    """categories_calibrated must be ≤ 6 (BACKLOG-007: 'unknown' exclusion)."""
+    """categories_calibrated must be <= 6 (BACKLOG-007: 'unknown' exclusion)."""
     content = client.get("/api/soc/tab/5/content").json()["content"]
     knows = content["what_system_knows"]
     assert knows["categories_calibrated"] <= 6, \
@@ -1303,8 +1303,8 @@ def test_tab2_noise_map_not_cold_start_at_high_decisions():
 def test_tab2_iks_reflects_decision_volume():
     """
     BACKLOG-004: Tab 2 iks_score must use the centroid-drift IKS formula.
-    At phase 3 calibration (≥537 decisions, formal switching cost plateau),
-    IKS must be ≥ 67 — the threshold where switching cost justifies lock-in.
+    At phase 3 calibration (>=537 decisions, formal switching cost plateau),
+    IKS must be >= 67 -- the threshold where switching cost justifies lock-in.
 
     If iks_score < 67 despite high decision volume, the composite v2 formula
     is underweighting calibrated centroids due to trust_coverage drag.
@@ -1316,8 +1316,8 @@ def test_tab2_iks_reflects_decision_volume():
 
     if decisions >= 537:
         assert iks >= 67.0, (
-            f"At {decisions:,} decisions (phase 3+), IKS must be ≥ 67 "
-            f"(switching cost plateau). Got {iks:.1f} — likely using composite v2 "
+            f"At {decisions:,} decisions (phase 3+), IKS must be >= 67 "
+            f"(switching cost plateau). Got {iks:.1f} -- likely using composite v2 "
             "instead of drift-based formula (BACKLOG-004)."
         )
 
@@ -1349,7 +1349,7 @@ def test_centroid_drift_nonzero_at_high_decisions():
     """Fallback computes non-zero drift when scorer.centroids differs from mu_zero.
 
     Unit test: patches Neo4j to raise (forcing the in-memory fallback),
-    and patches ProfileScorer + _load_mu_zero so centroids ≠ mu_zero by a known
+    and patches ProfileScorer + _load_mu_zero so centroids != mu_zero by a known
     amount.  Verifies the fallback correctly propagates non-zero drift into
     the centroid-evolution response.
     """
@@ -1396,5 +1396,5 @@ def test_centroid_drift_nonzero_at_high_decisions():
         for e in events if e
     ]
     assert max(drifts) > 0.001, (
-        f"Fallback drift values all ≈ 0 despite centroids ≠ mu_zero: {drifts}"
+        f"Fallback drift values all ~= 0 despite centroids != mu_zero: {drifts}"
     )

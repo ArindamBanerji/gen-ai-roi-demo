@@ -2,20 +2,20 @@
 GATE-R: Routing Accuracy Measurement.
 
 Measures what fraction of alerts route to the correct category through the
-full pipeline: alert_type → resolve_alert_category() → category_index →
-correct centroid slice μ[c,:,:].
+full pipeline: alert_type -> resolve_alert_category() -> category_index ->
+correct centroid slice mu[c,:,:].
 
 GATE-R is the gate that enables the composite accuracy claim:
-  composite_accuracy = routing_accuracy × scoring_accuracy
+  composite_accuracy = routing_accuracy x scoring_accuracy
   If routing is 100%, composite equals scoring accuracy.
 
 Tests:
-  test_gate_r_resolve_correctness       — resolve_alert_category matches ground truth
-  test_gate_r_map_coverage              — all pool alert_types in ALERT_TYPE_CATEGORY_MAP
-  test_gate_r_category_index_consistency— category_index valid and round-trips via SOC_CATEGORIES
-  test_gate_r_no_default_fallback       — no alert routes via DEFAULT_CATEGORY fallback
-  test_gate_r_all_categories_represented— all 6 SOC categories have at least one alert
-  test_gate_r_end_to_end_scoring_path   — alert_type → category → index → ProfileScorer.score()
+  test_gate_r_resolve_correctness       -- resolve_alert_category matches ground truth
+  test_gate_r_map_coverage              -- all pool alert_types in ALERT_TYPE_CATEGORY_MAP
+  test_gate_r_category_index_consistency-- category_index valid and round-trips via SOC_CATEGORIES
+  test_gate_r_no_default_fallback       -- no alert routes via DEFAULT_CATEGORY fallback
+  test_gate_r_all_categories_represented-- all 6 SOC categories have at least one alert
+  test_gate_r_end_to_end_scoring_path   -- alert_type -> category -> index -> ProfileScorer.score()
 """
 
 import pytest
@@ -78,12 +78,12 @@ def test_gate_r_resolve_correctness():
 
     if accuracy == 1.0:
         print("GATE-R: PASS")
-        print("Composite accuracy = routing(100%) × scoring(97.89%) = 97.89%")
+        print("Composite accuracy = routing(100%) x scoring(97.89%) = 97.89%")
         print("No routing degradation.")
     else:
         composite = accuracy * 0.9789
         print(f"GATE-R: CONDITIONAL PASS")
-        print(f"Composite accuracy = routing({accuracy:.1%}) × scoring(97.89%) = {composite:.1%}")
+        print(f"Composite accuracy = routing({accuracy:.1%}) x scoring(97.89%) = {composite:.1%}")
         print(f"Routing errors degrade composite by {(1 - accuracy) * 100:.1f}pp")
 
     assert not mismatches, (
@@ -144,17 +144,17 @@ def test_gate_r_category_index_consistency():
         try:
             idx = cfg.get_category_index(category)
         except ValueError as exc:
-            failures.append(f"  {alert_type!r} → {category!r}: get_category_index raised {exc}")
+            failures.append(f"  {alert_type!r} -> {category!r}: get_category_index raised {exc}")
             continue
 
         if not (0 <= idx < n_cats):
             failures.append(
-                f"  {alert_type!r} → {category!r}: index {idx} out of range [0, {n_cats})"
+                f"  {alert_type!r} -> {category!r}: index {idx} out of range [0, {n_cats})"
             )
         elif SOC_CATEGORIES[idx] != category:
             failures.append(
-                f"  {alert_type!r} → {category!r}: "
-                f"SOC_CATEGORIES[{idx}]={SOC_CATEGORIES[idx]!r} ≠ {category!r}"
+                f"  {alert_type!r} -> {category!r}: "
+                f"SOC_CATEGORIES[{idx}]={SOC_CATEGORIES[idx]!r} != {category!r}"
             )
 
     assert not failures, (
@@ -236,8 +236,8 @@ def test_gate_r_all_categories_represented():
 def test_gate_r_end_to_end_scoring_path():
     """
     For one alert from each unique category, verify the full pipeline:
-      alert_type → resolve_alert_category() → get_category_index()
-                 → ProfileScorer.score() returns a valid ScoringResult.
+      alert_type -> resolve_alert_category() -> get_category_index()
+                 -> ProfileScorer.score() returns a valid ScoringResult.
 
     Uses a dummy factor vector [0.5]*6; this tests routing plumbing, not scoring.
     """

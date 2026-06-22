@@ -1,5 +1,5 @@
 """
-Known issues backlog — documented for tracking and future resolution.
+Known issues backlog -- documented for tracking and future resolution.
 These are non-blocking cosmetic issues confirmed during MVP visual spot-check
 on April 1, 2026.
 """
@@ -185,7 +185,7 @@ on April 1, 2026.
 # Must resolve before: VPS deployment (Block 8.2)
 
 def test_backlog_documented():
-    """Placeholder — confirms backlog file is present and parseable."""
+    """Placeholder -- confirms backlog file is present and parseable."""
     issues = [
         "BACKLOG-001", "BACKLOG-002", "BACKLOG-003",
         "BACKLOG-004", "BACKLOG-005", "BACKLOG-006", "BACKLOG-007",

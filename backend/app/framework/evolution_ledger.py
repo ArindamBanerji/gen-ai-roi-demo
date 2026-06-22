@@ -1,5 +1,5 @@
 """
-Shim — evolution ledger has moved to gae.evolution.
+Shim -- evolution ledger has moved to gae.evolution.
 
 All symbols are re-exported from the canonical location so that any
 remaining call-sites that haven't been updated yet continue to work.

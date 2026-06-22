@@ -1,10 +1,10 @@
 """
-SOC Evaluation API — EVAL-2-SOC
+SOC Evaluation API -- EVAL-2-SOC
 
 Runs the 36 ground-truth evaluation scenarios through the live ProfileScorer
 and returns an EvaluationReport. Does NOT trigger learning.
 
-Reference: docs/soc_copilot_design_v1.md §17; gae/evaluation.py.
+Reference: docs/soc_copilot_design_v1.md Sec.17; gae/evaluation.py.
 """
 
 import json
@@ -82,7 +82,7 @@ async def run_evaluation_endpoint():
     """
     Run ProfileScorer against all 36 SOC evaluation scenarios.
     Returns accuracy, per-category breakdown, ECE, and per-scenario results.
-    Does NOT trigger learning — evaluation only.
+    Does NOT trigger learning -- evaluation only.
     """
     from app.services.gae_state import get_profile_scorer
 

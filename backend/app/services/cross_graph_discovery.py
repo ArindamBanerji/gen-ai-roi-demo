@@ -639,8 +639,8 @@ class DiscoveryService:
     ) -> tuple[list[Discovery], list[dict[str, Any]]]:
         """Algorithm 2: Pattern Convergence.
 
-        Uses numpy broadcasting for pairwise L2 distances — O(G²) numpy ops
-        rather than O(G²) Python loops. CONVERGENCE_LIMIT=200 caps worst-case
+        Uses numpy broadcasting for pairwise L2 distances -- O(G^2) numpy ops
+        rather than O(G^2) Python loops. CONVERGENCE_LIMIT=200 caps worst-case
         pairs at 200*199/2 = 19,900.
         """
         query = f"""

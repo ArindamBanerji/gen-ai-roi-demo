@@ -1,15 +1,15 @@
 """
-Integration Test 2 — W2 read path regression.
+Integration Test 2 -- W2 read path regression.
 tests/integration/test_w2_read_path.py
 
 Prevents future regression of PatternHistoryFactorComputer after
 any refactoring of factors.py, config.py, or the Neo4j layer.
 
 Four cases:
-  Case 1 — Fallback (0.40) when no TRIGGERED_EVOLUTION edges
-  Case 2 — W2 path live when edges exist (result ≠ fallback)
-  Case 3 — Recency weighting functional (exponential decay, half-life=30)
-  Case 4 — Only factor_snapshot[3] referenced (FACTOR_INDEX=4 in 1-based order)
+  Case 1 -- Fallback (0.40) when no TRIGGERED_EVOLUTION edges
+  Case 2 -- W2 path live when edges exist (result != fallback)
+  Case 3 -- Recency weighting functional (exponential decay, half-life=30)
+  Case 4 -- Only factor_snapshot[3] referenced (FACTOR_INDEX=4 in 1-based order)
 
 Run from backend/ directory:
     pytest tests/integration/test_w2_read_path.py -v
@@ -78,7 +78,7 @@ def test_w2_case2_read_path_live_when_edges_exist():
     When TRIGGERED_EVOLUTION edges are present, compute() must use the
     W2 path (return the edge-derived value, not the 0.40 fallback).
 
-    Single edge: pattern_value=0.80 → result should be ≈ 0.80, not 0.40.
+    Single edge: pattern_value=0.80 -> result should be ~= 0.80, not 0.40.
     Verifies: W2 path is wired and returning enriched data.
     """
     from app.domains.soc.factors import PatternHistoryFactorComputer
@@ -100,7 +100,7 @@ def test_w2_case2_read_path_live_when_edges_exist():
         "A single edge with pattern_value=0.80 must produce a result > baseline."
     )
     assert abs(result - 0.80) < 0.01, (
-        f"Expected ≈ 0.80 (single-edge mean), got {result}."
+        f"Expected ~= 0.80 (single-edge mean), got {result}."
     )
 
 
@@ -114,13 +114,13 @@ def test_w2_case3_recency_weighting():
     exponential decay formula with HALF_LIFE_DECISIONS.
 
     Setup:
-      decision_num=100, pattern_value=0.90  (recent — weight = 1.0)
-      decision_num=70,  pattern_value=0.40  (30 ago — weight = 2^(-30/30) = 0.5)
+      decision_num=100, pattern_value=0.90  (recent -- weight = 1.0)
+      decision_num=70,  pattern_value=0.40  (30 ago -- weight = 2^(-30/30) = 0.5)
 
-    Expected weighted_mean = (0.90×1.0 + 0.40×0.5) / (1.0 + 0.5)
+    Expected weighted_mean = (0.90x1.0 + 0.40x0.5) / (1.0 + 0.5)
                            = (0.90 + 0.20) / 1.5
                            = 1.10 / 1.5
-                           ≈ 0.7333
+                           ~= 0.7333
     """
     from app.domains.soc.factors import PatternHistoryFactorComputer
 
@@ -143,7 +143,7 @@ def test_w2_case3_recency_weighting():
 
     assert abs(result - expected) < 0.01, (
         f"Recency weighting failed. "
-        f"Expected ≈ {expected:.4f} (half_life={half_life}), got {result:.4f}. "
+        f"Expected ~= {expected:.4f} (half_life={half_life}), got {result:.4f}. "
         "Check that weights use 2^(-(max_dec - d) / HALF_LIFE_DECISIONS)."
     )
 
@@ -191,7 +191,7 @@ def test_w2_case4_factor_index_isolation():
         f"PatternHistoryFactorComputer must be at index 3 in get_factor_computers(). "
         f"Got: {names}. "
         "Factors [0,1,2,4,5] are travel_match, asset_criticality, threat_intel_enrichment, "
-        "time_anomaly, device_trust — none of these should be index 3."
+        "time_anomaly, device_trust -- none of these should be index 3."
     )
     # Confirm other slots are not disturbed
     assert names[0] != "pattern_history", "pattern_history must not be at index 0"

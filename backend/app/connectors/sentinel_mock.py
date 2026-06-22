@@ -1,5 +1,5 @@
 """
-SentinelMockConnector — test harness for the real Microsoft Sentinel connector.
+SentinelMockConnector -- test harness for the real Microsoft Sentinel connector.
 
 Accepts synthetic_pilot_alerts.json (Sentinel normalized schema) and streams
 alerts as normalized dicts ready for ingestion into the SOC graph.
@@ -66,7 +66,7 @@ class SentinelMockConnector:
         Sentinel field    -> SOC field
         ---------------------------------
         alert_id          -> id
-        alert_type        -> alert_type   (keep as-is — real Sentinel name)
+        alert_type        -> alert_type   (keep as-is -- real Sentinel name)
         severity          -> severity
         timestamp         -> timestamp_epoch  (ISO -> epoch ms int)
         category          -> category

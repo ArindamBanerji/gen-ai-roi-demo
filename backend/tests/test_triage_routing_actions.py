@@ -1,5 +1,5 @@
 """
-test_triage_routing_actions.py — routing-action outcome handling tests.
+test_triage_routing_actions.py -- routing-action outcome handling tests.
 
 Validates that report_decision_outcome() counts verified routing decisions,
 does not mutate centroids for refer_to_analyst, and still counts outcomes

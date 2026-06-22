@@ -1,5 +1,5 @@
 """
-Decision Factor Breakdown Service — Explainability for agent decisions
+Decision Factor Breakdown Service -- Explainability for agent decisions
 
 Provides a weighted 6-factor matrix showing how the agent scored each
 decision. The sixth factor (threat_intel_enrichment) is queried live
@@ -7,11 +7,11 @@ from Neo4j, using the ASSOCIATED_WITH relationship written by
 services/threat_intel.py during Threat Intel refresh.
 
 Factor schema:
-  name          str   — factor identifier
-  value         float — 0.0–1.0 signal strength
-  weight        float — importance in decision matrix
-  contribution  str   — "high" / "medium" / "low" / "none"
-  explanation   str   — plain English reason
+  name          str   -- factor identifier
+  value         float -- 0.0-1.0 signal strength
+  weight        float -- importance in decision matrix
+  contribution  str   -- "high" / "medium" / "low" / "none"
+  explanation   str   -- plain English reason
 
 Endpoint:
   GET /api/triage/decision-factors/{alert_id}
@@ -59,7 +59,7 @@ def append_confidence_snapshot(
         alert_id:       Alert ID (e.g. "ALERT-7823")
         alert_type:     Raw alert type string (e.g. "anomalous_login")
         situation_type: Classified situation from SituationAnalysis
-        confidence:     Agent recommendation confidence score (0.0–1.0)
+        confidence:     Agent recommendation confidence score (0.0-1.0)
     """
     CONFIDENCE_HISTORY.append({
         "decision_number": len(CONFIDENCE_HISTORY) + 1,
@@ -79,9 +79,9 @@ def seed_confidence_history() -> None:
     """
     Pre-populate CONFIDENCE_HISTORY with 15 realistic historical snapshots.
     Shows three situation types improving in confidence over time:
-      travel_login_anomaly   — 8 decisions, 0.68 → 0.92
-      cloud_misconfiguration — 4 decisions, 0.55 → 0.88
-      data_exfil_attempt     — 3 decisions, 0.60 → 0.85
+      travel_login_anomaly   -- 8 decisions, 0.68 -> 0.92
+      cloud_misconfiguration -- 4 decisions, 0.55 -> 0.88
+      data_exfil_attempt     -- 3 decisions, 0.60 -> 0.85
     Called at end of reset_confidence_history() and on module import so
     Tab 4 charts are always populated without requiring live interaction.
     Live decisions append to this baseline (decision_number continues from 16+).
@@ -124,7 +124,7 @@ def seed_confidence_history() -> None:
 
 
 def reset_confidence_history() -> None:
-    """Clear CONFIDENCE_HISTORY — registered with state_manager for demo reset."""
+    """Clear CONFIDENCE_HISTORY -- registered with state_manager for demo reset."""
     CONFIDENCE_HISTORY.clear()
     seed_confidence_history()
     print("[TRIAGE] Confidence history reset to seeded baseline")
@@ -185,7 +185,7 @@ async def _build_threat_intel_factor(alert_id: str) -> Dict[str, Any]:
             "value":        0.0,
             "weight":       0.75,
             "contribution": "none",
-            "explanation":  "No threat intel data — click Refresh Threat Intel in Tab 3",
+            "explanation":  "No threat intel data -- click Refresh Threat Intel in Tab 3",
         }
 
     # Pick the highest-severity IOC
@@ -205,7 +205,7 @@ async def _build_threat_intel_factor(alert_id: str) -> Dict[str, Any]:
     count      = len(results)
     source_lbl = "Pulsedive (live)" if "pulsedive" in str(source).lower() else "local fallback"
     explanation = (
-        f"{source_lbl}: {ioc_val} — risk={sev_str} "
+        f"{source_lbl}: {ioc_val} -- risk={sev_str} "
         f"({count} associated IOC{'s' if count != 1 else ''})"
     )
 
@@ -249,7 +249,7 @@ async def get_decision_factors(alert_id: str) -> Optional[Dict[str, Any]]:
     Final factor order:
       [0] primary factor (varies by alert type)
       [1] secondary factor
-      [2] threat_intel_enrichment  ← live Neo4j query
+      [2] threat_intel_enrichment  <- live Neo4j query
       [3] time_anomaly
       [4] device/source/pattern factor
       [5] pattern_history

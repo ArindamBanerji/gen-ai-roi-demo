@@ -180,7 +180,7 @@ def test_decisions_endpoint_calls_reconstruct_first(app_client):
     """GET /api/audit/decisions reconstructs feedback before returning rows.
 
     Verified by checking that the endpoint returns a dict with a 'decisions'
-    key — meaning the router ran reconstruct_from_memory() then get_decision_rows().
+    key -- meaning the router ran reconstruct_from_memory() then get_decision_rows().
     """
     r = app_client.get("/api/audit/decisions")
     assert r.status_code == 200

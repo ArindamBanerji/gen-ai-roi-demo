@@ -1,7 +1,7 @@
 """
 SOC Copilot accuracy constants.
 Derived from V-ACC-TRAJ-2 + V-ACC-TRAJ-3 (March 27, 2026).
-These are published reference values — not recomputed per deployment.
+These are published reference values -- not recomputed per deployment.
 Platform-validated: SOC + S2P confirmed.
 """
 
@@ -10,9 +10,9 @@ ENRICHED_PLATEAU = 0.918
 
 # Cold-start plateau by sigma band (approaches asymptotically)
 COLD_START_PLATEAU_BY_SIGMA = {
-    "low":    0.884,   # σ≤0.12: gap ~3.4pp
-    "medium": 0.850,   # σ=0.13-0.22: gap ~6.8pp
-    "high":   0.834,   # σ>0.22: gap ~8.4pp
+    "low":    0.884,   # sigma<=0.12: gap ~3.4pp
+    "medium": 0.850,   # sigma=0.13-0.22: gap ~6.8pp
+    "high":   0.834,   # sigma>0.22: gap ~8.4pp
 }
 
 # Permanent accuracy gap by sigma band (enriched - cold-start plateau)
@@ -41,8 +41,8 @@ def get_permanent_gap_pp(sigma: float) -> float:
 def n_half_applicable(sigma: float) -> bool:
     """
     N_half is only meaningful when cold-start can reach 80% threshold.
-    Only true in low-sigma environments (σ≤0.12).
-    At σ≥0.18, cold-start plateau is below 80% — N_half is not applicable.
+    Only true in low-sigma environments (sigma<=0.12).
+    At sigma>=0.18, cold-start plateau is below 80% -- N_half is not applicable.
     """
     return get_sigma_band(sigma) == "low"
 
@@ -63,7 +63,7 @@ COLD_START_REFERENCE_TRAJECTORY = {
 # S2P cold-start reference (V-ACC-TRAJ-3-v3, σ=0.18 q̄=0.75)
 S2P_ENRICHED_PLATEAU = 0.781
 S2P_COLD_PLATEAU     = 0.701
-S2P_PERMANENT_GAP    = 0.080   # 8.0pp at σ=0.18
+S2P_PERMANENT_GAP    = 0.080   # 8.0pp at sigma=0.18
 
 S2P_COLD_START_REFERENCE = {
     50:   0.275,

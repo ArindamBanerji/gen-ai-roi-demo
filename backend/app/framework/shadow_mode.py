@@ -1,11 +1,11 @@
 """
-ShadowModeService — Phase 4 shadow mode (§21).
+ShadowModeService -- Phase 4 shadow mode (Sec.21).
 
 Shadow mode: system makes decisions but does not act on them.
 Analyst actions are recorded separately. Agreement is computed.
-CISO Q3 answer: "What's the ROI?" — shadow mode realized numbers.
+CISO Q3 answer: "What's the ROI?" -- shadow mode realized numbers.
 
-Reference: docs/soc_copilot_design_v5_6_part1.md §21
+Reference: docs/soc_copilot_design_v5_6_part1.md Sec.21
 """
 
 from __future__ import annotations

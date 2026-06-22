@@ -92,7 +92,7 @@ async def process_alert(request: ProcessAlertRequest):
 
     Flow:
     1. Get alert details + security context from graph (47 nodes)
-    2. GAE scoring: compute_factor_vector → score_alert (replaces agent.decide)
+    2. GAE scoring: compute_factor_vector -> score_alert (replaces agent.decide)
     3. LLM generates reasoning (narration)
     4. Evaluate 4 gates (deterministic)
     5. Write Decision node to Neo4j with factor_vector (R4)
@@ -379,8 +379,8 @@ async def process_alert(request: ProcessAlertRequest):
                 "ambiguous":            ambiguous,
                 "decision_method":      (
                     "ProfileScorer centroid-proximity scoring "
-                    "(n_factors × 4 actions × n_categories, "
-                    "L2 kernel τ=0.1, EXP-E1 validated)"
+                    "(n_factors x 4 actions x n_categories, "
+                    "L2 kernel tau=0.1, EXP-E1 validated)"
                 ),
             },
             "gae_summary": {
@@ -418,7 +418,7 @@ async def process_alert_blocked(request: ProcessAlertRequest):
     This demonstrates the safety/governance layer to CISOs.
 
     Same flow as /api/alert/process, but with one gate failing.
-    Shows: Sequential animation → Failed check → BLOCKED → No evolution
+    Shows: Sequential animation -> Failed check -> BLOCKED -> No evolution
     """
 
     start_time = time.time()
@@ -718,7 +718,7 @@ async def get_weight_history(alert_type: Optional[str] = None):
     immediately after a decision outcome was recorded this session.
 
     Optional query parameter:
-        ?alert_type=anomalous_login   — filter to one alert type
+        ?alert_type=anomalous_login   -- filter to one alert type
 
     Response shape:
         {
@@ -746,7 +746,7 @@ async def get_weight_history(alert_type: Optional[str] = None):
     in this session (e.g. immediately after a demo reset).
     """
     history = evolver.get_weight_history(alert_type_filter=alert_type)
-    print(f"[EVOLUTION] GET /evolution/weight-history — "
+    print(f"[EVOLUTION] GET /evolution/weight-history -- "
           f"total={len(history)}, filter={alert_type!r}")
     return {
         "history":           history,
@@ -765,7 +765,7 @@ async def get_trust_scores():
     Return per-situation-type trust scores and the full trust update history.
 
     Trust starts at 0.5 for each situation type.
-    Asymmetric deltas:  correct +0.03, incorrect −0.60  (20:1 ratio).
+    Asymmetric deltas:  correct +0.03, incorrect -0.60  (20:1 ratio).
     human_review_required is True when trust drops below 0.3.
 
     Response shape:
@@ -795,7 +795,7 @@ async def get_trust_scores():
     from app.services.feedback import get_all_trust_scores
     result = get_all_trust_scores()
     print(
-        f"[EVOLUTION] GET /evolution/trust-scores — "
+        f"[EVOLUTION] GET /evolution/trust-scores -- "
         f"total_updates={result['total_updates']}, "
         f"low_trust={result['low_trust_situations']}"
     )

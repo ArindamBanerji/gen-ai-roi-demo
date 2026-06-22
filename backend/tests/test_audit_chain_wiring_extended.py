@@ -46,7 +46,7 @@ def _record(**kw):
 def test_audit_record_outcome_returns_none_when_decision_missing():
     """
     record_outcome called with a decision_id that doesn't exist must return
-    None — not raise.
+    None -- not raise.
     """
     _reset()
     result = _run(audit_mod.record_outcome("nonexistent-decision-id-xyz", "correct"))
@@ -60,7 +60,7 @@ def test_audit_record_outcome_returns_none_when_decision_missing():
 
 def test_audit_reconstruct_from_memory_appends_outcome_entry_once():
     """
-    Record a decision, place it in FEEDBACK_GIVEN, call reconstruct —
+    Record a decision, place it in FEEDBACK_GIVEN, call reconstruct --
     the resulting chain must have exactly one OutcomeEntry for that decision.
     """
     _reset()
@@ -367,7 +367,7 @@ def test_simulation_decision_persists_entry_hash_and_chain_index():
 def test_audit_router_decisions_calls_reconstruct_then_get_decision_rows():
     """
     GET /api/audit/decisions must return HTTP 200 with a JSON body containing
-    a 'decisions' list — proving reconstruct_from_memory + get_decision_rows
+    a 'decisions' list -- proving reconstruct_from_memory + get_decision_rows
     are wired correctly in the router.
     """
     from fastapi.testclient import TestClient

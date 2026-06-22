@@ -1,8 +1,8 @@
 """
-Block 9.5 — η change-rate cap tests (V-STABILITY F=8.14).
+Block 9.5 -- eta change-rate cap tests (V-STABILITY F=8.14).
 
 Verifies that ProfileScorer.update() caps any single coordinate delta at
-±MAX_ETA_DELTA = 0.005, for both the correct (η_confirm) and override (η_override)
++/-MAX_ETA_DELTA = 0.005, for both the correct (eta_confirm) and override (eta_override)
 update paths.
 """
 import os
@@ -54,8 +54,8 @@ def _fvec(value: float) -> np.ndarray:
 
 def test_large_update_is_capped():
     """
-    Default η=0.05, f=1.0, mu=0.5 → raw delta per coord = 0.05*(1.0-0.5) = 0.025.
-    0.025 > MAX_ETA_DELTA=0.005 → each coordinate must be capped at 0.005.
+    Default eta=0.05, f=1.0, mu=0.5 -> raw delta per coord = 0.05*(1.0-0.5) = 0.025.
+    0.025 > MAX_ETA_DELTA=0.005 -> each coordinate must be capped at 0.005.
     """
     scorer = _make_scorer()
     mu_before = scorer.centroids[0, 0, :].copy()
@@ -65,7 +65,7 @@ def test_large_update_is_capped():
     actual_delta = scorer.centroids[0, 0, :] - mu_before
 
     assert np.all(np.abs(actual_delta) <= MAX_ETA_DELTA + 1e-9), (
-        f"Delta exceeds cap: max|Δ|={np.max(np.abs(actual_delta)):.6f}, "
+        f"Delta exceeds cap: max|Delta|={np.max(np.abs(actual_delta)):.6f}, "
         f"cap={MAX_ETA_DELTA}"
     )
     np.testing.assert_allclose(
@@ -82,8 +82,8 @@ def test_large_update_is_capped():
 
 def test_small_update_passes_through():
     """
-    η=0.05, f=0.55, mu=0.5 → raw delta per coord = 0.05*(0.55-0.5) = 0.0025.
-    0.0025 < MAX_ETA_DELTA=0.005 → no cap; mu moves by exactly 0.0025.
+    eta=0.05, f=0.55, mu=0.5 -> raw delta per coord = 0.05*(0.55-0.5) = 0.0025.
+    0.0025 < MAX_ETA_DELTA=0.005 -> no cap; mu moves by exactly 0.0025.
     """
     scorer = _make_scorer()
     mu_before = scorer.centroids[0, 0, :].copy()
@@ -108,7 +108,7 @@ def test_small_update_passes_through():
 
 def test_cap_applies_to_override_path():
     """
-    η_override=0.05, f=1.0, mu=0.5 → raw push delta per coord = 0.05*(1.0-0.5) = 0.025.
+    eta_override=0.05, f=1.0, mu=0.5 -> raw push delta per coord = 0.05*(1.0-0.5) = 0.025.
     Capped at MAX_ETA_DELTA=0.005 on the override (correct=False, push-only) path.
     """
     scorer = _make_scorer(eta_override=0.05)
@@ -128,7 +128,7 @@ def test_cap_applies_to_override_path():
     actual_delta = scorer.centroids[0, 1, :] - mu_before
 
     assert np.all(np.abs(actual_delta) <= MAX_ETA_DELTA + 1e-9), (
-        f"Override path delta exceeds cap: max|Δ|={np.max(np.abs(actual_delta)):.6f}"
+        f"Override path delta exceeds cap: max|Delta|={np.max(np.abs(actual_delta)):.6f}"
     )
 
 

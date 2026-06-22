@@ -1,5 +1,5 @@
 """
-tests/test_convergence_calendar.py — Convergence Calendar (L-08) test suite.
+tests/test_convergence_calendar.py -- Convergence Calendar (L-08) test suite.
 
 6 tests validating CLAIM-CONV-01 coefficients, endpoint contract,
 and the v_causal=False invariant.
@@ -89,7 +89,7 @@ def test_decisions_to_days_correct():
     """
     decisions_to_days(14.0, V=200, alpha=0.25):
       alerts_per_day_reaching_learning = 200 * 0.25 = 50
-      days = 14.0 / 50 = 0.28  → rounded to 1dp = 0.3
+      days = 14.0 / 50 = 0.28  -> rounded to 1dp = 0.3
 
     The task spec says abs(days - 0.28) < 0.1; we also confirm the
     rounding to 0.3 matches round(0.28, 1).
@@ -97,7 +97,7 @@ def test_decisions_to_days_correct():
     days = decisions_to_days(14.0, 200, 0.25)
 
     assert abs(days - 0.28) < 0.1, (
-        f"Expected ≈ 0.28 days (14 decisions / 50 per day), got {days}"
+        f"Expected ~= 0.28 days (14 decisions / 50 per day), got {days}"
     )
 
 
@@ -107,7 +107,7 @@ def test_decisions_to_days_correct():
 
 def test_api_returns_all_6_categories():
     """
-    The endpoint must return a 'categories' list with exactly 6 entries —
+    The endpoint must return a 'categories' list with exactly 6 entries --
     one per SOC factor (travel_match, asset_criticality, threat_intel_enrichment,
     time_anomaly, pattern_history, device_trust).
     """

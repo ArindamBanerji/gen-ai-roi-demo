@@ -111,7 +111,7 @@ def test_r4_fires_on_high_value_monitor():
 
 
 def test_r4_does_not_fire_on_escalate():
-    """By design — escalate already routes to a human."""
+    """By design -- escalate already routes to a human."""
     rule = HighValueDataRule(criticality_threshold=0.85)
     ctx = {'category': 'data_exfiltration', 'asset_criticality': 0.95, 'stage1_action': 'escalate'}
     fires, _ = rule.evaluate(ctx)
@@ -250,7 +250,7 @@ def test_referral_audit_summary_contains_rule_details():
 
 
 def test_missing_context_defaults_to_no_fire():
-    """Safe degradation: empty context — no rule fires."""
+    """Safe degradation: empty context -- no rule fires."""
     engine = ReferralEngine(rules=get_soc_referral_rules())
     decision = engine.evaluate({})
     assert decision.should_refer is False
@@ -299,7 +299,7 @@ def test_triage_referral_veto_overrides_auto_approve():
 # ---------------------------------------------------------------------------
 
 def test_r2_fires_when_sequence_count_at_threshold():
-    """get_sequence_count returns threshold → R2 fires."""
+    """get_sequence_count returns threshold -> R2 fires."""
     from app.db.neo4j import Neo4jClient
 
     client = Neo4jClient()
@@ -315,7 +315,7 @@ def test_r2_fires_when_sequence_count_at_threshold():
 
 
 def test_r7_fires_when_cross_category_count_at_threshold():
-    """get_cross_category_count returns threshold → R7 fires."""
+    """get_cross_category_count returns threshold -> R7 fires."""
     from app.db.neo4j import Neo4jClient
 
     client = Neo4jClient()
@@ -331,7 +331,7 @@ def test_r7_fires_when_cross_category_count_at_threshold():
 
 
 def test_r2_r7_safe_degradation_on_neo4j_failure():
-    """Neo4j exception → both helpers return 0, neither rule fires (P-REF-2)."""
+    """Neo4j exception -> both helpers return 0, neither rule fires (P-REF-2)."""
     from app.db.neo4j import Neo4jClient
 
     client = Neo4jClient()

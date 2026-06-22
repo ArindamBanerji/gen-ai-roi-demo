@@ -1,19 +1,19 @@
 """
 IKS (Institutional Knowledge Score) algorithm for CopilotFramework.
-compute_iks(mu, mu_zero, d_max) — domain-agnostic.
-d_max is domain-calibrated (SOC: 0.20 from PROD-1 κ* validation).
+compute_iks(mu, mu_zero, d_max) -- domain-agnostic.
+d_max is domain-calibrated (SOC: 0.20 from PROD-1 kappa* validation).
 Safe to copy to copilot-sdk.
 
-Formula (docs/soc_copilot_design_v1.md §14):
+Formula (docs/soc_copilot_design_v1.md Sec.14):
 
-    IKS(t) = 100 × min(
-        mean( ‖μ(t)[c, a, :] − μ₀[c, a, :]‖₂  for all (c, a) )
+    IKS(t) = 100 x min(
+        mean( ||mu(t)[c, a, :] - mu_0[c, a, :]||_2  for all (c, a) )
         / d_max,
         1.0
     )
 
 The caller is responsible for supplying mu_zero (loaded from the
-domain-specific bootstrap sidecar) and d_max (domain-calibrated κ*).
+domain-specific bootstrap sidecar) and d_max (domain-calibrated kappa*).
 When mu_zero is None, compute_iks returns an estimated score of 50.
 """
 
@@ -33,7 +33,7 @@ log = logging.getLogger(__name__)
 
 def _mean_centroid_drift(mu_t: np.ndarray, mu_zero: np.ndarray) -> float:
     """
-    Compute mean ‖μ(t)[c,a,:] − μ₀[c,a,:]‖₂ over all (c, a) pairs.
+    Compute mean ||mu(t)[c,a,:] - mu_0[c,a,:]||_2 over all (c, a) pairs.
 
     Parameters
     ----------
@@ -70,23 +70,23 @@ def compute_iks(
               Bootstrap prior.  When None, returns estimated IKS=50.
               The caller is responsible for loading the domain sidecar.
     d_max   : float
-              Normalization constant (domain-calibrated κ*).
+              Normalization constant (domain-calibrated kappa*).
               SOC uses 0.20 (PROD-1, March 18).
 
     Returns
     -------
     dict with keys:
-        current (float)      — IKS in [0, 100]
-        mean_drift (float)   — raw mean L2 drift before normalization
-        estimated (bool)     — True if mu_zero was unavailable
+        current (float)      -- IKS in [0, 100]
+        mean_drift (float)   -- raw mean L2 drift before normalization
+        estimated (bool)     -- True if mu_zero was unavailable
     """
     if mu_zero is None:
-        log.debug("[IKS] mu_zero unavailable — returning estimated IKS=50")
+        log.debug("[IKS] mu_zero unavailable -- returning estimated IKS=50")
         return {"current": 50.0, "mean_drift": 0.0, "estimated": True}
 
     if mu_zero.shape != mu_t.shape:
         log.warning(
-            "[IKS] mu_zero shape %s ≠ mu(t) shape %s — IKS estimated (stale sidecar)",
+            "[IKS] mu_zero shape %s != mu(t) shape %s -- IKS estimated (stale sidecar)",
             mu_zero.shape, mu_t.shape,
         )
         return {"current": 50.0, "mean_drift": 0.0, "estimated": True}
@@ -110,11 +110,11 @@ def interpret(iks_score: float) -> str:
 def interpret_iks_v2(score: float) -> str:
     """Return a human-readable interpretation of the IKS v2 composite score."""
     if score < 10:
-        return "Cold start — system is accumulating its first decisions"
+        return "Cold start -- system is accumulating its first decisions"
     if score < 30:
-        return "Early learning — building baseline across categories"
+        return "Early learning -- building baseline across categories"
     if score < 60:
-        return "Developing — meaningful institutional knowledge emerging"
+        return "Developing -- meaningful institutional knowledge emerging"
     if score < 80:
-        return "Mature — system has deep environment-specific knowledge"
-    return "Expert — comprehensive institutional judgment established"
+        return "Mature -- system has deep environment-specific knowledge"
+    return "Expert -- comprehensive institutional judgment established"

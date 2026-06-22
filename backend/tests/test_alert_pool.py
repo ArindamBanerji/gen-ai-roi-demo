@@ -1,5 +1,5 @@
 """
-Tests for alert pool integrity — no healthcare, all valid SOC categories,
+Tests for alert pool integrity -- no healthcare, all valid SOC categories,
 cloud_infrastructure and refer_to_analyst coverage.
 """
 

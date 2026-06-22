@@ -674,8 +674,8 @@ async def test_shared_entity_batches_threat_intel_query():
         "cnt": 3,
     }
     mock.run_query.side_effect = [
-        [user_row, user_row, user_row],  # user aggregate — 3 qualifying
-        [asset_row, asset_row, asset_row],  # asset aggregate — 3 qualifying
+        [user_row, user_row, user_row],  # user aggregate -- 3 qualifying
+        [asset_row, asset_row, asset_row],  # asset aggregate -- 3 qualifying
         [],  # user batch TI
         [],  # asset batch TI
     ]
@@ -727,7 +727,7 @@ def test_convergence_completes_under_1_second():
         diff = matrix[:, np.newaxis, :] - matrix[np.newaxis, :, :]
         _distances = np.sqrt((diff ** 2).sum(axis=2))
     elapsed = time.monotonic() - start
-    assert elapsed < 1.0, f"Numpy computation took {elapsed:.2f}s — vectorization may be missing"
+    assert elapsed < 1.0, f"Numpy computation took {elapsed:.2f}s -- vectorization may be missing"
 
 
 @pytest.mark.asyncio

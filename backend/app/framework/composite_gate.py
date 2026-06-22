@@ -1,5 +1,5 @@
 """
-CompositeDiscriminant — multi-signal auto-approve gate (Phase 5).
+CompositeDiscriminant -- multi-signal auto-approve gate (Phase 5).
 
 Uses 13 features derived from ProfileScorer output and graph context to decide
 whether a decision qualifies for auto-approval.

@@ -1,13 +1,13 @@
 """
-app/models/responses.py — Pydantic response models for 10 priority endpoints.
+app/models/responses.py -- Pydantic response models for 10 priority endpoints.
 
 Models are derived from ACTUAL live endpoint responses (GRAPH_BACKEND=age,
 AGE on port 5433). Do NOT tighten types without re-verifying against the
-live endpoint — a stricter type that doesn't coerce causes a 500.
+live endpoint -- a stricter type that doesn't coerce causes a 500.
 
 Shape annotations come from observed responses:
-  profile.centroids  → list[list[list[float]]]  shape (n_categories, n_actions, n_factors)
-  profile.counts     → list[list[int]]           shape (n_categories, n_actions)
+  profile.centroids  -> list[list[list[float]]]  shape (n_categories, n_actions, n_factors)
+  profile.counts     -> list[list[int]]           shape (n_categories, n_actions)
 """
 
 from __future__ import annotations

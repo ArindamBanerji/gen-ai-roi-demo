@@ -83,7 +83,7 @@ def _compute_structural_ceiling_report() -> tuple[float | None, dict[str, float]
             factor_names=list(SOC_FACTORS),
         )
     except Exception as exc:
-        _log.warning("ceiling_estimate(balance_sheet): SNR computation failed — returning None (source=fallback): %s", exc)
+        _log.warning("ceiling_estimate(balance_sheet): SNR computation failed -- returning None (source=fallback): %s", exc)
         return None, {}
     return (
         float(report.mean_ceiling_estimate * 100.0),
@@ -106,7 +106,7 @@ async def _safe_overall_iks(neo4j_service: Any) -> float:
     try:
         return float(await compute_visible_iks(neo4j_service))
     except Exception as exc:
-        _log.warning("overall_iks(balance_sheet): IKS computation failed — returning 0.0 (source=fallback): %s", exc)
+        _log.warning("overall_iks(balance_sheet): IKS computation failed -- returning 0.0 (source=fallback): %s", exc)
         return 0.0
 
 
@@ -131,7 +131,7 @@ async def _safe_centroid_drift(neo4j_service: Any) -> dict[str, float]:
             drift_by_category[category] = round(float(np.mean(np.linalg.norm(diff, axis=1))), 4)
         return {category: float(drift_by_category.get(category, 0.0)) for category in SOC_CATEGORIES}
     except Exception as exc:
-        _log.warning("centroid_drift(balance_sheet): drift computation failed — returning 0.0 per category (source=fallback): %s", exc)
+        _log.warning("centroid_drift(balance_sheet): drift computation failed -- returning 0.0 per category (source=fallback): %s", exc)
         return {category: 0.0 for category in SOC_CATEGORIES}
 
 
@@ -148,7 +148,7 @@ async def _safe_auto_approve_stats() -> dict[str, Any]:
 
         return cast(dict[str, Any], await auto_approve_stats())
     except Exception as exc:
-        _log.warning("auto_approve_coverage_pct(balance_sheet): stats fetch failed — returning 0.0 (source=fallback): %s", exc)
+        _log.warning("auto_approve_coverage_pct(balance_sheet): stats fetch failed -- returning 0.0 (source=fallback): %s", exc)
         return {"by_category": {}, "coverage_pct": 0.0, "total_decisions": 0, "auto_approved": 0}
 
 

@@ -1,5 +1,5 @@
 """
-CheckpointService contract tests (TD-033, Phase 4 §17.5).
+CheckpointService contract tests (TD-033, Phase 4 Sec.17.5).
 
 Verifies create_checkpoint() and rollback() without a live Neo4j connection.
 Uses a lightweight in-memory mock for neo4j_service and a minimal scorer stub.
@@ -48,7 +48,7 @@ class _MockNeo4j:
 
 
 class _MockScorer:
-    """Minimal ProfileScorer stub — exposes only the fields checkpoint code reads."""
+    """Minimal ProfileScorer stub -- exposes only the fields checkpoint code reads."""
 
     def __init__(
         self,
@@ -95,7 +95,7 @@ def test_checkpoint_create_uses_centroids_not_mu():
 
 def test_checkpoint_rollback_restores_exact_values():
     """
-    Create checkpoint at state A, mutate scorer, rollback — centroids must
+    Create checkpoint at state A, mutate scorer, rollback -- centroids must
     match state A exactly (np.allclose, atol=1e-9).
     """
     centroids_a = np.array([[[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]])

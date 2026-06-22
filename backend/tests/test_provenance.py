@@ -2,12 +2,12 @@
 Tests for Phase 6: ProvenanceService and provenance endpoint.
 
 Coverage:
-  test_provenance_builds_6_factors        — build_provenance returns 6 FactorProvenance entries
-  test_provenance_factor_names            — all 6 SOC factor names present
-  test_provenance_privileged_identity_context_high — privileged_identity_context=0.9 → User, Identity, Device in nodes
-  test_provenance_device_trust_fully_trusted — device_trust=0.0 → "fully trusted" in explanation
-  test_provenance_endpoint_not_found      — GET /api/soc/provenance/{id} returns 404 when missing
-  test_provenance_threat_intel_nodes      — threat_intel_enrichment → ThreatIntel, Alert in nodes
+  test_provenance_builds_6_factors        -- build_provenance returns 6 FactorProvenance entries
+  test_provenance_factor_names            -- all 6 SOC factor names present
+  test_provenance_privileged_identity_context_high -- privileged_identity_context=0.9 -> User, Identity, Device in nodes
+  test_provenance_device_trust_fully_trusted -- device_trust=0.0 -> "fully trusted" in explanation
+  test_provenance_endpoint_not_found      -- GET /api/soc/provenance/{id} returns 404 when missing
+  test_provenance_threat_intel_nodes      -- threat_intel_enrichment -> ThreatIntel, Alert in nodes
 """
 
 import asyncio
@@ -24,7 +24,7 @@ from app.domains.soc.config import SOC_FACTORS
 # ---------------------------------------------------------------------------
 
 _DECISION_ID = "prov-test-001"
-_FACTOR_VALUES = [0.9, 0.8, 0.0, 0.5, 0.7, 0.0]   # privileged_identity_context…device_trust
+_FACTOR_VALUES = [0.9, 0.8, 0.0, 0.5, 0.7, 0.0]   # privileged_identity_context...device_trust
 
 
 def _build():
@@ -69,7 +69,7 @@ def test_provenance_factor_names():
 # ---------------------------------------------------------------------------
 
 def test_provenance_privileged_identity_context_high():
-    """privileged_identity_context=0.9 → graph_nodes_consulted includes User, Identity, Device."""
+    """privileged_identity_context=0.9 -> graph_nodes_consulted includes User, Identity, Device."""
     prov = _build()
     identity = next(fp for fp in prov.factors if fp.factor_name == "privileged_identity_context")
     assert identity.factor_value == pytest.approx(0.9, abs=1e-3)
@@ -90,7 +90,7 @@ def test_provenance_privileged_identity_context_high():
 # ---------------------------------------------------------------------------
 
 def test_provenance_device_trust_fully_trusted():
-    """device_trust=0.0 → explanation mentions fully trusted device."""
+    """device_trust=0.0 -> explanation mentions fully trusted device."""
     prov = _build()
     dt = next(fp for fp in prov.factors if fp.factor_name == "device_trust")
     assert dt.factor_value == pytest.approx(0.0, abs=1e-3)
@@ -108,7 +108,7 @@ def test_provenance_endpoint_not_found():
     from app.main import app
 
     async def fake_run_query(query, params=None):
-        return []   # empty → decision not found
+        return []   # empty -> decision not found
 
     with patch("app.routers.soc.neo4j_client") as mock_neo4j:
         mock_neo4j.run_query = fake_run_query

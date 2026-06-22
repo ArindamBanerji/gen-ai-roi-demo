@@ -1,11 +1,11 @@
 """
-GAE learning state endpoints — weight matrix, history, convergence.
+GAE learning state endpoints -- weight matrix, history, convergence.
 
 Exposes the live LearningState singleton for dashboard display and
 convergence monitoring.  All responses come from the in-process
 singleton; no Neo4j queries needed.
 
-Reference: docs/soc_copilot_design_v1.md §14.
+Reference: docs/soc_copilot_design_v1.md Sec.14.
 """
 
 from datetime import datetime, timezone
@@ -29,9 +29,9 @@ _CONVERGENCE_MIN_MSG = (
 
 # Trust-curve simulation constants (mirror the 20:1 asymmetric learning ratio).
 _TRUST_INITIAL    = 0.50   # starting trust level per action
-_TRUST_EARN       = 0.03   # correct outcome → slow trust gain
-_TRUST_LOSE       = 0.60   # incorrect outcome → fast trust loss (≈ 20:1)
-_REVIEW_THRESHOLD = 0.30   # trust below this → flag for human review
+_TRUST_EARN       = 0.03   # correct outcome -> slow trust gain
+_TRUST_LOSE       = 0.60   # incorrect outcome -> fast trust loss (~= 20:1)
+_REVIEW_THRESHOLD = 0.30   # trust below this -> flag for human review
 
 
 def _wu_timestamp(wu) -> str:
@@ -51,7 +51,7 @@ async def gae_weights() -> Dict[str, Any]:
     """
     Return the live W matrix, factor names, action names, and decision count.
 
-    W is a nested list (n_actions × n_factors) so it is JSON-serializable.
+    W is a nested list (n_actions x n_factors) so it is JSON-serializable.
     Rows correspond to SCORER_ACTIONS order (A=4):
         [0] escalate  [1] investigate  [2] suppress  [3] monitor
     """
@@ -137,7 +137,7 @@ async def gae_convergence() -> Dict[str, Any]:
     """
     Return convergence metrics computed from the live LearningState.
 
-    Uses gae.convergence.get_convergence_metrics() — see that module for
+    Uses gae.convergence.get_convergence_metrics() -- see that module for
     the full criterion definition:
 
         stability  = std(||W_after||_F) over last 10 updates
@@ -230,8 +230,8 @@ async def gae_trust_curve() -> Dict[str, Any]:
     Simulate cumulative trust per action class from learning history.
 
     Trust logic mirrors the 20:1 asymmetric learning ratio (LAMBDA_NEG=20):
-        correct   → trust += 0.03  (slow earn)
-        incorrect → trust -= 0.60  (fast lose)
+        correct   -> trust += 0.03  (slow earn)
+        incorrect -> trust -= 0.60  (fast lose)
     Clamped to [0, 1].  Initialised at 0.50 per action.
 
     below_threshold flags points where trust fell under review_threshold (0.30),

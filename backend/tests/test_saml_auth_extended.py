@@ -1,11 +1,11 @@
 """
-SAML auth extended tests — P1 batch.
+SAML auth extended tests -- P1 batch.
 
 Groups:
-  1 — JWT edge cases (7 tests)
-  2 — derive_role edge cases (4 tests)
-  3 — Auth dependency with SAML enabled (7 tests)
-  4 — SAML router tests (4 tests)
+  1 -- JWT edge cases (7 tests)
+  2 -- derive_role edge cases (4 tests)
+  3 -- Auth dependency with SAML enabled (7 tests)
+  4 -- SAML router tests (4 tests)
 
 Total: 22 tests.
 """
@@ -112,25 +112,25 @@ def test_jwt_missing_role_claim_returns_none():
 # ---------------------------------------------------------------------------
 
 def test_derive_role_none_groups_is_analyst():
-    """None groups is falsy → default analyst."""
+    """None groups is falsy -> default analyst."""
     from app.auth.jwt_utils import derive_role
     assert derive_role(None, ["soc-admins"]) == "analyst"
 
 
 def test_derive_role_empty_admin_groups_is_analyst():
-    """Empty admin_groups list → no match possible → analyst."""
+    """Empty admin_groups list -> no match possible -> analyst."""
     from app.auth.jwt_utils import derive_role
     assert derive_role(["soc-admins"], []) == "analyst"
 
 
 def test_derive_role_non_string_values_skipped():
-    """Non-string items in groups are skipped; no valid match → analyst."""
+    """Non-string items in groups are skipped; no valid match -> analyst."""
     from app.auth.jwt_utils import derive_role
     assert derive_role([1, None, 42, True], ["soc-admins"]) == "analyst"
 
 
 def test_derive_role_whitespace_group_not_matched():
-    """Whitespace-padded group name does not match exact admin group → analyst."""
+    """Whitespace-padded group name does not match exact admin group -> analyst."""
     from app.auth.jwt_utils import derive_role
     # "  soc-admins  ".lower() != "soc-admins" — no strip applied
     assert derive_role(["  soc-admins  "], ["soc-admins"]) == "analyst"
@@ -156,13 +156,13 @@ def saml_enabled_client():
 
 
 def test_saml_enabled_no_cookie_returns_401(saml_enabled_client):
-    """Non-exempt path with no cookie → 401."""
+    """Non-exempt path with no cookie -> 401."""
     r = saml_enabled_client.get("/api/soc/epistemic-state")
     assert r.status_code == 401
 
 
 def test_saml_enabled_bad_cookie_returns_401(saml_enabled_client):
-    """Malformed JWT cookie → 401."""
+    """Malformed JWT cookie -> 401."""
     r = saml_enabled_client.get(
         "/api/soc/epistemic-state",
         cookies={"soc_auth_token": "garbage.token.value"},
@@ -171,7 +171,7 @@ def test_saml_enabled_bad_cookie_returns_401(saml_enabled_client):
 
 
 def test_saml_enabled_valid_analyst_passes_auth(saml_enabled_client):
-    """Valid analyst JWT in cookie — auth passes (not 401 or 403)."""
+    """Valid analyst JWT in cookie -- auth passes (not 401 or 403)."""
     token = _make_jwt("analyst")
     r = saml_enabled_client.get(
         "/api/soc/epistemic-state",
@@ -181,19 +181,19 @@ def test_saml_enabled_valid_analyst_passes_auth(saml_enabled_client):
 
 
 def test_saml_enabled_health_is_exempt(saml_enabled_client):
-    """/health is in EXEMPT_PREFIXES — no cookie required."""
+    """/health is in EXEMPT_PREFIXES -- no cookie required."""
     r = saml_enabled_client.get("/health")
     assert r.status_code == 200
 
 
 def test_saml_enabled_saml_prefix_is_exempt(saml_enabled_client):
-    """/saml/* is exempt — status endpoint accessible without cookie."""
+    """/saml/* is exempt -- status endpoint accessible without cookie."""
     r = saml_enabled_client.get("/saml/status")
     assert r.status_code == 200
 
 
 def test_saml_enabled_admin_path_denies_analyst(saml_enabled_client):
-    """Analyst JWT on /api/audit/* (ADMIN_PREFIXES) → 403."""
+    """Analyst JWT on /api/audit/* (ADMIN_PREFIXES) -> 403."""
     token = _make_jwt("analyst")
     r = saml_enabled_client.get(
         "/api/audit/chain",
@@ -203,7 +203,7 @@ def test_saml_enabled_admin_path_denies_analyst(saml_enabled_client):
 
 
 def test_saml_enabled_admin_path_allows_admin_jwt(saml_enabled_client):
-    """Admin JWT on /api/audit/* — middleware allows through (status ≠ 403)."""
+    """Admin JWT on /api/audit/* -- middleware allows through (status != 403)."""
     token = _make_jwt("admin")
     r = saml_enabled_client.get(
         "/api/audit/chain",
@@ -227,19 +227,19 @@ def app_client():
 
 
 def test_saml_login_503_when_idp_not_configured(app_client):
-    """GET /saml/login → 503 when IdP credentials are absent."""
+    """GET /saml/login -> 503 when IdP credentials are absent."""
     r = app_client.get("/saml/login", follow_redirects=False)
     assert r.status_code == 503
 
 
 def test_saml_acs_400_when_saml_response_missing(app_client):
-    """POST /saml/acs with no SAMLResponse form field → 400."""
+    """POST /saml/acs with no SAMLResponse form field -> 400."""
     r = app_client.post("/saml/acs", data={})
     assert r.status_code == 400
 
 
 def test_saml_logout_deletes_auth_cookie(app_client):
-    """GET /saml/logout → 302 redirect and deletes soc_auth_token cookie."""
+    """GET /saml/logout -> 302 redirect and deletes soc_auth_token cookie."""
     r = app_client.get("/saml/logout", follow_redirects=False)
     assert r.status_code == 302
     set_cookie = r.headers.get("set-cookie", "")
@@ -247,7 +247,7 @@ def test_saml_logout_deletes_auth_cookie(app_client):
 
 
 def test_saml_status_has_required_keys(app_client):
-    """GET /saml/status → JSON with all required schema keys, no secrets."""
+    """GET /saml/status -> JSON with all required schema keys, no secrets."""
     r = app_client.get("/saml/status")
     assert r.status_code == 200
     data = r.json()

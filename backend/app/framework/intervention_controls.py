@@ -1,20 +1,20 @@
 """
-InterventionControls — P22 Consolidated Oversight Panel (L-12).
+InterventionControls -- P22 Consolidated Oversight Panel (L-12).
 
 EU AI Act Article 14: effective human oversight.  Six controls, full audit
 trail.  Every action writes an Intervention node to Neo4j with who/when/why.
 
 Controls
 --------
-1. freeze_all_learning      — freeze all centroid updates globally
-2. unfreeze_all_learning    — resume centroid updates
-3. freeze_category          — freeze a specific category
-4. rollback                 — restore centroid snapshot (supports preview)
-5. disable_auto_approve     — force all decisions to human review
-6. category_force_review    — force specific category to human review
-7. adjust_threshold         — change auto-approve threshold (min 0.50)
+1. freeze_all_learning      -- freeze all centroid updates globally
+2. unfreeze_all_learning    -- resume centroid updates
+3. freeze_category          -- freeze a specific category
+4. rollback                 -- restore centroid snapshot (supports preview)
+5. disable_auto_approve     -- force all decisions to human review
+6. category_force_review    -- force specific category to human review
+7. adjust_threshold         -- change auto-approve threshold (min 0.50)
 
-Reference: docs/soc_copilot_design_v1.md §P22
+Reference: docs/soc_copilot_design_v1.md Sec.P22
 """
 
 from __future__ import annotations
@@ -115,7 +115,7 @@ class InterventionControls:
 
         Parameters
         ----------
-        preview : bool — when True, return what would change without applying.
+        preview : bool -- when True, return what would change without applying.
         """
         if preview:
             try:
@@ -212,7 +212,7 @@ class InterventionControls:
     ) -> Dict:
         """Change auto-approve confidence threshold per category.
 
-        Rejects thresholds below 0.50 — below that, auto-approve is not
+        Rejects thresholds below 0.50 -- below that, auto-approve is not
         meaningfully filtered.
         """
         if new_threshold < 0.50:
@@ -227,7 +227,7 @@ class InterventionControls:
         )
         self.gate.CATEGORY_CONFIDENCE_THRESHOLDS[category] = new_threshold
         log.info(
-            "[INTERVENTION] adjust_threshold category=%s %.2f→%.2f by=%s",
+            "[INTERVENTION] adjust_threshold category=%s %.2f->%.2f by=%s",
             category, old_threshold, new_threshold, initiated_by,
         )
         return await self._log_intervention(

@@ -74,7 +74,7 @@ async def test_evaluate_returns_status_key():
 
 @pytest.mark.asyncio
 async def test_evaluate_calibrating_below_threshold():
-    """Fewer than CALIBRATION_DECISIONS (300) → status == CALIBRATING."""
+    """Fewer than CALIBRATION_DECISIONS (300) -> status == CALIBRATING."""
     mock_state = _make_state(decision_count=5, history=[])
     with patch("app.services.learning_health.get_learning_state",
                return_value=mock_state):
@@ -100,7 +100,7 @@ async def test_evaluate_green_with_high_quality():
 
 @pytest.mark.asyncio
 async def test_evaluate_non_blocking_with_none_history():
-    """evaluate() does not raise when history is None — logs and continues."""
+    """evaluate() does not raise when history is None -- logs and continues."""
     mock_state = _make_state(decision_count=0)
     mock_state.history = None   # simulate degenerate state
     with patch("app.services.learning_health.get_learning_state",
@@ -163,7 +163,7 @@ def test_extract_components_bool_outcome_rejected():
     assert result["n"] == 20
     # True == 1 in Python — all 20 items satisfy wu.outcome == 1
     assert result["q"] == 1.0, (
-        f"Bool True satisfies outcome==1 (True==1 in Python) → q must be 1.0; got {result['q']}"
+        f"Bool True satisfies outcome==1 (True==1 in Python) -> q must be 1.0; got {result['q']}"
     )
 
 
@@ -330,7 +330,7 @@ async def test_outcome_conservation_exception_non_blocking():
         try:
             await _LHM.evaluate(None)
         except Exception:
-            _conservation_block = True  # fail-closed: unknown health → block learning
+            _conservation_block = True  # fail-closed: unknown health -> block learning
 
     outcome_recorded = True  # outcome processing is independent of conservation check
 

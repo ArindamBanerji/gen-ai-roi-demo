@@ -1,10 +1,10 @@
 """
-StateManager — Atomic reset coordinator (TD-026).
+StateManager -- Atomic reset coordinator (TD-026).
 
 Orchestrates soft and hard resets across three stores:
-  • GAE LearningState   (W matrix, history, decision_count)
-  • Audit hash chain    (decision ledger)
-  • Neo4j graph         (Decision node outcomes / nodes)
+  * GAE LearningState   (W matrix, history, decision_count)
+  * Audit hash chain    (decision ledger)
+  * Neo4j graph         (Decision node outcomes / nodes)
 
 All dependencies are injected so this module imports no SOC-specific code.
 
@@ -65,7 +65,7 @@ class StateManager:
     async def _verify_deletion_safety(self, filter_clause: str) -> int:
         """Count nodes matched by filter_clause. Abort if any are persistent.
 
-        Uses a CASE WHEN count so a single query handles both checks —
+        Uses a CASE WHEN count so a single query handles both checks --
         avoids a separate WHERE clause that would be invalid Cypher when
         filter_clause already contains WHERE.
 
@@ -141,7 +141,7 @@ class StateManager:
             not clobber accumulated IKS (BACKLOG-020).
 
         Steps (ordered; no partial state on failure):
-          1. W → priors; history and decision_count cleared (skipped when
+          1. W -> priors; history and decision_count cleared (skipped when
              preserve_learning=True).
           2. Neo4j: REMOVE correct/outcome props from Decision nodes (keep nodes).
           3. Audit: clear ledger, write RESET marker, start fresh hash chain.
@@ -189,7 +189,7 @@ class StateManager:
             ) from exc
 
         new_ls = self._ls_svc.get_learning_state()
-        log.info("[StateManager] soft_reset complete — W%s step=%d", new_ls.W.shape, new_ls.decision_count)
+        log.info("[StateManager] soft_reset complete -- W%s step=%d", new_ls.W.shape, new_ls.decision_count)
         return {
             "W_shape":       list(new_ls.W.shape),
             "decision_count": new_ls.decision_count,
@@ -207,7 +207,7 @@ class StateManager:
             not clobber accumulated IKS (BACKLOG-020).
 
         Steps (ordered; no partial state on failure):
-          1. W → priors; history and decision_count cleared (skipped when
+          1. W -> priors; history and decision_count cleared (skipped when
              preserve_learning=True).
           2. Neo4j: DETACH DELETE session Decision nodes (training data preserved).
           3. Audit: clear ledger, write RESET marker, start fresh hash chain.
@@ -243,7 +243,7 @@ class StateManager:
             committed.append("audit")
 
             log.info(
-                "[StateManager] hard_reset complete — session decisions deleted. "
+                "[StateManager] hard_reset complete -- session decisions deleted. "
                 "Run seed_zero_day.py to re-seed if needed."
             )
 
@@ -259,7 +259,7 @@ class StateManager:
             ) from exc
 
         new_ls = self._ls_svc.get_learning_state()
-        log.info("[StateManager] hard_reset complete — W%s step=%d", new_ls.W.shape, new_ls.decision_count)
+        log.info("[StateManager] hard_reset complete -- W%s step=%d", new_ls.W.shape, new_ls.decision_count)
         return {
             "W_shape":       list(new_ls.W.shape),
             "decision_count": new_ls.decision_count,

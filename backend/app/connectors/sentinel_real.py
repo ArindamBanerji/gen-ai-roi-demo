@@ -1,17 +1,17 @@
 """
-app/connectors/sentinel_real.py — Block 4.2 Real Sentinel Connector (Inward).
+app/connectors/sentinel_real.py -- Block 4.2 Real Sentinel Connector (Inward).
 
 Reads live alerts from Microsoft Sentinel Graph Security API and normalizes
 to SituationAnalyzer schema.  Auth via OAuth2 client credentials (msal).
 
-Dependencies (optional — graceful ImportError when absent):
+Dependencies (optional -- graceful ImportError when absent):
   pip install msal httpx
 
-Credentials come from environment variables only — never hardcoded:
+Credentials come from environment variables only -- never hardcoded:
   SENTINEL_TENANT_ID
   SENTINEL_CLIENT_ID
   SENTINEL_CLIENT_SECRET
-  SENTINEL_WORKSPACE_ID   (optional — narrows filter to one workspace)
+  SENTINEL_WORKSPACE_ID   (optional -- narrows filter to one workspace)
 
 Safe degradation: if credentials absent or msal/httpx not installed,
 fetch_alerts() returns [] and get_sentinel_alerts() returns not_configured.
@@ -83,7 +83,7 @@ def _map_sentinel_category(raw_category: str) -> str:
         return "insider_threat"
     if "cloud" in raw_lower or "azure" in raw_lower or "aws" in raw_lower:
         return "cloud_infrastructure"
-    logger.warning("[Sentinel] Unknown category %r → unclassified", raw_category)
+    logger.warning("[Sentinel] Unknown category %r -> unclassified", raw_category)
     return "unclassified"
 
 
@@ -109,18 +109,18 @@ def _normalize_sentinel_alert(raw: dict) -> dict:
     """
     Normalize a Sentinel alerts_v2 response object to SituationAnalyzer schema.
 
-    Sentinel field          → SituationAnalyzer field
+    Sentinel field          -> SituationAnalyzer field
     -------------------------------------------------------
-    alertDisplayName/title  → alert_type
-    severity                → severity  (HIGH / MEDIUM / LOW / CRITICAL)
-    entities[Account].upn   → user
-    entities[Host].hostName → asset
-    createdDateTime         → timestamp  (epoch ms)
-    category / alertType    → category   (via SENTINEL_CATEGORY_MAP)
-    entities[Account].isPrivileged → is_executive
-    severity HIGH/CRITICAL  → is_critical
-    entities[Ip].threatIntel → has_ioc
-    incidentId / correlationId → campaign
+    alertDisplayName/title  -> alert_type
+    severity                -> severity  (HIGH / MEDIUM / LOW / CRITICAL)
+    entities[Account].upn   -> user
+    entities[Host].hostName -> asset
+    createdDateTime         -> timestamp  (epoch ms)
+    category / alertType    -> category   (via SENTINEL_CATEGORY_MAP)
+    entities[Account].isPrivileged -> is_executive
+    severity HIGH/CRITICAL  -> is_critical
+    entities[Ip].threatIntel -> has_ioc
+    incidentId / correlationId -> campaign
     """
     raw_severity  = raw.get("severity", "Medium")
     severity      = _SEVERITY_MAP.get(raw_severity, "MEDIUM")
@@ -230,7 +230,7 @@ class SentinelRealConnector:
         try:
             import msal  # optional dependency
         except ImportError:
-            logger.error("[Sentinel] msal not installed — run: pip install msal")
+            logger.error("[Sentinel] msal not installed -- run: pip install msal")
             return None
         try:
             app    = msal.ConfidentialClientApplication(
@@ -268,15 +268,15 @@ class SentinelRealConnector:
         PATCH /security/incidents/{incident_id}
 
         Payload:
-          - classification: maps action → Sentinel enum
+          - classification: maps action -> Sentinel enum
           - determination:  always "unknown" (Copilot does not set determination)
           - customProperties: action, confidence, decision_id, campaign_id, source
 
         Returns dict with keys: success (bool), status_code (int|None), error (str|None).
-        Never raises — callers fire-and-forget without awaiting result.
+        Never raises -- callers fire-and-forget without awaiting result.
         """
         if not self.is_configured():
-            logger.warning("[Sentinel-WB] Not configured — write-back skipped for %s", incident_id)
+            logger.warning("[Sentinel-WB] Not configured -- write-back skipped for %s", incident_id)
             return {"success": False, "status_code": None, "error": "not_configured"}
 
         token = await self.get_token()
@@ -323,12 +323,12 @@ class SentinelRealConnector:
                 )
             if resp.status_code in (200, 204):
                 logger.info(
-                    "[Sentinel-WB] incident=%s patched — action=%s conf=%.3f",
+                    "[Sentinel-WB] incident=%s patched -- action=%s conf=%.3f",
                     incident_id, action, confidence,
                 )
                 return {"success": True, "status_code": resp.status_code, "error": None}
             logger.error(
-                "[Sentinel-WB] PATCH %s failed — status=%d body=%s",
+                "[Sentinel-WB] PATCH %s failed -- status=%d body=%s",
                 incident_id, resp.status_code, resp.text[:200],
             )
             return {"success": False, "status_code": resp.status_code, "error": resp.text[:200]}
@@ -340,10 +340,10 @@ class SentinelRealConnector:
         """
         Fetch latest alerts from Graph Security API (alerts_v2).
         Returns list of normalized SituationAnalyzer dicts.
-        Returns [] on any failure — never raises.
+        Returns [] on any failure -- never raises.
         """
         if not self.is_configured():
-            logger.warning("[Sentinel] Not configured — credentials absent from env")
+            logger.warning("[Sentinel] Not configured -- credentials absent from env")
             return []
 
         token = await self.get_token()
@@ -351,9 +351,9 @@ class SentinelRealConnector:
             return []
 
         try:
-            import httpx  # optional dependency — already in requirements.txt
+            import httpx  # optional dependency -- already in requirements.txt
         except ImportError:
-            logger.error("[Sentinel] httpx not installed — run: pip install httpx")
+            logger.error("[Sentinel] httpx not installed -- run: pip install httpx")
             return []
 
         try:

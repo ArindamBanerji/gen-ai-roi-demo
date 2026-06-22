@@ -146,7 +146,7 @@ def test_by_category_all_6_present():
 # ============================================================================
 
 def test_evaluation_does_not_modify_scorer():
-    """learn=False — scorer mu must not change after evaluation."""
+    """learn=False -- scorer mu must not change after evaluation."""
     from app.routers.evaluation import load_soc_scenarios, run_soc_evaluation
     from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SCORER_ACTIONS
     from gae import ProfileScorer

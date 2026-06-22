@@ -63,7 +63,7 @@ class SituationAnalysis(BaseModel):
     selected_option: str
     selection_reasoning: str
     decision_economics: DecisionEconomics
-    mitre_technique: str = ""   # e.g. "T1078"  — populated from MITRE_ATTACK_MAP (F1a)
+    mitre_technique: str = ""   # e.g. "T1078"  -- populated from MITRE_ATTACK_MAP (F1a)
     mitre_tactic: str = ""      # e.g. "Initial Access"
 
 

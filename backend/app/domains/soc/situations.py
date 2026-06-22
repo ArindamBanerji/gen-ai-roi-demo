@@ -1,7 +1,7 @@
 """
 SOC-specific situation classification logic.
 
-Extracted from services/situation.py — exact same rules, moved to the domain layer.
+Extracted from services/situation.py -- exact same rules, moved to the domain layer.
 services/situation.py delegates classify_situation() and evaluate_options() here;
 callers (routers, triage.py) are unmodified.
 
@@ -10,8 +10,8 @@ Exported symbols used by services/situation.py:
     get_soc_options(situation_type, context)    -> List[Dict]
 
 Supporting data:
-    SOC_SITUATION_TYPES  — metadata for each situation type (label, description, color)
-    SOC_OPTIONS          — raw option data per situation type (plain dicts, no Pydantic)
+    SOC_SITUATION_TYPES  -- metadata for each situation type (label, description, color)
+    SOC_OPTIONS          -- raw option data per situation type (plain dicts, no Pydantic)
 """
 import logging
 from typing import Any, Dict, List, Tuple
@@ -30,7 +30,7 @@ SOC_SITUATION_TYPES: Dict[str, Dict[str, str]] = {
     "travel_login_anomaly": {
         "label":       "Travel Login Anomaly",
         "description": (
-            "Anomalous login where user travel record and VPN location align — "
+            "Anomalous login where user travel record and VPN location align -- "
             "likely a false positive"
         ),
         "color": "#3B82F6",   # blue
@@ -45,7 +45,7 @@ SOC_SITUATION_TYPES: Dict[str, Dict[str, str]] = {
     "malware_on_critical_asset": {
         "label":       "Malware on Critical Asset",
         "description": (
-            "Malware detected on a critical or production system — "
+            "Malware detected on a critical or production system -- "
             "immediate incident response required"
         ),
         "color": "#EF4444",   # red
@@ -53,7 +53,7 @@ SOC_SITUATION_TYPES: Dict[str, Dict[str, str]] = {
     "vip_after_hours": {
         "label":       "VIP After Hours",
         "description": (
-            "Executive-level user activity outside normal business hours — "
+            "Executive-level user activity outside normal business hours -- "
             "requires careful verification before escalation"
         ),
         "color": "#EAB308",   # yellow
@@ -61,7 +61,7 @@ SOC_SITUATION_TYPES: Dict[str, Dict[str, str]] = {
     "data_exfil_attempt": {
         "label":       "Data Exfiltration Attempt",
         "description": (
-            "Unusual data transfer to an external destination above volume threshold — "
+            "Unusual data transfer to an external destination above volume threshold -- "
             "forensics required"
         ),
         "color": "#DC2626",   # dark red
@@ -69,7 +69,7 @@ SOC_SITUATION_TYPES: Dict[str, Dict[str, str]] = {
     "unknown": {
         "label":       "Unknown",
         "description": (
-            "Insufficient context for automated classification — "
+            "Insufficient context for automated classification -- "
             "manual Tier 2 review recommended"
         ),
         "color": "#6B7280",   # gray
@@ -79,14 +79,14 @@ SOC_SITUATION_TYPES: Dict[str, Dict[str, str]] = {
         "label":       "Brute Force Attack",
         "description": (
             "Repeated authentication failures indicating a brute force "
-            "or password spray attack — block source and lock account"
+            "or password spray attack -- block source and lock account"
         ),
         "color": "#EF4444",   # red
     },
     "privilege_escalation_detected": {
         "label":       "Privilege Escalation",
         "description": (
-            "Account or process attempting to gain elevated privileges — "
+            "Account or process attempting to gain elevated privileges -- "
             "immediate containment required"
         ),
         "color": "#DC2626",   # dark red
@@ -94,7 +94,7 @@ SOC_SITUATION_TYPES: Dict[str, Dict[str, str]] = {
     "credential_stuffing_attack": {
         "label":       "Credential Stuffing",
         "description": (
-            "Multiple accounts targeted with leaked credential pairs — "
+            "Multiple accounts targeted with leaked credential pairs -- "
             "automated account takeover attempt"
         ),
         "color": "#F97316",   # orange
@@ -102,7 +102,7 @@ SOC_SITUATION_TYPES: Dict[str, Dict[str, str]] = {
     "c2_communication": {
         "label":       "C2 Communication",
         "description": (
-            "Internal host communicating with a known command-and-control server — "
+            "Internal host communicating with a known command-and-control server -- "
             "isolate host immediately"
         ),
         "color": "#7C3AED",   # purple
@@ -446,7 +446,7 @@ def classify_soc_situation(
     # ====================================================================
     # Default: Unknown Situation
     # ====================================================================
-    logger.error(f"[MITRE] Unrecognized alert_type={alert_type!r} — no technique mapped")
+    logger.error(f"[MITRE] Unrecognized alert_type={alert_type!r} -- no technique mapped")
     factors = ["insufficient_context", f"alert_type_{alert_type}"]
     return "unknown", 0.45, factors
 
@@ -469,7 +469,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["privileged_identity_context", "mfa_ok", "device_known"],
             "estimated_resolution_time": "3 seconds",
             "estimated_analyst_cost":   0.0,
-            "risk_if_wrong":            "Low — auto-reopen if flagged",
+            "risk_if_wrong":            "Low -- auto-reopen if flagged",
         },
         {
             "action":                   "escalate_tier2",
@@ -477,7 +477,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["verify_travel_legitimacy"],
             "estimated_resolution_time": "45 minutes",
             "estimated_analyst_cost":   127.0,
-            "risk_if_wrong":            "None — human reviews",
+            "risk_if_wrong":            "None -- human reviews",
         },
         {
             "action":                   "enrich_and_wait",
@@ -485,7 +485,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["monitor_additional_activity"],
             "estimated_resolution_time": "15 minutes",
             "estimated_analyst_cost":   43.0,
-            "risk_if_wrong":            "Low — delayed but monitored",
+            "risk_if_wrong":            "Low -- delayed but monitored",
         },
     ],
 
@@ -497,7 +497,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["known_signature", "playbook_exists", "low_risk"],
             "estimated_resolution_time": "8 seconds",
             "estimated_analyst_cost":   0.0,
-            "risk_if_wrong":            "Low — quarantine reversible",
+            "risk_if_wrong":            "Low -- quarantine reversible",
         },
         {
             "action":                   "escalate_tier2",
@@ -505,7 +505,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["verify_campaign_match"],
             "estimated_resolution_time": "30 minutes",
             "estimated_analyst_cost":   95.0,
-            "risk_if_wrong":            "None — human reviews",
+            "risk_if_wrong":            "None -- human reviews",
         },
         {
             "action":                   "enrich_and_wait",
@@ -513,7 +513,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["gather_more_samples"],
             "estimated_resolution_time": "20 minutes",
             "estimated_analyst_cost":   62.0,
-            "risk_if_wrong":            "Medium — exposure window",
+            "risk_if_wrong":            "Medium -- exposure window",
         },
     ],
 
@@ -525,7 +525,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["critical_asset", "production_impact", "high_risk"],
             "estimated_resolution_time": "2 hours",
             "estimated_analyst_cost":   310.0,
-            "risk_if_wrong":            "None — appropriate for criticality",
+            "risk_if_wrong":            "None -- appropriate for criticality",
         },
         {
             "action":                   "auto_remediate",
@@ -533,7 +533,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["isolate_system"],
             "estimated_resolution_time": "5 minutes",
             "estimated_analyst_cost":   15.0,
-            "risk_if_wrong":            "High — production downtime",
+            "risk_if_wrong":            "High -- production downtime",
         },
         {
             "action":                   "enrich_and_wait",
@@ -541,7 +541,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["assess_blast_radius"],
             "estimated_resolution_time": "30 minutes",
             "estimated_analyst_cost":   95.0,
-            "risk_if_wrong":            "Critical — malware spreads",
+            "risk_if_wrong":            "Critical -- malware spreads",
         },
     ],
 
@@ -553,7 +553,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["data_loss_risk", "external_connection", "volume_anomaly"],
             "estimated_resolution_time": "3 hours",
             "estimated_analyst_cost":   465.0,
-            "risk_if_wrong":            "None — forensics required",
+            "risk_if_wrong":            "None -- forensics required",
         },
         {
             "action":                   "enrich_and_wait",
@@ -561,7 +561,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["identify_data_type"],
             "estimated_resolution_time": "45 minutes",
             "estimated_analyst_cost":   127.0,
-            "risk_if_wrong":            "Critical — data already exfiltrated",
+            "risk_if_wrong":            "Critical -- data already exfiltrated",
         },
         {
             "action":                   "auto_remediate",
@@ -569,7 +569,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["block_connection"],
             "estimated_resolution_time": "10 seconds",
             "estimated_analyst_cost":   0.0,
-            "risk_if_wrong":            "High — may block legitimate traffic",
+            "risk_if_wrong":            "High -- may block legitimate traffic",
         },
     ],
 
@@ -581,7 +581,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["vip_caution", "verify_legitimacy", "context_needed"],
             "estimated_resolution_time": "20 minutes",
             "estimated_analyst_cost":   62.0,
-            "risk_if_wrong":            "Low — monitored closely",
+            "risk_if_wrong":            "Low -- monitored closely",
         },
         {
             "action":                   "escalate_tier2",
@@ -589,7 +589,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["manual_review"],
             "estimated_resolution_time": "40 minutes",
             "estimated_analyst_cost":   118.0,
-            "risk_if_wrong":            "None — human judgment",
+            "risk_if_wrong":            "None -- human judgment",
         },
         {
             "action":                   "false_positive_close",
@@ -597,7 +597,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["workaholic_pattern"],
             "estimated_resolution_time": "5 seconds",
             "estimated_analyst_cost":   0.0,
-            "risk_if_wrong":            "Medium — may miss real threat",
+            "risk_if_wrong":            "Medium -- may miss real threat",
         },
     ],
 
@@ -609,7 +609,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["insufficient_confidence", "manual_review_needed"],
             "estimated_resolution_time": "50 minutes",
             "estimated_analyst_cost":   143.0,
-            "risk_if_wrong":            "None — human reviews",
+            "risk_if_wrong":            "None -- human reviews",
         },
         {
             "action":                   "enrich_and_wait",
@@ -617,7 +617,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["gather_more_context"],
             "estimated_resolution_time": "25 minutes",
             "estimated_analyst_cost":   71.0,
-            "risk_if_wrong":            "Medium — delayed response",
+            "risk_if_wrong":            "Medium -- delayed response",
         },
         {
             "action":                   "escalate_incident",
@@ -625,7 +625,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["err_on_caution"],
             "estimated_resolution_time": "2.5 hours",
             "estimated_analyst_cost":   388.0,
-            "risk_if_wrong":            "Low — over-escalation cost",
+            "risk_if_wrong":            "Low -- over-escalation cost",
         },
     ],
 
@@ -639,7 +639,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["high_failure_rate", "known_attack_pattern", "source_blacklisted"],
             "estimated_resolution_time": "5 seconds",
             "estimated_analyst_cost":   0.0,
-            "risk_if_wrong":            "Low — block is reversible within 5 minutes",
+            "risk_if_wrong":            "Low -- block is reversible within 5 minutes",
         },
         {
             "action":                   "escalate_tier2",
@@ -647,7 +647,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["manual_account_review"],
             "estimated_resolution_time": "45 minutes",
             "estimated_analyst_cost":   127.0,
-            "risk_if_wrong":            "None — human reviews",
+            "risk_if_wrong":            "None -- human reviews",
         },
         {
             "action":                   "enrich_and_wait",
@@ -655,7 +655,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["gather_auth_logs"],
             "estimated_resolution_time": "5 minutes",
             "estimated_analyst_cost":   15.0,
-            "risk_if_wrong":            "Medium — account may be compromised during enrichment",
+            "risk_if_wrong":            "Medium -- account may be compromised during enrichment",
         },
     ],
 
@@ -667,7 +667,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["root_access_obtained", "production_asset", "active_threat"],
             "estimated_resolution_time": "2 hours",
             "estimated_analyst_cost":   310.0,
-            "risk_if_wrong":            "None — appropriate for severity",
+            "risk_if_wrong":            "None -- appropriate for severity",
         },
         {
             "action":                   "auto_remediate",
@@ -675,7 +675,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["revoke_elevated_privileges"],
             "estimated_resolution_time": "2 minutes",
             "estimated_analyst_cost":   0.0,
-            "risk_if_wrong":            "High — may disrupt production if legitimate",
+            "risk_if_wrong":            "High -- may disrupt production if legitimate",
         },
         {
             "action":                   "enrich_and_wait",
@@ -683,7 +683,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["assess_blast_radius"],
             "estimated_resolution_time": "30 minutes",
             "estimated_analyst_cost":   95.0,
-            "risk_if_wrong":            "Critical — attacker retains privileged access",
+            "risk_if_wrong":            "Critical -- attacker retains privileged access",
         },
     ],
 
@@ -695,7 +695,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["bulk_account_reset", "ip_blocklist_update", "known_breach_data"],
             "estimated_resolution_time": "15 seconds",
             "estimated_analyst_cost":   0.0,
-            "risk_if_wrong":            "Low — password reset is low disruption",
+            "risk_if_wrong":            "Low -- password reset is low disruption",
         },
         {
             "action":                   "escalate_tier2",
@@ -703,7 +703,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["manual_account_audit"],
             "estimated_resolution_time": "45 minutes",
             "estimated_analyst_cost":   127.0,
-            "risk_if_wrong":            "None — human reviews",
+            "risk_if_wrong":            "None -- human reviews",
         },
         {
             "action":                   "enrich_and_wait",
@@ -711,7 +711,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["identify_compromised_accounts"],
             "estimated_resolution_time": "15 minutes",
             "estimated_analyst_cost":   43.0,
-            "risk_if_wrong":            "Medium — additional accounts taken over during enrichment",
+            "risk_if_wrong":            "Medium -- additional accounts taken over during enrichment",
         },
     ],
 
@@ -723,7 +723,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["confirmed_c2", "active_channel", "data_exfil_risk"],
             "estimated_resolution_time": "2 hours",
             "estimated_analyst_cost":   310.0,
-            "risk_if_wrong":            "None — always appropriate for C2",
+            "risk_if_wrong":            "None -- always appropriate for C2",
         },
         {
             "action":                   "auto_remediate",
@@ -731,7 +731,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["isolate_host", "block_c2_domain"],
             "estimated_resolution_time": "30 seconds",
             "estimated_analyst_cost":   0.0,
-            "risk_if_wrong":            "Medium — host isolation may cause production downtime",
+            "risk_if_wrong":            "Medium -- host isolation may cause production downtime",
         },
         {
             "action":                   "enrich_and_wait",
@@ -739,7 +739,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["map_c2_infrastructure"],
             "estimated_resolution_time": "20 minutes",
             "estimated_analyst_cost":   62.0,
-            "risk_if_wrong":            "Critical — attacker exfiltrates data during enrichment",
+            "risk_if_wrong":            "Critical -- attacker exfiltrates data during enrichment",
         },
     ],
 
@@ -751,7 +751,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["confirmed_ioc", "active_threat_campaign", "multi_feed_match"],
             "estimated_resolution_time": "2 hours",
             "estimated_analyst_cost":   310.0,
-            "risk_if_wrong":            "None — IOC match warrants investigation",
+            "risk_if_wrong":            "None -- IOC match warrants investigation",
         },
         {
             "action":                   "auto_remediate",
@@ -759,7 +759,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["block_ioc", "update_firewall_rules"],
             "estimated_resolution_time": "5 seconds",
             "estimated_analyst_cost":   0.0,
-            "risk_if_wrong":            "Low — blocking single IOC is reversible",
+            "risk_if_wrong":            "Low -- blocking single IOC is reversible",
         },
         {
             "action":                   "enrich_and_wait",
@@ -767,7 +767,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["correlate_with_other_alerts"],
             "estimated_resolution_time": "25 minutes",
             "estimated_analyst_cost":   71.0,
-            "risk_if_wrong":            "High — active threat actor persists in environment",
+            "risk_if_wrong":            "High -- active threat actor persists in environment",
         },
     ],
 
@@ -779,7 +779,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["novel_pattern", "context_needed", "lateral_movement_possible"],
             "estimated_resolution_time": "20 minutes",
             "estimated_analyst_cost":   62.0,
-            "risk_if_wrong":            "Medium — delayed response if real attack",
+            "risk_if_wrong":            "Medium -- delayed response if real attack",
         },
         {
             "action":                   "escalate_tier2",
@@ -787,7 +787,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["manual_traffic_analysis"],
             "estimated_resolution_time": "40 minutes",
             "estimated_analyst_cost":   118.0,
-            "risk_if_wrong":            "None — human reviews",
+            "risk_if_wrong":            "None -- human reviews",
         },
         {
             "action":                   "escalate_incident",
@@ -795,7 +795,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["err_on_side_of_caution"],
             "estimated_resolution_time": "2 hours",
             "estimated_analyst_cost":   310.0,
-            "risk_if_wrong":            "Low — over-escalation cost only",
+            "risk_if_wrong":            "Low -- over-escalation cost only",
         },
     ],
 
@@ -807,7 +807,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["bulk_data_access", "departure_risk", "hr_involvement_needed"],
             "estimated_resolution_time": "3 hours",
             "estimated_analyst_cost":   465.0,
-            "risk_if_wrong":            "None — confidential investigation warranted",
+            "risk_if_wrong":            "None -- confidential investigation warranted",
         },
         {
             "action":                   "enrich_and_wait",
@@ -815,7 +815,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["gather_access_logs", "establish_timeline"],
             "estimated_resolution_time": "45 minutes",
             "estimated_analyst_cost":   127.0,
-            "risk_if_wrong":            "Medium — suspect may destroy evidence",
+            "risk_if_wrong":            "Medium -- suspect may destroy evidence",
         },
         {
             "action":                   "escalate_tier2",
@@ -823,7 +823,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["senior_analyst_review"],
             "estimated_resolution_time": "40 minutes",
             "estimated_analyst_cost":   118.0,
-            "risk_if_wrong":            "Low — human judgment",
+            "risk_if_wrong":            "Low -- human judgment",
         },
     ],
 
@@ -835,7 +835,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["known_fix", "reversible_change", "exposure_active"],
             "estimated_resolution_time": "10 seconds",
             "estimated_analyst_cost":   0.0,
-            "risk_if_wrong":            "Low — permission tightening rarely breaks apps",
+            "risk_if_wrong":            "Low -- permission tightening rarely breaks apps",
         },
         {
             "action":                   "escalate_tier2",
@@ -843,7 +843,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["verify_no_app_dependency"],
             "estimated_resolution_time": "30 minutes",
             "estimated_analyst_cost":   95.0,
-            "risk_if_wrong":            "None — human reviews",
+            "risk_if_wrong":            "None -- human reviews",
         },
         {
             "action":                   "enrich_and_wait",
@@ -851,7 +851,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
             "factors":                  ["assess_data_exposure_window"],
             "estimated_resolution_time": "15 minutes",
             "estimated_analyst_cost":   43.0,
-            "risk_if_wrong":            "Medium — data remains exposed during enrichment",
+            "risk_if_wrong":            "Medium -- data remains exposed during enrichment",
         },
     ],
 }
@@ -866,7 +866,7 @@ SOC_OPTIONS: Dict[str, List[Dict[str, Any]]] = {
 
 def get_soc_options(
     situation_type: str,
-    context: Dict[str, Any],  # noqa: ARG001 — reserved for future context-aware options
+    context: Dict[str, Any],  # noqa: ARG001 -- reserved for future context-aware options
 ) -> List[Dict[str, Any]]:
     """
     Return option dicts for the given situation type.

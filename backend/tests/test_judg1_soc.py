@@ -5,7 +5,7 @@ Verifies that the judgment router is registered and that
 build_judgment_response() returns the correct shape and values
 when called against the SOC baseline centroids.
 
-No Neo4j required — all tests use the pure build_judgment_response helper.
+No Neo4j required -- all tests use the pure build_judgment_response helper.
 
 Run from backend/:
     pytest tests/test_judg1_soc.py -v

@@ -1,4 +1,4 @@
-"""Tests for AttackChainService (P16 — L-06)."""
+"""Tests for AttackChainService (P16 -- L-06)."""
 
 from unittest.mock import AsyncMock, MagicMock
 

@@ -1,5 +1,5 @@
 """
-tests/test_campaign_api.py — F6 Campaign API endpoint tests.
+tests/test_campaign_api.py -- F6 Campaign API endpoint tests.
 
 4 tests validating GET /api/soc/campaigns, GET /api/soc/campaigns/{id},
 POST /api/soc/campaigns/recorrelate, and query-param filtering.
@@ -27,7 +27,7 @@ client = TestClient(app)
 def test_get_campaigns_returns_list():
     """
     GET /api/soc/campaigns must return 200 with 'campaigns', 'total',
-    and 'active_campaigns' keys. Empty Neo4j → empty list, not 500.
+    and 'active_campaigns' keys. Empty Neo4j -> empty list, not 500.
     """
     response = client.get("/api/soc/campaigns")
 
@@ -68,7 +68,7 @@ def test_recorrelate_returns_counts():
     """
     POST /api/soc/campaigns/recorrelate must return 200 with
     'campaigns_found', 'campaigns_written', 'events_processed'.
-    Empty graph → all zeros, not 500.
+    Empty graph -> all zeros, not 500.
     """
     response = client.post("/api/soc/campaigns/recorrelate")
 

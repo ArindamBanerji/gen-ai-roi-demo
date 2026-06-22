@@ -1,7 +1,7 @@
-"""Tests for iks_bootstrap_soc.json — shape and value parity with SCORER_PROFILE_CENTROIDS.
+"""Tests for iks_bootstrap_soc.json -- shape and value parity with SCORER_PROFILE_CENTROIDS.
 
-Scorer uses A=4 (SCORER_ACTIONS) → sidecar shape is (6, 4, 6).
-Key is "mu_zero" — matches the loader in app/services/iks.py.
+Scorer uses A=4 (SCORER_ACTIONS) -> sidecar shape is (6, 4, 6).
+Key is "mu_zero" -- matches the loader in app/services/iks.py.
 """
 import json
 import numpy as np
@@ -12,7 +12,7 @@ _JSON_PATH = Path(__file__).parent.parent / "app" / "data" / "iks_bootstrap_soc.
 
 
 def test_iks_bootstrap_shape_matches_config():
-    """Sidecar must be {"mu_zero": [...]} with shape (6, 4, 6) — 4-action scorer."""
+    """Sidecar must be {"mu_zero": [...]} with shape (6, 4, 6) -- 4-action scorer."""
     from app.domains.soc.config import SCORER_PROFILE_CENTROIDS
     with open(_JSON_PATH) as f:
         data = json.load(f)
@@ -24,7 +24,7 @@ def test_iks_bootstrap_shape_matches_config():
 
 
 def test_iks_bootstrap_values_match_config():
-    """μ₀ must equal SCORER_PROFILE_CENTROIDS (A=4 slice) at generation time."""
+    """mu_0 must equal SCORER_PROFILE_CENTROIDS (A=4 slice) at generation time."""
     from app.domains.soc.config import SCORER_PROFILE_CENTROIDS
     with open(_JSON_PATH) as f:
         data = json.load(f)

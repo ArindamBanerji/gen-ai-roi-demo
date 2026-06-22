@@ -2,22 +2,22 @@
 Institutional Knowledge Score (IKS) service.
 
 IKS measures how far the system's learned centroids have drifted from the
-bootstrap prior μ₀.  A higher score means more real-world experience has been
+bootstrap prior mu_0.  A higher score means more real-world experience has been
 integrated.
 
-Formula (docs/soc_copilot_design_v1.md §14):
+Formula (docs/soc_copilot_design_v1.md Sec.14):
 
-    IKS(t) = 100 × min(
-        mean( ‖μ(t)[c, a, :] − μ₀[c, a, :]‖₂  for all (c, a) )
+    IKS(t) = 100 x min(
+        mean( ||mu(t)[c, a, :] - mu_0[c, a, :]||_2  for all (c, a) )
         / D_MAX,
         1.0
     )
 
-where D_MAX = 0.20 is the normalization constant (κ*=0.20 calibrated by
+where D_MAX = 0.20 is the normalization constant (kappa*=0.20 calibrated by
 PROD-1, March 18. Was 0.30 design estimate).
 
-μ₀ is loaded from backend/app/data/iks_bootstrap_soc.json, written by
-gae_state.init_learning_state() before bootstrap_calibration() mutates μ.
+mu_0 is loaded from backend/app/data/iks_bootstrap_soc.json, written by
+gae_state.init_learning_state() before bootstrap_calibration() mutates mu.
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ from typing import Any, Optional, cast
 import numpy as np
 
 from app.domains.soc.config import compute_phase3_minimum as _p3min
-from app.framework.iks_base import (  # noqa: F401 — re-export for callers
+from app.framework.iks_base import (  # noqa: F401 -- re-export for callers
     compute_iks as _compute_iks_base,
     interpret,
     interpret_iks_v2,
@@ -39,7 +39,7 @@ from app.framework.iks_base import (  # noqa: F401 — re-export for callers
 
 log = logging.getLogger(__name__)
 
-D_MAX: float = 0.20  # κ*=0.20 calibrated by PROD-1 (March 18). Was 0.30 design estimate.
+D_MAX: float = 0.20  # kappa*=0.20 calibrated by PROD-1 (March 18). Was 0.30 design estimate.
 
 _MU_ZERO_PATH = Path(__file__).parent.parent / "data" / "iks_bootstrap_soc.json"
 
@@ -51,21 +51,21 @@ _mu_zero_cache: Optional[np.ndarray] = None   # lazily loaded, module-level cach
 # ---------------------------------------------------------------------------
 
 def _load_mu_zero() -> Optional[np.ndarray]:
-    """Load μ₀ from the SOC sidecar JSON, with module-level caching."""
+    """Load mu_0 from the SOC sidecar JSON, with module-level caching."""
     global _mu_zero_cache
     if _mu_zero_cache is not None:
         return _mu_zero_cache
     if not _MU_ZERO_PATH.exists():
-        log.warning("[IKS] μ₀ file not found at %s — IKS will be estimated", _MU_ZERO_PATH)
+        log.warning("[IKS] mu0 file not found at %s -- IKS will be estimated", _MU_ZERO_PATH)
         return None
     try:
         with open(_MU_ZERO_PATH, "r", encoding="utf-8") as fh:
             data = json.load(fh)
         _mu_zero_cache = np.array(data["mu_zero"], dtype=np.float64)
-        log.info("[IKS] μ₀ loaded from %s (shape=%s)", _MU_ZERO_PATH, list(_mu_zero_cache.shape))
+        log.info("[IKS] mu0 loaded from %s (shape=%s)", _MU_ZERO_PATH, list(_mu_zero_cache.shape))
         return _mu_zero_cache
     except Exception as exc:
-        log.warning("[IKS] Failed to load μ₀: %s", exc)
+        log.warning("[IKS] Failed to load mu0: %s", exc)
         return None
 
 
@@ -87,9 +87,9 @@ def compute_iks(mu_t: np.ndarray, mu_zero: Optional[np.ndarray] = None) -> dict:
     Returns
     -------
     dict with keys:
-        current (float)      — IKS in [0, 100]
-        mean_drift (float)   — raw mean L2 drift before normalization
-        estimated (bool)     — True if μ₀ was unavailable (IKS is approximate)
+        current (float)      -- IKS in [0, 100]
+        mean_drift (float)   -- raw mean L2 drift before normalization
+        estimated (bool)     -- True if mu_0 was unavailable (IKS is approximate)
     """
     if mu_zero is None:
         mu_zero = _load_mu_zero()
@@ -104,12 +104,12 @@ async def compute_visible_iks(
     Compute the shipped user-visible IKS score.
 
     Canonical order:
-    1. Drift-based scorer IKS from current centroids, using μ₀ from gae_state.get_mu_zero().
-       Only returned when score > 50.0 — below that, centroids have not diverged enough
-       from μ₀ for drift to be informative. Threshold at 50 (half of 0–100 range) means
+    1. Drift-based scorer IKS from current centroids, using mu_0 from gae_state.get_mu_zero().
+       Only returned when score > 50.0 -- below that, centroids have not diverged enough
+       from mu_0 for drift to be informative. Threshold at 50 (half of 0-100 range) means
        centroids must have moved significantly across all categories before drift-IKS
-       is trusted. Small post-decision shifts (~5–10) correctly fall back to v2.
-    2. Graph-composite IKS v2 as fallback when drift ≤ 50.0 or scorer unavailable.
+       is trusted. Small post-decision shifts (~5-10) correctly fall back to v2.
+    2. Graph-composite IKS v2 as fallback when drift <= 50.0 or scorer unavailable.
     """
     if scorer is None:
         try:
@@ -307,7 +307,7 @@ async def compute_iks_v2(neo4j_service) -> dict:
             # than the uninformative 50% used at early stage.
             75.0 if total_decisions >= _p3min(200.0, 0.25)
             else 50.0 if total_decisions > 0
-            else 0.0   # true cold start — no decisions at all
+            else 0.0   # true cold start -- no decisions at all
         )
     )
 

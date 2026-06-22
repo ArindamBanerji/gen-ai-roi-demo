@@ -1,5 +1,5 @@
 """
-tests/test_framework_discipline.py — CopilotFramework extraction discipline.
+tests/test_framework_discipline.py -- CopilotFramework extraction discipline.
 
 Enforces the boundary rules required for clean future extraction to copilot-sdk.
 These tests must pass before any new file is added to app/framework/.

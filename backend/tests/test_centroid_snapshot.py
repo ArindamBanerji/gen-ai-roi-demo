@@ -1,5 +1,5 @@
 """
-test_centroid_snapshot.py — Unit tests for FEATURE-04 centroid auto-snapshot.
+test_centroid_snapshot.py -- Unit tests for FEATURE-04 centroid auto-snapshot.
 
 Tests maybe_write_centroid_snapshot() in gae_state.py:
   - snapshot written exactly at SNAPSHOT_INTERVAL boundaries

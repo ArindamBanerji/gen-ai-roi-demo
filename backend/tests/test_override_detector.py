@@ -1,9 +1,9 @@
 """
-tests/test_override_detector.py — OverrideDetector activation threshold tests.
+tests/test_override_detector.py -- OverrideDetector activation threshold tests.
 
 2 tests:
-  - 49 examples → NOT activated
-  - 50 examples → ACTIVATED
+  - 49 examples -> NOT activated
+  - 50 examples -> ACTIVATED
 
 Run from backend/:
     pytest tests/test_override_detector.py -v

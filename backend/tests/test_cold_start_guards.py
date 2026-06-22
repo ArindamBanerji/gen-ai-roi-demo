@@ -1,13 +1,13 @@
 """
-Cold-start guard tests — P1 batch (Group 5).
+Cold-start guard tests -- P1 batch (Group 5).
 
 Verifies that endpoints requiring a live ProfileScorer return 503 (not 500 / crash)
 when the scorer is absent, and that the simulation service handles a None scorer
 gracefully without raising.
 
 Patches used:
-  app.services.gae_state.get_profile_scorer  — for endpoints with in-function imports
-  app.routers.evolution.get_profile_scorer   — for evolution (module-level binding)
+  app.services.gae_state.get_profile_scorer  -- for endpoints with in-function imports
+  app.routers.evolution.get_profile_scorer   -- for evolution (module-level binding)
 
 Total: 9 tests.
 """

@@ -38,7 +38,7 @@ def test_scenarios_file_exists():
 # ============================================================================
 
 def test_scenarios_count():
-    """JSON must contain exactly 36 scenarios (6 per category × 6 categories)."""
+    """JSON must contain exactly 36 scenarios (6 per category x 6 categories)."""
     scenarios = _load()
     assert len(scenarios) == 36, (
         f"Expected 36 scenarios, got {len(scenarios)}"
@@ -142,7 +142,7 @@ def test_credential_access_no_high_suppress():
         if s["category"] == "credential_access" and s["expected_action"] == "suppress"
     ]
     assert len(ca_suppress) > 0, (
-        "No credential_access suppress scenarios found — check scenario design"
+        "No credential_access suppress scenarios found -- check scenario design"
     )
     for s in ca_suppress:
         assert s["confidence_tier"] != "high", (

@@ -1,7 +1,7 @@
 """
 SOC-specific policy definitions and applicability logic.
 
-Extracted from services/policy.py — exact same policies and matching rules, moved
+Extracted from services/policy.py -- exact same policies and matching rules, moved
 to the domain layer. services/policy.py delegates the "which policies apply?" question
 here; the conflict resolution mechanism (priority comparison, audit ID generation,
 narrative building) remains in services/policy.py and will move to
@@ -11,9 +11,9 @@ Exported symbols used by services/policy.py:
     get_applicable_soc_policies(alert_id, context)  -> List[Dict[str, Any]]
 
 Supporting data:
-    SOC_POLICIES  — the 4 SOC policy definitions as plain dicts (no Pydantic)
+    SOC_POLICIES  -- the 4 SOC policy definitions as plain dicts (no Pydantic)
 
-No Pydantic dependency — services/policy.py wraps returned dicts with
+No Pydantic dependency -- services/policy.py wraps returned dicts with
 PolicyDefinition(**p) to preserve its existing return types.
 """
 from typing import Any, Dict, List

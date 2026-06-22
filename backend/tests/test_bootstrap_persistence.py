@@ -1,5 +1,5 @@
 """
-Block 2.2 — bootstrap_centroids persistence tests.
+Block 2.2 -- bootstrap_centroids persistence tests.
 Tests write_bootstrap_state() and get_bootstrap_centroids() using AsyncMock.
 No live Neo4j required.
 """

@@ -1,5 +1,5 @@
 """
-tests/test_campaign_frontend.py — F6 Step 7 frontend integration tests.
+tests/test_campaign_frontend.py -- F6 Step 7 frontend integration tests.
 
 3 backend API contract tests validating the shape of responses consumed
 by CampaignIntelligencePanel.tsx. No browser / Playwright required.
@@ -69,7 +69,7 @@ def test_campaign_list_items_have_required_fields():
     data = response.json()
 
     if not data["campaigns"]:
-        pytest.skip("no campaigns in test graph — field shape check skipped")
+        pytest.skip("no campaigns in test graph -- field shape check skipped")
 
     c = data["campaigns"][0]
     missing = REQUIRED_CAMPAIGN_FIELDS - set(c.keys())
@@ -85,7 +85,7 @@ def test_campaign_list_items_have_required_fields():
 
 def test_campaign_detail_returns_attack_progression():
     """
-    The campaign detail endpoint must include attack_progression.stages —
+    The campaign detail endpoint must include attack_progression.stages --
     consumed by the frontend campaign detail view (future tab).
     """
     # Recorrelate to populate
@@ -100,7 +100,7 @@ def test_campaign_detail_returns_attack_progression():
 
     campaign_id = campaigns[0]["campaign_id"]
     if not campaign_id:
-        pytest.skip("campaign_id empty — cannot fetch detail")
+        pytest.skip("campaign_id empty -- cannot fetch detail")
 
     detail_resp = client.get(f"/api/soc/campaigns/{campaign_id}")
     assert detail_resp.status_code == 200, (

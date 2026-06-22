@@ -28,7 +28,7 @@ from ci_platform.copilot_core import EntityCache, EntityContextCacheAdapter
 
 
 def _node_id(entity: dict, prefix: str = "") -> str:
-    """Get node ID from entity dict — AGE uses alert_id/user_id/etc, Neo4j uses id."""
+    """Get node ID from entity dict -- AGE uses alert_id/user_id/etc, Neo4j uses id."""
     return entity.get("id") or entity.get(f"{prefix}_id") or entity.get(f"{prefix}id") or "unknown"
 from app.services.gae_state import get_learning_state, save_learning_state, get_profile_scorer
 import dataclasses
@@ -474,7 +474,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             _perf_total_exception = "HTTPException"
             raise HTTPException(
                 status_code=503,
-                detail="Scorer not ready — backend restarting or reset in progress"
+                detail="Scorer not ready -- backend restarting or reset in progress"
             )
 
     try:
@@ -552,7 +552,7 @@ async def analyze_alert(request: ProcessAlertRequest):
         ):
             from app.domains.soc.config import SCORER_ACTIONS
             scorer_actions = list(SCORER_ACTIONS)  # A=4 classification actions (ProfileScorer axis-1)
-            tau     = SOCDomainConfig.get_temperature()  # τ=0.1 (V3B validated, ECE=0.036)
+            tau     = SOCDomainConfig.get_temperature()  # tau=0.1 (V3B validated, ECE=0.036)
 
             # v5.0: ProfileScorer centroid-proximity scoring (EXP-E1 validated L2, τ=0.1)
             _cfg = SOCDomainConfig()
@@ -582,7 +582,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             if confidence < _refer_threshold:
                 selected_action = "refer_to_analyst"
                 logger.info(
-                    "[TRIAGE-Phase0b] conf=%.3f < %.2f — gate overrides to refer_to_analyst (cat=%s)",
+                    "[TRIAGE-Phase0b] conf=%.3f < %.2f -- gate overrides to refer_to_analyst (cat=%s)",
                     confidence, _refer_threshold, alert_category,
                 )
 
@@ -664,7 +664,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             action=selected_action,
         ):
             if selected_action == "refer_to_analyst":
-                routing_zone = "human_review"   # graduated dispatch — always routes to human
+                routing_zone = "human_review"   # graduated dispatch -- always routes to human
             elif selected_action == "monitor":
                 routing_zone = "agent_zone"   # monitor never auto-approved
             elif _elevated:
@@ -751,7 +751,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                     _rl_explored_but_referred = True
                     _rl_exploration_executed = False
                 logger.info(
-                    "[TRIAGE-Referral] VETO fired — rules=%s audit=%s",
+                    "[TRIAGE-Referral] VETO fired -- rules=%s audit=%s",
                     _referral.reason_codes,
                     _referral.audit_summary,
                 )
@@ -959,7 +959,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                     )
                 )
             logger.info(
-                "[Sentinel-WB] fire-and-forget scheduled — incident=%s action=%s conf=%.3f",
+                "[Sentinel-WB] fire-and-forget scheduled -- incident=%s action=%s conf=%.3f",
                 _incident_id, selected_action, confidence,
             )
 
@@ -1267,8 +1267,8 @@ async def analyze_alert(request: ProcessAlertRequest):
                 "routing_zone":         routing_zone,
                 "decision_method":      (
                     "ProfileScorer centroid-proximity scoring "
-                    "(n_factors × 5 actions × n_categories, "
-                    "L2 kernel τ=0.1, EXP-E1 validated)"
+                    "(n_factors x 5 actions x n_categories, "
+                    "L2 kernel tau=0.1, EXP-E1 validated)"
                 ),
             },
             "graph_data": graph_data,
@@ -1542,7 +1542,7 @@ async def execute_action(request: ProcessAlertRequest):
             },
             "kpi_impact": {
                 "metric": "MTTR",
-                "contribution": f"↓{mttr_reduction} minutes",
+                "contribution": f"down{mttr_reduction} minutes",
                 "previous_avg": 15.3,
                 "new_avg": 15.3 - mttr_reduction
             }
@@ -1842,7 +1842,7 @@ async def report_decision_outcome(request: OutcomeRequest):
             if action_name not in SCORER_ACTIONS:
                 l5_persistence_status["l5_persistence_skipped_reason"] = "routing_action_not_scorable"
                 if fv is None:
-                    print(f"[GAE] Decision node found but factor_vector is NULL — skipping weight update")
+                    print(f"[GAE] Decision node found but factor_vector is NULL -- skipping weight update")
                 else:
                     print(
                         f"[GAE] Skipping learning update for routing action "
@@ -1935,7 +1935,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                         l5_persistence_status["conservation_status_reason"] = _eff_reason
                 except Exception as _cse:
                     logger.warning("Conservation status update failed: %s", _cse)
-                    _conservation_block = True  # fail-closed: unknown health → block
+                    _conservation_block = True  # fail-closed: unknown health -> block
 
                 # CORR-2 fix: ProfileScorer.update() — gated by LEARNING_ENABLED (default False).
                 # gt_action_index = analyst's actual chosen action when provided;
@@ -1976,7 +1976,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                         update_dk_welford_tracker as _update_dk_welford_tracker,
                     )
                     if _conservation_block:
-                        logger.warning("[B5] Conservation check failed — learning blocked (fail-closed)")
+                        logger.warning("[B5] Conservation check failed -- learning blocked (fail-closed)")
                         l5_persistence_status["l5_persistence_skipped_reason"] = "conservation_check_failed"
                     else:
                         _cu = None
@@ -2330,7 +2330,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                             affected_entities=(request.decision_id, request.alert_id),
                         ))
                         logger.info(
-                            "[FLYWHEEL] TRIGGERED_EVOLUTION edge created: %s → %s",
+                            "[FLYWHEEL] TRIGGERED_EVOLUTION edge created: %s -> %s",
                             request.decision_id,
                             request.alert_id,
                         )
@@ -2724,7 +2724,7 @@ async def get_profile_state():
                     "decisions_accumulated": 0,
                     "equivalent_calendar": "0 decisions accumulated",
                     "common_categories_days": 14,
-                    "rare_categories_note": "Rare categories take longer — all context lost on switch.",
+                    "rare_categories_note": "Rare categories take longer -- all context lost on switch.",
                     "competitor_iks": 0,
                     "decisions_per_day": 0.0,
                     "qualifies_one_quarter": False,
@@ -2778,7 +2778,7 @@ async def get_profile_state():
 
     return {
         "categories": SOC_CATEGORIES,
-        "actions": SCORER_ACTIONS,         # A=4 — matches counts/centroids shape
+        "actions": SCORER_ACTIONS,         # A=4 -- matches counts/centroids shape
         "centroids": scorer.centroids.tolist(),   # shape (n_categories, n_actions, n_factors)
         "counts": scorer.counts.tolist(),  # shape (6, 4)
         "decision_count": decision_count,
@@ -2797,7 +2797,7 @@ async def get_profile_state():
                     else f"{decision_count} decisions accumulated"
                 ),
                 "common_categories_days": 14,
-                "rare_categories_note": "Rare categories take longer — all context lost on switch.",
+                "rare_categories_note": "Rare categories take longer -- all context lost on switch.",
                 "competitor_iks": 0,
                 "decisions_per_day":      decisions_per_day,
                 "qualifies_one_quarter":  qualifies_one_quarter,
@@ -2817,7 +2817,7 @@ async def rl_reward_summary():
     Return aggregated RL reward signal from all outcome feedback recorded
     in this session.
 
-    Reward signal: correct → +0.3, incorrect → -6.0 (asymmetric ratio 20:1).
+    Reward signal: correct -> +0.3, incorrect -> -6.0 (asymmetric ratio 20:1).
     loop3_status is "active" once at least one decision has been recorded.
     """
     print("[RL] GET /rl/reward-summary called")

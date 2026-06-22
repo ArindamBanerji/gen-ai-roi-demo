@@ -1,10 +1,10 @@
 """
-UCL Connector Base — Abstract base class for all Universal Context Layer connectors.
+UCL Connector Base -- Abstract base class for all Universal Context Layer connectors.
 
 Every data source (Pulsedive, GreyNoise, CrowdStrike, ...) implements UCLConnector
 and returns ConnectorResult / HealthStatus from its two required async methods.
 
-Design: keep this file small. No Neo4j or HTTP imports here — those belong
+Design: keep this file small. No Neo4j or HTTP imports here -- those belong
 in the concrete connector implementations.
 """
 from abc import ABC, abstractmethod

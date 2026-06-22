@@ -1,5 +1,5 @@
 """
-tests/test_ols_status.py — OLS Dashboard (L-09) test suite.
+tests/test_ols_status.py -- OLS Dashboard (L-09) test suite.
 
 5 tests validating OLSMonitor integration, warm-start guard,
 ACM qualification, delta_pct arithmetic, and endpoint contract.
@@ -102,7 +102,7 @@ def test_plateau_reached_monitoring_status():
         f"Expected 'monitoring' after plateau. Got: {result['status']}"
     )
     assert result["baseline_ols"] == pytest.approx(1.25, abs=0.01), (
-        f"baseline_ols should ≈ 1.25 (mean of flat history). Got: {result['baseline_ols']}"
+        f"baseline_ols should ~= 1.25 (mean of flat history). Got: {result['baseline_ols']}"
     )
 
 
@@ -115,7 +115,7 @@ def test_acm_qualification_threshold():
     ACM (Analyst Competency Metric) must be inactive when no analyst has
     reached qualification_threshold overrides, and active when at least one has.
     """
-    ols_history = [1.2] * 5  # short — status=warming_up, but ACM still computed
+    ols_history = [1.2] * 5  # short -- status=warming_up, but ACM still computed
 
     # Below threshold: analyst A has 19 overrides, threshold=20
     result_below = get_ols_status(

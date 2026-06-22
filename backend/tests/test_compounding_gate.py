@@ -2,7 +2,7 @@
 """
 10-cycle compounding verification gate.
 
-Runs 10 analyze→outcome cycles against the live backend, then asserts 7 gates
+Runs 10 analyze->outcome cycles against the live backend, then asserts 7 gates
 that prove the compounding learning pipeline is working end-to-end.
 
 Cycle schedule:
@@ -13,12 +13,12 @@ Cycle schedule:
   Cycle  10   : phishing alert, correct outcome (tests W recovery)
 
 Gate summary:
-  Gate 1: W matrix evolved — ||W_final - W_initial||_F > 0.001
-  Gate 2: PatternHistory accumulates — ph_cycle6 > ph_cycle1
+  Gate 1: W matrix evolved -- ||W_final - W_initial||_F > 0.001
+  Gate 2: PatternHistory accumulates -- ph_cycle6 > ph_cycle1
           (PH = 0.5 for cycles 1-5 due to _MIN_DECISIONS=5;
            PH = 1.0 for cycle 6 when 5 prior correct outcomes exist)
-  Gate 3: 20:1 asymmetric delta — delta_norm(cycle9) / delta_norm(cycle8) > 10
-  Gate 4: W updates after cycle 10 correct — delta_norm(cycle10) > 0
+  Gate 3: 20:1 asymmetric delta -- delta_norm(cycle9) / delta_norm(cycle8) > 10
+  Gate 4: W updates after cycle 10 correct -- delta_norm(cycle10) > 0
   Gate 5: Final W_norm differs from initial W_norm
   Gate 6: decision_count == 10 (all outcomes stored in LearningState)
   Gate 7: history total == 10 (WeightUpdate records complete)
@@ -54,16 +54,16 @@ TIMEOUT = 30  # seconds per request
 
 ALERT_SCHEDULE = [
     # (alert_id,       alert_type,          outcome)
-    ("ALERT-7823", "anomalous_login",    "correct"),   # cycle 1  — PH=0.5 (0 prior)
-    ("ALERT-7820", "anomalous_login",    "correct"),   # cycle 2  — PH=0.5 (1 prior <5)
-    ("ALERT-7830", "anomalous_login",    "correct"),   # cycle 3  — PH=0.5 (2 prior <5)
-    ("ALERT-7835", "anomalous_login",    "correct"),   # cycle 4  — PH=0.5 (3 prior <5)
-    ("ALERT-7841", "anomalous_login",    "correct"),   # cycle 5  — PH=0.5 (4 prior <5)
-    ("ALERT-7845", "anomalous_login",    "correct"),   # cycle 6  — PH=1.0 (5 prior >=5!)
+    ("ALERT-7823", "anomalous_login",    "correct"),   # cycle 1  -- PH=0.5 (0 prior)
+    ("ALERT-7820", "anomalous_login",    "correct"),   # cycle 2  -- PH=0.5 (1 prior <5)
+    ("ALERT-7830", "anomalous_login",    "correct"),   # cycle 3  -- PH=0.5 (2 prior <5)
+    ("ALERT-7835", "anomalous_login",    "correct"),   # cycle 4  -- PH=0.5 (3 prior <5)
+    ("ALERT-7841", "anomalous_login",    "correct"),   # cycle 5  -- PH=0.5 (4 prior <5)
+    ("ALERT-7845", "anomalous_login",    "correct"),   # cycle 6  -- PH=1.0 (5 prior >=5!)
     ("ALERT-7822", "phishing",           "correct"),   # cycle 7
-    ("ALERT-7819", "phishing",           "correct"),   # cycle 8  — delta_norm reference
-    ("ALERT-7821", "malware_detection",  "incorrect"), # cycle 9  — INCORRECT → 20x penalty
-    ("ALERT-7824", "phishing",           "correct"),   # cycle 10 — recovery step
+    ("ALERT-7819", "phishing",           "correct"),   # cycle 8  -- delta_norm reference
+    ("ALERT-7821", "malware_detection",  "incorrect"), # cycle 9  -- INCORRECT -> 20x penalty
+    ("ALERT-7824", "phishing",           "correct"),   # cycle 10 -- recovery step
 ]
 
 # Factor vector index for pattern_history.
@@ -111,7 +111,7 @@ def w_norm(matrix: list) -> float:
 # Main test runner
 # ---------------------------------------------------------------------------
 
-def run() -> None:  # noqa: C901 (allowed — it's a self-contained integration test)
+def run() -> None:  # noqa: C901 (allowed -- it's a self-contained integration test)
     gate_results: list[tuple[int, str, bool, str]] = []
     failures: list[tuple[int, str, str]] = []
 
@@ -149,9 +149,9 @@ def run() -> None:  # noqa: C901 (allowed — it's a self-contained integration 
     # ================================================================
     # 10 CYCLES: analyze → outcome → record W state
     # ================================================================
-    ph_by_cycle: dict[int, float] = {}         # cycle_num → PH value at analyze time
-    delta_norm_by_decision: dict[int, float] = {}  # decision_number (1-based) → delta_norm
-    w_norm_after_cycle: dict[int, float] = {}   # cycle_num → W_norm after outcome
+    ph_by_cycle: dict[int, float] = {}         # cycle_num -> PH value at analyze time
+    delta_norm_by_decision: dict[int, float] = {}  # decision_number (1-based) -> delta_norm
+    w_norm_after_cycle: dict[int, float] = {}   # cycle_num -> W_norm after outcome
 
     for cycle_idx, (alert_id, alert_type, outcome) in enumerate(ALERT_SCHEDULE):
         cycle_num = cycle_idx + 1

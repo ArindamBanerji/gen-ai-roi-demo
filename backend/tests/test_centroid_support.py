@@ -1,5 +1,5 @@
 """
-Tests for Block 3.6 — Centroid Support Monitoring.
+Tests for Block 3.6 -- Centroid Support Monitoring.
 
 Covers the compute_centroid_support function and the
 GET /api/soc/centroid-support endpoint.
@@ -57,8 +57,8 @@ def test_centroid_support_compute_function_flags_outside():
     mu_zero = np.full((1, 1, 6), 0.5)
     sigma   = [0.1] * 6
     # Push 2 factors outside 2σ boundary (threshold = 0.2)
-    mu[0, 0, 0] = 0.9   # deviation 0.4 > 0.2 → outside
-    mu[0, 0, 1] = 0.1   # deviation 0.4 > 0.2 → outside
+    mu[0, 0, 0] = 0.9   # deviation 0.4 > 0.2 -> outside
+    mu[0, 0, 1] = 0.1   # deviation 0.4 > 0.2 -> outside
     result = compute_centroid_support(mu, mu_zero, sigma)
     assert result[(0, 0)]["n_factors_outside"] == 2
     assert result[(0, 0)]["support_status"] == "warning"

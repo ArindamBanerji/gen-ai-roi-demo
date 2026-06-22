@@ -30,7 +30,7 @@ from app.services.learning_health import LearningHealthMonitor
 @pytest.mark.asyncio
 async def test_simulation_does_not_mutate_production_state():
     """
-    save_learning_state must never be called during simulation — production
+    save_learning_state must never be called during simulation -- production
     LearningState is isolated via a local deepcopy (sim_ls).
     """
     mock_ls = MagicMock()

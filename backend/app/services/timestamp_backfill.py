@@ -4,7 +4,7 @@ All 4860 zero_day_synthetic Decision nodes were seeded with the same
 timestamp_epoch. This one-time migration assigns monotonically increasing
 epochs so audit trail timestamps are distinct and CX3 passes.
 
-Safe to call at every startup — skips immediately once spread > 1 day.
+Safe to call at every startup -- skips immediately once spread > 1 day.
 """
 import logging
 import time

@@ -1,13 +1,13 @@
 """
-Tests for NLTemplateEngine (§23.3) and SimilarCasesService (§23.4).
+Tests for NLTemplateEngine (Sec.23.3) and SimilarCasesService (Sec.23.4).
 
 Coverage:
-  test_render_l1_all_categories         — all 6 L1 templates render cleanly
-  test_render_l1_refer                  — refer-to-analyst template renders
-  test_render_l1_generic_fallback       — unknown category falls back to L1_GENERIC
-  test_similar_cases_cosine             — cosine_similarity correctness
-  test_similar_cases_category_filter    — cross-category isolation
-  test_similar_cases_min_prior_suppression — fewer than MIN_PRIOR → empty result
+  test_render_l1_all_categories         -- all 6 L1 templates render cleanly
+  test_render_l1_refer                  -- refer-to-analyst template renders
+  test_render_l1_generic_fallback       -- unknown category falls back to L1_GENERIC
+  test_similar_cases_cosine             -- cosine_similarity correctness
+  test_similar_cases_category_filter    -- cross-category isolation
+  test_similar_cases_min_prior_suppression -- fewer than MIN_PRIOR -> empty result
 """
 
 import asyncio
@@ -39,7 +39,7 @@ def _minimal_context(**extra) -> dict:
         "user_display":        "alice@corp.com",
         "asset_name":          "finance-server-01",
         "asset_criticality":   "high",
-        "time_context":        "Login at 02:47 UTC — 3.8 SD above baseline",
+        "time_context":        "Login at 02:47 UTC -- 3.8 SD above baseline",
         "pattern_context":     "Matches 2 prior escalations this month",
         "threat_context":      "No IOC matches in 412 checked indicators",
         "travel_context":      "No travel record to Singapore in past 90 days",
@@ -55,7 +55,7 @@ def _minimal_context(**extra) -> dict:
         "action_description":  "bulk export from DataClass=PCI_SCOPE",
         "access_context":      "47% above role baseline data volume",
         "cloud_operation":     "IAM policy modified: GrantFullAccess",
-        "device_description":  "Device not in CMDB — unregistered",
+        "device_description":  "Device not in CMDB -- unregistered",
         "situation_type":      "Anomalous Login",
         "dominant_factors_description": "travel_match=0.82, asset_criticality=0.91",
     }

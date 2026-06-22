@@ -189,11 +189,11 @@ async def generate_governance_report() -> GovernanceReport:
     art15_summary = "Model robustness evidence includes calibration, convergence, drift visibility, and tensor export metadata."
     if pre_activation:
         art9_summary = (
-            "Pre-activation — conservation law monitoring is configured but learning is not yet enabled. "
+            "Pre-activation -- conservation law monitoring is configured but learning is not yet enabled. "
             "Controls are ready to monitor learning quality, trigger safeguards, and disclose residual risks once activated."
         )
         art15_summary = (
-            "Pre-activation — model robustness monitoring is configured. Calibration, convergence, drift visibility, "
+            "Pre-activation -- model robustness monitoring is configured. Calibration, convergence, drift visibility, "
             "and tensor export will activate with learning. Current evidence reflects system configuration."
         )
 

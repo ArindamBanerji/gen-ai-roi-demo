@@ -1,5 +1,5 @@
 """
-CORR-1: alert_type → category routing tests.
+CORR-1: alert_type -> category routing tests.
 Verifies that ALERT_TYPE_CATEGORY_MAP covers all known alert_types and that
 resolve_alert_category() routes each one correctly.
 """

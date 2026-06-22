@@ -1,5 +1,5 @@
 """
-GraphExplorerService — safe graph exploration for the CISO demo (Phase 8).
+GraphExplorerService -- safe graph exploration for the CISO demo (Phase 8).
 
 Provides:
   - Read-only Cypher query validation + execution
@@ -8,7 +8,7 @@ Provides:
   - Graph-wide node/relationship summary
   - Pre-built curated queries (Tab 1 Panel B)
 
-CISO Q5: "Why not Security Copilot?" → firm-specific threat graph + IOC count.
+CISO Q5: "Why not Security Copilot?" -> firm-specific threat graph + IOC count.
 
 Reference: docs/project_status_and_plan_v3_part2.md Phase 8
 """

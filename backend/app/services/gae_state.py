@@ -1,7 +1,7 @@
 """
-GAE learning state manager — live LearningState singleton for SOC Copilot.
+GAE learning state manager -- live LearningState singleton for SOC Copilot.
 
-Single source of truth for the W matrix (n_actions × d factors) across
+Single source of truth for the W matrix (n_actions x d factors) across
 the backend process.  Initialized once at startup, persisted to JSON after
 each outcome update.
 
@@ -10,7 +10,7 @@ Design:
   Module-level singleton STATE (path, instances, metadata) lives here so
   it is patchable in tests via patch.object(gae_state, ...).
 
-Reference: docs/soc_copilot_design_v1.md §14.
+Reference: docs/soc_copilot_design_v1.md Sec.14.
 """
 
 import asyncio
@@ -54,7 +54,7 @@ async def acquire_scorer():
     async with _scorer_lock:
         scorer = _learning_state.profile_scorer if _learning_state is not None else None
         if scorer is None:
-            raise RuntimeError("ProfileScorer not attached — call init_learning_state() first")
+            raise RuntimeError("ProfileScorer not attached -- call init_learning_state() first")
         yield scorer
 
 
@@ -63,7 +63,7 @@ async def acquire_scorer_for_reset():
     """
     Acquire _scorer_lock to guard the reset window.
     Used only by reset_learning_state() to serialize against in-flight updates.
-    Yields None — the old scorer is being torn down.
+    Yields None -- the old scorer is being torn down.
     """
     async with _scorer_lock:
         yield
@@ -117,7 +117,7 @@ _MU_ZERO_PATH = Path(__file__).parent.parent / "data" / "iks_bootstrap_soc.json"
 # ---------------------------------------------------------------------------
 
 def _soc_profile() -> CalibrationProfile:
-    """Return the SOC calibration profile (asymmetry 20:1, τ=0.1)."""
+    """Return the SOC calibration profile (asymmetry 20:1, tau=0.1)."""
     return CalibrationProfile(
         learning_rate   = 0.02,
         penalty_ratio   = 20.0,   # asymmetry_ratio from SOCDomainConfig
@@ -178,9 +178,9 @@ def init_learning_state() -> LearningState:
     Initialize the live LearningState with bootstrap calibration.
 
     Three-path startup:
-      1. Checkpoint with metadata.bootstrap=True → load as-is (already calibrated).
-      2. Legacy checkpoint (no bootstrap metadata) → run bootstrap, overwrite.
-      3. No checkpoint → fresh state, run bootstrap, save.
+      1. Checkpoint with metadata.bootstrap=True -> load as-is (already calibrated).
+      2. Legacy checkpoint (no bootstrap metadata) -> run bootstrap, overwrite.
+      3. No checkpoint -> fresh state, run bootstrap, save.
 
     Called once in main.py startup_event().
     """
@@ -190,7 +190,7 @@ def init_learning_state() -> LearningState:
     _profile_scorer = SOCCompoundingScorerAdapter()
     assert _profile_scorer.eta_override is not None, (
         "ProfileScorer constructed without eta_override. "
-        "SOC requires eta_override=0.01 (P0 fix — prevents "
+        "SOC requires eta_override=0.01 (P0 fix -- prevents "
         "13-27pp centroid degradation from noisy overrides)."
     )
 
@@ -202,7 +202,7 @@ def init_learning_state() -> LearningState:
             checkpoint_meta = _read_checkpoint_metadata()
         except Exception as exc:
             log.warning(
-                "[GAE] Could not load state from %s: %s — using fresh state",
+                "[GAE] Could not load state from %s: %s -- using fresh state",
                 _STATE_PATH, exc,
             )
             _learning_state = _make_fresh_state()
@@ -216,7 +216,7 @@ def init_learning_state() -> LearningState:
                 f"drift={checkpoint_meta.get('drift', 0.0):.4f})"
             )
         else:
-            print("[GAE] Legacy checkpoint detected — running bootstrap")
+            print("[GAE] Legacy checkpoint detected -- running bootstrap")
             needs_bootstrap = True
     else:
         _learning_state = _make_fresh_state()
@@ -229,9 +229,9 @@ def init_learning_state() -> LearningState:
             _MU_ZERO_PATH.parent.mkdir(parents=True, exist_ok=True)
             with open(_MU_ZERO_PATH, "w", encoding="utf-8") as _fh:
                 json.dump({"mu_zero": mu_zero.tolist()}, _fh)
-            log.info("[GAE] μ₀ persisted to %s (shape=%s)", _MU_ZERO_PATH, list(mu_zero.shape))
+            log.info("[GAE] mu0 persisted to %s (shape=%s)", _MU_ZERO_PATH, list(mu_zero.shape))
         except Exception as exc:
-            log.warning("[GAE] Could not persist μ₀ to %s: %s", _MU_ZERO_PATH, exc)
+            log.warning("[GAE] Could not persist mu0 to %s: %s", _MU_ZERO_PATH, exc)
 
         result: BootstrapResult = bootstrap_calibration(
             scorer=_profile_scorer,
@@ -408,7 +408,7 @@ def get_profile_scorer():
 
 def get_mu_zero():
     """
-    Return μ₀ (bootstrap baseline centroid tensor) as a numpy ndarray.
+    Return mu_0 (bootstrap baseline centroid tensor) as a numpy ndarray.
 
     Reads from the persisted JSON file written at bootstrap time.
     Returns None if the file does not exist or cannot be parsed.
@@ -418,14 +418,14 @@ def get_mu_zero():
     import numpy as _np
     try:
         if not _MU_ZERO_PATH.exists():
-            log.warning("[GAE] μ₀ file not found at %s", _MU_ZERO_PATH)
+            log.warning("[GAE] mu0 file not found at %s", _MU_ZERO_PATH)
             return None
         with open(_MU_ZERO_PATH, "r", encoding="utf-8") as _fh:
             data = _json.load(_fh)
         arr = _np.array(data["mu_zero"], dtype=_np.float64)
         return arr
     except Exception as exc:
-        log.warning("[GAE] Could not load μ₀ from %s: %s", _MU_ZERO_PATH, exc)
+        log.warning("[GAE] Could not load mu0 from %s: %s", _MU_ZERO_PATH, exc)
         return None
 
 
@@ -450,7 +450,7 @@ def get_learning_state() -> LearningState:
     """
     if _learning_state is None:
         raise RuntimeError(
-            "Learning state not initialized — call init_learning_state() at startup"
+            "Learning state not initialized -- call init_learning_state() at startup"
         )
     return _learning_state
 
@@ -527,8 +527,8 @@ def write_centroid_backup(scorer, metadata: dict | None = None) -> dict:
 
     Parameters
     ----------
-    scorer   : ProfileScorer — source of centroids.
-    metadata : optional dict merged into the JSON payload (trigger, decision_id, …).
+    scorer   : ProfileScorer -- source of centroids.
+    metadata : optional dict merged into the JSON payload (trigger, decision_id, ...).
     """
     import uuid as _uuid
     payload = serialize_centroid_tensor(scorer)
@@ -569,7 +569,7 @@ def maybe_write_centroid_snapshot(
 
     Increments a module-level counter on every call and writes a backup when
     the counter is a positive multiple of SNAPSHOT_INTERVAL.  Returns True
-    if a backup was written, False otherwise.  Never raises — all errors are
+    if a backup was written, False otherwise.  Never raises -- all errors are
     logged as warnings so callers can fire-and-forget.
     """
     global _snapshot_decision_count
@@ -649,10 +649,10 @@ RETURN ds.bootstrap_mu        AS bootstrap_mu,
 
 async def write_bootstrap_state(neo4j_client, scorer) -> dict:
     """
-    Persist the current bootstrap centroid tensor (μ₀) to a
+    Persist the current bootstrap centroid tensor (mu_0) to a
     DeploymentState node in Neo4j.
 
-    Called at startup after ProfileScorer is attached so μ₀ survives
+    Called at startup after ProfileScorer is attached so mu_0 survives
     server restarts and is available to the centroid export endpoint (Block 2.3).
 
     Returns the stored payload.
@@ -689,7 +689,7 @@ async def write_bootstrap_state(neo4j_client, scorer) -> dict:
                 f" gae_version: {_ver_s}"
                 f"}})"
             )
-        log.info("[GAE] DeploymentState written — shape=%s gae_version=%s", shape, _GAE_VERSION)
+        log.info("[GAE] DeploymentState written -- shape=%s gae_version=%s", shape, _GAE_VERSION)
     except Exception as e:
         log.warning("DeploymentState persist failed: %s", e)
     return {
@@ -744,17 +744,17 @@ async def build_centroid_export(scorer, neo4j_client) -> dict:
 
     Fields
     ------
-    export_version       : str   — "1.0"
-    generated_at_epoch   : int   — ms since epoch
-    gae_version          : str   — "0.7.21"
-    tensor_shape         : list  — [n_categories, n_actions, n_factors]
-    current_mu           : list  — full centroid tensor (nested list)
-    bootstrap_mu         : list|None — μ₀ from DeploymentState, or None
-    drift_from_bootstrap : float|None — mean(|current - bootstrap|), or None
-    decision_count       : int   — scorer.decision_count
+    export_version       : str   -- "1.0"
+    generated_at_epoch   : int   -- ms since epoch
+    gae_version          : str   -- "0.7.21"
+    tensor_shape         : list  -- [n_categories, n_actions, n_factors]
+    current_mu           : list  -- full centroid tensor (nested list)
+    bootstrap_mu         : list|None -- mu_0 from DeploymentState, or None
+    drift_from_bootstrap : float|None -- mean(|current - bootstrap|), or None
+    decision_count       : int   -- scorer.decision_count
     categories           : list[str]
     actions              : list[str]
-    sha256               : str   — SHA-256 over canonical JSON of current_mu
+    sha256               : str   -- SHA-256 over canonical JSON of current_mu
     """
     import hashlib
     import json
@@ -843,7 +843,7 @@ async def restore_centroid_from_backup(backup_id: str | None = None) -> dict:
 
 def apply_analyst_eta_weights(scorer, eta_weights: dict) -> None:
     """
-    Store per-analyst η weights on the module-level singleton and on the scorer.
+    Store per-analyst eta weights on the module-level singleton and on the scorer.
 
     Sets module-level _analyst_eta_weights for endpoint reads, and attaches
     the dict to the scorer as a dynamic attribute so callers that hold a scorer
@@ -852,7 +852,7 @@ def apply_analyst_eta_weights(scorer, eta_weights: dict) -> None:
     Parameters
     ----------
     scorer      : ProfileScorer instance (attached to the live LearningState)
-    eta_weights : dict mapping analyst name → weight in [0.5, 1.5]
+    eta_weights : dict mapping analyst name -> weight in [0.5, 1.5]
     """
     global _analyst_eta_weights
     _analyst_eta_weights = dict(eta_weights)
@@ -861,11 +861,11 @@ def apply_analyst_eta_weights(scorer, eta_weights: dict) -> None:
         scorer.eta_weights = dict(eta_weights)
     except Exception as exc:
         log.debug("[D5] Could not attach eta_weights to scorer: %s", exc)
-    log.info("[D5] Analyst η weights updated: %s", _analyst_eta_weights)
+    log.info("[D5] Analyst eta weights updated: %s", _analyst_eta_weights)
 
 
 def get_analyst_eta_weights() -> dict:
-    """Return the current module-level analyst η weights (may be empty dict)."""
+    """Return the current module-level analyst eta weights (may be empty dict)."""
     return dict(_analyst_eta_weights)
 
 
@@ -883,11 +883,11 @@ def set_volume_spike(active: bool) -> None:
     global _volume_spike_active
     _volume_spike_active = bool(active)
     if active:
-        log.warning("[D3] Volume spike flag SET — centroid updates frozen this cadence")
+        log.warning("[D3] Volume spike flag SET -- centroid updates frozen this cadence")
     else:
         set_frozen_categories([])
         reset_spike_counter()
-        log.info("[D3] Volume spike flag CLEARED — centroid updates resumed")
+        log.info("[D3] Volume spike flag CLEARED -- centroid updates resumed")
 
 
 def is_volume_spike_active() -> bool:
@@ -901,19 +901,19 @@ def guarded_update(scorer, f, category_index: int, action_index: int,
     Spike-guarded + category-freeze wrapper around ProfileScorer.update().
 
     Guards (checked in order):
-      1. D3 global spike flag — skip all updates when volume spike active.
-      2. D2 category freeze — skip updates for over-represented categories
+      1. D3 global spike flag -- skip all updates when volume spike active.
+      2. D2 category freeze -- skip updates for over-represented categories
          during a spike (coupled to D3; frozen_categories is empty when no spike).
-      3. D7 spike cap — skip updates once 1.5× baseline daily count is reached.
+      3. D7 spike cap -- skip updates once 1.5x baseline daily count is reached.
 
     Parameters
     ----------
-    scorer         : ProfileScorer — the live scorer
-    f              : np.ndarray — factor vector
+    scorer         : ProfileScorer -- the live scorer
+    f              : np.ndarray -- factor vector
     category_index : int
     action_index   : int
     correct        : bool
-    category_name  : str — human-readable category name for D2 freeze check
+    category_name  : str -- human-readable category name for D2 freeze check
     **kwargs       : forwarded to scorer.update() (e.g. gt_action_index, confidence)
 
     Returns
@@ -922,28 +922,28 @@ def guarded_update(scorer, f, category_index: int, action_index: int,
     """
     if _volume_spike_active:
         log.warning(
-            "[D3] guarded_update: spike active — skipping centroid update "
+            "[D3] guarded_update: spike active -- skipping centroid update "
             "(category=%d/%s, action=%d, correct=%s)",
             category_index, category_name or "?", action_index, correct,
         )
         return None
     if category_name and is_category_frozen(category_name):
         log.warning(
-            "[D2] guarded_update: category '%s' frozen — skipping update "
+            "[D2] guarded_update: category '%s' frozen -- skipping update "
             "(action=%d, correct=%s)",
             category_name, action_index, correct,
         )
         return None
     if getattr(scorer, 'is_paused', False) is True:
         log.warning(
-            "[B5] guarded_update: conservation paused — skipping centroid update "
+            "[B5] guarded_update: conservation paused -- skipping centroid update "
             "(category=%d/%s, action=%d, correct=%s)",
             category_index, category_name or "?", action_index, correct,
         )
         return None
     if not increment_spike_counter():
         log.warning(
-            "[D7] guarded_update: spike cap reached (%d) — skipping update "
+            "[D7] guarded_update: spike cap reached (%d) -- skipping update "
             "(category=%d/%s, action=%d)",
             _spike_update_cap, category_index, category_name or "?", action_index,
         )
@@ -966,7 +966,7 @@ def set_frozen_categories(categories: list) -> None:
 
     Parameters
     ----------
-    categories : list[str] — category names to freeze
+    categories : list[str] -- category names to freeze
     """
     global _frozen_categories
     _frozen_categories = set(categories)
@@ -992,18 +992,18 @@ def is_category_frozen(category: str) -> bool:
 
 def set_spike_cap(baseline_daily: float) -> None:
     """
-    Set the per-cadence update cap to 1.5 × baseline_daily.
+    Set the per-cadence update cap to 1.5 x baseline_daily.
 
     Call this when a volume spike is detected, passing daily_mean from
     compute_volume_baseline(). Cap of 0 disables D7 enforcement.
 
     Parameters
     ----------
-    baseline_daily : float — mean daily alert/decision count from 30-day window
+    baseline_daily : float -- mean daily alert/decision count from 30-day window
     """
     global _spike_update_cap
     _spike_update_cap = int(1.5 * baseline_daily)
-    log.info("[D7] Spike update cap set: %d (1.5 × %.1f)", _spike_update_cap, baseline_daily)
+    log.info("[D7] Spike update cap set: %d (1.5 x %.1f)", _spike_update_cap, baseline_daily)
 
 
 def reset_spike_counter() -> None:
@@ -1026,7 +1026,7 @@ def increment_spike_counter() -> bool:
 
     Returns
     -------
-    bool : True → proceed with update; False → skip (cap reached)
+    bool : True -> proceed with update; False -> skip (cap reached)
     """
     global _spike_update_count, _spike_update_cap
     if not _volume_spike_active:
@@ -1047,7 +1047,7 @@ def get_spike_cap_status() -> dict:
     -------
     dict:
       spike_active          : bool
-      spike_cap             : int   — 0 means not set
+      spike_cap             : int   -- 0 means not set
       updates_this_cadence  : int
       cap_reached           : bool
     """

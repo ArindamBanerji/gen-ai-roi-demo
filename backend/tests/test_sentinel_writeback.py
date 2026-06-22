@@ -1,12 +1,12 @@
 """
-test_sentinel_writeback.py — Block 7.1 Sentinel Write-Back (Outward) contract tests.
+test_sentinel_writeback.py -- Block 7.1 Sentinel Write-Back (Outward) contract tests.
 
 5 tests:
   1. POST /api/sentinel/writeback-test returns 200
   2. Response contains required top-level fields
   3. writeback_result has required keys: success, status_code, error
   4. Unconfigured connector returns success=False, error='not_configured'
-  5. push_incident_update unit test: _CLASSIFICATION_MAP escalate → truePositive
+  5. push_incident_update unit test: _CLASSIFICATION_MAP escalate -> truePositive
 """
 
 import pytest
@@ -80,7 +80,7 @@ def test_unconfigured_connector_returns_not_configured():
 
 
 def test_push_incident_update_classification_map():
-    """Unit test: escalate → truePositive in internal classification map."""
+    """Unit test: escalate -> truePositive in internal classification map."""
     from app.connectors.sentinel_real import SentinelRealConnector
     connector = SentinelRealConnector()
 

@@ -1,10 +1,10 @@
 """
-SOC Judgment API — JUDG-1-SOC
+SOC Judgment API -- JUDG-1-SOC
 
 Translates a raw ProfileScorer decision into a human-readable JudgmentResult:
 why an action was recommended, which factors dominated, and confidence tier.
 
-Reference: docs/soc_copilot_design_v1.md §18; gae/judgment.py.
+Reference: docs/soc_copilot_design_v1.md Sec.18; gae/judgment.py.
 """
 
 from typing import Dict, Optional

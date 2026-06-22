@@ -1,5 +1,5 @@
 """
-Admin router — privileged operations.
+Admin router -- privileged operations.
 
 POST /api/admin/reset     Atomic soft or hard reset via StateManager.
 POST /api/admin/ingest    Ingest alerts from connector or CSV upload.
@@ -38,7 +38,7 @@ def _sanitize_sentinel_health_error(message: str, connector: Any) -> str:
 
 class ResetRequest(BaseModel):
     mode:    str  = "soft"   # "soft" | "hard"
-    confirm: bool = False    # must be set to true explicitly — no default allow
+    confirm: bool = False    # must be set to true explicitly -- no default allow
 
 
 class OnboardRequest(BaseModel):
@@ -84,10 +84,10 @@ async def admin_reset(body: ResetRequest):
     """
     Atomically reset GAE learning state, audit chain, and Neo4j.
 
-    - **soft**: reset W → priors, clear Decision outcomes (keep nodes), fresh audit chain.
+    - **soft**: reset W -> priors, clear Decision outcomes (keep nodes), fresh audit chain.
     - **hard**: same as soft, plus delete Decision nodes and re-seed graph.
 
-    `confirm` must be `true` — acts as an explicit safety acknowledgement.
+    `confirm` must be `true` -- acts as an explicit safety acknowledgement.
 
     Returns
     -------

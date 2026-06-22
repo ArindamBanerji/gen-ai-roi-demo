@@ -5,7 +5,7 @@ from app.domains.soc.config import N_ACTIONS, N_CATEGORIES, N_FACTORS
 
 def generate_three_claims() -> Dict:
     """
-    P15: Three unconditional claims — hold at every deployment.
+    P15: Three unconditional claims -- hold at every deployment.
 
     These are the claims a CISO can take to the board without caveats.
     Every number has experimental backing.
@@ -20,14 +20,14 @@ def generate_three_claims() -> Dict:
                 'headline': 'Every alert gets consistent, institutional judgment.',
                 'explanation': (
                     f'The system maintains {N_CATEGORIES * N_ACTIONS * N_FACTORS} learned parameters '
-                    f'({N_CATEGORIES} categories × {N_ACTIONS} actions × {N_FACTORS} factors) that encode your '
-                    'organization\'s security judgment. Every analyst — day shift, '
-                    'night shift, new hire, veteran — sees recommendations calibrated '
+                    f'({N_CATEGORIES} categories x {N_ACTIONS} actions x {N_FACTORS} factors) that encode your '
+                    'organization\'s security judgment. Every analyst -- day shift, '
+                    'night shift, new hire, veteran -- sees recommendations calibrated '
                     'from the same institutional knowledge base. '
                     'Consistency is guaranteed by architecture, not policy.'
                 ),
                 'metric': (
-                    'Guaranteed-consistent pair rate: (1 − acceptance_rate)². '
+                    'Guaranteed-consistent pair rate: (1 - acceptance_rate)^2. '
                     'At 70% acceptance: 9% of case pairs receive inconsistent '
                     'recommendations. At 90% acceptance: 1%.'
                 ),
@@ -63,7 +63,7 @@ def generate_three_claims() -> Dict:
                 'name': 'Conservation Law Safety',
                 'headline': 'The system cannot silently degrade.',
                 'explanation': (
-                    'A mathematical constraint (alpha · q · V >= theta_min) '
+                    'A mathematical constraint (alpha * q * V >= theta_min) '
                     'continuously monitors the learning signal. If automation '
                     'expansion, staffing changes, or any other factor reduces '
                     'the flow of verified decisions, the system alerts BEFORE '
@@ -88,7 +88,7 @@ def generate_three_claims() -> Dict:
             }
         ],
         'footer': (
-            'These guarantees are architectural — they hold at A=4 production '
+            'These guarantees are architectural -- they hold at A=4 production '
             'configuration with tau=0.1, eta=0.05, any category mix, any alert '
             'volume, any analyst team composition. They do not depend on sigma '
             'operators, Level 2 adaptation, or any feature gated by experiments.'

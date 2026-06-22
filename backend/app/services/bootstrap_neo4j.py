@@ -9,12 +9,12 @@ Design:
   - Generates sum(decisions_per_category.values()) Decision nodes total,
     round-robining through actions within each category.
   - factor_vector = centroid + small noise (sigma=0.02, seed=42), clipped [0,1].
-    Stored as a native Python list → Neo4j native array (NOT json.dumps string).
+    Stored as a native Python list -> Neo4j native array (NOT json.dumps string).
   - source='bootstrap' distinguishes these from live triage decisions.
   - No [:DECIDED_ON] relationship (bootstrap uses synthetic, not real, alerts).
   - Idempotent: skipped when any bootstrap Decision nodes already exist in Neo4j.
 
-Reference: docs/soc_copilot_design_v1.md §14 (CORR-3).
+Reference: docs/soc_copilot_design_v1.md Sec.14 (CORR-3).
 """
 
 import logging
@@ -27,7 +27,7 @@ import numpy as np
 log = logging.getLogger(__name__)
 
 _BOOTSTRAP_SIGMA = 0.02   # centroid noise: tight enough to stay near centroid
-_BOOTSTRAP_SEED  = 42     # reproducible — same seed as bootstrap_calibration
+_BOOTSTRAP_SEED  = 42     # reproducible -- same seed as bootstrap_calibration
 
 
 def _apply_weights(
@@ -38,14 +38,14 @@ def _apply_weights(
     """
     Redistribute *total* decisions across *categories* using fractional weights.
 
-    rounds each weight × total to the nearest integer, then adjusts the largest
-    category by ±1 so the result sums exactly to *total*.
+    rounds each weight x total to the nearest integer, then adjusts the largest
+    category by +/-1 so the result sums exactly to *total*.
 
     Parameters
     ----------
     total      : target total decision count
     categories : ordered category list
-    weights    : {category: fraction} — must contain all categories; need not sum to 1.0
+    weights    : {category: fraction} -- must contain all categories; need not sum to 1.0
                  (re-normalised internally)
 
     Returns
@@ -90,7 +90,7 @@ def build_bootstrap_decisions(
     categories             : Ordered category list (matches mu axis 0).
     decisions_per_category : {category: count} from BootstrapResult.
     seed                   : RNG seed for reproducible factor vectors.
-    weights                : optional {category: fraction} — when provided,
+    weights                : optional {category: fraction} -- when provided,
                              recomputes N_per_category using non-uniform weights
                              (BOOTSTRAP_CATEGORY_WEIGHTS) so the distribution
                              reflects realistic SOC alert frequency rather than
@@ -129,7 +129,7 @@ def build_bootstrap_decisions(
             fv_arr = (
                 centroid + rng.normal(0.0, _BOOTSTRAP_SIGMA, len(centroid))
             ).clip(0.0, 1.0)
-            fv = fv_arr.tolist()  # native Python list — NOT json.dumps()
+            fv = fv_arr.tolist()  # native Python list -- NOT json.dumps()
 
             score_result = scorer.score(fv_arr, category_index=cat_idx)
 
@@ -176,10 +176,10 @@ async def write_bootstrap_decisions(
     existing = check[0]["cnt"] if check else 0
     if existing > 0:
         log.info(
-            "[BOOTSTRAP-NEO4J] Skipping — %d bootstrap Decision nodes already exist",
+            "[BOOTSTRAP-NEO4J] Skipping -- %d bootstrap Decision nodes already exist",
             existing,
         )
-        print(f"[BOOTSTRAP-NEO4J] Skipping — {existing} bootstrap Decision nodes already exist")
+        print(f"[BOOTSTRAP-NEO4J] Skipping -- {existing} bootstrap Decision nodes already exist")
         return 0
 
     records = build_bootstrap_decisions(scorer, categories, decisions_per_category)

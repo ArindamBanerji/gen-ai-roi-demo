@@ -127,6 +127,7 @@ async def health():
 from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae, admin, simulation, evaluation, judgment, framework_router, eval_router, governance_router, whatif_router, time_machine_router, discoveries_router, platform
 from app.routers.servicenow_router import router as servicenow_router
 from app.routers.rl_router import router as rl_router
+from app.routers.cohort_status_router import router as cohort_status_router
 
 # Register routers
 app.include_router(evaluation.router, prefix="/api/soc", tags=["evaluation"])
@@ -148,6 +149,7 @@ app.include_router(eval_router.router, prefix="/api", tags=["Evaluation Upload"]
 app.include_router(time_machine_router.router, prefix="/api", tags=["Time Machine"])
 app.include_router(discoveries_router.router, prefix="/api", tags=["Cross-Graph Discovery"])
 app.include_router(platform.router, prefix="/api", tags=["Platform"])
+app.include_router(cohort_status_router, prefix="/api", tags=["Campaign Cohorts"])
 app.include_router(rl_router, prefix="/api", tags=["RL Observability"])
 app.include_router(servicenow_router)
 from app.routers.auth import router as auth_router
@@ -162,9 +164,9 @@ async def startup_event():
         if _auth_errors:
             print(f"[AUTH] SAML config invalid: {_auth_errors}")
             raise SystemExit(1)
-        print(f"[AUTH] SAML enabled — IdP: {_auth_cfg.idp_entity_id}, SP: {_auth_cfg.sp_entity_id}")
+        print(f"[AUTH] SAML enabled -- IdP: {_auth_cfg.idp_entity_id}, SP: {_auth_cfg.sp_entity_id}")
     else:
-        print("[AUTH] SAML disabled — all routes open")
+        print("[AUTH] SAML disabled -- all routes open")
 
     from app.db.neo4j import neo4j_client
     import os as _os
@@ -237,7 +239,7 @@ async def startup_event():
         )
         if _cd_correct == 0 and _backend == "age":
             print(
-                "[STARTUP] WARNING: correct_decisions=0 — historical Decision nodes "
+                "[STARTUP] WARNING: correct_decisions=0 -- historical Decision nodes "
                 "may lack outcome/correct fields. Run "
                 "support/setup/bootstrap_learning_loop.py --live to backfill."
             )
@@ -266,7 +268,7 @@ async def startup_event():
     from app.services.override_detector import load_from_neo4j as _load_od
     _od = await _load_od(neo4j_client)
     print(
-        f"[OverrideDetector] {'ACTIVATED' if _od.activated else 'inactive'} — "
+        f"[OverrideDetector] {'ACTIVATED' if _od.activated else 'inactive'} -- "
         f"{_od.example_count} correct-override examples loaded."
     )
 
@@ -441,7 +443,7 @@ async def startup_event():
     #   C5 → CrowdStrikeMockConnector
     from app.connectors.registry import registry as connector_registry
     print(
-        f"[CONNECTOR] Registry initialized — "
+        f"[CONNECTOR] Registry initialized -- "
         f"{connector_registry.count()} connector(s) registered"
     )
 
@@ -469,7 +471,7 @@ async def startup_event():
                 await _camp_repo.write_campaign(_c)
             print(f"[F6] Startup recorrelation: {len(_campaigns)} campaigns found.")
         else:
-            print("[F6] Campaign nodes exist — skipping startup recorrelation.")
+            print("[F6] Campaign nodes exist -- skipping startup recorrelation.")
     except Exception as _camp_exc:
         print(f"[F6] Startup recorrelation failed (non-blocking): {_camp_exc}")
 

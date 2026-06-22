@@ -1,5 +1,5 @@
 """
-Re-export stub — implementation moved to app.framework.decision_history.
+Re-export stub -- implementation moved to app.framework.decision_history.
 Preserved for backwards compatibility. Do not add logic here.
 When copilot-sdk is extracted, update callers to import from
 copilot_sdk.decision_history directly.

@@ -2,8 +2,8 @@
 Cross-repo contract tests.
 
 Verifies the interface contracts between:
-  GAE → SOC  (ProfileScorer, ScoringResult, centroid setter)
-  ci-platform → SOC  (EvidenceLedger, OutcomeEntry, SAMLService)
+  GAE -> SOC  (ProfileScorer, ScoringResult, centroid setter)
+  ci-platform -> SOC  (EvidenceLedger, OutcomeEntry, SAMLService)
   SOC graph schema  (audit fields, verified_by)
 
 9 tests. No live DB required.
@@ -96,7 +96,7 @@ def test_graph_schema_has_audit_chain_fields():
 
 
 def test_graph_schema_has_verified_by_field():
-    """GRAPH_CONTRACT Decision node lists verified_by for per-analyst η."""
+    """GRAPH_CONTRACT Decision node lists verified_by for per-analyst eta."""
     from app.graph_schema import GRAPH_CONTRACT
     optional = GRAPH_CONTRACT["nodes"]["Decision"]["optional_fields"]
     assert "verified_by" in optional

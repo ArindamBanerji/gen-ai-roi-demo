@@ -1,5 +1,5 @@
 """
-Demo State Manager — Centralized reset coordination for all in-memory state.
+Demo State Manager -- Centralized reset coordination for all in-memory state.
 
 Each service that owns in-memory state registers a named reset handler here.
 reset_all() clears every handler in one call, so reset endpoints stay thin.
@@ -24,19 +24,19 @@ class DemoStateManager:
         self._handlers: Dict[str, Callable] = {}
 
     def register(self, name: str, reset_handler: Callable) -> None:
-        """Store a named reset handler (idempotent — overwrites if re-registered)."""
+        """Store a named reset handler (idempotent -- overwrites if re-registered)."""
         self._handlers[name] = reset_handler
         print(f"[STATE] Registered reset handler: {name}")
 
     async def reset_all(self) -> None:
         """Call every registered reset handler and print a summary."""
         names = list(self._handlers.keys())
-        print(f"[STATE] reset_all() — resetting {len(names)} handler(s): {names}")
+        print(f"[STATE] reset_all() -- resetting {len(names)} handler(s): {names}")
         for name, handler in self._handlers.items():
             result = handler()
             if inspect.isawaitable(result):
                 await result
-        print("[STATE] reset_all() — done")
+        print("[STATE] reset_all() -- done")
 
     async def reset_except(self, skip: list) -> None:
         """Call every registered handler except those named in skip.
@@ -46,12 +46,12 @@ class DemoStateManager:
         """
         skip_set = set(skip)
         names = [n for n in self._handlers if n not in skip_set]
-        print(f"[STATE] reset_except({skip}) — resetting {len(names)} handler(s): {names}")
+        print(f"[STATE] reset_except({skip}) -- resetting {len(names)} handler(s): {names}")
         for name in names:
             result = self._handlers[name]()
             if inspect.isawaitable(result):
                 await result
-        print("[STATE] reset_except() — done")
+        print("[STATE] reset_except() -- done")
 
     def get_registered(self) -> List[str]:
         """Return the list of registered handler names."""

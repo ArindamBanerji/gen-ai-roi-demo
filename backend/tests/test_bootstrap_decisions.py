@@ -2,9 +2,9 @@
 Tests for CORR-3: Bootstrap Decision node writing + native factor_vector storage.
 
 Coverage:
-  test_bootstrap_creates_decision_records   — build_bootstrap_decisions returns records
-  test_factor_vector_native_storage         — factor_vector is a Python list (not str)
-  test_bootstrap_decision_has_required_fields — all required fields present
+  test_bootstrap_creates_decision_records   -- build_bootstrap_decisions returns records
+  test_factor_vector_native_storage         -- factor_vector is a Python list (not str)
+  test_bootstrap_decision_has_required_fields -- all required fields present
 """
 
 import pytest
@@ -34,7 +34,7 @@ def _small_decisions_per_category():
 def test_bootstrap_creates_decision_records():
     """
     build_bootstrap_decisions returns one record per decision in the pool.
-    With 5 decisions per category × 6 categories = 30 total.
+    With 5 decisions per category x 6 categories = 30 total.
     Each record has source='bootstrap'.
     """
     from app.domains.soc.config import SOC_CATEGORIES
@@ -44,7 +44,7 @@ def test_bootstrap_creates_decision_records():
     d_per_c = _small_decisions_per_category()
     records = build_bootstrap_decisions(scorer, list(SOC_CATEGORIES), d_per_c)
 
-    expected_total = sum(d_per_c.values())  # 5 × 6 = 30
+    expected_total = sum(d_per_c.values())  # 5 x 6 = 30
     assert len(records) == expected_total, (
         f"Expected {expected_total} records, got {len(records)}"
     )
@@ -131,7 +131,7 @@ def test_bootstrap_decision_has_required_fields():
     """
     Each bootstrap Decision record must contain: id, action, confidence,
     factor_vector, category, source.
-    (timestamp is set by Neo4j datetime() — not in the Python dict.)
+    (timestamp is set by Neo4j datetime() -- not in the Python dict.)
     """
     from app.domains.soc.config import SOC_CATEGORIES
     from app.services.bootstrap_neo4j import build_bootstrap_decisions
@@ -192,7 +192,7 @@ def test_bootstrap_all_categories_present():
             f"Category {cat!r} missing from BOOTSTRAP_CATEGORY_WEIGHTS"
         )
         assert w > 0, (
-            f"Category {cat!r} has weight {w} — must be > 0"
+            f"Category {cat!r} has weight {w} -- must be > 0"
         )
 
 
@@ -216,7 +216,7 @@ def test_bootstrap_weighted_distribution():
     more decisions for credential_access than for cloud_infrastructure.
 
     credential_access weight=0.30 vs cloud_infrastructure weight=0.10,
-    so credential_access must receive ~3× as many decisions.
+    so credential_access must receive ~3x as many decisions.
     """
     from app.domains.soc.config import (
         SOC_CATEGORIES, BOOTSTRAP_CATEGORY_WEIGHTS, SOCDomainConfig,
@@ -248,5 +248,5 @@ def test_bootstrap_weighted_distribution():
     )
     # credential_access weight (0.30) should be ~3× cloud_infrastructure (0.10)
     assert cred >= cloud * 2, (
-        f"credential_access ({cred}) should be at least 2× cloud_infrastructure ({cloud})"
+        f"credential_access ({cred}) should be at least 2x cloud_infrastructure ({cloud})"
     )

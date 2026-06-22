@@ -1,5 +1,5 @@
 """
-D-05 State Locking — unit tests for acquire_scorer / acquire_scorer_for_reset.
+D-05 State Locking -- unit tests for acquire_scorer / acquire_scorer_for_reset.
 
 All tests use module-level patching of gae_state singletons so no real
 ProfileScorer or asyncio.Lock is required.

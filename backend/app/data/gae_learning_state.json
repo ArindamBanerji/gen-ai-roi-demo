@@ -43,7 +43,7 @@
     "time_anomaly",
     "device_trust"
   ],
-  "decision_count": 4864,
+  "decision_count": 5185,
   "history": [
     {
       "decision_number": 4949,
@@ -550576,6 +550576,5 @@
     "drift": 0.009674701051653547,
     "n_decisions": 1200,
     "converged": true
-  },
-  "provenance": "sample"
+  }
 }

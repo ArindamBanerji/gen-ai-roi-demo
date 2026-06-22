@@ -1,14 +1,14 @@
 """SOC domain configuration. All SOC-specific constants live here.
 
-Constants are extracted from the existing service files — nothing is invented:
-  factors        ← services/triage.py  _ALERT_FACTORS factor name list
-  actions        ← services/agent.py   ACTION_* constants
+Constants are extracted from the existing service files -- nothing is invented:
+  factors        <- services/triage.py  _ALERT_FACTORS factor name list
+  actions        <- services/agent.py   ACTION_* constants
                    services/situation.py evaluate_options() economics
-  situation_types← services/situation.py SituationType enum
-  policies       ← services/policy.py  POLICY_REGISTRY
-  asymmetry_ratio← services/feedback.py get_reward_summary() asymmetric_ratio
-  prompt_variants← services/evolver.py  PROMPT_STATS keys
-  metrics_config ← routers/metrics.py   BusinessImpact values
+  situation_types<- services/situation.py SituationType enum
+  policies       <- services/policy.py  POLICY_REGISTRY
+  asymmetry_ratio<- services/feedback.py get_reward_summary() asymmetric_ratio
+  prompt_variants<- services/evolver.py  PROMPT_STATS keys
+  metrics_config <- routers/metrics.py   BusinessImpact values
 """
 
 import os
@@ -246,7 +246,7 @@ SOC_AUTO_APPROVE_THRESHOLDS = {
     "investigate":       0.90,
     "suppress":          0.90,
     "monitor":           None,   # excluded from auto-approve
-    "refer_to_analyst":  None,   # excluded — explicit human dispatch (v5.5)
+    "refer_to_analyst":  None,   # excluded -- explicit human dispatch (v5.5)
 }
 
 # Category confidence floors (Finding LL: credential_access warrants caution)
@@ -441,35 +441,35 @@ class SOCDomainConfig(DomainConfig):
             DomainAction(
                 id="false_positive_close",
                 label="Close as False Positive",
-                time_saved_min=0.05,   # "3 seconds" — TRAVEL_LOGIN_ANOMALY option
+                time_saved_min=0.05,   # "3 seconds" -- TRAVEL_LOGIN_ANOMALY option
                 cost_dollars=0.0,
                 risk_level="low",
             ),
             DomainAction(
                 id="auto_remediate",
                 label="Auto-Remediate",
-                time_saved_min=0.13,   # "8 seconds" — KNOWN_PHISHING_CAMPAIGN option
+                time_saved_min=0.13,   # "8 seconds" -- KNOWN_PHISHING_CAMPAIGN option
                 cost_dollars=0.0,
                 risk_level="low",
             ),
             DomainAction(
                 id="enrich_and_wait",
                 label="Enrich and Wait",
-                time_saved_min=20.0,   # "20 minutes" — VIP_AFTER_HOURS option
+                time_saved_min=20.0,   # "20 minutes" -- VIP_AFTER_HOURS option
                 cost_dollars=62.0,
                 risk_level="low",
             ),
             DomainAction(
                 id="escalate_tier2",
                 label="Escalate to Tier 2",
-                time_saved_min=45.0,   # "45 minutes" — TRAVEL_LOGIN_ANOMALY option
+                time_saved_min=45.0,   # "45 minutes" -- TRAVEL_LOGIN_ANOMALY option
                 cost_dollars=127.0,
                 risk_level="none",
             ),
             DomainAction(
                 id="escalate_incident",
                 label="Escalate to Incident",
-                time_saved_min=120.0,  # "2 hours" — MALWARE_ON_CRITICAL_ASSET option
+                time_saved_min=120.0,  # "2 hours" -- MALWARE_ON_CRITICAL_ASSET option
                 cost_dollars=310.0,
                 risk_level="none",
             ),
@@ -489,7 +489,7 @@ class SOCDomainConfig(DomainConfig):
                 id="TRAVEL_LOGIN_ANOMALY",
                 label="Travel Login Anomaly",
                 description=(
-                    "Anomalous login where user travel record and VPN location align — "
+                    "Anomalous login where user travel record and VPN location align -- "
                     "likely a false positive"
                 ),
                 color="#3B82F6",  # blue
@@ -506,7 +506,7 @@ class SOCDomainConfig(DomainConfig):
                 id="MALWARE_ON_CRITICAL_ASSET",
                 label="Malware on Critical Asset",
                 description=(
-                    "Malware detected on a critical or production system — "
+                    "Malware detected on a critical or production system -- "
                     "immediate incident response required"
                 ),
                 color="#EF4444",  # red
@@ -515,7 +515,7 @@ class SOCDomainConfig(DomainConfig):
                 id="VIP_AFTER_HOURS",
                 label="VIP After Hours",
                 description=(
-                    "Executive-level user activity outside normal business hours — "
+                    "Executive-level user activity outside normal business hours -- "
                     "requires careful verification before escalation"
                 ),
                 color="#EAB308",  # yellow
@@ -524,7 +524,7 @@ class SOCDomainConfig(DomainConfig):
                 id="DATA_EXFIL_ATTEMPT",
                 label="Data Exfiltration Attempt",
                 description=(
-                    "Unusual data transfer to an external destination above volume threshold — "
+                    "Unusual data transfer to an external destination above volume threshold -- "
                     "forensics required"
                 ),
                 color="#DC2626",  # dark red
@@ -533,7 +533,7 @@ class SOCDomainConfig(DomainConfig):
                 id="UNKNOWN",
                 label="Unknown",
                 description=(
-                    "Insufficient context for automated classification — "
+                    "Insufficient context for automated classification -- "
                     "manual Tier 2 review recommended"
                 ),
                 color="#6B7280",  # gray
@@ -631,13 +631,13 @@ class SOCDomainConfig(DomainConfig):
                 id="PHISHING_RESPONSE_v1",
                 category="phishing",
                 version=1,
-                description="Base phishing response prompt — active (82% success rate)",
+                description="Base phishing response prompt -- active (82% success rate)",
             ),
             PromptVariant(
                 id="PHISHING_RESPONSE_v2",
                 category="phishing",
                 version=2,
-                description="Experimental phishing response prompt — monitoring (80% success rate)",
+                description="Experimental phishing response prompt -- monitoring (80% success rate)",
             ),
         ]
 
@@ -649,9 +649,9 @@ class SOCDomainConfig(DomainConfig):
     @property
     def metrics_config(self) -> Dict:
         return {
-            "hrs_saved_monthly":       847,    # ~200 auto-closed alerts × 45 min manual review avoided
-            "cost_avoided_quarterly":  127000, # analyst_hours × $50/hr × 3 months
-            "mttr_reduction_pct":      75,     # MTTR improved from 12.4 min → 3.1 min
+            "hrs_saved_monthly":       847,    # ~200 auto-closed alerts x 45 min manual review avoided
+            "cost_avoided_quarterly":  127000, # analyst_hours x $50/hr x 3 months
+            "mttr_reduction_pct":      75,     # MTTR improved from 12.4 min -> 3.1 min
             "backlog_eliminated":      2400,   # alerts no longer waiting for human review
         }
 
@@ -664,7 +664,7 @@ class SOCDomainConfig(DomainConfig):
         """
         Return profile centroids for ProfileScorer.
         Shape: (n_categories, n_actions, n_factors).
-        τ=0.1 validated (V3B ECE=0.036).
+        tau=0.1 validated (V3B ECE=0.036).
         """
         return SOC_PROFILE_CENTROIDS.copy()
 
@@ -704,8 +704,13 @@ class SOCDomainConfig(DomainConfig):
 
     def build_profile_scorer(self) -> ProfileScorer:
         """
+        DEPRECATED: Use SOCCompoundingScorerAdapter for live SOC wiring.
+        Retained for test reference and parity verification. Will be
+        removed after the P77 migration callers use CompoundingScorer
+        APIs directly.
+
         Build a ProfileScorer from this domain config.
-        Uses L2 kernel (EXP-E1 validated), τ=0.1 (V3B validated, default).
+        Uses L2 kernel (EXP-E1 validated), tau=0.1 (V3B validated, default).
 
         Phase 0b: scorer uses SCORER_ACTIONS (A=4) and SCORER_PROFILE_CENTROIDS
         shaped as (N_CATEGORIES, N_ACTIONS, N_FACTORS). refer_to_analyst is handled by the confidence gate in
@@ -729,7 +734,7 @@ class SOCDomainConfig(DomainConfig):
     @staticmethod
     def get_actions() -> List[str]:
         """
-        Five SOC action names — full routing list (v5.5).
+        Five SOC action names -- full routing list (v5.5).
         For scoring use SCORER_ACTIONS (A=4); for NL/routing use this full list (A=5).
         """
         return list(SOC_ACTIONS)
@@ -762,9 +767,9 @@ class SOCDomainConfig(DomainConfig):
 
     @staticmethod
     def get_initial_W():
-        """Initial weight matrix (N_ACTIONS scorer actions × N_FACTORS factors). Security expert priors (v5.5).
+        """Initial weight matrix (N_ACTIONS scorer actions x N_FACTORS factors). Security expert priors (v5.5).
         Row order matches SCORER_ACTIONS: [escalate, investigate, suppress, monitor].
-        refer_to_analyst is a routing decision handled by the confidence gate — no W row.
+        refer_to_analyst is a routing decision handled by the confidence gate -- no W row.
         """
         import numpy as np
         return np.array([
@@ -819,14 +824,14 @@ MAX_ETA_DELTA: float = 0.005
 
 def compute_theta_min(alpha: float, V: float) -> float:
     """
-    Minimum analyst quality (q̄) required for conservation law to hold.
+    Minimum analyst quality (q) required for conservation law to hold.
     Formula: 23.53 / (alpha * V)
     Returns >1.0 for impossible deployments (V*alpha < 20/day).
-    Validated: V=200, alpha=0.25 → 0.4706 ≈ 0.467 ✓
+    Validated: V=200, alpha=0.25 -> 0.4706 ~= 0.467 [OK]
     Here alpha is analyst override rate, not learning rate or penalty ratio.
 
     Note: the GAE library already provides gae.calibration.derive_theta_min()
-    (η × N_half² / T_max) for the learning-rate form of the same threshold.
+    (eta x N_half^2 / T_max) for the learning-rate form of the same threshold.
     This function is the per-deployment throughput form used in P28 analysis.
     """
     if alpha <= 0 or V <= 0:
@@ -842,9 +847,9 @@ def compute_phase3_minimum(V: float, alpha: float) -> int:
     """
     Minimum verified decisions before self-calibrating gates activate.
     Formula: max(1000, 20 * V * alpha)
-    Validated: V=200, alpha=0.25 → max(1000, 1000) = 1000 ✓
-    At V=50, alpha=0.25 → max(1000, 250) = 1000 (calendar constraint)
-    At V=500, alpha=0.25 → max(1000, 2500) = 2500 (volume-driven)
+    Validated: V=200, alpha=0.25 -> max(1000, 1000) = 1000 [OK]
+    At V=50, alpha=0.25 -> max(1000, 250) = 1000 (calendar constraint)
+    At V=500, alpha=0.25 -> max(1000, 2500) = 2500 (volume-driven)
     """
     decisions_per_day = V * alpha
     calendar_minimum = int(20 * decisions_per_day)
@@ -883,7 +888,7 @@ class GateConfig:
 
     @property
     def eta_cap(self) -> float:
-        """η change-rate cap. Conservative=2.0, Calibrated=deployment-specific"""
+        """eta change-rate cap. Conservative=2.0, Calibrated=deployment-specific"""
         if not self.calibrated:
             return 2.0
         if self.vol_std <= 0:
@@ -893,10 +898,10 @@ class GateConfig:
     @property
     def eta_weights(self) -> Dict[str, float]:
         """
-        Per-analyst η weights.
+        Per-analyst eta weights.
         Conservative: uniform (1.0 for all analysts).
         Calibrated: precision-weighted, only when each analyst
-        has ≥10 decisions.
+        has >=10 decisions.
         """
         if not self.calibrated:
             return {a: 1.0 for a in self.per_analyst_precision}

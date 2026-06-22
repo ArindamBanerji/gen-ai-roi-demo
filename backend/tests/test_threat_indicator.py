@@ -2,12 +2,12 @@
 Tests for Phase 7: ThreatIndicatorService and alert-level threat intel endpoints.
 
 Coverage:
-  test_upsert_creates_indicator           — upsert returns a non-empty ID
-  test_upsert_idempotent                  — two upserts with same ioc_value return same ID (MERGE)
-  test_get_indicators_for_alert           — indicators linked to an alert are returned
-  test_get_all_indicators                 — get_all returns total, by_type, by_severity
-  test_threat_intel_alert_endpoint        — GET /api/soc/threat-intel/ALERT-7824 returns indicators list
-  test_enrichment_summary_includes_indicators — GET /api/graph/enrichment/summary has threat_indicators key
+  test_upsert_creates_indicator           -- upsert returns a non-empty ID
+  test_upsert_idempotent                  -- two upserts with same ioc_value return same ID (MERGE)
+  test_get_indicators_for_alert           -- indicators linked to an alert are returned
+  test_get_all_indicators                 -- get_all returns total, by_type, by_severity
+  test_threat_intel_alert_endpoint        -- GET /api/soc/threat-intel/ALERT-7824 returns indicators list
+  test_enrichment_summary_includes_indicators -- GET /api/graph/enrichment/summary has threat_indicators key
 """
 
 import asyncio

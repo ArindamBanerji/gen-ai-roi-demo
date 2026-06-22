@@ -1,5 +1,5 @@
 """
-Block 1.1 — Industry profile tests.
+Block 1.1 -- Industry profile tests.
 No live Neo4j required.
 """
 import os
@@ -85,7 +85,7 @@ def test_validate_profile_catches_errors():
         "regulatory_multiplier": 0.5,  # below minimum 1.0
     }
     errors = validate_profile(bad)
-    assert len(errors) >= 3, f"Expected ≥3 errors for bad profile, got: {errors}"
+    assert len(errors) >= 3, f"Expected >=3 errors for bad profile, got: {errors}"
 
     # A valid profile must produce no errors
     good = {

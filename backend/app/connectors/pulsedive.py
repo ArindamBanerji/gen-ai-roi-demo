@@ -1,5 +1,5 @@
 """
-PulsediveConnector — UCL connector for Pulsedive threat intelligence.
+PulsediveConnector -- UCL connector for Pulsedive threat intelligence.
 
 Wraps the logic that was previously in services/threat_intel.py.
 threat_intel.py is now a thin backward-compat wrapper that delegates here.
@@ -11,7 +11,7 @@ Behaviour:
   b. If no key, or all calls fail: use the full hardcoded fallback set.
 
 After enrichment:
-  c. MERGE :ThreatIntel nodes into Neo4j (idempotent — updates timestamp if
+  c. MERGE :ThreatIntel nodes into Neo4j (idempotent -- updates timestamp if
      the node already exists).
   d. MERGE :ASSOCIATED_WITH relationships to relevant :Alert nodes.
 """
@@ -57,10 +57,10 @@ PULSEDIVE_BASE_URL = "https://pulsedive.com/api/info.php"
 # ============================================================================
 
 DEMO_IOCS: List[Dict[str, str]] = [
-    {"value": "103.15.42.17",                 "context": "Singapore IP range — ties to ALERT-7823"},
+    {"value": "103.15.42.17",                 "context": "Singapore IP range -- ties to ALERT-7823"},
     {"value": "185.220.101.34",               "context": "Known Tor exit node"},
     {"value": "cobaltstrike.github.io",       "context": "C2 framework domain"},
-    {"value": "45.33.32.156",                 "context": "Scanning source — reconnaissance"},
+    {"value": "45.33.32.156",                 "context": "Scanning source -- reconnaissance"},
     {"value": "malware-traffic-analysis.net", "context": "Malware distribution tracker"},
 ]
 
@@ -82,7 +82,7 @@ HARDCODED_FALLBACK: Dict[str, Dict[str, Any]] = {
         ],
         "first_seen":   "2024-08-15",
         "last_updated": "2025-11-20",
-        "context":      "Singapore IP range — ties to ALERT-7823",
+        "context":      "Singapore IP range -- ties to ALERT-7823",
     },
     "185.220.101.34": {
         "value":        "185.220.101.34",
@@ -124,7 +124,7 @@ HARDCODED_FALLBACK: Dict[str, Dict[str, Any]] = {
         ],
         "first_seen":   "2024-06-22",
         "last_updated": "2025-10-15",
-        "context":      "Scanning source — reconnaissance",
+        "context":      "Scanning source -- reconnaissance",
     },
     "malware-traffic-analysis.net": {
         "value":        "malware-traffic-analysis.net",
@@ -247,7 +247,7 @@ class PulsediveConnector(UCLConnector):
 
     name        = "pulsedive"
     source_type = "threat_intel"
-    description = "Pulsedive community threat intelligence — live API with hardcoded fallback"
+    description = "Pulsedive community threat intelligence -- live API with hardcoded fallback"
 
     def __init__(self) -> None:
         # Populated by refresh() so the backward-compat wrapper can read them
@@ -278,7 +278,7 @@ class PulsediveConnector(UCLConnector):
         # Step 1 — Live API or hardcoded fallback
         # ---------------------------------------------------------------
         if api_key:
-            print("[PULSEDIVE] API key present — attempting live enrichment")
+            print("[PULSEDIVE] API key present -- attempting live enrichment")
             async with httpx.AsyncClient() as client:
                 for ioc in DEMO_IOCS:
                     live_attempted += 1
@@ -301,7 +301,7 @@ class PulsediveConnector(UCLConnector):
 
         # Full fallback when no key or every call failed
         if not enriched:
-            print("[PULSEDIVE] No live data — using full hardcoded fallback set")
+            print("[PULSEDIVE] No live data -- using full hardcoded fallback set")
             enriched = [dict(v) for v in HARDCODED_FALLBACK.values()]
             source = "hardcoded_fallback"
 
@@ -387,9 +387,9 @@ class PulsediveConnector(UCLConnector):
                             f" CREATE (ti)-[:ASSOCIATED_WITH {{linked_at: {_S(_now_epoch)}}}]->(a)"
                         )
                     relationships_created += 1
-                    print(f"[PULSEDIVE] Linked {ioc_value} → {alert_id}")
+                    print(f"[PULSEDIVE] Linked {ioc_value} -> {alert_id}")
                 except Exception as exc:
-                    print(f"[PULSEDIVE] Failed to link {ioc_value} → {alert_id}: {exc}")
+                    print(f"[PULSEDIVE] Failed to link {ioc_value} -> {alert_id}: {exc}")
 
         # ---------------------------------------------------------------
         # Step 4 — Build ConnectorResult
@@ -436,7 +436,7 @@ class PulsediveConnector(UCLConnector):
         return HealthStatus(
             healthy=False,
             source=self.name,
-            message="PULSEDIVE_API_KEY not set — using hardcoded fallback",
+            message="PULSEDIVE_API_KEY not set -- using hardcoded fallback",
         )
 
     # ------------------------------------------------------------------

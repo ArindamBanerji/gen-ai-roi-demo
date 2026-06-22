@@ -1,5 +1,5 @@
 """
-tests/test_campaign_seed_materialization.py — true Campaign Phase 2 tests.
+tests/test_campaign_seed_materialization.py -- true Campaign Phase 2 tests.
 
 Phase 2 scope is seed materialization / AGE safety / race safety only.
 It must not introduce CONTINUES, BELONGS_TO, async enrichment, or scorer input.

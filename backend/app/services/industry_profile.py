@@ -1,5 +1,5 @@
 """
-industry_profile.py — Block 1.1: Industry profile loader and validator.
+industry_profile.py -- Block 1.1: Industry profile loader and validator.
 
 Provides per-industry deployment parameters (V, alpha, analyst_hourly_cost,
 regulatory_multiplier) and computes derived metrics (theta_min, phase3_minimum,
@@ -39,10 +39,10 @@ def load_industry_profile(industry_id: str) -> Dict:
     Return the full profile dict for *industry_id*, augmented with derived metrics.
 
     Derived fields added:
-      theta_min       — minimum analyst quality for conservation law (23.53 / alpha*V)
-      phase3_minimum  — minimum verified decisions for self-calibrating gates
-      roi_annual_usd  — estimated annual ROI using industry analyst cost
-      decisions_per_day — V * alpha
+      theta_min       -- minimum analyst quality for conservation law (23.53 / alpha*V)
+      phase3_minimum  -- minimum verified decisions for self-calibrating gates
+      roi_annual_usd  -- estimated annual ROI using industry analyst cost
+      decisions_per_day -- V * alpha
 
     Raises KeyError if industry_id is not found.
     """

@@ -1,5 +1,5 @@
 """
-test_decision_distance_log.py — BACKLOG-015 extension: EXP-G1 decision distance log.
+test_decision_distance_log.py -- BACKLOG-015 extension: EXP-G1 decision distance log.
 
 4 tests:
   1. GET /api/soc/distance-log returns 200
@@ -42,8 +42,8 @@ def test_centroid_distance_formula_correct():
     """
     Unit test: L2 norm formula matches expected value for uniform tensors.
 
-    mu      = all 0.7, shape (6, 4, 6) → 144 elements
-    mu_zero = all 0.5, shape (6, 4, 6) → diff = 0.2 each element
+    mu      = all 0.7, shape (6, 4, 6) -> 144 elements
+    mu_zero = all 0.5, shape (6, 4, 6) -> diff = 0.2 each element
     expected = sqrt(144 * 0.2^2) = 0.2 * sqrt(144) = 0.2 * 12 = 2.4
     """
     mu      = np.full((6, 4, 6), 0.7)

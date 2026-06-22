@@ -2,10 +2,10 @@
 Tests for CORR-2: LEARNING_ENABLED toggle and ProfileScorer.update() wiring.
 
 Coverage:
-  test_learning_disabled_scorer_unchanged     — LEARNING_ENABLED=False → centroids untouched
-  test_learning_enabled_scorer_updates        — LEARNING_ENABLED=True  → centroids change
-  test_learning_passes_gt_action_index        — gt_action_index is always passed
-  test_learning_toggle_does_not_affect_scoring — toggle has no effect on score() output
+  test_learning_disabled_scorer_unchanged     -- LEARNING_ENABLED=False -> centroids untouched
+  test_learning_enabled_scorer_updates        -- LEARNING_ENABLED=True  -> centroids change
+  test_learning_passes_gt_action_index        -- gt_action_index is always passed
+  test_learning_toggle_does_not_affect_scoring -- toggle has no effect on score() output
 """
 
 import numpy as np

@@ -1,5 +1,5 @@
 """
-test_per_analyst_eta.py — Block 9.1 D5 per-analyst η weighting validation.
+test_per_analyst_eta.py -- Block 9.1 D5 per-analyst eta weighting validation.
 
 3 tests:
   1. test_high_precision_analyst_has_higher_weight
@@ -21,7 +21,7 @@ _ENDPOINT = "/api/soc/analyst-weights"
 
 def test_high_precision_analyst_has_higher_weight():
     """
-    Analyst with q̄=0.90 must have higher η weight than q̄=0.60 once both
+    Analyst with q=0.90 must have higher eta weight than q=0.60 once both
     have sufficient decisions.  Gate: weight_high >= weight_low (D5 Spearman r=0.975).
 
     This is validated against the formula
@@ -96,7 +96,7 @@ def test_analyst_below_threshold_uses_default_weight():
             )
             assert "default" in info.get("status", "").lower(), (
                 f"Analyst {analyst_id} below threshold but status is "
-                f"{info.get('status')!r} — expected 'default' in status"
+                f"{info.get('status')!r} -- expected 'default' in status"
             )
 
 

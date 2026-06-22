@@ -1,5 +1,5 @@
 """
-convergence_calendar.py — Convergence Calendar service (L-08).
+convergence_calendar.py -- Convergence Calendar service (L-08).
 
 SOC-specific calendar builder. Pure math lives in app.framework.convergence_math.
 """

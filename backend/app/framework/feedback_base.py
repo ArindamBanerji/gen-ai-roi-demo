@@ -1,14 +1,14 @@
 """
 Feedback trust/reward mechanics for CopilotFramework.
-Domain-agnostic — no SOC references.
+Domain-agnostic -- no SOC references.
 Safe to copy to copilot-sdk.
 
 Provides:
-  TRUST_SCORES, TRUST_HISTORY, LOW_TRUST_FLAGS  — module-level state
-  update_trust(situation_type, outcome)          — asymmetric 20:1 delta
-  get_trust_status(situation_type)               — single-situation getter
-  get_all_trust_scores()                         — full state dump
-  get_reward_summary()                           — RL reward aggregate (uses FEEDBACK_GIVEN)
+  TRUST_SCORES, TRUST_HISTORY, LOW_TRUST_FLAGS  -- module-level state
+  update_trust(situation_type, outcome)          -- asymmetric 20:1 delta
+  get_trust_status(situation_type)               -- single-situation getter
+  get_all_trust_scores()                         -- full state dump
+  get_reward_summary()                           -- RL reward aggregate (uses FEEDBACK_GIVEN)
 
 The domain layer (services/feedback.py) owns SOC-specific seeding and resets.
 """
@@ -20,7 +20,7 @@ import importlib
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal
 
-from app.framework.feedback_store import FEEDBACK_GIVEN  # noqa: F401 — intra-framework
+from app.framework.feedback_store import FEEDBACK_GIVEN  # noqa: F401 -- intra-framework
 
 log = logging.getLogger(__name__)
 
@@ -30,9 +30,9 @@ log = logging.getLogger(__name__)
 
 # F6a: Asymmetric trust per situation type.
 # Starting trust: 0.5.  Correct: +0.03 (cap 1.0).  Incorrect: −0.60 (floor 0.0).
-TRUST_SCORES: Dict[str, float] = {}      # situation_type → current trust (0.0–1.0)
+TRUST_SCORES: Dict[str, float] = {}      # situation_type -> current trust (0.0-1.0)
 TRUST_HISTORY: List[Dict[str, Any]] = [] # one entry per trust update
-LOW_TRUST_FLAGS: Dict[str, bool] = {}    # situation_type → human_review_required
+LOW_TRUST_FLAGS: Dict[str, bool] = {}    # situation_type -> human_review_required
 
 
 # ---------------------------------------------------------------------------
@@ -47,8 +47,8 @@ def update_trust(
     Update trust score for a situation type after a decision outcome.
 
     Asymmetric deltas (20:1 ratio):
-        correct   → +0.03  (slow build-up of trust)
-        incorrect → −0.60  (fast destruction of trust)
+        correct   -> +0.03  (slow build-up of trust)
+        incorrect -> -0.60  (fast destruction of trust)
 
     Sets LOW_TRUST_FLAGS[situation_type] = True when trust drops below 0.3,
     which signals that human review should be required for this situation type.
@@ -58,7 +58,7 @@ def update_trust(
     The snapshot dict appended to TRUST_HISTORY.
     """
     if situation_type not in TRUST_SCORES:
-        TRUST_SCORES[situation_type] = 0.5     # first encounter — start at neutral
+        TRUST_SCORES[situation_type] = 0.5     # first encounter -- start at neutral
 
     old_trust = TRUST_SCORES[situation_type]
 
@@ -101,7 +101,7 @@ def get_trust_status(situation_type: str) -> Dict[str, Any]:
     -------
     {
       "situation_type":        str,
-      "trust_score":           float (0.0–1.0),
+      "trust_score":           float (0.0-1.0),
       "human_review_required": bool   (True when trust < 0.3)
     }
     """
@@ -150,8 +150,8 @@ def get_reward_summary() -> Dict[str, Any]:
     Aggregate current in-memory feedback state into an RL reward summary.
 
     Reward signal:
-        correct   → +0.3  (reinforces good decisions)
-        incorrect → -6.0  (asymmetric penalty, ratio 20:1)
+        correct   -> +0.3  (reinforces good decisions)
+        incorrect -> -6.0  (asymmetric penalty, ratio 20:1)
 
     Returns
     -------

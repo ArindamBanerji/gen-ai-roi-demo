@@ -1,6 +1,6 @@
 """
-Block 9.1 — D5 Per-analyst η weighting tests.
-All Neo4j calls use AsyncMock — no live Neo4j required.
+Block 9.1 -- D5 Per-analyst eta weighting tests.
+All Neo4j calls use AsyncMock -- no live Neo4j required.
 """
 import asyncio
 import os
@@ -41,7 +41,7 @@ def _mock_neo4j(rows):
 # ---------------------------------------------------------------------------
 
 def test_compute_precision_returns_dict():
-    """When ≥2 analysts each have ≥10 decisions, returns precision dict."""
+    """When >=2 analysts each have >=10 decisions, returns precision dict."""
     rows = [
         {"analyst": "alice", "precision": 0.82},
         {"analyst": "bob",   "precision": 0.71},
@@ -66,7 +66,7 @@ def test_compute_precision_returns_dict():
 def test_precision_excludes_analysts_below_10_decisions():
     """
     The Cypher WHERE total >= 10 is enforced in the query. If only one analyst
-    comes back (meaning only one has ≥10 decisions), returns {} because
+    comes back (meaning only one has >=10 decisions), returns {} because
     _MIN_ANALYSTS_REQUIRED = 2.
     """
     rows = [{"analyst": "alice", "precision": 0.80}]   # only 1 row returned
@@ -84,13 +84,13 @@ def test_precision_excludes_analysts_below_10_decisions():
 
 def test_eta_weights_computed_correctly():
     """
-    precision: alice=0.90, bob=0.60  →  mean=0.75
+    precision: alice=0.90, bob=0.60  ->  mean=0.75
     alice_weight = min(1.5, max(0.5, 0.90/0.75)) = min(1.5, 1.20) = 1.20
     bob_weight   = min(1.5, max(0.5, 0.60/0.75)) = min(1.5, 0.80) = 0.80
     """
     precision = {"alice": 0.90, "bob": 0.60}
     cfg = GateConfig(
-        n_decisions=2000,   # > n_min (1000) → calibrated=True
+        n_decisions=2000,   # > n_min (1000) -> calibrated=True
         V=200.0,
         alpha=0.25,
         per_analyst_precision=precision,
@@ -110,7 +110,7 @@ def test_uniform_weights_before_nmin():
     """Before N_min decisions, all analyst weights must be 1.0."""
     precision = {"alice": 0.90, "bob": 0.60, "carol": 0.75}
     cfg = GateConfig(
-        n_decisions=50,    # << n_min (1000) → calibrated=False
+        n_decisions=50,    # << n_min (1000) -> calibrated=False
         V=200.0,
         alpha=0.25,
         per_analyst_precision=precision,

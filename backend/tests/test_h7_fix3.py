@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 def test_no_random_generators_in_soc_router():
     """soc.py must not contain any random.random(), random.randint(), or
-    random.uniform() calls — every number must trace to Neo4j or carry
+    random.uniform() calls -- every number must trace to Neo4j or carry
     estimated=True."""
     content = pathlib.Path("app/routers/soc.py").read_text()
     assert "random.random()" not in content, (
@@ -170,7 +170,7 @@ def test_dec_prefix_not_doubled():
     """
     Raw decision ID already starting with 'DEC-' must NOT gain a second prefix.
     Guard: `_display_id = _rid if _rid.upper().startswith('DEC-') else f"DEC-{_rid[:8]}"`
-    Regression for fix(0A-3) — ensures the guard cannot be silently reverted.
+    Regression for fix(0A-3) -- ensures the guard cannot be silently reverted.
     """
     # Replicate the guard logic exactly as it appears in metrics.py:254 and :514
     def apply_display_id_guard(raw_id: str) -> str:

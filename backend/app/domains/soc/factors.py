@@ -1,5 +1,5 @@
 """
-SOC domain factor computers — GAE FactorComputer implementations.
+SOC domain factor computers -- GAE FactorComputer implementations.
 
 One FactorComputer per SOC factor, each implementing the
 gae.factors.FactorComputer Protocol. Four use Cypher relationship traversal
@@ -66,7 +66,7 @@ class PrivilegedIdentityContextFactor(FactorComputer):
     Computes privileged identity context risk from pre-resolved security context.
 
     Uses normalized user risk, title heuristics, and inverted trust signals
-    (missing MFA, fingerprint mismatch) when available. No usable context → 0.5.
+    (missing MFA, fingerprint mismatch) when available. No usable context -> 0.5.
     """
 
     name = "privileged_identity_context"
@@ -162,7 +162,7 @@ class TravelMatchFactor:
     Relationship traversal: (User)-[:HAS_TRAVEL]->(TravelRecord).
 
     Score: count / (count + 3).  Recency boost +0.15 if start_date < 7 days.
-    No matching nodes → 0.5.
+    No matching nodes -> 0.5.
     """
 
     name = "travel_match"
@@ -224,12 +224,12 @@ class TravelMatchFactor:
 
 class AssetCriticalityFactor:
     """
-    Traverses Alert→Asset→DataClass to compute criticality + sensitivity score.
+    Traverses Alert->Asset->DataClass to compute criticality + sensitivity score.
     Relationship traversal: [:DETECTED_ON] then [:STORES].
 
     Criticality map: LOW=0.2, MED/MEDIUM=0.5, HIGH=0.8, CRIT/CRITICAL=1.0.
     Sensitivity boost: +0.1 for PII/RESTRICTED/CONFIDENTIAL DataClass.
-    No matching nodes → 0.5.
+    No matching nodes -> 0.5.
     """
 
     name = "asset_criticality"
@@ -288,11 +288,11 @@ class AssetCriticalityFactor:
 
 class ThreatIntelEnrichmentFactor:
     """
-    Traverses ThreatIntel→Alert relationships for IOC severity.
+    Traverses ThreatIntel->Alert relationships for IOC severity.
     Relationship traversal: (ThreatIntel)-[:ASSOCIATED_WITH]->(Alert).
 
     Score: max severity normalized.  Corroboration boost +0.1 if multiple sources.
-    No matching nodes → 0.0.
+    No matching nodes -> 0.0.
     """
 
     name = "threat_intel_enrichment"
@@ -360,12 +360,12 @@ class ThreatIntelEnrichmentFactor:
     ) -> dict:
         """
         Pass 3: Check if alert is part of an internally correlated campaign.
-        HIGH severity campaign → value=0.05 (strong escalate signal)
-        MEDIUM severity campaign → value=0.20
-        LOW or not in campaign → value=0.50 (neutral)
+        HIGH severity campaign -> value=0.05 (strong escalate signal)
+        MEDIUM severity campaign -> value=0.20
+        LOW or not in campaign -> value=0.50 (neutral)
 
         Returns dict with value, provenance_nodes, contribution fields.
-        Never raises — exceptions return neutral 0.50.
+        Never raises -- exceptions return neutral 0.50.
         """
         try:
             results = await neo4j.run_query(f"""
@@ -382,7 +382,7 @@ class ThreatIntelEnrichmentFactor:
                 return {
                     "value": 0.50,
                     "provenance_nodes": [],
-                    "contribution": "No campaign membership — neutral threat intel signal.",
+                    "contribution": "No campaign membership -- neutral threat intel signal.",
                 }
 
             c = results[0]
@@ -404,7 +404,7 @@ class ThreatIntelEnrichmentFactor:
             return {
                 "value": 0.50,
                 "provenance_nodes": [],
-                "contribution": "Campaign lookup unavailable — neutral signal.",
+                "contribution": "Campaign lookup unavailable -- neutral signal.",
             }
 
 
@@ -412,7 +412,7 @@ class PatternHistoryFactor:
     """
     THIS IS THE COMPOUNDING PROOF FACTOR.
 
-    Traverses Decision→Alert to compute historical accuracy for the same
+    Traverses Decision->Alert to compute historical accuracy for the same
     alert_type.  Relationship traversal: (Decision)-[:DECIDED_ON]->(Alert).
 
     First alert ever:  returns 0.5 (no history).
@@ -420,7 +420,7 @@ class PatternHistoryFactor:
     >=5 resolved:      returns correct / total.
 
     As correct decisions accumulate in the graph, this factor's output rises
-    toward 1.0 — demonstrating compounding intelligence across triage cycles.
+    toward 1.0 -- demonstrating compounding intelligence across triage cycles.
     """
 
     name = "pattern_history"
@@ -566,7 +566,7 @@ class PatternHistoryFactorComputer:
     def _fallback_compute(self, alert: Any) -> float:
         """
         Existing pattern_history computation when no W2 edges present.
-        Returns 0.40 neutral baseline (current behavior — unchanged from v5.5.1).
+        Returns 0.40 neutral baseline (current behavior -- unchanged from v5.5.1).
         """
         return 0.40
 
@@ -575,7 +575,7 @@ class TimeAnomalyFactor:
     """
     Reads alert.business_hours_login property to score time-based anomaly risk.
 
-    NOTE: Property read — tech debt TD-014.
+    NOTE: Property read -- tech debt TD-014.
     Future version traverses (User)-[:ACTIVE_AT]->(TimeSlot).
 
     Score: 0.0 = business hours, 0.7 = after hours, 1.0 = weekend.
@@ -607,7 +607,7 @@ class TimeAnomalyFactor:
         if bhl is False:
             return 0.7
 
-        return 0.7  # property absent → conservative after-hours assumption
+        return 0.7  # property absent -> conservative after-hours assumption
 
 
 class DeviceTrustFactor:
@@ -615,7 +615,7 @@ class DeviceTrustFactor:
     Reads alert properties mfa_completed, device_fingerprint_match, vpn
     to compute a composite device trust score.
 
-    NOTE: Property read — tech debt TD-015.
+    NOTE: Property read -- tech debt TD-015.
     Future version traverses (Alert)-[:USES_DEVICE]->(Device).
 
     Each missing trusted flag adds 1/3 to the score.
@@ -669,19 +669,19 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "name":        "privileged_identity_context",
                 "value":       0.92,
                 "weight":      0.82,
-                "explanation": "Privileged admin identity used without strong session safeguards — elevated account context raises risk",
+                "explanation": "Privileged admin identity used without strong session safeguards -- elevated account context raises risk",
             },
             {
                 "name":        "asset_criticality",
                 "value":       0.30,
                 "weight":      0.45,
-                "explanation": "Development server (non-critical) — lower blast radius if wrong",
+                "explanation": "Development server (non-critical) -- lower blast radius if wrong",
             },
             {
                 "name":        "time_anomaly",
                 "value":       0.70,
                 "weight":      0.55,
-                "explanation": "Login at 3 AM home timezone — moderate anomaly given travel context",
+                "explanation": "Login at 3 AM home timezone -- moderate anomaly given travel context",
             },
             {
                 "name":        "device_trust",
@@ -707,7 +707,7 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "name":        "campaign_signature_match",
                 "value":       0.94,
                 "weight":      0.90,
-                "explanation": "Operation DarkHook campaign signature matched — known phishing kit",
+                "explanation": "Operation DarkHook campaign signature matched -- known phishing kit",
             },
             {
                 "name":        "sender_domain_risk",
@@ -719,13 +719,13 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "name":        "time_anomaly",
                 "value":       0.40,
                 "weight":      0.40,
-                "explanation": "Received during business hours — low time-based anomaly",
+                "explanation": "Received during business hours -- low time-based anomaly",
             },
             {
                 "name":        "asset_criticality",
                 "value":       0.40,
                 "weight":      0.45,
-                "explanation": "Laptop endpoint, moderate criticality — quarantine is low-blast-radius action",
+                "explanation": "Laptop endpoint, moderate criticality -- quarantine is low-blast-radius action",
             },
             {
                 "name":        "pattern_history",
@@ -742,9 +742,9 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "factors": [
             {"name": "failure_rate",      "value": 0.95, "weight": 0.85, "explanation": "Auth failure rate 47/min exceeds brute-force threshold (>10 failures/min)"},
             {"name": "asset_criticality", "value": 0.65, "weight": 0.55, "explanation": "Target account holds elevated permissions on production system"},
-            {"name": "time_anomaly",      "value": 0.88, "weight": 0.70, "explanation": "Attack began 02:34 — outside business hours, low analyst coverage"},
-            {"name": "source_reputation", "value": 0.90, "weight": 0.80, "explanation": "Source IP blacklisted in 3 threat feeds — known attack infrastructure"},
-            {"name": "pattern_history",   "value": 0.82, "weight": 0.72, "explanation": "Similar brute-force pattern seen in 34 prior incidents — high confidence block"},
+            {"name": "time_anomaly",      "value": 0.88, "weight": 0.70, "explanation": "Attack began 02:34 -- outside business hours, low analyst coverage"},
+            {"name": "source_reputation", "value": 0.90, "weight": 0.80, "explanation": "Source IP blacklisted in 3 threat feeds -- known attack infrastructure"},
+            {"name": "pattern_history",   "value": 0.82, "weight": 0.72, "explanation": "Similar brute-force pattern seen in 34 prior incidents -- high confidence block"},
         ],
     },
 
@@ -752,10 +752,10 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "recommended_action": "escalate_incident",
         "confidence": 0.91,
         "factors": [
-            {"name": "escalation_severity", "value": 0.90, "weight": 0.85, "explanation": "Root-level privilege obtained on production host — full system access"},
-            {"name": "asset_criticality",   "value": 0.90, "weight": 0.85, "explanation": "Critical production server — potential for wide business impact"},
-            {"name": "time_anomaly",        "value": 0.78, "weight": 0.60, "explanation": "Escalation occurred outside normal change windows — unplanned activity"},
-            {"name": "device_trust",        "value": 0.60, "weight": 0.50, "explanation": "Originating process not in approved whitelist — potentially malicious"},
+            {"name": "escalation_severity", "value": 0.90, "weight": 0.85, "explanation": "Root-level privilege obtained on production host -- full system access"},
+            {"name": "asset_criticality",   "value": 0.90, "weight": 0.85, "explanation": "Critical production server -- potential for wide business impact"},
+            {"name": "time_anomaly",        "value": 0.78, "weight": 0.60, "explanation": "Escalation occurred outside normal change windows -- unplanned activity"},
+            {"name": "device_trust",        "value": 0.60, "weight": 0.50, "explanation": "Originating process not in approved whitelist -- potentially malicious"},
             {"name": "pattern_history",     "value": 0.70, "weight": 0.65, "explanation": "Privilege escalation path matches known attacker TTPs in MITRE T1068"},
         ],
     },
@@ -764,10 +764,10 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "recommended_action": "auto_remediate",
         "confidence": 0.90,
         "factors": [
-            {"name": "account_volume",      "value": 0.88, "weight": 0.80, "explanation": "142 distinct accounts targeted — automated stuffing pattern confirmed"},
-            {"name": "credential_exposure", "value": 0.85, "weight": 0.78, "explanation": "Credentials match recent breach dataset — verified leaked pairs"},
-            {"name": "time_anomaly",        "value": 0.75, "weight": 0.60, "explanation": "High-velocity login attempts span 3-hour window — automated bot pattern"},
-            {"name": "source_reputation",   "value": 0.88, "weight": 0.80, "explanation": "Source IPs rotate across 18 countries — residential botnet pattern"},
+            {"name": "account_volume",      "value": 0.88, "weight": 0.80, "explanation": "142 distinct accounts targeted -- automated stuffing pattern confirmed"},
+            {"name": "credential_exposure", "value": 0.85, "weight": 0.78, "explanation": "Credentials match recent breach dataset -- verified leaked pairs"},
+            {"name": "time_anomaly",        "value": 0.75, "weight": 0.60, "explanation": "High-velocity login attempts span 3-hour window -- automated bot pattern"},
+            {"name": "source_reputation",   "value": 0.88, "weight": 0.80, "explanation": "Source IPs rotate across 18 countries -- residential botnet pattern"},
             {"name": "pattern_history",     "value": 0.75, "weight": 0.68, "explanation": "PAT-CREDSTUFF-001: 34 prior incidents, 78% success rate blocking at this stage"},
         ],
     },
@@ -778,8 +778,8 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "factors": [
             {"name": "c2_confidence",  "value": 0.96, "weight": 0.92, "explanation": "Destination IP confirmed C2 infrastructure across 4 threat intelligence feeds"},
             {"name": "asset_criticality", "value": 0.82, "weight": 0.75, "explanation": "Beaconing host has read access to sensitive data stores"},
-            {"name": "time_anomaly",   "value": 0.65, "weight": 0.55, "explanation": "Regular 60-second beacon interval — automated implant, not user-initiated"},
-            {"name": "traffic_volume", "value": 0.80, "weight": 0.72, "explanation": "Low-volume but persistent traffic — classic C2 check-in heartbeat pattern"},
+            {"name": "time_anomaly",   "value": 0.65, "weight": 0.55, "explanation": "Regular 60-second beacon interval -- automated implant, not user-initiated"},
+            {"name": "traffic_volume", "value": 0.80, "weight": 0.72, "explanation": "Low-volume but persistent traffic -- classic C2 check-in heartbeat pattern"},
             {"name": "pattern_history","value": 0.90, "weight": 0.82, "explanation": "C2 domain matches threat actor infrastructure from Q3 2025 campaign"},
         ],
     },
@@ -790,8 +790,8 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "factors": [
             {"name": "ioc_confidence",  "value": 0.94, "weight": 0.90, "explanation": "IOC confirmed across 3 threat intelligence feeds with high fidelity"},
             {"name": "asset_criticality","value": 0.70, "weight": 0.60, "explanation": "Affected host is a production workstation with domain access"},
-            {"name": "time_anomaly",    "value": 0.55, "weight": 0.45, "explanation": "Activity during business hours — potential user-initiated or phishing lure"},
-            {"name": "indicator_age",   "value": 0.85, "weight": 0.75, "explanation": "IOC first seen 14 days ago — active threat campaign, not stale data"},
+            {"name": "time_anomaly",    "value": 0.55, "weight": 0.45, "explanation": "Activity during business hours -- potential user-initiated or phishing lure"},
+            {"name": "indicator_age",   "value": 0.85, "weight": 0.75, "explanation": "IOC first seen 14 days ago -- active threat campaign, not stale data"},
             {"name": "pattern_history", "value": 0.88, "weight": 0.80, "explanation": "IOC associated with known threat actor group targeting financial sector"},
         ],
     },
@@ -800,11 +800,11 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "recommended_action": "escalate_incident",
         "confidence": 0.95,
         "factors": [
-            {"name": "transfer_volume",  "value": 0.93, "weight": 0.88, "explanation": "47 GB outbound to external cloud storage — 23x above host baseline"},
+            {"name": "transfer_volume",  "value": 0.93, "weight": 0.88, "explanation": "47 GB outbound to external cloud storage -- 23x above host baseline"},
             {"name": "asset_criticality","value": 0.85, "weight": 0.78, "explanation": "Source server contains customer records and intellectual property"},
-            {"name": "time_anomaly",     "value": 0.88, "weight": 0.80, "explanation": "Transfer initiated at 01:15 — off-hours, minimal monitoring coverage"},
-            {"name": "destination_risk", "value": 0.90, "weight": 0.85, "explanation": "Destination IP not in approved vendor list — unsanctioned cloud provider"},
-            {"name": "pattern_history",  "value": 0.60, "weight": 0.55, "explanation": "No prior external transfers from this host — novel behavior, low FP rate"},
+            {"name": "time_anomaly",     "value": 0.88, "weight": 0.80, "explanation": "Transfer initiated at 01:15 -- off-hours, minimal monitoring coverage"},
+            {"name": "destination_risk", "value": 0.90, "weight": 0.85, "explanation": "Destination IP not in approved vendor list -- unsanctioned cloud provider"},
+            {"name": "pattern_history",  "value": 0.60, "weight": 0.55, "explanation": "No prior external transfers from this host -- novel behavior, low FP rate"},
         ],
     },
 
@@ -812,11 +812,11 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "recommended_action": "enrich_and_wait",
         "confidence": 0.87,
         "factors": [
-            {"name": "traffic_anomaly",    "value": 0.75, "weight": 0.70, "explanation": "Network traffic 8x above baseline — significant deviation from normal"},
-            {"name": "asset_criticality",  "value": 0.65, "weight": 0.58, "explanation": "Mid-tier server — moderate blast radius if lateral movement succeeds"},
-            {"name": "time_anomaly",       "value": 0.80, "weight": 0.70, "explanation": "Anomaly began after business hours — low-noise window for attacker"},
-            {"name": "connection_pattern", "value": 0.72, "weight": 0.65, "explanation": "Internal hosts contacted in sequential sweep — lateral movement indicators"},
-            {"name": "pattern_history",    "value": 0.50, "weight": 0.50, "explanation": "Novel behavior pattern — limited historical precedent, enrichment needed"},
+            {"name": "traffic_anomaly",    "value": 0.75, "weight": 0.70, "explanation": "Network traffic 8x above baseline -- significant deviation from normal"},
+            {"name": "asset_criticality",  "value": 0.65, "weight": 0.58, "explanation": "Mid-tier server -- moderate blast radius if lateral movement succeeds"},
+            {"name": "time_anomaly",       "value": 0.80, "weight": 0.70, "explanation": "Anomaly began after business hours -- low-noise window for attacker"},
+            {"name": "connection_pattern", "value": 0.72, "weight": 0.65, "explanation": "Internal hosts contacted in sequential sweep -- lateral movement indicators"},
+            {"name": "pattern_history",    "value": 0.50, "weight": 0.50, "explanation": "Novel behavior pattern -- limited historical precedent, enrichment needed"},
         ],
     },
 
@@ -825,9 +825,9 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "confidence": 0.89,
         "factors": [
             {"name": "access_anomaly",  "value": 0.82, "weight": 0.78, "explanation": "Bulk data access 12x above user baseline in 2-hour window"},
-            {"name": "asset_criticality","value": 0.88, "weight": 0.82, "explanation": "Customer PII database accessed — regulatory and reputational exposure"},
-            {"name": "time_anomaly",    "value": 0.85, "weight": 0.75, "explanation": "Access at 11 PM, 2 weeks before voluntary departure — high-risk timing"},
-            {"name": "device_trust",    "value": 0.90, "weight": 0.80, "explanation": "Registered corporate device — access is deliberate, not accidental"},
+            {"name": "asset_criticality","value": 0.88, "weight": 0.82, "explanation": "Customer PII database accessed -- regulatory and reputational exposure"},
+            {"name": "time_anomaly",    "value": 0.85, "weight": 0.75, "explanation": "Access at 11 PM, 2 weeks before voluntary departure -- high-risk timing"},
+            {"name": "device_trust",    "value": 0.90, "weight": 0.80, "explanation": "Registered corporate device -- access is deliberate, not accidental"},
             {"name": "pattern_history", "value": 0.65, "weight": 0.60, "explanation": "Access pattern matches 7 prior insider incidents in case library"},
         ],
     },
@@ -837,10 +837,10 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "confidence": 0.88,
         "factors": [
             {"name": "exposure_severity","value": 0.90, "weight": 0.85, "explanation": "S3 bucket with public-read ACL containing sensitive configuration files"},
-            {"name": "asset_criticality","value": 0.75, "weight": 0.68, "explanation": "Cloud resource attached to production environment — active exposure"},
-            {"name": "time_anomaly",    "value": 0.30, "weight": 0.30, "explanation": "Misconfiguration present since last deployment 3 days ago — drift detected"},
+            {"name": "asset_criticality","value": 0.75, "weight": 0.68, "explanation": "Cloud resource attached to production environment -- active exposure"},
+            {"name": "time_anomaly",    "value": 0.30, "weight": 0.30, "explanation": "Misconfiguration present since last deployment 3 days ago -- drift detected"},
             {"name": "data_sensitivity","value": 0.80, "weight": 0.75, "explanation": "Exposed content includes API keys and database connection strings"},
-            {"name": "pattern_history", "value": 0.70, "weight": 0.62, "explanation": "Third cloud misconfiguration this quarter — systemic IaC policy gap"},
+            {"name": "pattern_history", "value": 0.70, "weight": 0.62, "explanation": "Third cloud misconfiguration this quarter -- systemic IaC policy gap"},
         ],
     },
 
@@ -852,8 +852,8 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "recommended_action": "escalate_tier2",
         "confidence":         0.60,
         "factors": [
-            {"name": "privileged_identity_context", "value": 0.50, "weight": 0.60, "explanation": "No privileged identity context available — defaulting to neutral score"},
-            {"name": "asset_criticality","value": 0.50, "weight": 0.45, "explanation": "Asset criticality undetermined — defaulting to conservative action"},
+            {"name": "privileged_identity_context", "value": 0.50, "weight": 0.60, "explanation": "No privileged identity context available -- defaulting to neutral score"},
+            {"name": "asset_criticality","value": 0.50, "weight": 0.45, "explanation": "Asset criticality undetermined -- defaulting to conservative action"},
             {"name": "pattern_history", "value": 0.30, "weight": 0.60, "explanation": "Limited pattern history for this alert type"},
             {"name": "time_anomaly",    "value": 0.50, "weight": 0.50, "explanation": "Activity detected outside normal business hours"},
             {"name": "device_trust",    "value": 0.50, "weight": 0.55, "explanation": "Device trust level undetermined"},
@@ -863,7 +863,7 @@ SOC_FACTOR_TEMPLATES: Dict[str, Dict[str, Any]] = {
 
 
 def _contribution(value: float, weight: float) -> str:
-    """Map value × weight to a contribution label."""
+    """Map value x weight to a contribution label."""
     score = value * weight
     if score > 0.5:
         return "high"
@@ -883,9 +883,9 @@ def compute_soc_factors(
     Build the full 6-factor decision breakdown for alert_id.
 
     Lookup order:
-      1. alert_id  — exact match (ALERT-7823, ALERT-7824)
-      2. alert_type — type-keyed template (brute_force, c2_beacon, …)
-      3. "_default" — conservative fallback
+      1. alert_id  -- exact match (ALERT-7823, ALERT-7824)
+      2. alert_type -- type-keyed template (brute_force, c2_beacon, ...)
+      3. "_default" -- conservative fallback
 
     Args:
         alert_id:   Alert identifier (e.g. "ALERT-7823").
@@ -917,7 +917,7 @@ def compute_soc_factors(
             "value":        0.0,
             "weight":       0.75,
             "contribution": "none",
-            "explanation":  "No threat intel data — click Refresh Threat Intel in Tab 3",
+            "explanation":  "No threat intel data -- click Refresh Threat Intel in Tab 3",
         }
 
     factors = static_factors[:2] + [ti_factor] + static_factors[2:]
@@ -927,7 +927,7 @@ def compute_soc_factors(
         "factors":            factors,
         "recommended_action": template["recommended_action"],
         "confidence":         template["confidence"],
-        "decision_method":    "ProfileScorer L2 centroid-proximity scoring (n_factors × n_actions × n_categories)",
+        "decision_method":    "ProfileScorer L2 centroid-proximity scoring (n_factors x n_actions x n_categories)",
         "weights_note":       (
             "Centroids update automatically through verified analyst decisions "
             "(Loop 2 + Loop 3)"
@@ -938,7 +938,7 @@ def compute_soc_factors(
         "kernel_note": (
             "Higher-noise factors are automatically down-weighted by the "
             "DiagonalKernel scoring engine (Innovation #4). "
-            "device_trust (σ=0.28) contributes 6% of its nominal weight — "
+            "device_trust (sigma=0.28) contributes 6% of its nominal weight -- "
             "the system trusts your highest-confidence signals most."
         ),
     }

@@ -1,6 +1,6 @@
 """
-Block 9.2 — D3 Spike detector tests.
-All Neo4j calls use AsyncMock — no live Neo4j required.
+Block 9.2 -- D3 Spike detector tests.
+All Neo4j calls use AsyncMock -- no live Neo4j required.
 """
 import asyncio
 import os
@@ -50,7 +50,7 @@ def test_baseline_computed_from_history():
     10 days of data: counts = [10, 20, 30, 10, 20, 30, 10, 20, 30, 10]
     mean = 19.0, std = 7.746...  (np.std)
     spike_sigma = 5.0 (conservative, n_decisions < 1000)
-    threshold = 19.0 + 5.0 * max(7.746, 1.0) ≈ 57.73
+    threshold = 19.0 + 5.0 * max(7.746, 1.0) ~= 57.73
     """
     counts = [10, 20, 30, 10, 20, 30, 10, 20, 30, 10]
     mock = _mock_neo4j(_day_rows(*counts))
@@ -79,8 +79,8 @@ def test_baseline_computed_from_history():
 
 def test_spike_detected_when_above_threshold():
     """
-    Baseline: mean=20, std=2, spike_sigma=5 → threshold = 20 + 5*max(2,1) = 30.
-    today_count=100 > 30 → spike_detected=True.
+    Baseline: mean=20, std=2, spike_sigma=5 -> threshold = 20 + 5*max(2,1) = 30.
+    today_count=100 > 30 -> spike_detected=True.
     """
     mock = _mock_neo4j(_day_rows(*([20] * 10)))   # flat baseline mean=20, std=0
 
@@ -101,8 +101,8 @@ def test_spike_detected_when_above_threshold():
 
 def test_no_spike_when_normal_volume():
     """
-    Baseline: mean=20, std=0 (floored to 1), sigma=5 → threshold=25.
-    today_count=22 < 25 → spike_detected=False.
+    Baseline: mean=20, std=0 (floored to 1), sigma=5 -> threshold=25.
+    today_count=22 < 25 -> spike_detected=False.
     """
     mock = _mock_neo4j(_day_rows(*([20] * 10)))
 

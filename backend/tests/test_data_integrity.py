@@ -1,4 +1,4 @@
-"""Standing data integrity checks — run after any bulk graph operation."""
+"""Standing data integrity checks -- run after any bulk graph operation."""
 import pytest
 import asyncio
 import os
@@ -45,7 +45,7 @@ async def test_correct_decisions_nonzero(graph_client):
     )
     correct = int(r[0]["n"])
     assert correct > 1000, (
-        f"correct_decisions={correct} — expected >1000. "
+        f"correct_decisions={correct} -- expected >1000. "
         f"Data may have been wiped by a bulk operation."
     )
 
