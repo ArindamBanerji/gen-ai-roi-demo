@@ -7,10 +7,11 @@ GET  /api/simulation/result/{sim_id}       Full SimulationResult (when complete)
 GET  /api/simulation/experiment-log/{sim_id}  Raw experiment log JSON array
 """
 
+import asyncio
 import uuid
 from typing import Dict, Any
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.services.simulation import SimulationOrchestrator, _FALLBACK_POOL
@@ -24,6 +25,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 _simulations: Dict[str, Dict[str, Any]] = {}
+_simulation_tasks: Dict[str, asyncio.Task] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -78,6 +80,49 @@ async def _load_alert_pool():
 # Background simulation task
 # ---------------------------------------------------------------------------
 
+def _update_progress(sim_id: str, step: int, record: dict) -> None:
+    """Update simulation progress from the worker thread."""
+    sim = _simulations.get(sim_id)
+    if sim is None:
+        return
+    sim.update({
+        "step":                   step,
+        "status":                 "running",
+        "current_accuracy":       record["cumulative_accuracy"],
+        "category_accuracy":      record["category_accuracy"],
+        "latest_weight_snapshot": record["W_snapshot"],
+    })
+
+
+def _run_simulation_sync(
+    sim_id: str,
+    n_decisions: int,
+    speed_ms: int,
+    alert_pool: list[dict],
+    orchestrator: SimulationOrchestrator,
+):
+    """Run the async orchestrator on a private event loop in a worker thread."""
+    thread_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(thread_loop)
+
+    async def on_progress(step: int, total: int, record: dict) -> None:
+        _update_progress(sim_id, step, record)
+
+    try:
+        return thread_loop.run_until_complete(
+            orchestrator.run(
+                n_decisions=n_decisions,
+                alert_pool=alert_pool,
+                speed_ms=speed_ms,
+                on_progress=on_progress,
+            )
+        )
+    finally:
+        thread_loop.run_until_complete(thread_loop.shutdown_asyncgens())
+        asyncio.set_event_loop(None)
+        thread_loop.close()
+
+
 async def _run_simulation_bg(sim_id: str, n_decisions: int, speed_ms: int) -> None:
     """
     Async background task: runs the simulation and writes results to _simulations.
@@ -96,20 +141,15 @@ async def _run_simulation_bg(sim_id: str, n_decisions: int, speed_ms: int) -> No
             domain_config  = get_domain_config(),
         )
 
-        async def on_progress(step: int, total: int, record: dict) -> None:
-            _simulations[sim_id].update({
-                "step":                   step,
-                "status":                 "running",
-                "current_accuracy":       record["cumulative_accuracy"],
-                "category_accuracy":      record["category_accuracy"],
-                "latest_weight_snapshot": record["W_snapshot"],
-            })
-
-        result = await orchestrator.run(
-            n_decisions = n_decisions,
-            alert_pool  = alert_pool,
-            speed_ms    = speed_ms,
-            on_progress = on_progress,
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(
+            None,
+            _run_simulation_sync,
+            sim_id,
+            n_decisions,
+            speed_ms,
+            alert_pool,
+            orchestrator,
         )
 
         _simulations[sim_id].update({
@@ -147,15 +187,26 @@ async def _run_simulation_bg(sim_id: str, n_decisions: int, speed_ms: int) -> No
         print(f"[SIM] {sim_id[:8]} FAILED: {exc}")
 
 
+def _track_simulation_task(sim_id: str, task: asyncio.Task) -> None:
+    """Track detached simulation tasks and discard handles after completion."""
+    _simulation_tasks[sim_id] = task
+
+    def _cleanup(done_task: asyncio.Task) -> None:
+        _simulation_tasks.pop(sim_id, None)
+        try:
+            done_task.exception()
+        except asyncio.CancelledError:
+            pass
+
+    task.add_done_callback(_cleanup)
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
 @router.post("/simulation/start")
-async def start_simulation(
-    body: StartSimulationRequest,
-    background_tasks: BackgroundTasks,
-):
+async def start_simulation(body: StartSimulationRequest):
     """
     Start a new batch simulation.
 
@@ -192,8 +243,11 @@ async def start_simulation(
         "result":                 None,
     }
 
-    background_tasks.add_task(
-        _run_simulation_bg, sim_id, body.n_decisions, body.speed_ms
+    _track_simulation_task(
+        sim_id,
+        asyncio.create_task(
+            _run_simulation_bg(sim_id, body.n_decisions, body.speed_ms)
+        ),
     )
 
     print(f"[SIM] Started {sim_id[:8]} — n={body.n_decisions} speed={body.speed_ms}ms")

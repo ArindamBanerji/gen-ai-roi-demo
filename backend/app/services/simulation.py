@@ -17,7 +17,6 @@ import logging
 import random
 import time
 import uuid
-from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Coroutine, Dict, List, Optional, cast
@@ -30,9 +29,10 @@ from app.domains.soc.config import SOCDomainConfig, LEARNING_ENABLED
 from app.domains.soc.orchestrator import compute_factor_vector
 from app.services.audit import record_decision as audit_record_decision
 from app.services.event_bus import event_bus, DecisionMade, OutcomeVerified, GraphMutated
-from app.services.gae_state import get_learning_state, save_learning_state, get_profile_scorer
+from app.services.gae_state import get_learning_state, get_profile_scorer
 from app.graph_schema import _S
 from gae.scoring import score_alert
+from gae.learning import LearningState
 
 
 # ---------------------------------------------------------------------------
@@ -157,6 +157,36 @@ class SimulationResult:
     category_ground_truth: Dict[str, float]        # per-category ground-truth match rate
 
 
+def _clone_learning_state_for_simulation(live_state: LearningState) -> LearningState:
+    """Copy only W-matrix learning state needed by simulation.
+
+    The live singleton now has a ProfileScorer adapter attached. Deep-copying
+    that object can clone SDK/graph internals and crash the worker before the
+    first decision. Simulation is intentionally W-matrix-local, so keep the
+    profile_scorer detached.
+    """
+    epsilon_vector = getattr(live_state, "epsilon_vector", None)
+    return LearningState(
+        W=np.array(live_state.W, dtype=np.float64, copy=True),
+        n_actions=live_state.n_actions,
+        n_factors=live_state.n_factors,
+        factor_names=list(live_state.factor_names),
+        profile=live_state.profile,
+        decision_count=live_state.decision_count,
+        history=list(getattr(live_state, "history", [])),
+        expansion_history=[dict(x) for x in getattr(live_state, "expansion_history", [])],
+        discount_strength=getattr(live_state, "discount_strength", 0.0),
+        epsilon_vector=(
+            np.array(epsilon_vector, dtype=np.float64, copy=True)
+            if epsilon_vector is not None
+            else None
+        ),
+        dimension_metadata=list(getattr(live_state, "dimension_metadata", [])),
+        pending_validations=list(getattr(live_state, "pending_validations", [])),
+        profile_scorer=None,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Orchestrator
 # ---------------------------------------------------------------------------
@@ -236,9 +266,12 @@ class SimulationOrchestrator:
         tau            = SOCDomainConfig.get_temperature()
 
         # FIX-05: Isolate simulation from production learning state.
-        # deepcopy before the loop; sim updates go to this local copy only.
+        # Copy W-matrix state before the loop; sim updates go to this local
+        # copy only. Do not copy profile_scorer: the live singleton may carry
+        # a CompoundingScorer adapter with graph internals, and simulation must
+        # stay on the local W path.
         # save_learning_state() is never called during simulation.
-        sim_ls = deepcopy(get_learning_state())
+        sim_ls = _clone_learning_state_for_simulation(get_learning_state())
 
         correct_total = 0
         correct_by_category: Dict[str, int] = {}
@@ -261,6 +294,10 @@ class SimulationOrchestrator:
             )
 
         for step in range(n_decisions):
+            # Keep long simulation runs cooperative even when speed_ms is zero
+            # or a previous step completed without a naturally yielding await.
+            await asyncio.sleep(0)
+
             # ------------------------------------------------------------------
             # Step 1: Pick alert (round-robin across categories)
             # ------------------------------------------------------------------
@@ -547,8 +584,7 @@ class SimulationOrchestrator:
             # ------------------------------------------------------------------
             # Step 15: Speed control
             # ------------------------------------------------------------------
-            if speed_ms > 0:
-                await asyncio.sleep(speed_ms / 1000.0)
+            await asyncio.sleep(speed_ms / 1000.0 if speed_ms > 0 else 0)
 
         # -----------------------------------------------------------------------
         # Aggregate results
