@@ -200,6 +200,32 @@ def test_run_evaluation_does_not_mutate_production_scorer(monkeypatch):
     assert scorer.decision_count == before_decision_count
 
 
+def test_run_evaluation_unwraps_adapter_before_clone(monkeypatch):
+    raw_scorer = _make_scorer()
+
+    class _AdapterWrapper:
+        def __init__(self, scorer):
+            self._scorer = scorer
+
+        def __deepcopy__(self, memo):
+            raise AssertionError("evaluation must not deepcopy the adapter wrapper")
+
+    rows = [_base_row(row_id="row-1")]
+    clean_rows, errors, _warnings = validate_csv_rows(_service_rows(rows))
+    assert errors == []
+
+    monkeypatch.setattr(eval_service, "get_profile_scorer", lambda: _AdapterWrapper(raw_scorer))
+    monkeypatch.setattr(
+        eval_service,
+        "get_mu_zero",
+        lambda: np.array(SOC_PROFILE_CENTROIDS, dtype=np.float64),
+    )
+
+    result = run_evaluation(clean_rows)
+    assert result.evaluated_rows == 1
+    assert raw_scorer.decision_count == 0
+
+
 class _ImprovingFakeScorer:
     def __init__(self):
         self.actions = list(SCORER_ACTIONS)

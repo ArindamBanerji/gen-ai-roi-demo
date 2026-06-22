@@ -195,12 +195,24 @@ def validate_csv_rows(
     return clean_rows, errors, warnings
 
 
+def _clone_scorer_for_evaluation(scorer: Any) -> Any:
+    """Clone only the raw ProfileScorer state needed for local eval updates.
+
+    The live scorer may be the P77 SOCCompoundingScorerAdapter, which owns a
+    CompoundingScorer and GraphStore. Deep-copying that wrapper can clone SDK
+    graph internals and terminate the worker process. Evaluation only needs
+    the legacy ProfileScorer surface, so unwrap the raw scorer before copying.
+    """
+    raw_scorer = getattr(scorer, "_scorer", scorer)
+    return deepcopy(raw_scorer)
+
+
 def run_evaluation(rows: List[Dict]) -> EvalResult:
     scorer = get_profile_scorer()
     if scorer is None:
         raise RuntimeError("ProfileScorer not initialized")
 
-    scorer_copy = deepcopy(scorer)
+    scorer_copy = _clone_scorer_for_evaluation(scorer)
     start_ts = time.time()
 
     mu_zero = get_mu_zero()
@@ -303,7 +315,7 @@ def run_evaluation(rows: List[Dict]) -> EvalResult:
         }
         if decision_record["ambiguous"]:
             decision_record["ambiguity_note"] = (
-                "Structurally ambiguous — top two actions are nearly "
+                "Structurally ambiguous -- top two actions are nearly "
                 "equally likely. Disagreement here is expected, not an error."
             )
         per_decision_log.append(decision_record)
@@ -342,7 +354,7 @@ def run_evaluation(rows: List[Dict]) -> EvalResult:
         confidence_note = (
             "Confidence is near the random baseline (0.25). "
             "This is expected with uncalibrated or early-stage centroids. "
-            "Confidence sharpens as centroids calibrate to your data — "
+            "Confidence sharpens as centroids calibrate to your data -- "
             "look at the accuracy trend for the learning signal."
         )
     elif max_confidence < 0.50:
@@ -384,7 +396,7 @@ def run_evaluation(rows: List[Dict]) -> EvalResult:
     ):
         calibration_status = "uncalibrated"
         calibration_note = (
-            "All centroid values lie in [0.3, 0.7] with std < 0.15 — "
+            "All centroid values lie in [0.3, 0.7] with std < 0.15 -- "
             "centroids may not have been trained from domain-specific data."
         )
     else:

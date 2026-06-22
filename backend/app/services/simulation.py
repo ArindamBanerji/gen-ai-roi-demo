@@ -1,14 +1,14 @@
 """
-SimulationOrchestrator — batch N alerts through the real GAE pipeline (SIM-1).
+SimulationOrchestrator -- batch N alerts through the real GAE pipeline (SIM-1).
 
 CRITICAL: every decision in a simulation follows the EXACT same code path as
 a manual triage operation.  No separate scoring logic.  No shortcuts.
 
-  alert → compute_factor_vector → score_alert → write Decision node →
-  emit events → Bernoulli oracle → write outcome → learning_state.update() →
-  save_learning_state → emit outcome events → log record
+  alert -> compute_factor_vector -> score_alert -> write Decision node ->
+  emit events -> Bernoulli oracle -> write outcome -> learning_state.update() ->
+  save_learning_state -> emit outcome events -> log record
 
-Reference: docs/soc_copilot_design_v1.md §14 (GAE pipeline).
+Reference: docs/soc_copilot_design_v1.md Sec.14 (GAE pipeline).
 """
 
 import asyncio
@@ -196,8 +196,8 @@ class SimulationOrchestrator:
     Runs batch simulation through the real GAE pipeline.
 
     Each simulated decision follows the same path as a manual triage:
-      alert → classify_situation → compute_factors → score_entity →
-      decide → outcome → update_weights
+      alert -> classify_situation -> compute_factors -> score_entity ->
+      decide -> outcome -> update_weights
 
     Parameters
     ----------
@@ -231,7 +231,7 @@ class SimulationOrchestrator:
           1. Pick alert from pool (round-robin)
           2. Fetch full alert data from Neo4j (same as POST /api/alert/analyze)
           3. Run compute_factor_vector (same pipeline)
-          4. score_alert → select action (same pipeline)
+          4. score_alert -> select action (same pipeline)
           5. Write Decision node to Neo4j with factor_vector stored (R4)
           6. Emit DecisionMade + GraphMutated events
           7. Generate outcome: Bernoulli oracle with category success rate
@@ -634,20 +634,20 @@ class SimulationOrchestrator:
 
         Record schema
         -------------
-        step                    : int       — 0-indexed decision number
+        step                    : int       -- 0-indexed decision number
         timestamp               : iso8601
         alert_id                : str
-        category                : str       — alert category (maps to oracle rate)
-        situation_type          : str       — from SituationAnalysis
-        attack_technique        : str       — ATT&CK label
-        factor_vector           : [float]   — 6-element vector
-        W_snapshot              : [[float]] — full W matrix at decision time (before update)
+        category                : str       -- alert category (maps to oracle rate)
+        situation_type          : str       -- from SituationAnalysis
+        attack_technique        : str       -- ATT&CK label
+        factor_vector           : [float]   -- 6-element vector
+        W_snapshot              : [[float]] -- full W matrix at decision time (before update)
         predicted_action        : str
         confidence              : float
-        oracle_outcome          : int       — +1 correct, -1 incorrect (Bernoulli)
-        correct                 : bool      — Bernoulli oracle result
-        ground_truth_action     : str       — expert-defined optimal action
-        correct_vs_ground_truth : bool      — predicted_action == ground_truth_action
+        oracle_outcome          : int       -- +1 correct, -1 incorrect (Bernoulli)
+        correct                 : bool      -- Bernoulli oracle result
+        ground_truth_action     : str       -- expert-defined optimal action
+        correct_vs_ground_truth : bool      -- predicted_action == ground_truth_action
         cumulative_accuracy     : float
         category_accuracy       : {str: float}
         """

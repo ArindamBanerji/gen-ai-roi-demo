@@ -1,5 +1,5 @@
 """
-Simulation router — SIM-1 batch GAE pipeline endpoints.
+Simulation router -- SIM-1 batch GAE pipeline endpoints.
 
 POST /api/simulation/start                 Start a simulation run
 GET  /api/simulation/progress/{sim_id}     Live step / accuracy progress
@@ -43,9 +43,9 @@ class StartSimulationRequest(BaseModel):
 
 async def _load_alert_pool():
     """
-    Return the simulation alert pool — scored actions only (BACKLOG-042).
+    Return the simulation alert pool -- scored actions only (BACKLOG-042).
 
-    Imports get_alert_pool() from app.data.alert_pool — a deterministic,
+    Imports get_alert_pool() from app.data.alert_pool -- a deterministic,
     pre-defined pool whose graph entities are seeded by seed_simulation_alerts().
 
     Referral alerts (ground_truth_action='refer_to_analyst') are excluded here:
@@ -53,7 +53,7 @@ async def _load_alert_pool():
     scored actions.  Keeping them in the simulation pool causes a W_matrix
     refer_to_analyst attractor: the scorer picks refer_to_analyst, the guard at
     simulation.py:393 skips the W_matrix update, and W freezes permanently.
-    Pool size: 27 total → 24 after excluding the 3 referral alerts.
+    Pool size: 27 total -> 24 after excluding the 3 referral alerts.
 
     Falls back to the minimal _FALLBACK_POOL if the import fails (e.g. during
     unit tests that run without the full package installed).
@@ -171,7 +171,7 @@ async def _run_simulation_bg(sim_id: str, n_decisions: int, speed_ms: int) -> No
             },
         })
         print(
-            f"[SIM] {sim_id[:8]} complete — "
+            f"[SIM] {sim_id[:8]} complete -- "
             f"{result.n_decisions} decisions, "
             f"accuracy={result.overall_accuracy:.3f}, "
             f"duration={result.duration_seconds:.1f}s"
@@ -210,7 +210,7 @@ async def start_simulation(body: StartSimulationRequest):
     """
     Start a new batch simulation.
 
-    Performs a soft reset first (W → priors, clear Decision outcomes, fresh
+    Performs a soft reset first (W -> priors, clear Decision outcomes, fresh
     audit chain) so each run starts from a clean slate.
 
     Returns ``{"simulation_id": uuid, "status": "running"}``.
@@ -250,7 +250,7 @@ async def start_simulation(body: StartSimulationRequest):
         ),
     )
 
-    print(f"[SIM] Started {sim_id[:8]} — n={body.n_decisions} speed={body.speed_ms}ms")
+    print(f"[SIM] Started {sim_id[:8]} -- n={body.n_decisions} speed={body.speed_ms}ms")
     return {"simulation_id": sim_id, "status": "running"}
 
 
