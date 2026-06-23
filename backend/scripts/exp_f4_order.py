@@ -2,9 +2,9 @@
 EXP-F4: V-COMPOSITION-ORDER
 ===============================
 Does the order of composition matter?
-PATH 1: centroid → DK → RL
-PATH 2: centroid → RL → DK
-PATH 3: centroid → DK+RL jointly
+PATH 1: centroid -> DK -> RL
+PATH 2: centroid -> RL -> DK
+PATH 3: centroid -> DK+RL jointly
 
 Run: cd backend && python scripts/exp_f4_order.py
 Time: ~15 min
@@ -127,9 +127,9 @@ def main():
         acc_p3 = accuracy_score(y_test, preds_p3) * 100
 
         print(f"\n  Seed {seed}:")
-        print(f"    CONFIG 1 (f₀ only):        {acc_1:.1f}%")
-        print(f"    PATH 1 (f₀ → DK → RL):    {acc_p1:.1f}%  (DK={acc_dk:.1f}%, +RL={acc_p1:.1f}%)")
-        print(f"    PATH 2 (f₀ → RL):          {acc_p2:.1f}%  (RL directly on centroid residuals)")
+        print(f"    CONFIG 1 (f_0 only):        {acc_1:.1f}%")
+        print(f"    PATH 1 (f_0 -> DK -> RL):    {acc_p1:.1f}%  (DK={acc_dk:.1f}%, +RL={acc_p1:.1f}%)")
+        print(f"    PATH 2 (f_0 -> RL):          {acc_p2:.1f}%  (RL directly on centroid residuals)")
         print(f"    PATH 3 (MLP joint):         {acc_p3:.1f}%  (end-to-end, no sequential)")
         print(f"    PATH 1 vs PATH 2:           {acc_p1 - acc_p2:+.1f}pp")
         print(f"    PATH 3 vs PATH 1:           {acc_p3 - acc_p1:+.1f}pp")
@@ -137,9 +137,9 @@ def main():
     print(f"\n{'=' * 90}")
     print("BINARY QUESTIONS")
     print("=" * 90)
-    print("Q1: PATH 1 ≠ PATH 2? (order matters)")
+    print("Q1: PATH 1 != PATH 2? (order matters)")
     print("Q2: PATH 3 > PATH 1? (joint beats sequential)")
-    print("Q3: If PATH 1 ≈ PATH 2: terms are orthogonal")
+    print("Q3: If PATH 1 ~= PATH 2: terms are orthogonal")
 
     print("\nDONE.")
 

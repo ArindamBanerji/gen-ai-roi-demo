@@ -1,5 +1,5 @@
 """
-migrate_datetime_to_epoch.py — Convert Neo4j native datetime() fields to
+migrate_datetime_to_epoch.py -- Convert Neo4j native datetime() fields to
 epoch integers (milliseconds since Unix epoch) across all node types.
 
 PREREQUISITE: Aura snapshot taken 2026-04-04 00:40:11. Do NOT run without it.
@@ -10,9 +10,9 @@ Run from gen-ai-roi-demo-v4-v50/backend/:
     python scripts/migrate_datetime_to_epoch.py --phase1-only  # add _epoch fields, stop before removal
 
 THREE PHASES:
-  Phase 1 — Add *_epoch fields alongside existing datetime fields
-  Phase 2 — Print verification sample (5 nodes per type, both fields)
-  Phase 3 — Remove old datetime fields (requires y/n confirmation, or --phase1-only to skip)
+  Phase 1 -- Add *_epoch fields alongside existing datetime fields
+  Phase 2 -- Print verification sample (5 nodes per type, both fields)
+  Phase 3 -- Remove old datetime fields (requires y/n confirmation, or --phase1-only to skip)
 """
 
 import argparse
@@ -173,7 +173,7 @@ def _indent(text: str, prefix: str = "      ") -> str:
 # ---------------------------------------------------------------------------
 
 async def phase1(dry_run: bool) -> None:
-    section("PHASE 1 — Add *_epoch fields (non-destructive)")
+    section("PHASE 1 -- Add *_epoch fields (non-destructive)")
 
     for label, field in NODE_MIGRATIONS:
         cypher = phase1_node_cypher(label, field)
@@ -197,7 +197,7 @@ async def phase1(dry_run: bool) -> None:
 # ---------------------------------------------------------------------------
 
 async def phase2_verify(dry_run: bool) -> None:
-    section("PHASE 2 — Verification sample (5 nodes per field)")
+    section("PHASE 2 -- Verification sample (5 nodes per field)")
 
     for label, field in NODE_MIGRATIONS:
         cypher = verify_node_cypher(label, field)
@@ -207,7 +207,7 @@ async def phase2_verify(dry_run: bool) -> None:
             continue
         rows = await neo4j_client.run_query(cypher)
         if not rows:
-            print("    (no nodes with epoch field — may be empty or HealthLog absent)")
+            print("    (no nodes with epoch field -- may be empty or HealthLog absent)")
         else:
             for r in rows:
                 print(f"    original={r.get('original')}  epoch={r.get('epoch')}")
@@ -218,7 +218,7 @@ async def phase2_verify(dry_run: bool) -> None:
 # ---------------------------------------------------------------------------
 
 async def phase3(dry_run: bool) -> None:
-    section("PHASE 3 — Remove old datetime fields")
+    section("PHASE 3 -- Remove old datetime fields")
 
     for label, field in NODE_MIGRATIONS:
         cypher = phase3_node_cypher(label, field)
@@ -242,7 +242,7 @@ async def phase3(dry_run: bool) -> None:
 # ---------------------------------------------------------------------------
 
 async def final_counts(dry_run: bool) -> None:
-    section("FINAL — Node counts with *_epoch fields")
+    section("FINAL -- Node counts with *_epoch fields")
 
     for label, field in NODE_MIGRATIONS:
         cypher = count_node_cypher(label, field)
@@ -305,7 +305,7 @@ async def main() -> None:
         await phase2_verify(args.dry_run)
 
         if args.phase1_only:
-            print("\n[--] --phase1-only set — stopping before Phase 3 removal.")
+            print("\n[--] --phase1-only set -- stopping before Phase 3 removal.")
             await final_counts(args.dry_run)
             return
 
@@ -322,7 +322,7 @@ async def main() -> None:
         print("  This is irreversible without the Aura snapshot.")
         answer = input("  Proceed with Phase 3? [y/N]: ").strip().lower()
         if answer != "y":
-            print("  Aborted — Phase 3 skipped. _epoch fields are in place.")
+            print("  Aborted -- Phase 3 skipped. _epoch fields are in place.")
             return
 
         await phase3(args.dry_run)

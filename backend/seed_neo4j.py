@@ -598,7 +598,7 @@ async def seed_data():
             source_ip: '103.15.42.99',
             source_location: 'Singapore',
             timestamp: datetime('2026-02-26T05:18:00Z'),
-            description: 'Second Singapore login from new device — no MFA completion',
+            description: 'Second Singapore login from new device -- no MFA completion',
             asset_id: 'LAPTOP-JSMITH',
             user_id: 'jsmith@company.com',
             status: 'pending',
@@ -969,7 +969,7 @@ async def seed_data():
             source_location: 'External',
             destination_domain: 'cobaltstrike.github.io',
             timestamp: datetime('2026-02-26T01:12:00Z'),
-            description: 'Outbound beacon to known C2 infrastructure — cobaltstrike.github.io',
+            description: 'Outbound beacon to known C2 infrastructure -- cobaltstrike.github.io',
             asset_id: 'SRV-WEB-03',
             user_id: 'unknown@external',
             status: 'pending',
@@ -1248,7 +1248,7 @@ async def seed_data():
             source_ip: '10.0.1.99',
             source_location: 'Internal',
             timestamp: datetime('2026-02-26T14:40:00Z'),
-            description: 'Unusual outbound DNS query volume — 3x normal baseline',
+            description: 'Unusual outbound DNS query volume -- 3x normal baseline',
             asset_id: 'WORKSTATION-LCHEN',
             user_id: 'lchen@company.com',
             status: 'pending',
@@ -1586,16 +1586,16 @@ async def _seed_gae_factor_data():
     # ========================================================================
 
     bhl_values = [
-        ("ALERT-7823", False),   # 3 AM home timezone — after hours
-        ("ALERT-7824", True),    # 11:30 — business hours
-        ("ALERT-7821", True),    # 09:30 — business hours
-        ("ALERT-7820", True),    # 08:00 — business hours
-        ("ALERT-7819", False),   # 04:20 — after hours
-        ("ALERT-7822", True),    # 10:15 — business hours
-        ("ALERT-7830", False),   # 14:15 UTC = 23:15 Tokyo — after hours
-        ("ALERT-7835", True),    # 10:30 — business hours
-        ("ALERT-7841", False),   # 05:18 — after hours
-        ("ALERT-7845", False),   # 22:30 — after hours
+        ("ALERT-7823", False),   # 3 AM home timezone -- after hours
+        ("ALERT-7824", True),    # 11:30 -- business hours
+        ("ALERT-7821", True),    # 09:30 -- business hours
+        ("ALERT-7820", True),    # 08:00 -- business hours
+        ("ALERT-7819", False),   # 04:20 -- after hours
+        ("ALERT-7822", True),    # 10:15 -- business hours
+        ("ALERT-7830", False),   # 14:15 UTC = 23:15 Tokyo -- after hours
+        ("ALERT-7835", True),    # 10:30 -- business hours
+        ("ALERT-7841", False),   # 05:18 -- after hours
+        ("ALERT-7845", False),   # 22:30 -- after hours
     ]
     for alert_id, bhl in bhl_values:
         await neo4j_client.run_query(

@@ -160,9 +160,9 @@ def main():
         regime = max(set(regimes), key=regimes.count)
 
         event = ""
-        if n == 1000: event = "← SHIFT"
-        elif n == 2000: event = "← NOISE↑"
-        elif n == 3000: event = "← RESTORE"
+        if n == 1000: event = "<- SHIFT"
+        elif n == 2000: event = "<- NOISEup"
+        elif n == 3000: event = "<- RESTORE"
 
         print(f"  {n:>5d}  {vals['acc_pipe']:5.1f}%  {vals['acc_raw']:5.1f}%  "
               f"{vals['acc_static']:5.1f}%  {vals['learn_contrib']:+5.1f}pp  "
@@ -228,7 +228,7 @@ def main():
 
     if steady_lc and shift_lc:
         change = abs(np.mean(shift_lc) - np.mean(steady_lc))
-        print(f"Q1: Weights change R3→R4? steady_lc={np.mean(steady_lc):+.2f}pp "
+        print(f"Q1: Weights change R3->R4? steady_lc={np.mean(steady_lc):+.2f}pp "
               f"shift_lc={np.mean(shift_lc):+.2f}pp change={change:.2f}pp "
               f"{'YES' if change > 0.5 else 'NO'}")
 
@@ -286,7 +286,7 @@ def main():
     if raw_wins:
         print(f"Q5: Raw beats pipeline? YES at N={[r[0] for r in raw_wins[:5]]}...")
     else:
-        print(f"Q5: Raw beats pipeline? NO — pipeline never hurts by >0.5pp")
+        print(f"Q5: Raw beats pipeline? NO -- pipeline never hurts by >0.5pp")
 
     print("\nDONE.")
 

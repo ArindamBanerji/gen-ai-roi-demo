@@ -148,7 +148,7 @@ def main():
     print(f"\n{'=' * 80}")
     print("OVERALL RESULTS (mean across seeds)")
     print(f"{'=' * 80}")
-    print(f"  {'Classifier':>15s}  {'Accuracy':>8s}  {'ECE':>8s}  {'Δ vs centroid':>13s}")
+    print(f"  {'Classifier':>15s}  {'Accuracy':>8s}  {'ECE':>8s}  {'Delta vs centroid':>13s}")
     print(f"  {'-' * 50}")
 
     centroid_mean = np.mean(all_results["centroid"]['acc'])

@@ -126,7 +126,7 @@ def main():
     if multimodal_pairs:
         print(f"  Multimodal pairs:")
         for r in multimodal_pairs:
-            print(f"    {CATEGORIES[r['ci']]:>20s} × {ACTIONS[r['ai']]:>10s}: "
+            print(f"    {CATEGORIES[r['ci']]:>20s} x {ACTIONS[r['ai']]:>10s}: "
                   f"dip={r['dip']:.3f} silh={r['silh']:.3f}")
 
     # Binary questions
@@ -136,7 +136,7 @@ def main():
     print(f"Q1: Any (c,a) pairs show multimodality? "
           f"{'YES: ' + str(len(multimodal_pairs)) + ' pairs' if multimodal_pairs else 'NO'}")
     print(f"Q3: Would k=2 centroids help? "
-          f"{'(see silhouette scores above)' if multimodal_pairs else 'N/A — single prototype adequate'}")
+          f"{'(see silhouette scores above)' if multimodal_pairs else 'N/A -- single prototype adequate'}")
 
     print("\nDONE.")
 

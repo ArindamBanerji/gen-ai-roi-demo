@@ -108,7 +108,7 @@ def main():
 
     for label, use_pipe in [("LEARN_pipeline", True), ("LEARN_raw", False)]:
         print(f"\n  {label}:")
-        print(f"  {'N':>6s}  {'WrongCat%':>9s}  {'OtherCat%':>9s}  {'Frob→GT':>8s}  {'WrongN':>6s}")
+        print(f"  {'N':>6s}  {'WrongCat%':>9s}  {'OtherCat%':>9s}  {'Frob->GT':>8s}  {'WrongN':>6s}")
         print(f"  {'-' * 50}")
 
         all_r = [run_lockout_exp(s, use_pipe) for s in SEEDS]
@@ -143,7 +143,7 @@ def main():
     corrects_pipe = pipe_frob_2000 < pipe_frob_50
 
     print(f"Q1: Pipeline corrects wrong category? "
-          f"Frob: {pipe_frob_50:.4f}→{pipe_frob_2000:.4f} "
+          f"Frob: {pipe_frob_50:.4f}->{pipe_frob_2000:.4f} "
           f"{'YES' if corrects_pipe else 'NO'}")
 
     if raw_r:
@@ -152,7 +152,7 @@ def main():
         raw_frob_50 = np.mean([r['checkpoints'][50]['frob_from_gt'] for r in raw_r])
         corrects_raw = raw_frob_2000 < raw_frob_50
         print(f"Q2: Raw SGD corrects wrong category? "
-              f"Frob: {raw_frob_50:.4f}→{raw_frob_2000:.4f} "
+              f"Frob: {raw_frob_50:.4f}->{raw_frob_2000:.4f} "
               f"{'YES' if corrects_raw else 'NO'}")
 
     gate_opens_valid = [g for g in gate_opens if g is not None]

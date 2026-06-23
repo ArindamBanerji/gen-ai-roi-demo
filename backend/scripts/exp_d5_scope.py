@@ -171,7 +171,7 @@ def main():
         print(f"  {scope:>15s}  {acc:>10.1f}%")
 
     # Per-category breakdown for clustered scope
-    print(f"\n  CLUSTERED SCOPE — per-category accuracy (wrong cat setup):")
+    print(f"\n  CLUSTERED SCOPE -- per-category accuracy (wrong cat setup):")
     runs = []
     for seed in SEEDS:
         gt = build_gt(np.random.default_rng(seed), base_mu)

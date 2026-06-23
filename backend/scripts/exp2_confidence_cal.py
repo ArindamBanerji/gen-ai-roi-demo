@@ -2,7 +2,7 @@
 EXP-2: V-CONFIDENCE-CALIBRATION
 ================================
 Question: Does centroid learning improve the system BEYOND accuracy?
-Measures: ECE, confidence separation, Kendall's τ rank agreement.
+Measures: ECE, confidence separation, Kendall's tau rank agreement.
 
 Run: cd backend && python scripts/exp2_confidence_cal.py
 Time: ~10 min
@@ -42,7 +42,7 @@ def compute_ece(confidences, corrects, n_bins=10):
 
 
 def compute_kendall_tau(scorer, gt, fv, ci):
-    """Kendall's τ between system's action ranking and GT ranking."""
+    """Kendall's tau between system's action ranking and GT ranking."""
     # System's probability ranking
     result = scorer.score(fv, ci)
     sys_probs = np.array(result.probabilities)
@@ -130,7 +130,7 @@ def main():
         all_metrics = [run_calibration_exp(s, use_pipeline=(label == "LEARN_pipeline"))
                        for s in SEEDS]
 
-        print(f"  {'N':>6s}  {'Acc':>6s}  {'ECE':>6s}  {'Conf|C':>7s}  {'Conf|W':>7s}  {'Sep':>6s}  {'τ':>6s}")
+        print(f"  {'N':>6s}  {'Acc':>6s}  {'ECE':>6s}  {'Conf|C':>7s}  {'Conf|W':>7s}  {'Sep':>6s}  {'tau':>6s}")
         print(f"  {'-' * 55}")
 
         for n in CHECKPOINTS:
@@ -160,19 +160,19 @@ def main():
     ece_50 = np.mean([m[50]['ece'] for m in learn_metrics])
     ece_2000 = np.mean([m[2000]['ece'] for m in learn_metrics])
     print(f"Q1: ECE at N=50: {ece_50:.4f}, N=2000: {ece_2000:.4f}")
-    print(f"    Decreases? {'YES' if ece_2000 < ece_50 else 'NO'} (Δ={ece_2000 - ece_50:.4f})")
+    print(f"    Decreases? {'YES' if ece_2000 < ece_50 else 'NO'} (Delta={ece_2000 - ece_50:.4f})")
 
     # Q2: Confidence separation increases?
     sep_50 = np.mean([m[50]['conf_separation'] for m in learn_metrics])
     sep_2000 = np.mean([m[2000]['conf_separation'] for m in learn_metrics])
     print(f"Q2: Separation at N=50: {sep_50:.4f}, N=2000: {sep_2000:.4f}")
-    print(f"    Increases? {'YES' if sep_2000 > sep_50 else 'NO'} (Δ={sep_2000 - sep_50:.4f})")
+    print(f"    Increases? {'YES' if sep_2000 > sep_50 else 'NO'} (Delta={sep_2000 - sep_50:.4f})")
 
     # Q3: Kendall's τ increases?
     tau_50 = np.mean([m[50]['kendall_tau'] for m in learn_metrics])
     tau_2000 = np.mean([m[2000]['kendall_tau'] for m in learn_metrics])
-    print(f"Q3: τ at N=50: {tau_50:.4f}, N=2000: {tau_2000:.4f}")
-    print(f"    Increases? {'YES' if tau_2000 > tau_50 else 'NO'} (Δ={tau_2000 - tau_50:.4f})")
+    print(f"Q3: tau at N=50: {tau_50:.4f}, N=2000: {tau_2000:.4f}")
+    print(f"    Increases? {'YES' if tau_2000 > tau_50 else 'NO'} (Delta={tau_2000 - tau_50:.4f})")
 
     # Q4: Q1-Q3 improve between N=500 and N=2000 (plateau region)?
     ece_500 = np.mean([m[500]['ece'] for m in learn_metrics])
@@ -182,8 +182,8 @@ def main():
     sep_improves = sep_2000 > sep_500
     tau_improves = tau_2000 > tau_500
     any_improve = ece_improves or sep_improves or tau_improves
-    print(f"Q4: In plateau (N=500→2000): ECE improves={ece_improves}, "
-          f"Sep improves={sep_improves}, τ improves={tau_improves}")
+    print(f"Q4: In plateau (N=500->2000): ECE improves={ece_improves}, "
+          f"Sep improves={sep_improves}, tau improves={tau_improves}")
     print(f"    Any improve? {'YES' if any_improve else 'NO'}")
 
     # Q5: LEARN ECE < STATIC ECE at N=2000?
@@ -191,7 +191,7 @@ def main():
     static_ece = np.mean([m[2000]['ece'] for m in static_metrics])
     print(f"Q5: LEARN ECE={learn_ece:.4f}, STATIC ECE={static_ece:.4f}")
     print(f"    LEARN < STATIC? {'YES' if learn_ece < static_ece else 'NO'} "
-          f"(Δ={learn_ece - static_ece:.4f})")
+          f"(Delta={learn_ece - static_ece:.4f})")
 
     print("\nDONE.")
 

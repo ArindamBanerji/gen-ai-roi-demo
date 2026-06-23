@@ -1,7 +1,7 @@
 """
 EXP-ROADMAP-REMAINING: Five experiments from roadmap session
 ================================================================
-All use direct variance estimation (fast — no coordinate descent).
+All use direct variance estimation (fast -- no coordinate descent).
 
 1. NOVELTY-LARGE: Larger GT shifts (delta=0.10, 0.15, 0.25)
 2. DK-NOISE: DK learning curve at 4 noise levels

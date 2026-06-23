@@ -1,9 +1,9 @@
 """
 EXP-P6: PLANT DECOMPOSITION
 ===============================
-The plant is a composition: distance → square → scale → softmax → argmax.
+The plant is a composition: distance -> square -> scale -> softmax -> argmax.
 Accuracy depends on argmax (discontinuous). Confidence depends on softmax
-(saturated). These are DIFFERENT functions of μ.
+(saturated). These are DIFFERENT functions of mu.
 
 This experiment measures:
 1. How far queries sit from Voronoi boundaries (boundary proximity)
@@ -135,7 +135,7 @@ def run_production_controller(seed, strategy, gt, start_mu):
 def main():
     print("=" * 90)
     print("EXP-P6: PLANT DECOMPOSITION")
-    print("Composition chain: distance → square → scale → softmax → argmax")
+    print("Composition chain: distance -> square -> scale -> softmax -> argmax")
     print("=" * 90)
 
     base_mu = get_base_centroids()
@@ -178,7 +178,7 @@ def main():
         for lo, hi in [(0, 0.02), (0.02, 0.05), (0.05, 0.10), (0.10, 0.20), (0.20, 0.50), (0.50, 1.0)]:
             mask = (bd >= lo) & (bd < hi)
             if mask.sum() > 10:
-                print(f"      d ∈ [{lo:.2f}, {hi:.2f}): "
+                print(f"      d in [{lo:.2f}, {hi:.2f}): "
                       f"conf={confs[mask].mean():.4f} acc={correct_mask[mask].mean()*100:.1f}% "
                       f"n={mask.sum()}")
 
@@ -196,8 +196,8 @@ def main():
 
         eps_values = [0.001, 0.005, 0.01, 0.05, 0.10]
         print(f"\n  Seed {seed}:")
-        print(f"  {'eps':>7s}  {'Δ_dist':>8s}  {'Δ_dist²':>8s}  {'Δ_logit':>8s}  "
-              f"{'Δ_prob':>8s}  {'Δ_conf':>8s}  {'Δ_action':>8s}  {'Δ_acc':>7s}")
+        print(f"  {'eps':>7s}  {'Delta_dist':>8s}  {'Delta_dist^2':>8s}  {'Delta_logit':>8s}  "
+              f"{'Delta_prob':>8s}  {'Delta_conf':>8s}  {'Delta_action':>8s}  {'Delta_acc':>7s}")
         print(f"  {'-' * 72}")
 
         for eps in eps_values:
@@ -249,7 +249,7 @@ def main():
     # SECTION 3: WHERE DO ERRORS LIVE?
     # ═══════════════════════════════════════════════
     print(f"\n{'=' * 90}")
-    print("SECTION 3: ERROR GEOGRAPHY — where do wrong decisions concentrate?")
+    print("SECTION 3: ERROR GEOGRAPHY -- where do wrong decisions concentrate?")
     print(f"{'=' * 90}")
 
     for seed in SEEDS_SHORT[:2]:
@@ -278,14 +278,14 @@ def main():
             # What fraction of errors are within reach of a small centroid move?
             for reach in [0.01, 0.02, 0.05, 0.10, 0.20]:
                 fixable = (error_bd < reach).sum()
-                print(f"    Errors with d_boundary < {reach:.2f} (fixable by μ move of ~{reach:.2f}): "
+                print(f"    Errors with d_boundary < {reach:.2f} (fixable by mu move of ~{reach:.2f}): "
                       f"{fixable}/{errors.sum()} ({fixable/errors.sum()*100:.0f}%)")
 
     # ═══════════════════════════════════════════════
     # SECTION 4: PRODUCTION SCORER — SEPARATION SWEEP
     # ═══════════════════════════════════════════════
     print(f"\n{'=' * 90}")
-    print("SECTION 4: PRODUCTION ProfileScorer — controller leverage vs separation")
+    print("SECTION 4: PRODUCTION ProfileScorer -- controller leverage vs separation")
     print("(Replaces P4/P5 with production scorer)")
     print(f"{'=' * 90}")
 
@@ -334,7 +334,7 @@ def main():
     # SECTION 5: BOUNDARY-AWARE CONTROLLER
     # ═══════════════════════════════════════════════
     print(f"\n{'=' * 90}")
-    print("SECTION 5: BOUNDARY-AWARE — only update queries near boundaries")
+    print("SECTION 5: BOUNDARY-AWARE -- only update queries near boundaries")
     print(f"{'=' * 90}")
 
     for sep in [0.50, 0.75, 1.00, 1.50]:

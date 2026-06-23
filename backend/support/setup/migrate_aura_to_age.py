@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-migrate_aura_to_age.py — Block 8.5 Aura → AGE data migration.
+migrate_aura_to_age.py -- Block 8.5 Aura -> AGE data migration.
 
 Exports all nodes and relationships from Neo4j Aura and
 imports them into PostgreSQL + Apache AGE.
 
 Handles:
-  - Field remap: id → decision_id (Decision), id → alert_id (Alert)
-  - Label rename: ThreatIntel → ThreatIndicator
+  - Field remap: id -> decision_id (Decision), id -> alert_id (Alert)
+  - Label rename: ThreatIntel -> ThreatIndicator
   - All 12,120 nodes across 21 label types
   - All 8,385 relationships across 18 types
   - Batched import to avoid memory issues
-  - Idempotent: MERGE on key fields — safe to re-run
+  - Idempotent: MERGE on key fields -- safe to re-run
 
 Usage:
   # Dry run (audit only, no writes):
@@ -28,7 +28,7 @@ Usage:
 
 Tier definitions (from GAP registry):
   P0 (demo-blocking):  Decision, DECIDED_ON, Campaign, PART_OF
-  P1 (accuracy):       Alert, User, Asset, ThreatIntel→ThreatIndicator,
+  P1 (accuracy):       Alert, User, Asset, ThreatIntel->ThreatIndicator,
                        AttackPattern, TRIGGERED_EVOLUTION, INVOLVES,
                        DETECTED_ON, MATCHES, CALIBRATED_BY
   P2 (feature):        ShadowDecision, DecisionContext, AlertType,
@@ -103,8 +103,8 @@ COMPOSITE_KEYS: Dict[str, List[str]] = {
 # the field was renamed (e.g. Decision.id → decision_id), we must read the
 # Aura name from src_props/tgt_props but MATCH in AGE using the remapped name.
 AURA_KEY_FIELDS: Dict[str, str] = {
-    "Decision": "id",   # Aura: id  →  AGE: decision_id
-    "Alert":    "id",   # Aura: id  →  AGE: alert_id
+    "Decision": "id",   # Aura: id  ->  AGE: decision_id
+    "Alert":    "id",   # Aura: id  ->  AGE: alert_id
 }
 
 # ── Tier definitions ─────────────────────────────────────────────────────────
@@ -119,8 +119,8 @@ NODE_TIERS = {
 }
 
 REL_TIERS = {
-    "p0": ["PART_OF"],           # DECIDED_ON moved to p1 — requires Alert nodes (p1)
-    "p1": ["DECIDED_ON",         # Decision→Alert; Alert nodes must exist first
+    "p0": ["PART_OF"],           # DECIDED_ON moved to p1 -- requires Alert nodes (p1)
+    "p1": ["DECIDED_ON",         # Decision->Alert; Alert nodes must exist first
            "INVOLVES", "DETECTED_ON", "MATCHES",
            "ASSOCIATED_WITH", "MEMBER_OF", "HAS_TRAVEL",
            "CLASSIFIED_AS"],
@@ -273,7 +273,7 @@ async def import_relationship_to_age(
     Key resolution order for each endpoint:
       1. If the label is in COMPOSITE_KEYS: synthesize composite_key from Aura props.
       2. Otherwise: use AURA_KEY_FIELDS to read the Aura property name (which may
-         differ from the AGE key due to field remapping, e.g. Decision.id → decision_id).
+         differ from the AGE key due to field remapping, e.g. Decision.id -> decision_id).
          The AGE MATCH always uses KEY_FIELDS[label].
     """
     src_label = get_age_label(rel.get("src_label", "Node"))
@@ -373,7 +373,7 @@ async def migrate_tier(
             if len(batch) < BATCH_SIZE:
                 break
         results["nodes"][label] = total
-        logger.info(f"    ✓ {label}: {total} nodes")
+        logger.info(f"    [OK] {label}: {total} nodes")
 
     # Migrate relationships
     for rel_type in rel_types:
@@ -398,7 +398,7 @@ async def migrate_tier(
             if len(batch) < BATCH_SIZE:
                 break
         results["relationships"][rel_type] = total
-        logger.info(f"    ✓ {rel_type}: {total} relationships")
+        logger.info(f"    [OK] {rel_type}: {total} relationships")
 
     return results
 
@@ -409,7 +409,7 @@ async def run_migration(args):
     tiers = [args.tier] if args.tier else ["p0", "p1", "p2"]
 
     if dry_run:
-        logger.info("=== DRY RUN — no writes to AGE ===")
+        logger.info("=== DRY RUN -- no writes to AGE ===")
     else:
         # Validate AGE backend
         if os.getenv("GRAPH_BACKEND", "neo4j").lower() != "age":
@@ -419,7 +419,7 @@ async def run_migration(args):
             )
             sys.exit(1)
 
-    logger.info("=== Aura → AGE Migration ===")
+    logger.info("=== Aura -> AGE Migration ===")
     logger.info(f"Tiers: {tiers}")
     logger.info(f"Dry run: {dry_run}")
     logger.info("")
@@ -482,7 +482,7 @@ async def run_migration(args):
     logger.info(f"  Total relationships migrated: {grand_total_rels}")
     logger.info(f"  Errors:                       {grand_total_errors}")
     if dry_run:
-        logger.info("  (DRY RUN — nothing written)")
+        logger.info("  (DRY RUN -- nothing written)")
     else:
         logger.info("  Migration complete.")
         logger.info("  Next: python support/setup/rebuild_age_graph.py --verify")
@@ -490,11 +490,11 @@ async def run_migration(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Migrate Neo4j Aura → AGE/PostgreSQL"
+        description="Migrate Neo4j Aura -> AGE/PostgreSQL"
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--dry-run", action="store_true",
-                       help="Audit only — no writes")
+                       help="Audit only -- no writes")
     group.add_argument("--live", action="store_true",
                        help="Execute migration")
     parser.add_argument(

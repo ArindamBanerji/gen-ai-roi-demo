@@ -1,7 +1,7 @@
 """
 EXP-17: V-STAGED-ACTIVATION
 =============================
-Does raw SGD → pipeline switching fix cold start from generic prior?
+Does raw SGD -> pipeline switching fix cold start from generic prior?
 
 Run: cd backend && python scripts/exp17_staged.py
 Time: ~15 min
@@ -148,7 +148,7 @@ def main():
     beats_both = best_staged_acc > pipe_always and best_staged_acc > raw_always
     print(f"Q1: Any STAGED beats both PIPELINE_ALWAYS ({pipe_always:.1f}%) "
           f"and RAW_ALWAYS ({raw_always:.1f}%)? "
-          f"{'YES' if beats_both else 'NO'} — best: {best_staged} at {best_staged_acc:.1f}%")
+          f"{'YES' if beats_both else 'NO'} -- best: {best_staged} at {best_staged_acc:.1f}%")
 
     print(f"Q2: Best switchover: {best_staged} ({best_staged_acc:.1f}%)")
 

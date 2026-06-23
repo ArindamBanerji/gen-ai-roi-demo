@@ -1,8 +1,8 @@
 """
 EXP-F2: V-STABILITY-BOUNDARY
 ===============================
-Map the stability diagram: V̇ vs ρ.
-Find the exact ρ threshold where V̇ crosses zero.
+Map the stability diagram: V vs rho.
+Find the exact rho threshold where V crosses zero.
 
 Run: cd backend && python scripts/exp_f2_stability.py
 Time: ~15 min
@@ -27,8 +27,8 @@ def main():
     base_mu = get_base_centroids()
     rho_targets = [0.0, 0.05, 0.10, 0.20, 0.30, 0.50, 0.70, 0.90, 1.00]
 
-    print(f"\n  {'ρ_target':>10s}  {'V_start':>8s}  {'V_end':>8s}  {'ΔV':>8s}  "
-          f"{'V̇/step':>8s}  {'Stable?':>7s}  {'Acc':>6s}")
+    print(f"\n  {'rho_target':>10s}  {'V_start':>8s}  {'V_end':>8s}  {'DeltaV':>8s}  "
+          f"{'V/step':>8s}  {'Stable?':>7s}  {'Acc':>6s}")
     print(f"  {'-' * 65}")
 
     for rho_target in rho_targets:
@@ -98,11 +98,11 @@ def main():
 
     # Find crossover
     print(f"\n  CROSSOVER ANALYSIS:")
-    print(f"  The ρ threshold where V̇ crosses zero is between the")
+    print(f"  The rho threshold where V crosses zero is between the")
     print(f"  last unstable and first stable entries above.")
 
     # Also: compute theoretical η* = 2‖g‖²/(‖g‖²+Σσᵢ²)
-    print(f"\n  THEORETICAL η* COMPUTATION:")
+    print(f"\n  THEORETICAL eta* COMPUTATION:")
     for seed in SEEDS_SHORT[:1]:
         gt = build_gt(np.random.default_rng(seed), base_mu)
         g = gt - base_mu
@@ -120,11 +120,11 @@ def main():
         sigma_sq = np.mean(noises)
 
         eta_star = 2 * g_norm_sq / (g_norm_sq + sigma_sq)
-        print(f"    ‖g‖² = {g_norm_sq:.4f}")
-        print(f"    Σσᵢ² = {sigma_sq:.4f}")
-        print(f"    η* = 2‖g‖²/(‖g‖²+Σσᵢ²) = {eta_star:.6f}")
-        print(f"    Production η = 0.05")
-        print(f"    η > η*? {'YES (unstable)' if 0.05 > eta_star else 'NO (stable)'}")
+        print(f"    ||g||^2 = {g_norm_sq:.4f}")
+        print(f"    Sigmasigma_i^2 = {sigma_sq:.4f}")
+        print(f"    eta* = 2||g||^2/(||g||^2+Sigmasigma_i^2) = {eta_star:.6f}")
+        print(f"    Production eta = 0.05")
+        print(f"    eta > eta*? {'YES (unstable)' if 0.05 > eta_star else 'NO (stable)'}")
 
     print("\nDONE.")
 

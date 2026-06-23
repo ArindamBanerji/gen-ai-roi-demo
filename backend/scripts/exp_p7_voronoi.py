@@ -78,7 +78,7 @@ def main():
     # SECTION 2: GT vs PRIOR STRUCTURE
     # ═══════════════════════════════════════════════
     print(f"\n{'=' * 90}")
-    print("SECTION 2: GT vs PRIOR — does GT have the same Voronoi structure?")
+    print("SECTION 2: GT vs PRIOR -- does GT have the same Voronoi structure?")
     print(f"{'=' * 90}")
 
     for seed in SEEDS_SHORT:
@@ -162,7 +162,7 @@ def main():
     # ═══════════════════════════════════════════════
     print(f"\n{'=' * 90}")
     print("SECTION 4: CROSS-ACTION COUPLING")
-    print("Moving centroid a1 — how much does action a2's cell change?")
+    print("Moving centroid a1 -- how much does action a2's cell change?")
     print(f"{'=' * 90}")
 
     seed = 42
@@ -174,7 +174,7 @@ def main():
         print(f"  Move action a1 by eps=0.05, measure cell volume change for all actions:")
         print(f"  {'Moved':>10s}", end="")
         for ai in range(A):
-            print(f"  {'ΔVol_'+ACTIONS[ai][:4]:>10s}", end="")
+            print(f"  {'DeltaVol_'+ACTIONS[ai][:4]:>10s}", end="")
         print()
 
         for a_moved in range(A):

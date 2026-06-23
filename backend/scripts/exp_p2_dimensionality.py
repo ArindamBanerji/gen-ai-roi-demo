@@ -160,8 +160,8 @@ def main():
     print(f"\n{'=' * 80}")
     print("LANDSCAPE: gradient magnitude at different d")
     print(f"{'=' * 80}")
-    print(f"  {'d':>4s}  {'BaseAcc':>7s}  {'Conf':>6s}  {'|Δacc|@0.05':>11s}  "
-          f"{'|Δconf|@0.05':>12s}  {'Gradient':>8s}  {'10%→GT':>7s}  {'50%→GT':>7s}")
+    print(f"  {'d':>4s}  {'BaseAcc':>7s}  {'Conf':>6s}  {'|Deltaacc|@0.05':>11s}  "
+          f"{'|Deltaconf|@0.05':>12s}  {'Gradient':>8s}  {'10%->GT':>7s}  {'50%->GT':>7s}")
     print(f"  {'-' * 80}")
 
     for d in D_VALUES:

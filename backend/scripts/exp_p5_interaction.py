@@ -5,7 +5,7 @@ The key experiment: combine plant variations (temperature,
 dimensionality, metric) WITH the winning controller to find
 which plant configuration gives the most controller leverage.
 
-If changing the plant makes the controller 10× more effective,
+If changing the plant makes the controller 10x more effective,
 the plant was the bottleneck all along.
 
 Run: cd backend && python scripts/exp_p5_interaction.py
@@ -181,7 +181,7 @@ def main():
 
     # TEMPERATURE × CONTROLLER
     print(f"\n{'=' * 90}")
-    print("TEMPERATURE × CONTROLLER")
+    print("TEMPERATURE x CONTROLLER")
     print(f"{'=' * 90}")
     print(f"  {'Temp':>6s}  {'%>0.80':>6s}  {'Static':>7s}  {'Decay':>7s}  {'Best':>7s}  "
           f"{'Decay-Stat':>10s}  {'Best-Stat':>9s}")
@@ -206,7 +206,7 @@ def main():
 
     # METRIC × CONTROLLER
     print(f"\n{'=' * 90}")
-    print("METRIC × CONTROLLER")
+    print("METRIC x CONTROLLER")
     print(f"{'=' * 90}")
     print(f"  {'Metric':>12s}  {'Static':>7s}  {'Decay':>7s}  {'Best':>7s}  "
           f"{'Decay-Stat':>10s}  {'Best-Stat':>9s}")
@@ -228,7 +228,7 @@ def main():
 
     # DIMENSIONALITY × CONTROLLER
     print(f"\n{'=' * 90}")
-    print("DIMENSIONALITY × CONTROLLER")
+    print("DIMENSIONALITY x CONTROLLER")
     print(f"{'=' * 90}")
     print(f"  {'d':>4s}  {'Static':>7s}  {'Decay':>7s}  {'Best':>7s}  "
           f"{'Decay-Stat':>10s}  {'Best-Stat':>9s}")
@@ -250,7 +250,7 @@ def main():
 
     # NOISE SCALE × CONTROLLER
     print(f"\n{'=' * 90}")
-    print("NOISE SCALE × CONTROLLER")
+    print("NOISE SCALE x CONTROLLER")
     print(f"{'=' * 90}")
     print(f"  {'Noise':>6s}  {'Static':>7s}  {'Decay':>7s}  {'Best':>7s}  "
           f"{'Decay-Stat':>10s}  {'Best-Stat':>9s}")
@@ -287,7 +287,7 @@ def main():
                 accs.append(r['acc'])
             results[strategy] = np.mean(accs)
         s, d, b = results["STATIC"], results["SQRT_DECAY"], results["BEST_COMPOSED"]
-        print(f"  τ={temp:.1f} {metric:>12s}: Static={s:.1f}% Decay={d:.1f}% Best={b:.1f}%  "
+        print(f"  tau={temp:.1f} {metric:>12s}: Static={s:.1f}% Decay={d:.1f}% Best={b:.1f}%  "
               f"leverage={b-s:+.1f}pp")
 
     print("\nDONE.")

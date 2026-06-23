@@ -109,9 +109,9 @@ def main():
         for ci in range(C):
             print(f"    {CATEGORIES[ci]:>20s}: {cat_counts.get(ci, 0)}")
 
-        print(f"\n  Top error pairs (cat, true→pred):")
+        print(f"\n  Top error pairs (cat, true->pred):")
         for (cat, true_a, pred_a), count in pair_counts.most_common(10):
-            print(f"    {cat:>20s}: {true_a:>12s} → {pred_a:>12s}: {count}")
+            print(f"    {cat:>20s}: {true_a:>12s} -> {pred_a:>12s}: {count}")
 
         # Geometric structure: PCA of boundary-wrong factor vectors
         fvs = np.array([d['fv'] for d in boundary_wrong_details])
@@ -141,7 +141,7 @@ def main():
                                    for d in deep_wrong_details)
         print(f"\n  Top error pairs:")
         for (cat, true_a, pred_a), count in pair_counts_deep.most_common(10):
-            print(f"    {cat:>20s}: {true_a:>12s} → {pred_a:>12s}: {count}")
+            print(f"    {cat:>20s}: {true_a:>12s} -> {pred_a:>12s}: {count}")
 
         gaps = [d['gap'] for d in deep_wrong_details]
         print(f"\n  Gap distribution: mean={np.mean(gaps):.3f} max={np.max(gaps):.3f}")

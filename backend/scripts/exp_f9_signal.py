@@ -28,7 +28,7 @@ def compute_signal_stats(records):
 
     signals = np.array([r['signal'] for r in records])
     gt_dirs = np.array([r['gt_dir'] for r in records])
-    noises = signals - gt_dirs  # n = s - g = (f - μ) - (μ* - μ) = f - μ*
+    noises = signals - gt_dirs  # n = s - g = (f - mu) - (mu* - mu) = f - mu*
 
     # Per-dimension SNR
     snr_per_dim = np.zeros(D)
@@ -148,7 +148,7 @@ def main():
         print(f"  Top-2 SNR fraction: {np.sum(np.sort(stats['snr'])[-2:]**2) / np.sum(stats['snr']**2):.2f}")
 
         # ══ TABLE 2: Per-category × per-dimension SNR ══
-        print(f"\n  TABLE 2: Per-category × per-dimension SNR")
+        print(f"\n  TABLE 2: Per-category x per-dimension SNR")
         print(f"  {'Category':>20s}", end="")
         for d in range(D):
             print(f"  {'d'+str(d):>6s}", end="")
@@ -249,7 +249,7 @@ def main():
     print("Q5: Is signal subspace aligned with centroid subspace?")
     print("F10-Q1: Does SNR decrease as centroids converge?")
     print("F10-Q2: Do all dimensions lose SNR equally?")
-    print("F11-Q1: Override SNR ≠ confirm SNR?")
+    print("F11-Q1: Override SNR != confirm SNR?")
     print("F11-Q2: Boundary signal more concentrated than deep?")
     print("F11-Q3: Rare categories higher SNR than dominant?")
 

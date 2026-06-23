@@ -39,6 +39,7 @@ def test_oracle_outcome_fields() -> None:
     outcome = AnalystOracle(seed=42).synthetic_outcome(shown=True)
 
     assert set(outcome) == {
+        "action",
         "analyst_action",
         "was_override",
         "quality_signal",

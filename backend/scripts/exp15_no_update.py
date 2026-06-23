@@ -98,7 +98,7 @@ def run_strategy(seed, strategy):
             if strategy == "PIPELINE" and pipeline:
                 update_count = pipeline.stats['updates']
             elif strategy == "GATED_ONLY":
-                update_count = n  # approximate — all that pass gate
+                update_count = n  # approximate -- all that pass gate
             elif strategy == "RAW_SGD":
                 update_count = n
             cp[n] = {

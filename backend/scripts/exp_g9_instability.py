@@ -1,18 +1,18 @@
 """
 G9: PER-PARAMETER INSTABILITY
 =================================
-F1 showed AGGREGATE ρ ≈ -0.07 at the calibrated operating point.
-But ρ is the MEAN of 144 per-parameter alignments.
+F1 showed AGGREGATE rho ~= -0.07 at the calibrated operating point.
+But rho is the MEAN of 144 per-parameter alignments.
 
-If some parameters have ρ > 0.08 (learning) while most have ρ < 0
+If some parameters have rho > 0.08 (learning) while most have rho < 0
 (degrading), a SELECTIVE FREEZE controller that continues updating
 the learning parameters could outperform global STATIC.
 
 Tests:
-1. Per-(c,a,i) alignment ρ distribution
-2. Per-(c,a) alignment ρ distribution
+1. Per-(c,a,i) alignment rho distribution
+2. Per-(c,a) alignment rho distribution
 3. Selective freeze controller vs global STATIC
-4. Observable proxy: drift + accuracy → instability detection
+4. Observable proxy: drift + accuracy -> instability detection
 
 Run: cd backend && python scripts/exp_g9_instability.py
 Time: ~20 min
@@ -49,7 +49,7 @@ def compute_ece(confs, corrects, n_bins=10):
 def main():
     print("=" * 90)
     print("G9: PER-PARAMETER INSTABILITY")
-    print("Is ρ negative for ALL parameters, or just most?")
+    print("Is rho negative for ALL parameters, or just most?")
     print("=" * 90)
 
     base_mu = get_base_centroids()
@@ -58,7 +58,7 @@ def main():
     # SECTION 1: Per-(c,a,i) alignment distribution
     # ═══════════════════════════════════════════════════
     print(f"\n{'=' * 90}")
-    print("SECTION 1: Per-parameter ρ distribution at convergence (N=2000-4000)")
+    print("SECTION 1: Per-parameter rho distribution at convergence (N=2000-4000)")
     print(f"{'=' * 90}")
 
     for seed in SEEDS_SHORT:
@@ -97,23 +97,23 @@ def main():
         rho_values = list(rho_per_param.values())
 
         print(f"\n  Seed {seed}: {len(rho_values)} parameters with data")
-        print(f"    Aggregate ρ:   {np.mean(rho_values):+.4f}")
-        print(f"    Median ρ:      {np.median(rho_values):+.4f}")
-        print(f"    Std ρ:         {np.std(rho_values):.4f}")
-        print(f"    Min ρ:         {min(rho_values):+.4f}")
-        print(f"    Max ρ:         {max(rho_values):+.4f}")
+        print(f"    Aggregate rho:   {np.mean(rho_values):+.4f}")
+        print(f"    Median rho:      {np.median(rho_values):+.4f}")
+        print(f"    Std rho:         {np.std(rho_values):.4f}")
+        print(f"    Min rho:         {min(rho_values):+.4f}")
+        print(f"    Max rho:         {max(rho_values):+.4f}")
 
         # Distribution
         n_positive = sum(1 for r in rho_values if r > 0)
         n_above_threshold = sum(1 for r in rho_values if r > 0.08)
         n_strongly_negative = sum(1 for r in rho_values if r < -0.20)
-        print(f"    ρ > 0:         {n_positive}/{len(rho_values)} ({n_positive/len(rho_values)*100:.0f}%)")
-        print(f"    ρ > 0.08:      {n_above_threshold}/{len(rho_values)} ({n_above_threshold/len(rho_values)*100:.0f}%)")
-        print(f"    ρ < -0.20:     {n_strongly_negative}/{len(rho_values)} ({n_strongly_negative/len(rho_values)*100:.0f}%)")
+        print(f"    rho > 0:         {n_positive}/{len(rho_values)} ({n_positive/len(rho_values)*100:.0f}%)")
+        print(f"    rho > 0.08:      {n_above_threshold}/{len(rho_values)} ({n_above_threshold/len(rho_values)*100:.0f}%)")
+        print(f"    rho < -0.20:     {n_strongly_negative}/{len(rho_values)} ({n_strongly_negative/len(rho_values)*100:.0f}%)")
 
         # Per-(c,a) aggregated ρ
         print(f"\n    Per-(c,a) alignment:")
-        print(f"    {'Category':>20s}  {'Action':>10s}  {'ρ':>8s}  {'N_updates':>9s}  {'Status':>10s}")
+        print(f"    {'Category':>20s}  {'Action':>10s}  {'rho':>8s}  {'N_updates':>9s}  {'Status':>10s}")
         print(f"    {'-' * 65}")
 
         for ci in range(C):
@@ -134,7 +134,7 @@ def main():
                         for ci in range(C) for ai in range(A)
                         if (ci, ai, di) in rho_per_param]
             if dim_rhos:
-                print(f"      Dim {di}: ρ = {np.mean(dim_rhos):+.4f} "
+                print(f"      Dim {di}: rho = {np.mean(dim_rhos):+.4f} "
                       f"(positive: {sum(1 for r in dim_rhos if r > 0)}/{len(dim_rhos)})")
 
     # ═══════════════════════════════════════════════════
@@ -148,7 +148,7 @@ def main():
     strategies = {
         "GLOBAL_STATIC": "freeze all",
         "GLOBAL_UPDATE": "update all (sqrt decay)",
-        "SELECTIVE_ORACLE": "freeze where ρ < 0.08 (oracle — knows GT)",
+        "SELECTIVE_ORACLE": "freeze where rho < 0.08 (oracle -- knows GT)",
         "SELECTIVE_DRIFT": "freeze where drift is high AND q declining (observable)",
     }
 
@@ -234,9 +234,9 @@ def main():
                             ca_accuracy_window[(ci, ai)]) >= 100 else recent_acc
 
                         if drift_mag > 0.02 and recent_acc < older_acc - 0.05:
-                            should_update = False  # freeze — drifting and degrading
+                            should_update = False  # freeze -- drifting and degrading
                         elif drift_mag < 0.01 and recent_acc > 0.75:
-                            should_update = False  # freeze — converged
+                            should_update = False  # freeze -- converged
                         else:
                             should_update = True
                     else:
@@ -309,16 +309,16 @@ def main():
         n_degraded = (delta_V > 0).sum()
         n_unchanged = (delta_V == 0).sum()
 
-        print(f"\n  Seed {seed}: Per-parameter ΔV after 2000 decisions:")
-        print(f"    Improved (ΔV < 0):   {n_improved}/{delta_V.size} ({n_improved/delta_V.size*100:.0f}%)")
-        print(f"    Degraded (ΔV > 0):   {n_degraded}/{delta_V.size} ({n_degraded/delta_V.size*100:.0f}%)")
-        print(f"    Mean ΔV:             {delta_V.mean():+.6f}")
-        print(f"    Mean |ΔV| improved:  {delta_V[delta_V < 0].mean():.6f}" if n_improved > 0 else "")
-        print(f"    Mean |ΔV| degraded:  {delta_V[delta_V > 0].mean():.6f}" if n_degraded > 0 else "")
+        print(f"\n  Seed {seed}: Per-parameter DeltaV after 2000 decisions:")
+        print(f"    Improved (DeltaV < 0):   {n_improved}/{delta_V.size} ({n_improved/delta_V.size*100:.0f}%)")
+        print(f"    Degraded (DeltaV > 0):   {n_degraded}/{delta_V.size} ({n_degraded/delta_V.size*100:.0f}%)")
+        print(f"    Mean DeltaV:             {delta_V.mean():+.6f}")
+        print(f"    Mean |DeltaV| improved:  {delta_V[delta_V < 0].mean():.6f}" if n_improved > 0 else "")
+        print(f"    Mean |DeltaV| degraded:  {delta_V[delta_V > 0].mean():.6f}" if n_degraded > 0 else "")
 
         # Which (c,a) pairs improved vs degraded?
-        print(f"\n    Per-(c,a) ΔV:")
-        print(f"    {'Category':>20s}  {'Action':>10s}  {'ΔV':>10s}  {'Status':>10s}")
+        print(f"\n    Per-(c,a) DeltaV:")
+        print(f"    {'Category':>20s}  {'Action':>10s}  {'DeltaV':>10s}  {'Status':>10s}")
         print(f"    {'-' * 55}")
         for ci in range(C):
             for ai in range(A):
@@ -330,10 +330,10 @@ def main():
     print(f"\n{'=' * 90}")
     print("BINARY QUESTIONS")
     print("=" * 90)
-    print("Q1: Is ρ > 0 for ANY (c,a) pair at convergence?")
+    print("Q1: Is rho > 0 for ANY (c,a) pair at convergence?")
     print("Q2: Does selective oracle freeze beat global static?")
     print("Q3: Does selective drift (observable) approximate oracle freeze?")
-    print("Q4: What fraction of parameters are improving (ΔV < 0)?")
+    print("Q4: What fraction of parameters are improving (DeltaV < 0)?")
     print("Q5: Are the improving parameters concentrated in specific categories?")
 
     print("\nDONE.")

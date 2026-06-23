@@ -112,7 +112,7 @@ def main():
         print(f"\n  Seed {seed}:")
 
         # MI with magnitude
-        print(f"\n  MI(signal, |g|) — can signals detect ERROR MAGNITUDE?")
+        print(f"\n  MI(signal, |g|) -- can signals detect ERROR MAGNITUDE?")
         print(f"  {'Signal':>15s}  {'MI(magnitude)':>13s}")
         print(f"  {'-' * 30}")
         for name in signals:
@@ -124,7 +124,7 @@ def main():
             print(f"  {name:>15s}  {mi:>11.4f}")
 
         # MI with direction (per-dimension)
-        print(f"\n  MI(signal, g_i) — can signals detect ERROR DIRECTION per dimension?")
+        print(f"\n  MI(signal, g_i) -- can signals detect ERROR DIRECTION per dimension?")
         print(f"  {'Signal':>15s}", end="")
         for d in range(D):
             print(f"  {'dim_'+str(d):>7s}", end="")

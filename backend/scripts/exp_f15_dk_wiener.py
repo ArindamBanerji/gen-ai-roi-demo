@@ -4,10 +4,10 @@ EXP-F15: V-DK-WIENER-UNIFICATION
 Key architectural prediction: DK weights (for scoring) and
 Wiener gains (for updating) are mathematically related:
 
-  DK weight:    w_i ∝ 1/σ_i²     (weight inversely by noise)
-  Wiener gain:  η_i = g_i²/(g_i² + σ_i²)
+  DK weight:    w_i proportional to 1/sigma_i^2     (weight inversely by noise)
+  Wiener gain:  eta_i = g_i^2/(g_i^2 + sigma_i^2)
 
-Both depend on per-dimension noise σ_i². If we learn DK weights
+Both depend on per-dimension noise sigma_i^2. If we learn DK weights
 from analyst decisions, we SIMULTANEOUSLY get update gains.
 
 Tests:
@@ -65,8 +65,8 @@ def learn_dk_weights_from_data(scorer, gt, seed, N=1000):
         ta = true_action(gt, ci, fv)
         ai = ta
 
-        noise = fv - gt[ci, ai]  # f - μ*
-        signal = gt[ci, ai] - scorer.centroids[ci, ai]  # μ* - μ
+        noise = fv - gt[ci, ai]  # f - mu*
+        signal = gt[ci, ai] - scorer.centroids[ci, ai]  # mu* - mu
 
         for i in range(D):
             per_dim_sigma2[i] += noise[i] ** 2
@@ -119,11 +119,11 @@ def run_config(seed, config, gt, start_mu, learned):
     """
     Configs:
       STATIC: no updates
-      EUCLID_UNIFORM: Euclidean scoring + uniform η
-      DK_UNIFORM: DK scoring + uniform η
-      EUCLID_WIENER: Euclidean scoring + Wiener η_i
-      DK_WIENER: DK scoring + Wiener η_i (full unification)
-      DK_DKDERIVED: DK scoring + DK-derived η_i (without signal estimate)
+      EUCLID_UNIFORM: Euclidean scoring + uniform eta
+      DK_UNIFORM: DK scoring + uniform eta
+      EUCLID_WIENER: Euclidean scoring + Wiener eta_i
+      DK_WIENER: DK scoring + Wiener eta_i (full unification)
+      DK_DKDERIVED: DK scoring + DK-derived eta_i (without signal estimate)
     """
     rng = np.random.default_rng(seed)
     scorer = make_scorer(start_mu.copy())
@@ -212,7 +212,7 @@ def main():
         scoring = "DK" if "DK" in config else "Euclid"
         updating = "Wiener" if "WIENER" in config else ("DK-der" if "DKDERIVED" in config else "Uniform")
         if config == "STATIC":
-            scoring, updating = "—", "—"
+            scoring, updating = "--", "--"
         print(f"  {config:>15s}  {acc:>4.1f}%  {ece:>8.4f}  {vf:>8.4f}  {scoring:>10s}  {updating:>10s}")
 
     # Learned weights analysis
@@ -221,10 +221,10 @@ def main():
     scorer_est = make_scorer(base_mu.copy())
     learned = learn_dk_weights_from_data(scorer_est, gt, 42)
 
-    print(f"    Per-dim σ²:         {np.round(learned['sigma2'], 5)}")
-    print(f"    Per-dim signal²:    {np.round(learned['signal2'], 5)}")
+    print(f"    Per-dim sigma^2:         {np.round(learned['sigma2'], 5)}")
+    print(f"    Per-dim signal^2:    {np.round(learned['signal2'], 5)}")
     print(f"    Per-dim SNR:        {np.round(learned['snr'], 4)}")
-    print(f"    DK weights (1/σ²):  {np.round(learned['dk_weights'], 3)}")
+    print(f"    DK weights (1/sigma^2):  {np.round(learned['dk_weights'], 3)}")
     print(f"    Wiener gains:       {np.round(learned['wiener_gains'], 4)}")
     print(f"    DK-derived gains:   {np.round(learned['dk_derived_gains'], 4)}")
 

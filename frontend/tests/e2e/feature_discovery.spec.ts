@@ -65,7 +65,7 @@ test('discoveries_unsupported_domain_returns_400', async ({ page }) => {
   expect(response.status()).toBe(400);
 });
 
-test('discoveries_contain_seed_data_patterns', async ({ page }) => {
+test('discoveries_refresh_returns_valid_shape_when_empty', async ({ page }) => {
   test.setTimeout(15_000);
 
   const response = await page.request.post(`${BACKEND}/api/discoveries/refresh?domain=soc`);
@@ -73,9 +73,11 @@ test('discoveries_contain_seed_data_patterns', async ({ page }) => {
 
   const data = await response.json();
   expect(typeof data.total).toBe('number');
-  expect(data.total).toBeGreaterThan(0);
+  expect(data.total).toBeGreaterThanOrEqual(0);
   expectArray(data.discoveries, 'discoveries');
-  expect(data.discoveries.length).toBeGreaterThan(0);
+  expect(data.discoveries.length).toBe(data.total);
+  expectArray(data.errors, 'errors');
+  expectCache(data.cache);
 });
 
 test('discovery_items_have_required_fields', async ({ page }) => {

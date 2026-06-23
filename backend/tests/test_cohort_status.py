@@ -16,7 +16,7 @@ from app.services.cohort_status import (
 def test_t1_sample_only_no_lift() -> None:
     status = CohortStatusService(decision_records=_records("sample", 10, 10)).get_status()
 
-    assert status["real"]["lift"] is None
+    assert status["real"]["magnitude"] is None
     assert status["real"]["status"] == "pending"
     assert status["state"] != "MEASURED"
     assert status["state"] == "INSTRUMENT_VALIDATED"
@@ -35,7 +35,7 @@ def test_t3_one_real_below_k() -> None:
     status = CohortStatusService(decision_records=_records("real", 1, 0)).get_status()
 
     assert status["state"] == "ACCUMULATING"
-    assert status["real"]["lift"] is None
+    assert status["real"]["magnitude"] is None
     assert status["real"]["treatment_n"] == 1
     assert status["real"]["control_n"] == 0
 
@@ -47,8 +47,8 @@ def test_t4_real_above_k_both_arms() -> None:
     status = CohortStatusService(decision_records=records).get_status()
 
     assert status["state"] == "MEASURED"
-    assert status["real"]["lift"] is not None
-    assert status["real"]["lift"] == pytest.approx(0.4)
+    assert status["real"]["magnitude"] is not None
+    assert status["real"]["magnitude"] == pytest.approx(0.4)
     assert status["real"]["treatment_n"] == 50
     assert status["real"]["control_n"] == 50
 
@@ -77,7 +77,7 @@ def test_structure_never_moves_state() -> None:
 
     assert status["state"] == "INSTRUMENT_VALIDATED"
     assert status["structure"]["present"] is True
-    assert status["real"]["lift"] is None
+    assert status["real"]["magnitude"] is None
 
 
 def test_v7_gate_abstains_below_threshold() -> None:
@@ -87,7 +87,7 @@ def test_v7_gate_abstains_below_threshold() -> None:
 
     assert result["status"] == "awaiting_real_cohorts"
     assert result["status"] not in {"conditions_met", "conditions_not_met"}
-    assert result["lift"] is None
+    assert result["magnitude"] is None
 
 
 def test_v7_gate_rejects_non_real() -> None:
@@ -96,7 +96,7 @@ def test_v7_gate_rejects_non_real() -> None:
             "treatment_n": 50,
             "control_n": 50,
             "threshold_k": 50,
-            "lift": 0.1,
+            "magnitude": 0.1,
             "records": [_record("sample", "treatment", True)],
         }
     }
@@ -119,14 +119,14 @@ def test_lift_null_at_instrument_validated() -> None:
     status = CohortStatusService(decision_records=[]).get_status()
 
     assert status["state"] == "INSTRUMENT_VALIDATED"
-    assert status["real"]["lift"] is None
+    assert status["real"]["magnitude"] is None
 
 
 def test_lift_null_at_accumulating() -> None:
     status = CohortStatusService(decision_records=_records("real", 49, 50)).get_status()
 
     assert status["state"] == "ACCUMULATING"
-    assert status["real"]["lift"] is None
+    assert status["real"]["magnitude"] is None
 
 
 def test_state_enum_values() -> None:

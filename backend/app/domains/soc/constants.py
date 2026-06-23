@@ -73,3 +73,23 @@ S2P_COLD_START_REFERENCE = {
     1000: 0.661,
     3000: 0.701,
 }
+
+
+# Re-Convergence Theorem (CC-21 Tier 2, T-A Analytic)
+# gamma > 1 proven analytically: Phase 2 re-convergence faster than Phase 1.
+# Condition: L2 kernel, epsilon_firm > 0.125, category-sparse disruption.
+# Evidence: math_synopsis_v18.md, cga_arxiv_short_v7_6.md.
+# Registered: ClaimRegistry CC-21/SOC-gamma (Tier: analytic).
+GAMMA_THEOREM = {
+    "claim_id": "CC-21",
+    "registry_claim_id": "SOC-gamma",
+    "tier": "analytic",
+    "epsilon_firm_threshold": 0.125,
+    "conditions": [
+        "L2 kernel",
+        "epsilon_firm > 0.125",
+        "category-sparse disruption",
+    ],
+    "evidence_ref": "math_synopsis_v18",
+    "status": "proven",
+}

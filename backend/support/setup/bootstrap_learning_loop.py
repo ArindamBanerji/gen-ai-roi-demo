@@ -1,5 +1,5 @@
 """
-support/setup/bootstrap_learning_loop.py — Set outcome/correct on Decision nodes.
+support/setup/bootstrap_learning_loop.py -- Set outcome/correct on Decision nodes.
 
 The 9,796 Decision nodes migrated from Aura lack outcome and correct fields.
 This script reads the synthetic pilot decision data to determine the correct

@@ -82,7 +82,7 @@ def main():
 
     # Phase portrait A: (accuracy, velocity)
     print(f"\n{'=' * 80}")
-    print("PHASE A: (accuracy, velocity) — convergence dynamics")
+    print("PHASE A: (accuracy, velocity) -- convergence dynamics")
     print(f"{'=' * 80}")
     print(f"  {'N':>5s}  {'P_acc':>6s}  {'P_vel':>10s}  {'R_acc':>6s}  {'R_vel':>10s}  {'S_acc':>6s}")
     print(f"  {'-' * 55}")
@@ -99,7 +99,7 @@ def main():
 
     # Phase portrait B: (accuracy, confidence)
     print(f"\n{'=' * 80}")
-    print("PHASE B: (accuracy, confidence) — feedback gain structure")
+    print("PHASE B: (accuracy, confidence) -- feedback gain structure")
     print(f"{'=' * 80}")
     print(f"  {'N':>5s}  {'P_acc':>6s}  {'P_conf':>7s}  {'R_acc':>6s}  {'R_conf':>7s}")
     print(f"  {'-' * 40}")

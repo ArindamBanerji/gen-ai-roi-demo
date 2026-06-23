@@ -1,12 +1,12 @@
 """
-EXP-CENTROID: Four experiments characterizing T₀ (the centroid)
+EXP-CENTROID: Four experiments characterizing T_0 (the centroid)
 ================================================================
-These address the centroid characterization gap: T₀ is the foundation
-that T₁\T₀ builds on, but we haven't quantified the foundation's
+These address the centroid characterization gap: T_0 is the foundation
+that T_1\T_0 builds on, but we haven't quantified the foundation's
 properties or its interaction with Phase 2.
 
 1. FOUNDATION: How sensitive is DK improvement to centroid quality?
-2. CONVERGENCE: Per-dimension convergence geometry of T₀
+2. CONVERGENCE: Per-dimension convergence geometry of T_0
 3. STABILITY: How many decisions flip when centroids are perturbed?
 4. LIFTING: How much dimensionality does DK actually add?
 
@@ -162,7 +162,7 @@ def main():
         conditions["random"] = np.clip(rng_r.uniform(0.2, 0.8, (C, A, D)), 0, 1)
 
         print(f"\n  Seed {seed}:", flush=True)
-        print(f"  {'Condition':>15s}  {'||μ-μ*||':>8s}  {'Cent':>6s}  {'DK':>6s}  "
+        print(f"  {'Condition':>15s}  {'||mu-mu*||':>8s}  {'Cent':>6s}  {'DK':>6s}  "
               f"{'Shr.5':>6s}  {'DK gain':>7s}  {'Shr gain':>8s}", flush=True)
         print(f"  {'-'*60}", flush=True)
 

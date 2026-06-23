@@ -1,7 +1,7 @@
 """
 EXP-F8: V-ERROR-CONSERVATION
 ===============================
-Test whether ε_boundary is conserved under centroid perturbations
+Test whether epsilon_boundary is conserved under centroid perturbations
 at the operating point. Is the operating point a saddle, minimum,
 or generic point on the error landscape?
 
@@ -60,8 +60,8 @@ def main():
         base_errors, _ = count_boundary_errors(scorer_base, gt, test_queries)
         base_rate = base_errors / N_TEST * 100
 
-        print(f"\n  Seed {seed}: baseline ε_boundary = {base_rate:.1f}pp ({base_errors}/{N_TEST})")
-        print(f"\n  {'Magnitude':>10s}  {'Mean_Δε':>8s}  {'Std_Δε':>8s}  {'%Positive':>9s}  "
+        print(f"\n  Seed {seed}: baseline epsilon_boundary = {base_rate:.1f}pp ({base_errors}/{N_TEST})")
+        print(f"\n  {'Magnitude':>10s}  {'Mean_Deltaepsilon':>8s}  {'Std_Deltaepsilon':>8s}  {'%Positive':>9s}  "
               f"{'%Negative':>9s}  {'%Zero':>6s}  {'Conservation?':>13s}")
         print(f"  {'-' * 70}")
 
@@ -124,8 +124,8 @@ def main():
                 worst_delta = delta
                 worst_dir = direction.copy()
 
-        print(f"    Best direction:  Δε = {best_delta:+.2f}pp")
-        print(f"    Worst direction: Δε = {worst_delta:+.2f}pp")
+        print(f"    Best direction:  Deltaepsilon = {best_delta:+.2f}pp")
+        print(f"    Worst direction: Deltaepsilon = {worst_delta:+.2f}pp")
         print(f"    Range: {worst_delta - best_delta:.2f}pp")
 
         # Compare best direction to GT direction
@@ -145,13 +145,13 @@ def main():
             scorer_moved = make_scorer(moved)
             moved_errors, _ = count_boundary_errors(scorer_moved, gt, test_queries)
             delta = (moved_errors - base_errors) / N_TEST * 100
-            print(f"    {frac*100:.0f}% toward GT: Δε = {delta:+.2f}pp")
+            print(f"    {frac*100:.0f}% toward GT: Deltaepsilon = {delta:+.2f}pp")
 
     print(f"\n{'=' * 90}")
     print("BINARY QUESTIONS")
     print("=" * 90)
-    print("Q1: Is mean(Δε_boundary) < 0.5pp across all perturbations?")
-    print("Q2: Does std(Δε_boundary) increase with magnitude?")
+    print("Q1: Is mean(Deltaepsilon_boundary) < 0.5pp across all perturbations?")
+    print("Q2: Does std(Deltaepsilon_boundary) increase with magnitude?")
     print("Q3: Is there a consistent gradient direction?")
     print("Q4: How does gradient direction compare to GT direction?")
 

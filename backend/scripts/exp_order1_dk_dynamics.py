@@ -5,13 +5,13 @@ THE critical experiment: does variance estimation have different
 learning dynamics than mean estimation?
 
 Fisher information predicts:
-  Mean: I_μ = 1/σ²  → SNR → 0 at convergence → ρ_mean < 0
-  Variance: I_σ² = 1/(2σ⁴) → SNR may NOT go to zero
+  Mean: I_mu = 1/sigma^2  -> SNR -> 0 at convergence -> rho_mean < 0
+  Variance: I_sigma^2 = 1/(2sigma^4) -> SNR may NOT go to zero
   
-If ρ_variance > 0.08 at the operating point:
-  → DK weights compound from analyst decisions
-  → "Compounding intelligence" includes the centroid itself (Order 1)
-  → Architecture: freeze means, continue learning variances
+If rho_variance > 0.08 at the operating point:
+  -> DK weights compound from analyst decisions
+  -> "Compounding intelligence" includes the centroid itself (Order 1)
+  -> Architecture: freeze means, continue learning variances
 
 Run: cd backend && python scripts/exp_order1_dk_dynamics.py
 Time: ~20 min
@@ -83,7 +83,7 @@ def compute_optimal_dk_weights(gt, centroids, seed, N=5000):
 def main():
     print("=" * 90)
     print("EXP-ORDER-1: V-DK-LEARNING-DYNAMICS")
-    print("Does ρ_variance > 0.08 at the operating point?")
+    print("Does rho_variance > 0.08 at the operating point?")
     print("=" * 90)
 
     base_mu = get_base_centroids()
@@ -109,7 +109,7 @@ def main():
         checkpoints = [200, 500, 1000, 1500, 2000, 3000, 4000]
         window_size = 400
 
-        print(f"\n  {'N':>6s}  {'ρ_var':>7s}  {'DK_acc':>7s}  {'Cent_acc':>8s}  "
+        print(f"\n  {'N':>6s}  {'rho_var':>7s}  {'DK_acc':>7s}  {'Cent_acc':>8s}  "
               f"{'DK-Cent':>7s}  {'w_dist_to_opt':>13s}  {'Cumul_DK':>9s}")
         print(f"  {'-' * 70}")
 
@@ -200,24 +200,24 @@ def main():
 
     # COMPARISON: ρ_variance vs ρ_mean
     print(f"\n{'=' * 90}")
-    print("COMPARISON: ρ_variance vs ρ_mean (from F1)")
+    print("COMPARISON: rho_variance vs rho_mean (from F1)")
     print(f"{'=' * 90}")
-    print(f"  F1 showed ρ_mean ≈ -0.05 to -0.13 at convergence (N>500)")
-    print(f"  If ρ_variance above is consistently > 0.08:")
-    print(f"    → Variance estimation HAS different learning dynamics")
-    print(f"    → The centroid DOES compound through Order 1 parameters")
-    print(f"  If ρ_variance is also negative or near zero:")
-    print(f"    → ALL centroid learning stops at convergence")
-    print(f"    → Compounding is only through the MLP correction")
+    print(f"  F1 showed rho_mean ~= -0.05 to -0.13 at convergence (N>500)")
+    print(f"  If rho_variance above is consistently > 0.08:")
+    print(f"    -> Variance estimation HAS different learning dynamics")
+    print(f"    -> The centroid DOES compound through Order 1 parameters")
+    print(f"  If rho_variance is also negative or near zero:")
+    print(f"    -> ALL centroid learning stops at convergence")
+    print(f"    -> Compounding is only through the MLP correction")
 
     print(f"\n{'=' * 90}")
     print("BINARY QUESTIONS")
     print("=" * 90)
-    print("Q1: Is ρ_variance > 0.08 at any checkpoint N ≥ 1000?")
+    print("Q1: Is rho_variance > 0.08 at any checkpoint N >= 1000?")
     print("Q2: Does DK accuracy improve with N (compounding)?")
     print("Q3: Does cumulative DK beat recent-window DK (data accumulation helps)?")
     print("Q4: Do DK weights converge toward optimal (dist_to_optimal decreasing)?")
-    print("Q5: Is ρ_variance qualitatively different from ρ_mean?")
+    print("Q5: Is rho_variance qualitatively different from rho_mean?")
 
     print("\nDONE.")
 

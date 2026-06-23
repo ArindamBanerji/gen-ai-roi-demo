@@ -4,11 +4,11 @@ EXP-APPROX-1: V-BIAS-VARIANCE-BY-ORDER
 For each order k = {0 (centroid), 1 (DK), MLP-bounded, MLP-unbounded}:
   For each N = {200, 500, 1000, 2000, 5000}:
     Train 10 times with different data samples
-    Bias² = (mean_accuracy - oracle_accuracy)²
+    Bias^2 = (mean_accuracy - oracle_accuracy)^2
     Variance = std(accuracy) across samples
 
 Determines: optimal order for given dataset size.
-Predicts: N_cross_01 (when DK beats centroid) and N_cross_1∞ (when MLP beats DK).
+Predicts: N_cross_01 (when DK beats centroid) and N_cross_1inf (when MLP beats DK).
 
 Run: cd backend && python scripts/exp_approx1_biasvar.py
 Time: ~20 min
@@ -160,7 +160,7 @@ def main():
         print(f"\n  GT seed {gt_seed} (oracle accuracy: {oracle_acc:.1f}%):")
         print(f"\n  {'N':>6s}", end="")
         for order in orders:
-            print(f"  {'Mean':>6s} {'Std':>5s} {'Bias²':>6s}", end="")
+            print(f"  {'Mean':>6s} {'Std':>5s} {'Bias^2':>6s}", end="")
         print()
         print(f"  {'-' * 80}")
 
@@ -205,15 +205,15 @@ def main():
             best_name = ["ORDER_0", "ORDER_1", "MLP_BOUNDED", "MLP_UNBOUNDED"][
                 [o0, o1, mlp_b, mlp_u].index(best)]
             print(f"    N={N:>5d}: O0={o0:.1f} O1={o1:.1f} MLB={mlp_b:.1f} MLU={mlp_u:.1f} "
-                  f"→ best={best_name} ({best:.1f}%)")
+                  f"-> best={best_name} ({best:.1f}%)")
 
     print(f"\n{'=' * 90}")
     print("BINARY QUESTIONS")
     print("=" * 90)
     print("Q1: At what N does Order 1 beat Order 0? (N_cross_01)")
-    print("Q2: At what N does MLP beat Order 1? (N_cross_1∞)")
+    print("Q2: At what N does MLP beat Order 1? (N_cross_1inf)")
     print("Q3: Does variance increase with order (bias-variance tradeoff)?")
-    print("Q4: Is MLP_BOUNDED always ≤ MLP_UNBOUNDED in variance?")
+    print("Q4: Is MLP_BOUNDED always <= MLP_UNBOUNDED in variance?")
 
     print("\nDONE.")
 

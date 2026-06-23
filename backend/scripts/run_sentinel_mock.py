@@ -1,5 +1,5 @@
 """
-run_sentinel_mock.py — CLI runner for SentinelMockConnector.
+run_sentinel_mock.py -- CLI runner for SentinelMockConnector.
 
 Loads synthetic_pilot_alerts.json, normalizes each alert, and MERGEs it into
 Neo4j as an Alert node.  There is no /api/soc/import HTTP endpoint; the runner
@@ -111,7 +111,7 @@ async def main() -> None:
             print(f"  [{i+1:>4}] {alert}")
             if args.speed_ms:
                 time.sleep(args.speed_ms / 1000)
-        print(f"\n[sentinel-mock] Dry-run complete — {len(alerts)} alerts printed")
+        print(f"\n[sentinel-mock] Dry-run complete -- {len(alerts)} alerts printed")
         return
 
     # Live mode — write to Neo4j in batches
@@ -126,7 +126,7 @@ async def main() -> None:
             if args.speed_ms:
                 time.sleep(args.speed_ms / 1000)
 
-        print(f"\n[sentinel-mock] Done — {ingested} alerts merged into Neo4j")
+        print(f"\n[sentinel-mock] Done -- {ingested} alerts merged into Neo4j")
     finally:
         await neo4j_client.close()
 

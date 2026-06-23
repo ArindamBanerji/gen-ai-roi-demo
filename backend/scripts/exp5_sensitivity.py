@@ -4,7 +4,7 @@ EXP-5: V-PIPELINE-SENSITIVITY
 Question: How sensitive is the pipeline to parameter choices?
 
 Run: cd backend && python scripts/exp5_sensitivity.py
-Time: ~20 min (60 runs × 2000 decisions)
+Time: ~20 min (60 runs x 2000 decisions)
 """
 
 import numpy as np
@@ -64,8 +64,8 @@ def run_sweep_single(seed, theta, K):
 
 def main():
     print("=" * 75)
-    print("EXP-5: V-PIPELINE-SENSITIVITY (θ_conf × K sweep)")
-    print(f"3 seeds, {len(THETA_VALUES)} × {len(K_VALUES)} = {len(THETA_VALUES) * len(K_VALUES)} configs")
+    print("EXP-5: V-PIPELINE-SENSITIVITY (theta_conf x K sweep)")
+    print(f"3 seeds, {len(THETA_VALUES)} x {len(K_VALUES)} = {len(THETA_VALUES) * len(K_VALUES)} configs")
     print("=" * 75)
 
     results = {}
@@ -89,7 +89,7 @@ def main():
     print(f"\n{'=' * 75}")
     print("HEATMAP: Accuracy at N=2000")
     print(f"{'=' * 75}")
-    print(f"{'θ_conf':>8s}", end="")
+    print(f"{'theta_conf':>8s}", end="")
     for K in K_VALUES:
         print(f"  {'K=' + str(K):>8s}", end="")
     print()
@@ -101,9 +101,9 @@ def main():
 
     # ═══ HEATMAP: DRIFT ═══
     print(f"\n{'=' * 75}")
-    print("HEATMAP: Drift (N=200 → N=2000)")
+    print("HEATMAP: Drift (N=200 -> N=2000)")
     print(f"{'=' * 75}")
-    print(f"{'θ_conf':>8s}", end="")
+    print(f"{'theta_conf':>8s}", end="")
     for K in K_VALUES:
         print(f"  {'K=' + str(K):>8s}", end="")
     print()
@@ -111,15 +111,15 @@ def main():
         print(f"  {theta:.2f}  ", end="")
         for K in K_VALUES:
             d = results[(theta, K)]['drift']
-            marker = " ✓" if d >= -1.0 else " ✗"
+            marker = " [OK]" if d >= -1.0 else " [FAIL]"
             print(f"  {d:+5.1f}pp{marker}", end="")
         print()
 
     # ═══ HEATMAP: UPDATE RATE ═══
     print(f"\n{'=' * 75}")
-    print("HEATMAP: Update rate (% of decisions → centroid update)")
+    print("HEATMAP: Update rate (% of decisions -> centroid update)")
     print(f"{'=' * 75}")
-    print(f"{'θ_conf':>8s}", end="")
+    print(f"{'theta_conf':>8s}", end="")
     for K in K_VALUES:
         print(f"  {'K=' + str(K):>8s}", end="")
     print()
@@ -133,7 +133,7 @@ def main():
     print(f"\n{'=' * 75}")
     print("HEATMAP: LEARN - STATIC at N=2000")
     print(f"{'=' * 75}")
-    print(f"{'θ_conf':>8s}", end="")
+    print(f"{'theta_conf':>8s}", end="")
     for K in K_VALUES:
         print(f"  {'K=' + str(K):>8s}", end="")
     print()
@@ -141,22 +141,22 @@ def main():
         print(f"  {theta:.2f}  ", end="")
         for K in K_VALUES:
             g = results[(theta, K)]['ls_gap']
-            marker = " ✓" if g > 0 else " ✗"
+            marker = " [OK]" if g > 0 else " [FAIL]"
             print(f"  {g:+5.1f}pp{marker}", end="")
         print()
 
     # ═══ PARETO FRONTIER ═══
     print(f"\n{'=' * 75}")
-    print("PARETO FRONTIER: Max accuracy where drift ≥ -1.0pp")
+    print("PARETO FRONTIER: Max accuracy where drift >= -1.0pp")
     print(f"{'=' * 75}")
     pareto = [(k, v) for k, v in results.items() if v['drift'] >= -1.0]
     if pareto:
         pareto.sort(key=lambda x: -x[1]['acc'])
         for (theta, K), v in pareto[:5]:
-            print(f"  θ={theta:.2f} K={K:>2d}: acc={v['acc']:.1f}% drift={v['drift']:+.1f}pp "
+            print(f"  theta={theta:.2f} K={K:>2d}: acc={v['acc']:.1f}% drift={v['drift']:+.1f}pp "
                   f"L-S={v['ls_gap']:+.1f}pp rate={v['update_rate']*100:.1f}%")
     else:
-        print("  No config achieves drift ≥ -1.0pp")
+        print("  No config achieves drift >= -1.0pp")
 
     # ═══ BINARY QUESTIONS ═══
     print(f"\n{'=' * 75}")
@@ -167,20 +167,20 @@ def main():
     for K in K_VALUES:
         accs = [results[(t, K)]['acc'] for t in THETA_VALUES]
         spread = max(accs) - min(accs)
-        print(f"Q1 (K={K}): Accuracy spread across θ_conf: {spread:.1f}pp "
+        print(f"Q1 (K={K}): Accuracy spread across theta_conf: {spread:.1f}pp "
               f"{'ROBUST' if spread < 1.0 else 'SENSITIVE'}")
 
     # Q2: Accuracy varies < 1pp across K?
     for theta in THETA_VALUES:
         accs = [results[(theta, K)]['acc'] for K in K_VALUES]
         spread = max(accs) - min(accs)
-        print(f"Q2 (θ={theta}): Accuracy spread across K: {spread:.1f}pp "
+        print(f"Q2 (theta={theta}): Accuracy spread across K: {spread:.1f}pp "
               f"{'ROBUST' if spread < 1.0 else 'SENSITIVE'}")
 
     # Q3: Clear optimal?
     best = max(pareto, key=lambda x: x[1]['acc']) if pareto else None
     if best:
-        print(f"Q3: Best config: θ={best[0][0]:.2f} K={best[0][1]} "
+        print(f"Q3: Best config: theta={best[0][0]:.2f} K={best[0][1]} "
               f"(acc={best[1]['acc']:.1f}%, drift={best[1]['drift']:+.1f}pp)")
     else:
         print("Q3: No config meets drift threshold")
@@ -190,7 +190,7 @@ def main():
     if positive:
         print(f"Q4: {len(positive)} configs with positive drift (learning NEVER hurts):")
         for (t, K), v in sorted(positive, key=lambda x: -x[1]['acc'])[:3]:
-            print(f"     θ={t:.2f} K={K}: drift={v['drift']:+.1f}pp acc={v['acc']:.1f}%")
+            print(f"     theta={t:.2f} K={K}: drift={v['drift']:+.1f}pp acc={v['acc']:.1f}%")
     else:
         print("Q4: NO config achieves positive drift")
 

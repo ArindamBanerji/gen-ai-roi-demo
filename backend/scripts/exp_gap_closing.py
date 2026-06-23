@@ -129,7 +129,7 @@ def main():
 
     train_sizes = [100, 200, 500, 1000, 1500, 2000, 3000, 4000]
 
-    print(f"\n  {'N_train':>8s}  {'Centroid':>8s}  {'Bounded MLP':>11s}  {'Δ':>6s}  {'MLP unbounded':>13s}")
+    print(f"\n  {'N_train':>8s}  {'Centroid':>8s}  {'Bounded MLP':>11s}  {'Delta':>6s}  {'MLP unbounded':>13s}")
     print(f"  {'-' * 55}")
 
     for seed in SEEDS[:3]:
@@ -157,7 +157,7 @@ def main():
 
     # Summary across seeds
     print(f"\n  LEARNING CURVE (mean across 3 seeds):")
-    print(f"  {'N_train':>8s}  {'Bounded MLP':>11s}  {'Δ vs N=100':>10s}")
+    print(f"  {'N_train':>8s}  {'Bounded MLP':>11s}  {'Delta vs N=100':>10s}")
     print(f"  {'-' * 35}")
 
     for n_train in train_sizes:
@@ -196,7 +196,7 @@ def main():
         # Shift GT by different magnitudes
         if seed == SEEDS[0]:
             print(f"\n  Seed {seed}:")
-            print(f"  {'Shift':>6s}  {'Pre-shift':>9s}  {'Post-shift':>10s}  {'Δ':>6s}  {'Centroid post':>13s}")
+            print(f"  {'Shift':>6s}  {'Pre-shift':>9s}  {'Post-shift':>10s}  {'Delta':>6s}  {'Centroid post':>13s}")
             print(f"  {'-' * 50}")
 
         for shift_mag in [0.0, 0.10, 0.25, 0.50, 0.75, 1.00]:
@@ -226,7 +226,7 @@ def main():
     print("Does Firm A's MLP correction transfer to Firm B?")
     print("=" * 90)
 
-    print(f"\n  {'Config':>25s}  {'Acc':>6s}  {'Δ vs centroid':>13s}")
+    print(f"\n  {'Config':>25s}  {'Acc':>6s}  {'Delta vs centroid':>13s}")
     print(f"  {'-' * 50}")
 
     transfer_results = {}
@@ -270,7 +270,7 @@ def main():
     # Does richer context (simulated graph enrichment) help MLP?
     # ═══════════════════════════════════════════════════════════════
     print(f"\n{'=' * 90}")
-    print("G4: GRAPH → MLP INTERACTION")
+    print("G4: GRAPH -> MLP INTERACTION")
     print("Does richer context (more informative factors) help the MLP?")
     print("=" * 90)
 
@@ -278,7 +278,7 @@ def main():
     # (richer graph → more precise factor vectors → lower σ)
     factor_noise_levels = [0.20, 0.15, 0.10, 0.05, 0.02]
 
-    print(f"\n  {'Factor_σ':>8s}  {'Centroid':>8s}  {'Bounded MLP':>11s}  {'MLP Gain':>8s}  {'Interpretation':>20s}")
+    print(f"\n  {'Factor_sigma':>8s}  {'Centroid':>8s}  {'Bounded MLP':>11s}  {'MLP Gain':>8s}  {'Interpretation':>20s}")
     print(f"  {'-' * 65}")
 
     for factor_sigma in factor_noise_levels:
@@ -317,7 +317,7 @@ def main():
     # ═══════════════════════════════════════════════════════════════
     print(f"\n{'=' * 90}")
     print("G5: CONSERVATION LAW + BOUNDED MLP")
-    print("Does α·q·V ≥ θ_min still hold when MLP correction is active?")
+    print("Does alpha*q*V >= theta_min still hold when MLP correction is active?")
     print("=" * 90)
 
     for seed in SEEDS[:3]:
@@ -383,18 +383,18 @@ def main():
                   f"mean={np.mean(q_centroid):.3f} max={max(q_centroid):.3f}")
             print(f"    MLP q (rolling 400):      min={min(q_mlp):.3f} "
                   f"mean={np.mean(q_mlp):.3f} max={max(q_mlp):.3f}")
-            print(f"    MLP q ALWAYS ≥ centroid q? "
+            print(f"    MLP q ALWAYS >= centroid q? "
                   f"{'YES' if all(m >= c for m, c in zip(q_mlp, q_centroid)) else 'NO'}")
             print(f"    MLP q ever drops below 0.75? "
-                  f"{'YES — conservation risk' if min(q_mlp) < 0.75 else 'NO — safe'}")
+                  f"{'YES -- conservation risk' if min(q_mlp) < 0.75 else 'NO -- safe'}")
 
             # Conservation: α·q·V ≥ θ_min
             # With MLP: q is HIGHER, so conservation is EASIER to satisfy
             # α and V are unchanged (MLP doesn't change centroids)
             print(f"    Since MLP doesn't change centroids (V unchanged)")
-            print(f"    and q_mlp ≥ q_centroid (accuracy improves),")
-            print(f"    α·q_mlp·V ≥ α·q_centroid·V ≥ θ_min")
-            print(f"    → Conservation law STRENGTHENED by MLP correction")
+            print(f"    and q_mlp >= q_centroid (accuracy improves),")
+            print(f"    alpha*q_mlp*V >= alpha*q_centroid*V >= theta_min")
+            print(f"    -> Conservation law STRENGTHENED by MLP correction")
 
     # ═══════════════════════════════════════════════════════════════
     # G6: LABEL QUALITY FEEDBACK LOOP
@@ -402,7 +402,7 @@ def main():
     # ═══════════════════════════════════════════════════════════════
     print(f"\n{'=' * 90}")
     print("G6: LABEL QUALITY FEEDBACK LOOP")
-    print("Simulate: LLM-judge cleans labels → retrain MLP → measure improvement")
+    print("Simulate: LLM-judge cleans labels -> retrain MLP -> measure improvement")
     print("=" * 90)
 
     for seed in SEEDS[:1]:
@@ -435,7 +435,7 @@ def main():
                                 c_test, scorer, eps_max=0.0, seed=seed)
         r0c = train_bounded_mlp(X_all[:1], y_clean[:1], X_test, y_test_clean,
                                  c_test, scorer, eps_max=0.0, seed=seed)
-        print(f"  {'Centroid only':>20s}  {'—':>12s}  {r0['centroid_acc']:>9.1f}%  "
+        print(f"  {'Centroid only':>20s}  {'--':>12s}  {r0['centroid_acc']:>9.1f}%  "
               f"{r0c['centroid_acc']:>9.1f}%")
 
         # Round 1: MLP on noisy labels
@@ -494,7 +494,7 @@ def main():
     print("G3: Does Firm A's MLP help Firm B? (see transfer)")
     print("G4: Does richer context help MLP? (see graph interaction)")
     print("G5: Does conservation law hold with MLP? (see conservation)")
-    print("G6: Does clean labels → better MLP compound? (see feedback loop)")
+    print("G6: Does clean labels -> better MLP compound? (see feedback loop)")
 
     print("\nDONE.")
 

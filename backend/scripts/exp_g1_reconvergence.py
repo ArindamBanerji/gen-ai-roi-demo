@@ -1,25 +1,25 @@
 """
-EXP-G1 v3: Re-Convergence Factorial — Real GAE ProfileScorer
+EXP-G1 v3: Re-Convergence Factorial -- Real GAE ProfileScorer
 
 Uses the actual ProfileScorer from graph-attention-engine, not a
 simplified simulation. Scoring dynamics (softmax over DK-weighted
-L2 distances, η-weighted centroid updates) match production exactly.
+L2 distances, eta-weighted centroid updates) match production exactly.
 
-Factorial design (2×2):
-  COLD:          μ₀ = 0.5 uniform,  kernel = L2 (default, no DK)
-  WARM_DK:       μ₀ = 0.5 uniform,  kernel = DiagonalKernel(sigma)
-  WARM_CENTROID: μ  = converged,     kernel = L2 (default, no DK)
-  WARM_BOTH:     μ  = converged,     kernel = DiagonalKernel(sigma)
+Factorial design (2x2):
+  COLD:          mu_0 = 0.5 uniform,  kernel = L2 (default, no DK)
+  WARM_DK:       mu_0 = 0.5 uniform,  kernel = DiagonalKernel(sigma)
+  WARM_CENTROID: mu  = converged,     kernel = L2 (default, no DK)
+  WARM_BOTH:     mu  = converged,     kernel = DiagonalKernel(sigma)
 
 Each seed:
-  Phase 1 — Converge from cold with DK kernel → get converged centroids
-  Phase 2 — Disrupt ALL 6 categories (±0.30 per cell)
-  Phase 3 — Run all 4 conditions against same disrupted target
+  Phase 1 -- Converge from cold with DK kernel -> get converged centroids
+  Phase 2 -- Disrupt ALL 6 categories (+/-0.30 per cell)
+  Phase 3 -- Run all 4 conditions against same disrupted target
 
 Metrics:
-  γ_DK       = N_half_cold / N_half_warm_DK        (DK effect alone)
-  γ_centroid = N_half_cold / N_half_warm_centroid   (geometry effect alone)
-  γ_both     = N_half_cold / N_half_warm_both       (combined)
+  gamma_DK       = N_half_cold / N_half_warm_DK        (DK effect alone)
+  gamma_centroid = N_half_cold / N_half_warm_centroid   (geometry effect alone)
+  gamma_both     = N_half_cold / N_half_warm_both       (combined)
 
 Output: G:\\My Drive\\public-files\\gen-ai-roi\\experiments\\reconvergence_exp_g1_v3.json
 Runtime: ~30-90 seconds.
@@ -109,7 +109,7 @@ def generate_sigma(rng: np.random.Generator) -> np.ndarray:
 
 def make_scorer(centroids: np.ndarray,
                 dk_kernel=None) -> ProfileScorer:
-    """Create ProfileScorer. Copies centroids — caller's array not mutated."""
+    """Create ProfileScorer. Copies centroids -- caller's array not mutated."""
     return ProfileScorer(
         mu=centroids.copy(),
         actions=ACTIONS,
@@ -122,19 +122,19 @@ def make_scorer(centroids: np.ndarray,
 # ===========================================================================
 
 def compute_epsilon(scorer: ProfileScorer, target: np.ndarray) -> float:
-    """ε_firm: RMS distance between current centroids and target."""
+    """epsilon_firm: RMS distance between current centroids and target."""
     return float(np.sqrt(np.mean((scorer.centroids - target) ** 2)))
 
 
 def run_convergence(scorer: ProfileScorer, target: np.ndarray,
                     sigma: np.ndarray, rng: np.random.Generator,
                     max_decisions: int = MAX_DECISIONS) -> tuple:
-    """Run simulated decisions until ε < EPSILON_FIRM or max reached.
+    """Run simulated decisions until epsilon < EPSILON_FIRM or max reached.
 
     Each decision:
       1. Random category
       2. Random source action (ensures all 24 cells get updates)
-      3. Factor vector = target[cat, source_action] + Gaussian noise(σ)
+      3. Factor vector = target[cat, source_action] + Gaussian noise(sigma)
       4. Ground truth action = closest target centroid for this fv
       5. scorer.update(fv, cat, gt_action, correct=True)
 
@@ -167,7 +167,7 @@ def run_convergence(scorer: ProfileScorer, target: np.ndarray,
 
 def disrupt_all_categories(target: np.ndarray,
                            rng: np.random.Generator) -> np.ndarray:
-    """Shift ALL 6 categories. RMS ≈ 0.173 for magnitude=0.30."""
+    """Shift ALL 6 categories. RMS ~= 0.173 for magnitude=0.30."""
     new_target = target.copy()
     for c in range(C):
         shift = rng.uniform(-DISRUPTION_MAGNITUDE, DISRUPTION_MAGNITUDE,
@@ -285,10 +285,10 @@ def nhalf_stats(all_seeds: list, condition: str) -> dict:
 # ===========================================================================
 
 def main():
-    print("EXP-G1 v3: Re-Convergence Factorial — Real GAE ProfileScorer")
+    print("EXP-G1 v3: Re-Convergence Factorial -- Real GAE ProfileScorer")
     print(f"  Seeds: {N_SEEDS}, Tensor: ({C},{A},{F}), "
-          f"Disruption: ALL {C} cats ±{DISRUPTION_MAGNITUDE}")
-    print(f"  ε_firm★: {EPSILON_FIRM}, Max decisions: {MAX_DECISIONS}")
+          f"Disruption: ALL {C} cats +/-{DISRUPTION_MAGNITUDE}")
+    print(f"  epsilon_firm*: {EPSILON_FIRM}, Max decisions: {MAX_DECISIONS}")
     print()
 
     start = time.time()
@@ -305,7 +305,7 @@ def main():
         if (seed + 1) % 10 == 0:
             elapsed = time.time() - start
             c = result["conditions"]
-            mark = lambda v: "✓" if v else "✗"
+            mark = lambda v: "[OK]" if v else "[FAIL]"
             print(
                 f"  Seed {seed+1}/{N_SEEDS} ({elapsed:.1f}s)  "
                 f"init={result['initial_n_half']}{mark(result['initial_converged'])}  "
@@ -325,8 +325,8 @@ def main():
         "experiment": "EXP-G1_v3",
         "description": (
             "Factorial isolation of re-convergence mechanisms using real GAE "
-            "ProfileScorer. γ_DK: DK weight knowledge alone. γ_centroid: "
-            "centroid geometry alone. γ_both: combined effect."
+            "ProfileScorer. gamma_DK: DK weight knowledge alone. gamma_centroid: "
+            "centroid geometry alone. gamma_both: combined effect."
         ),
         "source": "EXP-G1_simulation_factorial_gae",
         "gae_path": GAE_PATH,
@@ -365,7 +365,7 @@ def main():
 
     # --- Interpretation ---
     lines = []
-    for label, s in [("γ_DK", dk_s), ("γ_centroid", cent_s), ("γ_both", both_s)]:
+    for label, s in [("gamma_DK", dk_s), ("gamma_centroid", cent_s), ("gamma_both", both_s)]:
         pct = s["gt_1_pct"]
         m = s["mean"]
         if pct >= 60:
@@ -395,7 +395,7 @@ def main():
     # --- Print ---
     print()
     print("=" * 65)
-    print("EXP-G1 v3 — Real GAE ProfileScorer")
+    print("EXP-G1 v3 -- Real GAE ProfileScorer")
     print("=" * 65)
     init = summary["initial_convergence"]
     print(f"\n  Phase 1: N_half={init['mean_n_half']:.0f} "
@@ -403,10 +403,10 @@ def main():
     print("\n  Recovery N_half (lower = faster):")
     for cond in ["cold", "warm_dk", "warm_centroid", "warm_both"]:
         s = summary["per_condition_n_half"][cond]
-        print(f"    {cond:18s}: {s['mean']:6.0f} ± {s['std']:5.0f}  "
+        print(f"    {cond:18s}: {s['mean']:6.0f} +/- {s['std']:5.0f}  "
               f"(converged {s['converged_pct']}%)")
-    print("\n  Acceleration (γ > 1 = faster than cold):")
-    for label, s in [("γ_DK", dk_s), ("γ_centroid", cent_s), ("γ_both", both_s)]:
+    print("\n  Acceleration (gamma > 1 = faster than cold):")
+    for label, s in [("gamma_DK", dk_s), ("gamma_centroid", cent_s), ("gamma_both", both_s)]:
         print(f"    {label:12s}: mean={s['mean']:.3f}  median={s['median']:.3f}  "
               f"95%CI=[{s['ci_lower']:.2f}, {s['ci_upper']:.2f}]  "
               f">{'>'}1: {s['gt_1_pct']}%")

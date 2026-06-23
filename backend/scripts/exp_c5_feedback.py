@@ -208,9 +208,9 @@ def main():
     print(f"Q3: Best ECE signal: {best_ece_sig} ({coupling_results[best_ece_sig]['live_ece']:.4f})")
 
     if not any_coupling:
-        print(f"Q4: ALL signals blind → plant landscape is flat at operating point. CONFIRMED.")
+        print(f"Q4: ALL signals blind -> plant landscape is flat at operating point. CONFIRMED.")
     else:
-        print(f"Q4: Coupling exists for {coupled_signals} → plant is NOT flat for these signals.")
+        print(f"Q4: Coupling exists for {coupled_signals} -> plant is NOT flat for these signals.")
 
     print("\nDONE.")
 

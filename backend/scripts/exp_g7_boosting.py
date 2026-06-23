@@ -4,15 +4,15 @@ G7: BOOSTED PERTURBATION CONVERGENCE
 The perturbation theory framework predicts that multiple rounds
 of bounded correction should converge:
 
-Round 0: f₀ = centroid (Voronoi)
-Round 1: f₁ = f₀ + δ₁ (trained on f₀ residuals, |δ₁| ≤ ε₁)
-Round 2: f₂ = f₁ + δ₂ (trained on f₁ residuals, |δ₂| ≤ ε₂)
-Round 3: f₃ = f₂ + δ₃ (trained on f₂ residuals, |δ₃| ≤ ε₃)
+Round 0: f_0 = centroid (Voronoi)
+Round 1: f_1 = f_0 + delta_1 (trained on f_0 residuals, |delta_1| <= epsilon_1)
+Round 2: f_2 = f_1 + delta_2 (trained on f_1 residuals, |delta_2| <= epsilon_2)
+Round 3: f_3 = f_2 + delta_3 (trained on f_2 residuals, |delta_3| <= epsilon_3)
 
 Tests:
 1. Does accuracy improve with each round?
 2. Do residual errors decrease? (convergence)
-3. Does the total perturbation Σ|δ| stay bounded?
+3. Does the total perturbation Sigma|delta| stay bounded?
 4. What's the convergence RATE? (geometric? logarithmic?)
 
 Run: cd backend && python scripts/exp_g7_boosting.py
@@ -42,7 +42,7 @@ def main():
     scorer = make_scorer(base_mu.copy())
 
     max_rounds = 5
-    eps_schedule = [0.30, 0.20, 0.15, 0.10, 0.08]  # decreasing ε per round
+    eps_schedule = [0.30, 0.20, 0.15, 0.10, 0.08]  # decreasing epsilon per round
 
     for seed in SEEDS[:3]:
         gt = build_gt(np.random.default_rng(seed), base_mu)
@@ -68,8 +68,8 @@ def main():
         c_test = c_all[N_TRAIN:]
 
         print(f"\n  Seed {seed}:")
-        print(f"  {'Round':>6s}  {'ε_max':>6s}  {'Acc':>6s}  {'Residual':>8s}  "
-              f"{'Δ_round':>8s}  {'Cumulative':>10s}  {'BND_fix':>7s}  {'BND_cre':>7s}")
+        print(f"  {'Round':>6s}  {'epsilon_max':>6s}  {'Acc':>6s}  {'Residual':>8s}  "
+              f"{'Delta_round':>8s}  {'Cumulative':>10s}  {'BND_fix':>7s}  {'BND_cre':>7s}")
         print(f"  {'-' * 70}")
 
         # Round 0: centroid baseline
@@ -93,8 +93,8 @@ def main():
 
         base_acc = accuracy_score(y_test, current_preds_test) * 100
         base_errors = (current_preds_test != y_test).sum()
-        print(f"  {'0':>6s}  {'—':>6s}  {base_acc:>4.1f}%  {base_errors:>8d}  "
-              f"{'—':>8s}  {'—':>10s}  {'—':>7s}  {'—':>7s}")
+        print(f"  {'0':>6s}  {'--':>6s}  {base_acc:>4.1f}%  {base_errors:>8d}  "
+              f"{'--':>8s}  {'--':>10s}  {'--':>7s}  {'--':>7s}")
 
         # Accumulated corrections per test sample
         total_correction = np.zeros(N_TEST)  # magnitude of total perturbation
@@ -111,7 +111,7 @@ def main():
             residual_errors_test = (final_preds != y_test).sum()
 
             if residual_errors_train < 5:
-                print(f"  {round_num:>6d}  {eps_max:>6.2f}  — (too few residual errors to train)")
+                print(f"  {round_num:>6d}  {eps_max:>6.2f}  -- (too few residual errors to train)")
                 break
 
             # Build features for this round's MLP
@@ -219,7 +219,7 @@ def main():
     print("BINARY QUESTIONS")
     print("=" * 90)
     print("Q1: Does each round add positive improvement?")
-    print("Q2: Do improvements decrease geometrically? (Δ_round2 < Δ_round1)")
+    print("Q2: Do improvements decrease geometrically? (Delta_round2 < Delta_round1)")
     print("Q3: Does multi-round boosted match single-round unbounded?")
     print("Q4: What fraction of the MLP ceiling is captured by 3 rounds of bounded correction?")
 

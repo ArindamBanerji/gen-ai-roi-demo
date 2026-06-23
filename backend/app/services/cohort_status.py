@@ -6,8 +6,14 @@ import json
 from pathlib import Path
 from typing import Any
 
+from copilot_sdk.substantiation.cohort_day_zero import (
+    STATES,
+    BaseCohortDayZeroState,
+    compute_state,
+    evaluate_v7_gate as _sdk_evaluate_v7_gate,
+)
 
-VALID_STATES = frozenset({"INSTRUMENT_VALIDATED", "ACCUMULATING", "MEASURED"})
+VALID_STATES = frozenset(STATES)
 REAL_PROVENANCE = "real"
 SAMPLE_PROVENANCE = "sample"
 ORACLE_PROVENANCE = "oracle"
@@ -16,44 +22,21 @@ CONTROL_GROUPS = frozenset({"control", "holdout", "suppressed"})
 POSITIVE_ACTIONS = frozenset({"escalate", "escalate_tier2", "investigate", "refer_to_analyst"})
 
 
-def compute_state(real_treatment_n: int, real_control_n: int, threshold_k: int) -> str:
-    """Three-state machine. No other states exist."""
-    if real_treatment_n == 0 and real_control_n == 0:
-        return "INSTRUMENT_VALIDATED"
-    if real_treatment_n < threshold_k or real_control_n < threshold_k:
-        return "ACCUMULATING"
-    return "MEASURED"
-
-
 def evaluate_v7_gate(cohort_status: dict[str, Any]) -> dict[str, Any]:
-    """v7.0 tensor expansion gate.
+    """Compatibility wrapper around the SDK v7.0 gate."""
 
-    Sample/oracle records are rejected by construction; below-threshold real
-    cohorts abstain instead of passing or failing.
-    """
     real = cohort_status["real"]
     records = cohort_status.get("records") or real.get("records") or []
-    for record in records:
-        if _provenance(record) != REAL_PROVENANCE:
-            raise ValueError("v7 gate accepts provenance=='real' records only")
-
     threshold_k = int(cohort_status.get("threshold_k") or real.get("threshold_k") or 50)
-    treatment_n = int(real.get("treatment_n") or 0)
-    control_n = int(real.get("control_n") or 0)
-    base = {
-        "real_treatment_n": treatment_n,
-        "real_control_n": control_n,
-        "threshold_k": threshold_k,
-    }
-    if treatment_n < threshold_k or control_n < threshold_k:
-        return {**base, "status": "awaiting_real_cohorts", "lift": None}
-
-    lift = real.get("lift")
-    status = "conditions_met" if lift is not None else "conditions_not_met"
-    return {**base, "status": status, "lift": lift}
+    gate_input = dict(real)
+    gate_input["provenance"] = REAL_PROVENANCE
+    gate_input["magnitude"] = real.get("magnitude")
+    if records:
+        gate_input["records"] = records
+    return _sdk_evaluate_v7_gate(gate_input, threshold_k)
 
 
-class CohortStatusService:
+class CohortStatusService(BaseCohortDayZeroState):
     """Campaign cohort day-zero state machine.
 
     State transitions are driven only by real decision cohorts. Sample
@@ -75,25 +58,6 @@ class CohortStatusService:
             else _default_oracle_artifact_path()
         )
         self._decision_records = list(decision_records) if decision_records is not None else None
-
-    def get_status(self) -> dict[str, Any]:
-        """Build the full cohort-status response."""
-        instrument = self._load_instrument()
-        real = self._count_real_cohorts()
-        structure = self._count_structure_cohorts()
-        state = compute_state(
-            real["treatment_n"],
-            real["control_n"],
-            self.THRESHOLD_K,
-        )
-        real["status"] = "measured" if state == "MEASURED" else "pending"
-        real["lift"] = self._compute_real_lift() if state == "MEASURED" else None
-        return {
-            "state": state,
-            "instrument": instrument,
-            "real": real,
-            "structure": structure,
-        }
 
     def _load_instrument(self) -> dict[str, Any]:
         """Load oracle self-test results. T-O provenance."""
@@ -129,10 +93,6 @@ class CohortStatusService:
         return {
             "treatment_n": treatment,
             "control_n": control,
-            "threshold_k": self.THRESHOLD_K,
-            "lift": None,
-            "provenance": REAL_PROVENANCE,
-            "status": "pending",
         }
 
     def _count_structure_cohorts(self) -> dict[str, Any]:
@@ -157,11 +117,11 @@ class CohortStatusService:
         for record in records:
             provenance = _provenance(record)
             if provenance == SAMPLE_PROVENANCE or provenance == ORACLE_PROVENANCE or provenance != REAL_PROVENANCE:
-                raise ValueError("Campaign lift must use provenance=='real' records only")
+                raise ValueError("Campaign magnitude must use provenance=='real' records only")
         treatment = [record for record in records if _arm(record) == "treatment"]
         control = [record for record in records if _arm(record) == "control"]
         if not treatment or not control:
-            raise ValueError("Campaign lift requires treatment and control real cohorts")
+            raise ValueError("Campaign magnitude requires treatment and control real cohorts")
         return round(_positive_rate(treatment) - _positive_rate(control), 6)
 
     def _real_decisions(self) -> list[dict[str, Any]]:

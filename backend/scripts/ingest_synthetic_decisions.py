@@ -80,10 +80,10 @@ async def main():
     missing = required - set(first.keys())
     if missing:
         print(f"\nERROR: missing expected fields: {missing}")
-        print("  Aborting — fix field mapping before ingesting.")
+        print("  Aborting -- fix field mapping before ingesting.")
         sys.exit(1)
 
-    print(f"\n  Loaded {len(decisions)} decisions — field names confirmed.")
+    print(f"\n  Loaded {len(decisions)} decisions -- field names confirmed.")
 
     await neo4j_client.connect()
     try:

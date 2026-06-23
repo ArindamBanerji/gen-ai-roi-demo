@@ -4,9 +4,9 @@ EXP-APPROX-2: V-BOUNDARY-CURVATURE
 Measure the curvature of decision boundaries at each approximation order.
 
 The approximation theory claims:
-  Order 0 (centroid): κ = 0 (flat hyperplane)
-  Order 1 (DK):       κ > 0 (quadric surface)
-  Order ∞ (MLP):      κ >> 0 (arbitrary curvature)
+  Order 0 (centroid): kappa = 0 (flat hyperplane)
+  Order 1 (DK):       kappa > 0 (quadric surface)
+  Order inf (MLP):      kappa >> 0 (arbitrary curvature)
 
 Measure the actual curvature by sampling along the boundary
 and computing local deviation from linearity.
@@ -170,7 +170,7 @@ def main():
         ci_target = 0
         a1, a2 = 1, 3  # investigate vs monitor
 
-        print(f"\n  Seed {seed}: Boundary investigate↔monitor in credential_access")
+        print(f"\n  Seed {seed}: Boundary investigate<->monitor in credential_access")
 
         orders = {
             "ORDER_0 (centroid)": score_order0,
@@ -199,7 +199,7 @@ def main():
                 print(f"  {order_name:>25s}  {msd:>10.6f}  {max_dev:>10.6f}  "
                       f"{len(boundary_pts):>7d}  {label:>12s}")
             else:
-                print(f"  {order_name:>25s}  — (only {len(boundary_pts)} boundary points found)")
+                print(f"  {order_name:>25s}  -- (only {len(boundary_pts)} boundary points found)")
 
         # How much GT curvature does each order capture?
         if "GT" in curvatures and curvatures["GT"] > 0:
@@ -212,7 +212,7 @@ def main():
 
         # Also measure for other category-action boundaries
         print(f"\n  CURVATURE ACROSS BOUNDARIES (Order 0 vs GT):")
-        print(f"  {'Category':>20s}  {'Pair':>15s}  {'κ_centroid':>10s}  {'κ_GT':>10s}  {'Ratio':>6s}")
+        print(f"  {'Category':>20s}  {'Pair':>15s}  {'kappa_centroid':>10s}  {'kappa_GT':>10s}  {'Ratio':>6s}")
         print(f"  {'-' * 65}")
 
         for ci in range(min(C, 4)):
@@ -240,10 +240,10 @@ def main():
     print(f"\n{'=' * 90}")
     print("BINARY QUESTIONS")
     print("=" * 90)
-    print("Q1: Is κ_centroid ≈ 0 (flat boundary confirmed)?")
-    print("Q2: Is κ_DK > κ_centroid (DK adds curvature)?")
-    print("Q3: Is κ_MLP > κ_DK (MLP adds MORE curvature)?")
-    print("Q4: What fraction of κ_GT does each order capture?")
+    print("Q1: Is kappa_centroid ~= 0 (flat boundary confirmed)?")
+    print("Q2: Is kappa_DK > kappa_centroid (DK adds curvature)?")
+    print("Q3: Is kappa_MLP > kappa_DK (MLP adds MORE curvature)?")
+    print("Q4: What fraction of kappa_GT does each order capture?")
 
     print("\nDONE.")
 

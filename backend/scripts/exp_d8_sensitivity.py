@@ -134,7 +134,7 @@ def main():
     print(f"  Accuracy spread: {a_spread:.1f}pp")
 
     # CANDIDATE C: Sweep theta_high/theta_low
-    print(f"\n  CANDIDATE C (Dual-Mode): sweep theta_high × eta_fast")
+    print(f"\n  CANDIDATE C (Dual-Mode): sweep theta_high x eta_fast")
     print(f"  {'theta_hi':>8s}  {'eta_fast':>8s}  {'Acc':>6s}  {'ECE':>8s}")
     print(f"  {'-' * 35}")
     c_results = []
@@ -155,7 +155,7 @@ def main():
     print(f"  Accuracy spread: {c_spread:.1f}pp")
 
     # CANDIDATE E: Sweep ece_target
-    print(f"\n  CANDIDATE E (Cascade ECE): sweep ece_target × kp")
+    print(f"\n  CANDIDATE E (Cascade ECE): sweep ece_target x kp")
     print(f"  {'ece_tgt':>8s}  {'kp':>6s}  {'Acc':>6s}  {'ECE':>8s}")
     print(f"  {'-' * 32}")
     e_results = []

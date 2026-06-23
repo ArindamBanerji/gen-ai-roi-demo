@@ -28,6 +28,16 @@ class AnalystOracle:
         self._accuracy_lift = accuracy_lift
         self._rng = random.Random(seed)
 
+    @property
+    def known_effect(self) -> float:
+        """Known treatment lift on escalation rate."""
+        return self._lift
+
+    @property
+    def known_accuracy_effect(self) -> float:
+        """Known treatment lift on accuracy."""
+        return self._accuracy_lift
+
     def synthetic_outcome(self, *, shown: bool) -> dict:
         """Generate one synthetic analyst outcome.
 
@@ -51,6 +61,7 @@ class AnalystOracle:
         quality_signal = 1.0 if correct else 0.0
 
         return {
+            "action": action,
             "analyst_action": action,
             "was_override": was_override,
             "quality_signal": quality_signal,

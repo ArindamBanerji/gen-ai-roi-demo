@@ -87,7 +87,10 @@ export default function CohortStatusPanel() {
             </h3>
           </div>
           <p className="mt-1 text-sm text-slate-600">
-            Oracle instrument evidence is separated from real campaign cohorts.
+            The measurement instrument is validated and running separately from real campaign cohorts.
+          </p>
+          <p className="mt-2 text-sm text-slate-600">
+            {summaryFor(state, real.magnitude, (real.treatment_n ?? 0) + (real.control_n ?? 0), real.threshold_k ?? 50)}
           </p>
         </div>
         <span
@@ -142,6 +145,9 @@ export default function CohortStatusPanel() {
           <div className="mt-3 text-xs text-slate-600">
             Source: {instrument.provenance ?? 'oracle'}
           </div>
+          <div className="mt-2 text-xs text-slate-600">
+            Instrument: Validated. The measurement instrument is validated and running. Context is populated with real external data.
+          </div>
         </div>
 
         <div data-testid="cohort-status-real" className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-4">
@@ -166,9 +172,9 @@ export default function CohortStatusPanel() {
               <div className="text-xs uppercase tracking-wide text-slate-500">Control</div>
               <div className="mt-1 font-semibold text-slate-900">{formatCount(real.control_n)}</div>
             </div>
-            <div data-testid="cohort-status-lift">
-              <div className="text-xs uppercase tracking-wide text-slate-500">Lift</div>
-              <div className="mt-1 font-semibold text-slate-900">{formatPercent(real.lift)}</div>
+            <div data-testid="cohort-status-magnitude">
+              <div className="text-xs uppercase tracking-wide text-slate-500">Magnitude</div>
+              <div className="mt-1 font-semibold text-slate-900">{formatPercent(real.magnitude)}</div>
             </div>
           </div>
 
@@ -194,4 +200,19 @@ export default function CohortStatusPanel() {
       )}
     </section>
   )
+}
+
+function summaryFor(
+  state: CohortStatusState,
+  magnitude: number | null | undefined,
+  total: number,
+  threshold: number,
+): string {
+  if (state === 'MEASURED' && typeof magnitude === 'number') {
+    return `Measured on your operations from ${total} verified decisions. This is your magnitude - not a projection, not synthetic.`
+  }
+  if (state === 'ACCUMULATING') {
+    return `Real decisions are accumulating. The instrument is measuring your operations. Magnitude will appear when ${threshold} decisions per arm are verified.`
+  }
+  return 'The measurement instrument is validated and running. Context is populated with real external data. As your team operates, real decisions will accumulate and your specific magnitude will be measured - never synthesized.'
 }

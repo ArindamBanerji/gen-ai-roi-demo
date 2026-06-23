@@ -4,13 +4,13 @@ EXP-ORDER-2: V-ORDER-DIMENSIONALITY-INTERACTION
 The untested quadrant: high order (DK) + high dimensionality (enriched init).
 
 Four conditions:
-  A: Standard centroid (eff_dim ~2, Order 0)    → baseline
-  B: DK on standard (eff_dim ~2, Order 1)       → G8 result
-  C: Rich init centroid (eff_dim ~4, Order 0)    → H3 result
-  D: DK on rich init (eff_dim ~4, Order 1)       → UNTESTED
+  A: Standard centroid (eff_dim ~2, Order 0)    -> baseline
+  B: DK on standard (eff_dim ~2, Order 1)       -> G8 result
+  C: Rich init centroid (eff_dim ~4, Order 0)    -> H3 result
+  D: DK on rich init (eff_dim ~4, Order 1)       -> UNTESTED
 
 If D > max(B, C): synergistic interaction
-If D ≈ max(B, C): one dominates, no interaction
+If D ~= max(B, C): one dominates, no interaction
 
 Run: cd backend && python scripts/exp_order2_interaction.py
 Time: ~20 min
@@ -83,7 +83,7 @@ def effective_dim(centroids):
 
 def main():
     print("=" * 90)
-    print("EXP-ORDER-2: ORDER × DIMENSIONALITY INTERACTION")
+    print("EXP-ORDER-2: ORDER x DIMENSIONALITY INTERACTION")
     print("=" * 90)
 
     base_mu = get_base_centroids()
@@ -138,9 +138,9 @@ def main():
 
         # Results
         print(f"\n  Seed {seed}:")
-        print(f"  {'Condition':>25s}  {'EffDim':>6s}  {'Order':>5s}  {'Acc':>6s}  {'Δ vs A':>7s}")
+        print(f"  {'Condition':>25s}  {'EffDim':>6s}  {'Order':>5s}  {'Acc':>6s}  {'Delta vs A':>7s}")
         print(f"  {'-' * 55}")
-        print(f"  {'A: Standard, Order 0':>25s}  {dim_a:>6.2f}  {'0':>5s}  {acc_a:>4.1f}%  {'—':>7s}")
+        print(f"  {'A: Standard, Order 0':>25s}  {dim_a:>6.2f}  {'0':>5s}  {acc_a:>4.1f}%  {'--':>7s}")
         print(f"  {'B: Standard, Order 1':>25s}  {dim_a:>6.2f}  {'1':>5s}  {acc_b:>4.1f}%  {acc_b-acc_a:>+5.1f}pp")
         print(f"  {'C: Enriched, Order 0':>25s}  {dim_c:>6.2f}  {'0':>5s}  {acc_c:>4.1f}%  {acc_c-acc_a:>+5.1f}pp")
         print(f"  {'D: Enriched, Order 1':>25s}  {dim_c:>6.2f}  {'1':>5s}  {acc_d:>4.1f}%  {acc_d-acc_a:>+5.1f}pp")

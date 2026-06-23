@@ -272,9 +272,38 @@ function DiscoveryAnchor({ discovery, onDismiss }: { discovery: DiscoveryItem; o
   )
 }
 
+function DiscoveryEmptyState({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <section data-testid="discovery-banner" className="overflow-hidden rounded-lg border border-amber-500/25 bg-slate-950/60 shadow-lg">
+      <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
+        <div className="flex min-w-0 gap-3">
+          <div className="mt-0.5 rounded-full border border-amber-400/25 bg-amber-500/10 p-2">
+            <Network className="h-5 w-5 text-amber-300" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold text-amber-50">No cross-graph findings right now</h3>
+            <p className="mt-1 max-w-4xl text-sm leading-6 text-amber-100/70">
+              Discovery is active. New findings appear here when shared entities, temporal velocity, or factor anomalies cross the evidence threshold.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="rounded border border-amber-500/30 p-1.5 text-amber-100/70 transition-colors hover:border-amber-400 hover:text-amber-50"
+          aria-label="Dismiss discovery banner"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </section>
+  )
+}
+
 export default function DiscoveryBanner() {
   const [selectedDiscovery, setSelectedDiscovery] = useState<DiscoveryItem | null>(null)
   const [dismissed, setDismissed] = useState(false)
+  const [loaded, setLoaded] = useState(false)
 
   const loadDiscoveries = async () => {
     try {
@@ -283,6 +312,8 @@ export default function DiscoveryBanner() {
     } catch (err) {
       console.debug('[DiscoveryBanner] Discovery service unavailable', err)
       setSelectedDiscovery(null)
+    } finally {
+      setLoaded(true)
     }
   }
 
@@ -290,7 +321,8 @@ export default function DiscoveryBanner() {
     loadDiscoveries()
   }, [])
 
-  if (dismissed || !selectedDiscovery) return null
+  if (dismissed || !loaded) return null
+  if (!selectedDiscovery) return <DiscoveryEmptyState onDismiss={() => setDismissed(true)} />
 
   return <DiscoveryAnchor discovery={selectedDiscovery} onDismiss={() => setDismissed(true)} />
 }

@@ -128,8 +128,8 @@ def main():
     print(f"\n{'=' * 80}")
     print("LANDSCAPE: gradient and room-to-improve at each separation")
     print(f"{'=' * 80}")
-    print(f"  {'Sep':>6s}  {'BaseAcc':>7s}  {'Conf':>6s}  {'|Δacc|@0.05':>11s}  "
-          f"{'10%→GT':>7s}  {'50%→GT':>7s}  {'RoomToGT':>8s}")
+    print(f"  {'Sep':>6s}  {'BaseAcc':>7s}  {'Conf':>6s}  {'|Deltaacc|@0.05':>11s}  "
+          f"{'10%->GT':>7s}  {'50%->GT':>7s}  {'RoomToGT':>8s}")
     print(f"  {'-' * 60}")
 
     for sep in SEPARATIONS:

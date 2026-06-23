@@ -17,7 +17,7 @@ N = 2000
 CHECKPOINTS = [50, 100, 200, 500, 1000, 2000]
 
 def make_generic_prior():
-    """All centroids at 0.5 — knows nothing."""
+    """All centroids at 0.5 -- knows nothing."""
     return np.full((C, A, D), 0.5)
 
 def make_wrong_prior(base_mu, rng, shift=0.3):
@@ -30,7 +30,7 @@ def make_wrong_prior(base_mu, rng, shift=0.3):
 
 def main():
     print("=" * 75)
-    print("EXP-1: V-PRIOR-GAP — Generic vs Calibrated vs Wrong Prior")
+    print("EXP-1: V-PRIOR-GAP -- Generic vs Calibrated vs Wrong Prior")
     print("=" * 75)
 
     base_mu = get_base_centroids()
@@ -73,7 +73,7 @@ def main():
                         n: r['checkpoints'][n]['frobenius'] for n in CHECKPOINTS
                     }
 
-        print(f"  {cond_name} done ({len(SEEDS)} seeds × {len(strategies)} strategies)")
+        print(f"  {cond_name} done ({len(SEEDS)} seeds x {len(strategies)} strategies)")
 
     # ═══ RESULTS TABLE ═══
     for cond_name in conditions:
@@ -100,7 +100,7 @@ def main():
 
     # ═══ FROBENIUS DISTANCE ═══
     print(f"\n{'=' * 75}")
-    print("Frobenius ||μ(N) - μ(0)|| at N=2000 (mean across seeds)")
+    print("Frobenius ||mu(N) - mu(0)|| at N=2000 (mean across seeds)")
     print(f"{'=' * 75}")
     for cond_name in conditions:
         for strat in ["LEARN_pipeline", "LEARN_raw"]:

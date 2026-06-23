@@ -1,5 +1,5 @@
 """
-support/setup/seed_zero_day.py — Load zero-day synthetic decisions into AGE.
+support/setup/seed_zero_day.py -- Load zero-day synthetic decisions into AGE.
 
 Usage:
     python support/setup/seed_zero_day.py --dry-run
@@ -352,9 +352,9 @@ async def seed_graph_backbone():
       - 6 User nodes (MERGE, idempotent)
       - 8 Asset nodes (MERGE, idempotent)
       - 20 Alert nodes (origin='demo_backbone', status='pending') (MERGE)
-      - INVOLVES edges: Alert → User
-      - DETECTED_ON edges: Alert → Asset
-      - 3 Campaign nodes + MEMBER_OF edges: Alert → Campaign
+      - INVOLVES edges: Alert -> User
+      - DETECTED_ON edges: Alert -> Asset
+      - 3 Campaign nodes + MEMBER_OF edges: Alert -> Campaign
 
     Use --clean to wipe existing backbone nodes before re-seeding.
     """

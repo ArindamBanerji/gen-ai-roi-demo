@@ -1,12 +1,12 @@
 """
 EXP-F3: V-ORTHOGONALITY-TEST
 ===============================
-Direct test: are the error classes addressed by f₀, δ₁, δ₂ disjoint?
+Direct test: are the error classes addressed by f_0, delta_1, delta_2 disjoint?
 
 Tests error overlap between:
-  A = errors of centroid (f₀)
-  B = errors of centroid + DK (f₀ + δ₁)
-  C = errors of centroid + DK + MLP (f₀ + δ₁ + δ₂)
+  A = errors of centroid (f_0)
+  B = errors of centroid + DK (f_0 + delta_1)
+  C = errors of centroid + DK + MLP (f_0 + delta_1 + delta_2)
 
 Run: cd backend && python scripts/exp_f3_orthogonality.py
 Time: ~20 min
@@ -162,13 +162,13 @@ def main():
 
         # Irreducible errors (in ALL three)
         irreducible = errors_A & errors_B & errors_C
-        print(f"    irreducible (A∩B∩C):    {len(irreducible)}")
+        print(f"    irreducible (AintersectionBintersectionC):    {len(irreducible)}")
 
         # Accuracy
         acc_A = (1 - len(errors_A) / N_TEST) * 100
         acc_B = (1 - len(errors_B) / N_TEST) * 100
         acc_C = (1 - len(errors_C) / N_TEST) * 100
-        print(f"    Accuracy: f₀={acc_A:.1f}% → f₀+δ₁={acc_B:.1f}% → f₀+δ₁+δ₂={acc_C:.1f}%")
+        print(f"    Accuracy: f_0={acc_A:.1f}% -> f_0+delta_1={acc_B:.1f}% -> f_0+delta_1+delta_2={acc_C:.1f}%")
 
         # Geometric analysis of fixed vs inherited errors
         if len(errors_A - errors_B) > 5 and len(errors_A & errors_B) > 5:

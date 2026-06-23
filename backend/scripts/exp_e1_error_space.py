@@ -2,10 +2,10 @@
 EXP-E1: ERROR SPACE DECOMPOSITION
 =====================================
 Decompose total error into:
-  ε_noise:      Oracle noise (irreducible)
-  ε_boundary:   Centroid on wrong side of boundary (controllable)
-  ε_structural: True boundary isn't Voronoi (model limit)
-  ε_capacity:   Centroids don't span full factor space (representation limit)
+  epsilon_noise:      Oracle noise (irreducible)
+  epsilon_boundary:   Centroid on wrong side of boundary (controllable)
+  epsilon_structural: True boundary isn't Voronoi (model limit)
+  epsilon_capacity:   Centroids don't span full factor space (representation limit)
 
 Also computes:
   - Bayes error (minimum achievable with perfect centroids + given noise)
@@ -56,7 +56,7 @@ def main():
     # SECTION 1: BAYES ERROR (perfect centroids + noise)
     # ═══════════════════════════════════════════════
     print(f"\n{'=' * 90}")
-    print("SECTION 1: BAYES ERROR — minimum achievable with PERFECT centroids")
+    print("SECTION 1: BAYES ERROR -- minimum achievable with PERFECT centroids")
     print("Error floor set by oracle noise alone")
     print(f"{'=' * 90}")
 
@@ -124,9 +124,9 @@ def main():
         print(f"    Oracle matches GT:         {oracle_match:.1f}%")
         print(f"")
         print(f"    ERROR DECOMPOSITION:")
-        print(f"      ε_noise     = {100-perfect_acc:.1f}pp  (oracle disagrees with GT scorer)")
-        print(f"      ε_centroid  = {perfect_acc - prior_acc:.1f}pp  (prior disagrees with GT)")
-        print(f"      ε_total     = {100-prior_acc:.1f}pp")
+        print(f"      epsilon_noise     = {100-perfect_acc:.1f}pp  (oracle disagrees with GT scorer)")
+        print(f"      epsilon_centroid  = {perfect_acc - prior_acc:.1f}pp  (prior disagrees with GT)")
+        print(f"      epsilon_total     = {100-prior_acc:.1f}pp")
         print(f"      CONTROLLABLE fraction: {(perfect_acc - prior_acc)/(100-prior_acc)*100:.0f}%"
               if (100-prior_acc) > 0 else "      CONTROLLABLE fraction: 0%")
 
@@ -174,7 +174,7 @@ def main():
             confusion[result.action_index, oa] += 1
             confusion_noiseless[result.action_index, ta] += 1
 
-        print(f"\n  Seed {seed} — Predicted vs Oracle (with noise):")
+        print(f"\n  Seed {seed} -- Predicted vs Oracle (with noise):")
         print(f"  {'Predicted':>12s}", end="")
         for ai in range(A):
             print(f"  {ACTIONS[ai][:8]:>8s}", end="")
@@ -199,7 +199,7 @@ def main():
             print()
 
         # Error directionality: which (true→predicted) pairs dominate?
-        print(f"\n  Top error pairs (true → predicted):")
+        print(f"\n  Top error pairs (true -> predicted):")
         errors = []
         for ti in range(A):
             for pi in range(A):
@@ -207,13 +207,13 @@ def main():
                     errors.append((ACTIONS[ti], ACTIONS[pi], confusion_noiseless[pi, ti]))
         errors.sort(key=lambda x: -x[2])
         for true_a, pred_a, count in errors[:10]:
-            print(f"    {true_a:>12s} → {pred_a:>12s}: {count:>5d} errors")
+            print(f"    {true_a:>12s} -> {pred_a:>12s}: {count:>5d} errors")
 
     # ═══════════════════════════════════════════════
     # SECTION 3: ERROR BY GEOMETRY
     # ═══════════════════════════════════════════════
     print(f"\n{'=' * 90}")
-    print("SECTION 3: ERROR GEOMETRY — boundary vs structural vs noise")
+    print("SECTION 3: ERROR GEOMETRY -- boundary vs structural vs noise")
     print(f"{'=' * 90}")
 
     for seed in SEEDS_SHORT:
@@ -262,16 +262,16 @@ def main():
 
         print(f"\n  Seed {seed}:")
         print(f"    Correct (prior agrees with oracle):           {n_correct:>5d} ({n_correct/n_total*100:.1f}%)")
-        print(f"    ε_boundary (GT right, prior wrong):           {n_boundary_error:>5d} ({n_boundary_error/n_total*100:.1f}%)")
-        print(f"    ε_noise (both wrong — oracle noise):          {n_both_wrong:>5d} ({n_both_wrong/n_total*100:.1f}%)")
-        print(f"    ε_total:                                      {(n_boundary_error+n_both_wrong)/n_total*100:.1f}%")
-        print(f"    CONTROLLABLE (ε_boundary / ε_total):          "
+        print(f"    epsilon_boundary (GT right, prior wrong):           {n_boundary_error:>5d} ({n_boundary_error/n_total*100:.1f}%)")
+        print(f"    epsilon_noise (both wrong -- oracle noise):          {n_both_wrong:>5d} ({n_both_wrong/n_total*100:.1f}%)")
+        print(f"    epsilon_total:                                      {(n_boundary_error+n_both_wrong)/n_total*100:.1f}%")
+        print(f"    CONTROLLABLE (epsilon_boundary / epsilon_total):          "
               f"{n_boundary_error/(n_boundary_error+n_both_wrong)*100:.0f}%"
               if (n_boundary_error+n_both_wrong) > 0 else "    N/A")
 
         if boundary_errors_by_dist:
             bds = np.array(boundary_errors_by_dist)
-            print(f"    Boundary errors — distance to boundary:")
+            print(f"    Boundary errors -- distance to boundary:")
             print(f"      mean={bds.mean():.4f} median={np.median(bds):.4f}")
             for thresh in [0.01, 0.02, 0.05, 0.10]:
                 frac = (bds < thresh).mean() * 100
@@ -283,8 +283,8 @@ def main():
     print(f"\n{'=' * 90}")
     print("SECTION 4: ERROR COMPONENTS vs GT-PRIOR SEPARATION")
     print(f"{'=' * 90}")
-    print(f"  {'Sep':>6s}  {'ε_total':>7s}  {'ε_noise':>7s}  {'ε_boundary':>10s}  "
-          f"{'ε_both':>7s}  {'Controllable':>12s}  {'Bayes':>6s}")
+    print(f"  {'Sep':>6s}  {'epsilon_total':>7s}  {'epsilon_noise':>7s}  {'epsilon_boundary':>10s}  "
+          f"{'epsilon_both':>7s}  {'Controllable':>12s}  {'Bayes':>6s}")
     print(f"  {'-' * 65}")
 
     separations = [0.0, 0.10, 0.25, 0.50, 0.75, 1.00, 1.50, 2.00]
@@ -343,7 +343,7 @@ def main():
     # SECTION 5: CAPACITY ERROR — d-dimensional limit
     # ═══════════════════════════════════════════════
     print(f"\n{'=' * 90}")
-    print("SECTION 5: CAPACITY ERROR — does low effective dimensionality cause errors?")
+    print("SECTION 5: CAPACITY ERROR -- does low effective dimensionality cause errors?")
     print(f"{'=' * 90}")
 
     for seed in SEEDS_SHORT[:1]:
@@ -386,14 +386,14 @@ def main():
         print(f"\n  Seed {seed}:")
         print(f"    Full-rank GT accuracy (noiseless):    {full_correct/total*100:.1f}%")
         print(f"    2D-projected GT accuracy (noiseless): {proj_correct/total*100:.1f}%")
-        print(f"    ε_capacity (lost by projection):      {(full_correct-proj_correct)/total*100:.1f}pp")
+        print(f"    epsilon_capacity (lost by projection):      {(full_correct-proj_correct)/total*100:.1f}pp")
         print(f"    Projection preserves {proj_correct/full_correct*100:.1f}% of decisions")
 
     # ═══════════════════════════════════════════════
     # SECTION 6: ERROR BUDGET SUMMARY
     # ═══════════════════════════════════════════════
     print(f"\n{'=' * 90}")
-    print("SECTION 6: ERROR BUDGET (production operating point, sep≈0.8)")
+    print("SECTION 6: ERROR BUDGET (production operating point, sep~=0.8)")
     print(f"{'=' * 90}")
 
     # Use average across seeds at production separation
@@ -425,16 +425,16 @@ def main():
         budget['total'].append((n_b + n_bw) / n_t * 100)
 
     print(f"""
-    ┌─────────────────────────────────────────────────┐
-    │  TOTAL ERROR:        {np.mean(budget['total']):>5.1f}pp                      │
-    │  ├── ε_noise:        {np.mean(budget['noise']):>5.1f}pp  (IRREDUCIBLE)       │
-    │  └── ε_boundary:     {np.mean(budget['boundary']):>5.1f}pp  (CONTROLLABLE)    │
-    │                                                 │
-    │  Controllable fraction: {np.mean(budget['boundary'])/np.mean(budget['total'])*100:>4.0f}%                  │
-    │  Max achievable acc:    {100-np.mean(budget['noise']):>5.1f}%                 │
-    │  Current acc:           {100-np.mean(budget['total']):>5.1f}%                 │
-    │  Room to improve:       {np.mean(budget['boundary']):>5.1f}pp                 │
-    └─────────────────────────────────────────────────┘
+    +-------------------------------------------------+
+    |  TOTAL ERROR:        {np.mean(budget['total']):>5.1f}pp                      |
+    |  +-- epsilon_noise:        {np.mean(budget['noise']):>5.1f}pp  (IRREDUCIBLE)       |
+    |  +-- epsilon_boundary:     {np.mean(budget['boundary']):>5.1f}pp  (CONTROLLABLE)    |
+    |                                                 |
+    |  Controllable fraction: {np.mean(budget['boundary'])/np.mean(budget['total'])*100:>4.0f}%                  |
+    |  Max achievable acc:    {100-np.mean(budget['noise']):>5.1f}%                 |
+    |  Current acc:           {100-np.mean(budget['total']):>5.1f}%                 |
+    |  Room to improve:       {np.mean(budget['boundary']):>5.1f}pp                 |
+    +-------------------------------------------------+
     """)
 
     print("DONE.")

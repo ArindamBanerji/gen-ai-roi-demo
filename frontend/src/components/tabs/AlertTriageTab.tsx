@@ -24,6 +24,7 @@ import PolicyConflict from '../PolicyConflict'
 import LearningStatePanel from '../LearningStatePanel'
 import ClusterHistoryPanel, { type ClusterHistoryData } from '../ClusterHistoryPanel'
 import FactorContributionPanel from '../FactorContributionPanel'
+import ProvenanceBadge from '../ProvenanceBadge'
 
 interface Alert {
   id: string
@@ -695,6 +696,10 @@ export default function AlertTriageTab() {
                 >
                   {threatIntel.source.includes('pulsedive') ? 'Pulsedive (live)' : 'Local fallback'}
                 </span>
+                <ProvenanceBadge
+                  source={threatIntel.source.includes('pulsedive') ? 'scraped_external' : 'sample'}
+                  asOf={threatIntel.timestamp}
+                />
                 <span className="text-gray-600">·</span>
                 <span className="text-gray-500">
                   Last refreshed:{' '}
@@ -1180,6 +1185,12 @@ export default function AlertTriageTab() {
                           >
                             {isPulsedive && <span className="mr-1">🛡️</span>}
                             {displayName}
+                            {isThreatIntel && (
+                              <ProvenanceBadge
+                                source={isPulsedive ? 'scraped_external' : 'sample'}
+                                className="ml-2 align-middle"
+                              />
+                            )}
                           </span>
                           <span className={`text-xs font-semibold uppercase tracking-wide ${labelColor}`}>
                             {factor.contribution}

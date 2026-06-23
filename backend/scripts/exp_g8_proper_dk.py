@@ -2,11 +2,11 @@
 G8: PROPERLY CALIBRATED DK
 =============================
 F3-F6 showed DK "doesn't help." But DK weights were learned by
-random perturbation with 100 iterations — a crude optimization.
+random perturbation with 100 iterations -- a crude optimization.
 
-The DK scoring function s = -Σ wᵢ(xᵢ-μᵢ)² produces QUADRIC
+The DK scoring function s = -Sigma w_i(x_i-mu_i)^2 produces QUADRIC
 boundaries when different actions have different weights.
-This IS curvature — the representation has the capacity.
+This IS curvature -- the representation has the capacity.
 The question is whether PROPER calibration unlocks it.
 
 Tests:
@@ -16,9 +16,9 @@ Tests:
 4. Compare: properly-calibrated DK vs MLP
 
 If proper DK captures 2-3pp of the 4.5pp MLP gap:
-  → DK IS the right intermediate term
-  → The series IS f₀ + δ₁(σ²) + δ₂(MLP)
-  → F3-F6 were testing the calibration, not the representation
+  -> DK IS the right intermediate term
+  -> The series IS f_0 + delta_1(sigma^2) + delta_2(MLP)
+  -> F3-F6 were testing the calibration, not the representation
 
 Run: cd backend && python scripts/exp_g8_proper_dk.py
 Time: ~20 min
@@ -39,7 +39,7 @@ N_TEST = 500
 
 
 def score_dk_per_ca(fv, ci, centroids, weights_per_ca):
-    """Score with per-(c,a) DK weights — each action has its own axis weighting."""
+    """Score with per-(c,a) DK weights -- each action has its own axis weighting."""
     sims = []
     for ai in range(A):
         diff = fv - centroids[ci, ai]
@@ -107,7 +107,7 @@ def calibrate_dk_gradient(X_train, y_train, c_train, centroids, n_iter=500, lr=0
 
 
 def calibrate_dk_coordinate(X_train, y_train, c_train, centroids, n_rounds=10):
-    """Coordinate descent DK calibration — optimize one weight at a time."""
+    """Coordinate descent DK calibration -- optimize one weight at a time."""
     weights = np.ones((C, A, D))
 
     for round_num in range(n_rounds):
@@ -254,10 +254,10 @@ def main():
 
         # Results
         print(f"\n    RESULTS:")
-        print(f"    {'Method':>25s}  {'Acc':>6s}  {'Δ vs centroid':>13s}  {'Params':>8s}  {'Boundary':>12s}")
+        print(f"    {'Method':>25s}  {'Acc':>6s}  {'Delta vs centroid':>13s}  {'Params':>8s}  {'Boundary':>12s}")
         print(f"    {'-' * 70}")
         results = [
-            ("Centroid (f₀)", cent_acc, 144, "hyperplane"),
+            ("Centroid (f_0)", cent_acc, 144, "hyperplane"),
             ("DK random (F3-F6)", dk_random_acc, 288, "quadric*"),
             ("DK coordinate descent", dk_coord_acc, 288, "quadric"),
             ("QDA (full covariance)", qda_acc, 648, "quadric"),

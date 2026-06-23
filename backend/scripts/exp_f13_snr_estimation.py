@@ -6,7 +6,7 @@ In simulation, we compute SNR from GT (oracle).
 In production, GT is unknown.
 
 Tests 5 estimation approaches:
-  A. Velocity-based: SNR_i ∝ |centroid velocity in dim i| / σ_i
+  A. Velocity-based: SNR_i proportional to |centroid velocity in dim i| / sigma_i
   B. Override-based: SNR_i from override residuals per dim
   C. Rolling accuracy gradient: perturb dim i, measure acc change
   D. Confidence-conditioned: SNR_i from low-confidence decisions only
@@ -202,7 +202,7 @@ def main():
     print("=" * 90)
     print("Q1: Any estimator correlation > 0.7 with oracle?")
     print("Q2: Which estimator is best?")
-    print("Q3: Do Wiener gains from estimates ≈ oracle Wiener gains?")
+    print("Q3: Do Wiener gains from estimates ~= oracle Wiener gains?")
     print("Q4: Is rank correlation better than Pearson? (captures ordering even if scale wrong)")
 
     print("\nDONE.")

@@ -45,7 +45,7 @@ def pytest_configure(config):
 
 def pytest_collection_modifyitems(config, items):
     if os.getenv("NEO4J_URI"):
-        return  # Neo4j available — run all tests
+        return  # Neo4j available -- run all tests
     skip_neo4j = pytest.mark.skip(reason="requires live Neo4j (NEO4J_URI not set)")
     for item in items:
         if "neo4j" in item.keywords:
@@ -60,10 +60,10 @@ def _all_selected_tests_skip_persistent_data_guard(request) -> bool:
 @pytest.fixture(scope="session", autouse=True)
 def verify_persistent_data(request):
     """
-    BACKLOG-069 Layer 5 — Guard zero-day training data across the full test run.
+    BACKLOG-069 Layer 5 -- Guard zero-day training data across the full test run.
 
     PRE-TEST: Counts persistent Decision nodes with correct IS NOT NULL.
-    Aborts the entire session (pytest.exit) if fewer than 3,000 found — means
+    Aborts the entire session (pytest.exit) if fewer than 3,000 found -- means
     seed_zero_day.py --backfill has not been run and the data is not ready.
 
     POST-TEST: Re-counts. Fails loudly if the count dropped by more than 10
@@ -92,7 +92,7 @@ def verify_persistent_data(request):
             )
             return int(r[0]["n"]) if r else 0
         except Exception:
-            return -1  # AGE unreachable — sentinel, skip checks
+            return -1  # AGE unreachable -- sentinel, skip checks
 
     n_before = asyncio.run(_count_persistent())
 
@@ -113,7 +113,7 @@ def verify_persistent_data(request):
 
     n_after = asyncio.run(_count_persistent())
     if n_after == -1:
-        return  # AGE unreachable post-test — skip
+        return  # AGE unreachable post-test -- skip
 
     print(
         f"\n[POST-TEST] Zero-day data intact: {n_after} decisions "
@@ -121,7 +121,7 @@ def verify_persistent_data(request):
     )
     if n_after < n_before - 10:
         pytest.fail(
-            f"ZERO-DAY DATA WIPED: {n_before} before → {n_after} after. "
+            f"ZERO-DAY DATA WIPED: {n_before} before -> {n_after} after. "
             f"A test called hard_reset(), demo/reset-all, or ran a raw "
             f"DETACH DELETE on Decision nodes."
         )
@@ -130,7 +130,7 @@ def verify_persistent_data(request):
 @pytest.fixture(scope="session", autouse=True)
 def report_graph_contract(request):
     """
-    BACKLOG-070b — Post-session graph contract health report.
+    BACKLOG-070b -- Post-session graph contract health report.
 
     Runs verify_graph() after the full test suite and prints a summary.
     Non-blocking: prints issues as warnings, does NOT fail the suite.
@@ -171,6 +171,6 @@ def report_graph_contract(request):
     if report["healthy"]:
         print("[GRAPH CONTRACT] All contract checks passed.")
     else:
-        print(f"[GRAPH CONTRACT] {len(report['issues'])} issue(s) — run seed_graph() to fix:")
+        print(f"[GRAPH CONTRACT] {len(report['issues'])} issue(s) -- run seed_graph() to fix:")
         for issue in report["issues"]:
             print(f"  WARNING: {issue}")

@@ -126,8 +126,8 @@ def run_stack(seed, noise_scale=1.0):
 
     return {
         'f0': acc_f0, 'dk': acc_dk,
-        'skip': acc_skip,  # f₀+δ₂
-        'full': acc_full,  # f₀+δ₁+δ₂
+        'skip': acc_skip,  # f_0+delta_2
+        'full': acc_full,  # f_0+delta_1+delta_2
         'dk_errors': len(dk_errors),
         'f0_errors': len(f0_errors),
     }
@@ -142,7 +142,7 @@ def main():
     print(f"\n{'=' * 90}")
     print("F6: Does DK provide a better base for RL?")
     print(f"{'=' * 90}")
-    print(f"  {'Seed':>6s}  {'f₀':>6s}  {'f₀+δ₁':>7s}  {'f₀+δ₂':>7s}  {'f₀+δ₁+δ₂':>9s}  "
+    print(f"  {'Seed':>6s}  {'f_0':>6s}  {'f_0+delta_1':>7s}  {'f_0+delta_2':>7s}  {'f_0+delta_1+delta_2':>9s}  "
           f"{'DK helps RL':>11s}")
     print(f"  {'-' * 55}")
 
@@ -159,8 +159,8 @@ def main():
     print(f"{'=' * 90}")
     noise_levels = [0.0, 0.25, 0.50, 1.00, 1.50, 2.00]
 
-    print(f"  {'Noise':>6s}  {'f₀':>6s}  {'f₀+δ₁':>7s}  {'f₀+δ₁+δ₂':>9s}  "
-          f"{'Δ(δ₁)':>7s}  {'Δ(δ₂)':>7s}  {'δ₂ more sensitive?':>18s}")
+    print(f"  {'Noise':>6s}  {'f_0':>6s}  {'f_0+delta_1':>7s}  {'f_0+delta_1+delta_2':>9s}  "
+          f"{'Delta(delta_1)':>7s}  {'Delta(delta_2)':>7s}  {'delta_2 more sensitive?':>18s}")
     print(f"  {'-' * 65}")
 
     baseline_results = {}
@@ -198,10 +198,10 @@ def main():
     print(f"\n{'=' * 90}")
     print("BINARY QUESTIONS")
     print("=" * 90)
-    print("F6-Q1: f₀+δ₁+δ₂ > f₀+δ₂? (DK helps RL)")
+    print("F6-Q1: f_0+delta_1+delta_2 > f_0+delta_2? (DK helps RL)")
     print("F6-Q2: Are DK residuals more structured?")
-    print("F7-Q1: Does δ₂ degrade more than δ₁ at high noise?")
-    print("F7-Q2: At noise=0, does f₀+δ₁+δ₂ approach Bayes floor?")
+    print("F7-Q1: Does delta_2 degrade more than delta_1 at high noise?")
+    print("F7-Q2: At noise=0, does f_0+delta_1+delta_2 approach Bayes floor?")
 
     print("\nDONE.")
 

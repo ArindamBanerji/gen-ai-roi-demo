@@ -21,12 +21,7 @@ pytestmark = pytest.mark.no_data_guard
 
 def test_analyst_oracle_satisfies_sdk_protocol():
     oracle = AnalystOracle()
-    if not isinstance(oracle, Oracle):
-        pytest.xfail(
-            "DRIFT: AnalystOracle has synthetic_outcome but does not expose "
-            "known_effect/known_accuracy_effect required by the SDK Oracle protocol."
-        )
-
+    assert isinstance(oracle, Oracle), "AnalystOracle must satisfy SDK Oracle protocol"
     assert oracle.known_effect == pytest.approx(0.10)
     assert oracle.known_accuracy_effect == pytest.approx(0.05)
     assert callable(oracle.synthetic_outcome)

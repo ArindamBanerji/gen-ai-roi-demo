@@ -99,7 +99,7 @@ def main():
     print("Does Firm A's DK weights help Firm B?")
     print("=" * 90)
 
-    print(f"\n  {'Config':>30s}  {'Acc':>6s}  {'Δ vs centroid':>13s}")
+    print(f"\n  {'Config':>30s}  {'Acc':>6s}  {'Delta vs centroid':>13s}")
     print(f"  {'-' * 55}")
 
     transfer_results = {}
@@ -277,9 +277,9 @@ def main():
         standalone_acc = accuracy_score(y_test, standalone_preds) * 100
 
         print(f"\n  Seed {seed}:")
-        print(f"  {'Config':>30s}  {'Acc':>6s}  {'Δ vs cent':>9s}  {'Layers':>10s}")
+        print(f"  {'Config':>30s}  {'Acc':>6s}  {'Delta vs cent':>9s}  {'Layers':>10s}")
         print(f"  {'-' * 60}")
-        print(f"  {'Centroid only':>30s}  {cent_acc:>4.1f}%  {'—':>9s}  {'L1':>10s}")
+        print(f"  {'Centroid only':>30s}  {cent_acc:>4.1f}%  {'--':>9s}  {'L1':>10s}")
         print(f"  {'DK on frozen':>30s}  {dk_acc:>4.1f}%  {dk_acc-cent_acc:>+7.1f}pp  {'L1+L1.5':>10s}")
         print(f"  {'Bounded MLP on centroid':>30s}  {mlp_on_cent_acc:>4.1f}%  {mlp_on_cent_acc-cent_acc:>+7.1f}pp  {'L1+L2':>10s}")
         print(f"  {'Bounded MLP on DK':>30s}  {mlp_on_dk_acc:>4.1f}%  {mlp_on_dk_acc-cent_acc:>+7.1f}pp  {'L1+L1.5+L2':>10s}")
@@ -332,7 +332,7 @@ def main():
             lambda fv, ci: make_scorer(frozen_mu).score(fv, ci).action_index, test_data)
 
         print(f"\n  Seed {seed} (centroid baseline: {cent_acc:.1f}%):")
-        print(f"  {'N':>6s}  {'DK_acc':>7s}  {'DK-Cent':>7s}  {'Δ from prev':>11s}  {'Marginal/1000':>13s}")
+        print(f"  {'N':>6s}  {'DK_acc':>7s}  {'DK-Cent':>7s}  {'Delta from prev':>11s}  {'Marginal/1000':>13s}")
         print(f"  {'-' * 55}")
 
         prev_acc = cent_acc

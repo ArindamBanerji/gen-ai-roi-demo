@@ -1,5 +1,5 @@
 """
-One-time backfill script — write the μ₀ IKS sidecar from the current live
+One-time backfill script -- write the mu_0 IKS sidecar from the current live
 ProfileScorer centroid state.
 
 WARNING: Run ONLY on a fresh system before first deployment.
@@ -12,7 +12,7 @@ Context
 -------
 The bootstrap checkpoint already has metadata.bootstrap=True, so the normal
 startup path (init_learning_state / bootstrap_calibration) skips the WIRING-0
-sidecar write.  This script captures the equivalent μ₀ from the currently
+sidecar write.  This script captures the equivalent mu_0 from the currently
 loaded centroids so that IKS can produce a real drift score instead of the
 50.0 fallback.
 

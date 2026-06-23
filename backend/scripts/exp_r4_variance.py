@@ -125,7 +125,7 @@ def main():
     print(f"\n{'=' * 80}")
     print("BINARY QUESTIONS")
     print("=" * 80)
-    print(f"Q1: z_score predicts errors better than distance? (see ΔAUC above)")
+    print(f"Q1: z_score predicts errors better than distance? (see DeltaAUC above)")
     print(f"Q3: Per-dimension sigma varies significantly? (see CV above)")
 
     print("\nDONE.")

@@ -1,5 +1,5 @@
 """
-support/setup/fix_null_category_decisions.py — Repair null-category simulation Decision nodes.
+support/setup/fix_null_category_decisions.py -- Repair null-category simulation Decision nodes.
 
 2307 Decision nodes (source_id=None, i.e. simulation artifacts) have d.category IS NULL
 and a [:DECIDED_ON] relationship to an Alert node.  This causes campaign recorrelation
@@ -95,7 +95,7 @@ async def run() -> None:
         "RETURN count(d) AS cnt"
     )
     phase_a_count = _int(rows, "cnt")
-    print(f"[STEP 2] Phase A — fixable (Alert has category):                    {phase_a_count}")
+    print(f"[STEP 2] Phase A -- fixable (Alert has category):                    {phase_a_count}")
 
     # ── Step 3: Count Phase-B candidates (Alert also null, delete) ───────────
     rows = await client.run_query(
@@ -104,7 +104,7 @@ async def run() -> None:
         "RETURN count(d) AS cnt"
     )
     phase_b_count = _int(rows, "cnt")
-    print(f"[STEP 3] Phase B — unfixable (Alert also null, will delete):        {phase_b_count}")
+    print(f"[STEP 3] Phase B -- unfixable (Alert also null, will delete):        {phase_b_count}")
     print()
 
     # ── Dry-run exit ──────────────────────────────────────────────────────────
@@ -117,7 +117,7 @@ async def run() -> None:
 
     # ── Phase A: Set d.category = a.category for fixable nodes ───────────────
     if phase_a_count == 0:
-        print("[PHASE A] No fixable nodes — skipping.")
+        print("[PHASE A] No fixable nodes -- skipping.")
     else:
         print(f"[PHASE A] Fetching {phase_a_count} decision_id(s) to fix...")
         rows = await client.run_query(
@@ -155,7 +155,7 @@ async def run() -> None:
 
     # ── Phase B: Delete unfixable nodes (Alert also null) ────────────────────
     if phase_b_count == 0:
-        print("[PHASE B] No unfixable nodes — skipping.")
+        print("[PHASE B] No unfixable nodes -- skipping.")
     else:
         print(f"[PHASE B] Fetching {phase_b_count} decision_id(s) to delete...")
         rows = await client.run_query(
@@ -192,14 +192,14 @@ async def run() -> None:
 
     if remaining == 0:
         print(
-            "\n[OK] Fix complete — no null-category simulation Decision nodes remain.\n"
+            "\n[OK] Fix complete -- no null-category simulation Decision nodes remain.\n"
             "     Next steps:\n"
             "       1. POST /api/soc/campaigns/recorrelate  (or via test)\n"
             "       2. GET  /api/soc/campaigns              (verify 200, no None in category_sequence)\n"
             "       3. python -m pytest tests/ -q --timeout=60  (gate: 600 passed, 1 skipped)"
         )
     else:
-        print(f"\n[WARN] {remaining} null-category Decision node(s) still present — check for errors above.")
+        print(f"\n[WARN] {remaining} null-category Decision node(s) still present -- check for errors above.")
 
 
 # ── entry point ───────────────────────────────────────────────────────────────

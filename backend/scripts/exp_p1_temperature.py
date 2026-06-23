@@ -1,12 +1,12 @@
 """
 EXP-P1: SOFTMAX TEMPERATURE SWEEP
 ====================================
-The softmax temperature τ controls how "peaked" the confidence
-distribution is. High τ → flat confidences → informative gradient.
-Low τ → peaked confidences → blind gradient (what we have now).
+The softmax temperature tau controls how "peaked" the confidence
+distribution is. High tau -> flat confidences -> informative gradient.
+Low tau -> peaked confidences -> blind gradient (what we have now).
 
 C7 showed the landscape is flat and confidence is blind.
-Is this because τ is wrong?
+Is this because tau is wrong?
 
 Run: cd backend && python scripts/exp_p1_temperature.py
 Time: ~20 min
@@ -154,7 +154,7 @@ def main():
     print(f"{'=' * 80}")
     print(f"  {'Temp':>6s}  {'BaseAcc':>7s}  {'MeanConf':>8s}  {'%>0.80':>6s}  ", end="")
     for eps in EPSILON_VALUES:
-        print(f"{'|Δacc|@'+str(eps):>12s}  {'|Δconf|@'+str(eps):>13s}  ", end="")
+        print(f"{'|Deltaacc|@'+str(eps):>12s}  {'|Deltaconf|@'+str(eps):>13s}  ", end="")
     print(f"{'Gradient':>8s}")
     print(f"  {'-' * 120}")
 
@@ -241,7 +241,7 @@ def main():
     print(f"\n{'=' * 80}")
     print("TOWARD-GT PERTURBATION (10% and 50% of distance)")
     print(f"{'=' * 80}")
-    print(f"  {'Temp':>6s}  {'Baseline':>8s}  {'10%→GT':>8s}  {'Δ@10%':>7s}  {'50%→GT':>8s}  {'Δ@50%':>7s}")
+    print(f"  {'Temp':>6s}  {'Baseline':>8s}  {'10%->GT':>8s}  {'Delta@10%':>7s}  {'50%->GT':>8s}  {'Delta@50%':>7s}")
     print(f"  {'-' * 50}")
 
     for temp in temperatures:

@@ -24,7 +24,7 @@ N_PROBE = 3000
 
 
 def compute_error_budget(scorer, scorer_gt, gt, seed, N):
-    """Measure ε_boundary and ε_noise at current centroid position."""
+    """Measure epsilon_boundary and epsilon_noise at current centroid position."""
     rng = np.random.default_rng(seed)
     n_boundary = 0
     n_noise = 0
@@ -71,7 +71,7 @@ def main():
 
     for strategy_name in ["GATED", "SQRT_DECAY", "RAW_SGD"]:
         print(f"\n  STRATEGY: {strategy_name}")
-        print(f"  {'N':>6s}  {'ε_total':>7s}  {'ε_bound':>7s}  {'ε_noise':>7s}  "
+        print(f"  {'N':>6s}  {'epsilon_total':>7s}  {'epsilon_bound':>7s}  {'epsilon_noise':>7s}  "
               f"{'Controllable%':>13s}  {'Acc':>5s}")
         print(f"  {'-' * 55}")
 
@@ -186,8 +186,8 @@ def main():
                     net_created += delta
 
                 if updates_measured <= 20 or updates_measured % 50 == 0:
-                    print(f"    Update {updates_measured:>4d}: errors {errors_before} → {errors_after} "
-                          f"(Δ={delta:+d})")
+                    print(f"    Update {updates_measured:>4d}: errors {errors_before} -> {errors_after} "
+                          f"(Delta={delta:+d})")
 
         print(f"\n    Summary ({updates_measured} updates measured):")
         print(f"      Total errors fixed:   {net_fixed}")

@@ -2,7 +2,7 @@
 EXP-P3: DISTANCE METRIC / SCORING FUNCTION
 =============================================
 The scoring function maps centroids to decisions. Current:
-softmax(-||f - μ||²). What if the metric is wrong?
+softmax(-||f - mu||^2). What if the metric is wrong?
 
 Tests: Euclidean, cosine, Mahalanobis, linear (dot product),
 and RBF with different bandwidth.
@@ -149,8 +149,8 @@ def main():
     print(f"\n{'=' * 80}")
     print("LANDSCAPE ANALYSIS per metric")
     print(f"{'=' * 80}")
-    print(f"  {'Metric':>18s}  {'BaseAcc':>7s}  {'Conf':>6s}  {'|Δacc|@0.05':>11s}  "
-          f"{'|Δconf|@0.05':>12s}  {'10%→GT':>7s}  {'50%→GT':>7s}")
+    print(f"  {'Metric':>18s}  {'BaseAcc':>7s}  {'Conf':>6s}  {'|Deltaacc|@0.05':>11s}  "
+          f"{'|Deltaconf|@0.05':>12s}  {'10%->GT':>7s}  {'50%->GT':>7s}")
     print(f"  {'-' * 75}")
 
     for metric in metrics:

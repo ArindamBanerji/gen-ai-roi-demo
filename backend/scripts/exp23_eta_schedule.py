@@ -214,7 +214,7 @@ def main():
         print(f"\n  >>> Accuracy matches but ECE differs. Pipeline's batch mechanism")
         print(f"  >>> contributes to calibration. Keep if calibration matters.")
     else:
-        print(f"\n  >>> Pipeline complexity JUSTIFIED — simpler alternatives don't match.")
+        print(f"\n  >>> Pipeline complexity JUSTIFIED -- simpler alternatives don't match.")
 
     # Q4: Best accuracy × ECE tradeoff
     print(f"\n  Q4: Best accuracy x ECE tradeoff at N={N}:")

@@ -46,11 +46,18 @@ from app.domains.soc.config import (
     LEARNING_ENABLED,
     is_learning_enabled,
     N_FACTORS,
+    SOC_FACTORS,
 )
-from app.domains.soc.orchestrator import compute_factor_vector
+from app.domains.soc.orchestrator import (
+    compute_factor_vector as _compute_factor_vector,
+    compute_factor_vector_with_provenance,
+)
 from gae.scoring import score_alert
 
 logger = logging.getLogger(__name__)
+
+# Backward-compatible monkeypatch hook used by existing tests.
+compute_factor_vector = _compute_factor_vector
 
 
 _SOC_PERF_FALSE_VALUES = {"", "0", "false", "no", "off"}
@@ -536,7 +543,20 @@ async def analyze_alert(request: ProcessAlertRequest):
         ):
             print(f"[GAE] Computing factor vector for {alert_id}...")
             computers = SOCDomainConfig.get_factor_computers()
-            f = await compute_factor_vector(alert_data, computers, neo4j_client)
+            if compute_factor_vector is not _compute_factor_vector:
+                f = await compute_factor_vector(alert_data, computers, neo4j_client)
+                factor_provenance = {
+                    name: {
+                        "value": float(value),
+                        "source": "test_override",
+                        "detail": "factor vector supplied by compatibility hook",
+                    }
+                    for name, value in zip(SOC_FACTORS, f.flatten().tolist())
+                }
+            else:
+                f, factor_provenance = await compute_factor_vector_with_provenance(
+                    alert_data, computers, neo4j_client
+                )
             f_2d = f.reshape(1, -1)  # kept for legacy reference; ProfileScorer uses f.flatten()
 
         # DEPRECATED v5.0: W-matrix scoring replaced by ProfileScorer
@@ -807,6 +827,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                     action:                {_S(selected_action)},
                     confidence:            {confidence},
                     factor_vector:         {_S(json.dumps(fv_list))},
+                    factor_provenance:     {_S(json.dumps(factor_provenance, sort_keys=True))},
                     category:              {_S(alert_category)},
                     source_id:             {_S(alert_data.get("source_location", ""))},
                     user_id:               {_S(context.get("user_id", ""))},

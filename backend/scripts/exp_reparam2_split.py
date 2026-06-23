@@ -4,11 +4,11 @@ EXP-REPARAM-2: V-SPLIT-ORDER-LEARNING
 Separate mean learning and variance learning with different strategies.
 
 STRATEGY SPLIT:
-  Means μ[c,a,i]: FROZEN after N=500
+  Means mu[c,a,i]: FROZEN after N=500
   DK weights w[c,a,i]: re-estimated from rolling window every 200 decisions
 
 Compare to:
-  ALL-FROZEN: η = 0 after N=500
+  ALL-FROZEN: eta = 0 after N=500
   ALL-LEARNING: pipeline continues for everything
   SPLIT: freeze means, continue learning variances
 
@@ -190,7 +190,7 @@ def main():
                 if n in cps:
                     print(f"  {cps[n]:>4.1f}%", end="")
                 else:
-                    print(f"  {'—':>6s}", end="")
+                    print(f"  {'--':>6s}", end="")
             print(f"  {V:>7.4f}")
 
     # DK learning curve: does DK accuracy improve with N?

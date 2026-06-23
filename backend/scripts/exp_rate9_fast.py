@@ -1,7 +1,7 @@
 """
 EXP-RATE-9-FAST: FRAMEWORK STRENGTHENING (optimized)
 ======================================================
-H-MONO, H-FLOOR, H-CATCOMP, H-DEPLOY — with fast DK calibration.
+H-MONO, H-FLOOR, H-CATCOMP, H-DEPLOY -- with fast DK calibration.
 
 Run: cd backend && python scripts/exp_rate9_fast.py
 Time: ~15 min

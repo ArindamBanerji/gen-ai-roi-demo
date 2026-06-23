@@ -204,7 +204,7 @@ def main():
     print(f"\n{'=' * 90}")
     print("CALIBRATED PRIOR")
     print(f"{'=' * 90}")
-    print(f"  {'Strategy':>20s}  {'Acc':>6s}  {'ECE':>8s}  {'V_final':>8s}  {'Δ vs unproj':>11s}")
+    print(f"  {'Strategy':>20s}  {'Acc':>6s}  {'ECE':>8s}  {'V_final':>8s}  {'Delta vs unproj':>11s}")
     print(f"  {'-' * 60}")
 
     unproj_acc = 0

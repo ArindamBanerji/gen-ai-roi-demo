@@ -1,5 +1,5 @@
 """
-support/setup/enrich_zero_day_v5.py — Enrich v4 zero_day_decisions.json to v5.
+support/setup/enrich_zero_day_v5.py -- Enrich v4 zero_day_decisions.json to v5.
 
 Adds to the existing 540 alerts + 4860 decisions:
   - 20 User records (zero_day_synthetic)
@@ -258,7 +258,7 @@ asset_by_id = {a["asset_id"]: a for a in ASSETS}
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n[STEP 1] Assigning user_id, asset_id, attack_pattern_id, indicator_ids to v4 alerts...")
 
-alerts   = [dict(a) for a in v4_alerts]   # shallow copy — we'll mutate
+alerts   = [dict(a) for a in v4_alerts]   # shallow copy -- we'll mutate
 cat_idx  = defaultdict(int)
 ind_cycle = 0
 
@@ -417,7 +417,7 @@ v5 = {
     "campaigns":         campaigns,
     "alerts":            alerts,
     "demo_alerts":       demo_alerts,
-    "decisions":         [dict(d) for d in v4_decisions],  # copy — we mutate user_id below
+    "decisions":         [dict(d) for d in v4_decisions],  # copy -- we mutate user_id below
 }
 
 # Propagate user_id from enriched alerts to decisions (v4 decisions all had user_id='')
@@ -444,7 +444,7 @@ def gate(n: int, desc: str, ok: bool, detail: str = "") -> None:
     label = "[OK  ]" if ok else "[FAIL]"
     line  = f"  {label} Gate {n:02d}: {desc}"
     if not ok and detail:
-        line += f" — {detail}"
+        line += f" -- {detail}"
     print(line)
     if not ok:
         failures.append(line)

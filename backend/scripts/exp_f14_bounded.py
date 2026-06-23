@@ -1,11 +1,11 @@
 """
 EXP-F14: V-BOUNDED-CORRECTION
 =================================
-The Taylor series requires |δ₂| ≤ ε_max.
+The Taylor series requires |delta_2| <= epsilon_max.
 R1: DEEP_WRONG gap = 0.47 (correction must exceed this to fix).
 R5: MLP +4.5pp (correction CAN work).
 
-What ε_max gives the best accuracy-stability tradeoff?
+What epsilon_max gives the best accuracy-stability tradeoff?
 Does bounded MLP still beat centroid?
 
 Run: cd backend && python scripts/exp_f14_bounded.py
@@ -29,7 +29,7 @@ A = 4
 def main():
     print("=" * 90)
     print("EXP-F14: V-BOUNDED-CORRECTION")
-    print("What ε_max gives the best accuracy-stability tradeoff?")
+    print("What epsilon_max gives the best accuracy-stability tradeoff?")
     print("=" * 90)
 
     base_mu = get_base_centroids()
@@ -39,7 +39,7 @@ def main():
     print(f"\n{'=' * 90}")
     print("PART A: Bounded MLP correction on centroid scores")
     print(f"{'=' * 90}")
-    print(f"  {'ε_max':>6s}  {'Acc':>6s}  {'DEEP_fixed':>10s}  {'DEEP_created':>12s}  "
+    print(f"  {'epsilon_max':>6s}  {'Acc':>6s}  {'DEEP_fixed':>10s}  {'DEEP_created':>12s}  "
           f"{'BND_fixed':>9s}  {'BND_created':>11s}  {'Net':>6s}")
     print(f"  {'-' * 70}")
 
@@ -145,7 +145,7 @@ def main():
 
     # PART B: What fraction of MLP's advantage survives bounding?
     print(f"\n{'=' * 90}")
-    print("PART B: How much of MLP's +4.5pp survives at each ε_max?")
+    print("PART B: How much of MLP's +4.5pp survives at each epsilon_max?")
     print(f"{'=' * 90}")
 
     centroid_acc = np.mean([

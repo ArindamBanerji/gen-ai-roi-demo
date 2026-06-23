@@ -1,10 +1,10 @@
 """
 EXP-F1: V-ALIGNMENT-TRAJECTORY
 =================================
-Track ρ (update-GT alignment) over 4000 decisions.
-Does ρ decrease as centroids converge?
-Is there a crossover at ρ = 0.5?
-Is ρ_boundary > ρ_deep?
+Track rho (update-GT alignment) over 4000 decisions.
+Does rho decrease as centroids converge?
+Is there a crossover at rho = 0.5?
+Is rho_boundary > rho_deep?
 
 Run: cd backend && python scripts/exp_f1_alignment.py
 Time: ~10 min
@@ -19,7 +19,7 @@ from exp_shared import (
 
 N_RUN = 4000
 SEEDS_SHORT = [42, 123, 777]
-WINDOW = 100  # compute ρ over rolling windows
+WINDOW = 100  # compute rho over rolling windows
 
 
 def main():
@@ -33,7 +33,7 @@ def main():
     # SECTION 1: ρ trajectory over 4000 decisions
     # ═══════════════════════════════════════════════
     print(f"\n{'=' * 90}")
-    print("SECTION 1: ρ(t) over 4000 decisions")
+    print("SECTION 1: rho(t) over 4000 decisions")
     print(f"{'=' * 90}")
 
     checkpoints = list(range(WINDOW, N_RUN + 1, WINDOW))
@@ -46,8 +46,8 @@ def main():
         alignments = []
         V_vals = []
         accs_window = []
-        rho_boundary = []  # ρ for confidence < 0.50
-        rho_deep = []      # ρ for confidence > 0.80
+        rho_boundary = []  # rho for confidence < 0.50
+        rho_deep = []      # rho for confidence > 0.80
 
         window_aligns = []
         window_aligns_bnd = []
@@ -56,7 +56,7 @@ def main():
         window_total = 0
 
         print(f"\n  Seed {seed}:")
-        print(f"  {'N':>6s}  {'ρ_all':>7s}  {'ρ_bnd':>7s}  {'ρ_deep':>7s}  "
+        print(f"  {'N':>6s}  {'rho_all':>7s}  {'rho_bnd':>7s}  {'rho_deep':>7s}  "
               f"{'V':>8s}  {'Acc':>6s}  {'n_bnd':>5s}  {'n_deep':>6s}")
         print(f"  {'-' * 65}")
 
@@ -116,7 +116,7 @@ def main():
     # SECTION 2: ρ from GENERIC prior (cold start)
     # ═══════════════════════════════════════════════
     print(f"\n{'=' * 90}")
-    print("SECTION 2: ρ from GENERIC prior (does ρ start high?)")
+    print("SECTION 2: rho from GENERIC prior (does rho start high?)")
     print(f"{'=' * 90}")
 
     for seed in SEEDS_SHORT[:1]:
@@ -126,7 +126,7 @@ def main():
         rng = np.random.default_rng(seed)
 
         print(f"\n  Seed {seed} (generic prior):")
-        print(f"  {'N':>6s}  {'ρ':>7s}  {'V':>8s}  {'Acc':>6s}")
+        print(f"  {'N':>6s}  {'rho':>7s}  {'V':>8s}  {'Acc':>6s}")
         print(f"  {'-' * 30}")
 
         window_aligns = []
@@ -167,7 +167,7 @@ def main():
     # SECTION 3: ρ after distribution shift
     # ═══════════════════════════════════════════════
     print(f"\n{'=' * 90}")
-    print("SECTION 3: ρ after distribution shift at N=2000")
+    print("SECTION 3: rho after distribution shift at N=2000")
     print(f"{'=' * 90}")
 
     for seed in SEEDS_SHORT[:1]:
@@ -183,7 +183,7 @@ def main():
         gt_shifted = np.clip(gt_orig + shift_dir, 0, 1)
 
         print(f"\n  Seed {seed} (shift at N=2000):")
-        print(f"  {'N':>6s}  {'ρ':>7s}  {'V':>8s}  {'Event':>8s}")
+        print(f"  {'N':>6s}  {'rho':>7s}  {'V':>8s}  {'Event':>8s}")
         print(f"  {'-' * 35}")
 
         window_aligns = []
@@ -217,10 +217,10 @@ def main():
     print(f"\n{'=' * 90}")
     print("BINARY QUESTIONS")
     print("=" * 90)
-    print("Q1: Does ρ decrease as centroids converge? (see Section 1)")
-    print("Q2: Is there a crossover at ρ = 0.5? (see Section 2)")
-    print("Q3: Is ρ_boundary > ρ_deep? (see Section 1)")
-    print("Q4: Does ρ increase after shift? (see Section 3)")
+    print("Q1: Does rho decrease as centroids converge? (see Section 1)")
+    print("Q2: Is there a crossover at rho = 0.5? (see Section 2)")
+    print("Q3: Is rho_boundary > rho_deep? (see Section 1)")
+    print("Q4: Does rho increase after shift? (see Section 3)")
 
     print("\nDONE.")
 

@@ -100,8 +100,8 @@ def main():
             all_r = [run_shift_exp(s, delta, use_pipe) for s in SEEDS]
 
             pre_acc = np.mean([r['pre_acc'] for r in all_r])
-            print(f"\n  δ={delta:.2f} (pre-shift acc: {pre_acc:.1f}%)")
-            print(f"  {'N_post':>6s}  {'Accuracy':>8s}  {'Δ from pre':>10s}")
+            print(f"\n  delta={delta:.2f} (pre-shift acc: {pre_acc:.1f}%)")
+            print(f"  {'N_post':>6s}  {'Accuracy':>8s}  {'Delta from pre':>10s}")
             print(f"  {'-' * 30}")
 
             recovery_n = "never"
@@ -123,7 +123,7 @@ def main():
 
     # ═══ BINARY QUESTIONS (at δ=0.15) ═══
     print(f"\n{'=' * 75}")
-    print("BINARY QUESTIONS (δ=0.15)")
+    print("BINARY QUESTIONS (delta=0.15)")
     print(f"{'=' * 75}")
 
     pipe_r = [run_shift_exp(s, 0.15, True) for s in SEEDS]

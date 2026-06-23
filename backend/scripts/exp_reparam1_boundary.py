@@ -1,11 +1,11 @@
 """
 EXP-REPARAM-1: V-BOUNDARY-PARAMETERIZATION
 =============================================
-Instead of updating centroids (μ ← μ + η(f-μ)), parameterize
+Instead of updating centroids (mu <- mu + eta(f-mu)), parameterize
 the classifier by its boundary hyperplanes and learn those directly.
 
-The ρ negativity may be a PARAMETERIZATION artifact, not fundamental.
-If boundary-parameterized updates have ρ > 0 at the operating point,
+The rho negativity may be a PARAMETERIZATION artifact, not fundamental.
+If boundary-parameterized updates have rho > 0 at the operating point,
 the learning-stability tension is RESOLVABLE through reparameterization.
 
 Run: cd backend && python scripts/exp_reparam1_boundary.py
@@ -128,7 +128,7 @@ def compute_gt_boundaries(gt):
 def main():
     print("=" * 90)
     print("EXP-REPARAM-1: BOUNDARY PARAMETERIZATION")
-    print("Does learning boundaries directly have better ρ than learning centroids?")
+    print("Does learning boundaries directly have better rho than learning centroids?")
     print("=" * 90)
 
     base_mu = get_base_centroids()
@@ -155,7 +155,7 @@ def main():
         window_total_b = 0
 
         print(f"\n  Seed {seed}:")
-        print(f"  {'N':>6s}  {'ρ_centroid':>10s}  {'ρ_boundary':>10s}  "
+        print(f"  {'N':>6s}  {'rho_centroid':>10s}  {'rho_boundary':>10s}  "
               f"{'Acc_cent':>8s}  {'Acc_bnd':>7s}  {'V_cent':>8s}")
         print(f"  {'-' * 60}")
 
@@ -236,19 +236,19 @@ def main():
         if rho_centroid_windows and rho_boundary_windows:
             late_rho_c = np.mean(rho_centroid_windows[-5:])
             late_rho_b = np.mean(rho_boundary_windows[-5:])
-            print(f"\n    Late-stage ρ (last 1000 decisions):")
+            print(f"\n    Late-stage rho (last 1000 decisions):")
             print(f"      Centroid parameterization: {late_rho_c:+.4f}")
             print(f"      Boundary parameterization: {late_rho_b:+.4f}")
             print(f"      Boundary better? {'YES' if late_rho_b > late_rho_c else 'NO'} "
-                  f"(Δρ = {late_rho_b - late_rho_c:+.4f})")
+                  f"(Deltarho = {late_rho_b - late_rho_c:+.4f})")
 
     print(f"\n{'=' * 90}")
     print("BINARY QUESTIONS")
     print("=" * 90)
-    print("Q1: Is ρ_boundary > ρ_centroid at convergence?")
-    print("Q2: Is ρ_boundary > 0.08 at any point N > 500?")
+    print("Q1: Is rho_boundary > rho_centroid at convergence?")
+    print("Q2: Is rho_boundary > 0.08 at any point N > 500?")
     print("Q3: Does boundary-parameterized accuracy exceed centroid accuracy?")
-    print("Q4: Is the ρ negativity fundamental or parameterization-dependent?")
+    print("Q4: Is the rho negativity fundamental or parameterization-dependent?")
 
     print("\nDONE.")
 

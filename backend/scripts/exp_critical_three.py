@@ -7,7 +7,7 @@ If they work, the framework becomes substantially more defensible.
 1. DIRECT: Direct variance estimation vs coordinate descent
    (Is the mathematically correct estimator better than the heuristic?)
 
-2. ALPHA: James-Stein α* computation from data
+2. ALPHA: James-Stein alpha* computation from data
    (What is the OPTIMAL shrinkage intensity at each checkpoint?)
 
 3. CONSERV: Conservation law behavior under DK learning
@@ -296,7 +296,7 @@ def main():
     # EXPERIMENT 2: JAMES-STEIN α* COMPUTATION
     # ════════════════════════════════════════════════════
     print(f"\n{'='*80}", flush=True)
-    print("EXP-ALPHA: James-Stein Optimal α* from Data", flush=True)
+    print("EXP-ALPHA: James-Stein Optimal alpha* from Data", flush=True)
     print("=" * 80, flush=True)
 
     for seed in SEEDS_SHORT:

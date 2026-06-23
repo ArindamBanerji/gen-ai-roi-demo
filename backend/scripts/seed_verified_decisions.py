@@ -164,7 +164,7 @@ async def maybe_seed_verified_decisions(client) -> dict[str, Any]:
         count = int((rows[0].get("cnt") or 0) if rows else 0)
 
     if count > 100:
-        message = f"Already {count} verified decisions — skipping seed"
+        message = f"Already {count} verified decisions -- skipping seed"
         print(message)
         return {"skipped": True, "existing_count": count, "message": message}
 
@@ -208,7 +208,7 @@ async def seed_demo_evolution_events(client) -> None:
         "RETURN count(*) AS cnt"
     )
     if rows and int(rows[0].get("cnt", 0)) > 0:
-        print(f"Already {rows[0]['cnt']} evolution events — skipping")
+        print(f"Already {rows[0]['cnt']} evolution events -- skipping")
         return
 
     from gae.evolution import (

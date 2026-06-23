@@ -1,5 +1,5 @@
 """
-support/setup/rebuild_age_graph.py — Seed the Apache AGE / PostgreSQL graph.
+support/setup/rebuild_age_graph.py -- Seed the Apache AGE / PostgreSQL graph.
 
 Usage:
     python support/setup/rebuild_age_graph.py --dry-run   # print plan, no DB writes
@@ -16,7 +16,7 @@ REQUIRES:
         python support/setup/rebuild_age_graph.py --live
 
 Guard: script refuses to run when GRAPH_BACKEND != age.
-Idempotency: all writes use MERGE — safe to run multiple times.
+Idempotency: all writes use MERGE -- safe to run multiple times.
 """
 
 from __future__ import annotations
@@ -295,7 +295,7 @@ HISTORY_EDGES = [
 # ── dry-run output ────────────────────────────────────────────────────────────
 
 def print_plan() -> None:
-    print("\n[DRY-RUN] rebuild_age_graph.py — seed plan")
+    print("\n[DRY-RUN] rebuild_age_graph.py -- seed plan")
     print("=" * 60)
     print(f"  Alerts            : {len(ALERTS)}")
     print(f"  Entities          : {len(ENTITIES)}")
@@ -681,7 +681,7 @@ async def run_live() -> None:
     print(f"\n  Total nodes: {total}")
 
     if total == 0:
-        print("\n[ERROR] Graph is empty after seed — check AGE query syntax.")
+        print("\n[ERROR] Graph is empty after seed -- check AGE query syntax.")
         sys.exit(1)
 
     print("\n[OK] Graph ready. Run collect_tab_content.py to verify.")

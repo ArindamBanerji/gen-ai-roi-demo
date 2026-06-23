@@ -4,7 +4,7 @@ EXP-H3: TRANSLATION UPDATE + RICH INITIALIZATION
 HE4: Does a uniform category shift beat per-action SGD?
 HE6: Does higher effective d initialization help?
 
-Prior-GT alignment is 0.90-0.97 — the constellation has the right
+Prior-GT alignment is 0.90-0.97 -- the constellation has the right
 shape but wrong position. Tests whether a TRANSLATION (uniform
 shift across all actions in a category) works better than
 per-action SGD.

@@ -30,9 +30,9 @@ def test_policy_check():
             print(f"Action adjusted: {data['resolution']['original_action']} -> {data['resolution']['action_adjusted']}")
 
         assert data['has_conflict'], "ALERT-7823 should have a conflict!"
-        print("✓ Test 1 PASSED")
+        print("[OK] Test 1 PASSED")
     else:
-        print(f"✗ Test 1 FAILED: {response.text}")
+        print(f"[FAIL] Test 1 FAILED: {response.text}")
 
 
 def test_policy_check_no_conflict():
@@ -50,9 +50,9 @@ def test_policy_check_no_conflict():
         print(f"Policies applied: {[p['id'] for p in data['policies_applied']]}")
 
         assert not data['has_conflict'], "ALERT-7824 should NOT have a conflict!"
-        print("✓ Test 2 PASSED")
+        print("[OK] Test 2 PASSED")
     else:
-        print(f"✗ Test 2 FAILED: {response.text}")
+        print(f"[FAIL] Test 2 FAILED: {response.text}")
 
 
 def test_policy_history():
@@ -74,9 +74,9 @@ def test_policy_history():
             print(f"  Winner: {conflict['winning_policy']}")
             print(f"  Loser: {conflict['losing_policy']}")
 
-        print("✓ Test 3 PASSED")
+        print("[OK] Test 3 PASSED")
     else:
-        print(f"✗ Test 3 FAILED: {response.text}")
+        print(f"[FAIL] Test 3 FAILED: {response.text}")
 
 
 def test_reset():
@@ -92,9 +92,9 @@ def test_reset():
         data = response.json()
         print(f"Message: {data['message']}")
         print(f"Alerts reset: {data['reset_count']}")
-        print("✓ Test 4 PASSED")
+        print("[OK] Test 4 PASSED")
     else:
-        print(f"✗ Test 4 FAILED: {response.text}")
+        print(f"[FAIL] Test 4 FAILED: {response.text}")
 
 
 if __name__ == "__main__":
@@ -115,9 +115,9 @@ if __name__ == "__main__":
         print("="*60)
 
     except requests.exceptions.ConnectionError:
-        print("\n✗ ERROR: Could not connect to backend.")
+        print("\n[FAIL] ERROR: Could not connect to backend.")
         print("Make sure the server is running: cd backend && uvicorn app.main:app --port 8001")
     except Exception as e:
-        print(f"\n✗ ERROR: {e}")
+        print(f"\n[FAIL] ERROR: {e}")
         import traceback
         traceback.print_exc()

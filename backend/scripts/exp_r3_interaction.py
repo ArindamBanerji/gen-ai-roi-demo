@@ -1,7 +1,7 @@
 """
 EXP-R3: V-FACTOR-INTERACTION
 ===============================
-Do factor interactions (f_i × f_j) predict errors that
+Do factor interactions (f_i x f_j) predict errors that
 individual factors can't?
 
 Run: cd backend && python scripts/exp_r3_interaction.py
@@ -95,13 +95,13 @@ def main():
     for name in ['linear', 'interaction', 'quadratic']:
         aucs = all_aucs[name]
         if aucs:
-            print(f"  {name:>15s}: AUC = {np.mean(aucs):.4f} ± {np.std(aucs):.4f}")
+            print(f"  {name:>15s}: AUC = {np.mean(aucs):.4f} +/- {np.std(aucs):.4f}")
 
     if all_aucs['linear'] and all_aucs['interaction']:
         delta_int = np.mean(all_aucs['interaction']) - np.mean(all_aucs['linear'])
         delta_quad = np.mean(all_aucs['quadratic']) - np.mean(all_aucs['interaction'])
-        print(f"\n  Interaction improvement: ΔAUC = {delta_int:+.4f}")
-        print(f"  Quadratic improvement:  ΔAUC = {delta_quad:+.4f}")
+        print(f"\n  Interaction improvement: DeltaAUC = {delta_int:+.4f}")
+        print(f"  Quadratic improvement:  DeltaAUC = {delta_quad:+.4f}")
 
     # Identify strongest interaction
     print(f"\n  Top interaction pairs (from last seed):")
@@ -120,7 +120,7 @@ def main():
                     idx += 1
             int_pairs.sort(key=lambda x: -x[2])
             for i, j, coef in int_pairs[:5]:
-                print(f"    f{i} × f{j}: |coef| = {coef:.4f}")
+                print(f"    f{i} x f{j}: |coef| = {coef:.4f}")
         except Exception:
             pass
 
@@ -129,9 +129,9 @@ def main():
     print("BINARY QUESTIONS")
     print("=" * 80)
     if all_aucs['linear'] and all_aucs['interaction']:
-        print(f"Q1: Interactions improve AUC > 0.02? ΔAUC={delta_int:+.4f} "
+        print(f"Q1: Interactions improve AUC > 0.02? DeltaAUC={delta_int:+.4f} "
               f"{'YES' if delta_int > 0.02 else 'NO'}")
-        print(f"Q2: Quadratic improves over interaction? ΔAUC={delta_quad:+.4f} "
+        print(f"Q2: Quadratic improves over interaction? DeltaAUC={delta_quad:+.4f} "
               f"{'YES' if delta_quad > 0.02 else 'NO'}")
 
     print("\nDONE.")

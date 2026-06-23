@@ -41,6 +41,7 @@ import ROICalculatorModal from '../ROICalculator'
 import SimulationPanel from '../SimulationPanel'
 import ThreeChannelPanel from '../ThreeChannelPanel'
 import CohortStatusPanel from '../CohortStatusPanel'
+import ProvenanceBadge from '../ProvenanceBadge'
 
 // ============================================================================
 // Custom Hook: Counter Animation
@@ -2298,7 +2299,10 @@ export default function CompoundingTab() {
             <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-bold text-white">Decision Audit Trail</h4>
-                <span className="text-xs text-gray-400">{evidenceRoom?.audit_trail.total ?? 0} total</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">{evidenceRoom?.audit_trail.total ?? 0} total</span>
+                  <ProvenanceBadge source="real_measured" />
+                </div>
               </div>
               {evidenceEntries.length === 0 ? (
                 <div className="py-8 text-center text-gray-400 italic text-sm">No decisions recorded yet</div>
@@ -2335,9 +2339,12 @@ export default function CompoundingTab() {
             <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-bold text-white">Conservation Compliance</h4>
-                <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${conservationBadgeClass(evidenceStatus)}`}>
-                  {evidenceStatus}
-                </span>
+                <div className="flex items-center gap-2">
+                  <ProvenanceBadge source="real_measured" />
+                  <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${conservationBadgeClass(evidenceStatus)}`}>
+                    {evidenceStatus}
+                  </span>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-3">

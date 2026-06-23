@@ -3,11 +3,11 @@ EXP-RATE-9+10+11: FRAMEWORK STRENGTHENING EXPERIMENTS
 =======================================================
 Three experiments that test the formal properties the framework needs:
 
-RATE-9:  H-MONO — Does cumulative DK EVER drop below centroid?
-         H-FLOOR — Does mixing DK with centroid guarantee safety?
-RATE-10: H-CATCOMP — Per-category DK improvement ∝ log(N_c)?
-RATE-11: H-DEPLOY — Full two-phase deployment end-to-end
-         H-BRIER — Is Brier more monotonic than accuracy?
+RATE-9:  H-MONO -- Does cumulative DK EVER drop below centroid?
+         H-FLOOR -- Does mixing DK with centroid guarantee safety?
+RATE-10: H-CATCOMP -- Per-category DK improvement proportional to log(N_c)?
+RATE-11: H-DEPLOY -- Full two-phase deployment end-to-end
+         H-BRIER -- Is Brier more monotonic than accuracy?
 
 Run: cd backend && python scripts/exp_rate9_strengthen.py
 Time: ~25 min
@@ -218,14 +218,14 @@ def main():
         print(f"  H-BRIER monotonic: {brier_mono_count}/{total_checkpoints-1} "
               f"intervals ({brier_mono_count/max(total_checkpoints-1,1)*100:.0f}%)")
         print(f"  H-FLOOR: mixing at alpha=0.5 ALWAYS >= centroid? "
-              f"(check Mix.5 column — all >= {cent_acc:.1f}%?)")
+              f"(check Mix.5 column -- all >= {cent_acc:.1f}%?)")
 
     # ══════════════════════════════════════════════════════
     # RATE-10: H-CATCOMP
     # Per-category DK improvement ∝ log(N_c)?
     # ══════════════════════════════════════════════════════
     print(f"\n{'=' * 90}")
-    print("RATE-10: H-CATCOMP (per-category improvement ∝ log(N_c)?)")
+    print("RATE-10: H-CATCOMP (per-category improvement proportional to log(N_c)?)")
     print("=" * 90)
 
     for seed in SEEDS_SHORT:
@@ -372,7 +372,7 @@ def main():
                 if n in checkpoints:
                     print(f"  {checkpoints[n]:>4.1f}%", end="")
                 else:
-                    print(f"  {'—':>6s}", end="")
+                    print(f"  {'--':>6s}", end="")
             print()
 
     # ══════════════════════════════════════════════════════

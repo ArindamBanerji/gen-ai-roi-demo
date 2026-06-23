@@ -1,12 +1,12 @@
 """
-support/setup/cleanup_orphaned_decisions.py — Remove pre-WS-4 refer_to_analyst Decision nodes.
+support/setup/cleanup_orphaned_decisions.py -- Remove pre-WS-4 refer_to_analyst Decision nodes.
 
-648 Decision nodes exist with action='refer_to_analyst' — simulation artifacts created
+648 Decision nodes exist with action='refer_to_analyst' -- simulation artifacts created
 before the dual representation fix (BACKLOG-050 / WS-4).  refer_to_analyst is a routing
 decision handled by the confidence gate in triage.py, not a ProfileScorer action.
 These nodes pollute bootstrap counts and analytics.
 
-Also reports (but does NOT delete) Decision nodes where category IS NULL — those may need
+Also reports (but does NOT delete) Decision nodes where category IS NULL -- those may need
 the category property set from their linked Alert node rather than deleted.
 
 Usage:
@@ -110,7 +110,7 @@ async def run() -> None:
     # ── Dry-run exit ──────────────────────────────────────────────────────────
     if DRY_RUN:
         if rta_count == 0:
-            print("[DRY-RUN] No refer_to_analyst Decision nodes found — nothing to delete.")
+            print("[DRY-RUN] No refer_to_analyst Decision nodes found -- nothing to delete.")
         else:
             print(
                 f"[DRY-RUN] Would delete {rta_count} Decision node(s) with "
@@ -121,7 +121,7 @@ async def run() -> None:
 
     # ── Live: delete ──────────────────────────────────────────────────────────
     if rta_count == 0:
-        print("[OK] No refer_to_analyst Decision nodes found — nothing to delete.")
+        print("[OK] No refer_to_analyst Decision nodes found -- nothing to delete.")
         return
 
     # Step 4: Fetch all decision_ids to delete
@@ -134,7 +134,7 @@ async def run() -> None:
 
     if not ids_to_delete:
         # AGE agtype wrapping edge case: count was non-zero but IDs came back empty
-        print("[WARN] Count was non-zero but no decision_ids returned — aborting.")
+        print("[WARN] Count was non-zero but no decision_ids returned -- aborting.")
         return
 
     # Step 5: Batch-delete Decision nodes and their HAD_CONTEXT children
@@ -160,7 +160,7 @@ async def run() -> None:
         "RETURN count(d) AS cnt"
     )
     remaining = _int(rows, "cnt")
-    print(f"[STEP 6] Verification — refer_to_analyst Decision nodes remaining: {remaining}")
+    print(f"[STEP 6] Verification -- refer_to_analyst Decision nodes remaining: {remaining}")
 
     rows = await client.run_query(
         "MATCH (d:Decision) RETURN count(d) AS cnt"
@@ -176,7 +176,7 @@ async def run() -> None:
             "     Then: restart uvicorn to refresh bootstrap counts and analytics."
         )
     else:
-        print(f"\n[WARN] {remaining} refer_to_analyst Decision node(s) still present — check for errors above.")
+        print(f"\n[WARN] {remaining} refer_to_analyst Decision node(s) still present -- check for errors above.")
 
 
 # ── entry point ───────────────────────────────────────────────────────────────
