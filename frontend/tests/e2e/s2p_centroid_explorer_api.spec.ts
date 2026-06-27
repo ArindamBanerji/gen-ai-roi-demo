@@ -8,7 +8,7 @@ test.describe('S2P centroid explorer API', () => {
 
     expect(response.status()).toBe(200)
     const body = await response.json()
-    expect(body.shape).toEqual({ categories: 5, actions: 5, factors: 7 })
+    expect(body.shape).toEqual({ categories: 5, actions: 5, factors: 8 })
     expect(body.read_only).toBe(true)
     expect(Array.isArray(body.cells)).toBe(true)
     expect(body.cells).toHaveLength(25)
@@ -23,7 +23,7 @@ test.describe('S2P centroid explorer API', () => {
     expect(body.category).toBe('price_variance')
     expect(body.action).toBe('auto_approve')
     expect(body.read_only).toBe(true)
-    expect(body.centroid_vector).toHaveLength(7)
+    expect(body.centroid_vector).toHaveLength(8)
     expect(body.source).toBe('scorer_centroid')
   })
 
@@ -77,9 +77,8 @@ test.describe('S2P centroid explorer API', () => {
     expect(body.read_only).toBe(true)
     expect(body).toHaveProperty('centroid_distances')
     expect(Array.isArray(body.factor_contributions)).toBe(true)
-    expect(body.factor_contributions).toHaveLength(7)
+    expect(body.factor_contributions).toHaveLength(8)
     expect(JSON.stringify(body).toLowerCase()).not.toContain('learning_applied')
     expect(JSON.stringify(body).toLowerCase()).not.toContain('outcome_written')
   })
 })
-

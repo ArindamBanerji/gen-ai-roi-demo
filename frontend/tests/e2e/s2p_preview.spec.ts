@@ -35,7 +35,7 @@ test('preview_queue_returns_valid_data', async ({ page }) => {
     expect(inv.factor_vector).toBeDefined()
     expect(Array.isArray(inv.factor_vector)).toBeTruthy()
     if (Array.isArray(inv.factor_vector)) {
-      expect(inv.factor_vector.length).toBe(7)
+      expect(inv.factor_vector.length).toBe(8)
     }
     expect(inv.recommended_action).toBeDefined()
     if (typeof inv.confidence === 'number') {
@@ -94,9 +94,9 @@ test('preview_config_returns_v2_shape', async ({ page }) => {
   expect(res.ok()).toBeTruthy()
 
   const data = await res.json()
-  expect(String(data.tensor_shape ?? '')).toContain('5, 5, 7')
+  expect(String(data.tensor_shape ?? '')).toContain('5, 5, 8')
   expect(Array.isArray(data.factors)).toBeTruthy()
-  if (Array.isArray(data.factors)) expect(data.factors.length).toBe(7)
+  if (Array.isArray(data.factors)) expect(data.factors.length).toBe(8)
   expect(Array.isArray(data.categories)).toBeTruthy()
   if (Array.isArray(data.categories)) expect(data.categories.length).toBe(5)
   expect(Array.isArray(data.actions)).toBeTruthy()

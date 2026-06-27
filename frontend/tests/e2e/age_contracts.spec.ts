@@ -207,7 +207,7 @@ test.describe('Tab render contracts', () => {
   test('Tab 1 loads without error boundary or crash text', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Alert Triage/i }).click();
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByText(/Queue/i).first()).toBeVisible({ timeout: 15000 });
 
     // No React error boundary text should appear
     const errorBoundary = page.locator('text=/Something went wrong|Cannot read properties|is not a function/i');
@@ -221,7 +221,7 @@ test.describe('Tab render contracts', () => {
   test('Tab 4 compounding panel — no DEC-None text visible', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Compounding/i }).click();
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByText(/Compounding|Watch the Moat/i).first()).toBeVisible({ timeout: 15000 });
 
     // "DEC-None" in visible text means decision_id property was not used
     const decNoneText = page.locator('text=DEC-None');
@@ -231,7 +231,7 @@ test.describe('Tab render contracts', () => {
   test('SOC Analytics tab campaign panel — no error boundary fires for category_sequence', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /SOC Analytics/i }).click();
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByText(/SOC Analytics/i).first()).toBeVisible({ timeout: 15000 });
 
     // The campaign intelligence panel must render (no crash from .map on string)
     const panel = page.locator('.campaign-intelligence-panel');
