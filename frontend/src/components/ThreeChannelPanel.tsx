@@ -51,7 +51,7 @@ export default function ThreeChannelPanel() {
     async function loadChannelData() {
       setLoading(true)
       try {
-        const response = await fetch('/api/compounding/channel-decomposition')
+        const response = await fetch('http://localhost:8002/api/compounding/channel-decomposition')
         if (!response.ok) {
           if (!cancelled) setData(null)
           return

@@ -86,7 +86,7 @@ export default function FactorContributionPanel() {
       setLoading(true)
       setFailed(false)
       try {
-        const response = await fetch('/api/soc/factor-contribution')
+        const response = await fetch('http://localhost:8002/api/soc/factor-contribution')
         if (!response.ok) {
           if (!cancelled) setFailed(true)
           return

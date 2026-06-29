@@ -1,4 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import CompliancePanel from '../CompliancePanel'
+import DisruptionSimPanel from '../DisruptionSimPanel'
+import FinancialImpactPanel from '../FinancialImpactPanel'
+import NoveltyPanel from '../NoveltyPanel'
+import ProcessFusionPanel from '../ProcessFusionPanel'
+import TrendCorrelationPanel from '../TrendCorrelationPanel'
+import WorkingCapitalPanel from '../WorkingCapitalPanel'
 
 const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
 const S2P_API = env?.VITE_S2P_API_URL || ''
@@ -685,6 +692,17 @@ export default function S2PPreviewTab() {
       </div>
 
       <SupplierIntelligenceProfilePanel profile={intelligenceProfile} />
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <FinancialImpactPanel />
+        <WorkingCapitalPanel />
+        <DisruptionSimPanel />
+        <CompliancePanel />
+        <ProcessFusionPanel />
+        <NoveltyPanel />
+      </div>
+
+      <TrendCorrelationPanel />
 
       <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-5 text-center text-sm text-blue-100">
         The engine is domain-agnostic. The intelligence is firm-specific.
