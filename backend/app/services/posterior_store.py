@@ -9,11 +9,12 @@ from __future__ import annotations
 import logging
 import os
 import time
+import warnings
 from typing import Any
 
 log = logging.getLogger(__name__)
 
-DEFAULT_POSTERIOR_DSN = "postgresql://postgres:postgres@localhost:5433/soc_copilot?connect_timeout=5"
+DEFAULT_POSTERIOR_DSN = "postgresql://postgres:postgres@localhost:5433/soc_copilot?connect_timeout=5&sslmode=disable"
 POSTERIOR_HEALTH_CONNECT_TIMEOUT_SECONDS = 2
 
 
@@ -34,9 +35,17 @@ class PosteriorStore:
     @staticmethod
     def _resolve_dsn() -> str:
         for name in ("POSTERIOR_DSN", "GRAPH_DSN", "AGE_DSN", "DATABASE_URL"):
-            value = os.getenv(name)
+            value = os.environ.get(name, "").strip()
             if value:
+                if "sslmode" not in value:
+                    sep = "&" if "?" in value else ("?" if "://" in value else " ")
+                    value += f"{sep}sslmode=disable"
                 return value
+        warnings.warn(
+            "No GRAPH_DSN set - using localhost fallback. "
+            "Set GRAPH_DSN with WSL2 NAT IP per Rule #40.",
+            stacklevel=2,
+        )
         return DEFAULT_POSTERIOR_DSN
 
     def save(self, alphas: list[list[float]], betas: list[list[float]]) -> None:

@@ -43,6 +43,8 @@ import ThreeChannelPanel from '../ThreeChannelPanel'
 import CohortStatusPanel from '../CohortStatusPanel'
 import ProvenanceBadge from '../ProvenanceBadge'
 
+const SOC_API = 'http://localhost:8001'
+
 // ============================================================================
 // Custom Hook: Counter Animation
 // ============================================================================
@@ -749,7 +751,7 @@ export default function CompoundingTab() {
     setEvidenceRoomLoading(true)
     setEvidenceRoomError(null)
     try {
-      const resp = await fetch('/api/soc/evidence-room')
+      const resp = await fetch(`${SOC_API}/api/soc/evidence-room`)
       if (!resp.ok) {
         if (resp.status === 401) window.location.href = '/saml/login'
         throw new Error(`Evidence Room request failed: ${resp.status}`)
@@ -780,7 +782,7 @@ export default function CompoundingTab() {
   const handleEvidenceExport = async () => {
     setEvidenceExporting(true)
     try {
-      const resp = await fetch('/api/soc/evidence-room/export')
+      const resp = await fetch(`${SOC_API}/api/soc/evidence-room/export`)
       if (!resp.ok) {
         if (resp.status === 401) window.location.href = '/saml/login'
         throw new Error(`Evidence export failed: ${resp.status}`)
@@ -832,7 +834,7 @@ export default function CompoundingTab() {
   // H7-FIX-4: load real decision economics from Neo4j
   const loadDecisionEconomics = async () => {
     try {
-      const resp = await fetch('/api/metrics/decision-economics')
+      const resp = await fetch(`${SOC_API}/api/metrics/decision-economics`)
       if (!resp.ok) {
         if (resp.status === 401) window.location.href = '/saml/login'
         return
@@ -846,7 +848,7 @@ export default function CompoundingTab() {
   // F4-OVERLAY: load operational metrics
   const loadOperationalMetrics = async () => {
     try {
-      const resp = await fetch('/api/soc/operational-metrics')
+      const resp = await fetch(`${SOC_API}/api/soc/operational-metrics`)
       if (!resp.ok) {
         if (resp.status === 401) window.location.href = '/saml/login'
         return
@@ -860,7 +862,7 @@ export default function CompoundingTab() {
   // F4-OVERLAY: board export download
   const handleBoardExport = async () => {
     try {
-      const resp = await fetch('/api/soc/board-export')
+      const resp = await fetch(`${SOC_API}/api/soc/board-export`)
       if (!resp.ok) {
         if (resp.status === 401) window.location.href = '/saml/login'
         return
@@ -880,7 +882,7 @@ export default function CompoundingTab() {
   // ECON-1: load economics data
   const loadEconomicsData = async () => {
     try {
-      const resp = await fetch('/api/soc/economics')
+      const resp = await fetch(`${SOC_API}/api/soc/economics`)
       if (!resp.ok) {
         if (resp.status === 401) window.location.href = '/saml/login'
         return

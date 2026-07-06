@@ -1,0 +1,55 @@
+{
+  "graph": "soc_graph_diag_f8",
+  "node_count": 1758,
+  "entity_label": "User",
+  "entity_property": "id",
+  "entity_key": "DIAG-F8-CRED-USER-0001",
+  "entity_evidence": "MATCH (u:User) RETURN u.id LIMIT 1",
+  "entity_substitution": null,
+  "pool_mode": "warm_connection_fallback",
+  "baseline_per_query_ms": 83.15565000229981,
+  "pooled_or_warm_per_query_ms": 1.096219997270964,
+  "connection_tax_ms": 82.05943000502884,
+  "pooled_write_ms": 13.039000012213364,
+  "baseline_detail": {
+    "n": 10,
+    "mean_ms": 83.15565000229981,
+    "median_ms": 79.16214999568183,
+    "min_ms": 72.25490000564605,
+    "max_ms": 117.59320000419393,
+    "values_ms": [
+      88.75100000295788,
+      73.55030000326224,
+      89.76849997998215,
+      83.30160001059994,
+      72.25490000564605,
+      117.59320000419393,
+      81.83209999697283,
+      74.73120000213385,
+      73.28150002285838,
+      76.49219999439083
+    ]
+  },
+  "pooled_or_warm_detail": {
+    "n": 10,
+    "mean_ms": 1.096219997270964,
+    "median_ms": 0.8887500007404014,
+    "min_ms": 0.4054000019095838,
+    "max_ms": 2.7834000065922737,
+    "values_ms": [
+      2.7834000065922737,
+      1.4377999759744853,
+      0.9660999930929393,
+      0.8114000083878636,
+      1.104399998439476,
+      1.5589000249747187,
+      0.48299998161382973,
+      0.4054000019095838,
+      0.6058999861124903,
+      0.8058999956119806
+    ]
+  },
+  "rollback_before_count": 0,
+  "rollback_after_count": 0,
+  "branch": "cache_model_viable"
+}

@@ -1,4 +1,4 @@
-"""Property name audit — cross-reference Cypher property refs vs actual AGE node properties."""
+"""Property name audit -- cross-reference Cypher property refs vs actual AGE node properties."""
 import asyncio, os, sys, re
 from pathlib import Path
 from collections import Counter
@@ -32,7 +32,7 @@ print("=" * 70)
 for prefix, label in [("d", "Decision"), ("a", "Alert"), ("sd", "ShadowDecision"), ("ti", "ThreatIntel")]:
     props = extract_props(prefix, all_py)
     if props:
-        print(f"\n  {prefix}.* ({label}) — {len(props)} unique properties:")
+        print(f"\n  {prefix}.* ({label}) -- {len(props)} unique properties:")
         for prop, count in props.most_common():
             print(f"    {prefix}.{prop:30s} referenced {count}x")
 
@@ -61,12 +61,12 @@ async def audit_graph():
                     all_keys.update(val.keys())
             print(f"\n  {label}: {sorted(all_keys) if all_keys else 'NO NODES FOUND'}")
         except Exception as e:
-            print(f"\n  {label}: ERROR — {e}")
+            print(f"\n  {label}: ERROR -- {e}")
 
     # --- Step 3: Cross-reference ---
 
     print("\n" + "=" * 70)
-    print("STEP 3: Mismatches — properties referenced in code but NOT on nodes")
+    print("STEP 3: Mismatches -- properties referenced in code but NOT on nodes")
     print("=" * 70)
 
     # Get actual Decision properties
@@ -94,27 +94,27 @@ async def audit_graph():
                     "replace", "split", "join", "lower", "upper", "startswith",
                     "endswith", "format", "isoformat"}
 
-    print("\n  Decision (d.*) — in code but NOT on any node:")
+    print("\n  Decision (d.*) -- in code but NOT on any node:")
     mismatches = 0
     for prop in sorted(code_decision_props):
         if prop in python_attrs:
             continue
         if prop not in decision_keys:
-            print(f"    ⚠ d.{prop:30s} (used {code_decision_props[prop]}x) — NOT FOUND on Decision nodes")
+            print(f"    WARNING d.{prop:30s} (used {code_decision_props[prop]}x) -- NOT FOUND on Decision nodes")
             mismatches += 1
     if mismatches == 0:
-        print("    ✓ All properties match")
+        print("    [OK] All properties match")
 
-    print(f"\n  Alert (a.*) — in code but NOT on any node:")
+    print(f"\n  Alert (a.*) -- in code but NOT on any node:")
     mismatches = 0
     for prop in sorted(code_alert_props):
         if prop in python_attrs:
             continue
         if prop not in alert_keys:
-            print(f"    ⚠ a.{prop:30s} (used {code_alert_props[prop]}x) — NOT FOUND on Alert nodes")
+            print(f"    WARNING a.{prop:30s} (used {code_alert_props[prop]}x) -- NOT FOUND on Alert nodes")
             mismatches += 1
     if mismatches == 0:
-        print("    ✓ All properties match")
+        print("    [OK] All properties match")
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())

@@ -8,7 +8,7 @@ import TrendCorrelationPanel from '../TrendCorrelationPanel'
 import WorkingCapitalPanel from '../WorkingCapitalPanel'
 
 const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
-const S2P_API = env?.VITE_S2P_API_URL || ''
+const S2P_API = env?.VITE_S2P_API_URL || 'http://127.0.0.1:8002'
 
 interface QueueException {
   invoice_id?: string
@@ -556,9 +556,9 @@ export default function S2PPreviewTab() {
 
   if (error || !data) {
     return (
-      <div className="rounded-lg border border-red-500/30 bg-soc-card p-6">
-        <h2 className="text-lg font-semibold text-red-300">S2P Preview unavailable</h2>
-        <p className="mt-2 text-sm text-gray-400">S2P preview data is temporarily unavailable. Retry this tab after the API is reachable.</p>
+      <div className="rounded-lg border border-gray-800 bg-soc-card p-6">
+        <h2 className="text-lg font-semibold text-gray-100">S2P Preview</h2>
+        <p className="mt-2 text-sm text-gray-400">S2P service not connected. Preview data will appear when the S2P API is reachable.</p>
         <p className="mt-3 font-mono text-xs text-gray-500">{error}</p>
       </div>
     )

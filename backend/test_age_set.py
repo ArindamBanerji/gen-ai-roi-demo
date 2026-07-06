@@ -49,7 +49,7 @@ async def experiment():
     if lost:
         print(f"\n*** AGE BUG CONFIRMED: SET wiped {lost} ***")
     else:
-        print(f"\n*** AGE SET is safe — properties preserved. Data loss came from elsewhere. ***")
+        print(f"\n*** AGE SET is safe -- properties preserved. Data loss came from elsewhere. ***")
 
     # Cleanup
     await c.run_query("MATCH (t:TestSetBehavior {test_id: 'SET-TEST-001'}) DELETE t")

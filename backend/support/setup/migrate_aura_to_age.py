@@ -18,7 +18,7 @@ Usage:
   python support/setup/migrate_aura_to_age.py --dry-run
 
   # Live migration:
-  GRAPH_BACKEND=age DATABASE_URL="postgresql://postgres:postgres@localhost:5433/soc_copilot" \
+  GRAPH_BACKEND=age DATABASE_URL="postgresql://postgres:postgres@localhost:5433/soc_copilot?sslmode=disable" \
       python support/setup/migrate_aura_to_age.py --live
 
   # Migrate specific tiers only:
@@ -447,7 +447,7 @@ async def run_migration(args):
     # Set up AGE client (target)
     target_db_url = os.getenv(
         "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost:5433/soc_copilot"
+        "postgresql://postgres:postgres@localhost:5433/soc_copilot?sslmode=disable"
     )
     import ci_platform.graph.age_client as age_mod
     age_client = age_mod.AGEClient(dsn=target_db_url)

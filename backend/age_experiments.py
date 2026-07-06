@@ -1,4 +1,4 @@
-"""AGE Behavior Validation — 6 experiments testing trust assumptions."""
+"""AGE Behavior Validation -- 6 experiments testing trust assumptions."""
 import asyncio, os, sys, re
 sys.path.insert(0, ".")
 os.environ["GRAPH_BACKEND"] = "age"
@@ -37,7 +37,7 @@ async def experiments():
             else:
                 print("  >>> SAFE: SET t = {} preserves other properties in AGE")
         else:
-            print("  >>> Node not found after SET — even test_id was wiped and MATCH failed")
+            print("  >>> Node not found after SET -- even test_id was wiped and MATCH failed")
     except Exception as e:
         print(f"  >>> SET t = {{}} raised error: {e}")
         print("  >>> AGE may not support whole-node SET syntax")
@@ -74,7 +74,7 @@ async def experiments():
         await c.run_query("MATCH (d:Decision {decision_id: 'exp2-orphan-test'}) DETACH DELETE d")
     else:
         print("  >>> SAFE: No orphan created when MATCH finds nothing")
-        print("  >>> The compound statement is atomic — if MATCH fails, CREATE is skipped")
+        print("  >>> The compound statement is atomic -- if MATCH fails, CREATE is skipped")
 
     # EXP 3: Does CREATE silently drop properties?
     print()
@@ -115,7 +115,7 @@ async def experiments():
             print(f"  >>> MISSING ({len(missing)}): {missing}")
             print(f"  >>> CREATE SILENTLY DROPPED PROPERTIES")
         else:
-            print(f"  >>> ALL 10 PROPERTIES PRESENT — CREATE is reliable")
+            print(f"  >>> ALL 10 PROPERTIES PRESENT -- CREATE is reliable")
 
     await c.run_query("MATCH (d:Decision {decision_id: 'exp3-test'}) DETACH DELETE d")
 
@@ -173,13 +173,13 @@ async def experiments():
                            for m in re.finditer(r"CREATE \(dd:Decision", content)]
             print(f"  {filename}:")
             if not creates:
-                print(f"    No CREATE Decision found — uses a different pattern")
+                print(f"    No CREATE Decision found -- uses a different pattern")
             for i, (pos, ctx) in enumerate(creates):
                 has_edge = "DECIDED_ON" in ctx
                 line_no = content[:pos].count("\n") + 1
                 print(f"    CREATE #{i+1} at line ~{line_no}: DECIDED_ON in same block = {has_edge}")
                 if not has_edge:
-                    print(f"    >>> TWO-QUERY PATTERN — potential orphan source")
+                    print(f"    >>> TWO-QUERY PATTERN -- potential orphan source")
         except FileNotFoundError:
             print(f"  {filename}: NOT FOUND")
 

@@ -29,6 +29,8 @@ import { queryMetric, getThreatLandscape, getAttackTacticBreakdown, fetchAnalyst
 import { ensureArray } from '../../lib/guards'
 import { domainConfig } from '../../lib/domain'
 
+const SOC_API = 'http://localhost:8001'
+
 interface MetricContract {
   id: string
   name: string
@@ -213,7 +215,7 @@ export default function SOCAnalyticsTab() {
       .then((data: any) => setTacticBreakdown(data?.breakdown ?? []))
       .catch(() => {})
       .finally(() => setTacticBreakdownLoading(false))
-    fetch('/api/soc/detection-engineering')
+    fetch(`${SOC_API}/api/soc/detection-engineering`)
       .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() })
       .then((data) => setDetEng(data as DetectionEngineering))
       .catch(() => setDetEngError(true))

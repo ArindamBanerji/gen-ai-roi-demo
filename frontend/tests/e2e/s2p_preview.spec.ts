@@ -18,7 +18,7 @@ test('s2p_tab_renders_without_crash', async ({ page }) => {
   expect(title.length).toBeGreaterThan(0)
 
   const containerVisible = await page.locator('.bg-soc-card, .bg-slate-900, .bg-slate-800').first().isVisible({ timeout: 5_000 }).catch(() => false)
-  const previewVisible = await page.getByText(/S2P Invoice Exception Copilot|Invoice Exception Queue|S2P Preview unavailable|ensure S2P backend/i).first().isVisible({ timeout: 5_000 }).catch(() => false)
+  const previewVisible = await page.getByText(/S2P Preview|Exception Queue|S2P service not connected/i).first().isVisible({ timeout: 5_000 }).catch(() => false)
   expect(containerVisible || previewVisible).toBe(true)
 })
 
@@ -107,7 +107,7 @@ test('s2p_tab_shows_invoice_queue_or_error', async ({ page }) => {
   await goToS2P(page)
 
   const queueVisible = await page.getByText(/Exception Queue/i).first().isVisible({ timeout: 5_000 }).catch(() => false)
-  const errorVisible = await page.getByText(/S2P Preview unavailable|ensure S2P backend/i).first().isVisible({ timeout: 5_000 }).catch(() => false)
+  const errorVisible = await page.getByText(/S2P service not connected/i).first().isVisible({ timeout: 5_000 }).catch(() => false)
   expect(queueVisible || errorVisible).toBe(true)
 })
 

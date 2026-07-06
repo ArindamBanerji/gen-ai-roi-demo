@@ -29,6 +29,8 @@ import * as api from '@/lib/api'
 import { domainConfig } from '@/lib/domain'
 import { ensureArray, ensureObject } from '@/lib/guards'
 
+const SOC_API = 'http://localhost:8001'
+
 // ── suppress unused-import lint warnings for icons used only via JSX ──
 void BarChart2; void Database; void ArrowUp; void ArrowDown; void Minus
 
@@ -804,7 +806,7 @@ export default function RuntimeEvolutionTab() {
 
   const loadGraphStats = async () => {
     try {
-      const resp = await fetch('/api/soc/graph-stats')
+      const resp = await fetch(`${SOC_API}/api/soc/graph-stats`)
       if (!resp.ok) {
         if (resp.status === 401) window.location.href = '/saml/login'
         return
@@ -820,7 +822,7 @@ export default function RuntimeEvolutionTab() {
     setCentroidEvoLoading(true)
     setCentroidEvoError(false)
     try {
-      const data = await fetch('/api/soc/centroid-evolution?n=200').then(r => {
+      const data = await fetch(`${SOC_API}/api/soc/centroid-evolution?n=200`).then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()
       })
@@ -834,7 +836,7 @@ export default function RuntimeEvolutionTab() {
 
   const loadLearningState = async () => {
     try {
-      const data = await fetch('/api/soc/learning-state').then(r => {
+      const data = await fetch(`${SOC_API}/api/soc/learning-state`).then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()
       })
@@ -846,7 +848,7 @@ export default function RuntimeEvolutionTab() {
 
   const loadHeatmap = async () => {
     try {
-      const data = await fetch('/api/soc/centroid-heatmap').then(r => {
+      const data = await fetch(`${SOC_API}/api/soc/centroid-heatmap`).then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()
       })
@@ -896,7 +898,7 @@ export default function RuntimeEvolutionTab() {
 
   const loadEnrichmentStatus = async () => {
     try {
-      const data = await fetch('/api/soc/enrichment-status').then(r => {
+      const data = await fetch(`${SOC_API}/api/soc/enrichment-status`).then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()
       })
@@ -908,7 +910,7 @@ export default function RuntimeEvolutionTab() {
 
   const loadCentroidSupport = async () => {
     try {
-      const data = await fetch('/api/soc/centroid-support').then(r => {
+      const data = await fetch(`${SOC_API}/api/soc/centroid-support`).then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()
       })

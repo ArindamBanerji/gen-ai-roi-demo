@@ -20,7 +20,7 @@ async def run():
         print(f"Sanity check: orphan {did} relationships: {r2}")
         print(f"Expected: empty list (no relationships)")
         if r2:
-            print("ABORT — NOT EXISTS may be unreliable in AGE")
+            print("ABORT -- NOT EXISTS may be unreliable in AGE")
             return
 
     # Counts before

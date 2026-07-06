@@ -11,6 +11,8 @@ import {
 } from 'lucide-react'
 import { ensureArray, ensureNumber, ensureString, safeKey } from '../../lib/guards'
 
+const SOC_API = 'http://localhost:8001'
+
 type PanelStatus = 'idle' | 'loading' | 'ready' | 'error'
 
 interface AuditEntry {
@@ -591,7 +593,7 @@ export default function GovernanceTab() {
     setExporting(true)
     setExportError(null)
     try {
-      const response = await fetch('/api/soc/evidence-room/export')
+      const response = await fetch(`${SOC_API}/api/soc/evidence-room/export`)
       if (response.status === 401) {
         window.location.href = '/saml/login'
         throw new Error('Unauthorized')

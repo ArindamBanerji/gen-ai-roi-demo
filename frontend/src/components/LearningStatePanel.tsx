@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 
+const SOC_API = 'http://localhost:8001'
+
 interface LearningStateData {
   strategy: string
   category: string
@@ -26,7 +28,7 @@ export default function LearningStatePanel({ category = 'credential_access' }: L
     async function loadLearningState() {
       setLoading(true)
       try {
-        const response = await fetch(`/api/triage/learning-state?category=${encodeURIComponent(category)}`)
+        const response = await fetch(`${SOC_API}/api/triage/learning-state?category=${encodeURIComponent(category)}`)
         if (!response.ok) {
           if (!cancelled) setData(null)
           return

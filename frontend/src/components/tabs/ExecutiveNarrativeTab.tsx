@@ -14,6 +14,8 @@ import {
   fetchGovernanceSummary,
 } from '../../lib/api'
 
+const SOC_API = 'http://localhost:8001'
+
 interface Shift {
   label: string
   magnitude: number
@@ -422,7 +424,7 @@ export default function ExecutiveNarrativeTab() {
   const [domainApplicability, setDomainApplicability] = useState<DomainApplicabilityResponse | null>(null)
 
   useEffect(() => {
-    fetch('/api/soc/executive-narrative')
+    fetch(`${SOC_API}/api/soc/executive-narrative`)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()
@@ -433,7 +435,7 @@ export default function ExecutiveNarrativeTab() {
   }, [])
 
   useEffect(() => {
-    fetch('/api/platform/domain-applicability')
+    fetch(`${SOC_API}/api/platform/domain-applicability`)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()

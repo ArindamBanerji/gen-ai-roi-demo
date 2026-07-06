@@ -96,7 +96,7 @@ def test_log_reset_does_not_raise(pg_store):
 def test_dsn_resolution_respects_posterior_dsn(monkeypatch):
     monkeypatch.setenv("POSTERIOR_DSN", "postgresql://example/posterior")
     monkeypatch.setenv("DATABASE_URL", "postgresql://example/database")
-    assert PosteriorStore()._dsn == "postgresql://example/posterior"
+    assert PosteriorStore()._dsn == "postgresql://example/posterior?sslmode=disable"
 
 
 def test_load_ignores_rows_outside_requested_shape(pg_store):
