@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import ProvenanceBadge from './ProvenanceBadge'
 
 const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
 const S2P_API = env?.VITE_S2P_API_URL || 'http://127.0.0.1:8002'
+// Provenance: default "sample" - suppliers/trends currently returns fixture data.
+// Override: uses data.source if S2P backend adds it.
+const DEFAULT_TIER = 'sample'
 
 type Payload = Record<string, unknown>
 
@@ -66,6 +70,12 @@ export default function TrendCorrelationPanel() {
   const top = warningRows[0] ?? trendRows.find((row) => String(row.recent_trend ?? row.trend ?? '').toLowerCase().includes('declin')) ?? trendRows[0]
   const activeTrendCount = numberValue(trends?.total ?? trends?.declining_count) ?? trendRows.length
   const warningCount = numberValue(warnings?.active_warnings ?? warnings?.patterns_detected) ?? warningRows.length
+  const provenance =
+    (typeof trends?.provenance === 'string' && trends.provenance) ||
+    (typeof trends?.source === 'string' && trends.source) ||
+    (typeof warnings?.provenance === 'string' && warnings.provenance) ||
+    (typeof warnings?.source === 'string' && warnings.source) ||
+    DEFAULT_TIER
 
   return (
     <section className="rounded-lg border border-gray-800 bg-soc-card p-5" aria-label="Trend Correlation">
@@ -84,15 +94,24 @@ export default function TrendCorrelationPanel() {
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             <div className="rounded border border-gray-800 bg-slate-950/60 p-4">
               <div className="text-xs text-gray-500">Active trends</div>
-              <div className="mt-2 font-mono text-2xl text-gray-100">{activeTrendCount.toLocaleString()}</div>
+              <div className="mt-2 flex items-center gap-2 font-mono text-2xl text-gray-100">
+                <span>{activeTrendCount.toLocaleString()}</span>
+                <ProvenanceBadge source={provenance} />
+              </div>
             </div>
             <div className="rounded border border-gray-800 bg-slate-950/60 p-4">
               <div className="text-xs text-gray-500">Early warnings</div>
-              <div className="mt-2 font-mono text-2xl text-yellow-200">{warningCount.toLocaleString()}</div>
+              <div className="mt-2 flex items-center gap-2 font-mono text-2xl text-yellow-200">
+                <span>{warningCount.toLocaleString()}</span>
+                <ProvenanceBadge source={provenance} />
+              </div>
             </div>
             <div className="rounded border border-gray-800 bg-slate-950/60 p-4">
               <div className="text-xs text-gray-500">Top distress archetype</div>
-              <div className="mt-2 text-sm text-gray-100">{text(top?.archetype ?? top?.pattern ?? top?.warning_type ?? top?.trend)}</div>
+              <div className="mt-2 flex items-center gap-2 text-sm text-gray-100">
+                <span>{text(top?.archetype ?? top?.pattern ?? top?.warning_type ?? top?.trend)}</span>
+                <ProvenanceBadge source={provenance} />
+              </div>
             </div>
           </div>
           <p className="mt-4 text-sm leading-6 text-gray-300">

@@ -1,7 +1,11 @@
 import { type ReactNode, useEffect, useState } from 'react'
+import ProvenanceBadge from './ProvenanceBadge'
 
 const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
 const S2P_API = env?.VITE_S2P_API_URL || 'http://127.0.0.1:8002'
+// Provenance: default "context" - this endpoint returns a compliance report.
+// Override: uses data.provenance if S2P backend adds it.
+const DEFAULT_TIER = 'context'
 
 type Payload = Record<string, unknown>
 
@@ -68,6 +72,7 @@ export default function CompliancePanel() {
   const screened = numberValue(data?.screened_count ?? data?.suppliers_screened ?? data?.high_risk_screened)
   const flags = numberValue(data?.flagged_count ?? data?.flags_raised ?? data?.uflpa_flags)
   const auditHash = data?.audit_hash ?? data?.proof_hash ?? (data?.conservation_proof as Payload | undefined)?.audit_hash
+  const provenance = typeof data?.provenance === 'string' ? data.provenance : DEFAULT_TIER
 
   return (
     <section className="rounded-lg border border-gray-800 bg-soc-card p-5" aria-label="Compliance Screening">
@@ -91,15 +96,24 @@ export default function CompliancePanel() {
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             <div className="rounded border border-gray-800 bg-slate-950/60 p-4">
               <div className="text-xs text-gray-500">Suppliers screened</div>
-              <div className="mt-2 font-mono text-2xl text-gray-100">{screened === null ? 'Unavailable' : screened.toLocaleString()}</div>
+              <div className="mt-2 flex items-center gap-2 font-mono text-2xl text-gray-100">
+                <span>{screened === null ? 'Unavailable' : screened.toLocaleString()}</span>
+                <ProvenanceBadge source={provenance} />
+              </div>
             </div>
             <div className="rounded border border-gray-800 bg-slate-950/60 p-4">
               <div className="text-xs text-gray-500">Flags raised</div>
-              <div className="mt-2 font-mono text-2xl text-yellow-200">{flags === null ? 'Unavailable' : flags.toLocaleString()}</div>
+              <div className="mt-2 flex items-center gap-2 font-mono text-2xl text-yellow-200">
+                <span>{flags === null ? 'Unavailable' : flags.toLocaleString()}</span>
+                <ProvenanceBadge source={provenance} />
+              </div>
             </div>
             <div className="rounded border border-gray-800 bg-slate-950/60 p-4">
               <div className="text-xs text-gray-500">Audit hash</div>
-              <div className="mt-2 font-mono text-sm text-gray-100">{shortHash(auditHash)}</div>
+              <div className="mt-2 flex items-center gap-2 font-mono text-sm text-gray-100">
+                <span>{shortHash(auditHash)}</span>
+                <ProvenanceBadge source={provenance} />
+              </div>
             </div>
           </div>
           <p className="mt-4 text-sm leading-6 text-gray-300">

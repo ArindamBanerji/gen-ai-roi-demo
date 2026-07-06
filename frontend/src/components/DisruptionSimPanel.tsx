@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
+import ProvenanceBadge from './ProvenanceBadge'
 
 const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
 const S2P_API = env?.VITE_S2P_API_URL || 'http://127.0.0.1:8002'
+// Provenance: default "context" - this endpoint returns simulation output.
+// Override: uses data.provenance if S2P backend adds it.
+const DEFAULT_TIER = 'context'
 
 type Payload = Record<string, unknown>
 
@@ -71,6 +75,10 @@ export default function DisruptionSimPanel() {
     return current > previous ? current : max
   }, summary?.worst_case_impact ?? summary?.total_quarterly_exposure)
   const alternatives = rows.reduce((total, row) => total + arrayValue(row.alternatives).length, 0)
+  const provenance =
+    (typeof summary?.provenance === 'string' && summary.provenance) ||
+    (typeof scenarios?.provenance === 'string' && scenarios.provenance) ||
+    DEFAULT_TIER
 
   return (
     <section className="rounded-lg border border-gray-800 bg-soc-card p-5" aria-label="Disruption Simulation">
@@ -89,15 +97,24 @@ export default function DisruptionSimPanel() {
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             <div className="rounded border border-gray-800 bg-slate-950/60 p-4">
               <div className="text-xs text-gray-500">Active scenarios</div>
-              <div className="mt-2 font-mono text-2xl text-gray-100">{scenarioCount.toLocaleString()}</div>
+              <div className="mt-2 flex items-center gap-2 font-mono text-2xl text-gray-100">
+                <span>{scenarioCount.toLocaleString()}</span>
+                <ProvenanceBadge source={provenance} />
+              </div>
             </div>
             <div className="rounded border border-gray-800 bg-slate-950/60 p-4">
               <div className="text-xs text-gray-500">Worst-case impact</div>
-              <div className="mt-2 font-mono text-2xl text-yellow-200">{money(worst)}</div>
+              <div className="mt-2 flex items-center gap-2 font-mono text-2xl text-yellow-200">
+                <span>{money(worst)}</span>
+                <ProvenanceBadge source={provenance} />
+              </div>
             </div>
             <div className="rounded border border-gray-800 bg-slate-950/60 p-4">
               <div className="text-xs text-gray-500">Alternatives identified</div>
-              <div className="mt-2 font-mono text-2xl text-green-300">{alternatives.toLocaleString()}</div>
+              <div className="mt-2 flex items-center gap-2 font-mono text-2xl text-green-300">
+                <span>{alternatives.toLocaleString()}</span>
+                <ProvenanceBadge source={provenance} />
+              </div>
             </div>
           </div>
           <p className="mt-4 text-sm leading-6 text-gray-300">

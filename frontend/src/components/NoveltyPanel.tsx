@@ -1,7 +1,11 @@
 import { type ReactNode, useEffect, useState } from 'react'
+import ProvenanceBadge from './ProvenanceBadge'
 
 const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
 const S2P_API = env?.VITE_S2P_API_URL || 'http://127.0.0.1:8002'
+// Provenance: default "context" - this endpoint returns novelty detection output.
+// Override: uses data.provenance if S2P backend adds it.
+const DEFAULT_TIER = 'context'
 
 type Payload = Record<string, unknown>
 
@@ -59,6 +63,7 @@ export default function NoveltyPanel() {
 
   const alertActive = Boolean(data?.alert_active)
   const review = Boolean(data?.conservation_review)
+  const provenance = typeof data?.provenance === 'string' ? data.provenance : DEFAULT_TIER
 
   return (
     <section className="rounded-lg border border-gray-800 bg-soc-card p-5" aria-label="Novelty Detection">
@@ -81,15 +86,24 @@ export default function NoveltyPanel() {
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             <div className="rounded border border-gray-800 bg-slate-950/60 p-4">
               <div className="text-xs text-gray-500">Novelty rate</div>
-              <div className="mt-2 font-mono text-2xl text-gray-100">{percent(data.novelty_rate)}</div>
+              <div className="mt-2 flex items-center gap-2 font-mono text-2xl text-gray-100">
+                <span>{percent(data.novelty_rate)}</span>
+                <ProvenanceBadge source={provenance} />
+              </div>
             </div>
             <div className="rounded border border-gray-800 bg-slate-950/60 p-4">
               <div className="text-xs text-gray-500">Novelty count</div>
-              <div className="mt-2 font-mono text-2xl text-gray-100">{numberValue(data.novelty_count)?.toLocaleString() ?? 'Unavailable'}</div>
+              <div className="mt-2 flex items-center gap-2 font-mono text-2xl text-gray-100">
+                <span>{numberValue(data.novelty_count)?.toLocaleString() ?? 'Unavailable'}</span>
+                <ProvenanceBadge source={provenance} />
+              </div>
             </div>
             <div className="rounded border border-gray-800 bg-slate-950/60 p-4">
               <div className="text-xs text-gray-500">Distance threshold</div>
-              <div className="mt-2 font-mono text-2xl text-gray-100">{numberValue(data.distance_threshold)?.toFixed(2) ?? 'Unavailable'}</div>
+              <div className="mt-2 flex items-center gap-2 font-mono text-2xl text-gray-100">
+                <span>{numberValue(data.distance_threshold)?.toFixed(2) ?? 'Unavailable'}</span>
+                <ProvenanceBadge source={provenance} />
+              </div>
             </div>
           </div>
           <p className="mt-4 text-sm leading-6 text-gray-300">

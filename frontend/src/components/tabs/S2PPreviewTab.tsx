@@ -7,6 +7,13 @@ import ProcessFusionPanel from '../ProcessFusionPanel'
 import TrendCorrelationPanel from '../TrendCorrelationPanel'
 import WorkingCapitalPanel from '../WorkingCapitalPanel'
 
+// S2P Preview provenance declaration (v1.2 section 7):
+// - Panels show SUMMARY context from S2P backend APIs
+// - Default: "context" (most panels compute from real decisions)
+// - Exception: TrendCorrelation defaults to "sample" (fixture data)
+// - ProcessFusion uses API-provided provenance (cross-graph endpoint)
+// - No "sample" headline without sample badge (F-25 compliance)
+
 const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
 const S2P_API = env?.VITE_S2P_API_URL || 'http://127.0.0.1:8002'
 

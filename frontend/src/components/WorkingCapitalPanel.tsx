@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
+import ProvenanceBadge from './ProvenanceBadge'
 
 const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
 const S2P_API = env?.VITE_S2P_API_URL || 'http://127.0.0.1:8002'
+// Provenance: default "context" - this endpoint computes from payment strategy.
+// Override: uses data.provenance if S2P backend adds it.
+const DEFAULT_TIER = 'context'
 
 type Payload = Record<string, unknown>
 
@@ -79,6 +83,10 @@ export default function WorkingCapitalPanel() {
   const discount = portfolio?.discount_capture_rate ?? strategy?.discount_capture_rate ?? portfolio?.discount_opportunity
   const strategies = Array.isArray(strategy?.strategies) ? strategy?.strategies : []
   const supplierCount = firstNumber(strategy?.supplier_count, portfolio?.supplier_count) ?? strategies.length
+  const provenance =
+    (typeof strategy?.provenance === 'string' && strategy.provenance) ||
+    (typeof portfolio?.provenance === 'string' && portfolio.provenance) ||
+    DEFAULT_TIER
 
   return (
     <section className="rounded-lg border border-gray-800 bg-soc-card p-5" aria-label="Working Capital">
@@ -97,15 +105,24 @@ export default function WorkingCapitalPanel() {
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             <div className="rounded border border-gray-800 bg-slate-950/60 p-4">
               <div className="text-xs text-gray-500">DPO impact</div>
-              <div className="mt-2 font-mono text-xl text-gray-100">{dpo === null ? 'Unavailable' : `${dpo.toFixed(1)} days`}</div>
+              <div className="mt-2 flex items-center gap-2 font-mono text-xl text-gray-100">
+                <span>{dpo === null ? 'Unavailable' : `${dpo.toFixed(1)} days`}</span>
+                <ProvenanceBadge source={provenance} />
+              </div>
             </div>
             <div className="rounded border border-gray-800 bg-slate-950/60 p-4">
               <div className="text-xs text-gray-500">Early-pay discount capture</div>
-              <div className="mt-2 font-mono text-xl text-gray-100">{percent(discount)}</div>
+              <div className="mt-2 flex items-center gap-2 font-mono text-xl text-gray-100">
+                <span>{percent(discount)}</span>
+                <ProvenanceBadge source={provenance} />
+              </div>
             </div>
             <div className="rounded border border-gray-800 bg-slate-950/60 p-4">
               <div className="text-xs text-gray-500">Cash flow benefit</div>
-              <div className="mt-2 font-mono text-xl text-green-300">{money(cash)}</div>
+              <div className="mt-2 flex items-center gap-2 font-mono text-xl text-green-300">
+                <span>{money(cash)}</span>
+                <ProvenanceBadge source={provenance} />
+              </div>
             </div>
           </div>
           <p className="mt-4 text-sm leading-6 text-gray-300">
