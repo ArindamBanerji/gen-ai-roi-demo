@@ -28,6 +28,7 @@ import {
 import * as api from '@/lib/api'
 import { domainConfig } from '@/lib/domain'
 import { ensureArray, ensureObject } from '@/lib/guards'
+import CampaignTimelinePanel from '../CampaignTimelinePanel'
 
 const SOC_API = 'http://localhost:8001'
 
@@ -1381,6 +1382,8 @@ export default function RuntimeEvolutionTab() {
           </div>
         </div>
       </div>
+
+      <CampaignTimelinePanel />
 
       {/* ── Mobile horizontal tab bar ─────────────────────────────────── */}
       <div className="md:hidden flex gap-1 bg-soc-card rounded-lg border border-gray-800 p-1">

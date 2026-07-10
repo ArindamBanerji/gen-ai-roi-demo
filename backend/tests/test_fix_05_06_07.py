@@ -35,6 +35,22 @@ async def test_simulation_does_not_mutate_production_state():
     """
     mock_ls = MagicMock()
     mock_ls.W = np.zeros((4, 6))
+    mock_ls.n_actions = 4
+    mock_ls.n_factors = 6
+    mock_ls.factor_names = [f"f{i}" for i in range(6)]
+    mock_ls.profile = SimpleNamespace(
+        learning_rate=0.05,
+        penalty_ratio=-0.25,
+        factor_decay_classes={},
+        decay_class_rates={"standard": 0.02},
+        epsilon_default=0.02,
+    )
+    mock_ls.history = []
+    mock_ls.expansion_history = []
+    mock_ls.discount_strength = 0.0
+    mock_ls.epsilon_vector = np.full(6, 0.02)
+    mock_ls.dimension_metadata = []
+    mock_ls.pending_validations = []
     mock_ls.decision_count = 99
 
     mock_scoring = MagicMock()
@@ -52,7 +68,7 @@ async def test_simulation_does_not_mutate_production_state():
     factor_vec = np.array([0.5, 0.3, 0.7, 0.2, 0.6, 0.4])
 
     with patch.object(sim_mod, "get_learning_state", return_value=mock_ls), \
-         patch.object(sim_mod, "save_learning_state") as mock_save, \
+         patch.object(sim_mod, "save_learning_state", create=True) as mock_save, \
          patch.object(sim_mod, "event_bus", mock_eb), \
          patch.object(sim_mod, "score_alert", return_value=mock_scoring), \
          patch.object(sim_mod, "compute_factor_vector",
@@ -89,10 +105,26 @@ async def test_simulation_empty_pool_returns_gracefully():
     """
     mock_ls = MagicMock()
     mock_ls.W = np.zeros((4, 6))
+    mock_ls.n_actions = 4
+    mock_ls.n_factors = 6
+    mock_ls.factor_names = [f"f{i}" for i in range(6)]
+    mock_ls.profile = SimpleNamespace(
+        learning_rate=0.05,
+        penalty_ratio=-0.25,
+        factor_decay_classes={},
+        decay_class_rates={"standard": 0.02},
+        epsilon_default=0.02,
+    )
+    mock_ls.history = []
+    mock_ls.expansion_history = []
+    mock_ls.discount_strength = 0.0
+    mock_ls.epsilon_vector = np.full(6, 0.02)
+    mock_ls.dimension_metadata = []
+    mock_ls.pending_validations = []
     mock_ls.decision_count = 0
 
     with patch.object(sim_mod, "get_learning_state", return_value=mock_ls), \
-         patch.object(sim_mod, "save_learning_state"):
+         patch.object(sim_mod, "save_learning_state", create=True):
 
         orch = SimulationOrchestrator(MagicMock(), MagicMock(), MagicMock())
         result = await orch.run(n_decisions=10, alert_pool=[], speed_ms=0)

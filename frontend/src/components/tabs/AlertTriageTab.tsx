@@ -37,6 +37,18 @@ interface Alert {
   source_location: string
 }
 
+const FACTOR_DISPLAY_ALIASES: Record<string, string> = {
+  travel_match: 'Privileged Identity Context',
+}
+
+function formatDecisionFactorName(name: string) {
+  return FACTOR_DISPLAY_ALIASES[name]
+    ?? name
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+}
+
 interface GraphNode {
   id: string
   label: string
@@ -1149,10 +1161,7 @@ export default function AlertTriageTab() {
                     const barWidth = Math.round(factor.value * factor.weight * 100)
                     const isThreatIntel = factor.name === 'threat_intel_enrichment'
                     const isPulsedive = isThreatIntel && factor.explanation.includes('Pulsedive')
-                    const displayName = factor.name
-                      .split('_')
-                      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                      .join(' ')
+                    const displayName = formatDecisionFactorName(factor.name)
 
                     const barColor =
                       factor.contribution === 'high'

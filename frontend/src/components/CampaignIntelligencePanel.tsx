@@ -19,7 +19,7 @@ const CampaignIntelligencePanel: React.FC = () => {
   const [activeCampaigns, setActiveCampaigns] = useState(0)
 
   useEffect(() => {
-    fetch('http://localhost:8002/api/soc/campaigns')
+    fetch('/api/soc/campaigns')
       .then(r => r.json())
       .then(data => {
         setCampaigns(data.campaigns || [])

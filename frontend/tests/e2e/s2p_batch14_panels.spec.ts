@@ -47,7 +47,7 @@ test.describe('S2P Batch 14 panels', () => {
     if (await s2pDisconnected(page)) return
     const target = panel(page, /Working capital/i)
     await expect(target).toBeVisible({ timeout: 15_000 })
-    await expect(target.getByText(/DPO impact|Payment timing strategy/i)).toBeVisible()
+    await expect(target.getByText('DPO impact', { exact: true })).toBeVisible()
     await expect(target.getByText(/Optimized payment timing|Unavailable|\d+(\.\d+)?%/i).first()).toBeVisible()
   })
 
@@ -80,7 +80,7 @@ test.describe('S2P Batch 14 panels', () => {
     if (await s2pDisconnected(page)) return
     const target = panel(page, /Trend correlation/i)
     await expect(target).toBeVisible({ timeout: 15_000 })
-    await expect(target.getByText(/Early warnings/i)).toBeVisible()
+    await expect(target.getByText('Early warnings', { exact: true })).toBeVisible()
     await expect(target.getByText(/\d+/).first()).toBeVisible()
   })
 })

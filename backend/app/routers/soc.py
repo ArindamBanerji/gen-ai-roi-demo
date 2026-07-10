@@ -1763,6 +1763,73 @@ def _format_campaign(raw: dict) -> dict:
     }
 
 
+def _campaign_node(raw: dict) -> dict:
+    node = raw.get("c", raw)
+    if hasattr(node, "data"):
+        node = dict(node)
+    return node if isinstance(node, dict) else {}
+
+
+def _epoch_seconds(value) -> int:
+    if isinstance(value, (int, float)):
+        return int(value / 1000) if value > 1e12 else int(value)
+    try:
+        dt = _parse_dt(value)
+        return int(dt.timestamp())
+    except Exception:
+        return int(datetime.utcnow().timestamp())
+
+
+def _campaign_state(alert_count: int, last_alert_epoch: int, now_epoch: int) -> str:
+    age_seconds = max(0, now_epoch - last_alert_epoch)
+    if alert_count <= 1 or age_seconds <= 24 * 3600:
+        return "ACTIVE"
+    if alert_count > 1 and age_seconds <= 7 * 24 * 3600:
+        return "CONTINUES"
+    return "RESOLVED"
+
+
+def _campaign_events(campaign: dict, detail: dict | None, state: str) -> list[dict]:
+    first_seen = _epoch_seconds(campaign.get("first_seen"))
+    last_seen = _epoch_seconds(campaign.get("last_seen"))
+    events: list[dict] = [{"type": "CREATED", "at": first_seen}]
+
+    decisions = []
+    if detail:
+        decisions = detail.get("decisions") or []
+    seen_alerts: set[str] = set()
+    for decision in decisions:
+        if not isinstance(decision, dict):
+            continue
+        alert_id = str(decision.get("alert_id") or "").strip()
+        if not alert_id or alert_id in seen_alerts:
+            continue
+        seen_alerts.add(alert_id)
+        events.append({
+            "type": "ALERT_ADDED",
+            "at": _epoch_seconds(decision.get("timestamp") or last_seen),
+            "alert_id": alert_id,
+        })
+
+    if state == "CONTINUES":
+        events.append({
+            "type": "STATE_CHANGE",
+            "at": last_seen,
+            "from": "ACTIVE",
+            "to": "CONTINUES",
+        })
+    elif state == "RESOLVED":
+        events.append({
+            "type": "STATE_CHANGE",
+            "at": last_seen,
+            "from": "CONTINUES",
+            "to": "RESOLVED",
+        })
+        events.append({"type": "RESOLVED", "at": last_seen + 7 * 24 * 3600})
+
+    return sorted(events, key=lambda event: int(event.get("at") or 0))
+
+
 def _format_campaign_detail(raw: dict) -> dict:
     """Format full campaign detail including decisions."""
     c = raw.get("c", raw)
@@ -1844,6 +1911,60 @@ async def get_campaigns(
         "total": len(campaigns_raw),
         "active_campaigns": active,
     }
+
+
+# ============================================================================
+# GET /api/soc/campaign-timeline — SOC-D8 Campaign lifecycle timeline
+# ============================================================================
+
+@router.get("/soc/campaign-timeline")
+async def get_campaign_timeline(limit: int = 10):
+    """
+    Return latest campaign lifecycle events for the Runtime Evolution timeline.
+
+    Read-only: uses existing CampaignRepository graph reads. Campaign state is
+    derived when the graph has no persisted lifecycle field.
+    """
+    from app.domains.soc.campaigns import CampaignRepository
+
+    repo = CampaignRepository(neo4j_client)
+    rows = await repo.get_campaigns(limit=max(1, min(limit, 50)))
+    now_epoch = int(datetime.utcnow().timestamp())
+    timeline = []
+
+    for row in rows[:max(1, min(limit, 50))]:
+        campaign = _format_campaign(row)
+        node = _campaign_node(row)
+        campaign_id = campaign.get("campaign_id", "")
+        detail = await repo.get_campaign_detail(campaign_id) if campaign_id else None
+        detail_campaign = _campaign_node(detail or {}) if detail else {}
+
+        first_seen = _epoch_seconds(detail_campaign.get("first_seen") or campaign.get("first_seen"))
+        last_seen = _epoch_seconds(detail_campaign.get("last_seen") or campaign.get("last_seen"))
+        alert_count = int(campaign.get("alert_count") or 0)
+        state = _campaign_state(alert_count, last_seen, now_epoch)
+        resolved_at = last_seen + 7 * 24 * 3600 if state == "RESOLVED" else None
+        shared_entities = campaign.get("shared_entities") or []
+        entity_key = (
+            str(shared_entities[0])
+            if isinstance(shared_entities, list) and shared_entities
+            else str(node.get("derived_entity_key") or node.get("name") or f"campaign:{campaign_id}")
+        )
+
+        timeline.append({
+            "campaign_id": campaign_id,
+            "entity_key": entity_key,
+            "state": state,
+            "created_at": first_seen,
+            "last_alert_at": last_seen,
+            "resolved_at": resolved_at,
+            "alert_count": alert_count,
+            "events": _campaign_events({**campaign, **detail_campaign}, detail, state),
+            "provenance": "learned",
+        })
+
+    timeline.sort(key=lambda item: int(item.get("last_alert_at") or 0), reverse=True)
+    return timeline
 
 
 # ============================================================================
