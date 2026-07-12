@@ -371,7 +371,10 @@ def record_decision_outcome(
     print(f"Recorded outcome: {prompt_variant} success={success}")
 
 
-def check_for_promotion(alert_type: str) -> Optional[Dict[str, Any]]:
+def check_for_promotion(
+    alert_type: str,
+    conservation_state: Optional[Any] = None,
+) -> Optional[Dict[str, Any]]:
     """Check if a prompt variant should be promoted for an alert type."""
     current = ACTIVE_PROMPTS.get(alert_type)
     if not current:
@@ -379,9 +382,22 @@ def check_for_promotion(alert_type: str) -> Optional[Dict[str, Any]]:
 
     family = _variant_family(current)
     _sync_sdk_from_compat_state()
-    result = _evolver.check_for_promotion(family=family)
+    result = _evolver.check_for_promotion(
+        family=family,
+        conservation_state=conservation_state,
+    )
     if not result:
         return None
+    if result.get("promoted") is False:
+        _refresh_compat_stats_from_sdk()
+        return {
+            "promoted": False,
+            "old_variant": result.get("previous_id"),
+            "new_variant": result.get("candidate_id"),
+            "old_rate": result.get("active_rate"),
+            "new_rate": result.get("candidate_rate"),
+            "reason": result.get("message") or result.get("reason"),
+        }
 
     ACTIVE_PROMPTS[alert_type] = result["promoted_id"]
     _refresh_compat_stats_from_sdk()

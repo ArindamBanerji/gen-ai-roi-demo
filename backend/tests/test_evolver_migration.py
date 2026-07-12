@@ -166,7 +166,7 @@ def test_promotion_gate_unchanged_global():
         "success_rate": 0.9,
     }
 
-    result = evolver.check_for_promotion("migration")
+    result = evolver.check_for_promotion("migration", conservation_state={"status": "GREEN"})
 
     assert result["promoted"] is True
     assert result["old_variant"] == "MIGRATION_v1"
