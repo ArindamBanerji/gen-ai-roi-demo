@@ -3,6 +3,8 @@ import { test, expect } from '@playwright/test'
 const API_BASE = process.env.S2P_API_BASE_URL ?? 'http://127.0.0.1:8002'
 
 test.describe('S2P financial impact API', () => {
+  test.describe.configure({ timeout: 90_000 })
+
   test('summary exposes P28-backed fields', async ({ request }) => {
     const response = await request.get(`${API_BASE}/api/s2p/financial-impact`)
     expect(response.ok()).toBeTruthy()

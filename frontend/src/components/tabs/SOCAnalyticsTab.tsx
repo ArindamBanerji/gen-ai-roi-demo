@@ -29,7 +29,7 @@ import { queryMetric, getThreatLandscape, getAttackTacticBreakdown, fetchAnalyst
 import { ensureArray } from '../../lib/guards'
 import { domainConfig } from '../../lib/domain'
 
-const SOC_API = 'http://localhost:8001'
+const SOC_API = 'http://127.0.0.1:8001'
 
 interface MetricContract {
   id: string

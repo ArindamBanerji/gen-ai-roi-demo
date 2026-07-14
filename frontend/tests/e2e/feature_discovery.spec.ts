@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 
 const BACKEND_PORT = process.env.BACKEND_PORT || '8001';
 const FRONTEND_PORT = process.env.FRONTEND_PORT || '5173';
-const BACKEND = `http://localhost:${BACKEND_PORT}`;
-const FRONTEND = `http://localhost:${FRONTEND_PORT}`;
+const BACKEND = `http://127.0.0.1:${BACKEND_PORT}`;
+const FRONTEND = `http://127.0.0.1:${FRONTEND_PORT}`;
 
 function expectArray(value: unknown, name: string) {
   expect(Array.isArray(value), `${name} must be an array`).toBe(true);

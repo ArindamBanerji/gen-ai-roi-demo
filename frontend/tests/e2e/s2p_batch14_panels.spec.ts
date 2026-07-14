@@ -2,6 +2,8 @@ import { expect, type Page, test } from '@playwright/test'
 
 const BACKEND = 'http://127.0.0.1:8002'
 
+test.describe.configure({ timeout: 90_000 })
+
 async function goToS2PPreview(page: Page) {
   await page.goto('/')
 

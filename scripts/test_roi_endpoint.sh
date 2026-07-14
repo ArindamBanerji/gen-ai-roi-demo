@@ -8,14 +8,14 @@ echo ""
 
 # Test 1: Get defaults
 echo "1. GET /api/roi/defaults"
-curl -s http://localhost:8001/api/roi/defaults | python -m json.tool
+curl -s http://127.0.0.1:8001/api/roi/defaults | python -m json.tool
 echo ""
 echo "---"
 echo ""
 
 # Test 2: Calculate ROI with default values
 echo "2. POST /api/roi/calculate (default values)"
-curl -s -X POST http://localhost:8001/api/roi/calculate \
+curl -s -X POST http://127.0.0.1:8001/api/roi/calculate \
   -H "Content-Type: application/json" \
   -d '{
     "alerts_per_day": 500,
@@ -31,7 +31,7 @@ echo ""
 
 # Test 3: Calculate ROI with custom values (larger SOC)
 echo "3. POST /api/roi/calculate (larger SOC: 1500 alerts/day, 20 analysts)"
-curl -s -X POST http://localhost:8001/api/roi/calculate \
+curl -s -X POST http://127.0.0.1:8001/api/roi/calculate \
   -H "Content-Type: application/json" \
   -d '{
     "alerts_per_day": 1500,
@@ -47,7 +47,7 @@ echo ""
 
 # Test 4: Calculate ROI with custom values (smaller SOC)
 echo "4. POST /api/roi/calculate (smaller SOC: 200 alerts/day, 3 analysts)"
-curl -s -X POST http://localhost:8001/api/roi/calculate \
+curl -s -X POST http://127.0.0.1:8001/api/roi/calculate \
   -H "Content-Type: application/json" \
   -d '{
     "alerts_per_day": 200,

@@ -14,7 +14,7 @@ import {
   fetchGovernanceSummary,
 } from '../../lib/api'
 
-const SOC_API = 'http://localhost:8001'
+const SOC_API = 'http://127.0.0.1:8001'
 
 interface Shift {
   label: string

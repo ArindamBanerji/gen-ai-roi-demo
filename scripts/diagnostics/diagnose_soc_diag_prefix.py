@@ -30,7 +30,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--graph-name", required=True)
     parser.add_argument("--prefix", required=True)
     parser.add_argument("--graph-dsn", default=DEFAULT_DSN)
-    parser.add_argument("--backend-url", default="http://localhost:8001")
+    parser.add_argument("--backend-url", default="http://127.0.0.1:8001")
     parser.add_argument("--alert-id")
     parser.add_argument("--decision-id")
     return parser.parse_args()

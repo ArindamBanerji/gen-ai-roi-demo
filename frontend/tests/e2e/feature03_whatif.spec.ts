@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
 const FRONTEND_PORT = process.env.FRONTEND_PORT || '5173';
-const FRONTEND      = `http://localhost:${FRONTEND_PORT}`;
+const FRONTEND      = `http://127.0.0.1:${FRONTEND_PORT}`;
 const SCREENSHOTS   = path.join(__dirname, 'screenshots', 'feature03_whatif');
 
 test.beforeAll(() => {

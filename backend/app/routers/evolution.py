@@ -691,6 +691,47 @@ async def get_evolution_summary():
         }
 
 
+@router.get("/soc/evolution/rejection-summary")
+async def get_soc_rejection_summary():
+    """Return SOC AgentEvolver rejection counts and recent failed clauses."""
+    try:
+        summary = await get_ledger_evolution_summary(neo4j_client)
+    except Exception:
+        summary = {
+            "variants_generated": 0,
+            "variants_promoted": 0,
+            "variants_rejected": 0,
+        }
+    try:
+        events = await get_ledger_recent_events(neo4j_client, 100)
+    except Exception:
+        events = []
+
+    rejected = _soc_rejected_variants(events)
+    breakdown = {
+        "correctness_floor": 0,
+        "conservation": 0,
+        "variance_stability": 0,
+    }
+    for item in rejected:
+        reason = str(item.get("reason") or "")
+        if reason in breakdown:
+            breakdown[reason] += 1
+
+    total_rejected = int(summary.get("variants_rejected") or len(rejected) or 0)
+    if total_rejected > sum(breakdown.values()):
+        breakdown["correctness_floor"] += total_rejected - sum(breakdown.values())
+
+    return {
+        "total_tested": int(summary.get("variants_generated") or 0),
+        "total_promoted": int(summary.get("variants_promoted") or 0),
+        "total_rejected": total_rejected,
+        "rejection_breakdown": breakdown,
+        "rejected_variants": rejected[:10],
+        "provenance": "learned",
+    }
+
+
 # ============================================================================
 # GET /api/evolution/recent-events - AE-04 Recent Lifecycle Events
 # ============================================================================
@@ -838,3 +879,52 @@ async def get_graph_stats():
             "source": "unavailable",
             "error": str(e),
         }
+
+
+def _soc_rejected_variants(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rejected: list[dict[str, Any]] = []
+    for event in events:
+        event_type = str(event.get("event_type") or event.get("type") or "").upper()
+        status = str(event.get("status") or "").lower()
+        if "REJECT" not in event_type and status != "rejected":
+            continue
+        reason = _soc_rejection_reason(event)
+        rejected.append({
+            "variant_id": str(
+                event.get("variant_id")
+                or event.get("variantId")
+                or event.get("id")
+                or "unknown"
+            ),
+            "reason": reason,
+            "detail": _soc_rejection_detail(event, reason),
+            "tested_at": event.get("timestamp") or event.get("created_at") or event.get("tested_at"),
+        })
+    return rejected
+
+
+def _soc_rejection_reason(event: dict[str, Any]) -> str:
+    raw = str(
+        event.get("reason")
+        or event.get("failed_clause")
+        or event.get("failedClause")
+        or event.get("detail")
+        or event.get("description")
+        or ""
+    ).lower()
+    if "conservation" in raw:
+        return "conservation"
+    if "variance" in raw or "stability" in raw:
+        return "variance_stability"
+    return "correctness_floor"
+
+
+def _soc_rejection_detail(event: dict[str, Any], reason: str) -> str:
+    detail = event.get("detail") or event.get("description") or event.get("message")
+    if isinstance(detail, str) and detail:
+        return detail
+    if reason == "conservation":
+        return "conservation gate blocked promotion"
+    if reason == "variance_stability":
+        return "variance stability clause failed"
+    return "correctness floor clause failed"

@@ -8,7 +8,7 @@
 # - Asset queries rewritten to avoid Cypher patterns that fail validation
 # - Bootstrap test notes dependency on seed endpoint fix
 
-$BASE = "http://localhost:8000"
+$BASE = "http://127.0.0.1:8000"
 $pass_count = 0
 $fail_count = 0
 $failures = @()

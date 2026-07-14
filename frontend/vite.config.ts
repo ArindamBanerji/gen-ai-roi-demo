@@ -24,11 +24,11 @@ export default defineConfig(({ mode }) => {
       allowedHosts: ['.ngrok-free.app', '.ngrok.io', 'localhost'], // Allow ngrok domains
       proxy: {
         '/api/s2p/preview': {
-          target: `http://localhost:${s2pBackendPort}`,
+          target: `http://127.0.0.1:${s2pBackendPort}`,
           changeOrigin: true,
         },
         '/api': {
-          target: `http://localhost:${backendPort}`,
+          target: `http://127.0.0.1:${backendPort}`,
           changeOrigin: true,
         },
       },

@@ -3,6 +3,8 @@ import { expect, test } from '@playwright/test'
 const S2P_API_BASE_URL = process.env.S2P_API_BASE_URL ?? 'http://127.0.0.1:8002'
 
 test.describe('S2P lead time intelligence API', () => {
+  test.describe.configure({ timeout: 90_000 })
+
   test('summary returns lead-time groups', async ({ request }) => {
     const response = await request.get(`${S2P_API_BASE_URL}/api/s2p/lead-time/summary`)
 

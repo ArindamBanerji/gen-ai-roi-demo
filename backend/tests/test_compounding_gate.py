@@ -27,7 +27,7 @@ Usage:
     cd backend && python tests/test_compounding_gate.py
 
 Prerequisites:
-    Backend running at http://localhost:8000 (uvicorn app.main:app --port 8000)
+    Backend running at http://127.0.0.1:8000 (uvicorn app.main:app --port 8000)
     pip install requests
 """
 
@@ -36,7 +36,7 @@ import sys
 
 import requests
 
-BASE = "http://localhost:8000/api"
+BASE = "http://127.0.0.1:8000/api"
 TIMEOUT = 30  # seconds per request
 
 # ---------------------------------------------------------------------------

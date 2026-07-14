@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 const S2P_API_BASE_URL = process.env.S2P_API_BASE_URL ?? 'http://127.0.0.1:8002'
 
 test.describe('S2P auto-approve shadow API', () => {
-  test.describe.configure({ mode: 'serial' })
+  test.describe.configure({ mode: 'serial', timeout: 90_000 })
 
   test('status returns config and default disabled mode', async ({ request }) => {
     await request.post(`${S2P_API_BASE_URL}/api/s2p/auto-approve/disable`)

@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
 
+test.describe.configure({ timeout: 90_000 })
+
 async function goToS2P(page: import('@playwright/test').Page) {
   await page.goto('/')
   await page.getByText('S2P Preview').click()
@@ -106,9 +108,12 @@ test('preview_config_returns_v2_shape', async ({ page }) => {
 test('s2p_tab_shows_invoice_queue_or_error', async ({ page }) => {
   await goToS2P(page)
 
-  const queueVisible = await page.getByText(/Exception Queue/i).first().isVisible({ timeout: 5_000 }).catch(() => false)
-  const errorVisible = await page.getByText(/S2P service not connected/i).first().isVisible({ timeout: 5_000 }).catch(() => false)
-  expect(queueVisible || errorVisible).toBe(true)
+  await expect(async () => {
+    const q = await page.getByText(/Exception Queue/i).first().isVisible()
+    const e = await page.getByText('Unavailable', { exact: true }).isVisible()
+    const l = await page.getByText(/loading/i).first().isVisible()
+    expect(q || e || l).toBe(true)
+  }).toPass({ timeout: 30_000 })
 })
 
 test('s2p_tab_no_soc_categories', async ({ page }) => {

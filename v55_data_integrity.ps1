@@ -3,7 +3,7 @@
 # Queries Neo4j directly via the backend API endpoints
 # Usage: .\v55_data_integrity.ps1
 
-$BASE = "http://localhost:8000"
+$BASE = "http://127.0.0.1:8000"
 $pass_count = 0
 $fail_count = 0
 $failures = @()

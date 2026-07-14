@@ -3,7 +3,7 @@
 import { test, expect } from '@playwright/test';
 
 const BACKEND_PORT = process.env.BACKEND_PORT || '8001';
-const BACKEND = `http://localhost:${BACKEND_PORT}`;
+const BACKEND = `http://127.0.0.1:${BACKEND_PORT}`;
 
 function expectArray(value: unknown, name: string) {
   expect(Array.isArray(value), `${name} must be an array`).toBe(true);

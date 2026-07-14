@@ -16,7 +16,7 @@ import sys
 import requests
 from requests.exceptions import RequestException
 
-BASE = "http://localhost:8000"
+BASE = "http://127.0.0.1:8000"
 TIMEOUT = 45  # seconds -- generous for endpoints that hit Neo4j
 
 # Module-level results list; reset inside main() on each run.

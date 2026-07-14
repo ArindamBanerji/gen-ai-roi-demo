@@ -29,8 +29,9 @@ import * as api from '@/lib/api'
 import { domainConfig } from '@/lib/domain'
 import { ensureArray, ensureObject } from '@/lib/guards'
 import CampaignTimelinePanel from '../CampaignTimelinePanel'
+import RejectionMomentPanel from '../RejectionMomentPanel'
 
-const SOC_API = 'http://localhost:8001'
+const SOC_API = 'http://127.0.0.1:8001'
 
 // ── suppress unused-import lint warnings for icons used only via JSX ──
 void BarChart2; void Database; void ArrowUp; void ArrowDown; void Minus
@@ -1384,6 +1385,7 @@ export default function RuntimeEvolutionTab() {
       </div>
 
       <CampaignTimelinePanel />
+      <RejectionMomentPanel />
 
       {/* ── Mobile horizontal tab bar ─────────────────────────────────── */}
       <div className="md:hidden flex gap-1 bg-soc-card rounded-lg border border-gray-800 p-1">

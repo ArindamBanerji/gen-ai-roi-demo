@@ -3,7 +3,7 @@
 import { test, expect } from '@playwright/test';
 
 const BACKEND_PORT = process.env.BACKEND_PORT || '8001';
-const BACKEND = `http://localhost:${BACKEND_PORT}`;
+const BACKEND = `http://127.0.0.1:${BACKEND_PORT}`;
 
 function uniqueId(prefix: string, workerIndex: number) {
   return `${prefix}-${Date.now()}-${workerIndex}-${Math.random().toString(36).slice(2, 8)}`;

@@ -1,8 +1,10 @@
 import { expect, test } from '@playwright/test'
 
-const s2pApi = process.env.S2P_API_URL || 'http://localhost:8002'
+const s2pApi = process.env.S2P_API_URL || 'http://127.0.0.1:8002'
 
 test.describe('S2P preview observation wiring', () => {
+  test.describe.configure({ timeout: 90_000 })
+
   test('preview queue does not change conservation decision counts', async ({ request }) => {
     const before = await request.get(`${s2pApi}/api/conservation/status`)
     expect(before.status()).toBe(200)

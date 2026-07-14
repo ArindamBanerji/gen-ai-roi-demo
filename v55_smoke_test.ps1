@@ -2,7 +2,7 @@
 # Run with backend already started on localhost:8000
 # Usage: .\v55_smoke_test.ps1
 
-$BASE = "http://localhost:8000"
+$BASE = "http://127.0.0.1:8000"
 $pass_count = 0
 $fail_count = 0
 $failures = @()

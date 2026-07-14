@@ -8,7 +8,7 @@
 
 import { test, expect } from "@playwright/test";
 
-const API = "http://localhost:8001";
+const API = "http://127.0.0.1:8001";
 
 // ===========================================================================
 // X1: Conservation consistent across Tab 5 and Tab 7

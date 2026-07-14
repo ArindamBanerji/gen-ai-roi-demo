@@ -4,9 +4,9 @@
 import { test, expect } from '@playwright/test';
 
 const FRONTEND_PORT = process.env.FRONTEND_PORT || '5173';
-const FRONTEND = `http://localhost:${FRONTEND_PORT}`;
+const FRONTEND = `http://127.0.0.1:${FRONTEND_PORT}`;
 const BACKEND_PORT = process.env.BACKEND_PORT || '8001';
-const BACKEND = `http://localhost:${BACKEND_PORT}`;
+const BACKEND = `http://127.0.0.1:${BACKEND_PORT}`;
 
 async function goToEvidenceRoom(page: import('@playwright/test').Page) {
   await page.goto(FRONTEND);

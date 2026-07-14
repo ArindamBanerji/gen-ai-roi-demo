@@ -16,7 +16,7 @@ class AuthConfig:
     idp_sso_url: str = ""
     idp_x509_cert: str = ""
     sp_entity_id: str = "soc-copilot"
-    sp_acs_url: str = "http://localhost:8001/saml/acs"
+    sp_acs_url: str = "http://127.0.0.1:8001/saml/acs"
     admin_groups: List[str] = field(
         default_factory=lambda: ["soc-admins", "administrators"]
     )
@@ -54,5 +54,5 @@ def load_auth_config() -> AuthConfig:
             "SAML_SP_ENTITY_ID", "soc-copilot"),
         sp_acs_url=os.getenv(
             "SAML_SP_ACS_URL",
-            "http://localhost:8001/saml/acs"),
+            "http://127.0.0.1:8001/saml/acs"),
     )

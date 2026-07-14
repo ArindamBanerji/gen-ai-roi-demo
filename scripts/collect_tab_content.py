@@ -9,8 +9,8 @@
 import requests, json, sys
 from pathlib import Path
 
-SOC_BASE = "http://localhost:8001"
-S2P_BASE = "http://localhost:8002"
+SOC_BASE = "http://127.0.0.1:8001"
+S2P_BASE = "http://127.0.0.1:8002"
 DRIVE_PATH = Path(r"G:\My Drive\public-files\gen-ai-roi\experiments\tab_content.json")
 
 tabs = {}

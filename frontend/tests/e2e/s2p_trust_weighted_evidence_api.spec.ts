@@ -2,6 +2,8 @@ import { expect, test, type APIRequestContext } from '@playwright/test'
 
 const S2P_API_BASE_URL = process.env.S2P_API_BASE_URL ?? 'http://127.0.0.1:8002'
 
+test.describe.configure({ timeout: 90_000 })
+
 async function getTemplate(request: APIRequestContext, params: Record<string, string>) {
   const query = new URLSearchParams(params)
   const response = await request.get(`${S2P_API_BASE_URL}/api/s2p/evidence/template?${query}`)

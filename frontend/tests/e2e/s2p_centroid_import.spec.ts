@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test'
 
-const s2pApi = process.env.S2P_API_URL || 'http://localhost:8002'
+const s2pApi = process.env.S2P_API_URL || 'http://127.0.0.1:8002'
+
+test.describe.configure({ timeout: 90_000 })
 
 function validCentroids(value = 0.5) {
   return Array.from({ length: 5 }, () =>

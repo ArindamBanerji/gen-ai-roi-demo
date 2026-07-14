@@ -18,7 +18,7 @@ print("SOC PLAYWRIGHT DIAGNOSTIC")
 print("=" * 60)
 
 # 1. Evidence room audit trail shape
-code, er = fetch("http://localhost:8001/api/soc/evidence-room")
+code, er = fetch("http://127.0.0.1:8001/api/soc/evidence-room")
 print(f"\n=== evidence-room: HTTP {code}")
 if isinstance(er, dict):
     print(f"  top keys: {sorted(er.keys())}")
@@ -37,7 +37,7 @@ if isinstance(er, dict):
         print(f"  audit_trail value: {str(at)[:200]}")
 
 # 2. S2P preview suppliers
-code2, sup = fetch("http://localhost:8001/api/s2p/preview/suppliers")
+code2, sup = fetch("http://127.0.0.1:8001/api/s2p/preview/suppliers")
 print(f"\n=== s2p suppliers: HTTP {code2}")
 if isinstance(sup, dict):
     print(f"  top keys: {sorted(sup.keys())}")
@@ -53,24 +53,24 @@ for s in items[:8]:
     print(f"  {name}: otif={otif}")
 
 # 3. S2P preview queue
-code3, q = fetch("http://localhost:8001/api/s2p/preview/queue")
+code3, q = fetch("http://127.0.0.1:8001/api/s2p/preview/queue")
 print(f"\n=== s2p queue: HTTP {code3}")
 if isinstance(q, dict):
     print(f"  top keys: {sorted(q.keys())}")
 
 # 4. Eval demo
-code4, ev = fetch("http://localhost:8001/api/soc/eval/demo")
+code4, ev = fetch("http://127.0.0.1:8001/api/soc/eval/demo")
 print(f"\n=== eval/demo: HTTP {code4}")
 if code4 == 0:
     print(f"  error: {ev}")
 
 # 5. S2P tab text on frontend
 print(f"\n=== S2P Preview Tab content check")
-code5, html = fetch("http://localhost:5173")
+code5, html = fetch("http://127.0.0.1:5173")
 print(f"  frontend: HTTP {code5}")
 
 # 6. Check what text the S2P preview tab actually shows
-code6, tab = fetch("http://localhost:8001/api/s2p/preview/conservation")
+code6, tab = fetch("http://127.0.0.1:8001/api/s2p/preview/conservation")
 print(f"\n=== s2p conservation: HTTP {code6}")
 if isinstance(tab, dict):
     print(f"  keys: {sorted(tab.keys())}")

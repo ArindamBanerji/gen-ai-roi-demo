@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const PORT = process.env.BACKEND_PORT || '8001';
-const BASE = `http://localhost:${PORT}`;
+const BASE = `http://127.0.0.1:${PORT}`;
 
 test.describe('Checkpoint integrity', () => {
 
