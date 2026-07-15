@@ -251,7 +251,7 @@ class InterventionControls:
         try:
             rows = await self.db.run_query(
                 """MATCH (i:Intervention)
-                   RETURN i ORDER BY i.timestamp DESC LIMIT 1""",
+                   RETURN i ORDER BY i.timestamp_epoch DESC LIMIT 1""",
             )
             if rows:
                 node = rows[0].get("i") or rows[0]
@@ -289,8 +289,9 @@ class InterventionControls:
                           i.initiated_by AS initiated_by,
                           i.reason       AS reason,
                           i.timestamp    AS timestamp,
+                          i.timestamp_epoch AS timestamp_epoch,
                           i.details      AS details
-                   ORDER BY i.timestamp DESC
+                   ORDER BY i.timestamp_epoch DESC
                    LIMIT $limit""",
                 {"limit": limit},
             )
@@ -312,7 +313,7 @@ class InterventionControls:
                 "type":         r.get("type"),
                 "initiated_by": r.get("initiated_by"),
                 "reason":       r.get("reason"),
-                "timestamp":    str(r.get("timestamp") or ""),
+                "timestamp":    str(r.get("timestamp") or r.get("timestamp_epoch") or ""),
                 "details":      details,
             })
         return records
@@ -338,6 +339,7 @@ class InterventionControls:
                     type:            $type,
                     initiated_by:    $initiated_by,
                     reason:          $reason,
+                    timestamp:       $timestamp,
                     timestamp_epoch: $timestamp_epoch,
                     details:         $details
                 })""",
@@ -346,6 +348,7 @@ class InterventionControls:
                     "type":            intervention_type,
                     "initiated_by":    initiated_by,
                     "reason":          reason,
+                    "timestamp":       timestamp,
                     "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
                     "details":         json.dumps(details),
                 },

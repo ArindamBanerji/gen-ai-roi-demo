@@ -19,7 +19,7 @@ from app.services.gae_state import get_learning_state, save_learning_state, get_
 from app.db.neo4j import neo4j_client
 from app.graph_schema import _S
 from app.models.schemas import ProcessAlertRequest
-from app.domains.soc.config import SOCDomainConfig, SOC_CATEGORIES
+from app.domains.soc.config import SOCDomainConfig, SOC_CATEGORIES, SOC_FACTORS, SCORER_ACTIONS
 from app.domains.soc.orchestrator import compute_factor_vector
 from gae.evolution import (
     get_evolution_summary as get_ledger_evolution_summary,
@@ -566,9 +566,46 @@ async def simulate_failure():
     Simulate a failed eval gate for demonstration purposes.
     Shows what happens when Safe Action check fails.
     """
+    scorer = get_profile_scorer()
+    if scorer is None:
+        raise HTTPException(status_code=503, detail="ProfileScorer not initialized")
+
+    injected = 0
+    n_factors = int(getattr(scorer, "n_factors", None) or len(SOC_FACTORS))
+    n_actions = int(getattr(scorer, "n_actions", None) or len(SCORER_ACTIONS))
+    n_categories = int(getattr(scorer, "n_categories", len(SOC_CATEGORIES)))
+    for idx in range(20):
+        category_index = idx % max(n_categories, 1)
+        factors = [
+            0.9 if (factor_index + idx) % 3 == 0 else 0.1
+            for factor_index in range(n_factors)
+        ]
+        result = scorer.score(factors, category_index=category_index)
+        wrong_action = (int(result.action_index) + 1) % max(n_actions, 1)
+        scorer.update(
+            f=factors,
+            category_index=category_index,
+            action_index=int(result.action_index),
+            correct=False,
+            gt_action_index=wrong_action,
+            confidence=float(getattr(result, "confidence", 1.0)),
+        )
+        injected += 1
+
+    if callable(getattr(scorer, "set_conservation_status", None)):
+        scorer.set_conservation_status("AMBER")
+    try:
+        save_learning_state()
+    except Exception:
+        pass
+
+    conservation_status = str(getattr(scorer, "_conservation_status", "AMBER"))
 
     return {
         "simulated": True,
+        "decisions_injected": injected,
+        "provenance": "simulated",
+        "conservation_status": conservation_status,
         "simulated_check": "Safe Action",
         "eval_gate": {
             "checks": [

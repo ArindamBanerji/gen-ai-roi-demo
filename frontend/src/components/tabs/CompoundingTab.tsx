@@ -29,6 +29,7 @@ import {
   getGAEConfidenceTrajectory, getGAETrustCurve, getGAEBeforeAfter,
   getEvolutionEvents, getCentroidEvolution, getProfileState,
   uploadEvalCSV, fetchEvalTemplates, fetchLearningHealth,
+  fetchInterventionHistory, simulateFailedGate,
 } from '../../lib/api'
 import { domainConfig } from '../../lib/domain'
 import { ensureArray } from '../../lib/guards'
@@ -213,6 +214,11 @@ interface AuditVerification {
   chain_length: number; verified: boolean
   first_record: string | null; last_record: string | null
   broken_at_index?: number
+}
+
+interface InterventionHistoryResponse {
+  interventions?: Array<Record<string, unknown>>
+  count?: number
 }
 
 interface EvidenceRoomEntry {
@@ -674,6 +680,10 @@ export default function CompoundingTab() {
   const [evidenceRoomLoading, setEvidenceRoomLoading] = useState(false)
   const [evidenceRoomError, setEvidenceRoomError] = useState<string | null>(null)
   const [evidenceExporting, setEvidenceExporting] = useState(false)
+  const [latestIntervention, setLatestIntervention] = useState<Record<string, unknown> | null>(null)
+  const [interventionLoading, setInterventionLoading] = useState(false)
+  const [failureLoading, setFailureLoading] = useState(false)
+  const [failureMessage, setFailureMessage] = useState<string | null>(null)
 
   // ALL HOOKS MUST BE AT TOP LEVEL
   const animatedNodesEnd = useCountUp(data?.headline.nodes_start ?? 0, data?.headline.nodes_end ?? 0, 3000, 0, !!data && !loading)
@@ -746,6 +756,40 @@ export default function CompoundingTab() {
     finally { setAuditLoading(false) }
   }
   useEffect(() => { loadAuditData() }, [])
+
+  const loadLatestIntervention = async () => {
+    setInterventionLoading(true)
+    try {
+      const payload = await fetchInterventionHistory(1) as InterventionHistoryResponse
+      setLatestIntervention(payload.interventions?.[0] ?? null)
+    } catch (error) {
+      console.error('[CompoundingTab] Failed to load interventions:', error)
+      setLatestIntervention(null)
+    } finally {
+      setInterventionLoading(false)
+    }
+  }
+  useEffect(() => { loadLatestIntervention() }, [])
+
+  const handleSimulateFailure = async () => {
+    setFailureLoading(true)
+    setFailureMessage(null)
+    try {
+      const result = await simulateFailedGate() as { execution?: { status?: string; reason?: string }; eval_gate?: { overall_passed?: boolean } }
+      const reason = result.execution?.reason ?? 'Conservation guard degraded to AMBER; expansion paused.'
+      setFailureMessage(`AMBER / degraded: ${reason}`)
+      await Promise.all([
+        loadLatestIntervention(),
+        loadEvidenceRoom(),
+        loadData(),
+      ])
+    } catch (error) {
+      console.error('[CompoundingTab] Simulate failure failed:', error)
+      setFailureMessage('Simulate Failure unavailable')
+    } finally {
+      setFailureLoading(false)
+    }
+  }
 
   const loadEvidenceRoom = async () => {
     setEvidenceRoomLoading(true)
@@ -1185,6 +1229,54 @@ export default function CompoundingTab() {
 
       {/* ── Simulation Panel ────────────────────────────────────────────────── */}
       <SimulationPanel onSimulationComplete={loadGAECharts} />
+
+      <section className="rounded-lg border border-amber-300 bg-amber-50 p-5 shadow-sm" data-testid="staged-trust-panel">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Staged trust</p>
+            <h3 className="mt-1 text-lg font-bold text-slate-950">The system said no</h3>
+            <p className="mt-2 max-w-3xl text-sm text-slate-700">
+              Conservation refused auto-expansion when measured accuracy moved below the threshold.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleSimulateFailure}
+            disabled={failureLoading}
+            className="inline-flex items-center gap-2 rounded-md bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            <Shield className="h-4 w-4" />
+            {failureLoading ? 'Simulating...' : 'Simulate Failure'}
+          </button>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="rounded-md border border-amber-200 bg-white p-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest intervention</span>
+              <ProvenanceBadge source="real_measured" />
+            </div>
+            <p className="mt-2 text-sm font-semibold text-slate-900">
+              {interventionLoading
+                ? 'Loading intervention history...'
+                : latestIntervention
+                  ? String(latestIntervention.action ?? latestIntervention.type ?? latestIntervention.reason ?? 'learning paused')
+                  : 'No intervention recorded yet'}
+            </p>
+            <p className="mt-1 text-xs text-slate-600">
+              {latestIntervention
+                ? String(latestIntervention.reason ?? latestIntervention.message ?? 'Automatic expansion paused by conservation gate.')
+                : 'Refusal events appear here after the conservation gate pauses learning or expansion.'}
+            </p>
+          </div>
+          <div className="rounded-md border border-amber-200 bg-white p-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Red-team result</span>
+            <p className="mt-2 text-sm font-semibold text-slate-900">
+              {failureMessage ?? 'Click Simulate Failure to force the AMBER / degraded path.'}
+            </p>
+            <p className="mt-1 text-xs text-slate-600">The presenter-visible action is blocked, not silently accepted.</p>
+          </div>
+        </div>
+      </section>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6">

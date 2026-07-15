@@ -115,6 +115,10 @@ export async function simulateFailedGate() {
   return fetchJSON('/eval/simulate-failure', { method: 'POST' })
 }
 
+export async function fetchInterventionHistory(limit: number = 1) {
+  return fetchJSON(`/soc/interventions/history?limit=${limit}`)
+}
+
 export async function getRewardSummary() {
   return fetchJSON('/rl/reward-summary')
 }
