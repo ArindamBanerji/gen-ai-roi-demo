@@ -59,10 +59,10 @@ test('s2p preview conservation shows green projected status and penalty ratio', 
 
   const conservation = s2pMain(page).locator('div').filter({ hasText: /^Conservation/ }).first()
   await expect(conservation).toBeVisible()
-  await expect(conservation.getByText(/GREEN/i).first()).toBeVisible()
+  await expect(conservation.getByText(/^GREEN$/i).first()).toBeVisible()
   await expect(conservation.getByText(/illustration|projected/i).first()).toBeVisible()
   await expect(conservation.getByText(/5:1/i).first()).toBeVisible()
-  await expect(conservation.getByText(/Verified decisions/i).first()).toBeVisible()
+  await expect(conservation.getByText(/^Verified decisions$/i).first()).toBeVisible()
 })
 
 test('s2p preview compounding curve shows projected milestones', async ({ page }) => {
@@ -83,8 +83,8 @@ test('s2p preview supplier profile shows Chen-Lin, exception rate, and OTIF', as
   const supplierProfile = s2pMain(page).locator('div').filter({ hasText: 'Supplier Profile' }).first()
   await expect(supplierProfile).toBeVisible()
   await expect(supplierProfile.getByText(/Aster|Pacifica|Northstar|Novatek/i).first()).toBeVisible()
-  await expect(supplierProfile.getByText(/Exception rate/i).first()).toBeVisible()
-  await expect(supplierProfile.getByText(/OTIF score/i).first()).toBeVisible()
+  await expect(supplierProfile.getByText(/^Exception rate$/i).first()).toBeVisible()
+  await expect(supplierProfile.getByText(/^OTIF score$/i).first()).toBeVisible()
 })
 
 test('soc to s2p to soc round trip keeps both tabs working', async ({ page }) => {
@@ -94,7 +94,7 @@ test('soc to s2p to soc round trip keeps both tabs working', async ({ page }) =>
 
   await goToS2PPreview(page)
   if (await s2pDisconnected(page)) return
-  await expectVisibleText(page, /Exception Queue/i)
+  await expectVisibleText(page, /^Exception Queue$/i)
   await expectVisibleText(page, /Conservation/i)
 
   await page.getByRole('button', { name: /SOC Analytics/i }).first().click()
@@ -118,7 +118,7 @@ test('s2p preview conservation and queue are populated together', async ({ page 
   await expect(s2pMain(page).locator('table tbody tr').first()).toBeVisible()
   await expectVisibleText(page, /\d+ total/i)
   await expectVisibleText(page, /Accuracy/i)
-  await expectVisibleText(page, /Verified decisions/i)
+  await expectVisibleText(page, /^Verified decisions$/i)
 })
 
 test('s2p preview all four panels are populated before the closing narrative', async ({ page }) => {
@@ -126,10 +126,10 @@ test('s2p preview all four panels are populated before the closing narrative', a
   if (await s2pDisconnected(page)) return
 
   const main = s2pMain(page)
-  await expect(main.getByText(/Exception Queue/i).first()).toBeVisible()
+  await expect(main.getByText(/^Exception Queue$/i).first()).toBeVisible()
   await expect(main.getByText(/^Conservation$/i).first()).toBeVisible()
-  await expect(main.getByText(/Compounding Curve/i).first()).toBeVisible()
-  await expect(main.getByText(/Supplier Profile/i).first()).toBeVisible()
+  await expect(main.getByText(/^Compounding Curve$/i).first()).toBeVisible()
+  await expect(main.getByText(/^Supplier Profile$/i).first()).toBeVisible()
 
   const bodyText = await main.innerText()
   expect(bodyText.indexOf('Exception Queue')).toBeLessThan(bodyText.indexOf('The engine is domain-agnostic'))

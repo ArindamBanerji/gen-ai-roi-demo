@@ -3,6 +3,7 @@ Runtime Evolution API - THE KEY DIFFERENTIATOR
 Tab 2 endpoints: Deployment registry, eval gates, TRIGGERED_EVOLUTION
 """
 import dataclasses
+import copy
 
 from fastapi import APIRouter, HTTPException, Query
 from typing import Any, Optional
@@ -15,7 +16,7 @@ from app.services.reasoning import narrator
 from app.services.situation import analyze_situation
 from app.services import evolver
 from app.services.event_bus import event_bus, DecisionMade, GraphMutated
-from app.services.gae_state import get_learning_state, save_learning_state, get_profile_scorer
+from app.services.gae_state import get_learning_state, get_profile_scorer, acquire_scorer
 from app.db.neo4j import neo4j_client
 from app.graph_schema import _S
 from app.models.schemas import ProcessAlertRequest
@@ -30,6 +31,21 @@ from gae.scoring import score_alert
 
 
 router = APIRouter()
+
+
+def _snapshot_scorer_state(scorer: Any) -> dict[str, Any]:
+    state = getattr(scorer, "__dict__", None)
+    if not isinstance(state, dict):
+        return {}
+    return copy.deepcopy(state)
+
+
+def _restore_scorer_state(scorer: Any, snapshot: dict[str, Any]) -> None:
+    state = getattr(scorer, "__dict__", None)
+    if not isinstance(state, dict):
+        return
+    state.clear()
+    state.update(snapshot)
 
 
 # ============================================================================
@@ -566,40 +582,40 @@ async def simulate_failure():
     Simulate a failed eval gate for demonstration purposes.
     Shows what happens when Safe Action check fails.
     """
-    scorer = get_profile_scorer()
-    if scorer is None:
-        raise HTTPException(status_code=503, detail="ProfileScorer not initialized")
-
     injected = 0
-    n_factors = int(getattr(scorer, "n_factors", None) or len(SOC_FACTORS))
-    n_actions = int(getattr(scorer, "n_actions", None) or len(SCORER_ACTIONS))
-    n_categories = int(getattr(scorer, "n_categories", len(SOC_CATEGORIES)))
-    for idx in range(20):
-        category_index = idx % max(n_categories, 1)
-        factors = [
-            0.9 if (factor_index + idx) % 3 == 0 else 0.1
-            for factor_index in range(n_factors)
-        ]
-        result = scorer.score(factors, category_index=category_index)
-        wrong_action = (int(result.action_index) + 1) % max(n_actions, 1)
-        scorer.update(
-            f=factors,
-            category_index=category_index,
-            action_index=int(result.action_index),
-            correct=False,
-            gt_action_index=wrong_action,
-            confidence=float(getattr(result, "confidence", 1.0)),
-        )
-        injected += 1
-
-    if callable(getattr(scorer, "set_conservation_status", None)):
-        scorer.set_conservation_status("AMBER")
     try:
-        save_learning_state()
-    except Exception:
-        pass
+        async with acquire_scorer() as scorer:
+            snapshot = _snapshot_scorer_state(scorer)
+            try:
+                n_factors = int(getattr(scorer, "n_factors", None) or len(SOC_FACTORS))
+                n_actions = int(getattr(scorer, "n_actions", None) or len(SCORER_ACTIONS))
+                n_categories = int(getattr(scorer, "n_categories", len(SOC_CATEGORIES)))
+                for idx in range(20):
+                    category_index = idx % max(n_categories, 1)
+                    factors = [
+                        0.9 if (factor_index + idx) % 3 == 0 else 0.1
+                        for factor_index in range(n_factors)
+                    ]
+                    result = scorer.score(factors, category_index=category_index)
+                    wrong_action = (int(result.action_index) + 1) % max(n_actions, 1)
+                    scorer.update(
+                        f=factors,
+                        category_index=category_index,
+                        action_index=int(result.action_index),
+                        correct=False,
+                        gt_action_index=wrong_action,
+                        confidence=float(getattr(result, "confidence", 1.0)),
+                    )
+                    injected += 1
 
-    conservation_status = str(getattr(scorer, "_conservation_status", "AMBER"))
+                if callable(getattr(scorer, "set_conservation_status", None)):
+                    scorer.set_conservation_status("AMBER")
+
+                conservation_status = str(getattr(scorer, "_conservation_status", "AMBER"))
+            finally:
+                _restore_scorer_state(scorer, snapshot)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     return {
         "simulated": True,
