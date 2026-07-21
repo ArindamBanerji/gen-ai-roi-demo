@@ -302,14 +302,20 @@ class Neo4jClient:
         BACKLOG-020 Phase 1: used on startup to sync LearningState.decision_count
         from the graph so the count survives server restarts.
 
-        Uses d.outcome IS NOT NULL as the verified predicate -- this is the field
-        set by both the triage outcome endpoint and all ingest scripts.
+        Uses the D2 verified predicate scoped to SOC Decisions. Legacy SOC
+        rows use embedded outcome properties; newer rows use status.
         Falls back gracefully to 0 on any error.
         """
         try:
             results = await self.run_query(
-                "MATCH (d:Decision) WHERE d.outcome IS NOT NULL "
-                "RETURN count(d) AS cnt"
+                "MATCH (d:Decision) "
+                "WHERE (d.domain = 'soc' OR d.domain IS NULL) "
+                "AND (d.archived IS NULL OR d.archived <> true) "
+                "AND ("
+                "(d.status IS NOT NULL AND d.status IN ['confirmed', 'overridden']) "
+                "OR (d.status IS NULL AND d.outcome IS NOT NULL)"
+                ") "
+                "RETURN count(DISTINCT d.decision_id) AS cnt"
             )
             return int(results[0]["cnt"]) if results else 0
         except (TypeError, ValueError, KeyError):
@@ -325,8 +331,11 @@ class Neo4jClient:
         """
         try:
             results = await self.run_query(
-                "MATCH (d:Decision) WHERE d.correct = true "
-                "RETURN count(d) AS cnt"
+                "MATCH (d:Decision) "
+                "WHERE (d.domain = 'soc' OR d.domain IS NULL) "
+                "AND (d.archived IS NULL OR d.archived <> true) "
+                "AND d.status IS NULL AND d.correct = true "
+                "RETURN count(DISTINCT d.decision_id) AS cnt"
             )
             return int(results[0]["cnt"]) if results else 0
         except (TypeError, ValueError, KeyError):
