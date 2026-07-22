@@ -582,6 +582,13 @@ export default function GovernanceTab() {
     ].filter((item): item is { key: string; article: EuAiActArticle } => Boolean(item.article)),
     [socCompliance]
   )
+  const hasRuntimeEvolutionEvents = useMemo(() => {
+    const rows = ensureArray<RLExplorationEntry>(rlExplorationDemo?.exploration_log)
+    return rows.some((row) => (
+      ensureNumber(row.proposals_generated, 0) > 0
+      || ensureNumber(row.proposals_accepted, 0) > 0
+    ))
+  }, [rlExplorationDemo])
 
   const conservation = evidenceRoom?.conservation
   const hashChain = evidenceRoom?.hash_chain
@@ -838,7 +845,7 @@ export default function GovernanceTab() {
       >
         {evolutionStatus === 'loading' ? (
           <div className="py-8 text-center text-sm text-slate-400">Loading evolution events...</div>
-        ) : evolutionEvents.length === 0 ? (
+        ) : evolutionEvents.length === 0 && !hasRuntimeEvolutionEvents ? (
           <div className="py-8 text-center text-sm italic text-slate-400">
             No evolution events yet. The system will generate variants as graph signals accumulate.
           </div>
