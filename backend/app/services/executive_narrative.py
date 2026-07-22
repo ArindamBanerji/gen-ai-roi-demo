@@ -546,17 +546,27 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
             "ORDER BY c.last_seen DESC LIMIT 3"
         )
         for r in rows:
-            alert_count = int(r.get("alert_count") or 0)
-            campaign_name = str(r.get("name") or "unknown")
+            alert_count_raw = r.get("alert_count")
+            cat_seq_raw = r.get("category_sequence")
+            if alert_count_raw in (None, "") or cat_seq_raw in (None, ""):
+                continue
+            alert_count = int(alert_count_raw)
             # category_sequence is stored as a JSON string in AGE (no array props).
             # First element gives a \w+-compatible token ("credential_theft", etc.)
             # which satisfies the E2E regex /\d+ alerts in \w+ cluster/.
-            cat_seq_raw = r.get("category_sequence") or "[]"
             try:
                 cats = json.loads(cat_seq_raw) if isinstance(cat_seq_raw, str) else cat_seq_raw
-                first_cat = cats[0] if isinstance(cats, list) and cats else (campaign_name.split() or ["unknown"])[0]
+                first_cat = next(
+                    (category for category in cats if isinstance(category, str) and category.strip()),
+                    None,
+                ) if isinstance(cats, list) else None
             except Exception:
-                first_cat = (campaign_name.split() or ["unknown"])[0]
+                first_cat = None
+            if not first_cat:
+                campaign_name = r.get("name")
+                if not isinstance(campaign_name, str) or not campaign_name.strip():
+                    continue
+                first_cat = campaign_name.split()[0]
             campaign_summaries.append(f"{alert_count} alerts in {first_cat} cluster")
     except Exception:
         pass

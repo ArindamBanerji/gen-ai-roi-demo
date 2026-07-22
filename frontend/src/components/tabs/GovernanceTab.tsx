@@ -584,7 +584,7 @@ export default function GovernanceTab() {
   )
   const hasRuntimeEvolutionEvents = useMemo(() => {
     const rows = ensureArray<RLExplorationEntry>(rlExplorationDemo?.exploration_log)
-    return rows.some((row) => (
+    return ensureNumber(rlExplorationDemo?.summary?.total_proposals, 0) > 0 || rows.some((row) => (
       ensureNumber(row.proposals_generated, 0) > 0
       || ensureNumber(row.proposals_accepted, 0) > 0
     ))
