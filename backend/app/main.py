@@ -173,7 +173,7 @@ async def startup_event():
     else:
         print("[AUTH] SAML disabled -- all routes open")
 
-    from app.db.neo4j import neo4j_client, soc_decision_where
+    from app.db.neo4j import neo4j_client, soc_decision_where, _GRAPH_BACKEND
     import os as _os
     import pathlib as _pathlib
 
@@ -191,7 +191,7 @@ async def startup_event():
     except (OSError, PermissionError) as e:
         log.warning(f"[STARTUP] Cannot write .env: {e}")
 
-    _backend = _os.getenv("GRAPH_BACKEND", "neo4j").lower()
+    _backend = _GRAPH_BACKEND
 
     # Neo4j needs an explicit connect(); AGEClient.connect() is a no-op.
     if _backend == "neo4j":

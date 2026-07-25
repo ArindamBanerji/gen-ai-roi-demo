@@ -13,6 +13,8 @@ from typing import Optional, Dict, Any, List, cast
 from contextlib import asynccontextmanager
 import pathlib as _pathlib
 
+from copilot_sdk.config import GraphConfig, GraphConfigError
+
 # ── Block 8.5: load .env BEFORE reading GRAPH_BACKEND ────────────────────────
 # This module is imported before main.py's load_dotenv() runs (Python import
 # order).  Loading .env here ensures GRAPH_BACKEND is visible to the switcher
@@ -25,7 +27,17 @@ try:
 except ImportError:
     pass
 
-_GRAPH_BACKEND = os.getenv("GRAPH_BACKEND", "neo4j").lower()
+try:
+    _GRAPH_CONFIG = GraphConfig.load("soc")
+    _GRAPH_BACKEND = _GRAPH_CONFIG.backend
+except GraphConfigError:
+    # Preserve the explicit legacy Neo4j development path. AGE/SOC
+    # production configuration remains fail-closed through GraphConfig.
+    if os.getenv("GRAPH_BACKEND", "").strip().lower() == "neo4j":
+        _GRAPH_CONFIG = None
+        _GRAPH_BACKEND = "neo4j"
+    else:
+        raise
 # ─────────────────────────────────────────────────────────────────────────────
 
 logger = logging.getLogger(__name__)
@@ -507,7 +519,10 @@ if _GRAPH_BACKEND == "age":
         from ci_platform.graph import get_graph_client as _age_factory
         import ci_platform.graph.age_client as _age_mod
         _age_mod._client = None
-        neo4j_client = _age_factory()  # type: ignore[assignment]
+        neo4j_client = _age_factory(  # type: ignore[assignment]
+            dsn=_GRAPH_CONFIG.dsn if _GRAPH_CONFIG else None,
+            graph_name=_GRAPH_CONFIG.graph if _GRAPH_CONFIG else None,
+        )
         print(
             f"[BACKEND] GRAPH_BACKEND=age -- "
             f"Client={type(neo4j_client).__name__} "
@@ -552,4 +567,11 @@ if _GRAPH_BACKEND == "age":
         ) from _exc
 else:
     neo4j_client = Neo4jClient()
+    if _GRAPH_CONFIG is not None:
+        if _GRAPH_CONFIG.neo4j_uri:
+            neo4j_client.uri = _GRAPH_CONFIG.neo4j_uri
+        if _GRAPH_CONFIG.neo4j_user:
+            neo4j_client.user = _GRAPH_CONFIG.neo4j_user
+        if _GRAPH_CONFIG.neo4j_password:
+            neo4j_client.password = _GRAPH_CONFIG.neo4j_password
 # ─────────────────────────────────────────────────────────────────────────────
