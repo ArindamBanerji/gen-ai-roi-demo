@@ -225,13 +225,14 @@ async def test_soc_verified_query_excludes_no_domain_unverified_rows():
 
 
 @pytest.mark.asyncio
-async def test_soc_verified_query_shape_allows_null_domain_but_not_other_domain():
+async def test_soc_verified_query_shape_uses_exact_domain_and_active_filter():
     graph = _SocConservationGraph([_row(SOC_CATEGORIES[0], 1, 1)])
 
     await LearningHealthMonitor._apply_soc_conservation_components({}, graph)
 
     query = graph.queries[0]
-    assert "d.domain = 'soc' OR d.domain IS NULL" in query
+    assert "d.domain = 'soc'" in query
+    assert "(d.archived IS NULL OR d.archived <> true)" in query
     assert "d.category IN [" in query
     assert "credential_access" in query
     assert "d.verified_at_epoch IS NOT NULL" in query

@@ -4,6 +4,7 @@ import asyncio
 import os
 
 from app.domains.soc.config import SOC_CATEGORIES
+from app.db.neo4j import soc_decision_where
 
 pytestmark = pytest.mark.skipif(
     os.getenv("GRAPH_BACKEND") != "age",
@@ -18,7 +19,8 @@ def graph_client():
 @pytest.mark.asyncio
 async def test_no_orphan_decisions(graph_client):
     r = await graph_client.run_query(
-        "MATCH (d:Decision) WHERE NOT EXISTS((d)-[:DECIDED_ON]->()) "
+        f"MATCH (d:Decision) WHERE {soc_decision_where(active_only=False)} "
+        "AND NOT EXISTS((d)-[:DECIDED_ON]->()) "
         "RETURN count(d) AS n"
     )
     orphans = int(r[0]["n"])
@@ -52,7 +54,8 @@ async def test_correct_decisions_nonzero(graph_client):
 @pytest.mark.asyncio
 async def test_categories_are_canonical(graph_client):
     r = await graph_client.run_query(
-        "MATCH (d:Decision) RETURN DISTINCT d.category AS cat"
+        f"MATCH (d:Decision) WHERE {soc_decision_where(active_only=False)} "
+        "RETURN DISTINCT d.category AS cat"
     )
     cats = {row["cat"] for row in r if row["cat"]}
     valid = set(SOC_CATEGORIES)

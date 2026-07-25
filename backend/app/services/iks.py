@@ -31,6 +31,7 @@ from typing import Any, Optional, cast
 import numpy as np
 
 from app.domains.soc.config import compute_phase3_minimum as _p3min
+from app.db.neo4j import soc_decision_where
 from app.framework.iks_base import (  # noqa: F401 -- re-export for callers
     compute_iks as _compute_iks_base,
     interpret,
@@ -209,7 +210,8 @@ async def compute_iks_v2(neo4j_service) -> dict:
     _neo4j_query_ok = True
     try:
         rows = await neo4j_service.run_query(
-            "MATCH (d:Decision) RETURN count(d) AS total", {}
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "RETURN count(d) AS total", {}
         )
         total_decisions = int((rows[0].get("total") or 0) if rows else 0)
     except Exception as exc:
@@ -244,7 +246,8 @@ async def compute_iks_v2(neo4j_service) -> dict:
     _dm_query_ok = True
     try:
         rows = await neo4j_service.run_query(
-            "MATCH (d:Decision) RETURN d.category AS category, count(d) AS n", {}
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "RETURN d.category AS category, count(d) AS n", {}
         )
         cat_counts = {
             r["category"]: int(r.get("n") or 0)
@@ -269,7 +272,8 @@ async def compute_iks_v2(neo4j_service) -> dict:
     # ── Component 3: Trust Coverage ──────────────────────────────────────────
     try:
         rows = await neo4j_service.run_query(
-            "MATCH (d:Decision) WHERE d.confidence >= 0.70 RETURN count(d) AS high_conf", {}
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "AND d.confidence >= 0.70 RETURN count(d) AS high_conf", {}
         )
         high_conf = int((rows[0].get("high_conf") or 0) if rows else 0)
     except Exception as exc:
@@ -283,7 +287,8 @@ async def compute_iks_v2(neo4j_service) -> dict:
         rows = await neo4j_service.run_query(
             """
             MATCH (d:Decision)
-            WHERE d.outcome IS NOT NULL
+            WHERE """ + soc_decision_where() + """
+              AND d.outcome IS NOT NULL
             RETURN d.category AS category,
                    avg(CASE WHEN d.outcome = 'correct' THEN 1.0 ELSE 0.0 END) AS accuracy
             """,

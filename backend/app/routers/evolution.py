@@ -17,7 +17,7 @@ from app.services.situation import analyze_situation
 from app.services import evolver
 from app.services.event_bus import event_bus, DecisionMade, GraphMutated
 from app.services.gae_state import get_learning_state, get_profile_scorer, acquire_scorer
-from app.db.neo4j import neo4j_client
+from app.db.neo4j import neo4j_client, soc_decision_where
 from app.graph_schema import _S
 from app.models.schemas import ProcessAlertRequest
 from app.domains.soc.config import SOCDomainConfig, SOC_CATEGORIES, SOC_FACTORS, SCORER_ACTIONS
@@ -62,7 +62,8 @@ async def get_deployments():
     # Get decision count from AGE (proxy for learned pattern coverage)
     try:
         _rows = await neo4j_client.run_query(
-            "MATCH (d:Decision)-[:DECIDED_ON]->() RETURN count(d) AS n"
+            f"MATCH (d:Decision)-[:DECIDED_ON]->() "
+            f"WHERE {soc_decision_where()} RETURN count(d) AS n"
         )
         pattern_count = int(_rows[0]["n"]) if _rows else 0
     except Exception:
@@ -222,6 +223,7 @@ async def process_alert(request: ProcessAlertRequest):
                 decision_id:     $decision_id,
                 action:          $action,
                 confidence:      $confidence,
+                domain:          'soc',
                 factor_vector:   $fv,
                 reasoning:       $reasoning,
                 pattern_id:      $pattern_id,
@@ -264,6 +266,7 @@ async def process_alert(request: ProcessAlertRequest):
         if _entry_hash_evo:
             await neo4j_client.run_query(
                 f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
+                f"WHERE {soc_decision_where()} "
                 f"SET d.entry_hash = {_S(_entry_hash_evo)}"
             )
 
@@ -674,6 +677,7 @@ async def get_recent_evolution():
     try:
         rows = await neo4j_client.run_query(
             "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
+            f"WHERE {soc_decision_where()} "
             "RETURN d.decision_id AS did, d.action AS action, "
             "a.alert_id AS aid, d.confidence AS conf, "
             "d.timestamp_epoch AS ts "
@@ -916,7 +920,8 @@ async def get_graph_stats():
             "MATCH ()-[r]->() RETURN count(r) AS rel_count"
         )
         dec_result = await neo4j_client.run_query(
-            "MATCH (d:Decision) RETURN count(d) AS dec_count"
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "RETURN count(d) AS dec_count"
         )
         return {
             "nodes_traversed": node_result[0]["node_count"] if node_result else 0,

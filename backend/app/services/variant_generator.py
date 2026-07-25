@@ -21,6 +21,7 @@ from gae.evolution import (
 from app.services import variant_registry as default_registry
 from app.domains.soc.config import DEFAULT_CATEGORY
 from app.services.variant_registry import CANDIDATE, VariantRecord
+from app.db.neo4j import soc_decision_where
 
 log = logging.getLogger(__name__)
 
@@ -227,6 +228,7 @@ async def _load_accuracy_trajectory(neo4j_client: Any) -> dict[str, Any] | None:
             rows = await neo4j_client.run_query(
                 """
                 MATCH (d:Decision)
+                WHERE """ + soc_decision_where() + """
                 RETURN d.category AS category, count(d) AS cnt
                 """
             )
@@ -410,24 +412,20 @@ async def _get_per_category_accuracy_trends(neo4j_client: Any) -> dict[str, dict
     recent_cutoff = now_ms - window_ms
     prior_cutoff = now_ms - (2 * window_ms)
 
-    recent_query = f"""
-    MATCH (d:Decision)
-    WHERE d.outcome IS NOT NULL
-      AND d.correct IS NOT NULL
-      AND d.category IS NOT NULL
-      AND d.verified_at_epoch >= {recent_cutoff}
-      AND d.verified_at_epoch < {now_ms}
-    RETURN d.category AS category, d.correct AS correct
-    """
-    prior_query = f"""
-    MATCH (d:Decision)
-    WHERE d.outcome IS NOT NULL
-      AND d.correct IS NOT NULL
-      AND d.category IS NOT NULL
-      AND d.verified_at_epoch >= {prior_cutoff}
-      AND d.verified_at_epoch < {recent_cutoff}
-    RETURN d.category AS category, d.correct AS correct
-    """
+    recent_query = (
+        f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+        f"AND d.outcome IS NOT NULL AND d.correct IS NOT NULL "
+        f"AND d.category IS NOT NULL AND d.verified_at_epoch >= {recent_cutoff} "
+        f"AND d.verified_at_epoch < {now_ms} "
+        "RETURN d.category AS category, d.correct AS correct"
+    )
+    prior_query = (
+        f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+        f"AND d.outcome IS NOT NULL AND d.correct IS NOT NULL "
+        f"AND d.category IS NOT NULL AND d.verified_at_epoch >= {prior_cutoff} "
+        f"AND d.verified_at_epoch < {recent_cutoff} "
+        "RETURN d.category AS category, d.correct AS correct"
+    )
 
     try:
         recent_rows = await run_query(recent_query)
@@ -670,7 +668,8 @@ class CoverageGapRule:
     async def detect(self, neo4j_client: Any) -> Optional[GraphSignal]:
         try:
             rows = await neo4j_client.run_query(
-                "MATCH (d:Decision) WHERE d.category IS NOT NULL "
+                f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+                "AND d.category IS NOT NULL "
                 "RETURN d.category AS category, count(*) AS cnt"
             )
             counts: dict[str, int] = {}

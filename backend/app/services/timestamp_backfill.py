@@ -20,11 +20,12 @@ async def backfill_decision_timestamps() -> dict:
 
     Returns a dict with keys: updated (int), skipped (bool), reason (str).
     """
-    from app.db.neo4j import neo4j_client  # noqa: PLC0415
+    from app.db.neo4j import neo4j_client, soc_decision_where  # noqa: PLC0415
     from app.graph_schema import _S         # noqa: PLC0415
 
     check = await neo4j_client.run_query(
-        "MATCH (d:Decision) WHERE d.origin = 'zero_day_synthetic' "
+        f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+        "AND d.origin = 'zero_day_synthetic' "
         "RETURN max(d.timestamp_epoch) AS max_ts, min(d.timestamp_epoch) AS min_ts, count(d) AS cnt"
     )
     if not check:
@@ -44,7 +45,8 @@ async def backfill_decision_timestamps() -> dict:
         pass
 
     id_rows = await neo4j_client.run_query(
-        "MATCH (d:Decision) WHERE d.origin = 'zero_day_synthetic' "
+        f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+        "AND d.origin = 'zero_day_synthetic' "
         "RETURN d.decision_id AS decision_id ORDER BY d.decision_id ASC"
     )
     if not id_rows:
@@ -62,7 +64,8 @@ async def backfill_decision_timestamps() -> dict:
             continue
         new_ts = start_ms + i * step_ms
         await neo4j_client.run_query(
-            f"MATCH (d:Decision) WHERE d.decision_id = {_S(str(did))} "
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            f"AND d.decision_id = {_S(str(did))} "
             f"SET d.timestamp_epoch = {new_ts}"
         )
         updated += 1

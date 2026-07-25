@@ -12,7 +12,7 @@ import logging
 import re
 from dataclasses import asdict
 
-from app.db.neo4j import neo4j_client
+from app.db.neo4j import neo4j_client, soc_decision_where
 from app.models.responses import (
     AnalyticsResponse,
     CampaignsResponse,
@@ -663,7 +663,7 @@ async def get_detection_engineering():
         try:
             rows = await neo4j_client.run_query(
                 "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
-                "WHERE a.category = $cat "
+                f"WHERE {soc_decision_where()} AND a.category = $cat "
                 "RETURN count(d) AS total, "
                 "sum(CASE WHEN d.correct = false OR d.outcome = 'incorrect' "
                 "THEN 1 ELSE 0 END) AS fp_count",
@@ -774,7 +774,7 @@ async def get_threat_landscape():
 
         # Decision count
         dec_res = await neo4j_client.run_query(
-            "MATCH (d:Decision) RETURN count(d) AS c",
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} RETURN count(d) AS c",
         )
         if dec_res:
             decisions_total = int(dec_res[0].get("c") or 0)
@@ -808,7 +808,8 @@ async def get_threat_landscape():
 
         # BACKLOG-062: avg_confidence — mean confidence across all Decision nodes
         conf_res = await neo4j_client.run_query(
-            "MATCH (d:Decision) WHERE d.confidence IS NOT NULL "
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "AND d.confidence IS NOT NULL "
             "RETURN avg(d.confidence) AS avg_conf"
         )
         if conf_res and conf_res[0].get("avg_conf") is not None:
@@ -913,13 +914,15 @@ async def get_soc_analytics():
 
         # Metric 3 — Total decisions
         dec_res = await neo4j_client.run_query(
-            "MATCH (d:Decision) RETURN count(d) AS total_decisions"
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "RETURN count(d) AS total_decisions"
         )
         total_decisions = int(dec_res[0]["total_decisions"]) if dec_res else 0
 
         # Metric 4 — Correct decisions
         correct_res = await neo4j_client.run_query(
-            "MATCH (d:Decision) WHERE d.correct = true "
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "AND d.correct = true "
             "RETURN count(d) AS correct_decisions"
         )
         correct_decisions = int(correct_res[0]["correct_decisions"]) if correct_res else 0
@@ -1010,7 +1013,8 @@ async def get_learning_state_endpoint():
         rows = await neo4j_client.run_query(
             """
             MATCH (d:Decision)
-            WHERE d.verified_at_epoch IS NOT NULL
+            WHERE """ + soc_decision_where() + """
+              AND d.verified_at_epoch IS NOT NULL
             RETURN d.verified_at_epoch AS verified_at
             ORDER BY d.verified_at_epoch DESC
             LIMIT 1
@@ -1096,6 +1100,7 @@ async def explain_decision(decision_id: str):
         rows = await neo4j_client.run_query(
             """
             MATCH (d:Decision {decision_id: $decision_id})
+            WHERE """ + soc_decision_where() + """
             OPTIONAL MATCH (d)-[:DECIDED_ON]->(a:Alert)
             OPTIONAL MATCH (a)-[:INVOLVES]->(u:User)
             OPTIONAL MATCH (a)-[:DETECTED_ON]->(asset:Asset)
@@ -1163,7 +1168,8 @@ async def explain_decision(decision_id: str):
     try:
         cal_rows = await neo4j_client.run_query(
             "MATCH (d:Decision {category: $category}) "
-            "WHERE d.outcome IS NOT NULL RETURN count(d) AS cnt",
+            f"WHERE {soc_decision_where()} AND d.outcome IS NOT NULL "
+            "RETURN count(d) AS cnt",
             {"category": category},
         )
         calibration_count = int((cal_rows[0].get("cnt") or 0) if cal_rows else 0)
@@ -1178,6 +1184,7 @@ async def explain_decision(decision_id: str):
             """
             MATCH (d:Decision {decision_id: $decision_id})-[:DECIDED_ON]->(a:Alert)
             -[:HAS_INDICATOR]->(ti:ThreatIndicator)
+            WHERE """ + soc_decision_where() + """
             RETURN ti.source AS source LIMIT 1
             """,
             {"decision_id": decision_id},
@@ -2013,6 +2020,7 @@ async def get_accuracy_trajectory():
         rows = await neo4j_client.run_query(
             """
             MATCH (d:Decision)
+            WHERE """ + soc_decision_where() + """
             RETURN d.category AS category, count(d) AS cnt
             """,
             {},
@@ -2746,7 +2754,8 @@ async def _tab1_content() -> dict:
             rows = await neo4j_client.run_query(
                 f"""
                 MATCH (d:Decision)
-                WHERE d.category IN {_cats_literal} AND d.outcome IS NOT NULL
+                WHERE {soc_decision_where()} 
+                  AND d.category IN {_cats_literal} AND d.outcome IS NOT NULL
                 RETURN d.category AS category,
                        count(d) AS verified,
                        sum(CASE WHEN d.correct = false THEN 1 ELSE 0 END) AS overrides
@@ -2844,7 +2853,8 @@ async def _tab2_content() -> dict:
 
     try:
         rows = await neo4j_client.run_query(
-            "MATCH (d:Decision) WHERE d.confidence IS NOT NULL AND d.confidence < 0.50 "
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "AND d.confidence IS NOT NULL AND d.confidence < 0.50 "
             "RETURN count(d) AS cnt", {}
         )
         drift_alert_count = int((rows[0].get("cnt") or 0) if rows else 0)
@@ -3165,7 +3175,8 @@ async def _tab3_content() -> dict:
         try:
             _ov_rows = await neo4j_client.run_query(
                 f"MATCH (d:Decision) "
-                f"WHERE d.category = '{rec_category}' AND d.outcome IS NOT NULL "
+                f"WHERE {soc_decision_where()} "
+                f"AND d.category = '{rec_category}' AND d.outcome IS NOT NULL "
                 "RETURN count(d) AS verified, "
                 "sum(CASE WHEN d.correct = false THEN 1 ELSE 0 END) AS overrides",
                 {},
@@ -3181,7 +3192,8 @@ async def _tab3_content() -> dict:
     total_verified = 0
     try:
         _tv_rows = await neo4j_client.run_query(
-            "MATCH (d:Decision) WHERE d.outcome IS NOT NULL RETURN count(d) AS cnt",
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "AND d.outcome IS NOT NULL RETURN count(d) AS cnt",
             {},
         )
         if _tv_rows:
@@ -3244,7 +3256,8 @@ async def _tab4_content() -> dict:
 
     try:
         rows = await neo4j_client.run_query(
-            "MATCH (d:Decision) RETURN count(d) AS cnt", {}
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "RETURN count(d) AS cnt", {}
         )
         total_decisions = int((rows[0].get("cnt") or 0) if rows else 0)
     except Exception as _exc:
@@ -3264,7 +3277,8 @@ async def _tab4_content() -> dict:
         rows = await neo4j_client.run_query(
             """
             MATCH (d:Decision)
-            WHERE d.timestamp_epoch IS NOT NULL
+            WHERE """ + soc_decision_where() + """
+              AND d.timestamp_epoch IS NOT NULL
             RETURN min(d.timestamp_epoch) AS t_min, max(d.timestamp_epoch) AS t_max,
                    count(d) AS n
             """, {}
@@ -3280,7 +3294,8 @@ async def _tab4_content() -> dict:
 
     try:
         rows = await neo4j_client.run_query(
-            "MATCH (d:Decision) WHERE d.correct = true RETURN count(d) AS cnt", {}
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "AND d.correct = true RETURN count(d) AS cnt", {}
         )
         learning_events_count = int((rows[0].get("cnt") or 0) if rows else 0)
     except Exception as _exc:
@@ -3711,11 +3726,11 @@ async def get_analyst_eta_weights_endpoint():
 # GET /api/soc/analyst-weights — Block 9.1 D5 per-analyst η weighting (rich)
 # =============================================================================
 
-_ANALYST_DECISION_COUNT_QUERY = """
-MATCH (d:Decision)
-WHERE d.source = "live" AND d.analyst IS NOT NULL
-RETURN d.analyst AS analyst, count(d) AS total
-"""
+_ANALYST_DECISION_COUNT_QUERY = (
+    f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+    'AND d.source = "live" AND d.analyst IS NOT NULL '
+    "RETURN d.analyst AS analyst, count(d) AS total"
+)
 
 _ANALYST_WEIGHT_THRESHOLD = 20   # decisions required for "personalized" status
 

@@ -17,6 +17,8 @@ Usage (see routers/admin.py):
 
 import logging
 
+from app.db.neo4j import soc_decision_where
+
 log = logging.getLogger(__name__)
 
 
@@ -49,7 +51,10 @@ class StateManager:
     PERSISTENT_ORIGIN = "zero_day_synthetic"
 
     # Session filter: selects session/demo decisions, excludes persistent training data.
-    PERSISTENT_FILTER = "WHERE d.origin IS NULL OR d.origin <> 'zero_day_synthetic'"
+    PERSISTENT_FILTER = (
+        f"WHERE {soc_decision_where(active_only=False)} "
+        "AND (d.origin IS NULL OR d.origin <> 'zero_day_synthetic')"
+    )
     SESSION_FILTER    = PERSISTENT_FILTER  # alias used in _verify_deletion_safety calls
 
     def __init__(self, learning_state_service, audit_store, neo4j_service, domain_config):
@@ -103,7 +108,8 @@ class StateManager:
         )
         cleared = int(result[0]["cleared"]) if result else 0
         total_rows = await self._neo4j.run_query(
-            "MATCH (d:Decision) RETURN count(d) AS total"
+            f"MATCH (d:Decision) WHERE {soc_decision_where(active_only=False)} "
+            "RETURN count(d) AS total"
         )
         total = int(total_rows[0]["total"]) if total_rows else 0
         preserved = total - cleared
@@ -114,7 +120,8 @@ class StateManager:
         """DETACH DELETE session decisions only. Training data preserved."""
         await self._verify_deletion_safety(self.SESSION_FILTER)
         preserved_rows = await self._neo4j.run_query(
-            "MATCH (d:Decision) WHERE d.origin = 'zero_day_synthetic' "
+            f"MATCH (d:Decision) WHERE {soc_decision_where(active_only=False)} "
+            "AND d.origin = 'zero_day_synthetic' "
             "RETURN count(d) AS n"
         )
         preserved_n = int(preserved_rows[0]["n"]) if preserved_rows else 0
@@ -289,4 +296,3 @@ class StateManager:
                 "[StateManager] Learning state rollback failed (state may be inconsistent): %s",
                 rb_exc,
             )
-

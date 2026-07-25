@@ -2,6 +2,8 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 
+from app.db.neo4j import soc_decision_where
+
 
 def _safe_float(value, default: float = 0.0) -> float:
     try:
@@ -189,7 +191,8 @@ class ExecutiveNarrative:
         """
         query = """
         MATCH (d:Decision)
-        WHERE d.verified = true AND d.centroid_delta IS NOT NULL
+        WHERE """ + soc_decision_where() + """
+          AND d.verified = true AND d.centroid_delta IS NOT NULL
         RETURN d.category AS category, d.action AS action,
                d.centroid_delta AS centroid_delta,
                d.centroid_delta_factor AS factor
@@ -198,7 +201,8 @@ class ExecutiveNarrative:
         """
         total_query = """
         MATCH (d:Decision)
-        WHERE d.verified = true
+        WHERE """ + soc_decision_where() + """
+          AND d.verified = true
         RETURN count(d) AS total, count(d.centroid_delta) AS with_updates
         """
         top_shifts = []
@@ -320,7 +324,9 @@ class ExecutiveNarrative:
         try:
             counts_query = """
             MATCH (a:Alert) WITH count(a) AS alerts
-            OPTIONAL MATCH (d:Decision) WHERE d.verified = true
+            OPTIONAL MATCH (d:Decision)
+            WHERE """ + soc_decision_where() + """
+              AND d.verified = true
             WITH alerts, count(d) AS verified
             RETURN alerts, verified
             """
@@ -357,7 +363,9 @@ class ExecutiveNarrative:
         try:
             counts_query = """
             MATCH (a:Alert) WITH count(a) AS alerts
-            OPTIONAL MATCH (d:Decision) WHERE d.verified = true
+            OPTIONAL MATCH (d:Decision)
+            WHERE """ + soc_decision_where() + """
+              AND d.verified = true
             WITH alerts, count(d) AS verified
             RETURN alerts, verified
             """
@@ -406,7 +414,8 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     verified_decisions = 0
     try:
         rows = await neo4j_service.run_query(
-            "MATCH (d:Decision) RETURN count(d) AS cnt"
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "RETURN count(d) AS cnt"
         )
         verified_decisions = int((rows[0].get("cnt") or 0) if rows else 0)
     except Exception:
@@ -425,7 +434,8 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     centroid_updates = 0
     try:
         rows = await neo4j_service.run_query(
-            "MATCH (d:Decision) WHERE d.correct = true RETURN count(d) AS cnt"
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "AND d.correct = true RETURN count(d) AS cnt"
         )
         centroid_updates = int((rows[0].get("cnt") or 0) if rows else 0)
     except Exception:
@@ -476,7 +486,8 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     categories_calibrated = 0
     try:
         rows = await neo4j_service.run_query(
-            "MATCH (d:Decision) WHERE d.outcome IS NOT NULL "
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "AND d.outcome IS NOT NULL "
             "RETURN d.category AS category, count(d) AS n"
         )
         # Filter to the 6 canonical SOC_CATEGORIES — excludes "unknown" and
@@ -497,8 +508,8 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     category_accuracy = []
     try:
         rows = await neo4j_service.run_query(
-            "MATCH (d:Decision) "
-            "WHERE d.category IS NOT NULL AND d.outcome IS NOT NULL "
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "AND d.category IS NOT NULL AND d.outcome IS NOT NULL "
             "RETURN d.category AS category, count(d) AS total, "
             "sum(CASE WHEN d.outcome = 'correct' OR d.correct = true THEN 1 ELSE 0 END) AS correct"
         )
@@ -517,7 +528,8 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     top_shifts = []
     try:
         rows = await neo4j_service.run_query(
-            "MATCH (d:Decision) WHERE d.correct = true "
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "AND d.correct = true "
             "RETURN d.category AS category, d.action AS action, count(d) AS n "
             "ORDER BY n DESC LIMIT 3"
         )

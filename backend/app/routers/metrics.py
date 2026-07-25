@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from pydantic import BaseModel
 import logging
 
-from app.db.neo4j import neo4j_client
+from app.db.neo4j import neo4j_client, soc_decision_where
 from app.graph_schema import _S
 
 
@@ -206,7 +206,8 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
 
                 total_rows = await neo4j_client.run_query(
                     f"MATCH (d:Decision)-[:DECIDED_ON]->() "
-                    f"WHERE d.timestamp_epoch > {_S(week_start)} "
+                    f"WHERE {soc_decision_where()} "
+                    f"AND d.timestamp_epoch > {_S(week_start)} "
                     f"AND d.timestamp_epoch <= {_S(week_end)} "
                     f"RETURN count(d) AS n"
                 )
@@ -214,7 +215,8 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
 
                 correct_rows = await neo4j_client.run_query(
                     f"MATCH (d:Decision)-[:DECIDED_ON]->() "
-                    f"WHERE d.timestamp_epoch > {_S(week_start)} "
+                    f"WHERE {soc_decision_where()} "
+                    f"AND d.timestamp_epoch > {_S(week_start)} "
                     f"AND d.timestamp_epoch <= {_S(week_end)} "
                     f"AND d.correct = true "
                     f"RETURN count(d) AS n"
@@ -244,14 +246,15 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
         if _all_zero:
             try:
                 _fb_total_rows = await neo4j_client.run_query(
-                    "MATCH (d:Decision {origin: 'zero_day_synthetic'}) "
+                    f"MATCH (d:Decision {{origin: 'zero_day_synthetic'}}) "
+                    f"WHERE {soc_decision_where()} "
                     "RETURN count(d) AS total"
                 )
                 _fb_total = int(_fb_total_rows[0]["total"]) if _fb_total_rows else 0
 
                 _fb_correct_rows = await neo4j_client.run_query(
-                    "MATCH (d:Decision {origin: 'zero_day_synthetic'}) "
-                    "WHERE d.correct = true "
+                    f"MATCH (d:Decision {{origin: 'zero_day_synthetic'}}) "
+                    f"WHERE {soc_decision_where()} AND d.correct = true "
                     "RETURN count(d) AS correct"
                 )
                 _fb_correct = int(_fb_correct_rows[0]["correct"]) if _fb_correct_rows else 0
@@ -275,6 +278,7 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
         try:
             evo_rows = await neo4j_client.run_query(
                 "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
+                f"WHERE {soc_decision_where()} "
                 "RETURN d.decision_id AS id, d.action AS action, d.confidence AS confidence, "
                 "d.timestamp_epoch AS ts, a.alert_id AS alert_id "
                 "ORDER BY d.timestamp_epoch DESC LIMIT 20"
@@ -477,6 +481,7 @@ async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
     try:
         results = await neo4j_client.run_query(
             "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
+            f"WHERE {soc_decision_where()} "
             "RETURN d.decision_id AS id, d.action AS action, d.confidence AS confidence, "
             "d.timestamp_epoch AS ts, a.alert_id AS alert_id "
             "ORDER BY d.timestamp_epoch DESC LIMIT $limit",
@@ -531,7 +536,8 @@ async def get_weekly_trends():
     """
     try:
         results = await neo4j_client.run_query(
-            "MATCH (d:Decision) WHERE d.timestamp_epoch IS NOT NULL "
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "AND d.timestamp_epoch IS NOT NULL "
             "RETURN d.timestamp_epoch AS ts, d.action AS action, d.confidence AS confidence "
             "ORDER BY d.timestamp_epoch"
         )
@@ -581,12 +587,14 @@ async def get_decision_economics():
     """
     try:
         dec_res = await neo4j_client.run_query(
-            "MATCH (d:Decision) RETURN count(d) AS total_decisions"
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "RETURN count(d) AS total_decisions"
         )
         total = int(dec_res[0]["total_decisions"]) if dec_res else 0
 
         correct_res = await neo4j_client.run_query(
-            "MATCH (d:Decision) WHERE d.correct = true "
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "AND d.correct = true "
             "RETURN count(d) AS correct_decisions"
         )
         correct = int(correct_res[0]["correct_decisions"]) if correct_res else 0
@@ -599,7 +607,8 @@ async def get_decision_economics():
             rows = await neo4j_client.run_query(
                 """
                 MATCH (d:Decision)
-                WHERE d.timestamp_epoch IS NOT NULL
+                WHERE """ + soc_decision_where() + """
+                  AND d.timestamp_epoch IS NOT NULL
                 RETURN min(d.timestamp_epoch) AS t_min, max(d.timestamp_epoch) AS t_max,
                        count(d) AS n
                 """, {}
@@ -697,7 +706,8 @@ async def get_operational_metrics():
     try:
         mttd_result = await neo4j_client.run_query(
             "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
-            "WHERE d.timestamp_epoch IS NOT NULL AND a.created_at_epoch IS NOT NULL "
+            f"WHERE {soc_decision_where()} "
+            "AND d.timestamp_epoch IS NOT NULL AND a.created_at_epoch IS NOT NULL "
             "RETURN avg((d.timestamp_epoch - a.created_at_epoch) / 1000.0)"
             " AS avg_mttd_seconds, count(d) AS sample_size"
         )
@@ -728,7 +738,8 @@ async def get_operational_metrics():
     try:
         mttr_result = await neo4j_client.run_query(
             "MATCH (d:Decision) "
-            "WHERE d.timestamp_epoch IS NOT NULL AND d.verified_at_epoch IS NOT NULL "
+            f"WHERE {soc_decision_where()} "
+            "AND d.timestamp_epoch IS NOT NULL AND d.verified_at_epoch IS NOT NULL "
             "RETURN avg((d.verified_at_epoch - d.timestamp_epoch) / 1000.0)"
             " AS avg_mttr_seconds, count(d) AS sample_size"
         )
@@ -759,6 +770,7 @@ async def get_operational_metrics():
     try:
         fp_result = await neo4j_client.run_query(
             "MATCH (d:Decision) "
+            f"WHERE {soc_decision_where()} "
             "RETURN count(d) AS total, "
             "sum(CASE WHEN d.correct = false OR d.outcome = 'incorrect' "
             "THEN 1 ELSE 0 END) AS fp_count"
@@ -808,18 +820,21 @@ async def get_board_export():
 
     try:
         dec_res = await neo4j_client.run_query(
-            "MATCH (d:Decision) RETURN count(d) AS total"
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "RETURN count(d) AS total"
         )
         total = int(dec_res[0]["total"]) if dec_res else 0
 
         correct_res = await neo4j_client.run_query(
-            "MATCH (d:Decision) WHERE d.correct = true "
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "AND d.correct = true "
             "RETURN count(d) AS correct"
         )
         correct = int(correct_res[0]["correct"]) if correct_res else 0
 
         fp_res = await neo4j_client.run_query(
-            "MATCH (d:Decision) RETURN count(d) AS total, "
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "RETURN count(d) AS total, "
             "sum(CASE WHEN d.correct = false OR d.outcome = 'incorrect' "
             "THEN 1 ELSE 0 END) AS fp_count"
         )
@@ -870,6 +885,7 @@ async def get_economics():
     try:
         dec_result = await neo4j_client.run_query(
             "MATCH (d:Decision) "
+            f"WHERE {soc_decision_where()} "
             "RETURN "
             "count(d) AS total, "
             "sum(CASE WHEN d.correct = true OR d.outcome = 'correct' "

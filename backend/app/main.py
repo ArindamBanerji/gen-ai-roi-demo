@@ -173,7 +173,7 @@ async def startup_event():
     else:
         print("[AUTH] SAML disabled -- all routes open")
 
-    from app.db.neo4j import neo4j_client
+    from app.db.neo4j import neo4j_client, soc_decision_where
     import os as _os
     import pathlib as _pathlib
 
@@ -227,11 +227,13 @@ async def startup_event():
     # The separate script is still useful for bulk historical migrations.
     try:
         _total_res = await neo4j_client.run_query(
-            "MATCH (d:Decision) WHERE d.outcome IS NOT NULL "
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "AND d.outcome IS NOT NULL "
             "RETURN count(d) AS total"
         )
         _correct_res = await neo4j_client.run_query(
-            "MATCH (d:Decision) WHERE d.correct = true "
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "AND d.correct = true "
             "RETURN count(d) AS correct"
         )
         _cd_total   = int(_total_res[0]["total"])   if _total_res   else 0
@@ -319,7 +321,8 @@ async def startup_event():
     # on every server restart (fixes cold-start IKS = 1.7/100 regression).
     try:
         _count_result = await neo4j_client.run_query(
-            "MATCH (d:Decision) RETURN count(d) AS cnt"
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "RETURN count(d) AS cnt"
         )
         _historical_count = _count_result[0]["cnt"] if _count_result else 0
         from app.services.gae_state import get_learning_state as _get_ls

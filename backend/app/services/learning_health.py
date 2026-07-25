@@ -28,6 +28,7 @@ import numpy as np
 from gae.calibration import compute_theta_min, derive_theta_min, check_conservation
 
 from app.services.gae_state import get_learning_state, get_learning_store
+from app.db.neo4j import soc_decision_where
 
 log = logging.getLogger(__name__)
 
@@ -478,10 +479,11 @@ async def _query_soc_verified_conservation_stats(neo4j_service: Any = None) -> d
     )
 
     try:
+        _soc_where = soc_decision_where()
         rows = await neo4j_service.run_query(
             f"""
             MATCH (d:Decision)
-            WHERE (d.domain = 'soc' OR d.domain IS NULL)
+            WHERE {_soc_where}
               AND d.verified_at_epoch IS NOT NULL
               AND (d.status IS NOT NULL OR d.outcome IS NOT NULL)
               AND d.category IN [{category_literals}]
@@ -834,10 +836,12 @@ async def compute_analyst_precision(neo4j_client: Any) -> dict[str, float]:
       {"analyst_a": 0.82, "analyst_b": 0.71}
     """
     try:
+        _soc_where = soc_decision_where()
         rows = await neo4j_client.run_query(
             f"""
             MATCH (d:Decision)
-            WHERE d.source_id IS NOT NULL AND d.verified_by IS NOT NULL
+            WHERE {_soc_where}
+              AND d.source_id IS NOT NULL AND d.verified_by IS NOT NULL
             WITH d.verified_by AS analyst,
                  count(d) AS total,
                  sum(CASE WHEN d.correct = true THEN 1 ELSE 0 END) AS correct
@@ -891,7 +895,8 @@ async def compute_verification_health(neo4j_client: Any) -> dict:
     verified_decisions = 0
     try:
         rows = await neo4j_client.run_query(
-            "MATCH (d:Decision) RETURN count(d) AS total"
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "RETURN count(d) AS total"
         )
         total_decisions = int((rows[0].get("total") or 0) if rows else 0)
     except Exception as exc:
@@ -899,8 +904,8 @@ async def compute_verification_health(neo4j_client: Any) -> dict:
 
     try:
         rows = await neo4j_client.run_query(
-            "MATCH (d:Decision) "
-            "WHERE d.outcome IS NOT NULL AND d.verified_at_epoch IS NOT NULL "
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "AND d.outcome IS NOT NULL AND d.verified_at_epoch IS NOT NULL "
             "RETURN count(d) AS verified"
         )
         verified_decisions = int((rows[0].get("verified") or 0) if rows else 0)
@@ -917,10 +922,12 @@ async def compute_verification_health(neo4j_client: Any) -> dict:
     last_7d_total = last_7d_verified = 0
     prior_7d_total = prior_7d_verified = 0
     try:
+        _soc_where = soc_decision_where()
         rows = await neo4j_client.run_query(
             f"""
             MATCH (d:Decision)
-            WHERE d.timestamp_epoch >= {last_7d_start} AND d.timestamp_epoch < {now_ms}
+            WHERE {_soc_where}
+              AND d.timestamp_epoch >= {last_7d_start} AND d.timestamp_epoch < {now_ms}
             RETURN
               count(d) AS total,
               count(CASE WHEN d.verified_at_epoch IS NOT NULL THEN 1 END) AS verified
@@ -933,10 +940,12 @@ async def compute_verification_health(neo4j_client: Any) -> dict:
         log.debug("[VERIF-HEALTH] last_7d query failed: %s", exc)
 
     try:
+        _soc_where = soc_decision_where()
         rows = await neo4j_client.run_query(
             f"""
             MATCH (d:Decision)
-            WHERE d.timestamp_epoch >= {prior_7d_start} AND d.timestamp_epoch < {last_7d_start}
+            WHERE {_soc_where}
+              AND d.timestamp_epoch >= {prior_7d_start} AND d.timestamp_epoch < {last_7d_start}
             RETURN
               count(d) AS total,
               count(CASE WHEN d.verified_at_epoch IS NOT NULL THEN 1 END) AS verified

@@ -244,11 +244,11 @@ def _make_narrative_neo4j(verified: int, correct: int, campaigns: int, alerts: i
     async def run_query(query, params=None):
         q = query.strip()
         # Verified decisions: now a simple count of all Decision nodes (no outcome filter)
-        if "MATCH (d:Decision) RETURN count(d) AS cnt" in q:
+        if "MATCH (d:Decision)" in q and "RETURN count(d) AS cnt" in q:
             return [{"cnt": verified}]
         if "d.correct = true" in q and "category" not in q:
             return [{"cnt": correct}]
-        if "WHERE d.category IS NOT NULL AND d.outcome IS NOT NULL" in q:
+        if "d.category IS NOT NULL" in q and "d.outcome IS NOT NULL" in q:
             return [
                 {"category": "credential_access", "total": 50, "correct": 48},
                 {"category": "lateral_movement", "total": 40, "correct": 32},
@@ -312,7 +312,7 @@ def test_category_accuracy_uses_verified_outcomes_not_pending_denominator():
     class FakeNeo4j:
         async def run_query(self, query, params=None):
             q = query.strip()
-            if "MATCH (d:Decision) RETURN count(d) AS cnt" in q:
+            if "MATCH (d:Decision)" in q and "RETURN count(d) AS cnt" in q:
                 return [{"cnt": 100}]
             if "d.correct = true" in q and "category" not in q:
                 return [{"cnt": 90}]
@@ -322,7 +322,7 @@ def test_category_accuracy_uses_verified_outcomes_not_pending_denominator():
                 return [{"cnt": 0}]
             if "RETURN count(d) AS total" in q:
                 return [{"total": 100}]
-            if "WHERE d.category IS NOT NULL AND d.outcome IS NOT NULL" in q:
+            if "d.category IS NOT NULL" in q and "d.outcome IS NOT NULL" in q:
                 return [
                     {"category": "credential_access", "total": 30, "correct": 29},
                     {"category": "lateral_movement", "total": 25, "correct": 22},

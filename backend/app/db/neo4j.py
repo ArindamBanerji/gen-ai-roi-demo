@@ -31,6 +31,14 @@ _GRAPH_BACKEND = os.getenv("GRAPH_BACKEND", "neo4j").lower()
 logger = logging.getLogger(__name__)
 
 
+def soc_decision_where(alias: str = "d", active_only: bool = True) -> str:
+    """Emit the exact SOC domain and optional active predicate."""
+    parts = [f"{alias}.domain = 'soc'"]
+    if active_only:
+        parts.append(f"({alias}.archived IS NULL OR {alias}.archived <> true)")
+    return " AND ".join(parts)
+
+
 class Neo4jClient:
     """Neo4j Aura client with connection pooling"""
 
@@ -210,6 +218,7 @@ class Neo4jClient:
             f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})\n"
             f"CREATE (d:Decision {{\n"
             f"    decision_id:      {_S(decision_id)},\n"
+            f"    domain:           'soc',\n"
             f"    action:           {_S(action)},\n"
             f"    confidence:       {_S(confidence)},\n"
             f"    category:         {_S(category)},\n"
@@ -229,6 +238,7 @@ class Neo4jClient:
         if playbook_id:
             pb_query = (
                 f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}})\n"
+                f"WHERE {soc_decision_where()}\n"
                 f"MATCH (p:Playbook {{id: {_S(playbook_id)}}})\n"
                 f"CREATE (d)-[:APPLIED_PLAYBOOK]->(p)"
             )
@@ -257,6 +267,7 @@ class Neo4jClient:
         """
         query = """
         MATCH (decision:Decision {decision_id: $triggered_by})
+        WHERE """ + soc_decision_where(alias="decision") + """
 
         CREATE (event:EvolutionEvent {
             id: $event_id,
@@ -309,8 +320,7 @@ class Neo4jClient:
         try:
             results = await self.run_query(
                 "MATCH (d:Decision) "
-                "WHERE (d.domain = 'soc' OR d.domain IS NULL) "
-                "AND (d.archived IS NULL OR d.archived <> true) "
+                f"WHERE {soc_decision_where()} "
                 "AND ("
                 "(d.status IS NOT NULL AND d.status IN ['confirmed', 'overridden']) "
                 "OR (d.status IS NULL AND d.outcome IS NOT NULL)"
@@ -332,8 +342,7 @@ class Neo4jClient:
         try:
             results = await self.run_query(
                 "MATCH (d:Decision) "
-                "WHERE (d.domain = 'soc' OR d.domain IS NULL) "
-                "AND (d.archived IS NULL OR d.archived <> true) "
+                f"WHERE {soc_decision_where()} "
                 "AND d.status IS NULL AND d.correct = true "
                 "RETURN count(DISTINCT d.decision_id) AS cnt"
             )
@@ -352,7 +361,8 @@ class Neo4jClient:
         try:
             results = await self.run_query(
                 "MATCH (d:Decision) "
-                "WHERE d.outcome IS NOT NULL AND d.category IS NOT NULL "
+                f"WHERE {soc_decision_where()} "
+                "AND d.outcome IS NOT NULL AND d.category IS NOT NULL "
                 "RETURN d.category AS category, count(d) AS cnt"
             )
             return {
@@ -374,9 +384,10 @@ class Neo4jClient:
         """
         try:
             results = await self.run_query(
-                """
+                f"""
                 MATCH (d:Decision)
-                WHERE d.outcome IS NOT NULL
+                WHERE {soc_decision_where()}
+                  AND d.outcome IS NOT NULL
                 RETURN
                     count(d) AS total,
                     sum(CASE WHEN d.was_override = true THEN 1 ELSE 0 END) AS overrides,
@@ -437,9 +448,10 @@ class Neo4jClient:
             return 0
         try:
             result = await self.run_query(
-                """
+                f"""
                 MATCH (d:Decision)
-                WHERE d.source_id = $source_id
+                WHERE {soc_decision_where()}
+                AND d.source_id = $source_id
                 AND d.timestamp_epoch > $cutoff_epoch
                 RETURN count(d) AS sequence_count
                 """,
@@ -466,9 +478,10 @@ class Neo4jClient:
             return 0
         try:
             result = await self.run_query(
-                """
+                f"""
                 MATCH (d:Decision)
-                WHERE d.user_id = $user_id
+                WHERE {soc_decision_where()}
+                AND d.user_id = $user_id
                 AND d.timestamp_epoch > $cutoff_epoch
                 RETURN count(DISTINCT d.category) AS cross_category_count
                 """,
@@ -513,7 +526,8 @@ if _GRAPH_BACKEND == "age":
                 """Count Decision nodes with correct=true (matches bootstrap query)."""
                 try:
                     results = await self.run_query(
-                        "MATCH (d:Decision) WHERE d.correct = true "
+                        f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+                        "AND d.correct = true "
                         "RETURN count(d) AS cnt"
                     )
                     return int(results[0]["cnt"]) if results else 0

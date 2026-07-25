@@ -5,19 +5,31 @@ Uses asyncio.run() -- no pytest-asyncio dependency needed.
 Tests run against live AGE database.
 
 Skip with: pytest -k "not graph_contract_stress"
+
+This module never selects AGE implicitly.  Destructive tests are additionally
+opt-in via TEST_DESTRUCTIVE_AGE=1 when GRAPH_BACKEND=age.  The July 2026
+shared-graph census found no SOC SQLite source snapshot in this repository;
+the 20 previously deleted unverified rows therefore cannot be restored by
+this test module.  V_soc was unchanged, so no verified SOC data was lost.
 """
 import pytest
 import asyncio
 import os
 import sys
 
+from app.db.neo4j import soc_decision_where
+
 # Ensure backend is on path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-os.environ.setdefault("GRAPH_BACKEND", "age")
-
 pytestmark = pytest.mark.skipif(
     os.getenv("GRAPH_BACKEND") != "age",
     reason="Stress tests require live AGE database"
+)
+
+destructive_age_skip = pytest.mark.skipif(
+    os.getenv("GRAPH_BACKEND") == "age"
+    and os.getenv("TEST_DESTRUCTIVE_AGE") != "1",
+    reason="Destructive test skipped on live AGE; set TEST_DESTRUCTIVE_AGE=1",
 )
 
 
@@ -52,6 +64,7 @@ def client():
 # Clear session decisions — preserves everything persistent
 # ================================================================
 
+@destructive_age_skip
 class TestClearPreservesEverything:
 
     def test_preserves_persistent_decisions(self, sm, client):
@@ -98,6 +111,7 @@ class TestClearPreservesEverything:
 # Delete session decisions — preserves persistent decisions + all other nodes
 # ================================================================
 
+@destructive_age_skip
 class TestDeletePreservesEverything:
 
     def test_preserves_persistent_decisions(self, sm, client):
@@ -188,6 +202,7 @@ class TestPreCheckCatchesBadFilters:
 
 class TestVerifyGraphDetectsProblems:
 
+    @destructive_age_skip
     def test_catches_orphan_decision(self, client):
         """An orphan Decision (no DECIDED_ON edge) violates the contract."""
         from app.graph_schema import verify_graph
@@ -251,7 +266,8 @@ class TestContractSurvivesStress:
     def test_no_orphan_decisions(self, client):
         """Zero orphan Decisions after all stress tests."""
         r = _run(client.run_query(
-            "MATCH (d:Decision) WHERE NOT EXISTS((d)-[:DECIDED_ON]->()) "
+            f"MATCH (d:Decision) WHERE {soc_decision_where(active_only=False)} "
+            "AND NOT EXISTS((d)-[:DECIDED_ON]->()) "
             "RETURN count(d) AS n"
         ))
         n = int(r[0]["n"])

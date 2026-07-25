@@ -19,6 +19,8 @@ import logging
 import re
 from typing import Any, Optional
 
+from app.db.neo4j import soc_decision_where
+
 log = logging.getLogger(__name__)
 
 
@@ -60,7 +62,7 @@ PREBUILT_QUERIES = {
         "name":        "Recent Decisions",
         "description": "Latest triage decisions with outcomes",
         "cypher": (
-            "MATCH (d:Decision) "
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "RETURN d.decision_id AS id, d.category AS category, d.action AS action, "
             "d.confidence AS confidence, d.auto_approved AS auto_approved "
             "ORDER BY d.timestamp_epoch DESC LIMIT 20"
@@ -163,13 +165,23 @@ class GraphExplorerService:
 
         try:
             if node_type:
-                query = (
-                    f"MATCH (n:{node_type})-[r]-() "
-                    "RETURN n.id AS id, head(labels(n)) AS type,"
-                    "coalesce(n.name, n.hostname, n.id) AS display_name, "
-                    "count(r) AS connections "
-                    "ORDER BY connections DESC LIMIT $limit"
-                )
+                if node_type == "Decision":
+                    query = (
+                        f"MATCH (n:Decision)-[r]-() "
+                        f"WHERE {soc_decision_where(alias='n')} "
+                        "RETURN n.decision_id AS id, head(labels(n)) AS type,"
+                        "coalesce(n.category, n.decision_id) AS display_name, "
+                        "count(r) AS connections "
+                        "ORDER BY connections DESC LIMIT $limit"
+                    )
+                else:
+                    query = (
+                        f"MATCH (n:{node_type})-[r]-() "
+                        "RETURN n.id AS id, head(labels(n)) AS type,"
+                        "coalesce(n.name, n.hostname, n.id) AS display_name, "
+                        "count(r) AS connections "
+                        "ORDER BY connections DESC LIMIT $limit"
+                    )
             else:
                 query = (
                     "MATCH (n)-[r]-() "
