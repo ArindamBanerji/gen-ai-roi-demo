@@ -9,16 +9,18 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
-from copilot_sdk.graph import InMemoryGraphStore
 from copilot_sdk.scoring.scorer import CompoundingScorer
 
 
 class SOCCompoundingScorerAdapter:
     """Drop-in replacement for SOC's legacy ``ProfileScorer`` instance."""
 
-    def __init__(self, graph_store: Any | None = None) -> None:
+    def __init__(self, graph_store: Any) -> None:
         if graph_store is None:
-            graph_store = InMemoryGraphStore(domain="soc")
+            raise TypeError(
+                "graph_store is required; pass the AGE-backed SOC GraphStore "
+                "explicitly (tests may pass an InMemoryGraphStore explicitly)"
+            )
         compound = CompoundingScorer.from_preset(
             "soc",
             graph_store=graph_store,

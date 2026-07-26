@@ -32,9 +32,27 @@ class FakeSOCConfig:
 def isolated_gae_state(monkeypatch, tmp_path):
     from app.domains.soc import config as soc_config
     from app.services import gae_state
+    from copilot_sdk.config import GraphConfig
+    from copilot_sdk.graph import factory as graph_factory
+    from copilot_sdk.graph.memory_store import InMemoryGraphStore
 
     monkeypatch.delenv("GRAPH_DSN", raising=False)
     monkeypatch.delenv("AGE_GRAPH_NAME", raising=False)
+    monkeypatch.setattr(
+        GraphConfig,
+        "load",
+        lambda _domain: SimpleNamespace(
+            backend="sqlite",
+            dsn=None,
+            graph="test_graph",
+            authorized="soc:test_graph",
+        ),
+    )
+    monkeypatch.setattr(
+        graph_factory,
+        "create_graph_store",
+        lambda **_kwargs: InMemoryGraphStore(domain="soc"),
+    )
     monkeypatch.setattr(gae_state, "_learning_state", None)
     monkeypatch.setattr(gae_state, "_learning_store", None)
     monkeypatch.setattr(gae_state, "_bootstrap_metadata", None)

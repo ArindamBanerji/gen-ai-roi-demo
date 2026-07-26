@@ -156,6 +156,9 @@ def _load_age_learning_store_adapter():
 def _init_learning_store() -> object | None:
     dsn = (os.environ.get("GRAPH_DSN") or "").strip()
     if not dsn:
+        log.warning(
+            "[GAE] SOC L5 learning store unavailable: GRAPH_DSN is not configured"
+        )
         return None
 
     graph_name = (os.environ.get("AGE_GRAPH_NAME") or "soc_graph").strip() or "soc_graph"
@@ -187,7 +190,22 @@ def init_learning_state() -> LearningState:
     global _learning_state, _learning_store, _bootstrap_metadata, _bootstrap_result
 
     from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
-    _profile_scorer = SOCCompoundingScorerAdapter()
+    from copilot_sdk.config import GraphConfig
+    from copilot_sdk.graph.factory import create_graph_store
+
+    # The SOC scorer must use the same typed AGE configuration as the shared
+    # graph client.  In particular, do not fall back to the process-local
+    # InMemoryGraphStore: B0 established that it reports V=0 while AGE has
+    # the authoritative verified population.
+    graph_config = GraphConfig.load("soc")
+    graph_store = create_graph_store(
+        domain="soc",
+        backend=graph_config.backend,
+        dsn=graph_config.dsn,
+        graph_name=graph_config.graph,
+        shared_graph_authorization=graph_config.authorized,
+    )
+    _profile_scorer = SOCCompoundingScorerAdapter(graph_store=graph_store)
     assert _profile_scorer.eta_override is not None, (
         "ProfileScorer constructed without eta_override. "
         "SOC requires eta_override=0.01 (P0 fix -- prevents "

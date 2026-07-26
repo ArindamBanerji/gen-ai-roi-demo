@@ -7,6 +7,7 @@ import pytest
 
 from app.domains.soc.config import SCORER_ACTIONS, SOC_CATEGORIES, SOCDomainConfig
 from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
+from copilot_sdk.graph.memory_store import InMemoryGraphStore
 
 
 def _raw_scorer():
@@ -14,7 +15,9 @@ def _raw_scorer():
 
 
 def _adapter() -> SOCCompoundingScorerAdapter:
-    return SOCCompoundingScorerAdapter()
+    return SOCCompoundingScorerAdapter(
+        graph_store=InMemoryGraphStore(domain="soc")
+    )
 
 
 def _vector(seed: int = 0) -> np.ndarray:
@@ -180,6 +183,8 @@ def test_adapter_phase_transition_at_200():
 
 def test_gae_state_uses_adapter(monkeypatch, tmp_path):
     from app.services import gae_state
+    from copilot_sdk.config import GraphConfig
+    from copilot_sdk.graph import factory as graph_factory
 
     monkeypatch.setattr(gae_state, "_STATE_PATH", tmp_path / "state.json")
     monkeypatch.setattr(gae_state, "_MU_ZERO_PATH", tmp_path / "mu_zero.json")
@@ -188,6 +193,21 @@ def test_gae_state_uses_adapter(monkeypatch, tmp_path):
     monkeypatch.setattr(gae_state, "_bootstrap_metadata", None)
     monkeypatch.setattr(gae_state, "_bootstrap_result", None)
     monkeypatch.delenv("GRAPH_DSN", raising=False)
+    monkeypatch.setattr(
+        GraphConfig,
+        "load",
+        lambda _domain: SimpleNamespace(
+            backend="sqlite",
+            dsn=None,
+            graph="test_graph",
+            authorized="soc:test_graph",
+        ),
+    )
+    monkeypatch.setattr(
+        graph_factory,
+        "create_graph_store",
+        lambda **_kwargs: InMemoryGraphStore(domain="soc"),
+    )
     monkeypatch.setattr(
         gae_state,
         "bootstrap_calibration",

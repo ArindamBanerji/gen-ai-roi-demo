@@ -14,7 +14,10 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture
 def graph_client():
     from ci_platform.graph import get_graph_client
-    return get_graph_client()
+    from copilot_sdk.config import GraphConfig
+
+    config = GraphConfig.load("soc")
+    return get_graph_client(dsn=config.dsn, graph_name=config.graph)
 
 @pytest.mark.asyncio
 async def test_no_orphan_decisions(graph_client):

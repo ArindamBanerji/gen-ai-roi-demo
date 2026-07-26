@@ -57,7 +57,10 @@ def sm():
 def client():
     """Get raw graph client."""
     from ci_platform.graph import get_graph_client
-    return get_graph_client()
+    from copilot_sdk.config import GraphConfig
+
+    config = GraphConfig.load("soc")
+    return get_graph_client(dsn=config.dsn, graph_name=config.graph)
 
 
 # ================================================================

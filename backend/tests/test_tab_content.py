@@ -5,6 +5,7 @@ All tests mock neo4j_client and service functions -- no live Neo4j required.
 import asyncio
 import os
 import sys
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch, MagicMock
 
 import pytest
@@ -13,8 +14,38 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from fastapi.testclient import TestClient
 from app.main import app
+from copilot_sdk.graph.memory_store import InMemoryGraphStore
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _isolated_scorer_graph(monkeypatch):
+    """Keep tab-content unit tests independent of live AGE configuration.
+
+    B1 correctly makes the production scorer AGE-backed and fail-closed. These
+    endpoint contract tests exercise response shaping, so their scorer must be
+    an explicitly injected in-memory store rather than whichever DSN the full
+    suite or host environment happens to expose.
+    """
+    from copilot_sdk.config import GraphConfig
+    from copilot_sdk.graph import factory as graph_factory
+
+    monkeypatch.setattr(
+        GraphConfig,
+        "load",
+        lambda _domain: SimpleNamespace(
+            backend="sqlite",
+            dsn=None,
+            graph="test_graph",
+            authorized="soc:test_graph",
+        ),
+    )
+    monkeypatch.setattr(
+        graph_factory,
+        "create_graph_store",
+        lambda **_kwargs: InMemoryGraphStore(domain="soc"),
+    )
 
 
 # ---------------------------------------------------------------------------

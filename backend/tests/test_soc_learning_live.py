@@ -4,6 +4,7 @@ from app.domains.soc import config as soc_config
 from app.domains.soc.config import SCORER_ACTIONS
 from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
 from app.routers import triage
+from copilot_sdk.graph.memory_store import InMemoryGraphStore
 
 
 FACTOR_VECTOR = np.array([0.9, 0.9, 0.9, 0.9, 0.9, 0.1], dtype=float)
@@ -44,7 +45,9 @@ def _apply_verified_outcome_if_enabled(scorer: SOCCompoundingScorerAdapter) -> f
 
 def test_soc_learning_changes_score(monkeypatch):
     _set_soc_learning(monkeypatch, True)
-    scorer = SOCCompoundingScorerAdapter()
+    scorer = SOCCompoundingScorerAdapter(
+        graph_store=InMemoryGraphStore(domain="soc")
+    )
 
     score_1 = _score_probabilities(scorer)
     centroid_delta = _apply_verified_outcome_if_enabled(scorer)
@@ -57,7 +60,9 @@ def test_soc_learning_changes_score(monkeypatch):
 
 def test_soc_learning_disabled_no_change(monkeypatch):
     _set_soc_learning(monkeypatch, False)
-    scorer = SOCCompoundingScorerAdapter()
+    scorer = SOCCompoundingScorerAdapter(
+        graph_store=InMemoryGraphStore(domain="soc")
+    )
 
     score_1 = _score_probabilities(scorer)
     centroid_delta = _apply_verified_outcome_if_enabled(scorer)
@@ -69,7 +74,9 @@ def test_soc_learning_disabled_no_change(monkeypatch):
 
 
 def test_soc_learning_toggle(monkeypatch):
-    scorer = SOCCompoundingScorerAdapter()
+    scorer = SOCCompoundingScorerAdapter(
+        graph_store=InMemoryGraphStore(domain="soc")
+    )
 
     _set_soc_learning(monkeypatch, False)
     score_1 = _score_probabilities(scorer)
