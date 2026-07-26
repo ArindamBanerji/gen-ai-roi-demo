@@ -1,25 +1,22 @@
 """
 Block 8.5 Phase 3 -- graph backend switcher tests.
-All run with GRAPH_BACKEND=neo4j (default). No live DB required.
+The legacy Neo4j path is tested for explicit retirement. No live DB required.
 """
 import os
 import importlib
+import pytest
+
+from copilot_sdk.config import GraphConfigError
 
 
-def test_default_backend_is_neo4j():
-    """Default GRAPH_BACKEND produces Neo4jClient -- no behaviour change.
-
-    Explicitly sets GRAPH_BACKEND=neo4j in the shell environment so that
-    load_dotenv(override=False) inside neo4j.py cannot override it with the
-    GRAPH_BACKEND=age that may be present in the project .env file.
-    """
+def test_legacy_neo4j_backend_is_retired():
+    """The retired Aura path fails clearly instead of constructing a client."""
     prev = os.environ.get("GRAPH_BACKEND")
     os.environ["GRAPH_BACKEND"] = "neo4j"
     try:
         import app.db.neo4j as db_mod
-        importlib.reload(db_mod)
-        from app.db.neo4j import neo4j_client, Neo4jClient
-        assert isinstance(neo4j_client, Neo4jClient)
+        with pytest.raises(GraphConfigError, match="Legacy Neo4j backend is retired"):
+            importlib.reload(db_mod)
     finally:
         if prev is None:
             os.environ.pop("GRAPH_BACKEND", None)

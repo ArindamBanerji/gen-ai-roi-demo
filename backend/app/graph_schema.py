@@ -32,6 +32,8 @@ import math
 import os
 import sys
 
+from copilot_sdk.config import GraphConfig
+
 log = logging.getLogger(__name__)
 
 # Origin values for seeded data
@@ -204,6 +206,23 @@ _DATA_LABELS = ["Decision", "Alert"]
 _DATA_ORIGINS = [SYNTHETIC_ORIGIN, DEMO_ORIGIN]
 
 
+def _configured_age_client(graph_name: str | None = None):
+    """Build an AGE client from the canonical SOC graph configuration."""
+    config = GraphConfig.load("soc")
+    if config.backend != "age":
+        raise RuntimeError(
+            "SOC graph seeding requires GraphConfig backend=age; "
+            f"resolved {config.backend!r}"
+        )
+    if not config.dsn:
+        raise RuntimeError("SOC graph seeding requires an AGE DSN")
+    target_graph = (graph_name or config.graph).strip()
+    if not target_graph:
+        raise ValueError("An explicit AGE target graph is required for seeding")
+    from ci_platform.graph import get_graph_client
+    return get_graph_client(config.dsn, target_graph)
+
+
 # ---------------------------------------------------------------------------
 # verify_graph()
 # ---------------------------------------------------------------------------
@@ -215,9 +234,7 @@ async def verify_graph(client=None):
     counts is ALWAYS populated, even when healthy.
     """
     if client is None:
-        os.environ.setdefault("GRAPH_BACKEND", "age")
-        from ci_platform.graph import get_graph_client
-        client = get_graph_client()
+        client = _configured_age_client()
 
     report = {"healthy": True, "issues": [], "warnings": [], "counts": {}}
 
@@ -432,7 +449,14 @@ def _validate_seed_data(data):
 # seed_graph()
 # ---------------------------------------------------------------------------
 
-async def seed_graph(json_path, clean=False, client=None):
+async def seed_graph(
+    json_path,
+    clean=False,
+    client=None,
+    *,
+    graph_name=None,
+    allow_production_seed=False,
+):
     """Create complete graph from zero_day_decisions_v5.json.
 
     clean=True:  delete backbone nodes (ALL) + seeded Decision/Alert nodes
@@ -443,11 +467,6 @@ async def seed_graph(json_path, clean=False, client=None):
 
     Returns verify_graph() result.
     """
-    if client is None:
-        os.environ.setdefault("GRAPH_BACKEND", "age")
-        from ci_platform.graph import get_graph_client
-        client = get_graph_client()
-
     print("[SEED] Loading " + json_path + "...")
     with open(json_path, encoding="utf-8") as fh:
         data = _json.load(fh)
@@ -457,6 +476,20 @@ async def seed_graph(json_path, clean=False, client=None):
     _validate_seed_data(data)
     _validate_json(data)
     print("[SEED] JSON valid.")
+
+    if not graph_name:
+        raise ValueError(
+            "An explicit target graph is required for synthetic seeding"
+        )
+    target_graph = graph_name.strip()
+    if target_graph == "soc_graph" and not (
+        allow_production_seed or os.getenv("ALLOW_PRODUCTION_SEED") == "1"
+    ):
+        raise RuntimeError(
+            "Refusing to seed soc_graph without ALLOW_PRODUCTION_SEED=1"
+        )
+    if client is None:
+        client = _configured_age_client(target_graph)
 
     users       = data.get("users", [])
     assets      = data.get("assets", [])
@@ -503,13 +536,16 @@ async def seed_graph(json_path, clean=False, client=None):
             print("  " + label + ": deleted " + str(deleted))
         for label in _DATA_LABELS:
             for origin in _DATA_ORIGINS:
-                before = await client.run_query(
+                domain_filter = " WHERE n.domain = 'soc'" if label == "Decision" else ""
+                match = (
                     "MATCH (n:" + label + " {origin: " +
-                    _S(origin) + "}) RETURN count(n) AS cnt"
+                    _S(origin) + "})"
+                )
+                before = await client.run_query(
+                    match + domain_filter + " RETURN count(n) AS cnt"
                 )
                 await client.run_query(
-                    "MATCH (n:" + label + " {origin: " +
-                    _S(origin) + "}) DETACH DELETE n"
+                    match + domain_filter + " DETACH DELETE n"
                 )
                 deleted = int(before[0]["cnt"]) if before else 0
                 if deleted > 0:
@@ -754,6 +790,7 @@ async def seed_graph(json_path, clean=False, client=None):
                 "MATCH (a:Alert {alert_id: " + _S(d["alert_id"]) + "}) "
                 "CREATE (dd:Decision {"
                 "decision_id: " + _S(d["decision_id"]) + ", "
+                "domain: 'soc', "
                 "category: " + _S(d["category"]) + ", "
                 "action: " + _S(d["action"]) + ", "
                 "factor_vector: " + _S(d["factor_vector"]) + ", "
@@ -800,13 +837,12 @@ async def seed_graph(json_path, clean=False, client=None):
 if __name__ == "__main__":
     import asyncio
 
-    os.environ.setdefault("GRAPH_BACKEND", "age")
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
     if len(sys.argv) < 2 or sys.argv[1] not in ("verify", "seed"):
         print("Usage:")
         print("  python -m app.graph_schema verify")
-        print("  python -m app.graph_schema seed [--clean] [--file=path]")
+        print("  python -m app.graph_schema seed [--clean] [--file=path] --graph=<disposable-graph>")
         sys.exit(1)
 
     if sys.platform == "win32":
@@ -834,6 +870,18 @@ if __name__ == "__main__":
         if not os.path.exists(json_path):
             print("[ERROR] Not found: " + json_path)
             sys.exit(1)
-        report = asyncio.run(seed_graph(json_path, clean=do_clean))
+        graph_args = [a for a in sys.argv if a.startswith("--graph=")]
+        if not graph_args:
+            print("[ERROR] seed requires --graph=<disposable graph name>")
+            sys.exit(1)
+        target_graph = graph_args[0].split("=", 1)[1]
+        report = asyncio.run(
+            seed_graph(
+                json_path,
+                clean=do_clean,
+                graph_name=target_graph,
+                allow_production_seed="--allow-production-seed" in sys.argv,
+            )
+        )
         if not report["healthy"]:
             sys.exit(1)

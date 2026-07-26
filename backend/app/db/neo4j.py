@@ -31,13 +31,12 @@ try:
     _GRAPH_CONFIG = GraphConfig.load("soc")
     _GRAPH_BACKEND = _GRAPH_CONFIG.backend
 except GraphConfigError:
-    # Preserve the explicit legacy Neo4j development path. AGE/SOC
-    # production configuration remains fail-closed through GraphConfig.
     if os.getenv("GRAPH_BACKEND", "").strip().lower() == "neo4j":
-        _GRAPH_CONFIG = None
-        _GRAPH_BACKEND = "neo4j"
-    else:
-        raise
+        raise GraphConfigError(
+            "Legacy Neo4j backend is retired. Use GRAPH_BACKEND=age with "
+            "GraphConfig. See age_unification_gaps_v1_1.md section 6 B6."
+        ) from None
+    raise
 # ─────────────────────────────────────────────────────────────────────────────
 
 logger = logging.getLogger(__name__)
@@ -566,12 +565,9 @@ if _GRAPH_BACKEND == "age":
             f"FATAL: GRAPH_BACKEND=age but AGEClient init failed: {_exc}"
         ) from _exc
 else:
-    neo4j_client = Neo4jClient()
-    if _GRAPH_CONFIG is not None:
-        if _GRAPH_CONFIG.neo4j_uri:
-            neo4j_client.uri = _GRAPH_CONFIG.neo4j_uri
-        if _GRAPH_CONFIG.neo4j_user:
-            neo4j_client.user = _GRAPH_CONFIG.neo4j_user
-        if _GRAPH_CONFIG.neo4j_password:
-            neo4j_client.password = _GRAPH_CONFIG.neo4j_password
+    raise GraphConfigError(
+        "SOC Decision operations require GRAPH_BACKEND=age; "
+        f"resolved backend {_GRAPH_BACKEND!r}. Legacy Neo4j, SQLite, and "
+        "dual_write paths are retired for SOC."
+    )
 # ─────────────────────────────────────────────────────────────────────────────
