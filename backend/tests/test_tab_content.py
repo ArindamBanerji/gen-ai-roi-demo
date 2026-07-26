@@ -15,8 +15,20 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from fastapi.testclient import TestClient
 from app.main import app
 from copilot_sdk.graph.memory_store import InMemoryGraphStore
+from copilot_sdk.scoring.scorer import CompoundingScorer
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _test_profile_for_in_memory_scorers(monkeypatch):
+    original = CompoundingScorer.from_preset
+
+    def from_preset(*args, **kwargs):
+        kwargs.setdefault("profile", "test")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(CompoundingScorer, "from_preset", from_preset)
 
 
 @pytest.fixture(autouse=True)

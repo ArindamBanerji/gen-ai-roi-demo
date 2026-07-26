@@ -13,6 +13,18 @@ from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
 from app.routers import triage
 from app.services import gae_state
 from copilot_sdk.graph.memory_store import InMemoryGraphStore
+from copilot_sdk.scoring.scorer import CompoundingScorer
+
+
+@pytest.fixture(autouse=True)
+def _test_profile_for_in_memory_scorers(monkeypatch):
+    original = CompoundingScorer.from_preset
+
+    def from_preset(*args, **kwargs):
+        kwargs.setdefault("profile", "test")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(CompoundingScorer, "from_preset", from_preset)
 
 
 def _adapter() -> SOCCompoundingScorerAdapter:

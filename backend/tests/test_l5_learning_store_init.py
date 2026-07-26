@@ -1,8 +1,21 @@
+import os
 from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
+from copilot_sdk.scoring.scorer import CompoundingScorer
+
+
+@pytest.fixture(autouse=True)
+def _test_profile_for_in_memory_scorers(monkeypatch):
+    original = CompoundingScorer.from_preset
+
+    def from_preset(*args, **kwargs):
+        kwargs.setdefault("profile", "test")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(CompoundingScorer, "from_preset", from_preset)
 
 
 class FakeLearningState:
@@ -43,9 +56,9 @@ def isolated_gae_state(monkeypatch, tmp_path):
         "load",
         lambda _domain: SimpleNamespace(
             backend="sqlite",
-            dsn=None,
-            graph="test_graph",
-            authorized="soc:test_graph",
+            dsn=os.environ.get("GRAPH_DSN") or None,
+            graph=os.environ.get("AGE_GRAPH_NAME") or "soc_graph",
+            authorized=f"soc:{os.environ.get('AGE_GRAPH_NAME') or 'soc_graph'}",
         ),
     )
     monkeypatch.setattr(

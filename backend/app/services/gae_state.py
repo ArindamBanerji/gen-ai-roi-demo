@@ -154,14 +154,21 @@ def _load_age_learning_store_adapter():
 
 
 def _init_learning_store() -> object | None:
-    dsn = (os.environ.get("GRAPH_DSN") or "").strip()
-    if not dsn:
-        log.warning(
-            "[GAE] SOC L5 learning store unavailable: GRAPH_DSN is not configured"
-        )
+    from copilot_sdk.config import GraphConfig, GraphConfigError
+
+    try:
+        graph_config = GraphConfig.load("soc")
+    except GraphConfigError as exc:
+        log.warning("[GAE] SOC L5 learning store unavailable: %s", exc)
         return None
 
-    graph_name = (os.environ.get("AGE_GRAPH_NAME") or "soc_graph").strip() or "soc_graph"
+    dsn = (graph_config.dsn or "").strip()
+    graph_name = graph_config.graph
+    if not dsn:
+        log.warning(
+            "[GAE] SOC L5 learning store unavailable: AGE DSN is not configured"
+        )
+        return None
     try:
         adapter_cls = _load_age_learning_store_adapter()
         store = adapter_cls(dsn=dsn, graph_name=graph_name)
@@ -190,8 +197,9 @@ def init_learning_state() -> LearningState:
     global _learning_state, _learning_store, _bootstrap_metadata, _bootstrap_result
 
     from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
-    from copilot_sdk.config import GraphConfig
+    from copilot_sdk.config import GraphConfig, GraphConfigError
     from copilot_sdk.graph.factory import create_graph_store
+    from copilot_sdk.graph.dual_write_store import DualWriteStore
 
     # The SOC scorer must use the same typed AGE configuration as the shared
     # graph client.  In particular, do not fall back to the process-local
@@ -205,6 +213,11 @@ def init_learning_state() -> LearningState:
         graph_name=graph_config.graph,
         shared_graph_authorization=graph_config.authorized,
     )
+    if isinstance(graph_store, DualWriteStore):
+        raise GraphConfigError(
+            "SOC scorer requires an AGE-backed store directly; "
+            "dual_write reads from SQLite primary and is not authoritative"
+        )
     _profile_scorer = SOCCompoundingScorerAdapter(graph_store=graph_store)
     assert _profile_scorer.eta_override is not None, (
         "ProfileScorer constructed without eta_override. "
@@ -484,6 +497,16 @@ def save_learning_state() -> None:
 def _reset_learning_state_inner() -> None:
     """Synchronous reset body. Must only be called while _scorer_lock is held."""
     global _learning_state, _bootstrap_metadata, _bootstrap_result
+    old_scorer = getattr(_learning_state, "profile_scorer", None)
+    old_compound = getattr(old_scorer, "_compound", None)
+    old_graph_store = getattr(old_compound, "_graph_store", None)
+    for store in (old_graph_store, _learning_store):
+        close = getattr(store, "close", None)
+        if callable(close):
+            try:
+                close()
+            except Exception as exc:
+                log.warning("[GAE] Failed to close prior graph store during reset: %s", exc)
     _learning_state = None
     _bootstrap_metadata = {}
     _bootstrap_result = None
