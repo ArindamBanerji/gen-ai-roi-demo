@@ -468,13 +468,7 @@ async def get_iks_trend_endpoint():
         current = await compute_iks_v2(_get_age_client())  # SOURCE: computed from graph (Decision nodes + centroids)
     except Exception as exc:
         print(f"[SOC] iks-trend compute failed: {exc}")
-        current = {
-            "iks_v2": 0.0,
-            "components": {},
-            "interpretation": "unavailable",
-            "total_decisions": 0,
-            "categories_active": 0,
-        }
+        raise HTTPException(status_code=503, detail="AGE query failed for IKS") from exc
 
     trend_point = {
         "decisions":  current.get("total_decisions", 0),

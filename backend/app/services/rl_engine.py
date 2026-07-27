@@ -441,7 +441,8 @@ class CreditAssigner:
             min_decision_number = max(0, current_number - self.LOOKBACK)
             query = (
                 "MATCH (d:Decision)-[:TRIGGERED_EVOLUTION]->(e:EvolutionEvent)\n"
-                f"WHERE d.category = {_S(category)}\n"
+                f"WHERE d.domain = 'soc'\n"
+                f"  AND d.category = {_S(category)}\n"
                 f"  AND d.action_index = {action_idx}\n"
                 f"  AND d.decision_number >= {min_decision_number}\n"
                 f"  AND d.decision_number < {current_number}\n"

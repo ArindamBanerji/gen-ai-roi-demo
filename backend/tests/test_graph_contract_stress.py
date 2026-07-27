@@ -219,6 +219,7 @@ class TestVerifyGraphDetectsProblems:
         from app.graph_schema import verify_graph
         _run(isolated_client.run_query(
             "CREATE (d:Decision {decision_id: 'stress-test-orphan', "
+            "domain: 'soc', "
             "origin: 'stress_test', category: 'test', action: 'test', "
             "confidence: 0.5, correct: true, outcome: 'correct', "
             "factor_vector: '[0.1,0.2,0.3,0.4,0.5,0.6]'})"

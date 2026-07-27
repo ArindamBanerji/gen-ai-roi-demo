@@ -721,8 +721,8 @@ async def get_variant_history(variant_id: str = Query(..., description="Variant 
         return {"variant_id": variant_id, "events": events, "count": len(events)}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception:
-        return {"variant_id": variant_id, "events": [], "count": 0}
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="AGE query failed for variant history") from exc
 
 
 # ============================================================================
@@ -799,8 +799,8 @@ async def get_recent_events(limit: int = Query(20, ge=1, le=100)):
     try:
         events = await get_ledger_recent_events(neo4j_client, limit)
         return {"events": events, "count": len(events), "limit": limit}
-    except Exception:
-        return {"events": [], "count": 0, "limit": limit}
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="AGE query failed for recent events") from exc
 
 
 # ============================================================================

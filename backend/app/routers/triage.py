@@ -651,6 +651,7 @@ async def analyze_alert(request: ProcessAlertRequest):
         _rl_explored_action_name = None
         _rl_explored_but_referred = False
         _rl_exploration_executed = False
+        _rl_exploration_status = "available"
         _rl_decision_method = "gae_scoring"
         try:
             with _soc_perf_phase(
@@ -702,6 +703,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             _rl_exploration_decision = None
             _rl_explored_action_name = None
             _rl_exploration_executed = False
+            _rl_exploration_status = "unavailable"
 
         with _soc_perf_phase(
             "routing_zone_resolution",
@@ -1349,6 +1351,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             "provenance":      _provenance_payload,
             "referral":        _referral_payload,
             "referral_debug":  _referral_debug,
+            "exploration_status": _rl_exploration_status,
             "decision_method": "referral_override" if _referral.should_refer else _rl_decision_method,
         }
         if _cluster_history_payload is not None:

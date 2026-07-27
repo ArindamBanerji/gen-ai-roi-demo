@@ -154,14 +154,15 @@ GRAPH_CONTRACT = {
     "invariants": [
         {
             "name": "no_orphan_decisions",
-            "query": "MATCH (d:Decision) WHERE NOT EXISTS((d)-[:DECIDED_ON]->()) "
+            "query": "MATCH (d:Decision) WHERE d.domain = 'soc' "
+                     "AND NOT EXISTS((d)-[:DECIDED_ON]->()) "
                      "RETURN count(d) AS n",
             "expected": 0,
         },
         {
             "name": "no_missing_outcomes",
             "query": "MATCH (d:Decision {origin: '" + SYNTHETIC_ORIGIN + "'}) "
-                     "WHERE d.correct IS NULL RETURN count(d) AS n",
+                     "WHERE d.domain = 'soc' AND d.correct IS NULL RETURN count(d) AS n",
             "expected": 0,
         },
         {
@@ -172,7 +173,7 @@ GRAPH_CONTRACT = {
         },
         {
             "name": "no_null_categories",
-            "query": "MATCH (d:Decision) WHERE d.category IS NULL "
+            "query": "MATCH (d:Decision) WHERE d.domain = 'soc' AND d.category IS NULL "
                      "RETURN count(d) AS n",
             "expected": 0,
         },
