@@ -219,7 +219,7 @@ class TravelMatchFactor:
             return float(max(0.0, min(score, 1.0)))
         except Exception as exc:
             log.warning("TravelMatchFactor error: %s", exc)
-            return 0.5
+            raise RuntimeError("AGE query failed for travel factor") from exc
 
 
 class AssetCriticalityFactor:
@@ -283,7 +283,7 @@ class AssetCriticalityFactor:
             return float(score)
         except Exception as exc:
             log.warning("AssetCriticalityFactor error: %s", exc)
-            return 0.5
+            raise RuntimeError("AGE query failed for asset factor") from exc
 
 
 class ThreatIntelEnrichmentFactor:
@@ -323,7 +323,8 @@ class ThreatIntelEnrichmentFactor:
             return 0.0
 
         # Pass 1: IOC matching (existing logic)
-        pass1_value = 0.0
+        pass1_result = {"value": 0.0, "provenance_nodes": [],
+                        "contribution": "IOC score 0.00"}
         try:
             results = await neo4j.run_query(
                 f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})"
@@ -339,12 +340,12 @@ class ThreatIntelEnrichmentFactor:
                     max_score = max(max_score, self._SEV_MAP.get(sev, 0.3))
                 if len(sources) > 1:
                     max_score = min(max_score + 0.1, 1.0)
-                pass1_value = float(max_score)
+                pass1_result["value"] = float(max_score)
         except Exception as exc:
             log.warning("ThreatIntelEnrichmentFactor Pass 1 error: %s", exc)
+            raise RuntimeError("AGE query failed for threat intel factor Pass 1") from exc
 
-        pass1_result = {"value": pass1_value, "provenance_nodes": [],
-                        "contribution": f"IOC score {pass1_value:.2f}"}
+        pass1_result["contribution"] = f"IOC score {pass1_result['value']:.2f}"
 
         # Pass 3: Internal campaign membership (highest signal when present)
         pass3 = await self._internal_campaign_score(alert_id, neo4j)
@@ -401,11 +402,7 @@ class ThreatIntelEnrichmentFactor:
             }
         except Exception as e:
             log.warning("_internal_campaign_score failed for %s: %s", alert_id, e)
-            return {
-                "value": 0.50,
-                "provenance_nodes": [],
-                "contribution": "Campaign lookup unavailable -- neutral signal.",
-            }
+            raise RuntimeError("AGE query failed for campaign score") from e
 
 
 class PatternHistoryFactor:
@@ -450,7 +447,8 @@ class PatternHistoryFactor:
             results = await neo4j.run_query(
                 f"""
                 MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
-                WHERE a.alert_type = {_S(situation_type)} AND d.outcome IS NOT NULL
+                WHERE d.domain = 'soc'
+                  AND a.alert_type = {_S(situation_type)} AND d.outcome IS NOT NULL
                 RETURN count(d) AS total,
                        sum(CASE WHEN d.correct = true THEN 1 ELSE 0 END) AS correct
                 """
@@ -467,7 +465,7 @@ class PatternHistoryFactor:
             return float(max(0.0, min(correct / total, 1.0)))
         except Exception as exc:
             log.warning("PatternHistoryFactor error: %s", exc)
-            return 0.5
+            raise RuntimeError("AGE query failed for pattern history") from exc
 
 
 class PatternHistoryFactorComputer:
@@ -546,7 +544,7 @@ class PatternHistoryFactorComputer:
             results = await neo4j.run_query(query)
         except Exception as exc:
             log.warning("PatternHistoryFactorComputer error: %s", exc)
-            return self._fallback_compute(alert)
+            raise RuntimeError("AGE query failed for pattern computation") from exc
 
         if not results:
             return self._fallback_compute(alert)

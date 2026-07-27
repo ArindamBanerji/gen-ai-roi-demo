@@ -28,6 +28,7 @@ async def get_campaign_cohort_status() -> dict[str, Any]:
 async def _read_decision_records() -> list[dict[str, Any]]:
     query = """
     MATCH (d:Decision)
+    WHERE d.domain = 'soc'
     RETURN
         d.decision_id AS decision_id,
         d.provenance AS provenance,

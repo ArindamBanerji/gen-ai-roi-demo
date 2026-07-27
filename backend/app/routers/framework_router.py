@@ -164,57 +164,11 @@ async def get_centroid_evolution(
             detail="AGE query failed for centroid evolution",
         ) from exc
 
-    # Fallback: compute cumulative drift from μ₀ using in-memory ProfileScorer.
-    # Triggered when no per-update records exist (bootstrap-only deployment or
-    # first run before any live triage outcomes). Drift formula:
-    #   drift[c] = mean_a( ‖μ(t)[c,a,:] − μ₀[c,a,:]‖₂ )
     if not result:
-        try:
-            import uuid
-            import numpy as np
-            from app.services.iks import _load_mu_zero
-            from app.services.gae_state import get_profile_scorer, get_learning_state
-
-            mu_zero = _load_mu_zero()
-            scorer  = get_profile_scorer()
-
-            if scorer is not None and mu_zero is not None:
-                categories = scorer.categories if hasattr(scorer, "categories") else []
-                actions    = scorer.actions    if hasattr(scorer, "actions")    else []
-                # BACKLOG-020 Phase 7: use snapshot.verified_decisions for display;
-                # fall back to learning_state.decision_count if snapshot not ready.
-                try:
-                    from app.state.graph_snapshot import get_snapshot as _get_snap_ce
-                    decision_count = _get_snap_ce().verified_decisions  # SOURCE: GraphSnapshot (graph-backed, survives restart)
-                except Exception:
-                    decision_count = get_learning_state().decision_count  # SOURCE: in-memory LearningState (resets on restart)
-
-                for c_idx, cat in enumerate(categories):
-                    if category is not None and cat != category:
-                        continue
-                    if c_idx >= scorer.centroids.shape[0] or c_idx >= mu_zero.shape[0]:
-                        continue
-                    # Mean L2 drift from μ₀ across all actions for this category
-                    diffs = scorer.centroids[c_idx] - mu_zero[c_idx]   # shape (n_actions, n_factors)
-                    drift = float(np.mean([np.linalg.norm(diffs[a]) for a in range(diffs.shape[0])]))
-                    best_action = actions[0] if actions else "unknown"
-                    result.append({
-                        "decision_number": c_idx + 1,
-                        "id": str(uuid.uuid4()),
-                        "centroid_delta_norm": round(drift, 6),
-                        "category": cat,
-                        "action": best_action,
-                        "correct": True,
-                        "verified_at": "",
-                        "drift_type": "cumulative_from_bootstrap",
-                        "decision_count": decision_count,
-                    })
-                print(
-                    f"[SOC] centroid-evolution fallback: {len(result)} categories "
-                    f"(drift-from-bootstrap, decision_count={decision_count})"
-                )
-        except Exception as exc:
-            print(f"[SOC] centroid-evolution fallback failed: {exc}")
+        raise HTTPException(
+            status_code=503,
+            detail="AGE query returned no centroid evolution data",
+        )
 
     print(f"[SOC] centroid-evolution: returned {len(result)} records (n={n}, category={category!r})")
     return result
@@ -268,7 +222,7 @@ async def get_convergence_calendar():
                 if factor_name in decisions_per_factor:
                     decisions_per_factor[factor_name] = int(row.get("cnt", 0))
         except Exception as exc:
-            print(f"[convergence-calendar] decisions query failed: {exc}")
+            raise HTTPException(status_code=503, detail="Convergence graph data unavailable") from exc
 
         # Overall decision count as fallback for factors not tagged
         total = getattr(ls, "decision_count", 0)  # SOURCE: in-memory LearningState (resets on restart)
@@ -277,10 +231,10 @@ async def get_convergence_calendar():
             per = total // len(SOC_FACTORS)
             decisions_per_factor = {f: per for f in SOC_FACTORS}
 
-    except RuntimeError:
-        pass  # not yet initialised -- stay with defaults
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail="Convergence state unavailable") from exc
     except Exception as exc:
-        print(f"[convergence-calendar] state read failed: {exc}")
+        raise HTTPException(status_code=503, detail="Convergence state unavailable") from exc
 
     return build_convergence_calendar(
         sigma_per_factor=sigma_per_factor,
@@ -333,7 +287,7 @@ async def get_ols_status_endpoint():
         )
         ols_history = [float(r["ols_score"]) for r in result]
     except Exception as exc:
-        print(f"[ols-status] ols_history query failed: {exc}")
+        raise HTTPException(status_code=503, detail="AGE query failed for OLS history") from exc
 
     try:
         # Read override counts per analyst
@@ -344,7 +298,7 @@ async def get_ols_status_endpoint():
         )
         analyst_overrides = {r["analyst_id"]: int(r["cnt"]) for r in result}
     except Exception as exc:
-        print(f"[ols-status] analyst_overrides query failed: {exc}")
+        raise HTTPException(status_code=503, detail="AGE query failed for analyst overrides") from exc
 
     try:
         # Check warm_start flag from LearningState node if present
@@ -355,7 +309,7 @@ async def get_ols_status_endpoint():
         if result:
             warm_start_active = bool(result[0].get("warm_start", False))
     except Exception as exc:
-        print(f"[ols-status] warm_start query failed: {exc}")
+        raise HTTPException(status_code=503, detail="AGE query failed for warm-start state") from exc
 
     return get_ols_status(
         ols_history=ols_history,
@@ -373,13 +327,13 @@ async def get_flywheel_comparison(alert_id: str = "ALERT-001", category: str = "
     """
     Return W2 flywheel Day-1 vs current comparison for a given alert category.
 
-    Suppressed when TRIGGERED_EVOLUTION edge count < 10 (cold-start guard).
+     Inactive when TRIGGERED_EVOLUTION edge count < 10 (cold-start guard).
 
     Response
     --------
     {
-        "suppressed": bool,
-        "reason": str (if suppressed),
+         "flywheel_active": bool,
+         "reason": str (if inactive),
         "category": str,
         "day_1_snapshot": {...},
         "current": {...},
@@ -442,8 +396,7 @@ async def get_flywheel_comparison(alert_id: str = "ALERT-001", category: str = "
         )
 
     except Exception as exc:
-        print(f"[flywheel-comparison] AGE error: {exc}")
-        return {"suppressed": True, "reason": "data_unavailable"}
+        raise HTTPException(status_code=503, detail="AGE query failed for flywheel comparison") from exc
 
 
 # ============================================================================

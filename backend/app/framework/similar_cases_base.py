@@ -75,7 +75,8 @@ class SimilarCasesBase(abc.ABC):
             rows = await neo4j_client.run_query(
                 """
                 MATCH (d:Decision)
-                WHERE d.category = $category
+                WHERE d.domain = 'soc'
+                  AND d.category = $category
                   AND d.factor_vector IS NOT NULL
                   AND d.outcome IS NOT NULL
                 RETURN d.decision_id    AS decision_id,

@@ -242,13 +242,7 @@ async def _load_accuracy_trajectory(neo4j_client: Any) -> dict[str, Any] | None:
         except Exception as exc:
             log.debug("Accuracy trajectory live decision query failed: %s", exc)
 
-    try:
-        trajectory = builder(live_data=live_data)
-    except TypeError:
-        trajectory = builder(live_data)
-    except Exception as exc:
-        log.debug("Accuracy trajectory build failed: %s", exc)
-        return None
+    trajectory = builder(live_data=live_data)
     return trajectory if isinstance(trajectory, dict) else None
 
 

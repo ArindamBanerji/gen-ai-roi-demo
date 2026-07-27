@@ -38,7 +38,7 @@ class DecisionHistoryService:
             result = await neo4j_service.run_query(
                 """
                 MATCH (d:Decision)
-                WHERE d.category = $cat
+                WHERE d.domain = 'soc' AND d.category = $cat
                 WITH d ORDER BY d.timestamp_epoch DESC LIMIT 100
                 RETURN count(d) AS cat_count,
                        sum(CASE WHEN d.outcome = 'correct' THEN 1 ELSE 0 END) AS correct_count,

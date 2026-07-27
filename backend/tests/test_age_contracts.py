@@ -318,9 +318,12 @@ def test_threat_landscape_nodes_is_integer():
 
     client = TestClient(app)
     resp = client.get("/api/soc/threat-landscape")
-    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+    assert resp.status_code in (200, 503), f"Expected 200 with live AGE or 503, got {resp.status_code}"
+    if resp.status_code == 503:
+        return
     data = resp.json()
     nodes = data.get("graph_coverage", {}).get("nodes")
+    assert data.get("source") == "age", "A 200 response must identify live AGE as its source"
     assert isinstance(nodes, int), (
         f"graph_coverage.nodes is {type(nodes).__name__!r} (value={nodes!r}), expected int."
     )
@@ -329,19 +332,15 @@ def test_threat_landscape_nodes_is_integer():
 def test_threat_landscape_source_field_present():
     """
     GET /api/soc/threat-landscape -> source field must be present.
-    On live AGE it is 'age'; on unavailable it is 'unavailable'.
-    Either is acceptable -- absence is a bug.
+    AGE unavailability is an explicit 503 rather than a synthetic payload.
     """
     from fastapi.testclient import TestClient
     from app.main import app
 
     client = TestClient(app)
     resp = client.get("/api/soc/threat-landscape")
-    assert resp.status_code == 200
+    assert resp.status_code in (200, 503), f"Expected 200 with live AGE or 503, got {resp.status_code}"
+    if resp.status_code == 503:
+        return
     data = resp.json()
-    assert "source" in data, (
-        f"threat-landscape response missing 'source' field. Keys: {list(data.keys())}"
-    )
-    assert data["source"] in ("age", "unavailable"), (
-        f"Unexpected source value: {data['source']!r}. Expected 'age' or 'unavailable'."
-    )
+    assert data.get("source") == "age", "A 200 response must identify live AGE as its source"

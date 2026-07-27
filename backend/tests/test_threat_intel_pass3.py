@@ -16,6 +16,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import asyncio
 from unittest.mock import AsyncMock
 
+import pytest
+
 from app.domains.soc.factors import ThreatIntelEnrichmentFactor
 
 
@@ -104,24 +106,17 @@ def test_no_campaign_returns_neutral():
 
 
 # ============================================================================
-# Test 4 — Neo4j failure → neutral fallback, never raises
+# Test 4 — Neo4j failure → explicit error
 # ============================================================================
 
-def test_neo4j_failure_returns_neutral_not_exception():
+def test_neo4j_failure_raises_runtime_error():
     """
-    When Neo4j raises an exception, _internal_campaign_score must catch it
-    and return neutral value=0.50. The word 'unavailable' must appear in
-    the contribution message (per spec).
+    When AGE raises an exception, _internal_campaign_score must surface the
+    failure instead of synthesizing a neutral campaign score.
     """
     mock_neo4j = AsyncMock()
     mock_neo4j.run_query.side_effect = Exception("connection failed")
 
     factor = ThreatIntelEnrichmentFactor()
-    result = run(factor._internal_campaign_score("alert-x", mock_neo4j))
-
-    assert result["value"] == 0.50, (
-        f"Neo4j failure must return neutral 0.50. Got: {result['value']}"
-    )
-    assert "unavailable" in result["contribution"].lower(), (
-        f"contribution must contain 'unavailable'. Got: {result['contribution']!r}"
-    )
+    with pytest.raises(RuntimeError, match="AGE query failed for campaign score"):
+        run(factor._internal_campaign_score("alert-x", mock_neo4j))

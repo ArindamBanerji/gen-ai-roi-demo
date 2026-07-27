@@ -66,8 +66,8 @@ async def get_deployments():
             f"WHERE {soc_decision_where()} RETURN count(d) AS n"
         )
         pattern_count = int(_rows[0]["n"]) if _rows else 0
-    except Exception:
-        pattern_count = 0
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Deployment graph data unavailable") from exc
 
     deployments = [
         {
@@ -734,18 +734,8 @@ async def get_evolution_summary():
     """Return aggregate graph-backed AE lifecycle statistics."""
     try:
         return await get_ledger_evolution_summary(neo4j_client)
-    except Exception:
-        return {
-            "variants_generated": 0,
-            "variants_promoted": 0,
-            "variants_rejected": 0,
-            "variants_rolled_back": 0,
-            "shadow_batches": 0,
-            "shadow_started": 0,
-            "by_artifact_type": {},
-            "avg_shadow_win_rate": 0.0,
-            "total_shadow_decisions": 0,
-        }
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="AGE query failed for evolution summary") from exc
 
 
 @router.get("/soc/evolution/rejection-summary")
@@ -753,16 +743,12 @@ async def get_soc_rejection_summary():
     """Return SOC AgentEvolver rejection counts and recent failed clauses."""
     try:
         summary = await get_ledger_evolution_summary(neo4j_client)
-    except Exception:
-        summary = {
-            "variants_generated": 0,
-            "variants_promoted": 0,
-            "variants_rejected": 0,
-        }
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="AGE query failed for rejection summary") from exc
     try:
         events = await get_ledger_recent_events(neo4j_client, 100)
-    except Exception:
-        events = []
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="AGE query failed for rejection events") from exc
 
     rejected = _soc_rejected_variants(events)
     breakdown = {

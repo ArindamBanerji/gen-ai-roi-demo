@@ -121,7 +121,7 @@ RETURN d.decision_id AS id
 
 _READ_CATEGORY_DIST_QUERY = """
 MATCH (d:Decision)
-WHERE d.category IS NOT NULL
+WHERE d.domain = 'soc' AND d.category IS NOT NULL
 RETURN d.category AS category, count(d) AS cnt
 ORDER BY cnt DESC
 LIMIT 100

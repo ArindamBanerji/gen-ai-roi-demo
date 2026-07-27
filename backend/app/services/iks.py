@@ -216,29 +216,7 @@ async def compute_iks_v2(neo4j_service) -> dict:
         total_decisions = int((rows[0].get("total") or 0) if rows else 0)
     except Exception as exc:
         log.warning("[IKS-v2] graph_richness query failed: %s", exc)
-        total_decisions = 0
-        _neo4j_query_ok = False
-
-    # Floor: only when the query itself FAILED (not when it returned 0 legitimately).
-    # Uses the startup-synced in-memory decision_count so IKS doesn't collapse
-    # to 0 on transient Neo4j reconnects.
-    if not _neo4j_query_ok and total_decisions == 0:
-        try:
-            from app.services.gae_state import get_learning_state as _get_ls
-            total_decisions = max(0, _get_ls().decision_count)
-        except Exception as _fb_exc:
-            log.warning("[IKS-v2] learning_state fallback failed: %s", _fb_exc)
-            # Second-tier fallback: read checkpoint file directly so IKS stays
-            # stable even when startup hasn't run yet (e.g. isolated test runs).
-            try:
-                import json as _json
-                from app.services.gae_state import _STATE_PATH as _ckpt_path
-                with open(_ckpt_path, "r", encoding="utf-8") as _fh:
-                    _ckpt = _json.load(_fh)
-                total_decisions = max(0, int(_ckpt.get("decision_count", 0)))
-                log.info("[IKS-v2] decision_count=%d from checkpoint fallback", total_decisions)
-            except Exception:
-                pass
+        raise RuntimeError("AGE query failed for IKS graph richness") from exc
 
     graph_richness = min(total_decisions / float(_p3min(200.0, 0.25)), 1.0) * 100.0
 
@@ -256,15 +234,9 @@ async def compute_iks_v2(neo4j_service) -> dict:
         }
     except Exception as exc:
         log.warning("[IKS-v2] decision_maturity query failed: %s", exc)
-        cat_counts = {}
-        _dm_query_ok = False
+        raise RuntimeError("AGE query failed for IKS decision maturity") from exc
 
     mean_cat_count = (sum(cat_counts.values()) / len(cat_counts)) if cat_counts else 0.0
-    # Fallback: when the query itself failed (not a legitimately empty result), estimate
-    # mean_cat_count from total_decisions assuming uniform distribution across 6 categories.
-    # Mirrors the graph_richness fallback — keeps IKS stable on transient Neo4j errors.
-    if not _dm_query_ok and total_decisions > 0:
-        mean_cat_count = total_decisions / 6.0
     # Threshold: reaches 1.0 at mean_cat_count = 1 (6 total for 6 cats);
     # reaches 100.0 at mean_cat_count >= 100 (~600 total for 6 categories).
     decision_maturity = min(mean_cat_count / 100.0, 1.0) * 100.0
@@ -278,7 +250,7 @@ async def compute_iks_v2(neo4j_service) -> dict:
         high_conf = int((rows[0].get("high_conf") or 0) if rows else 0)
     except Exception as exc:
         log.warning("[IKS-v2] trust_coverage query failed: %s", exc)
-        high_conf = 0
+        raise RuntimeError("AGE query failed for trust coverage") from exc
 
     trust_coverage = min((high_conf / max(total_decisions, 1)) * 100.0, 100.0)
 
@@ -301,7 +273,7 @@ async def compute_iks_v2(neo4j_service) -> dict:
         ]
     except Exception as exc:
         log.warning("[IKS-v2] factor_quality query failed: %s", exc)
-        verified_accuracies = []
+        raise RuntimeError("AGE query failed for factor quality") from exc
 
     factor_quality = (
         (sum(verified_accuracies) / len(verified_accuracies)) * 100.0
@@ -353,7 +325,7 @@ async def _compute_delta_7d(current_iks: float) -> float:
         )
     except Exception as exc:
         log.debug("[IKS] delta_7d query failed: %s", exc)
-        return 0.0
+        raise RuntimeError("AGE query failed for IKS delta") from exc
 
     if not rows:
         return 0.0

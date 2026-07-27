@@ -135,7 +135,8 @@ async def get_cluster_history(
     decision_id = current_decision_id or ""
     query = f"""
     MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
-    WHERE a.user_id = {_S(source_user)}
+    WHERE d.domain = 'soc'
+      AND a.user_id = {_S(source_user)}
       AND d.outcome IS NOT NULL
       AND d.verified_at_epoch IS NOT NULL
       AND d.decision_id <> {_S(decision_id)}

@@ -1381,11 +1381,9 @@ def test_tab5_conservation_has_evidence_ledger():
 # ---------------------------------------------------------------------------
 
 def test_centroid_evolution_returns_data():
-    """centroid-evolution endpoint returns a list."""
+    """centroid-evolution fails closed when AGE is unavailable."""
     resp = client.get("/api/soc/centroid-evolution")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert isinstance(data, list) or isinstance(data, dict)
+    assert resp.status_code == 503
 
 
 def test_centroid_drift_nonzero_at_high_decisions():

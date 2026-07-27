@@ -370,7 +370,9 @@ class CampaignTemporalContext:
 
 SHARED_ENTITY_QUERY = """
 MATCH (d1:Decision)-[:INVOLVES]->(e:Entity)<-[:INVOLVES]-(d2:Decision)
-WHERE d1.alert_id <> d2.alert_id
+WHERE d1.domain = 'soc'
+  AND d2.domain = 'soc'
+  AND d1.alert_id <> d2.alert_id
   AND d1.timestamp_epoch >= $window_start
   AND d2.timestamp_epoch >= $window_start
 WITH e, collect(DISTINCT d1) + collect(DISTINCT d2) AS decisions
@@ -389,7 +391,9 @@ LIMIT $limit
 
 TECHNIQUE_SEQUENCE_QUERY = """
 MATCH path = (d1:Decision)-[:TRIGGERED_EVOLUTION*1..5]->(d2:Decision)
-WHERE d1.timestamp_epoch >= $window_start
+WHERE d1.domain = 'soc'
+  AND d2.domain = 'soc'
+  AND d1.timestamp_epoch >= $window_start
   AND d2.timestamp_epoch >= $window_start
   AND d1.alert_id <> d2.alert_id
 WITH
@@ -406,7 +410,8 @@ LIMIT $limit
 
 TEMPORAL_QUERY = """
 MATCH (d:Decision)
-WHERE d.timestamp_epoch >= $window_start
+WHERE d.domain = 'soc'
+  AND d.timestamp_epoch >= $window_start
   AND d.timestamp_epoch <= $window_end
 WITH d ORDER BY d.timestamp_epoch ASC
 WITH collect(d) AS decisions
@@ -426,7 +431,7 @@ LIMIT $limit
 GET_CAMPAIGNS_QUERY = """
 MATCH (c:Campaign)
 OPTIONAL MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)-[:MEMBER_OF]->(c)
-WITH c, collect(d.decision_id) AS decision_ids
+WITH c, [d IN collect(d) WHERE d.domain = 'soc' | d.decision_id] AS decision_ids
 RETURN
     c.campaign_id              AS campaign_id,
     c.first_seen               AS first_seen,
@@ -449,7 +454,7 @@ LIMIT $limit
 GET_CAMPAIGN_DETAIL_QUERY = """
 MATCH (c:Campaign {campaign_id: $campaign_id})
 OPTIONAL MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)-[:MEMBER_OF]->(c)
-WITH c, collect(d) AS decisions
+WITH c, [d IN collect(d) WHERE d.domain = 'soc' | d] AS decisions
 RETURN
     c.campaign_id              AS campaign_id,
     c.first_seen               AS first_seen,
@@ -1319,6 +1324,7 @@ class CampaignRepository:
                 "read",
                 self.neo4j.run_query("""
                     MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert {alert_id: $alert_id})
+                    WHERE d.domain = 'soc'
                     RETURN a.alert_id AS alert_id,
                            COALESCE(a.category, d.category) AS category,
                            COALESCE(a.source_entity_id, d.source_id) AS source_entity_id,
@@ -1691,6 +1697,7 @@ class CampaignRepository:
                 MATCH (c:Campaign {campaign_id: $campaign_id})
                 OPTIONAL MATCH (a:Alert)-[:MEMBER_OF]->(c)
                 OPTIONAL MATCH (d:Decision)-[:DECIDED_ON]->(a)
+                WHERE d.domain = 'soc'
                 RETURN c,
                        collect({
                            alert_id: a.alert_id,

@@ -645,7 +645,8 @@ class DiscoveryService:
         """
         query = f"""
         MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
-        WHERE d.timestamp_epoch >= {baseline_cutoff}
+        WHERE d.domain = 'soc'
+          AND d.timestamp_epoch >= {baseline_cutoff}
           AND d.confidence > {self.MIN_CONFIDENCE_CONVERGENCE}
         RETURN d.decision_id AS decision_id,
                a.alert_id AS alert_id,

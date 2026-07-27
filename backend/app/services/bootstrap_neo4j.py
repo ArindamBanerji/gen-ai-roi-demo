@@ -171,7 +171,8 @@ async def write_bootstrap_decisions(
     """
     # Idempotency guard: skip if bootstrap nodes already exist
     check = await neo4j_client.run_query(
-        "MATCH (d:Decision {source: 'bootstrap'}) RETURN count(d) AS cnt"
+        "MATCH (d:Decision {source: 'bootstrap'}) "
+        "WHERE d.domain = 'soc' RETURN count(d) AS cnt"
     )
     existing = check[0]["cnt"] if check else 0
     if existing > 0:
@@ -200,6 +201,7 @@ async def write_bootstrap_decisions(
             centroid_snapshot: dec.centroid_snapshot,
             category:         dec.category,
             source:           dec.source,
+            domain:           'soc',
             timestamp_epoch:  $timestamp_epoch,
             auto_approved:    false,
             shadow_mode:      false,

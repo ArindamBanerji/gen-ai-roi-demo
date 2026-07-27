@@ -807,7 +807,7 @@ def test_live_dk_adapter_reads_profile_scorer_path(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_plateau_rule_fires_below_target_and_flat(monkeypatch):
-    def build_accuracy_trajectory(live_data):
+    def build_accuracy_trajectory(*, live_data):
         assert live_data == {"credential_access": 100}
         return {
             "categories": [{
@@ -843,7 +843,7 @@ async def test_plateau_rule_fires_below_target_and_flat(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_plateau_rule_does_not_fire_above_target(monkeypatch):
-    def build_accuracy_trajectory(live_data):
+    def build_accuracy_trajectory(*, live_data):
         return {
             "categories": [{
                 "category": "credential_access",
@@ -863,6 +863,21 @@ async def test_plateau_rule_does_not_fire_above_target(monkeypatch):
     client.run_query = AsyncMock(return_value=[{"category": "credential_access", "cnt": 100}])
 
     assert await rule.detect(client) is None
+
+
+@pytest.mark.asyncio
+async def test_accuracy_trajectory_builder_exception_propagates(monkeypatch):
+    def build_accuracy_trajectory(*, live_data):
+        raise TypeError("unexpected builder failure")
+
+    _patch_module(
+        monkeypatch,
+        "app.services.accuracy_trajectory",
+        SimpleNamespace(build_accuracy_trajectory=build_accuracy_trajectory),
+    )
+
+    with pytest.raises(TypeError, match="unexpected builder failure"):
+        await generator._load_accuracy_trajectory(None)
 
 
 @pytest.mark.asyncio

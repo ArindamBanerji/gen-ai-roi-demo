@@ -413,6 +413,7 @@ class SimulationOrchestrator:
             gae_result = await neo4j_client.run_query(
                 f"""
                 MATCH (d:Decision {{decision_id: {_S(decision_id)}}})
+                WHERE d.domain = 'soc'
                 SET d.outcome           = {_S(outcome_str)},
                     d.correct           = {'true' if correct else 'false'},
                     d.verified_at_epoch = {_ts_sim_outcome}
@@ -543,6 +544,7 @@ class SimulationOrchestrator:
             if _sim_entry_hash:
                 await neo4j_client.run_query(
                     f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
+                    f"WHERE d.domain = 'soc' "
                     f"SET d.entry_hash = {_S(_sim_entry_hash)}, "
                     f"d.decision_chain_index = {_sim_chain_index}"
                 )

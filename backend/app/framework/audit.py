@@ -245,7 +245,7 @@ async def rebuild_chain_from_graph(client: Any) -> int:
     """
     rows = await client.run_query(
         "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
-        "WHERE d.origin = 'zero_day_synthetic' "
+        "WHERE d.domain = 'soc' AND d.origin = 'zero_day_synthetic' "
         "RETURN d.decision_id AS decision_id, "
         "       a.alert_id    AS alert_id, "
         "       d.category    AS category, "
@@ -299,7 +299,7 @@ async def rebuild_from_age() -> int:
 
     rows = await neo4j_client.run_query(
         "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
-        "WHERE d.timestamp_epoch IS NOT NULL "
+        "WHERE d.domain = 'soc' AND d.timestamp_epoch IS NOT NULL "
         "RETURN d.decision_id AS decision_id, "
         "d.action AS action, "
         "d.confidence AS confidence, "

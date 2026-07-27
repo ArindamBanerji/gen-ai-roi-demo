@@ -694,15 +694,15 @@ def test_evolution_summary_endpoint_empty_ledger_returns_zeros():
     assert response.json() == _empty_summary()
 
 
-def test_evolution_summary_endpoint_failure_returns_zeros():
+def test_evolution_summary_endpoint_failure_returns_503():
     with patch(
         "app.routers.evolution.get_ledger_evolution_summary",
         new=AsyncMock(side_effect=RuntimeError("graph unavailable")),
     ):
         response = TestClient(app).get("/api/evolution/summary")
 
-    assert response.status_code == 200
-    assert response.json() == _empty_summary()
+    assert response.status_code == 503
+    assert response.json()["detail"] == "AGE query failed for evolution summary"
 
 
 def test_p16_separation_no_profile_scorer_or_centroid_imports():

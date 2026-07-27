@@ -817,7 +817,7 @@ async def get_threat_landscape():
 
         source = "age"
     except Exception as exc:
-        print(f"[SOC] threat-landscape AGE query failed (using zero fallback): {exc}")
+        raise HTTPException(status_code=503, detail="Threat landscape data unavailable") from exc
 
     return {
         "threat_intel": {

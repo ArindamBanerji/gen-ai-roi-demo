@@ -310,6 +310,7 @@ class ProvenanceService:
             results = await neo4j_service.run_query(
                 """
                 MATCH (d:Decision {decision_id: $id})-[:DECIDED_ON]->(a:Alert)
+                WHERE d.domain = 'soc'
                 RETURN d.factor_vector AS fv,
                        d.action        AS action,
                        a.alert_type    AS alert_type

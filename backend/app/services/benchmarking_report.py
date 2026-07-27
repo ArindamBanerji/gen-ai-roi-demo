@@ -157,7 +157,7 @@ class BenchmarkingEngine:
     def _fetch_verified_decisions(self, start_date, end_date) -> List[Dict]:
         query = """
         MATCH (d:Decision)
-        WHERE d.outcome IS NOT NULL
+        WHERE d.domain = 'soc' AND d.outcome IS NOT NULL
         RETURN d.decision_id AS id, d.action AS system_action,
                d.analyst_action AS analyst_action,
                d.category AS category,
