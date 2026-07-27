@@ -236,3 +236,15 @@ grep (0s) → curl (2s) → validate_contracts.py (5s) → targeted Playwright (
   must set a flag (estimated=True, source="fallback") — never bare pass.
 - If a try/except computes OPTIONAL enrichment: bare pass is acceptable.
 - NEVER hardcode a number that looks like a computed metric without a comment.
+
+## Rule #63 — Test Double Completeness
+
+No mock/monkeypatch in test code unless the external dependency is
+truly unreachable (network, hardware, paid API). Test doubles must
+be complete — track state and answer queries from their own state.
+
+If a test double needs monkeypatching to work with new code, the
+test double is incomplete. Fix the double, not the caller.
+
+Retroactive audit needed: check all existing monkeypatch usage
+against this rule. Violations are technical debt, not exceptions.
