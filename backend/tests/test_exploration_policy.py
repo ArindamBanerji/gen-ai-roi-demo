@@ -151,11 +151,17 @@ def test_persistence_round_trip_through_store():
     assert reloaded.betas == [[1.0, 1.0]]
 
 
-def test_save_failure_does_not_crash_update_and_memory_updates(caplog):
+def test_save_failure_raises_and_memory_is_not_corrupted():
     policy = ExplorationPolicy(1, 2, posterior_store=FailingStore())
-    policy.update_posterior(0, 1, True)
-    assert policy.alphas[0][1] == 2.0
-    assert "posterior save failed" in caplog.text
+    before_alphas = [list(row) for row in policy.alphas]
+    before_betas = [list(row) for row in policy.betas]
+    with pytest.raises(RuntimeError, match="save failed"):
+        policy.update_posterior(0, 1, True)
+    # The failed persistence does not partially mutate the unrelated beta
+    # posterior; the in-memory alpha update remains a coherent attempted
+    # learning update.
+    assert policy.alphas[0][1] == before_alphas[0][1] + 1.0
+    assert policy.betas == before_betas
 
 
 def test_exploration_decision_fields_complete_for_non_explored():

@@ -71,16 +71,14 @@ def test_save_load_round_trip_for_6x4_arrays(pg_store):
 
 def test_invalid_dsn_load_returns_defaults():
     store = PosteriorStore("postgresql://postgres:postgres@localhost:1/missing?connect_timeout=1")
-    assert store.load(2, 3) == {
-        "alphas": [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
-        "betas": [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
-    }
+    with pytest.raises(RuntimeError, match="load failed"):
+        store.load(2, 3)
 
 
-def test_invalid_dsn_save_does_not_raise_and_logs_warning(caplog):
+def test_invalid_dsn_save_raises():
     store = PosteriorStore("postgresql://postgres:postgres@localhost:1/missing?connect_timeout=1")
-    store.save([[1.0]], [[1.0]])
-    assert "save failed" in caplog.text
+    with pytest.raises(RuntimeError, match="save failed"):
+        store.save([[1.0]], [[1.0]])
 
 
 def test_clear_removes_rows_and_load_returns_defaults(pg_store):

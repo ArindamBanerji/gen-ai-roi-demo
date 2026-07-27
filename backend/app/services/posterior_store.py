@@ -9,12 +9,12 @@ from __future__ import annotations
 import logging
 import os
 import time
-import warnings
 from typing import Any
+
+from copilot_sdk.config import GraphConfig
 
 log = logging.getLogger(__name__)
 
-DEFAULT_POSTERIOR_DSN = "postgresql://postgres:postgres@localhost:5433/soc_copilot?connect_timeout=5&sslmode=disable"
 POSTERIOR_HEALTH_CONNECT_TIMEOUT_SECONDS = 2
 
 
@@ -26,7 +26,7 @@ def _default_posteriors(n_categories: int, n_actions: int) -> dict[str, list[lis
 
 
 class PosteriorStore:
-    """Tiny fail-open PostgreSQL store for per-category/action Beta posteriors."""
+    """Tiny PostgreSQL store for per-category/action Beta posteriors."""
 
     def __init__(self, dsn: str | None = None) -> None:
         self._dsn = dsn or self._resolve_dsn()
@@ -34,19 +34,22 @@ class PosteriorStore:
 
     @staticmethod
     def _resolve_dsn() -> str:
-        for name in ("POSTERIOR_DSN", "GRAPH_DSN", "AGE_DSN", "DATABASE_URL"):
-            value = os.environ.get(name, "").strip()
-            if value:
-                if "sslmode" not in value:
-                    sep = "&" if "?" in value else ("?" if "://" in value else " ")
-                    value += f"{sep}sslmode=disable"
-                return value
-        warnings.warn(
-            "No GRAPH_DSN set - using localhost fallback. "
-            "Set GRAPH_DSN with WSL2 NAT IP per Rule #40.",
-            stacklevel=2,
+        # POSTERIOR_DSN is an explicit test-only override. Production graph
+        # connection settings remain owned by the typed GraphConfig.
+        if os.environ.get("PYTEST_CURRENT_TEST"):
+            override = os.environ.get("POSTERIOR_DSN", "").strip()
+            if override:
+                if "sslmode" not in override:
+                    sep = "&" if "?" in override else "?"
+                    override += f"{sep}sslmode=disable"
+                return override
+        config = GraphConfig.load(
+            "soc",
+            profile="test" if os.environ.get("PYTEST_CURRENT_TEST") else "production",
         )
-        return DEFAULT_POSTERIOR_DSN
+        if not config.dsn:
+            raise RuntimeError("SOC GraphConfig does not provide a posterior DSN")
+        return config.dsn
 
     def save(self, alphas: list[list[float]], betas: list[list[float]]) -> None:
         """Persist all posterior parameters using DELETE + INSERT in one transaction."""
@@ -82,10 +85,10 @@ class PosteriorStore:
                         rows,
                     )
         except Exception as exc:
-            log.warning("[PosteriorStore] save failed: %s", exc)
+            raise RuntimeError("[PosteriorStore] save failed") from exc
 
     def load(self, n_categories: int, n_actions: int) -> dict[str, list[list[float]]]:
-        """Load posterior parameters; return uninformative priors on failure."""
+        """Load posterior parameters; surface storage failures."""
         posteriors = _default_posteriors(n_categories, n_actions)
         try:
             self._ensure_table()
@@ -102,7 +105,7 @@ class PosteriorStore:
                             posteriors["alphas"][category_index][action_index] = float(alpha)
                             posteriors["betas"][category_index][action_index] = float(beta)
         except Exception as exc:
-            log.warning("[PosteriorStore] load failed: %s", exc)
+            raise RuntimeError("[PosteriorStore] load failed") from exc
         return posteriors
 
     def log_reset(self, reason: str) -> None:
@@ -118,7 +121,7 @@ class PosteriorStore:
                 with conn.cursor() as cur:
                     cur.execute("DELETE FROM rl_posteriors")
         except Exception as exc:
-            log.warning("[PosteriorStore] clear failed: %s", exc)
+            raise RuntimeError("[PosteriorStore] clear failed") from exc
 
     def health_check(self) -> dict[str, Any]:
         """Return storage health without mutating posterior state."""

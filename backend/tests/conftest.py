@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import socket
+import uuid
 
 import pytest
+
+from copilot_sdk.config import GraphConfig
+from copilot_sdk.testing.fixtures import age_available
 
 
 LIVE_BACKEND_HOST = "127.0.0.1"
@@ -31,6 +35,35 @@ def _live_backend_reachable(timeout: float = 0.25) -> bool:
             return True
     except OSError:
         return False
+
+
+@pytest.fixture(scope="session")
+def soc_stress_test_graph():
+    """Create an isolated AGE graph for destructive SOC contract tests."""
+    if not age_available():
+        pytest.skip("AGE not reachable (no DSN configured or connection failed)")
+
+    config = GraphConfig.load("soc")
+    if not config.dsn:
+        pytest.skip("SOC AGE DSN is not configured")
+
+    import psycopg
+
+    graph_name = f"soc_stress_test_{uuid.uuid4().hex[:12]}"
+    conn = psycopg.connect(config.dsn, connect_timeout=3, autocommit=True)
+    try:
+        conn.execute("LOAD 'age'")
+        conn.execute('SET search_path = ag_catalog, "$user", public')
+        conn.execute("SELECT create_graph(%s)", (graph_name,))
+        yield config.dsn, graph_name
+    finally:
+        try:
+            if not conn.closed:
+                conn.execute("LOAD 'age'")
+                conn.execute('SET search_path = ag_catalog, "$user", public')
+                conn.execute("SELECT drop_graph(%s, true)", (graph_name,))
+        finally:
+            conn.close()
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:

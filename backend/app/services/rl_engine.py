@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import math
+import os
 import random
 import time
 from dataclasses import asdict, dataclass
@@ -291,10 +292,7 @@ class ExplorationPolicy:
         self.posterior_store = posterior_store
         loaded: Dict[str, Any] = {}
         if posterior_store is not None:
-            try:
-                loaded = posterior_store.load(self.n_categories, self.n_actions)
-            except Exception as exc:
-                log.warning("[ExplorationPolicy] posterior load failed: %s", exc)
+            loaded = posterior_store.load(self.n_categories, self.n_actions)
         self.alphas = self._coerce_matrix(loaded.get("alphas"), default=1.0)
         self.betas = self._coerce_matrix(loaded.get("betas"), default=1.0)
 
@@ -364,10 +362,7 @@ class ExplorationPolicy:
         self.betas = [[2.0 for _ in range(self.n_actions)] for _ in range(self.n_categories)]
         self._save()
         if self.posterior_store is not None:
-            try:
-                self.posterior_store.log_reset(reason)
-            except Exception as exc:
-                log.warning("[ExplorationPolicy] posterior reset log failed: %s", exc)
+            self.posterior_store.log_reset(reason)
 
     @staticmethod
     def _argmax(values: list[float]) -> int:
@@ -405,10 +400,7 @@ class ExplorationPolicy:
     def _save(self) -> None:
         if self.posterior_store is None:
             return
-        try:
-            self.posterior_store.save(self.alphas, self.betas)
-        except Exception as exc:
-            log.warning("[ExplorationPolicy] posterior save failed: %s", exc)
+        self.posterior_store.save(self.alphas, self.betas)
 
 
 class CreditAssigner:
@@ -566,18 +558,32 @@ def get_exploration_policy() -> ExplorationPolicy:
     if _exploration_policy is None:
         from app.domains.soc.config import SCORER_ACTIONS, SOC_CATEGORIES
 
+        test_mode = bool(os.environ.get("PYTEST_CURRENT_TEST"))
         try:
             from app.services.posterior_store import PosteriorStore
 
             _posterior_store = PosteriorStore()
         except Exception as exc:
-            log.warning("[RL] PosteriorStore unavailable; using in-memory priors: %s", exc)
+            if not test_mode:
+                raise RuntimeError("[RL] PosteriorStore is required outside test mode") from exc
+            log.warning("[RL] test mode: PosteriorStore unavailable; using in-memory priors: %s", exc)
             _posterior_store = None
-        _exploration_policy = ExplorationPolicy(
-            n_categories=len(SOC_CATEGORIES),
-            n_actions=len(SCORER_ACTIONS),
-            posterior_store=_posterior_store,
-        )
+        try:
+            _exploration_policy = ExplorationPolicy(
+                n_categories=len(SOC_CATEGORIES),
+                n_actions=len(SCORER_ACTIONS),
+                posterior_store=_posterior_store,
+            )
+        except Exception as exc:
+            if not test_mode:
+                raise RuntimeError("[RL] PosteriorStore is required outside test mode") from exc
+            log.warning("[RL] test mode: posterior load unavailable; using in-memory priors: %s", exc)
+            _posterior_store = None
+            _exploration_policy = ExplorationPolicy(
+                n_categories=len(SOC_CATEGORIES),
+                n_actions=len(SCORER_ACTIONS),
+                posterior_store=None,
+            )
     return _exploration_policy
 
 
@@ -596,15 +602,9 @@ def get_credit_assigner() -> CreditAssigner:
 def reset_rl_state() -> None:
     global _reward_computer, _reward_ledger, _posterior_store, _exploration_policy, _credit_assigner
     if _exploration_policy is not None:
-        try:
-            _exploration_policy.reset_posteriors("demo_reset")
-        except Exception as exc:
-            log.warning("[RL] exploration reset failed: %s", exc)
+        _exploration_policy.reset_posteriors("demo_reset")
     if _posterior_store is not None:
-        try:
-            _posterior_store.clear()
-        except Exception as exc:
-            log.warning("[RL] posterior store clear failed: %s", exc)
+        _posterior_store.clear()
     _reward_computer = None
     _reward_ledger = None
     _exploration_policy = None

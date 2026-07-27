@@ -6,32 +6,27 @@ Tests run against live AGE database.
 
 Skip with: pytest -k "not graph_contract_stress"
 
-This module never selects AGE implicitly.  Destructive tests are additionally
-opt-in via TEST_DESTRUCTIVE_AGE=1 when GRAPH_BACKEND=age.  The July 2026
+This module never selects AGE implicitly.  Destructive tests use a disposable
+AGE graph when available.  The July 2026
 shared-graph census found no SOC SQLite source snapshot in this repository;
 the 20 previously deleted unverified rows therefore cannot be restored by
 this test module.  V_soc was unchanged, so no verified SOC data was lost.
 """
 import pytest
 import asyncio
+import inspect
 import os
 import sys
 
 from app.db.neo4j import soc_decision_where
+from copilot_sdk.testing.fixtures import age_available
 
 # Ensure backend is on path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 pytestmark = pytest.mark.skipif(
-    os.getenv("GRAPH_BACKEND") != "age",
-    reason="Stress tests require live AGE database"
+    not age_available(),
+    reason="Stress tests require a reachable AGE database",
 )
-
-destructive_age_skip = pytest.mark.skipif(
-    os.getenv("GRAPH_BACKEND") == "age"
-    and os.getenv("TEST_DESTRUCTIVE_AGE") != "1",
-    reason="Destructive test skipped on live AGE; set TEST_DESTRUCTIVE_AGE=1",
-)
-
 
 def _run(coro):
     """Run async coroutine synchronously."""
@@ -39,16 +34,15 @@ def _run(coro):
 
 
 @pytest.fixture
-def sm():
+def sm(isolated_client):
     """Get StateManager connected to AGE -- matches router construction pattern."""
     from app.services.state_manager import StateManager
     from app.services import gae_state, audit as audit_store
-    from app.db.neo4j import neo4j_client
     from app.core.domain_registry import get_domain_config
     return StateManager(
         learning_state_service=gae_state,
         audit_store=audit_store,
-        neo4j_service=neo4j_client,
+        neo4j_service=isolated_client,
         domain_config=get_domain_config(),
     )
 
@@ -63,20 +57,36 @@ def client():
     return get_graph_client(dsn=config.dsn, graph_name=config.graph)
 
 
+@pytest.fixture
+def isolated_client(soc_stress_test_graph):
+    """Get a raw graph client bound to the disposable stress-test graph."""
+    from ci_platform.graph import get_graph_client
+
+    dsn, graph_name = soc_stress_test_graph
+    client = get_graph_client(dsn=dsn, graph_name=graph_name)
+    try:
+        yield client
+    finally:
+        close = getattr(client, "close", None)
+        if close is not None:
+            result = close()
+            if inspect.isawaitable(result):
+                _run(result)
+
+
 # ================================================================
 # Clear session decisions — preserves everything persistent
 # ================================================================
 
-@destructive_age_skip
 class TestClearPreservesEverything:
 
-    def test_preserves_persistent_decisions(self, sm, client):
-        before = _run(client.run_query(
+    def test_preserves_persistent_decisions(self, sm, isolated_client):
+        before = _run(isolated_client.run_query(
             "MATCH (d:Decision {origin: 'zero_day_synthetic'}) "
             "WHERE d.correct IS NOT NULL RETURN count(d) AS n"
         ))
         _run(sm.clear_session_decisions())
-        after = _run(client.run_query(
+        after = _run(isolated_client.run_query(
             "MATCH (d:Decision {origin: 'zero_day_synthetic'}) "
             "WHERE d.correct IS NOT NULL RETURN count(d) AS n"
         ))
@@ -85,28 +95,28 @@ class TestClearPreservesEverything:
             + str(before[0]["n"]) + " -> " + str(after[0]["n"])
         )
 
-    def test_preserves_alerts(self, sm, client):
-        before = _run(client.run_query("MATCH (a:Alert) RETURN count(a) AS n"))
+    def test_preserves_alerts(self, sm, isolated_client):
+        before = _run(isolated_client.run_query("MATCH (a:Alert) RETURN count(a) AS n"))
         _run(sm.clear_session_decisions())
-        after = _run(client.run_query("MATCH (a:Alert) RETURN count(a) AS n"))
+        after = _run(isolated_client.run_query("MATCH (a:Alert) RETURN count(a) AS n"))
         assert after[0]["n"] == before[0]["n"], "clear_session_decisions deleted alerts"
 
-    def test_preserves_users(self, sm, client):
-        before = _run(client.run_query("MATCH (u:User) RETURN count(u) AS n"))
+    def test_preserves_users(self, sm, isolated_client):
+        before = _run(isolated_client.run_query("MATCH (u:User) RETURN count(u) AS n"))
         _run(sm.clear_session_decisions())
-        after = _run(client.run_query("MATCH (u:User) RETURN count(u) AS n"))
+        after = _run(isolated_client.run_query("MATCH (u:User) RETURN count(u) AS n"))
         assert after[0]["n"] == before[0]["n"], "clear_session_decisions deleted users"
 
-    def test_preserves_assets(self, sm, client):
-        before = _run(client.run_query("MATCH (a:Asset) RETURN count(a) AS n"))
+    def test_preserves_assets(self, sm, isolated_client):
+        before = _run(isolated_client.run_query("MATCH (a:Asset) RETURN count(a) AS n"))
         _run(sm.clear_session_decisions())
-        after = _run(client.run_query("MATCH (a:Asset) RETURN count(a) AS n"))
+        after = _run(isolated_client.run_query("MATCH (a:Asset) RETURN count(a) AS n"))
         assert after[0]["n"] == before[0]["n"], "clear_session_decisions deleted assets"
 
-    def test_preserves_campaigns(self, sm, client):
-        before = _run(client.run_query("MATCH (c:Campaign) RETURN count(c) AS n"))
+    def test_preserves_campaigns(self, sm, isolated_client):
+        before = _run(isolated_client.run_query("MATCH (c:Campaign) RETURN count(c) AS n"))
         _run(sm.clear_session_decisions())
-        after = _run(client.run_query("MATCH (c:Campaign) RETURN count(c) AS n"))
+        after = _run(isolated_client.run_query("MATCH (c:Campaign) RETURN count(c) AS n"))
         assert after[0]["n"] == before[0]["n"], "clear_session_decisions deleted campaigns"
 
 
@@ -114,15 +124,14 @@ class TestClearPreservesEverything:
 # Delete session decisions — preserves persistent decisions + all other nodes
 # ================================================================
 
-@destructive_age_skip
 class TestDeletePreservesEverything:
 
-    def test_preserves_persistent_decisions(self, sm, client):
-        before = _run(client.run_query(
+    def test_preserves_persistent_decisions(self, sm, isolated_client):
+        before = _run(isolated_client.run_query(
             "MATCH (d:Decision {origin: 'zero_day_synthetic'}) RETURN count(d) AS n"
         ))
         _run(sm.delete_session_decisions())
-        after = _run(client.run_query(
+        after = _run(isolated_client.run_query(
             "MATCH (d:Decision {origin: 'zero_day_synthetic'}) RETURN count(d) AS n"
         ))
         assert after[0]["n"] == before[0]["n"], (
@@ -130,19 +139,19 @@ class TestDeletePreservesEverything:
             + str(before[0]["n"]) + " -> " + str(after[0]["n"])
         )
 
-    def test_preserves_alerts(self, sm, client):
-        before = _run(client.run_query("MATCH (a:Alert) RETURN count(a) AS n"))
+    def test_preserves_alerts(self, sm, isolated_client):
+        before = _run(isolated_client.run_query("MATCH (a:Alert) RETURN count(a) AS n"))
         _run(sm.delete_session_decisions())
-        after = _run(client.run_query("MATCH (a:Alert) RETURN count(a) AS n"))
+        after = _run(isolated_client.run_query("MATCH (a:Alert) RETURN count(a) AS n"))
         assert after[0]["n"] == before[0]["n"], "delete_session_decisions deleted alerts"
 
-    def test_preserves_decided_on_edges(self, sm, client):
-        before = _run(client.run_query(
+    def test_preserves_decided_on_edges(self, sm, isolated_client):
+        before = _run(isolated_client.run_query(
             "MATCH (d:Decision {origin: 'zero_day_synthetic'})"
             "-[r:DECIDED_ON]->() RETURN count(r) AS n"
         ))
         _run(sm.delete_session_decisions())
-        after = _run(client.run_query(
+        after = _run(isolated_client.run_query(
             "MATCH (d:Decision {origin: 'zero_day_synthetic'})"
             "-[r:DECIDED_ON]->() RETURN count(r) AS n"
         ))
@@ -151,22 +160,22 @@ class TestDeletePreservesEverything:
             + str(before[0]["n"]) + " -> " + str(after[0]["n"])
         )
 
-    def test_preserves_involves_edges(self, sm, client):
-        before = _run(client.run_query(
+    def test_preserves_involves_edges(self, sm, isolated_client):
+        before = _run(isolated_client.run_query(
             "MATCH ()-[r:INVOLVES]->() RETURN count(r) AS n"
         ))
         _run(sm.delete_session_decisions())
-        after = _run(client.run_query(
+        after = _run(isolated_client.run_query(
             "MATCH ()-[r:INVOLVES]->() RETURN count(r) AS n"
         ))
         assert after[0]["n"] == before[0]["n"], "delete_session_decisions broke INVOLVES edges"
 
-    def test_preserves_detected_on_edges(self, sm, client):
-        before = _run(client.run_query(
+    def test_preserves_detected_on_edges(self, sm, isolated_client):
+        before = _run(isolated_client.run_query(
             "MATCH ()-[r:DETECTED_ON]->() RETURN count(r) AS n"
         ))
         _run(sm.delete_session_decisions())
-        after = _run(client.run_query(
+        after = _run(isolated_client.run_query(
             "MATCH ()-[r:DETECTED_ON]->() RETURN count(r) AS n"
         ))
         assert after[0]["n"] == before[0]["n"], "delete_session_decisions broke DETECTED_ON edges"
@@ -205,24 +214,23 @@ class TestPreCheckCatchesBadFilters:
 
 class TestVerifyGraphDetectsProblems:
 
-    @destructive_age_skip
-    def test_catches_orphan_decision(self, client):
+    def test_catches_orphan_decision(self, isolated_client):
         """An orphan Decision (no DECIDED_ON edge) violates the contract."""
         from app.graph_schema import verify_graph
-        _run(client.run_query(
+        _run(isolated_client.run_query(
             "CREATE (d:Decision {decision_id: 'stress-test-orphan', "
             "origin: 'stress_test', category: 'test', action: 'test', "
             "confidence: 0.5, correct: true, outcome: 'correct', "
             "factor_vector: '[0.1,0.2,0.3,0.4,0.5,0.6]'})"
         ))
         try:
-            report = _run(verify_graph(client))
+            report = _run(verify_graph(isolated_client))
             assert not report["healthy"], "verify_graph missed orphan Decision"
             assert any("orphan" in i.lower() for i in report["issues"]), (
                 "No orphan issue reported. Issues: " + str(report["issues"])
             )
         finally:
-            _run(client.run_query(
+            _run(isolated_client.run_query(
                 "MATCH (d:Decision {decision_id: 'stress-test-orphan'}) DETACH DELETE d"
             ))
 
