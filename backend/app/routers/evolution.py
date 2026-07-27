@@ -705,8 +705,8 @@ async def get_recent_evolution():
                 "triggered_by": aid,
             })
         return {"events": events}
-    except Exception:
-        return {"events": []}
+    except Exception as exc:
+        raise RuntimeError("Failed to load recent evolution events") from exc
 
 
 # ============================================================================

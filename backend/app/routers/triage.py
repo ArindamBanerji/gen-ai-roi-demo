@@ -3,6 +3,7 @@ Alert Triage API - Tab 3
 Graph-based reasoning and closed-loop execution
 """
 import contextlib
+import inspect
 import json
 import logging
 import os
@@ -55,6 +56,32 @@ from app.domains.soc.orchestrator import (
 from gae.scoring import score_alert
 
 logger = logging.getLogger(__name__)
+_REFERRAL_COUNT_SOURCE = os.environ.get("REFERRAL_COUNT_SOURCE", "legacy").strip().lower()
+_shadow_log = logging.getLogger("soc.referral.shadow")
+
+
+async def _legacy_sequence_count(source_id: str | None) -> int:
+    method = getattr(neo4j_client, "_legacy_sequence_count", None)
+    if method is not None:
+        result = method(source_id)
+        if not inspect.isawaitable(result):
+            return int(await neo4j_client.get_sequence_count(source_id))
+        return int((await result) or 0)
+    # AGE deployments without the legacy helper retain the established count
+    # semantics until the Alert-based implementation is provided by the client.
+    return int(await neo4j_client.get_sequence_count(source_id))
+
+
+async def _legacy_cross_category_count(user_id: str | None) -> int:
+    method = getattr(neo4j_client, "_legacy_cross_category_count", None)
+    if method is not None:
+        result = method(user_id)
+        if not inspect.isawaitable(result):
+            return int(await neo4j_client.get_cross_category_count(user_id))
+        return int((await result) or 0)
+    # See _legacy_sequence_count: preserve behavior until the client exposes
+    # a dedicated Alert-based legacy query.
+    return int(await neo4j_client.get_cross_category_count(user_id))
 
 # Backward-compatible monkeypatch hook used by existing tests.
 compute_factor_vector = _compute_factor_vector
@@ -718,8 +745,24 @@ async def analyze_alert(request: ProcessAlertRequest):
         ):
             _source_id = alert_data.get('source_location')
             _user_id   = context.get('user_id')
-            _sequence_count       = await neo4j_client.get_sequence_count(_source_id)
-            _cross_category_count = await neo4j_client.get_cross_category_count(_user_id)
+            _new_seq = await neo4j_client.get_sequence_count(_source_id)
+            _legacy_seq = await _legacy_sequence_count(_source_id)
+            _new_cross = await neo4j_client.get_cross_category_count(_user_id)
+            _legacy_cross = await _legacy_cross_category_count(_user_id)
+            if _new_seq != _legacy_seq:
+                _shadow_log.warning(
+                    "SHADOW MISMATCH seq: decision=%d alert=%d source_id=%s",
+                    _new_seq, _legacy_seq, _source_id,
+                )
+            if _new_cross != _legacy_cross:
+                _shadow_log.warning(
+                    "SHADOW MISMATCH cross_cat: decision=%d alert=%d user_id=%s",
+                    _new_cross, _legacy_cross, _user_id,
+                )
+            if _REFERRAL_COUNT_SOURCE == "decision":
+                _sequence_count, _cross_category_count = _new_seq, _new_cross
+            else:
+                _sequence_count, _cross_category_count = _legacy_seq, _legacy_cross
         # Referral runs before Decision creation so final-action side effects are
         # safe. The DB helpers count persisted Decisions only, so include the
         # current candidate decision in-memory to preserve previous R2/R7 semantics.
@@ -864,6 +907,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             if _entry_hash_analyze:
                 await neo4j_client.run_query(
                     f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
+                    "WHERE d.domain = 'soc' "
                     f"SET d.entry_hash = {_S(_entry_hash_analyze)}, "
                     f"d.decision_chain_index = {_chain_index_analyze}"
                 )
@@ -934,6 +978,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                 )
             await neo4j_client.run_query(
                 f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
+                "WHERE d.domain = 'soc' "
                 f"SET {', '.join(_campaign_set_clauses)}"
             )
         except Exception as _camp_flag_exc:
@@ -1031,7 +1076,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                 if _composite["auto_approve"] and not ShadowModeService.SHADOW_ENABLED:
                     await neo4j_client.run_query(
                         f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
-                        "SET d.auto_approved = true"
+                        "WHERE d.domain = 'soc' SET d.auto_approved = true"
                     )
         except Exception as _cg_exc:
             logger.warning("[TRIAGE] composite gate failed: %s", _cg_exc)
@@ -1155,6 +1200,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                     await neo4j_client.run_query(
                         f"""
                         MATCH (d:Decision {{decision_id: {_S(decision_id)}}})
+                        WHERE d.domain = 'soc'
                         SET d.action                  = {_S(selected_action)},
                             d.explored                = true,
                             d.exploration_rate        = {float(_rl_exploration_decision.exploration_rate)},
@@ -1487,6 +1533,7 @@ async def execute_action(request: ProcessAlertRequest):
                 confidence:      {decision.confidence},
                 factor_vector:   {_S(json.dumps([]))},
                 category:        {_S(_exec_category)},
+                domain:          'soc',
                 source_id:       {_S(context.get("source_location", ""))},
                 user_id:         {_S(context.get("user_id", ""))},
                 timestamp_epoch: {_ts_execute},
@@ -1513,6 +1560,7 @@ async def execute_action(request: ProcessAlertRequest):
         if _entry_hash_execute:
             await neo4j_client.run_query(
                 f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
+                "WHERE d.domain = 'soc' "
                 f"SET d.entry_hash = {_S(_entry_hash_execute)}, "
                 f"d.decision_chain_index = {_chain_index_execute}"
             )
@@ -1726,6 +1774,7 @@ async def report_decision_outcome(request: OutcomeRequest):
             gae_result = await neo4j_client.run_query(
                 f"""
                 MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
+                WHERE d.domain = 'soc'
                 OPTIONAL MATCH (d)-[:DECIDED_ON]->(a:Alert)
                 SET d.outcome           = {_S(outcome_label)},
                     d.correct           = {'true' if correct_bool else 'false'},
@@ -1780,6 +1829,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                     _oc_idx = _outcome_rec.get("chain_index", -1)
                     await neo4j_client.run_query(
                         f"MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}}) "
+                        "WHERE d.domain = 'soc' "
                         f"SET d.outcome_entry_hash = {_S(_oc_hash)}, "
                         f"d.outcome_chain_index = {_oc_idx}"
                     )
@@ -1797,7 +1847,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                 ):
                     _q_rows = await neo4j_client.run_query(
                         f"MATCH (d:Decision) "
-                        f"WHERE d.verified_by = {_S(analyst_id)} AND d.correct IS NOT NULL "
+                        f"WHERE d.domain = 'soc' AND d.verified_by = {_S(analyst_id)} AND d.correct IS NOT NULL "
                         f"RETURN d.correct AS correct"
                     )
                 if len(_q_rows) >= 5:
@@ -2186,6 +2236,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                     await neo4j_client.run_query(
                         f"""
                         MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
+                        WHERE d.domain = 'soc'
                         SET d.centroid_delta_norm = {cu.centroid_delta_norm},
                             d.category            = {_S(cu.category_name)},
                             d.correct             = {'true' if correct_bool else 'false'},
@@ -2323,6 +2374,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                             await neo4j_client.run_query(
                                 f"""
                                 MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
+                                WHERE d.domain = 'soc'
                                 CREATE (evo:EvolutionEvent {{
                                     id:              {_S(_evo_id)},
                                     event_type:      'verified_outcome',

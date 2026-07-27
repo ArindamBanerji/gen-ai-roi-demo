@@ -529,34 +529,6 @@ if _GRAPH_BACKEND == "age":
             f"Graph={neo4j_client._graph}"
         )
 
-        # Shim: bind methods that live on Neo4jClient but are not yet on AGEClient.
-        # Added here rather than in ci_platform so we don't violate the
-        # "do not modify ci_platform" constraint.  Uses types.MethodType so
-        # `self` resolves correctly inside each method body.
-        import types as _types
-
-        if not hasattr(neo4j_client, "count_correct_decisions"):
-            async def _count_correct_decisions(self) -> int:
-                """Count Decision nodes with correct=true (matches bootstrap query)."""
-                try:
-                    results = await self.run_query(
-                        f"MATCH (d:Decision) WHERE {soc_decision_where()} "
-                        "AND d.correct = true "
-                        "RETURN count(d) AS cnt"
-                    )
-                    return int(results[0]["cnt"]) if results else 0
-                except (TypeError, ValueError, KeyError):
-                    return 0
-            neo4j_client.count_correct_decisions = _types.MethodType(
-                _count_correct_decisions, neo4j_client
-            )
-
-        if not hasattr(neo4j_client, "create_decision_trace"):
-            # Bind the updated Neo4jClient method (inline literals — AGE-safe).
-            neo4j_client.create_decision_trace = _types.MethodType(
-                Neo4jClient.create_decision_trace, neo4j_client
-            )
-
     except Exception as _exc:
         print(
             f"[BACKEND] GRAPH_BACKEND=age but AGEClient FAILED: {_exc}"
