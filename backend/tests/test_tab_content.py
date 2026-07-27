@@ -1389,12 +1389,10 @@ def test_centroid_evolution_returns_data():
 
 
 def test_centroid_drift_nonzero_at_high_decisions():
-    """Fallback computes non-zero drift when scorer.centroids differs from mu_zero.
+    """AGE failures are surfaced as HTTP 503 instead of in-memory fallback data.
 
-    Unit test: patches Neo4j to raise (forcing the in-memory fallback),
-    and patches ProfileScorer + _load_mu_zero so centroids != mu_zero by a known
-    amount.  Verifies the fallback correctly propagates non-zero drift into
-    the centroid-evolution response.
+    The old test exercised a removed fallback that synthesized drift from the
+    in-memory scorer.  The endpoint now fails closed when AGE is unavailable.
     """
     import numpy as np
 
@@ -1430,14 +1428,5 @@ def test_centroid_drift_nonzero_at_high_decisions():
         local_client = TestClient(app)
         resp = local_client.get("/api/soc/centroid-evolution")
 
-    assert resp.status_code == 200
-    data = resp.json()
-    events = data if isinstance(data, list) else data.get("evolution", [])
-    assert len(events) > 0, "Fallback returned no records despite mocked scorer"
-    drifts = [
-        abs(e.get("drift", e.get("centroid_delta_norm", e.get("magnitude", 0.0))))
-        for e in events if e
-    ]
-    assert max(drifts) > 0.001, (
-        f"Fallback drift values all ~= 0 despite centroids != mu_zero: {drifts}"
-    )
+    assert resp.status_code == 503
+    assert resp.json()["detail"] == "AGE query failed for centroid evolution"

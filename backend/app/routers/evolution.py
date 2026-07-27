@@ -930,13 +930,7 @@ async def get_graph_stats():
             "source": "neo4j",
         }
     except Exception as e:
-        return {
-            "nodes_traversed": 0,
-            "relationships_analyzed": 0,
-            "historical_decisions": 0,
-            "source": "unavailable",
-            "error": str(e),
-        }
+        raise HTTPException(status_code=503, detail="AGE query failed for graph stats") from e
 
 
 def _soc_rejected_variants(events: list[dict[str, Any]]) -> list[dict[str, Any]]:

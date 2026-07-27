@@ -522,7 +522,8 @@ class PatternHistoryFactorComputer:
             if action_index is not None:
                 query = f"""
                 MATCH (d:Decision)-[:TRIGGERED_EVOLUTION]->(evo:EvolutionEvent)
-                WHERE d.category = {_S(category)}
+                WHERE d.domain = 'soc'
+                  AND d.category = {_S(category)}
                   AND d.action_index = {_S(action_index)}
                   AND d.verified_correct = true
                 RETURN d.factor_snapshot AS factor_snapshot,
@@ -533,7 +534,8 @@ class PatternHistoryFactorComputer:
             else:
                 query = f"""
                 MATCH (d:Decision)-[:TRIGGERED_EVOLUTION]->(evo:EvolutionEvent)
-                WHERE d.category = {_S(category)}
+                WHERE d.domain = 'soc'
+                  AND d.category = {_S(category)}
                   AND d.verified_correct = true
                 RETURN d.factor_snapshot AS factor_snapshot,
                        d.decision_number AS decision_num

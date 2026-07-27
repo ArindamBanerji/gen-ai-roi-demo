@@ -11,6 +11,9 @@ import sys
 import os
 from unittest.mock import patch, AsyncMock
 
+import pytest
+from fastapi import HTTPException
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 
@@ -63,7 +66,7 @@ def test_graph_stats_source_is_neo4j_on_success():
 
 
 def test_graph_stats_source_unavailable_on_error():
-    """source field equals 'unavailable' and 'error' key present when Neo4j raises."""
+    """Graph stats failures are surfaced as HTTP 503, not a zero payload."""
     from app.routers.evolution import get_graph_stats
 
     async def _run():
@@ -71,11 +74,11 @@ def test_graph_stats_source_unavailable_on_error():
             mock_client.run_query = AsyncMock(side_effect=RuntimeError("Neo4j down"))
             return await get_graph_stats()
 
-    result = asyncio.run(_run())
-    assert result["source"] == "unavailable", (
-        f"Expected source='unavailable', got {result['source']!r}"
-    )
-    assert "error" in result, "Expected 'error' key in fallback response"
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(_run())
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.detail == "AGE query failed for graph stats"
 
 
 def test_graph_stats_counts_are_integers():

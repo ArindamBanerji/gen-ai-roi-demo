@@ -147,6 +147,7 @@ async def explain_decision_get(alert_id: str):
     try:
         rows = await neo4j_client.run_query(
             "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert {alert_id: $alert_id}) "
+            "WHERE d.domain = 'soc' "
             "RETURN d ORDER BY d.timestamp_epoch DESC LIMIT 1",
             {"alert_id": alert_id},
         )

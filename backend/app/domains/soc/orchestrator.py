@@ -97,7 +97,8 @@ async def _factor_provenance(name: str, alert: Any, neo4j: Any, value: float) ->
         if category and await _query_has_rows(
             neo4j,
             f"MATCH (d:Decision)-[:TRIGGERED_EVOLUTION]->(evo:EvolutionEvent) "
-            f"WHERE d.category = {_S(category)} AND d.verified_correct = true "
+             f"WHERE d.domain = 'soc' AND d.category = {_S(category)} "
+             "AND d.verified_correct = true "
             "RETURN d.decision_id AS decision_id LIMIT 1",
         ):
             return _provenance_record(value, "learned", "verified decision history")

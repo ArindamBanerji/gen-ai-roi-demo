@@ -1250,7 +1250,8 @@ class CampaignRepository:
         try:
             results = await self.neo4j.run_query("""
                 MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
-                WHERE d.source_id IS NOT NULL AND d.source_id <> 'synthetic'
+                WHERE d.domain = 'soc'
+                  AND d.source_id IS NOT NULL AND d.source_id <> 'synthetic'
                 RETURN a.alert_id AS alert_id,
                        COALESCE(a.category, d.category) AS category,
                        COALESCE(a.source_entity_id, d.source_id) AS source_entity_id,
@@ -1282,7 +1283,8 @@ class CampaignRepository:
                 "read",
                 self.neo4j.run_query("""
                     MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
-                    WHERE d.timestamp_epoch > $cutoff_epoch
+                    WHERE d.domain = 'soc'
+                      AND d.timestamp_epoch > $cutoff_epoch
                     RETURN a.alert_id AS alert_id,
                            COALESCE(a.category, d.category) AS category,
                            COALESCE(a.source_entity_id, d.source_id) AS source_entity_id,

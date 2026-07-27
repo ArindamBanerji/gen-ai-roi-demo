@@ -370,6 +370,7 @@ class SimulationOrchestrator:
                 MATCH (a:Alert {{alert_id: {_S(alert_id)}}})
                 CREATE (d:Decision {{
                     decision_id:     {_S(decision_id)},
+                    domain:          'soc',
                     action:          {_S(scoring.selected_action)},
                     confidence:      {scoring.confidence},
                     factor_vector:   {_S(json.dumps(fv_list))},

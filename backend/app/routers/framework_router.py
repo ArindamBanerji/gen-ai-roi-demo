@@ -159,7 +159,10 @@ async def get_centroid_evolution(
                 "drift_type": "per_update",
             })
     except Exception as exc:
-        print(f"[SOC] centroid-evolution query failed: {exc}")
+        raise HTTPException(
+            status_code=503,
+            detail="AGE query failed for centroid evolution",
+        ) from exc
 
     # Fallback: compute cumulative drift from μ₀ using in-memory ProfileScorer.
     # Triggered when no per-update records exist (bootstrap-only deployment or
