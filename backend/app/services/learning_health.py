@@ -380,7 +380,7 @@ class LearningHealthMonitor:
 
         Cumulative, not consecutive -- matches the rolling-aggregate semantics of
         the conservation law (alpha, q, V use rolling windows, not consecutive runs).
-        Returns 0 if neo4j_service is None or the query fails.
+        Returns 0 if neo4j_service is None or the query has no rows.
         """
         if neo4j_service is None:
             return 0
@@ -400,7 +400,7 @@ class LearningHealthMonitor:
             return int((rows[0].get("red_days") or 0) if rows else 0)
         except Exception as exc:
             log.debug("[HEALTH] red_days query failed: %s", exc)
-            return 0
+            raise RuntimeError("AGE query failed for RED-day count") from exc
 
     # -------------------------------------------------------------------------
     # Interpretation
@@ -495,7 +495,7 @@ async def _query_soc_verified_conservation_stats(neo4j_service: Any = None) -> d
         )
     except Exception as exc:
         log.debug("[HEALTH] SOC verified conservation query failed: %s", exc)
-        return None
+        raise RuntimeError("AGE query failed for SOC conservation stats") from exc
 
     categories_with_data: set[str] = set()
     verified = 0
@@ -749,7 +749,7 @@ async def compute_category_baseline(neo4j_client: Any) -> dict[str, float]:
         )
     except Exception as exc:
         log.warning("[D2] compute_category_baseline query failed: %s", exc)
-        return {}
+        raise RuntimeError("AGE query failed for category baseline") from exc
 
     total = sum(int(r.get("cnt") or 0) for r in rows)
     if total == 0:
@@ -851,7 +851,7 @@ async def compute_analyst_precision(neo4j_client: Any) -> dict[str, float]:
         )
     except Exception as exc:
         log.warning("[D5] compute_analyst_precision query failed: %s", exc)
-        return {}
+        raise RuntimeError("AGE query failed for analyst precision") from exc
 
     result = {
         r["analyst"]: float(r["precision"])

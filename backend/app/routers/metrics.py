@@ -516,7 +516,7 @@ async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
 
     except Exception as e:
         print(f"[ERROR] Evolution events fetch failed: {e}")
-        return {"events": [], "estimated": False, "note": str(e), "total": 0}
+        raise HTTPException(status_code=503, detail="Evolution events unavailable") from e
 
 
 # ============================================================================
@@ -562,11 +562,7 @@ async def get_weekly_trends():
 
     except Exception as e:
         print(f"[METRICS] weekly-trends AGE query failed: {e}")
-        return {
-            "data": [],
-            "estimated": True,
-            "note": f"Weekly trends unavailable: {e}",
-        }
+        raise HTTPException(status_code=503, detail="Weekly trends unavailable") from e
 
 
 # ============================================================================
@@ -621,6 +617,10 @@ async def get_decision_economics():
                 decisions_per_day = round(n / span_days, 1)
         except Exception as throughput_exc:
             print(f"[METRICS] decision-economics decisions_per_day query failed: {throughput_exc}")
+            raise HTTPException(
+                status_code=503,
+                detail="Decision economics throughput data unavailable",
+            ) from throughput_exc
 
         switching_cost_trajectory = None
         try:
@@ -648,16 +648,7 @@ async def get_decision_economics():
 
     except Exception as e:
         print(f"[METRICS] decision-economics AGE query failed: {e}")
-        return {
-            "decisions_made": 0,
-            "correct_rate": 0.0,
-            "false_positive_rate": 0.0,
-            "time_saved_hours": 0.0,
-            "time_saved_estimated": True,
-            "note": "Time saved estimated at 0.5hr per correct decision",
-            "switching_cost_trajectory": None,
-            "error": str(e),
-        }
+        raise HTTPException(status_code=503, detail="Decision economics unavailable") from e
 
 
 # ============================================================================
@@ -729,10 +720,7 @@ async def get_operational_metrics():
             }
     except Exception as exc:
         print(f"[METRICS] MTTD query failed: {exc}")
-        mttd = {
-            "value_seconds": None, "value_minutes": None, "sample_size": 0,
-            "estimated": True, "note": "Requires decisions with timestamps",
-        }
+        raise HTTPException(status_code=503, detail="MTTD data unavailable") from exc
 
     # MTTR: decision → outcome verification
     try:
@@ -761,10 +749,7 @@ async def get_operational_metrics():
             }
     except Exception as exc:
         print(f"[METRICS] MTTR query failed: {exc}")
-        mttr = {
-            "value_seconds": None, "value_minutes": None, "sample_size": 0,
-            "estimated": True, "note": "Requires verified outcomes with timestamps",
-        }
+        raise HTTPException(status_code=503, detail="MTTR data unavailable") from exc
 
     # FP Rate from Decision outcomes
     try:
@@ -794,10 +779,7 @@ async def get_operational_metrics():
             }
     except Exception as exc:
         print(f"[METRICS] FP rate query failed: {exc}")
-        fp_rate = {
-            "rate": None, "total_decisions": 0, "fp_count": 0,
-            "estimated": True, "note": "Requires verified decision outcomes",
-        }
+        raise HTTPException(status_code=503, detail="False-positive rate data unavailable") from exc
 
     return {
         "mttd": mttd,

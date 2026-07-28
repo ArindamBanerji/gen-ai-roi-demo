@@ -61,6 +61,7 @@ def test_economics_endpoint_shape():
             mock_client.run_query = AsyncMock(side_effect=[
                 [{"total_decisions": 10}],
                 [{"correct_decisions": 8}],
+                [],
             ])
             return await get_decision_economics()
 
@@ -89,6 +90,7 @@ def test_economics_zero_decisions_safe():
             mock_client.run_query = AsyncMock(side_effect=[
                 [{"total_decisions": 0}],
                 [{"correct_decisions": 0}],
+                [],
             ])
             return await get_decision_economics()
 
