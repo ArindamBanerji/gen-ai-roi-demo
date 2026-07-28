@@ -12,7 +12,12 @@ Design:
     Stored as a native Python list -> Neo4j native array (NOT json.dumps string).
   - source='bootstrap' distinguishes these from live triage decisions.
   - No [:DECIDED_ON] relationship (bootstrap uses synthetic, not real, alerts).
-  - Idempotent: skipped when any bootstrap Decision nodes already exist in Neo4j.
+  - Idempotent: skipped when any bootstrap Decision nodes already exist in AGE.
+
+This is migration/seed infrastructure, not a live decision path. The writer
+accepts the shared AGE client resolved by ``GraphConfig.load("soc")`` and uses
+its governed ``run_query`` interface; it does not construct a legacy Neo4j
+client or bypass the shared AGE graph.
 
 Reference: docs/soc_copilot_design_v1.md Sec.14 (CORR-3).
 """
@@ -141,26 +146,32 @@ def build_bootstrap_decisions(
                 "centroid_snapshot": centroid.tolist(),  # native list for Neo4j
                 "category":         category,
                 "source":           "bootstrap",
+                "domain":           "soc",
             })
 
     return records
 
 
 async def write_bootstrap_decisions(
-    neo4j_client,
+    age_client,
     scorer,
     categories: List[str],
     decisions_per_category: Dict[str, int],
 ) -> int:
     """
-    Write bootstrap Decision nodes to Neo4j via UNWIND batch.
+    Write bootstrap Decision nodes to the shared SOC AGE graph via UNWIND batch.
+
+    ``age_client`` must be the shared AGE client created from
+    ``GraphConfig.load("soc")``. This direct batch is the documented
+    migration-equivalent governed path for synthetic bootstrap records; live
+    decisions use the GraphStore governed writer.
 
     Idempotent: skipped if any Decision node with source='bootstrap' already
     exists, preventing duplicate writes on repeated cold-starts.
 
     Parameters
     ----------
-    neo4j_client           : Neo4jClient instance (already connected).
+    age_client             : GraphConfig-resolved shared AGE client.
     scorer                 : ProfileScorer with calibrated centroids.
     categories             : Ordered category list.
     decisions_per_category : {category: count} from BootstrapResult.
@@ -170,7 +181,7 @@ async def write_bootstrap_decisions(
     int  Number of Decision nodes written (0 if skipped).
     """
     # Idempotency guard: skip if bootstrap nodes already exist
-    check = await neo4j_client.run_query(
+    check = await age_client.run_query(
         "MATCH (d:Decision {source: 'bootstrap'}) "
         "WHERE d.domain = 'soc' RETURN count(d) AS cnt"
     )
@@ -190,7 +201,7 @@ async def write_bootstrap_decisions(
 
     # UNWIND batch: factor_vector passed as Python list → native Neo4j array.
     # No [:DECIDED_ON] relationship — bootstrap uses synthetic, not real, alerts.
-    await neo4j_client.run_query(
+    await age_client.run_query(
         """
         UNWIND $decisions AS dec
         CREATE (d:Decision {
@@ -201,7 +212,7 @@ async def write_bootstrap_decisions(
             centroid_snapshot: dec.centroid_snapshot,
             category:         dec.category,
             source:           dec.source,
-            domain:           'soc',
+             domain:           dec.domain,
             timestamp_epoch:  $timestamp_epoch,
             auto_approved:    false,
             shadow_mode:      false,

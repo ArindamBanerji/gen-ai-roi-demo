@@ -9,6 +9,7 @@ Coverage:
 
 import pytest
 import numpy as np
+from unittest.mock import AsyncMock
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +169,40 @@ def test_bootstrap_decision_has_required_fields():
         assert isinstance(rec["id"], str) and len(rec["id"]) > 0, (
             "id must be a non-empty string"
         )
+
+    assert all(rec["domain"] == "soc" for rec in records)
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_writer_uses_shared_age_batch_and_is_idempotent():
+    from app.domains.soc.config import SOC_CATEGORIES
+    from app.services.bootstrap_neo4j import write_bootstrap_decisions
+
+    client = AsyncMock()
+    client.run_query = AsyncMock(side_effect=[
+        [],
+        [],
+        [{"cnt": 1}],
+    ])
+
+    written = await write_bootstrap_decisions(
+        client,
+        _make_scorer(),
+        list(SOC_CATEGORIES),
+        {category: 1 for category in SOC_CATEGORIES},
+    )
+    skipped = await write_bootstrap_decisions(
+        client,
+        _make_scorer(),
+        list(SOC_CATEGORIES),
+        {category: 1 for category in SOC_CATEGORIES},
+    )
+
+    assert written == len(SOC_CATEGORIES)
+    assert skipped == 0
+    write_query = client.run_query.call_args_list[1].args[0]
+    assert "UNWIND $decisions AS dec" in write_query
+    assert "domain:           dec.domain" in write_query
 
 
 # ---------------------------------------------------------------------------

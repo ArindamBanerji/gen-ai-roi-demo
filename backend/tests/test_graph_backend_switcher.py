@@ -70,3 +70,10 @@ def test_interface_parity_neo4j_vs_age():
     for method in required:
         assert hasattr(Neo4jClient, method), f"Neo4jClient missing: {method}"
         assert hasattr(AGEClient, method),   f"AGEClient missing: {method}"
+
+
+def test_legacy_neo4j_client_constructor_is_disabled():
+    from app.db.neo4j import Neo4jClient
+
+    with pytest.raises(RuntimeError, match="Legacy Neo4j path disabled"):
+        Neo4jClient()

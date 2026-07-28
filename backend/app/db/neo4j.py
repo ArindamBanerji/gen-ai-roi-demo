@@ -51,13 +51,17 @@ def soc_decision_where(alias: str = "d", active_only: bool = True) -> str:
 
 
 class Neo4jClient:
-    """Neo4j Aura client with connection pooling"""
+    """Retired Neo4j compatibility surface.
+
+    The class remains importable for type/interface compatibility, but SOC
+    graph access is AGE-only and must use the shared client resolved through
+    ``GraphConfig``.
+    """
 
     def __init__(self):
-        self.uri = os.getenv("NEO4J_URI")
-        self.user = os.getenv("NEO4J_USER", "neo4j")
-        self.password = os.getenv("NEO4J_PASSWORD")
-        self._driver: Optional[Any] = None  # AsyncDriver when connected
+        raise RuntimeError(
+            "Legacy Neo4j path disabled — use AGE via GraphConfig"
+        )
 
     async def connect(self):
         """Initialize connection pool"""

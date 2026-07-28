@@ -201,6 +201,7 @@ async def get_convergence_calendar():
     V                   = DEFAULT_V
     kernel              = DEFAULT_KERNEL
     decisions_per_factor = {f: 0 for f in SOC_FACTORS}
+    data_source = "cold_start_defaults"
 
     # ── try to read live state ──────────────────────────────────────────────
     try:
@@ -221,6 +222,8 @@ async def get_convergence_calendar():
                 factor_name = str(row.get("factor", ""))
                 if factor_name in decisions_per_factor:
                     decisions_per_factor[factor_name] = int(row.get("cnt", 0))
+            if rows:
+                data_source = "live_graph"
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Convergence graph data unavailable") from exc
 
@@ -230,19 +233,22 @@ async def get_convergence_calendar():
             # Distribute evenly across factors when primary_factor tagging absent
             per = total // len(SOC_FACTORS)
             decisions_per_factor = {f: per for f in SOC_FACTORS}
+            data_source = "in_memory_learning_state"
 
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail="Convergence state unavailable") from exc
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Convergence state unavailable") from exc
 
-    return build_convergence_calendar(
+    result = build_convergence_calendar(
         sigma_per_factor=sigma_per_factor,
         q_bar=q_bar,
         V=V,
         kernel=kernel,
         decisions_per_factor=decisions_per_factor,
     )
+    result["data_source"] = data_source
+    return result
 
 
 # ============================================================================
