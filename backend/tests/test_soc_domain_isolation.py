@@ -4,13 +4,14 @@ import re
 
 import pytest
 
-from app.db.neo4j import Neo4jClient, soc_decision_where
+from ci_platform.graph.age_client import AGEClient
+from app.db.neo4j import soc_decision_where
 from app.services.graph_explorer import GraphExplorerService
 from app.services.state_manager import StateManager
 from app.state.graph_snapshot import GraphSnapshot
 
 
-class InMemorySocGraphClient(Neo4jClient):
+class InMemorySocGraphClient(AGEClient):
     """Query-aware test double that fails closed when SOC predicates disappear."""
 
     def __init__(self, decisions=()):
@@ -30,6 +31,15 @@ class InMemorySocGraphClient(Neo4jClient):
 
     async def run_query(self, query, parameters=None):
         self.queries.append(query)
+        if "SET d.domain" in query and "RETURN d" in query and parameters:
+            if parameters.get("did"):
+                self.created_decisions.append({
+                    "decision_id": parameters.get("did"),
+                    "domain": "soc",
+                })
+            return []
+        if "CREATE (d)-[:DECIDED_ON]" in query:
+            return []
         if "CREATE (d:Decision" in query:
             decision_id = re.search(r"decision_id:\s*'([^']+)'", query)
             domain = re.search(r"domain:\s*'([^']+)'", query)
@@ -212,7 +222,8 @@ async def test_soc_write_sets_domain():
         context_snapshot={},
     )
 
-    assert client.created_decisions == [{"decision_id": "SOC-WRITE-1", "domain": "soc"}]
+    assert any(row.get("decision_id") == "SOC-WRITE-1" for row in client.created_decisions)
+    assert all(row.get("domain") == "soc" for row in client.created_decisions)
 
 
 def test_soc_decision_where_helper_exact():

@@ -2113,6 +2113,20 @@ async def report_decision_outcome(request: OutcomeRequest):
                                         gt_action_index=_gt_idx,
                                     )
                                 if _cu is not None:
+                                    _compound_scorer = getattr(_ps_out, "_compound", None)
+                                    _persist_learning_artifacts = getattr(
+                                        _compound_scorer,
+                                        "_persist_learning_artifacts",
+                                        None,
+                                    )
+                                    if callable(_persist_learning_artifacts):
+                                        try:
+                                            _persist_learning_artifacts(request.decision_id)
+                                        except Exception as _artifact_exc:
+                                            logger.warning(
+                                                "[GAE][LEARN] SOC persistence artifacts failed: %s",
+                                                _artifact_exc,
+                                            )
                                     _actual_action_index = _gt_idx
                                     _actual_action_name = _scorer_acts[_actual_action_index]
                                     l5_persistence_status["l5_persistence_source"] = "profile_scorer"

@@ -300,10 +300,10 @@ def test_triage_referral_veto_overrides_auto_approve():
 
 def test_r2_fires_when_sequence_count_at_threshold():
     """get_sequence_count returns threshold -> R2 fires."""
-    from app.db.neo4j import Neo4jClient
+    from ci_platform.graph.age_client import AGEClient
 
-    client = object.__new__(Neo4jClient)
-    client.run_query = AsyncMock(return_value=[{"sequence_count": 3}])
+    client = object.__new__(AGEClient)
+    client.run_query = AsyncMock(return_value=[{"cnt": 3}])
 
     count = asyncio.run(client.get_sequence_count("192.168.1.1"))
     assert count == 3
@@ -316,10 +316,10 @@ def test_r2_fires_when_sequence_count_at_threshold():
 
 def test_r7_fires_when_cross_category_count_at_threshold():
     """get_cross_category_count returns threshold -> R7 fires."""
-    from app.db.neo4j import Neo4jClient
+    from ci_platform.graph.age_client import AGEClient
 
-    client = object.__new__(Neo4jClient)
-    client.run_query = AsyncMock(return_value=[{"cross_category_count": 2}])
+    client = object.__new__(AGEClient)
+    client.run_query = AsyncMock(return_value=[{"cnt": 2}])
 
     count = asyncio.run(client.get_cross_category_count("jsmith@company.com"))
     assert count == 2
@@ -332,9 +332,9 @@ def test_r7_fires_when_cross_category_count_at_threshold():
 
 def test_r2_r7_safe_degradation_on_neo4j_failure():
     """Neo4j exception -> both helpers return 0, neither rule fires (P-REF-2)."""
-    from app.db.neo4j import Neo4jClient
+    from ci_platform.graph.age_client import AGEClient
 
-    client = object.__new__(Neo4jClient)
+    client = object.__new__(AGEClient)
     client.run_query = AsyncMock(side_effect=Exception("connection refused"))
 
     seq_count   = asyncio.run(client.get_sequence_count("10.0.0.1"))
@@ -368,10 +368,10 @@ _minimal_alert_context = {
 
 def test_r2_sequence_count_is_integer():
     """R2 sequence_count populated from alert_context must be an integer >= 0."""
-    from app.db.neo4j import Neo4jClient
+    from ci_platform.graph.age_client import AGEClient
 
-    client = object.__new__(Neo4jClient)
-    client.run_query = AsyncMock(return_value=[{"sequence_count": 0}])
+    client = object.__new__(AGEClient)
+    client.run_query = AsyncMock(return_value=[{"cnt": 0}])
     seq_count = asyncio.run(client.get_sequence_count("192.168.1.1"))
 
     debug = {
@@ -386,10 +386,10 @@ def test_r2_sequence_count_is_integer():
 
 def test_r7_cross_category_count_is_integer():
     """R7 cross_category_count populated from alert_context must be an integer >= 0."""
-    from app.db.neo4j import Neo4jClient
+    from ci_platform.graph.age_client import AGEClient
 
-    client = object.__new__(Neo4jClient)
-    client.run_query = AsyncMock(return_value=[{"cross_category_count": 0}])
+    client = object.__new__(AGEClient)
+    client.run_query = AsyncMock(return_value=[{"cnt": 0}])
     cross_count = asyncio.run(client.get_cross_category_count("jsmith@company.com"))
 
     debug = {

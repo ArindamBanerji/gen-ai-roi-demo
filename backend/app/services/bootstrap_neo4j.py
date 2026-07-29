@@ -201,6 +201,10 @@ async def write_bootstrap_decisions(
 
     # UNWIND batch: factor_vector passed as Python list → native Neo4j array.
     # No [:DECIDED_ON] relationship — bootstrap uses synthetic, not real, alerts.
+    # ARCHITECTURAL NOTE: Bootstrap uses direct AGE client write
+    # (not GraphStore) because it seeds initial data before the
+    # scorer/store lifecycle begins. Domain='soc' stamped.
+    # Governed by GraphConfig-resolved AGE client injection.
     await age_client.run_query(
         """
         UNWIND $decisions AS dec

@@ -1,9 +1,9 @@
 import pytest
 
-from app.db.neo4j import Neo4jClient
+from ci_platform.graph.age_client import AGEClient
 
 
-class FakeOutcomeStatsClient(Neo4jClient):
+class FakeOutcomeStatsClient(AGEClient):
     def __init__(self):
         pass
 

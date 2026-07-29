@@ -47,33 +47,8 @@ def test_age_backend_import_error_without_ci_platform():
             sys.modules["ci_platform.graph.age_client"] = age_mod
 
 
-def test_interface_parity_neo4j_vs_age():
-    """AGEClient and Neo4jClient expose identical query method surface.
-    All 290 call sites depend on this contract.
+def test_neo4j_client_removed():
+    import app.db.neo4j as db_mod
 
-    Note: connect()/close() are Neo4jClient-only (AGEClient uses per-query
-    connections). main.py guards these with hasattr() -- intentionally excluded.
-    """
-    from app.db.neo4j import Neo4jClient
-    from ci_platform.graph.age_client import AGEClient
+    assert not hasattr(db_mod, "Neo4jClient")
 
-    required = [
-        "run_query", "get_security_context", "get_alert",
-        "get_sequence_count",
-        "get_cross_category_count", "create_decision_trace",
-        "create_evolution_event",
-        "count_verified_decisions",
-        "count_decisions_by_category",
-        "compute_outcome_stats",
-        "compute_iks",
-    ]
-    for method in required:
-        assert hasattr(Neo4jClient, method), f"Neo4jClient missing: {method}"
-        assert hasattr(AGEClient, method),   f"AGEClient missing: {method}"
-
-
-def test_legacy_neo4j_client_constructor_is_disabled():
-    from app.db.neo4j import Neo4jClient
-
-    with pytest.raises(RuntimeError, match="Legacy Neo4j path disabled"):
-        Neo4jClient()

@@ -39,7 +39,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Dict, Optional
 
 if TYPE_CHECKING:
-    from app.db.neo4j import Neo4jClient
+    from ci_platform.graph.age_client import AGEClient
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class GraphSnapshot:
     iks_score: float = 0.0
 
     @classmethod
-    async def from_graph(cls, graph_client: "Neo4jClient") -> "GraphSnapshot":
+    async def from_graph(cls, graph_client: "AGEClient") -> "GraphSnapshot":
         """
         Build snapshot from graph. Called on startup.
         Closes the restart gap -- all stats read from graph, not memory.

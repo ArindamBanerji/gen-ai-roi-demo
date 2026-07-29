@@ -113,10 +113,17 @@ def test_api_returns_all_6_categories():
     """
     response = client.get("/api/soc/convergence-calendar")
 
+    if response.status_code == 503:
+        pytest.skip("AGE unavailable for endpoint integration")
     assert response.status_code == 200, (
         f"Expected 200, got {response.status_code}: {response.text[:300]}"
     )
     body = response.json()
+    assert body.get("data_source") in {
+        "cold_start_defaults",
+        "live_graph",
+        "in_memory_learning_state",
+    }
     assert "categories" in body, f"Response missing 'categories' key: {list(body.keys())}"
     assert len(body["categories"]) == 6, (
         f"Expected 6 categories (one per SOC factor), got {len(body['categories'])}: "

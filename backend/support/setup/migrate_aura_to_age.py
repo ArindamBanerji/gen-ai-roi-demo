@@ -436,13 +436,10 @@ async def run_migration(args):
     except ImportError:
         pass
 
-    # Set up Neo4j client (source) — force neo4j backend
-    os.environ["GRAPH_BACKEND"] = "neo4j"
-    # Import fresh to pick up the neo4j backend
-    import importlib
-    import backend.app.db.neo4j as neo4j_mod
-    importlib.reload(neo4j_mod)
-    neo4j_client = neo4j_mod.Neo4jClient()
+    raise RuntimeError(
+        "Aura-to-AGE migration requires an explicit legacy source adapter; "
+        "the retired Neo4jClient is no longer available."
+    )
 
     # Set up AGE client (target)
     target_db_url = os.getenv(
