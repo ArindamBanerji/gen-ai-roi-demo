@@ -2113,15 +2113,19 @@ async def report_decision_outcome(request: OutcomeRequest):
                                         gt_action_index=_gt_idx,
                                     )
                                 if _cu is not None:
-                                    _compound_scorer = getattr(_ps_out, "_compound", None)
-                                    _persist_learning_artifacts = getattr(
-                                        _compound_scorer,
-                                        "_persist_learning_artifacts",
-                                        None,
+                                    from app.domains.soc.scorer_adapter import (
+                                        SOCCompoundingScorerAdapter,
                                     )
-                                    if callable(_persist_learning_artifacts):
+                                    if isinstance(_ps_out, SOCCompoundingScorerAdapter):
+                                        _compound_scorer = _ps_out._compound
                                         try:
-                                            _persist_learning_artifacts(request.decision_id)
+                                            _compound_scorer._persist_learning_artifacts(
+                                                request.decision_id,
+                                                actual_action=_scorer_acts[_gt_idx],
+                                                outcome=outcome_label,
+                                                is_correct=bool(_correct),
+                                                category=_cat_name_out,
+                                            )
                                         except Exception as _artifact_exc:
                                             logger.warning(
                                                 "[GAE][LEARN] SOC persistence artifacts failed: %s",

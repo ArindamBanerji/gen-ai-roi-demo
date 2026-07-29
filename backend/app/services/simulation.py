@@ -16,7 +16,6 @@ import json
 import logging
 import random
 import time
-import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Coroutine, Dict, List, Optional, cast
@@ -60,6 +59,35 @@ _ORACLE_SUCCESS_RATES: Dict[str, float] = {
     "anomalous_behavior": 0.72,
     "unknown":            0.65,
 }
+
+
+def _write_simulation_decision(
+    graph_store: Any,
+    *,
+    alert_id: str,
+    category: str,
+    action: str,
+    confidence: float,
+    factor_names: list[str],
+    factor_values: list[float],
+) -> str:
+    """Persist one simulation Decision through the governed SOC store."""
+    return graph_store.write_decision(
+        domain="soc",
+        category=category,
+        action=action,
+        confidence=float(confidence),
+        factors={
+            "factor_names": list(factor_names),
+            "factor_values": list(factor_values),
+        },
+        metadata={
+            "entity_id": alert_id,
+            "factor_vector": list(factor_values),
+            "created_at": time.time(),
+            "source": "soc_simulation",
+        },
+    )
 
 # ATT&CK technique labels for experiment log enrichment
 _ATTACK_TECHNIQUES: Dict[str, str] = {
@@ -255,7 +283,14 @@ class SimulationOrchestrator:
         SimulationResult
         """
         from app.db.neo4j import neo4j_client
+        from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
+        from app.services.gae_state import get_profile_scorer
         from app.services.situation import analyze_situation
+
+        profile_scorer = get_profile_scorer()
+        if not isinstance(profile_scorer, SOCCompoundingScorerAdapter):
+            raise RuntimeError("SOC GraphStore is unavailable for simulation persistence")
+        graph_store = profile_scorer._compound.graph_store
 
         start_ts = time.perf_counter()
         self.experiment_log = []
@@ -357,29 +392,16 @@ class SimulationOrchestrator:
             correct_vs_ground_truth = (scoring.selected_action == ground_truth_action)
 
             # ------------------------------------------------------------------
-            # Step 6: Write Decision node to Neo4j with f(t) stored (R4)
-            # Uses the exact same Cypher as triage.py analyze_alert.
-            # MATCH is used (not MERGE) to stay on the identical code path.
-            # For synthetic alerts the MATCH returns 0 rows so no node is
-            # written — the fallback in step 9 covers the weight update.
+            # Step 6: Write the Decision through the governed SOC GraphStore.
             # ------------------------------------------------------------------
-            decision_id = str(uuid.uuid4())
-            _ts_sim = int(datetime.utcnow().timestamp() * 1000)
-            await neo4j_client.run_query(
-                f"""
-                MATCH (a:Alert {{alert_id: {_S(alert_id)}}})
-                CREATE (d:Decision {{
-                    decision_id:     {_S(decision_id)},
-                    domain:          'soc',
-                    action:          {_S(scoring.selected_action)},
-                    confidence:      {scoring.confidence},
-                    factor_vector:   {_S(json.dumps(fv_list))},
-                    category:        {_S(category)},
-                    timestamp_epoch: {_ts_sim},
-                    outcome:         null
-                }})
-                CREATE (d)-[:DECIDED_ON]->(a)
-                """
+            decision_id = _write_simulation_decision(
+                graph_store,
+                alert_id=alert_id,
+                category=category,
+                action=scoring.selected_action,
+                confidence=float(scoring.confidence),
+                factor_names=[computer.name for computer in computers],
+                factor_values=fv_list,
             )
 
             # ------------------------------------------------------------------
@@ -406,34 +428,17 @@ class SimulationOrchestrator:
             outcome_str  = "correct" if correct else "incorrect"
 
             # ------------------------------------------------------------------
-            # Step 9: Update Decision node + retrieve f(t) from graph (R4)
-            # (same Cypher as POST /api/alert/outcome → gae_result query)
+            # Step 9: Persist the simulated outcome through GraphStore.
             # ------------------------------------------------------------------
-            _ts_sim_outcome = int(datetime.utcnow().timestamp() * 1000)
-            gae_result = await neo4j_client.run_query(
-                f"""
-                MATCH (d:Decision {{decision_id: {_S(decision_id)}}})
-                WHERE d.domain = 'soc'
-                SET d.outcome           = {_S(outcome_str)},
-                    d.correct           = {'true' if correct else 'false'},
-                    d.verified_at_epoch = {_ts_sim_outcome}
-                RETURN d.factor_vector AS factor_vector,
-                       d.action        AS action,
-                       d.confidence    AS confidence
-                """
+            graph_store.write_outcome(
+                decision_id=decision_id,
+                actual_action=scoring.selected_action if correct else ground_truth_action,
+                is_correct=bool(correct),
+                metadata={"source": "soc_simulation", "verified_at": time.time()},
+                domain="soc",
             )
 
-            # Read f from graph result; fall back to locally-computed vector
-            # (fallback is only taken for synthetic alerts with no Decision node)
-            if gae_result and gae_result[0].get("factor_vector") is not None:
-                _fv_raw = gae_result[0]["factor_vector"]
-                if isinstance(_fv_raw, str):
-                    _fv_raw = json.loads(_fv_raw)
-                f_for_update = np.array(
-                    _fv_raw, dtype=np.float64
-                ).reshape(1, -1)
-            else:
-                f_for_update = f_2d
+            f_for_update = f_2d
 
             # ------------------------------------------------------------------
             # Step 10: Weight update
@@ -542,11 +547,16 @@ class SimulationOrchestrator:
             _sim_entry_hash = _sim_audit_rec.get("hash", "")
             _sim_chain_index = _sim_audit_rec.get("chain_index", -1)
             if _sim_entry_hash:
-                await neo4j_client.run_query(
-                    f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
-                    f"WHERE d.domain = 'soc' "
-                    f"SET d.entry_hash = {_S(_sim_entry_hash)}, "
-                    f"d.decision_chain_index = {_sim_chain_index}"
+                graph_store.write_outcome(
+                    decision_id=decision_id,
+                    actual_action=scoring.selected_action if correct else ground_truth_action,
+                    is_correct=bool(correct),
+                    metadata={
+                        "entry_hash": _sim_entry_hash,
+                        "decision_chain_index": _sim_chain_index,
+                        "source": "soc_simulation.audit",
+                    },
+                    domain="soc",
                 )
             try:
                 from app.services.audit import record_outcome as _sim_outcome

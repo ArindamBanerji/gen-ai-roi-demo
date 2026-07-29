@@ -1172,10 +1172,19 @@ async def explain_decision(decision_id: str):
             "RETURN count(d) AS cnt",
             {"category": category},
         )
-        calibration_count = int((cal_rows[0].get("cnt") or 0) if cal_rows else 0)
+        if cal_rows:
+            calibration_count = int(cal_rows[0].get("cnt") or 0)
+            calibration_status = "live"
+            calibration_message = None
+        else:
+            calibration_count = None
+            calibration_status = "cold_start"
+            calibration_message = "No verified calibration decisions are available yet."
     except Exception as _exc:
-        print(f"[SOC] calibration_count query failed: {_exc}")
-        calibration_count = 0
+        raise HTTPException(
+            status_code=503,
+            detail="SOC calibration data unavailable",
+        ) from _exc
 
     # ── Step 2b: ThreatIndicator source (for malware_execution template) ────
     ti_source = "threat intelligence feed"
@@ -1218,6 +1227,8 @@ async def explain_decision(decision_id: str):
         "action_display":    action.replace("_", " ").title(),
         "confidence":        conf,
         "calibration_count": calibration_count,
+        "calibration_status": calibration_status,
+        "calibration_message": calibration_message,
         "category":          category,
         # Real entity names from graph nodes
         "user_display":        user_name,
@@ -2028,8 +2039,11 @@ async def get_accuracy_trajectory():
         for record in rows:
             cat = record.get("category") or "unknown"
             live_data[cat] = int(record.get("cnt", 0))
-    except Exception:
-        pass  # cold-start safe -- empty live_data falls back to reference curve
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="SOC accuracy trajectory unavailable",
+        ) from exc
 
     return build_accuracy_trajectory(
         live_data=live_data,
