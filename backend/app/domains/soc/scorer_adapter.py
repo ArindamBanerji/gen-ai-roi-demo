@@ -113,3 +113,7 @@ class SOCCompoundingScorerAdapter:
     def get_category_phase(self, category: str) -> str:
         category_index = self._scorer.categories.index(category)
         return self._scorer.get_phase(category_index)
+
+    def _persist_conservation_snapshot(self, *args: Any, **kwargs: Any) -> None:
+        """Delegate J6 conservation persistence to the compound scorer."""
+        self._compound._persist_conservation_snapshot(*args, **kwargs)

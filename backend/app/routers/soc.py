@@ -2,7 +2,7 @@
 SOC Analytics API - Tab 1
 Governed security metrics with provenance
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -10,6 +10,7 @@ from pydantic import BaseModel
 import json
 import logging
 import re
+import time
 from dataclasses import asdict
 
 from app.db.neo4j import neo4j_client, soc_decision_where
@@ -31,9 +32,36 @@ from app.domains.soc.config import (
     SOC_FACTOR_SIGMA,
     SOC_FACTORS,
 )
+from copilot_sdk.backend.diagnostics_models import build_diagnostics
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+@router.get("/diagnostics")
+def diagnostics(request: Request) -> dict[str, Any]:
+    try:
+        from app.services.gae_state import get_learning_state, get_learning_store, get_profile_scorer
+        scorer = get_profile_scorer()
+        state = get_learning_state()
+        extras: dict[str, Any] = {
+            "learning_state_step": int(getattr(state, "decision_count", 0)),
+            "profile_scorer_attached": scorer is not None,
+        }
+        startup_status = getattr(request.app.state, "l5_startup_status", None)
+        if isinstance(startup_status, dict):
+            extras["l5_startup_status"] = dict(startup_status)
+        result: dict[str, Any] = build_diagnostics(
+            "soc",
+            scorer,
+            get_learning_store(),
+            extras=extras,
+        )
+        return result
+    except Exception as exc:
+        logger.exception("Diagnostics failed for soc")
+        result = build_diagnostics("soc", None, None, extras={"error": str(exc)})
+        return result
 
 
 # ============================================================================

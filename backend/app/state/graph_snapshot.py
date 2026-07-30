@@ -94,7 +94,7 @@ class GraphSnapshot:
             f"GraphSnapshot initialized: "
             f"{snap.verified_decisions} decisions, "
             f"correct={snap.correct_decisions}, "
-            f"alpha={snap.override_rate:.3f}, "
+            f"override_rate={snap.override_rate:.3f}, "
             f"IKS={snap.iks_score:.1f}"
         )
         return snap

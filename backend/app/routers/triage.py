@@ -1915,6 +1915,22 @@ async def report_decision_outcome(request: OutcomeRequest):
             # action.  ProfileScorer has A=4 (SCORER_ACTIONS); skip learning.
             if action_name not in SCORER_ACTIONS:
                 l5_persistence_status["l5_persistence_skipped_reason"] = "routing_action_not_scorable"
+                # Record SOC conservation state even though routing actions do
+                # not update centroids or enter the shared learn path.
+                try:
+                    from app.services.gae_state import acquire_scorer as _acquire_scorer_non_scorable
+                    from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
+
+                    async with _acquire_scorer_non_scorable() as _ps_non_scorable:
+                        if isinstance(_ps_non_scorable, SOCCompoundingScorerAdapter):
+                            _ps_non_scorable._compound._persist_conservation_snapshot(
+                                request.decision_id,
+                            )
+                except Exception as _snapshot_exc:
+                    logger.warning(
+                        "[GAE][LEARN] SOC non-scorable conservation snapshot failed: %s",
+                        _snapshot_exc,
+                    )
                 if fv is None:
                     print(f"[GAE] Decision node found but factor_vector is NULL -- skipping weight update")
                 else:
@@ -2049,9 +2065,21 @@ async def report_decision_outcome(request: OutcomeRequest):
                         persist_soc_dk_weights as _persist_soc_dk_weights,
                         update_dk_welford_tracker as _update_dk_welford_tracker,
                     )
+                    from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
                     if _conservation_block:
                         logger.warning("[B5] Conservation check failed -- learning blocked (fail-closed)")
                         l5_persistence_status["l5_persistence_skipped_reason"] = "conservation_check_failed"
+                        async with _acquire_scorer() as _ps_blocked:
+                            if isinstance(_ps_blocked, SOCCompoundingScorerAdapter):
+                                try:
+                                    _ps_blocked._compound._persist_conservation_snapshot(
+                                        request.decision_id,
+                                    )
+                                except Exception as _snapshot_exc:
+                                    logger.warning(
+                                        "[GAE][LEARN] SOC conservation snapshot failed: %s",
+                                        _snapshot_exc,
+                                    )
                     else:
                         _cu = None
                         _guard_block_reason = None
@@ -2112,12 +2140,23 @@ async def report_decision_outcome(request: OutcomeRequest):
                                         category_name=_cat_name_out,
                                         gt_action_index=_gt_idx,
                                     )
+                                if isinstance(_ps_out, SOCCompoundingScorerAdapter):
+                                    _compound_scorer = _ps_out._compound
+                                    if _cu is None:
+                                        # Conservation can pause the raw profile scorer before
+                                        # guarded_update returns. Record the current state even
+                                        # though no outcome or learning artifact exists yet.
+                                        try:
+                                            _compound_scorer._persist_conservation_snapshot(
+                                                request.decision_id,
+                                            )
+                                        except Exception as _snapshot_exc:
+                                            logger.warning(
+                                                "[GAE][LEARN] SOC conservation snapshot failed: %s",
+                                                _snapshot_exc,
+                                            )
                                 if _cu is not None:
-                                    from app.domains.soc.scorer_adapter import (
-                                        SOCCompoundingScorerAdapter,
-                                    )
                                     if isinstance(_ps_out, SOCCompoundingScorerAdapter):
-                                        _compound_scorer = _ps_out._compound
                                         try:
                                             _compound_scorer._persist_learning_artifacts(
                                                 request.decision_id,

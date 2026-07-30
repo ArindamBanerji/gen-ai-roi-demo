@@ -145,11 +145,11 @@ def _compute_current_ceiling_estimate() -> float | None:
 
 
 def run_whatif(scenario: WhatIfScenario) -> WhatIfResult:
-    override_rate = float(scenario.alpha)
+    category_coverage = float(scenario.alpha)
     verified_volume = float(scenario.V)
-    theta_min = float(compute_theta_min(override_rate, verified_volume))
+    theta_min = float(compute_theta_min(category_coverage, verified_volume))
 
-    alpha_v = float(override_rate * verified_volume)
+    alpha_v = float(category_coverage * verified_volume)
     q_threshold = float("inf") if alpha_v <= 0 else theta_min / alpha_v
     horizon_days = max(0, int(scenario.horizon_days))
     warnings = _build_warnings(scenario, q_threshold)
