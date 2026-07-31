@@ -6,7 +6,7 @@ Wraps ``CompoundingScorer.from_preset("soc")`` while preserving the raw
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 from copilot_sdk.scoring.scorer import CompoundingScorer
@@ -117,3 +117,7 @@ class SOCCompoundingScorerAdapter:
     def _persist_conservation_snapshot(self, *args: Any, **kwargs: Any) -> None:
         """Delegate J6 conservation persistence to the compound scorer."""
         self._compound._persist_conservation_snapshot(*args, **kwargs)
+
+    def capture_existing_state(self, **kwargs: Any) -> dict[str, Any]:
+        """Delegate state-only J6 capture to the compound scorer."""
+        return cast(dict[str, Any], self._compound.capture_existing_state(**kwargs))

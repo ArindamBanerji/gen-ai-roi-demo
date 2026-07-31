@@ -299,6 +299,14 @@ def init_learning_state() -> LearningState:
     _learning_store = _init_learning_store()
     reset_dk_welford_tracker()
 
+    try:
+        capture_result = _profile_scorer.capture_existing_state(
+            capture_reason="startup_restore",
+        )
+        log.info("SOC startup state capture: %s", capture_result)
+    except Exception as exc:
+        log.warning("SOC startup state capture failed: %s", exc)
+
     return _learning_state
 
 

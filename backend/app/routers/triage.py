@@ -1915,20 +1915,21 @@ async def report_decision_outcome(request: OutcomeRequest):
             # action.  ProfileScorer has A=4 (SCORER_ACTIONS); skip learning.
             if action_name not in SCORER_ACTIONS:
                 l5_persistence_status["l5_persistence_skipped_reason"] = "routing_action_not_scorable"
-                # Record SOC conservation state even though routing actions do
-                # not update centroids or enter the shared learn path.
+                # Capture state even though routing actions do not update
+                # centroids or enter the shared learn path.
                 try:
                     from app.services.gae_state import acquire_scorer as _acquire_scorer_non_scorable
                     from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
 
                     async with _acquire_scorer_non_scorable() as _ps_non_scorable:
                         if isinstance(_ps_non_scorable, SOCCompoundingScorerAdapter):
-                            _ps_non_scorable._compound._persist_conservation_snapshot(
-                                request.decision_id,
+                            _ps_non_scorable.capture_existing_state(
+                                capture_reason="non_scorable",
+                                decision_id=request.decision_id,
                             )
                 except Exception as _snapshot_exc:
                     logger.warning(
-                        "[GAE][LEARN] SOC non-scorable conservation snapshot failed: %s",
+                        "[GAE][LEARN] SOC non-scorable state capture failed: %s",
                         _snapshot_exc,
                     )
                 if fv is None:
@@ -2072,12 +2073,13 @@ async def report_decision_outcome(request: OutcomeRequest):
                         async with _acquire_scorer() as _ps_blocked:
                             if isinstance(_ps_blocked, SOCCompoundingScorerAdapter):
                                 try:
-                                    _ps_blocked._compound._persist_conservation_snapshot(
-                                        request.decision_id,
+                                    _ps_blocked.capture_existing_state(
+                                        capture_reason="guarded_pause",
+                                        decision_id=request.decision_id,
                                     )
                                 except Exception as _snapshot_exc:
                                     logger.warning(
-                                        "[GAE][LEARN] SOC conservation snapshot failed: %s",
+                                        "[GAE][LEARN] SOC guarded-pause state capture failed: %s",
                                         _snapshot_exc,
                                     )
                     else:
@@ -2147,12 +2149,13 @@ async def report_decision_outcome(request: OutcomeRequest):
                                         # guarded_update returns. Record the current state even
                                         # though no outcome or learning artifact exists yet.
                                         try:
-                                            _compound_scorer._persist_conservation_snapshot(
-                                                request.decision_id,
+                                            _ps_out.capture_existing_state(
+                                                capture_reason="guarded_pause",
+                                                decision_id=request.decision_id,
                                             )
                                         except Exception as _snapshot_exc:
                                             logger.warning(
-                                                "[GAE][LEARN] SOC conservation snapshot failed: %s",
+                                                "[GAE][LEARN] SOC guarded-pause state capture failed: %s",
                                                 _snapshot_exc,
                                             )
                                 if _cu is not None:
