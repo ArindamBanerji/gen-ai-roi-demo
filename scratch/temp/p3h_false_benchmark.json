@@ -1,0 +1,1523 @@
+{
+  "mode": "false",
+  "status": "PASS",
+  "backend_url": "http://127.0.0.1:8001",
+  "contract": {
+    "launcher": "copilot-sdk/demo.py --diag-mode",
+    "graph_name": "soc_graph_p3h_false_benchmark_1",
+    "backend_port": 8001,
+    "use_entity_cache": "false",
+    "age_use_pool_requested": "true",
+    "age_use_pool": "true",
+    "connection_mode": "warm_fallback",
+    "pool_available": "false"
+  },
+  "health_before": {
+    "status": "healthy",
+    "components": {
+      "posterior_store": {
+        "healthy": true
+      },
+      "entity_cache": {
+        "enabled": false,
+        "adapter_enabled": true,
+        "hits": 0,
+        "misses": 0,
+        "loads": 0,
+        "invalidations": 0,
+        "evictions": 0,
+        "size": 0,
+        "max_size": 4096
+      }
+    }
+  },
+  "health_after": {
+    "status": "healthy",
+    "components": {
+      "posterior_store": {
+        "healthy": true
+      },
+      "entity_cache": {
+        "enabled": false,
+        "adapter_enabled": true,
+        "hits": 0,
+        "misses": 0,
+        "loads": 0,
+        "invalidations": 0,
+        "evictions": 0,
+        "size": 0,
+        "max_size": 4096
+      }
+    }
+  },
+  "seed": {
+    "prefix": "P3HBENCH",
+    "count": 5,
+    "ids": [
+      "P3HBENCH-0001",
+      "P3HBENCH-0002",
+      "P3HBENCH-0003",
+      "P3HBENCH-0004",
+      "P3HBENCH-0005"
+    ],
+    "queue_visible_ids": [
+      "P3HBENCH-0005",
+      "P3HBENCH-0004",
+      "P3HBENCH-0003",
+      "P3HBENCH-0002",
+      "P3HBENCH-0001"
+    ]
+  },
+  "workloads": {
+    "unique_once": {
+      "name": "unique_once",
+      "sequence": [
+        "P3HBENCH-0001",
+        "P3HBENCH-0002",
+        "P3HBENCH-0003",
+        "P3HBENCH-0004",
+        "P3HBENCH-0005"
+      ],
+      "stats": {
+        "request_count": 5,
+        "success_count": 5,
+        "failure_count": 0,
+        "avg_seconds": 0.254552,
+        "median_seconds": 0.205753,
+        "p95_seconds": 0.523486,
+        "max_seconds": 0.523486
+      },
+      "records": [
+        {
+          "alert_id": "P3HBENCH-0001",
+          "success": true,
+          "latency_seconds": 0.523486,
+          "spot_check": {
+            "action": "investigate",
+            "confidence": 0.8770461205137833,
+            "factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "suppress": 0.006531,
+              "monitor": 0.084343
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0001",
+              "category": "credential_access",
+              "severity": "critical",
+              "source_location": "c9b-seed-zone-1",
+              "user_id": "P3HBENCH-USER-0001",
+              "asset_id": "P3HBENCH-ASSET-0001"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0002",
+          "success": true,
+          "latency_seconds": 0.242978,
+          "spot_check": {
+            "action": "refer_to_analyst",
+            "confidence": 0.49511496153045853,
+            "factor_vector": [
+              0.475,
+              0.8,
+              0.0,
+              0.4,
+              0.7,
+              0.3333333333333333
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.044543,
+              "investigate": 0.495115,
+              "suppress": 0.012343,
+              "monitor": 0.447999
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0002",
+              "category": "malware_execution",
+              "severity": "high",
+              "source_location": "c9b-seed-zone-2",
+              "user_id": "P3HBENCH-USER-0002",
+              "asset_id": "P3HBENCH-ASSET-0002"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0003",
+          "success": true,
+          "latency_seconds": 0.205753,
+          "spot_check": {
+            "action": "investigate",
+            "confidence": 0.7015967296491831,
+            "factor_vector": [
+              0.1,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.0
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.038604,
+              "investigate": 0.701597,
+              "suppress": 0.001696,
+              "monitor": 0.258103
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0003",
+              "category": "lateral_movement",
+              "severity": "critical",
+              "source_location": "c9b-seed-zone-3",
+              "user_id": "P3HBENCH-USER-0003",
+              "asset_id": "P3HBENCH-ASSET-0003"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0004",
+          "success": true,
+          "latency_seconds": 0.143811,
+          "spot_check": {
+            "action": "refer_to_analyst",
+            "confidence": 0.4402681463673651,
+            "factor_vector": [
+              0.825,
+              0.2,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.00015,
+              "investigate": 0.251905,
+              "suppress": 0.307677,
+              "monitor": 0.440268
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0004",
+              "category": "data_exfiltration",
+              "severity": "low",
+              "source_location": "c9b-seed-zone-4",
+              "user_id": "P3HBENCH-USER-0004",
+              "asset_id": "P3HBENCH-ASSET-0004"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0005",
+          "success": true,
+          "latency_seconds": 0.156733,
+          "spot_check": {
+            "action": "refer_to_analyst",
+            "confidence": 0.5320197397309421,
+            "factor_vector": [
+              0.475,
+              0.5,
+              0.0,
+              0.4,
+              0.7,
+              0.3333333333333333
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.007463,
+              "investigate": 0.53202,
+              "suppress": 0.028551,
+              "monitor": 0.431966
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0005",
+              "category": "insider_threat",
+              "severity": "medium",
+              "source_location": "c9b-seed-zone-5",
+              "user_id": "P3HBENCH-USER-0005",
+              "asset_id": "P3HBENCH-ASSET-0005"
+            }
+          }
+        }
+      ]
+    },
+    "repeat_same": {
+      "name": "repeat_same",
+      "sequence": [
+        "P3HBENCH-0001",
+        "P3HBENCH-0001",
+        "P3HBENCH-0001",
+        "P3HBENCH-0001",
+        "P3HBENCH-0001",
+        "P3HBENCH-0001",
+        "P3HBENCH-0001",
+        "P3HBENCH-0001",
+        "P3HBENCH-0001",
+        "P3HBENCH-0001"
+      ],
+      "stats": {
+        "request_count": 10,
+        "success_count": 10,
+        "failure_count": 0,
+        "avg_seconds": 0.122448,
+        "median_seconds": 0.11464,
+        "p95_seconds": 0.165164,
+        "max_seconds": 0.165164
+      },
+      "records": [
+        {
+          "alert_id": "P3HBENCH-0001",
+          "success": true,
+          "latency_seconds": 0.165164,
+          "spot_check": {
+            "action": "investigate",
+            "confidence": 0.8770461205137833,
+            "factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "suppress": 0.006531,
+              "monitor": 0.084343
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0001",
+              "category": "credential_access",
+              "severity": "critical",
+              "source_location": "c9b-seed-zone-1",
+              "user_id": "P3HBENCH-USER-0001",
+              "asset_id": "P3HBENCH-ASSET-0001"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0001",
+          "success": true,
+          "latency_seconds": 0.135627,
+          "spot_check": {
+            "action": "investigate",
+            "confidence": 0.8770461205137833,
+            "factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "suppress": 0.006531,
+              "monitor": 0.084343
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0001",
+              "category": "credential_access",
+              "severity": "critical",
+              "source_location": "c9b-seed-zone-1",
+              "user_id": "P3HBENCH-USER-0001",
+              "asset_id": "P3HBENCH-ASSET-0001"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0001",
+          "success": true,
+          "latency_seconds": 0.118166,
+          "spot_check": {
+            "action": "investigate",
+            "confidence": 0.8770461205137833,
+            "factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "suppress": 0.006531,
+              "monitor": 0.084343
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0001",
+              "category": "credential_access",
+              "severity": "critical",
+              "source_location": "c9b-seed-zone-1",
+              "user_id": "P3HBENCH-USER-0001",
+              "asset_id": "P3HBENCH-ASSET-0001"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0001",
+          "success": true,
+          "latency_seconds": 0.11464,
+          "spot_check": {
+            "action": "investigate",
+            "confidence": 0.8770461205137833,
+            "factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "suppress": 0.006531,
+              "monitor": 0.084343
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0001",
+              "category": "credential_access",
+              "severity": "critical",
+              "source_location": "c9b-seed-zone-1",
+              "user_id": "P3HBENCH-USER-0001",
+              "asset_id": "P3HBENCH-ASSET-0001"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0001",
+          "success": true,
+          "latency_seconds": 0.127376,
+          "spot_check": {
+            "action": "investigate",
+            "confidence": 0.8770461205137833,
+            "factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "suppress": 0.006531,
+              "monitor": 0.084343
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0001",
+              "category": "credential_access",
+              "severity": "critical",
+              "source_location": "c9b-seed-zone-1",
+              "user_id": "P3HBENCH-USER-0001",
+              "asset_id": "P3HBENCH-ASSET-0001"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0001",
+          "success": true,
+          "latency_seconds": 0.113281,
+          "spot_check": {
+            "action": "investigate",
+            "confidence": 0.8770461205137833,
+            "factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "suppress": 0.006531,
+              "monitor": 0.084343
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0001",
+              "category": "credential_access",
+              "severity": "critical",
+              "source_location": "c9b-seed-zone-1",
+              "user_id": "P3HBENCH-USER-0001",
+              "asset_id": "P3HBENCH-ASSET-0001"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0001",
+          "success": true,
+          "latency_seconds": 0.109788,
+          "spot_check": {
+            "action": "investigate",
+            "confidence": 0.8770461205137833,
+            "factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "suppress": 0.006531,
+              "monitor": 0.084343
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0001",
+              "category": "credential_access",
+              "severity": "critical",
+              "source_location": "c9b-seed-zone-1",
+              "user_id": "P3HBENCH-USER-0001",
+              "asset_id": "P3HBENCH-ASSET-0001"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0001",
+          "success": true,
+          "latency_seconds": 0.121453,
+          "spot_check": {
+            "action": "investigate",
+            "confidence": 0.8770461205137833,
+            "factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "suppress": 0.006531,
+              "monitor": 0.084343
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0001",
+              "category": "credential_access",
+              "severity": "critical",
+              "source_location": "c9b-seed-zone-1",
+              "user_id": "P3HBENCH-USER-0001",
+              "asset_id": "P3HBENCH-ASSET-0001"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0001",
+          "success": true,
+          "latency_seconds": 0.110238,
+          "spot_check": {
+            "action": "investigate",
+            "confidence": 0.8770461205137833,
+            "factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "suppress": 0.006531,
+              "monitor": 0.084343
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0001",
+              "category": "credential_access",
+              "severity": "critical",
+              "source_location": "c9b-seed-zone-1",
+              "user_id": "P3HBENCH-USER-0001",
+              "asset_id": "P3HBENCH-ASSET-0001"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0001",
+          "success": true,
+          "latency_seconds": 0.108746,
+          "spot_check": {
+            "action": "investigate",
+            "confidence": 0.8770461205137833,
+            "factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "suppress": 0.006531,
+              "monitor": 0.084343
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0001",
+              "category": "credential_access",
+              "severity": "critical",
+              "source_location": "c9b-seed-zone-1",
+              "user_id": "P3HBENCH-USER-0001",
+              "asset_id": "P3HBENCH-ASSET-0001"
+            }
+          }
+        }
+      ]
+    },
+    "mixed_reuse": {
+      "name": "mixed_reuse",
+      "sequence": [
+        "P3HBENCH-0001",
+        "P3HBENCH-0002",
+        "P3HBENCH-0001",
+        "P3HBENCH-0003",
+        "P3HBENCH-0001",
+        "P3HBENCH-0004",
+        "P3HBENCH-0005",
+        "P3HBENCH-0001"
+      ],
+      "stats": {
+        "request_count": 8,
+        "success_count": 8,
+        "failure_count": 0,
+        "avg_seconds": 0.181952,
+        "median_seconds": 0.130132,
+        "p95_seconds": 0.518928,
+        "max_seconds": 0.518928
+      },
+      "records": [
+        {
+          "alert_id": "P3HBENCH-0001",
+          "success": true,
+          "latency_seconds": 0.148681,
+          "spot_check": {
+            "action": "investigate",
+            "confidence": 0.8770461205137833,
+            "factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "suppress": 0.006531,
+              "monitor": 0.084343
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0001",
+              "category": "credential_access",
+              "severity": "critical",
+              "source_location": "c9b-seed-zone-1",
+              "user_id": "P3HBENCH-USER-0001",
+              "asset_id": "P3HBENCH-ASSET-0001"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0002",
+          "success": true,
+          "latency_seconds": 0.154337,
+          "spot_check": {
+            "action": "refer_to_analyst",
+            "confidence": 0.49511496153045853,
+            "factor_vector": [
+              0.475,
+              0.8,
+              0.0,
+              0.4,
+              0.7,
+              0.3333333333333333
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.044543,
+              "investigate": 0.495115,
+              "suppress": 0.012343,
+              "monitor": 0.447999
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0002",
+              "category": "malware_execution",
+              "severity": "high",
+              "source_location": "c9b-seed-zone-2",
+              "user_id": "P3HBENCH-USER-0002",
+              "asset_id": "P3HBENCH-ASSET-0002"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0001",
+          "success": true,
+          "latency_seconds": 0.120261,
+          "spot_check": {
+            "action": "investigate",
+            "confidence": 0.8770461205137833,
+            "factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "suppress": 0.006531,
+              "monitor": 0.084343
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0001",
+              "category": "credential_access",
+              "severity": "critical",
+              "source_location": "c9b-seed-zone-1",
+              "user_id": "P3HBENCH-USER-0001",
+              "asset_id": "P3HBENCH-ASSET-0001"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0003",
+          "success": true,
+          "latency_seconds": 0.127547,
+          "spot_check": {
+            "action": "investigate",
+            "confidence": 0.7015967296491831,
+            "factor_vector": [
+              0.1,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.0
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.038604,
+              "investigate": 0.701597,
+              "suppress": 0.001696,
+              "monitor": 0.258103
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0003",
+              "category": "lateral_movement",
+              "severity": "critical",
+              "source_location": "c9b-seed-zone-3",
+              "user_id": "P3HBENCH-USER-0003",
+              "asset_id": "P3HBENCH-ASSET-0003"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0001",
+          "success": true,
+          "latency_seconds": 0.116671,
+          "spot_check": {
+            "action": "investigate",
+            "confidence": 0.8770461205137833,
+            "factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "suppress": 0.006531,
+              "monitor": 0.084343
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0001",
+              "category": "credential_access",
+              "severity": "critical",
+              "source_location": "c9b-seed-zone-1",
+              "user_id": "P3HBENCH-USER-0001",
+              "asset_id": "P3HBENCH-ASSET-0001"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0004",
+          "success": true,
+          "latency_seconds": 0.130132,
+          "spot_check": {
+            "action": "refer_to_analyst",
+            "confidence": 0.4402681463673651,
+            "factor_vector": [
+              0.825,
+              0.2,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.00015,
+              "investigate": 0.251905,
+              "suppress": 0.307677,
+              "monitor": 0.440268
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0004",
+              "category": "data_exfiltration",
+              "severity": "low",
+              "source_location": "c9b-seed-zone-4",
+              "user_id": "P3HBENCH-USER-0004",
+              "asset_id": "P3HBENCH-ASSET-0004"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0005",
+          "success": true,
+          "latency_seconds": 0.139059,
+          "spot_check": {
+            "action": "refer_to_analyst",
+            "confidence": 0.5320197397309421,
+            "factor_vector": [
+              0.475,
+              0.5,
+              0.0,
+              0.4,
+              0.7,
+              0.3333333333333333
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.007463,
+              "investigate": 0.53202,
+              "suppress": 0.028551,
+              "monitor": 0.431966
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0005",
+              "category": "insider_threat",
+              "severity": "medium",
+              "source_location": "c9b-seed-zone-5",
+              "user_id": "P3HBENCH-USER-0005",
+              "asset_id": "P3HBENCH-ASSET-0005"
+            }
+          }
+        },
+        {
+          "alert_id": "P3HBENCH-0001",
+          "success": true,
+          "latency_seconds": 0.518928,
+          "spot_check": {
+            "action": "investigate",
+            "confidence": 0.8770461205137833,
+            "factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "suppress": 0.006531,
+              "monitor": 0.084343
+            },
+            "referral": {
+              "should_refer": false,
+              "reasons": [],
+              "audit_summary": "No referral rules triggered."
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            },
+            "alert": {
+              "alert_id": "P3HBENCH-0001",
+              "category": "credential_access",
+              "severity": "critical",
+              "source_location": "c9b-seed-zone-1",
+              "user_id": "P3HBENCH-USER-0001",
+              "asset_id": "P3HBENCH-ASSET-0001"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "comparable_fields": [
+    "recommendation.action",
+    "recommendation.confidence",
+    "gae_scoring.factor_vector",
+    "gae_scoring.factor_names",
+    "gae_scoring.action_probabilities",
+    "referral",
+    "referral_debug",
+    "alert fresh fields"
+  ],
+  "excluded_fields": [
+    "decision_id",
+    "generated UUIDs",
+    "timestamps",
+    "elapsed timings",
+    "narrative"
+  ],
+  "component_timing": {
+    "ran": true,
+    "ids": [
+      "P3HBENCH-0001",
+      "P3HBENCH-0002",
+      "P3HBENCH-0003",
+      "P3HBENCH-0004",
+      "P3HBENCH-0005"
+    ],
+    "get_security_context_seconds": [
+      0.12301229999866337,
+      0.11031920003006235,
+      0.07443659997079521,
+      0.0816810000105761,
+      0.08795799996005371
+    ],
+    "split_recompose_seconds": [
+      5.659996531903744e-05,
+      3.649998689070344e-05,
+      2.1899992134422064e-05,
+      3.2400013878941536e-05,
+      3.100000321865082e-05
+    ],
+    "get_security_context_avg_seconds": 0.09548141999403015,
+    "get_security_context_max_seconds": 0.12301229999866337,
+    "split_recompose_avg_seconds": 3.567999228835106e-05,
+    "split_recompose_max_seconds": 5.659996531903744e-05
+  }
+}

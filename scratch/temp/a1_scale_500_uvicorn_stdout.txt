@@ -1,0 +1,36 @@
+[BACKEND] GRAPH_BACKEND=age — Client=AGEClient DSN=postgresql://postgres:postgres@localhost... Graph=soc_graph_a1_scale_500_1
+[AUTH] SAML disabled — all routes open
+[STARTUP] BACKEND_PORT=8001 written to .env
+[STARTUP] Backend=AGE | Client=AGEClient | Nodes=1 | Status=VERIFIED
+[STARTUP] correct_decisions=0, verified=0, accuracy=0.0%
+[STARTUP] WARNING: correct_decisions=0 — historical Decision nodes may lack outcome/correct fields. Run support/setup/bootstrap_learning_loop.py --live to backfill.
+[OverrideDetector] inactive — 0 correct-override examples loaded.
+[DOMAIN] Active domain: SOC Copilot (soc)
+[DOMAIN] Factors: 6, Actions: 5, Situations: 6
+[GAE] Loaded bootstrap checkpoint (step=2478, drift=0.0097)
+[GAE] ProfileScorer attached (actions=['escalate', 'investigate', 'suppress', 'monitor'], tau=0.1)
+[GAE] LearningState ready: W.shape=(4, 6), step=2478
+[STARTUP] Promotion rollback handler registered
+[STARTUP] decision_count already current (2478), skipping AGE sync
+[SNAPSHOT] GraphSnapshot initialized: 0 verified decisions, correct=0, IKS=0.0, override_rate=0.000
+[AUDIT] Rebuilt 0 entries from AGE
+[STARTUP] Audit ledger rebuilt: 0 entries
+[WARMUP] Domain warm-up complete in 0.0s
+[WARMUP] LLM narrator initialized
+[NARRATIVE] Provider initialized: template
+[STATE] Registered reset handler: feedback
+[STATE] Registered reset handler: trust
+[STATE] Registered reset handler: policy
+[STATE] Registered reset handler: audit
+[STATE] Registered reset handler: evolver
+[STATE] Registered reset handler: confidence_history
+[STATE] Registered reset handler: learning_state
+[STATE] Registered reset handler: rl_engine
+[STATE] Registered reset handler: platform_caches
+[STATE] Registered reset handler: baseline_caches
+[STATE] Registered reset handler: servicenow_mock
+[TRUST] Seeded 12 historical trust snapshots for 'travel_login_anomaly' — current trust=0.23, human_review_required=True
+[TRIAGE] Seeded 15 historical confidence snapshots
+[CONNECTOR] Registry initialized — 0 connector(s) registered
+[F6] Startup recorrelation: 0 campaigns found.
+INFO:     127.0.0.1:50218 - "GET /health HTTP/1.1" 200 OK

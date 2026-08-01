@@ -1,0 +1,74 @@
+{
+  "started_epoch": 1780943234.8612115,
+  "graph_name": "soc_graph_diag_f4",
+  "backend_url": "http://127.0.0.1:8001",
+  "prefix": "DIAG-F4-CRED",
+  "runner_ci_platform_import_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform\\ci_platform\\graph\\age_graph_store.py",
+  "backend_contract": {
+    "graph_name": "soc_graph_diag_f4",
+    "backend_port": 8001,
+    "graph_dsn_redacted": "host=127.0.0.1 port=5433 dbname=soc_copilot user=postgres password=***",
+    "soc_learning_enabled": "true",
+    "pythonpath": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform;C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend",
+    "ci_platform_import_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform\\ci_platform\\graph\\age_graph_store.py",
+    "launched_at": "2026-06-08T11:24:54.2476968-07:00"
+  },
+  "health": {
+    "status": "healthy",
+    "components": {
+      "posterior_store": {
+        "healthy": true
+      }
+    }
+  },
+  "dry_run": false,
+  "seed_count": 300,
+  "target_outcomes": 250,
+  "batch_size": 25,
+  "sanity_count": 1,
+  "seed_contract_source": "duplicated_from_current_seed_contract",
+  "seed_contract_todo": "P3: reuse scripts/soc_c9b_seed_alerts.py when a small proof-mode interface exists.",
+  "seed_shape": {
+    "alert_type": "anomalous_login",
+    "category": "credential_access",
+    "severity": "critical",
+    "risk_score": 0.92,
+    "asset_criticality": "critical",
+    "mfa_completed": false,
+    "device_fingerprint_match": false
+  },
+  "seed_attempted_count": 112,
+  "seed_completed_count": 111,
+  "seeded_alerts_readback": 100,
+  "analyze_attempts": 0,
+  "outcome_attempts": 0,
+  "valid_outcomes": 0,
+  "skipped_refer_to_analyst": 0,
+  "other_categories": 0,
+  "other_action_skips": 0,
+  "latest_alert_id": null,
+  "latest_action": null,
+  "latest_confidence": null,
+  "progress_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\scratch\\temp\\soc_diag_f_progress.json",
+  "failures": [
+    {
+      "verdict": "SEED_RUNTIME_FAILURE",
+      "message": "seed batch failed: connection timeout expired",
+      "time_epoch": 1780943338.1434689
+    }
+  ],
+  "last_successful_phase": "age_graph_ensured",
+  "exception": "seed batch failed: connection timeout expired",
+  "milestones": {},
+  "progress_readbacks": {},
+  "loops": [],
+  "readback": null,
+  "verdict": "SEED_RUNTIME_FAILURE",
+  "exit_code": 1,
+  "criteria_failures": [
+    "seed batch failed: connection timeout expired"
+  ],
+  "report_json_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_DIAG-F4-CRED.json",
+  "report_md_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_DIAG-F4-CRED.md",
+  "backend_runtime_contract_statement": "Backend import path cannot be directly introspected without a debug endpoint; proof assumes backend was launched by run_soc_diag_backend.ps1 or demo.py --diag-mode with matching graph/env."
+}

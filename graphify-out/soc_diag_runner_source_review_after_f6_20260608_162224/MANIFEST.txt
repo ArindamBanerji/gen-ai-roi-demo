@@ -1,0 +1,38 @@
+
+Name                                             Length LastWriteTime
+----                                             ------ -------------
+00_CONTEXT.txt                                      983 6/8/2026 4:22:24 PM
+01_run_soc_diag_f.py.txt                          73367 6/8/2026 4:22:24 PM
+02_run_soc_diag_backend.ps1.txt                    3894 6/8/2026 4:22:24 PM
+03_soc_external_proof_harness_design.md.txt        7231 6/8/2026 4:22:24 PM
+04_soc_c9b_runtime_harness_plan.md.txt             7628 6/8/2026 4:22:24 PM
+05_triage.py.txt                                 110205 6/8/2026 4:22:24 PM
+06_schemas.py.txt                                  6390 6/8/2026 4:22:24 PM
+07_soc_c9b_seed_alerts.py.txt                     12465 6/8/2026 4:22:24 PM
+08_age_client.py.txt                              36724 6/8/2026 4:22:24 PM
+09_age_graph_store.py.txt                         96983 6/8/2026 4:22:24 PM
+10_demo.py.txt                                    25197 6/8/2026 4:22:24 PM
+report_soc_c9b_diag_f_runner_DIAG-F4-CRED.json     3493 6/8/2026 11:28:58 AM
+report_soc_c9b_diag_f_runner_DIAG-F4-CRED.md       1815 6/8/2026 11:35:28 AM
+report_soc_c9b_diag_f_runner_DIAG-F4-DRY.json      3174 6/8/2026 11:19:50 AM
+report_soc_c9b_diag_f_runner_DIAG-F4-DRY.md        1272 6/8/2026 11:19:50 AM
+report_soc_c9b_diag_f_runner_DIAG-F4-DRY2.json     3182 6/8/2026 11:20:48 AM
+report_soc_c9b_diag_f_runner_DIAG-F4-DRY2.md       1276 6/8/2026 11:20:48 AM
+report_soc_c9b_diag_f_runner_DIAG-F5-CRED.json     4265 6/8/2026 11:59:16 AM
+report_soc_c9b_diag_f_runner_DIAG-F5-CRED.md       2283 6/8/2026 11:58:59 AM
+report_soc_c9b_diag_f_runner_DIAG-F5-DRY.json      3638 6/8/2026 11:35:47 AM
+report_soc_c9b_diag_f_runner_DIAG-F5-DRY.md        1531 6/8/2026 11:35:47 AM
+report_soc_c9b_diag_f_runner_DIAG-F6-CRED.json    61761 6/8/2026 4:11:14 PM
+report_soc_c9b_diag_f_runner_DIAG-F6-CRED.md       2535 6/8/2026 4:11:14 PM
+report_soc_c9b_diag_f_runner_DIAG-F6-DRY.json      4237 6/8/2026 12:30:28 PM
+report_soc_c9b_diag_f_runner_DIAG-F6-DRY.md        2248 6/8/2026 12:30:28 PM
+report_soc_c9b_diag_f_runner_DIAG-F6-RULE40.json   4557 6/8/2026 3:08:33 PM
+report_soc_c9b_diag_f_runner_DIAG-F6-RULE40.md     2821 6/8/2026 3:08:33 PM
+runtime_age_readback_snapshot.py                   1442 6/8/2026 4:22:28 PM
+runtime_age_readback_snapshot.txt                  2076 6/8/2026 4:22:29 PM
+runtime_health_snapshot.txt                         147 6/8/2026 4:22:28 PM
+runtime_process_snapshot.txt                        330 6/8/2026 4:22:25 PM
+runtime_soc_diag_backend_contract.json              700 6/8/2026 1:38:05 PM
+runtime_soc_diag_f_progress.json                   1979 6/8/2026 4:11:14 PM
+
+

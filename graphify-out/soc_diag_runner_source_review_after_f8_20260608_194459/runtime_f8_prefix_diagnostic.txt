@@ -1,0 +1,112 @@
+{
+  "graph_name": "soc_graph_diag_f8",
+  "prefix": "DIAG-F8-CRED",
+  "graph_dsn_redacted": "host=localhost port=5433 dbname=soc_copilot user=postgres password=***",
+  "rule40_validated": true,
+  "backend_health": {
+    "status": "healthy",
+    "components": {
+      "posterior_store": {
+        "healthy": true
+      }
+    }
+  },
+  "max_n_decisions_used": 250,
+  "welford_present": true,
+  "raw": {
+    "decisions": [
+      {
+        "cnt": 250
+      }
+    ],
+    "verified": [
+      {
+        "cnt": 250
+      }
+    ],
+    "outcome_present": [
+      {
+        "cnt": 250
+      }
+    ],
+    "latest_alert": [
+      {
+        "alert_id": "DIAG-F8-CRED-0250",
+        "decision_id": "36782939-a4a4-4ecb-be99-10cfbefca05e",
+        "action": "investigate",
+        "outcome": "correct",
+        "correct": true,
+        "timestamp_epoch": 1780995775611
+      }
+    ],
+    "l5_centroid": [
+      {
+        "cnt": 1
+      }
+    ],
+    "shaped_by": [
+      {
+        "cnt": 1
+      }
+    ],
+    "l5_dk_weight": [
+      {
+        "cnt": 1
+      }
+    ],
+    "dk_welford": [
+      {
+        "n_decisions_used": 250,
+        "confirmed_mean_json": [
+          0.825,
+          1.0,
+          0.0,
+          0.4,
+          0.7,
+          0.6666666666666666
+        ],
+        "confirmed_m2_json": [
+          0.0,
+          0.0,
+          0.0,
+          2.545309014502171e-30,
+          0.0,
+          0.0
+        ],
+        "overridden_mean_json": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "overridden_m2_json": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "all_mean_json": [
+          0.825,
+          1.0,
+          0.0,
+          0.4,
+          0.7,
+          0.6666666666666666
+        ],
+        "all_m2_json": [
+          0.0,
+          0.0,
+          0.0,
+          2.545309014502171e-30,
+          0.0,
+          0.0
+        ]
+      }
+    ]
+  }
+}
+

@@ -1,0 +1,25 @@
+{
+  "contract_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\scratch\\temp\\soc_diag_backend_contract.json",
+  "count": 5,
+  "env": {
+    "AGE_USE_POOL": "true",
+    "USE_ENTITY_CACHE": "false",
+    "USE_SOC_DECISION_PIPELINE_SHADOW": "false"
+  },
+  "error": "failed to clear stale backend on port 8001: ",
+  "error_type": "RouteValidationError",
+  "failed_checks": [
+    "false_baseline.failed"
+  ],
+  "graph": "soc_graph_5d_runner_false_2",
+  "performance_ledger": {
+    "P2E baseline": "avg analyze 0.193s at 250 outcomes, warm_fallback",
+    "P3G-D clean proof": "avg analyze 0.202s, max 0.571s, avg outcome 0.440s; hits=0, misses=250, loads=250",
+    "P3H benchmark conclusion": "EntityCache correct but current route wiring is not a reliable performance win",
+    "buyer_facing_claim_allowed": false
+  },
+  "phase": "false_baseline",
+  "prefix": "P5DRUNNER",
+  "started_at": "2026-06-10T22:36:29.165990+00:00",
+  "status": "FAIL"
+}

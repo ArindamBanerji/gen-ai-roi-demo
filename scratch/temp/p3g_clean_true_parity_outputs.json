@@ -1,0 +1,580 @@
+{
+  "mode": "true",
+  "status": "PASS",
+  "backend_url": "http://127.0.0.1:8001",
+  "contract_summary": {
+    "launcher": "copilot-sdk/demo.py --diag-mode",
+    "graph_name": "soc_graph_p3g_cache_true_parity_clean_1",
+    "backend_port": 8001,
+    "use_entity_cache": "true",
+    "connection_mode": "warm_fallback",
+    "pool_available": "false",
+    "age_use_pool_requested": "true"
+  },
+  "health_before": {
+    "status": "healthy",
+    "components": {
+      "posterior_store": {
+        "healthy": true
+      },
+      "entity_cache": {
+        "enabled": true,
+        "adapter_enabled": true,
+        "hits": 0,
+        "misses": 0,
+        "loads": 0,
+        "invalidations": 0,
+        "evictions": 0,
+        "size": 0,
+        "max_size": 4096
+      }
+    }
+  },
+  "health_after_first_pass": {
+    "status": "healthy",
+    "components": {
+      "posterior_store": {
+        "healthy": true
+      },
+      "entity_cache": {
+        "enabled": true,
+        "adapter_enabled": true,
+        "hits": 0,
+        "misses": 5,
+        "loads": 5,
+        "invalidations": 0,
+        "evictions": 0,
+        "size": 5,
+        "max_size": 4096
+      }
+    }
+  },
+  "health_after_repeat": {
+    "status": "healthy",
+    "components": {
+      "posterior_store": {
+        "healthy": true
+      },
+      "entity_cache": {
+        "enabled": true,
+        "adapter_enabled": true,
+        "hits": 1,
+        "misses": 5,
+        "loads": 5,
+        "invalidations": 0,
+        "evictions": 0,
+        "size": 5,
+        "max_size": 4096
+      }
+    }
+  },
+  "seeded_alert_ids": [
+    "P3GPARITYCLEAN-0001",
+    "P3GPARITYCLEAN-0002",
+    "P3GPARITYCLEAN-0003",
+    "P3GPARITYCLEAN-0004",
+    "P3GPARITYCLEAN-0005"
+  ],
+  "queue_visible_ids": [
+    "P3GPARITYCLEAN-0005",
+    "P3GPARITYCLEAN-0004",
+    "P3GPARITYCLEAN-0003",
+    "P3GPARITYCLEAN-0002",
+    "P3GPARITYCLEAN-0001"
+  ],
+  "comparable_outputs": [
+    {
+      "alert_id": "P3GPARITYCLEAN-0001",
+      "comparable": {
+        "recommendation": {
+          "action": "investigate",
+          "confidence": 0.8770461205137833
+        },
+        "gae_scoring": {
+          "factor_vector": [
+            0.825,
+            1.0,
+            0.0,
+            0.4,
+            0.7,
+            0.6666666666666666
+          ],
+          "factor_names": [
+            "privileged_identity_context",
+            "asset_criticality",
+            "threat_intel_enrichment",
+            "pattern_history",
+            "time_anomaly",
+            "device_trust"
+          ],
+          "action_probabilities": {
+            "escalate": 0.03208,
+            "investigate": 0.877046,
+            "suppress": 0.006531,
+            "monitor": 0.084343
+          }
+        },
+        "referral": {
+          "should_refer": false,
+          "reasons": [],
+          "audit_summary": "No referral rules triggered."
+        },
+        "referral_debug": {
+          "r2_sequence_count": 0,
+          "r7_cross_category_count": 0,
+          "rules_evaluated": [
+            "R1",
+            "R2",
+            "R3",
+            "R4",
+            "R5",
+            "R6",
+            "R7"
+          ],
+          "rules_fired": []
+        },
+        "composite_gate": {
+          "auto_approve": false,
+          "reason_codes": [
+            "cat_count 1 < 50 (maturity gate)"
+          ]
+        },
+        "alert": {
+          "alert_id": "P3GPARITYCLEAN-0001",
+          "category": "credential_access",
+          "severity": "critical",
+          "source_location": "c9b-seed-zone-1",
+          "user_id": "P3GPARITYCLEAN-USER-0001",
+          "asset_id": "P3GPARITYCLEAN-ASSET-0001"
+        },
+        "context": {
+          "nodes_count": 47,
+          "subgraphs_traversed": [
+            "User Profile",
+            "Asset Inventory",
+            "Travel Calendar",
+            "Pattern Library",
+            "Playbook Registry"
+          ]
+        }
+      }
+    },
+    {
+      "alert_id": "P3GPARITYCLEAN-0002",
+      "comparable": {
+        "recommendation": {
+          "action": "refer_to_analyst",
+          "confidence": 0.49511496153045853
+        },
+        "gae_scoring": {
+          "factor_vector": [
+            0.475,
+            0.8,
+            0.0,
+            0.4,
+            0.7,
+            0.3333333333333333
+          ],
+          "factor_names": [
+            "privileged_identity_context",
+            "asset_criticality",
+            "threat_intel_enrichment",
+            "pattern_history",
+            "time_anomaly",
+            "device_trust"
+          ],
+          "action_probabilities": {
+            "escalate": 0.044543,
+            "investigate": 0.495115,
+            "suppress": 0.012343,
+            "monitor": 0.447999
+          }
+        },
+        "referral": {
+          "should_refer": false,
+          "reasons": [],
+          "audit_summary": "No referral rules triggered."
+        },
+        "referral_debug": {
+          "r2_sequence_count": 0,
+          "r7_cross_category_count": 0,
+          "rules_evaluated": [
+            "R1",
+            "R2",
+            "R3",
+            "R4",
+            "R5",
+            "R6",
+            "R7"
+          ],
+          "rules_fired": []
+        },
+        "composite_gate": {
+          "auto_approve": false,
+          "reason_codes": [
+            "confidence 0.50 < 0.69 (malware_execution)",
+            "margin 0.05 < 0.3",
+            "cat_count 1 < 50 (maturity gate)"
+          ]
+        },
+        "alert": {
+          "alert_id": "P3GPARITYCLEAN-0002",
+          "category": "malware_execution",
+          "severity": "high",
+          "source_location": "c9b-seed-zone-2",
+          "user_id": "P3GPARITYCLEAN-USER-0002",
+          "asset_id": "P3GPARITYCLEAN-ASSET-0002"
+        },
+        "context": {
+          "nodes_count": 47,
+          "subgraphs_traversed": [
+            "User Profile",
+            "Asset Inventory",
+            "Travel Calendar",
+            "Pattern Library",
+            "Playbook Registry"
+          ]
+        }
+      }
+    },
+    {
+      "alert_id": "P3GPARITYCLEAN-0003",
+      "comparable": {
+        "recommendation": {
+          "action": "investigate",
+          "confidence": 0.7015967296491831
+        },
+        "gae_scoring": {
+          "factor_vector": [
+            0.1,
+            1.0,
+            0.0,
+            0.4,
+            0.7,
+            0.0
+          ],
+          "factor_names": [
+            "privileged_identity_context",
+            "asset_criticality",
+            "threat_intel_enrichment",
+            "pattern_history",
+            "time_anomaly",
+            "device_trust"
+          ],
+          "action_probabilities": {
+            "escalate": 0.038604,
+            "investigate": 0.701597,
+            "suppress": 0.001696,
+            "monitor": 0.258103
+          }
+        },
+        "referral": {
+          "should_refer": false,
+          "reasons": [],
+          "audit_summary": "No referral rules triggered."
+        },
+        "referral_debug": {
+          "r2_sequence_count": 0,
+          "r7_cross_category_count": 0,
+          "rules_evaluated": [
+            "R1",
+            "R2",
+            "R3",
+            "R4",
+            "R5",
+            "R6",
+            "R7"
+          ],
+          "rules_fired": []
+        },
+        "composite_gate": {
+          "auto_approve": false,
+          "reason_codes": [
+            "cat_count 1 < 50 (maturity gate)"
+          ]
+        },
+        "alert": {
+          "alert_id": "P3GPARITYCLEAN-0003",
+          "category": "lateral_movement",
+          "severity": "critical",
+          "source_location": "c9b-seed-zone-3",
+          "user_id": "P3GPARITYCLEAN-USER-0003",
+          "asset_id": "P3GPARITYCLEAN-ASSET-0003"
+        },
+        "context": {
+          "nodes_count": 47,
+          "subgraphs_traversed": [
+            "User Profile",
+            "Asset Inventory",
+            "Travel Calendar",
+            "Pattern Library",
+            "Playbook Registry"
+          ]
+        }
+      }
+    },
+    {
+      "alert_id": "P3GPARITYCLEAN-0004",
+      "comparable": {
+        "recommendation": {
+          "action": "refer_to_analyst",
+          "confidence": 0.4402681463673651
+        },
+        "gae_scoring": {
+          "factor_vector": [
+            0.825,
+            0.2,
+            0.0,
+            0.4,
+            0.7,
+            0.6666666666666666
+          ],
+          "factor_names": [
+            "privileged_identity_context",
+            "asset_criticality",
+            "threat_intel_enrichment",
+            "pattern_history",
+            "time_anomaly",
+            "device_trust"
+          ],
+          "action_probabilities": {
+            "escalate": 0.00015,
+            "investigate": 0.251905,
+            "suppress": 0.307677,
+            "monitor": 0.440268
+          }
+        },
+        "referral": {
+          "should_refer": false,
+          "reasons": [],
+          "audit_summary": "No referral rules triggered."
+        },
+        "referral_debug": {
+          "r2_sequence_count": 0,
+          "r7_cross_category_count": 0,
+          "rules_evaluated": [
+            "R1",
+            "R2",
+            "R3",
+            "R4",
+            "R5",
+            "R6",
+            "R7"
+          ],
+          "rules_fired": []
+        },
+        "composite_gate": {
+          "auto_approve": false,
+          "reason_codes": [
+            "confidence 0.44 < 0.67 (data_exfiltration)",
+            "margin 0.13 < 0.3",
+            "cat_count 1 < 50 (maturity gate)"
+          ]
+        },
+        "alert": {
+          "alert_id": "P3GPARITYCLEAN-0004",
+          "category": "data_exfiltration",
+          "severity": "low",
+          "source_location": "c9b-seed-zone-4",
+          "user_id": "P3GPARITYCLEAN-USER-0004",
+          "asset_id": "P3GPARITYCLEAN-ASSET-0004"
+        },
+        "context": {
+          "nodes_count": 47,
+          "subgraphs_traversed": [
+            "User Profile",
+            "Asset Inventory",
+            "Travel Calendar",
+            "Pattern Library",
+            "Playbook Registry"
+          ]
+        }
+      }
+    },
+    {
+      "alert_id": "P3GPARITYCLEAN-0005",
+      "comparable": {
+        "recommendation": {
+          "action": "refer_to_analyst",
+          "confidence": 0.5320197397309421
+        },
+        "gae_scoring": {
+          "factor_vector": [
+            0.475,
+            0.5,
+            0.0,
+            0.4,
+            0.7,
+            0.3333333333333333
+          ],
+          "factor_names": [
+            "privileged_identity_context",
+            "asset_criticality",
+            "threat_intel_enrichment",
+            "pattern_history",
+            "time_anomaly",
+            "device_trust"
+          ],
+          "action_probabilities": {
+            "escalate": 0.007463,
+            "investigate": 0.53202,
+            "suppress": 0.028551,
+            "monitor": 0.431966
+          }
+        },
+        "referral": {
+          "should_refer": false,
+          "reasons": [],
+          "audit_summary": "No referral rules triggered."
+        },
+        "referral_debug": {
+          "r2_sequence_count": 0,
+          "r7_cross_category_count": 0,
+          "rules_evaluated": [
+            "R1",
+            "R2",
+            "R3",
+            "R4",
+            "R5",
+            "R6",
+            "R7"
+          ],
+          "rules_fired": []
+        },
+        "composite_gate": {
+          "auto_approve": false,
+          "reason_codes": [
+            "confidence 0.53 < 0.7 (insider_threat)",
+            "margin 0.10 < 0.3",
+            "cat_count 1 < 50 (maturity gate)"
+          ]
+        },
+        "alert": {
+          "alert_id": "P3GPARITYCLEAN-0005",
+          "category": "insider_threat",
+          "severity": "medium",
+          "source_location": "c9b-seed-zone-5",
+          "user_id": "P3GPARITYCLEAN-USER-0005",
+          "asset_id": "P3GPARITYCLEAN-ASSET-0005"
+        },
+        "context": {
+          "nodes_count": 47,
+          "subgraphs_traversed": [
+            "User Profile",
+            "Asset Inventory",
+            "Travel Calendar",
+            "Pattern Library",
+            "Playbook Registry"
+          ]
+        }
+      }
+    }
+  ],
+  "failed_captures": [],
+  "repeated_cache_probe": {
+    "alert_id": "P3GPARITYCLEAN-0001",
+    "comparable": {
+      "recommendation": {
+        "action": "investigate",
+        "confidence": 0.8770461205137833
+      },
+      "gae_scoring": {
+        "factor_vector": [
+          0.825,
+          1.0,
+          0.0,
+          0.4,
+          0.7,
+          0.6666666666666666
+        ],
+        "factor_names": [
+          "privileged_identity_context",
+          "asset_criticality",
+          "threat_intel_enrichment",
+          "pattern_history",
+          "time_anomaly",
+          "device_trust"
+        ],
+        "action_probabilities": {
+          "escalate": 0.03208,
+          "investigate": 0.877046,
+          "suppress": 0.006531,
+          "monitor": 0.084343
+        }
+      },
+      "referral": {
+        "should_refer": false,
+        "reasons": [],
+        "audit_summary": "No referral rules triggered."
+      },
+      "referral_debug": {
+        "r2_sequence_count": 0,
+        "r7_cross_category_count": 0,
+        "rules_evaluated": [
+          "R1",
+          "R2",
+          "R3",
+          "R4",
+          "R5",
+          "R6",
+          "R7"
+        ],
+        "rules_fired": []
+      },
+      "composite_gate": {
+        "auto_approve": false,
+        "reason_codes": [
+          "cat_count 2 < 50 (maturity gate)"
+        ]
+      },
+      "alert": {
+        "alert_id": "P3GPARITYCLEAN-0001",
+        "category": "credential_access",
+        "severity": "critical",
+        "source_location": "c9b-seed-zone-1",
+        "user_id": "P3GPARITYCLEAN-USER-0001",
+        "asset_id": "P3GPARITYCLEAN-ASSET-0001"
+      },
+      "context": {
+        "nodes_count": 47,
+        "subgraphs_traversed": [
+          "User Profile",
+          "Asset Inventory",
+          "Travel Calendar",
+          "Pattern Library",
+          "Playbook Registry"
+        ]
+      }
+    },
+    "failure": null
+  },
+  "comparable_fields": [
+    "recommendation.action",
+    "recommendation.confidence",
+    "gae_scoring.factor_vector",
+    "gae_scoring.factor_names",
+    "gae_scoring.action_probabilities",
+    "referral",
+    "referral_debug",
+    "composite_gate.auto_approve",
+    "composite_gate.reason_codes",
+    "alert.alert_id",
+    "alert.category",
+    "alert.severity",
+    "alert.source_location",
+    "alert.user_id",
+    "alert.asset_id",
+    "context.nodes_count",
+    "context.subgraphs_traversed"
+  ],
+  "excluded_fields": [
+    "recommendation.decision_id",
+    "gae_scoring.decision_id",
+    "provenance.decision_id",
+    "generated UUIDs",
+    "timestamps",
+    "elapsed timings",
+    "narrative text"
+  ],
+  "notes": "USE_ENTITY_CACHE=true parity capture. First five outputs are used for parity; repeated P3GPARITYCLEAN-0001 is diagnostics-only."
+}

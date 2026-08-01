@@ -1,0 +1,9 @@
+{
+  "graph_name": "soc_graph_diag_f5",
+  "backend_port": 8001,
+  "graph_dsn_redacted": "host=127.0.0.1 port=5433 dbname=soc_copilot user=postgres password=***",
+  "soc_learning_enabled": "true",
+  "pythonpath": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform;C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend",
+  "ci_platform_import_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform\\ci_platform\\graph\\age_graph_store.py",
+  "launched_at": "2026-06-08T11:41:07.6420186-07:00"
+}

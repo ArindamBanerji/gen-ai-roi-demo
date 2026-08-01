@@ -17,7 +17,7 @@ _VALID_VECTOR = [0.7, 0.8, 0.5, 0.4, 0.6, 0.9]
 
 
 class _OutcomeResult:
-    graph_updates = []
+    graph_updates: list[object] = []
     consequence = "stable"
 
     def model_dump(self):
@@ -36,35 +36,23 @@ def _make_request() -> OutcomeRequest:
     )
 
 
-def _make_neo4j(factor_vector, action: str = "investigate"):
-    async def _run(query, params=None):
-        if "RETURN d.factor_vector AS factor_vector" in query:
-            return [{
-                "factor_vector": factor_vector,
-                "action": action,
-                "confidence": 0.85,
-                "category": _CATEGORY,
-                "alert_type": _CATEGORY,
-            }]
-        return []
-
-    client = AsyncMock()
-    client.run_query.side_effect = _run
-    return client
-
-
 def _make_learning_state():
     state = SimpleNamespace(decision_count=100)
     state.update = MagicMock(return_value=SimpleNamespace(centroid_update=None))
     return state
 
 
-async def _call_with_factor_vector(factor_vector, action: str = "investigate"):
-    neo4j = _make_neo4j(factor_vector=factor_vector, action=action)
+async def _call_with_factor_vector(factor_vector, harness, action: str = "investigate"):
+    harness.add_decision(
+        decision_id=_DECISION_ID,
+        category=_CATEGORY,
+        action=action,
+        factors={f"f{i}": value for i, value in enumerate(_VALID_VECTOR)},
+        factor_vector=factor_vector,
+    )
     learning_state = _make_learning_state()
 
     with contextlib.ExitStack() as stack:
-        stack.enter_context(patch("app.routers.triage.neo4j_client", neo4j))
         stack.enter_context(patch("app.routers.triage.get_feedback_status", return_value={"has_feedback": False}))
         stack.enter_context(patch("app.routers.triage.process_outcome", return_value=_OutcomeResult()))
         stack.enter_context(patch("app.routers.triage.event_bus.emit", new_callable=AsyncMock))
@@ -87,31 +75,33 @@ def _run(coro):
     return asyncio.run(coro)
 
 
-def test_empty_factor_vector_raises():
+def test_empty_factor_vector_raises(soc_triage_harness):
     with pytest.raises(ValueError, match="factor_vector must have 6 elements, got 0"):
-        _run(_call_with_factor_vector([]))
+        _run(_call_with_factor_vector([], soc_triage_harness))
 
 
-def test_none_factor_vector_raises():
+def test_none_factor_vector_raises(soc_triage_harness):
     with pytest.raises(ValueError, match="factor_vector must have 6 elements, got None"):
-        _run(_call_with_factor_vector(None))
+        _run(_call_with_factor_vector(None, soc_triage_harness))
 
 
-def test_wrong_length_factor_vector_raises():
+def test_wrong_length_factor_vector_raises(soc_triage_harness):
     with pytest.raises(ValueError, match="factor_vector must have 6 elements, got 3"):
-        _run(_call_with_factor_vector([0.1, 0.2, 0.3]))
+        _run(_call_with_factor_vector([0.1, 0.2, 0.3], soc_triage_harness))
 
 
-def test_valid_factor_vector_scores_correctly():
-    result, learning_state = _run(_call_with_factor_vector(json.dumps(_VALID_VECTOR)))
+def test_valid_factor_vector_scores_correctly(soc_triage_harness):
+    result, learning_state = _run(
+        _call_with_factor_vector(json.dumps(_VALID_VECTOR), soc_triage_harness)
+    )
 
     learning_state.update.assert_not_called()
     assert result["consequence"] == "stable"
 
 
-def test_factor_validation_message_includes_expected_length():
+def test_factor_validation_message_includes_expected_length(soc_triage_harness):
     with pytest.raises(ValueError) as exc:
-        _run(_call_with_factor_vector([0.1, 0.2, 0.3]))
+        _run(_call_with_factor_vector([0.1, 0.2, 0.3], soc_triage_harness))
 
     message = str(exc.value)
     assert "factor_vector must have 6 elements" in message

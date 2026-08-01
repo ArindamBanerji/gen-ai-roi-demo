@@ -89,11 +89,28 @@ class FakeLearningState:
         return SimpleNamespace(centroid_update=None)
 
 
-def _patch_common_outcome(monkeypatch, record=None):
+def _patch_common_outcome(monkeypatch, harness, record=None, *, fail_triggered_evolution=False):
     rl_engine.reset_rl_state()
-    fake_neo4j = FakeNeo4j(record)
+    decision = record or _decision_record()
+    harness.graph_client.fail_triggered_evolution = fail_triggered_evolution
+    monkeypatch.setattr(triage, "neo4j_client", harness.graph_client)
+    harness.add_decision(
+        decision_id="D-RL",
+        category=decision["category"],
+        action=decision["action"],
+        confidence=decision["confidence"],
+        factors={f"f{i}": value for i, value in enumerate([0.2, 0.3, 0.4, 0.1, 0.5, 0.6])},
+        factor_vector=decision["factor_vector"],
+        campaign_id=decision.get("campaign_id"),
+        exploration_flags={
+            "explored": decision.get("explored", False),
+            "explored_but_referred": decision.get("explored_but_referred", False),
+            "exploration_executed": decision.get("exploration_executed", False),
+            "explored_action": decision.get("explored_action"),
+        },
+        alert_type=decision.get("alert_type", decision["category"]),
+    )
     learning_state = FakeLearningState()
-    monkeypatch.setattr(triage, "neo4j_client", fake_neo4j)
     monkeypatch.setattr(triage, "get_feedback_status", lambda _alert_id: {"has_feedback": False})
     monkeypatch.setattr(triage, "get_learning_state", lambda: learning_state)
     monkeypatch.setattr(triage, "save_learning_state", lambda: None)
@@ -109,7 +126,7 @@ def _patch_common_outcome(monkeypatch, record=None):
     )
     monkeypatch.setattr("app.framework.audit.record_outcome", AsyncMock(return_value=None))
     monkeypatch.setattr("app.services.shadow_runner.fill_shadow_outcome", lambda *_args: None)
-    return fake_neo4j, learning_state
+    return harness.graph_client, learning_state
 
 
 async def _call_outcome(outcome="correct", analyst_action=None):
@@ -132,8 +149,8 @@ def _outcome_decision_update_query(fake_neo4j):
 
 
 @pytest.mark.asyncio
-async def test_reward_computation_fires_on_outcome_when_flag_enabled(monkeypatch):
-    _patch_common_outcome(monkeypatch)
+async def test_reward_computation_fires_on_outcome_when_flag_enabled(monkeypatch, soc_triage_harness):
+    _patch_common_outcome(monkeypatch, soc_triage_harness)
     monkeypatch.setattr(soc_config, "RL_REWARD_LEDGER_ENABLED", True)
 
     await _call_outcome()
@@ -145,69 +162,74 @@ async def test_reward_computation_fires_on_outcome_when_flag_enabled(monkeypatch
 
 
 @pytest.mark.asyncio
-async def test_outcome_persists_analyst_action_override_measurement_fields(monkeypatch):
-    fake_neo4j, _learning_state = _patch_common_outcome(monkeypatch)
+async def test_outcome_persists_analyst_action_override_measurement_fields(monkeypatch, soc_triage_harness):
+    _client, _learning_state = _patch_common_outcome(monkeypatch, soc_triage_harness)
 
     await _call_outcome(outcome="incorrect", analyst_action="suppress")
 
-    query = _outcome_decision_update_query(fake_neo4j)
-    assert "d.outcome           = 'incorrect'" in query
-    assert "d.correct           = false" in query
-    assert "d.analyst_action    = 'suppress'" in query
-    assert "d.final_action      = 'suppress'" in query
-    assert "d.recommended_action = d.action" in query
-    assert "ELSE d.action <> 'suppress'" in query
-    assert "d.quality_signal    = 0.0" in query
+    decision = soc_triage_harness.get_decision("D-RL")
+    assert decision is not None
+    assert decision["outcome"] == "incorrect"
+    assert decision["correct"] is False
+    assert decision["analyst_action"] == "suppress"
+    assert decision["final_action"] == "suppress"
+    assert decision["recommended_action"] == "escalate"
+    assert decision["was_override"] is True
+    assert decision["quality_signal"] == 0.0
 
 
 @pytest.mark.asyncio
-async def test_outcome_persists_non_override_measurement_fields(monkeypatch):
-    fake_neo4j, _learning_state = _patch_common_outcome(monkeypatch)
+async def test_outcome_persists_non_override_measurement_fields(monkeypatch, soc_triage_harness):
+    _client, _learning_state = _patch_common_outcome(monkeypatch, soc_triage_harness)
 
     await _call_outcome(outcome="correct", analyst_action="escalate")
 
-    query = _outcome_decision_update_query(fake_neo4j)
-    assert "d.analyst_action    = 'escalate'" in query
-    assert "d.final_action      = 'escalate'" in query
-    assert "ELSE d.action <> 'escalate'" in query
-    assert "d.quality_signal    = 1.0" in query
+    decision = soc_triage_harness.get_decision("D-RL")
+    assert decision is not None
+    assert decision["analyst_action"] == "escalate"
+    assert decision["final_action"] == "escalate"
+    assert decision["was_override"] is False
+    assert decision["quality_signal"] == 1.0
 
 
 @pytest.mark.asyncio
-async def test_outcome_without_analyst_action_does_not_fabricate_action(monkeypatch):
-    fake_neo4j, _learning_state = _patch_common_outcome(monkeypatch)
+async def test_outcome_without_analyst_action_does_not_fabricate_action(monkeypatch, soc_triage_harness):
+    _client, _learning_state = _patch_common_outcome(monkeypatch, soc_triage_harness)
 
     await _call_outcome(outcome="correct", analyst_action=None)
 
-    query = _outcome_decision_update_query(fake_neo4j)
-    assert "d.outcome           = 'correct'" in query
-    assert "d.correct           = true" in query
-    assert "d.analyst_action    = null" in query
-    assert "d.final_action      = null" in query
-    assert "WHEN null IS NULL THEN false" in query
-    assert "d.quality_signal    = 1.0" in query
+    decision = soc_triage_harness.get_decision("D-RL")
+    assert decision is not None
+    assert decision["outcome"] == "correct"
+    assert decision["correct"] is True
+    assert decision.get("analyst_action") is None
+    assert decision.get("final_action") is None
+    assert decision["was_override"] is False
+    assert decision["quality_signal"] == 1.0
 
 
 @pytest.mark.asyncio
-async def test_campaign_measurement_fields_share_decision_node_with_cohort_flags(monkeypatch):
-    fake_neo4j, _learning_state = _patch_common_outcome(
+async def test_campaign_measurement_fields_share_decision_node_with_cohort_flags(monkeypatch, soc_triage_harness):
+    client, _learning_state = _patch_common_outcome(
         monkeypatch,
+        soc_triage_harness,
         _decision_record(campaign_id="L1-campaign"),
     )
 
     await _call_outcome(outcome="correct", analyst_action="escalate")
 
-    query = _outcome_decision_update_query(fake_neo4j)
-    assert "MATCH (d:Decision {decision_id: 'D-RL'})" in query
-    assert "d.analyst_action    = 'escalate'" in query
-    assert "d.was_override" in query
-    assert "d.quality_signal    = 1.0" in query
-    assert any("d.campaign_id    AS campaign_id" in q for q in fake_neo4j.queries)
+    decision = soc_triage_harness.get_decision("D-RL")
+    assert decision is not None
+    assert decision["metadata"]["campaign_id"] == "L1-campaign"
+    assert decision["analyst_action"] == "escalate"
+    assert decision["was_override"] is False
+    assert decision["quality_signal"] == 1.0
+    assert any("RETURN d.factor_vector AS factor_vector" in q for q, _ in client._queries)
 
 
 @pytest.mark.asyncio
-async def test_reward_skipped_when_flag_false(monkeypatch):
-    _patch_common_outcome(monkeypatch)
+async def test_reward_skipped_when_flag_false(monkeypatch, soc_triage_harness):
+    _patch_common_outcome(monkeypatch, soc_triage_harness)
     monkeypatch.setattr(soc_config, "RL_REWARD_LEDGER_ENABLED", False)
 
     await _call_outcome()
@@ -216,9 +238,10 @@ async def test_reward_skipped_when_flag_false(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_posterior_update_fires_when_explored_and_not_vetoed(monkeypatch):
+async def test_posterior_update_fires_when_explored_and_not_vetoed(monkeypatch, soc_triage_harness):
     _patch_common_outcome(
         monkeypatch,
+        soc_triage_harness,
         _decision_record(
             explored=True,
             explored_but_referred=False,
@@ -236,9 +259,10 @@ async def test_posterior_update_fires_when_explored_and_not_vetoed(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_posterior_update_skipped_when_referral_vetoed(monkeypatch):
+async def test_posterior_update_skipped_when_referral_vetoed(monkeypatch, soc_triage_harness):
     _patch_common_outcome(
         monkeypatch,
+        soc_triage_harness,
         _decision_record(
             explored=True,
             explored_but_referred=True,
@@ -256,8 +280,8 @@ async def test_posterior_update_skipped_when_referral_vetoed(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_chain_credit_fires_on_correct_outcome_when_enabled(monkeypatch):
-    _patch_common_outcome(monkeypatch)
+async def test_chain_credit_fires_on_correct_outcome_when_enabled(monkeypatch, soc_triage_harness):
+    _patch_common_outcome(monkeypatch, soc_triage_harness)
     monkeypatch.setattr(soc_config, "RL_CHAIN_CREDIT_ENABLED", True)
     calls = []
 
@@ -275,26 +299,12 @@ async def test_chain_credit_fires_on_correct_outcome_when_enabled(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_chain_credit_skipped_when_triggered_evolution_write_fails(monkeypatch):
-    rl_engine.reset_rl_state()
-    fake_neo4j = FakeNeo4j(fail_triggered_evolution=True)
-    learning_state = FakeLearningState()
-    monkeypatch.setattr(triage, "neo4j_client", fake_neo4j)
-    monkeypatch.setattr(triage, "get_feedback_status", lambda _alert_id: {"has_feedback": False})
-    monkeypatch.setattr(triage, "get_learning_state", lambda: learning_state)
-    monkeypatch.setattr(triage, "save_learning_state", lambda: None)
-    monkeypatch.setattr(triage.event_bus, "emit", AsyncMock())
-    monkeypatch.setattr(
-        triage,
-        "process_outcome",
-        lambda **_kwargs: SimpleNamespace(
-            model_dump=lambda: {"graph_updates": [], "consequence": "ok"},
-            graph_updates=[],
-            consequence="ok",
-        ),
+async def test_chain_credit_skipped_when_triggered_evolution_write_fails(monkeypatch, soc_triage_harness):
+    _client, _learning_state = _patch_common_outcome(
+        monkeypatch,
+        soc_triage_harness,
+        fail_triggered_evolution=True,
     )
-    monkeypatch.setattr("app.framework.audit.record_outcome", AsyncMock(return_value=None))
-    monkeypatch.setattr("app.services.shadow_runner.fill_shadow_outcome", lambda *_args: None)
     monkeypatch.setattr(soc_config, "RL_CHAIN_CREDIT_ENABLED", True)
     calls = []
 
@@ -312,8 +322,8 @@ async def test_chain_credit_skipped_when_triggered_evolution_write_fails(monkeyp
 
 
 @pytest.mark.asyncio
-async def test_chain_credit_skipped_when_flag_false(monkeypatch):
-    _patch_common_outcome(monkeypatch)
+async def test_chain_credit_skipped_when_flag_false(monkeypatch, soc_triage_harness):
+    _patch_common_outcome(monkeypatch, soc_triage_harness)
     monkeypatch.setattr(soc_config, "RL_CHAIN_CREDIT_ENABLED", False)
     calls = []
     monkeypatch.setattr(
@@ -328,8 +338,8 @@ async def test_chain_credit_skipped_when_flag_false(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_reward_failure_does_not_crash_outcome(monkeypatch):
-    _patch_common_outcome(monkeypatch)
+async def test_reward_failure_does_not_crash_outcome(monkeypatch, soc_triage_harness):
+    _patch_common_outcome(monkeypatch, soc_triage_harness)
     monkeypatch.setattr(soc_config, "RL_REWARD_LEDGER_ENABLED", True)
 
     class BadComputer:
@@ -344,8 +354,8 @@ async def test_reward_failure_does_not_crash_outcome(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_eta_restored_when_guarded_update_raises(monkeypatch):
-    _patch_common_outcome(monkeypatch)
+async def test_eta_restored_when_guarded_update_raises(monkeypatch, soc_triage_harness):
+    _patch_common_outcome(monkeypatch, soc_triage_harness)
     monkeypatch.setattr(triage, "LEARNING_ENABLED", True)
     monkeypatch.setattr(soc_config, "RL_REWARD_LEDGER_ENABLED", True)
     monkeypatch.setattr(soc_config, "RL_ETA_MODULATION_ENABLED", True)

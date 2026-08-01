@@ -1,0 +1,112 @@
+param(
+    [string]$GraphName = "soc_graph_diag_f2",
+    [int]$Port = 8001,
+    [bool]$SourceCiPlatform = $true,
+    [switch]$PreflightOnly
+)
+
+$ErrorActionPreference = "Stop"
+
+$RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
+$ProjectsRoot = Resolve-Path (Join-Path $RepoRoot "..")
+$BackendPath = Join-Path $RepoRoot "backend"
+$CiPlatformPath = Join-Path $ProjectsRoot "ci-platform"
+$GraphDsn = "host=127.0.0.1 port=5433 dbname=soc_copilot user=postgres password=postgres"
+
+if ($SourceCiPlatform) {
+    $env:PYTHONPATH = "$CiPlatformPath;$BackendPath"
+} else {
+    $env:PYTHONPATH = "$BackendPath"
+}
+$env:GRAPH_BACKEND = "age"
+$env:GRAPH_DSN = $GraphDsn
+$env:AGE_GRAPH_NAME = $GraphName
+$env:SOC_LEARNING_ENABLED = "true"
+$ContractDir = Join-Path $RepoRoot "scratch\temp"
+$ContractPath = Join-Path $ContractDir "soc_diag_backend_contract.json"
+
+function Remove-StaleContractForGraph {
+    if (-not (Test-Path $ContractPath)) {
+        return
+    }
+    try {
+        $existing = Get-Content $ContractPath -Raw | ConvertFrom-Json
+        if ($existing.graph_name -eq $GraphName) {
+            Remove-Item -LiteralPath $ContractPath -Force
+            Write-Host "[SOC DIAG] removed stale contract for $GraphName"
+        }
+    } catch {
+        Write-Host "[SOC DIAG] existing contract unreadable; leaving it in place: $ContractPath"
+    }
+}
+
+function Fail-Preflight {
+    param([string]$Message)
+    Write-Error "[SOC DIAG] preflight failed: $Message"
+    exit 1
+}
+
+Remove-StaleContractForGraph
+
+Write-Host "[SOC DIAG] repo=$RepoRoot"
+Write-Host "[SOC DIAG] backend=$BackendPath"
+Write-Host "[SOC DIAG] GRAPH_BACKEND=$env:GRAPH_BACKEND"
+Write-Host "[SOC DIAG] GRAPH_DSN=$($GraphDsn -replace 'password=[^ ]+', 'password=***')"
+Write-Host "[SOC DIAG] AGE_GRAPH_NAME=$env:AGE_GRAPH_NAME"
+Write-Host "[SOC DIAG] SOC_LEARNING_ENABLED=$env:SOC_LEARNING_ENABLED"
+Write-Host "[SOC DIAG] PYTHONPATH=$env:PYTHONPATH"
+
+try {
+    $ImportPath = python -c "import ci_platform.graph.age_graph_store as m; print(m.__file__)"
+    if ($LASTEXITCODE -ne 0) {
+        Fail-Preflight "ci_platform import check failed"
+    }
+} catch {
+    Fail-Preflight "ci_platform import check failed: $_"
+}
+Write-Host "[SOC DIAG] ci_platform=$ImportPath"
+if ($SourceCiPlatform -and -not $ImportPath.StartsWith($CiPlatformPath)) {
+    Fail-Preflight "ci_platform import path is not source repo: $ImportPath"
+}
+
+try {
+    python -c "import asyncio; from ci_platform.graph.age_client import AGEClient; c=AGEClient(); asyncio.run(c.ensure_graph()); print('Graph ready:', c._graph)"
+    if ($LASTEXITCODE -ne 0) {
+        Fail-Preflight "ensure_graph failed"
+    }
+} catch {
+    Fail-Preflight "ensure_graph failed: $_"
+}
+
+try {
+    $Readback = python -c "import asyncio; from ci_platform.graph.age_client import AGEClient; c=AGEClient(); print(asyncio.run(c.run_query('MATCH (n) RETURN count(n) AS total')))"
+    if ($LASTEXITCODE -ne 0) {
+        Fail-Preflight "graph readback failed"
+    }
+    Write-Host "[SOC DIAG] graph readback=$Readback"
+} catch {
+    Fail-Preflight "graph readback failed: $_"
+}
+
+if ($PreflightOnly) {
+    Write-Host "[SOC DIAG] preflight-only complete; contract not written and uvicorn not started"
+    exit 0
+}
+
+New-Item -ItemType Directory -Path $ContractDir -Force | Out-Null
+$Contract = [ordered]@{
+    graph_name = $GraphName
+    backend_port = $Port
+    graph_dsn_redacted = ($GraphDsn -replace 'password=[^ ]+', 'password=***')
+    soc_learning_enabled = $env:SOC_LEARNING_ENABLED
+    pythonpath = $env:PYTHONPATH
+    ci_platform_import_path = $ImportPath
+    launched_at = (Get-Date).ToString("o")
+}
+$Contract | ConvertTo-Json -Depth 4 | Set-Content -Path $ContractPath -Encoding UTF8
+Write-Host "[SOC DIAG] contract=$ContractPath"
+
+Set-Location $BackendPath
+Write-Host "[SOC DIAG] starting uvicorn foreground on port $Port"
+python -m uvicorn app.main:app --host 127.0.0.1 --port $Port
+

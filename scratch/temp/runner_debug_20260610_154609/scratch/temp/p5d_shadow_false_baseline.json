@@ -1,0 +1,1335 @@
+{
+  "assertions": {
+    "canonical_route_output_returned": true,
+    "proof_criteria_changed": false,
+    "shadow_diagnostics_absent": true,
+    "side_effect_counters_duplicated": "UNKNOWN"
+  },
+  "backend": {
+    "contract": {
+      "age_use_pool": "true",
+      "age_use_pool_requested": "true",
+      "backend_port": 8001,
+      "ci_platform_import_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform\\ci_platform\\graph\\age_graph_store.py",
+      "connection_mode": "warm_fallback",
+      "graph_dsn_redacted": "host=localhost port=5433 dbname=soc_copilot user=postgres password=***",
+      "graph_name": "soc_graph_5d_shadow_false_baseline_1",
+      "health_url": "http://127.0.0.1:8001/health",
+      "launched_at": "2026-06-10T14:38:56-0700",
+      "launcher": "copilot-sdk/demo.py --diag-mode",
+      "pool_available": "false",
+      "pythonpath": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform;C:\\Users\\baner\\CopyFolder\\IOT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend",
+      "soc_learning_enabled": "true",
+      "use_entity_cache": "false"
+    },
+    "health": {
+      "components": {
+        "entity_cache": {
+          "adapter_enabled": true,
+          "enabled": false,
+          "evictions": 0,
+          "hits": 0,
+          "invalidations": 0,
+          "loads": 0,
+          "max_size": 4096,
+          "misses": 0,
+          "size": 0
+        },
+        "posterior_store": {
+          "healthy": true
+        }
+      },
+      "status": "healthy"
+    },
+    "health_after": {
+      "components": {
+        "entity_cache": {
+          "adapter_enabled": true,
+          "enabled": false,
+          "evictions": 0,
+          "hits": 0,
+          "invalidations": 0,
+          "loads": 0,
+          "max_size": 4096,
+          "misses": 0,
+          "size": 0
+        },
+        "posterior_store": {
+          "healthy": true
+        }
+      },
+      "status": "healthy"
+    },
+    "shadow_flag_value": null,
+    "shadow_flag_visible": false,
+    "strict_contract_verified": true
+  },
+  "comparable_fields": [
+    "recommendation.action",
+    "recommendation.confidence",
+    "recommendation.routing_zone",
+    "gae_scoring.factor_vector",
+    "gae_scoring.factor_names",
+    "gae_scoring.action_probabilities",
+    "gae_scoring.routing_zone",
+    "gae_scoring.softmax_sum",
+    "gae_scoring.temperature",
+    "gae_scoring.low_confidence",
+    "gae_scoring.ambiguous",
+    "referral",
+    "referral_debug",
+    "composite_gate",
+    "decision_metadata"
+  ],
+  "excluded_fields": [
+    "decision IDs",
+    "timestamps",
+    "elapsed timings",
+    "generated UUIDs",
+    "narrative/rationale text"
+  ],
+  "failures": [],
+  "missing_ids": [],
+  "notes": [
+    "USE_SOC_DECISION_PIPELINE_SHADOW was not visible in health/contract; absence of shadow diagnostics was used as false-run assertion.",
+    "No backend start/stop, git, source edits, tests, 250 proof, or route adoption performed by this capture."
+  ],
+  "queue_visible": true,
+  "seeded_alert_ids": [
+    "P5DSHADOW-0001",
+    "P5DSHADOW-0002",
+    "P5DSHADOW-0003",
+    "P5DSHADOW-0004",
+    "P5DSHADOW-0005"
+  ],
+  "status": "PASS",
+  "workloads": {
+    "mixed_reuse": {
+      "captures": [
+        {
+          "alert_id": "P5DSHADOW-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.4999,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 7 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.1121487999917008,
+          "shadow_diagnostics_present": false
+        },
+        {
+          "alert_id": "P5DSHADOW-0002",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.2575,
+              "auto_approve": false,
+              "reason_codes": [
+                "confidence 0.50 < 0.69 (malware_execution)",
+                "margin 0.05 < 0.3",
+                "cat_count 2 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.044543,
+              "investigate": 0.495115,
+              "monitor": 0.447999,
+              "suppress": 0.012343
+            },
+            "gae_scoring.ambiguous": true,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.475,
+              0.8,
+              0.0,
+              0.4,
+              0.7,
+              0.3333333333333333
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "human_review",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "refer_to_analyst",
+            "recommendation.confidence": 0.49511496153045853,
+            "recommendation.routing_zone": "human_review",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.13384490000316873,
+          "shadow_diagnostics_present": false
+        },
+        {
+          "alert_id": "P5DSHADOW-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.5087,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 8 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.12567149999085814,
+          "shadow_diagnostics_present": false
+        },
+        {
+          "alert_id": "P5DSHADOW-0003",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.3648,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 2 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.038604,
+              "investigate": 0.701597,
+              "monitor": 0.258103,
+              "suppress": 0.001696
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.1,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.0
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.7015967296491831,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.10843179997755215,
+          "shadow_diagnostics_present": false
+        },
+        {
+          "alert_id": "P5DSHADOW-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.5175,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 9 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.1183860000455752,
+          "shadow_diagnostics_present": false
+        },
+        {
+          "alert_id": "P5DSHADOW-0004",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.2289,
+              "auto_approve": false,
+              "reason_codes": [
+                "confidence 0.44 < 0.67 (data_exfiltration)",
+                "margin 0.13 < 0.3",
+                "cat_count 2 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.00015,
+              "investigate": 0.251905,
+              "monitor": 0.440268,
+              "suppress": 0.307677
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              0.2,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "human_review",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "refer_to_analyst",
+            "recommendation.confidence": 0.4402681463673651,
+            "recommendation.routing_zone": "human_review",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.15848699997877702,
+          "shadow_diagnostics_present": false
+        },
+        {
+          "alert_id": "P5DSHADOW-0005",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.2767,
+              "auto_approve": false,
+              "reason_codes": [
+                "confidence 0.53 < 0.7 (insider_threat)",
+                "margin 0.10 < 0.3",
+                "cat_count 2 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.007463,
+              "investigate": 0.53202,
+              "monitor": 0.431966,
+              "suppress": 0.028551
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.475,
+              0.5,
+              0.0,
+              0.4,
+              0.7,
+              0.3333333333333333
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "human_review",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "refer_to_analyst",
+            "recommendation.confidence": 0.5320197397309421,
+            "recommendation.routing_zone": "human_review",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.1594755999976769,
+          "shadow_diagnostics_present": false
+        },
+        {
+          "alert_id": "P5DSHADOW-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.5262,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 10 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.15904999995836988,
+          "shadow_diagnostics_present": false
+        }
+      ],
+      "summary": {
+        "avg_seconds": 0.13443694999295985,
+        "failure_count": 0,
+        "latencies_seconds": [
+          0.1121487999917008,
+          0.13384490000316873,
+          0.12567149999085814,
+          0.10843179997755215,
+          0.1183860000455752,
+          0.15848699997877702,
+          0.1594755999976769,
+          0.15904999995836988
+        ],
+        "max_seconds": 0.1594755999976769,
+        "median_seconds": 0.12975819999701343,
+        "p95_seconds": 0.1594755999976769,
+        "request_count": 8,
+        "success_count": 8
+      }
+    },
+    "repeat_same": {
+      "captures": [
+        {
+          "alert_id": "P5DSHADOW-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.4561,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 2 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.25290309998672456,
+          "shadow_diagnostics_present": false
+        },
+        {
+          "alert_id": "P5DSHADOW-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.4648,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 3 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.15102119999937713,
+          "shadow_diagnostics_present": false
+        },
+        {
+          "alert_id": "P5DSHADOW-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.4736,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 4 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.13058189995354041,
+          "shadow_diagnostics_present": false
+        },
+        {
+          "alert_id": "P5DSHADOW-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.4824,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 5 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.15129250002792105,
+          "shadow_diagnostics_present": false
+        },
+        {
+          "alert_id": "P5DSHADOW-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.4911,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 6 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.15999349998310208,
+          "shadow_diagnostics_present": false
+        }
+      ],
+      "summary": {
+        "avg_seconds": 0.16915843999013305,
+        "failure_count": 0,
+        "latencies_seconds": [
+          0.25290309998672456,
+          0.15102119999937713,
+          0.13058189995354041,
+          0.15129250002792105,
+          0.15999349998310208
+        ],
+        "max_seconds": 0.25290309998672456,
+        "median_seconds": 0.15129250002792105,
+        "p95_seconds": 0.25290309998672456,
+        "request_count": 5,
+        "success_count": 5
+      }
+    },
+    "unique_once": {
+      "captures": [
+        {
+          "alert_id": "P5DSHADOW-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.4473,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 1 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.5660994999925606,
+          "shadow_diagnostics_present": false
+        },
+        {
+          "alert_id": "P5DSHADOW-0002",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.2525,
+              "auto_approve": false,
+              "reason_codes": [
+                "confidence 0.50 < 0.69 (malware_execution)",
+                "margin 0.05 < 0.3",
+                "cat_count 1 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.044543,
+              "investigate": 0.495115,
+              "monitor": 0.447999,
+              "suppress": 0.012343
+            },
+            "gae_scoring.ambiguous": true,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.475,
+              0.8,
+              0.0,
+              0.4,
+              0.7,
+              0.3333333333333333
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "human_review",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "refer_to_analyst",
+            "recommendation.confidence": 0.49511496153045853,
+            "recommendation.routing_zone": "human_review",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.16043620003620163,
+          "shadow_diagnostics_present": false
+        },
+        {
+          "alert_id": "P5DSHADOW-0003",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.3578,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 1 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.038604,
+              "investigate": 0.701597,
+              "monitor": 0.258103,
+              "suppress": 0.001696
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.1,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.0
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.7015967296491831,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.1639580000191927,
+          "shadow_diagnostics_present": false
+        },
+        {
+          "alert_id": "P5DSHADOW-0004",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.2245,
+              "auto_approve": false,
+              "reason_codes": [
+                "confidence 0.44 < 0.67 (data_exfiltration)",
+                "margin 0.13 < 0.3",
+                "cat_count 1 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.00015,
+              "investigate": 0.251905,
+              "monitor": 0.440268,
+              "suppress": 0.307677
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              0.2,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "human_review",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "refer_to_analyst",
+            "recommendation.confidence": 0.4402681463673651,
+            "recommendation.routing_zone": "human_review",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.8319376999861561,
+          "shadow_diagnostics_present": false
+        },
+        {
+          "alert_id": "P5DSHADOW-0005",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.2713,
+              "auto_approve": false,
+              "reason_codes": [
+                "confidence 0.53 < 0.7 (insider_threat)",
+                "margin 0.10 < 0.3",
+                "cat_count 1 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.007463,
+              "investigate": 0.53202,
+              "monitor": 0.431966,
+              "suppress": 0.028551
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.475,
+              0.5,
+              0.0,
+              0.4,
+              0.7,
+              0.3333333333333333
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "human_review",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "refer_to_analyst",
+            "recommendation.confidence": 0.5320197397309421,
+            "recommendation.routing_zone": "human_review",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "latency_seconds": 0.1991390999755822,
+          "shadow_diagnostics_present": false
+        }
+      ],
+      "summary": {
+        "avg_seconds": 0.38431410000193866,
+        "failure_count": 0,
+        "latencies_seconds": [
+          0.5660994999925606,
+          0.16043620003620163,
+          0.1639580000191927,
+          0.8319376999861561,
+          0.1991390999755822
+        ],
+        "max_seconds": 0.8319376999861561,
+        "median_seconds": 0.1991390999755822,
+        "p95_seconds": 0.8319376999861561,
+        "request_count": 5,
+        "success_count": 5
+      }
+    }
+  }
+}

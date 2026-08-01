@@ -1,0 +1,92 @@
+{
+  "started_epoch": 1780944117.9124703,
+  "graph_name": "soc_graph_diag_f5",
+  "backend_url": "http://127.0.0.1:8001",
+  "prefix": "DIAG-F5-CRED",
+  "runner_ci_platform_import_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform\\ci_platform\\graph\\age_graph_store.py",
+  "backend_contract": {
+    "graph_name": "soc_graph_diag_f5",
+    "backend_port": 8001,
+    "graph_dsn_redacted": "host=127.0.0.1 port=5433 dbname=soc_copilot user=postgres password=***",
+    "soc_learning_enabled": "true",
+    "pythonpath": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform;C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend",
+    "ci_platform_import_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform\\ci_platform\\graph\\age_graph_store.py",
+    "launched_at": "2026-06-08T11:41:07.6420186-07:00"
+  },
+  "health": {
+    "status": "healthy",
+    "components": {
+      "posterior_store": {
+        "healthy": true
+      }
+    }
+  },
+  "dry_run": false,
+  "seed_count": 300,
+  "target_outcomes": 250,
+  "batch_size": 10,
+  "sanity_count": 1,
+  "seed_strategy": "direct-age",
+  "seed_sleep_seconds": 0.15,
+  "batch_sleep_seconds": 2.0,
+  "seed_timeout_seconds": 60.0,
+  "seed_max_retries": 3,
+  "preflight_seed_count": 5,
+  "seed_contract_source": "duplicated_from_current_seed_contract",
+  "seed_contract_todo": "P3: reuse scripts/soc_c9b_seed_alerts.py when a small proof-mode interface exists.",
+  "seed_shape": {
+    "alert_type": "anomalous_login",
+    "category": "credential_access",
+    "severity": "critical",
+    "risk_score": 0.92,
+    "asset_criticality": "critical",
+    "mfa_completed": false,
+    "device_fingerprint_match": false
+  },
+  "seed_attempted_count": 295,
+  "seed_completed_count": 291,
+  "seeded_alerts_readback": 285,
+  "current_batch_index": 30,
+  "current_batch_start": 286,
+  "current_batch_end": 295,
+  "seed_retries": 3,
+  "last_seed_error": "connection timeout expired",
+  "analyze_attempts": 0,
+  "outcome_attempts": 0,
+  "valid_outcomes": 0,
+  "skipped_refer_to_analyst": 0,
+  "other_categories": 0,
+  "other_action_skips": 0,
+  "latest_alert_id": null,
+  "latest_action": null,
+  "latest_confidence": null,
+  "progress_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\scratch\\temp\\soc_diag_f_progress.json",
+  "failures": [
+    {
+      "verdict": "SEED_RUNTIME_FAILURE",
+      "message": "seed batch failed: batch=30 start=286 end=295 retries=3 error=connection timeout expired",
+      "time_epoch": 1780944516.385911
+    }
+  ],
+  "last_successful_phase": "age_graph_ensured",
+  "exception": "seed batch failed: batch=30 start=286 end=295 retries=3 error=connection timeout expired",
+  "milestones": {},
+  "progress_readbacks": {},
+  "loops": [],
+  "readback": null,
+  "verdict": "SEED_RUNTIME_FAILURE",
+  "exit_code": 1,
+  "criteria_failures": [
+    "seed batch failed: batch=30 start=286 end=295 retries=3 error=connection timeout expired"
+  ],
+  "report_json_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_DIAG-F5-CRED.json",
+  "report_md_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_DIAG-F5-CRED.md",
+  "backend_runtime_contract_statement": "Backend import path cannot be directly introspected without a debug endpoint; proof assumes backend was launched by run_soc_diag_backend.ps1 or demo.py --diag-mode with matching graph/env.",
+  "follow_up_harness_fix": {
+    "soc_graph_diag_f5_contaminated": true,
+    "reason": "partial upfront seed failure before analyze/outcome proof loop",
+    "new_default_mode": "streaming_seed_analyze_outcome",
+    "next_clean_graph": "soc_graph_diag_f6",
+    "next_prefix": "DIAG-F6-CRED"
+  }
+}

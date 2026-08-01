@@ -17,7 +17,7 @@ from test_rl_triage_integration import (
 
 
 @pytest.mark.asyncio
-async def test_all_flags_true_pipeline_exercises_rl_paths(monkeypatch):
+async def test_all_flags_true_pipeline_exercises_rl_paths(monkeypatch, soc_triage_harness):
     rl_engine.reset_rl_state()
     monkeypatch.setattr(soc_config, "RL_REWARD_LEDGER_ENABLED", True)
     monkeypatch.setattr(soc_config, "RL_EXPLORATION_ENABLED", True)
@@ -39,6 +39,7 @@ async def test_all_flags_true_pipeline_exercises_rl_paths(monkeypatch):
 
     outcome_graph, _learning_state = _patch_common_outcome(
         monkeypatch,
+        soc_triage_harness,
         _decision_record(
             action="investigate",
             explored=True,
@@ -93,4 +94,4 @@ async def test_all_flags_true_pipeline_exercises_rl_paths(monkeypatch):
     assert scorer.eta == 0.05
     assert scorer.eta_neg == 0.05
     assert scorer.eta_override == 0.01
-    assert any("TRIGGERED_EVOLUTION" in query for query in outcome_graph.queries)
+    assert any("TRIGGERED_EVOLUTION" in query for query, _ in outcome_graph._queries)

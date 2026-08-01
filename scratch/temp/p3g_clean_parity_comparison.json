@@ -1,0 +1,71 @@
+{
+  "status": "PASS",
+  "false_artifact_path": "scratch/temp/p3g_clean_false_parity_outputs.json",
+  "true_artifact_path": "scratch/temp/p3g_clean_true_parity_outputs.json",
+  "input_ids_compared": [
+    "P3GPARITYCLEAN-0001",
+    "P3GPARITYCLEAN-0002",
+    "P3GPARITYCLEAN-0003",
+    "P3GPARITYCLEAN-0004",
+    "P3GPARITYCLEAN-0005"
+  ],
+  "action_parity": true,
+  "confidence_parity": true,
+  "factor_vector_parity": true,
+  "factor_names_parity": true,
+  "action_probabilities_parity": true,
+  "referral_parity": true,
+  "referral_debug_parity": true,
+  "composite_gate_parity": true,
+  "alert_fresh_field_parity": true,
+  "context_parity": true,
+  "decision_critical_metadata_parity": true,
+  "differences": [],
+  "excluded_fields": [
+    "recommendation.decision_id",
+    "gae_scoring.decision_id",
+    "provenance.decision_id",
+    "generated UUIDs",
+    "timestamps",
+    "elapsed timings",
+    "narrative text"
+  ],
+  "cache_diagnostics_summary": {
+    "before": {
+      "enabled": true,
+      "adapter_enabled": true,
+      "hits": 0,
+      "misses": 0,
+      "loads": 0,
+      "invalidations": 0,
+      "evictions": 0,
+      "size": 0,
+      "max_size": 4096
+    },
+    "after_first_pass": {
+      "enabled": true,
+      "adapter_enabled": true,
+      "hits": 0,
+      "misses": 5,
+      "loads": 5,
+      "invalidations": 0,
+      "evictions": 0,
+      "size": 5,
+      "max_size": 4096
+    },
+    "after_repeat": {
+      "enabled": true,
+      "adapter_enabled": true,
+      "hits": 1,
+      "misses": 5,
+      "loads": 5,
+      "invalidations": 0,
+      "evictions": 0,
+      "size": 5,
+      "max_size": 4096
+    },
+    "cache_hit_proven": true
+  },
+  "failed_captures": [],
+  "repeat_failure": null
+}

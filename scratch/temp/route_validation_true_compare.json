@@ -1,0 +1,2365 @@
+{
+  "alert_ids": [
+    "P5DRUNNER-0001",
+    "P5DRUNNER-0002",
+    "P5DRUNNER-0003",
+    "P5DRUNNER-0004",
+    "P5DRUNNER-0005"
+  ],
+  "comparable_fields": [
+    "recommendation.action",
+    "recommendation.confidence",
+    "recommendation.routing_zone",
+    "gae_scoring.factor_vector",
+    "gae_scoring.factor_names",
+    "gae_scoring.action_probabilities",
+    "gae_scoring.routing_zone",
+    "gae_scoring.softmax_sum",
+    "gae_scoring.temperature",
+    "gae_scoring.low_confidence",
+    "gae_scoring.ambiguous",
+    "referral",
+    "referral_debug",
+    "composite_gate",
+    "decision_metadata"
+  ],
+  "contract": {
+    "connection_mode": "warm_fallback",
+    "errors": [],
+    "graph": "soc_graph_5d_runner_true_3",
+    "launcher": "copilot-sdk/demo.py --diag-mode",
+    "path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\scratch\\temp\\soc_diag_backend_contract.json",
+    "port": 8001,
+    "verified": true
+  },
+  "contract_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\scratch\\temp\\soc_diag_backend_contract.json",
+  "count": 5,
+  "env": {
+    "AGE_USE_POOL": "true",
+    "USE_ENTITY_CACHE": "false",
+    "USE_SOC_DECISION_PIPELINE_SHADOW": "true"
+  },
+  "excluded_fields": [
+    "decision IDs",
+    "timestamps",
+    "elapsed timings",
+    "generated UUIDs",
+    "narrative/rationale text"
+  ],
+  "failed_checks": [],
+  "graph": "soc_graph_5d_runner_true_3",
+  "health": {
+    "components": {
+      "entity_cache": {
+        "adapter_enabled": true,
+        "enabled": false,
+        "evictions": 0,
+        "hits": 0,
+        "invalidations": 0,
+        "loads": 0,
+        "max_size": 4096,
+        "misses": 0,
+        "size": 0
+      },
+      "posterior_store": {
+        "healthy": true
+      }
+    },
+    "status": "healthy"
+  },
+  "health_after": {
+    "components": {
+      "entity_cache": {
+        "adapter_enabled": true,
+        "enabled": false,
+        "evictions": 0,
+        "hits": 0,
+        "invalidations": 0,
+        "loads": 0,
+        "max_size": 4096,
+        "misses": 0,
+        "size": 0
+      },
+      "posterior_store": {
+        "healthy": true
+      }
+    },
+    "status": "healthy"
+  },
+  "performance_ledger": {
+    "P2E baseline": "avg analyze 0.193s at 250 outcomes, warm_fallback",
+    "P3G-D clean proof": "avg analyze 0.202s, max 0.571s, avg outcome 0.440s; hits=0, misses=250, loads=250",
+    "P3H benchmark conclusion": "EntityCache correct but current route wiring is not a reliable performance win",
+    "buyer_facing_claim_allowed": false
+  },
+  "phase": "true_compare",
+  "prefix": "P5DRUNNER",
+  "profile_validation": null,
+  "queue": {
+    "missing_ids": [],
+    "queue_visible": true
+  },
+  "seed": {
+    "created": 5,
+    "database_url": "host=localhost port=5433 dbname=soc_copilot user=postgres password=postgres",
+    "dry_run": false,
+    "dsn_source": "DATABASE_URL",
+    "existing": 0,
+    "first_alert_id": "P5DRUNNER-0001",
+    "graph_name": "soc_graph_5d_runner_true_3",
+    "last_alert_id": "P5DRUNNER-0005",
+    "planned": 5,
+    "prefix": "P5DRUNNER"
+  },
+  "started_at": "2026-06-10T23:43:15.620814+00:00",
+  "status": "PASS",
+  "workloads": {
+    "mixed_reuse": {
+      "captures": [
+        {
+          "alert_id": "P5DRUNNER-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.4999,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 7 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.1558548000175506,
+          "request_index": 0
+        },
+        {
+          "alert_id": "P5DRUNNER-0002",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.2575,
+              "auto_approve": false,
+              "reason_codes": [
+                "confidence 0.50 < 0.69 (malware_execution)",
+                "margin 0.05 < 0.3",
+                "cat_count 2 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.044543,
+              "investigate": 0.495115,
+              "monitor": 0.447999,
+              "suppress": 0.012343
+            },
+            "gae_scoring.ambiguous": true,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.475,
+              0.8,
+              0.0,
+              0.4,
+              0.7,
+              0.3333333333333333
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "human_review",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "refer_to_analyst",
+            "recommendation.confidence": 0.49511496153045853,
+            "recommendation.routing_zone": "human_review",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.13403779995860532,
+          "request_index": 1
+        },
+        {
+          "alert_id": "P5DRUNNER-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.5087,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 8 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.14155340002616867,
+          "request_index": 2
+        },
+        {
+          "alert_id": "P5DRUNNER-0003",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.3648,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 2 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.038604,
+              "investigate": 0.701597,
+              "monitor": 0.258103,
+              "suppress": 0.001696
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.1,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.0
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.7015967296491831,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.15746499999659136,
+          "request_index": 3
+        },
+        {
+          "alert_id": "P5DRUNNER-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.5175,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 9 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.15001559996744618,
+          "request_index": 4
+        },
+        {
+          "alert_id": "P5DRUNNER-0004",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.2289,
+              "auto_approve": false,
+              "reason_codes": [
+                "confidence 0.44 < 0.67 (data_exfiltration)",
+                "margin 0.13 < 0.3",
+                "cat_count 2 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.00015,
+              "investigate": 0.251905,
+              "monitor": 0.440268,
+              "suppress": 0.307677
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              0.2,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "human_review",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "refer_to_analyst",
+            "recommendation.confidence": 0.4402681463673651,
+            "recommendation.routing_zone": "human_review",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.1654158000019379,
+          "request_index": 5
+        },
+        {
+          "alert_id": "P5DRUNNER-0005",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.2767,
+              "auto_approve": false,
+              "reason_codes": [
+                "confidence 0.53 < 0.7 (insider_threat)",
+                "margin 0.10 < 0.3",
+                "cat_count 2 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.007463,
+              "investigate": 0.53202,
+              "monitor": 0.431966,
+              "suppress": 0.028551
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.475,
+              0.5,
+              0.0,
+              0.4,
+              0.7,
+              0.3333333333333333
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "human_review",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "refer_to_analyst",
+            "recommendation.confidence": 0.5320197397309421,
+            "recommendation.routing_zone": "human_review",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.12736199999926612,
+          "request_index": 6
+        },
+        {
+          "alert_id": "P5DRUNNER-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.5262,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 10 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.11710709996987134,
+          "request_index": 7
+        }
+      ],
+      "failures": [],
+      "profile_validation": {
+        "diagnostics_present": true,
+        "differences_empty": true,
+        "matched_true": true,
+        "passed": true,
+        "profile": "shadow",
+        "shadow_failed": false,
+        "side_effect_zero": {
+          "counter_updates": true,
+          "decision_writes": true,
+          "graph_mutations": true,
+          "outcome_writes": true,
+          "proof_writes": true
+        }
+      },
+      "summary": {
+        "avg_seconds": 0.14360143749217968,
+        "failure_count": 0,
+        "latencies_seconds": [
+          0.1558548000175506,
+          0.13403779995860532,
+          0.14155340002616867,
+          0.15746499999659136,
+          0.15001559996744618,
+          0.1654158000019379,
+          0.12736199999926612,
+          0.11710709996987134
+        ],
+        "max_seconds": 0.1654158000019379,
+        "median_seconds": 0.14578449999680743,
+        "p95_seconds": 0.1654158000019379,
+        "request_count": 8,
+        "success_count": 8
+      }
+    },
+    "repeat_same": {
+      "captures": [
+        {
+          "alert_id": "P5DRUNNER-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.4561,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 2 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.12541209999471903,
+          "request_index": 0
+        },
+        {
+          "alert_id": "P5DRUNNER-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.4648,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 3 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.13622230000328273,
+          "request_index": 1
+        },
+        {
+          "alert_id": "P5DRUNNER-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.4736,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 4 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.12319379998371005,
+          "request_index": 2
+        },
+        {
+          "alert_id": "P5DRUNNER-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.4824,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 5 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.19627739995485172,
+          "request_index": 3
+        },
+        {
+          "alert_id": "P5DRUNNER-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.4911,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 6 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.14527500001713634,
+          "request_index": 4
+        }
+      ],
+      "failures": [],
+      "profile_validation": {
+        "diagnostics_present": true,
+        "differences_empty": true,
+        "matched_true": true,
+        "passed": true,
+        "profile": "shadow",
+        "shadow_failed": false,
+        "side_effect_zero": {
+          "counter_updates": true,
+          "decision_writes": true,
+          "graph_mutations": true,
+          "outcome_writes": true,
+          "proof_writes": true
+        }
+      },
+      "summary": {
+        "avg_seconds": 0.14527611999073997,
+        "failure_count": 0,
+        "latencies_seconds": [
+          0.12541209999471903,
+          0.13622230000328273,
+          0.12319379998371005,
+          0.19627739995485172,
+          0.14527500001713634
+        ],
+        "max_seconds": 0.19627739995485172,
+        "median_seconds": 0.13622230000328273,
+        "p95_seconds": 0.19627739995485172,
+        "request_count": 5,
+        "success_count": 5
+      }
+    },
+    "unique_once": {
+      "captures": [
+        {
+          "alert_id": "P5DRUNNER-0001",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.4473,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 1 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.03208,
+              "investigate": 0.877046,
+              "monitor": 0.084343,
+              "suppress": 0.006531
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.8770461205137833,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.44117419997928664,
+          "request_index": 0
+        },
+        {
+          "alert_id": "P5DRUNNER-0002",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.2525,
+              "auto_approve": false,
+              "reason_codes": [
+                "confidence 0.50 < 0.69 (malware_execution)",
+                "margin 0.05 < 0.3",
+                "cat_count 1 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.044543,
+              "investigate": 0.495115,
+              "monitor": 0.447999,
+              "suppress": 0.012343
+            },
+            "gae_scoring.ambiguous": true,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.475,
+              0.8,
+              0.0,
+              0.4,
+              0.7,
+              0.3333333333333333
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "human_review",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "refer_to_analyst",
+            "recommendation.confidence": 0.49511496153045853,
+            "recommendation.routing_zone": "human_review",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.18326130002969876,
+          "request_index": 1
+        },
+        {
+          "alert_id": "P5DRUNNER-0003",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.3578,
+              "auto_approve": false,
+              "reason_codes": [
+                "cat_count 1 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.038604,
+              "investigate": 0.701597,
+              "monitor": 0.258103,
+              "suppress": 0.001696
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.1,
+              1.0,
+              0.0,
+              0.4,
+              0.7,
+              0.0
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "agent_zone",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "investigate",
+            "recommendation.confidence": 0.7015967296491831,
+            "recommendation.routing_zone": "agent_zone",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.12729870004113764,
+          "request_index": 2
+        },
+        {
+          "alert_id": "P5DRUNNER-0004",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.2245,
+              "auto_approve": false,
+              "reason_codes": [
+                "confidence 0.44 < 0.67 (data_exfiltration)",
+                "margin 0.13 < 0.3",
+                "cat_count 1 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.00015,
+              "investigate": 0.251905,
+              "monitor": 0.440268,
+              "suppress": 0.307677
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.825,
+              0.2,
+              0.0,
+              0.4,
+              0.7,
+              0.6666666666666666
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "human_review",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "refer_to_analyst",
+            "recommendation.confidence": 0.4402681463673651,
+            "recommendation.routing_zone": "human_review",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.18540570000186563,
+          "request_index": 3
+        },
+        {
+          "alert_id": "P5DRUNNER-0005",
+          "comparable": {
+            "composite_gate": {
+              "approval_score": 0.2713,
+              "auto_approve": false,
+              "reason_codes": [
+                "confidence 0.53 < 0.7 (insider_threat)",
+                "margin 0.10 < 0.3",
+                "cat_count 1 < 50 (maturity gate)"
+              ]
+            },
+            "decision_metadata": null,
+            "gae_scoring.action_probabilities": {
+              "escalate": 0.007463,
+              "investigate": 0.53202,
+              "monitor": 0.431966,
+              "suppress": 0.028551
+            },
+            "gae_scoring.ambiguous": false,
+            "gae_scoring.factor_names": [
+              "privileged_identity_context",
+              "asset_criticality",
+              "threat_intel_enrichment",
+              "pattern_history",
+              "time_anomaly",
+              "device_trust"
+            ],
+            "gae_scoring.factor_vector": [
+              0.475,
+              0.5,
+              0.0,
+              0.4,
+              0.7,
+              0.3333333333333333
+            ],
+            "gae_scoring.low_confidence": false,
+            "gae_scoring.routing_zone": "human_review",
+            "gae_scoring.softmax_sum": 1.0,
+            "gae_scoring.temperature": 0.1,
+            "recommendation.action": "refer_to_analyst",
+            "recommendation.confidence": 0.5320197397309421,
+            "recommendation.routing_zone": "human_review",
+            "referral": {
+              "audit_summary": "No referral rules triggered.",
+              "reasons": [],
+              "should_refer": false
+            },
+            "referral_debug": {
+              "r2_sequence_count": 0,
+              "r7_cross_category_count": 0,
+              "rules_evaluated": [
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7"
+              ],
+              "rules_fired": []
+            }
+          },
+          "diagnostics": {
+            "soc_decision_pipeline_shadow": {
+              "background_status": {
+                "cancelled": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_flight": 0,
+                "last_errors": [],
+                "submitted": 0
+              },
+              "differences": [],
+              "enabled": true,
+              "excluded_fields": [
+                "decision_id",
+                "elapsed_seconds",
+                "narrative",
+                "rationale",
+                "timestamp",
+                "timestamp_epoch"
+              ],
+              "field_coverage": [
+                "recommendation.action",
+                "recommendation.confidence",
+                "recommendation.routing_zone",
+                "gae_scoring.factor_vector",
+                "gae_scoring.factor_names",
+                "gae_scoring.action_probabilities",
+                "gae_scoring.routing_zone",
+                "gae_scoring.softmax_sum",
+                "gae_scoring.temperature",
+                "gae_scoring.low_confidence",
+                "gae_scoring.ambiguous",
+                "referral",
+                "referral_debug",
+                "composite_gate",
+                "decision_metadata"
+              ],
+              "matched": true,
+              "persistence_strategy": "shadow_noop",
+              "phase_order": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4"
+              ],
+              "side_effects": {
+                "counter_updates": 0,
+                "decision_writes": 0,
+                "graph_mutations": 0,
+                "outcome_writes": 0,
+                "proof_writes": 0
+              }
+            }
+          },
+          "latency_seconds": 0.13777519995346665,
+          "request_index": 4
+        }
+      ],
+      "failures": [],
+      "profile_validation": {
+        "diagnostics_present": true,
+        "differences_empty": true,
+        "matched_true": true,
+        "passed": true,
+        "profile": "shadow",
+        "shadow_failed": false,
+        "side_effect_zero": {
+          "counter_updates": true,
+          "decision_writes": true,
+          "graph_mutations": true,
+          "outcome_writes": true,
+          "proof_writes": true
+        }
+      },
+      "summary": {
+        "avg_seconds": 0.21498302000109107,
+        "failure_count": 0,
+        "latencies_seconds": [
+          0.44117419997928664,
+          0.18326130002969876,
+          0.12729870004113764,
+          0.18540570000186563,
+          0.13777519995346665
+        ],
+        "max_seconds": 0.44117419997928664,
+        "median_seconds": 0.18326130002969876,
+        "p95_seconds": 0.44117419997928664,
+        "request_count": 5,
+        "success_count": 5
+      }
+    }
+  }
+}

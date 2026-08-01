@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import socket
 import uuid
+import os
+from collections.abc import Iterator
 
 import pytest
 
 from copilot_sdk.config import GraphConfig
 from copilot_sdk.testing.fixtures import age_available
+from app.routers import triage
+from support import SOCTriageHarness
 
 
 LIVE_BACKEND_HOST = "127.0.0.1"
@@ -64,6 +68,27 @@ def soc_stress_test_graph():
                 conn.execute("SELECT drop_graph(%s, true)", (graph_name,))
         finally:
             conn.close()
+
+
+@pytest.fixture
+def soc_triage_harness(tmp_path) -> Iterator[SOCTriageHarness]:
+    """Inject one stateful Decision authority into the triage route."""
+    previous_scorer = triage.get_profile_scorer
+    previous_client = triage.neo4j_client
+    previous_outbox = os.environ.get("CI_PERSISTENCE_OUTBOX_PATH")
+    os.environ["CI_PERSISTENCE_OUTBOX_PATH"] = str(tmp_path / "soc-outbox")
+    harness = SOCTriageHarness()
+    triage.get_profile_scorer = harness.get_scorer
+    triage.neo4j_client = harness.graph_client
+    try:
+        yield harness
+    finally:
+        triage.get_profile_scorer = previous_scorer
+        triage.neo4j_client = previous_client
+        if previous_outbox is None:
+            os.environ.pop("CI_PERSISTENCE_OUTBOX_PATH", None)
+        else:
+            os.environ["CI_PERSISTENCE_OUTBOX_PATH"] = previous_outbox
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:

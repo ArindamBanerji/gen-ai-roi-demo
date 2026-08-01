@@ -1,0 +1,22 @@
+
+╔══════════════════════════════════════════════════════╗
+║  Starting 1 copilot(s)...                        ║
+╚══════════════════════════════════════════════════════╝
+
+Checking AGE/PostgreSQL...
+  ✓ AGE connection verified
+  ✓ WSL2 keepalive started (PID 48800)
+
+Ensuring SOC diagnostic graph: soc_graph_a1_scale_500_1
+  ✓ SOC diagnostic graph ready (warm_fallback; pool_available=false)
+Starting backends...
+  SOC backend starting on :8001 (PID 23168)
+
+Waiting for backends...
+  ✓ SOC: healthy 
+  Wrote SOC diagnostic contract: C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\scratch\temp\soc_diag_backend_contract.json
+
+SOC diagnostic backend is ready for T2 proof/perf validation.
+  graph: soc_graph_a1_scale_500_1
+  health: http://127.0.0.1:8001/health
+  contract: C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\scratch\temp\soc_diag_backend_contract.json

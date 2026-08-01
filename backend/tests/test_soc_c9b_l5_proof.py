@@ -120,6 +120,9 @@ class _C9BNeo4j:
                     continue
                 if row.get("status") is None and row.get("outcome") is None:
                     continue
+                category = row.get("category")
+                if not isinstance(category, str):
+                    continue
                 bucket = grouped.setdefault(
                     category,
                     {"category": category, "verified": 0, "correct": 0, "overrides": 0},
@@ -157,17 +160,31 @@ class _LearningState:
 
 
 @pytest.mark.asyncio
-async def test_soc_c9b_full_flow_writes_all_three_l5_types(monkeypatch):
+async def test_soc_c9b_full_flow_writes_all_three_l5_types(monkeypatch, soc_triage_harness):
     store = _C9BStore()
     scorer = _C9BScorer()
-    neo4j = _C9BNeo4j()
+    soc_triage_harness.add_decision(
+        decision_id="DEC-C9B",
+        category=SOC_CATEGORIES[0],
+        action="escalate",
+        confidence=0.9,
+        factors={f"f{i}": value for i, value in enumerate([0.2, 0.3, 0.4, 0.5, 0.6, 0.7])},
+        factor_vector="[0.2, 0.3, 0.4, 0.5, 0.6, 0.7]",
+        alert_type="anomalous_login",
+    )
+    soc_triage_harness.graph_client.set_health_rows([{"red_days": 0}])
+    soc_triage_harness.graph_client.set_decision_summary_rows(
+        [
+            {"category": SOC_CATEGORIES[0], "verified": 1, "correct": 1, "overrides": 0},
+            {"category": SOC_CATEGORIES[1], "verified": 1, "correct": 0, "overrides": 1},
+        ]
+    )
 
     @asynccontextmanager
     async def fake_acquire_scorer():
         yield scorer
 
     monkeypatch.setattr(triage, "LEARNING_ENABLED", True)
-    monkeypatch.setattr(triage, "neo4j_client", neo4j)
     monkeypatch.setattr(triage, "get_feedback_status", lambda _alert_id: {"has_feedback": False})
     monkeypatch.setattr(triage, "get_learning_state", lambda: _LearningState())
     monkeypatch.setattr(triage, "save_learning_state", lambda: None)

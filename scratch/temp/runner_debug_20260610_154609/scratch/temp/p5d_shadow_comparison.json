@@ -1,0 +1,86 @@
+{
+  "differences": [],
+  "excluded_fields": [
+    "decision IDs",
+    "timestamps",
+    "elapsed timings",
+    "generated UUIDs",
+    "narrative/rationale text"
+  ],
+  "false_artifact": "scratch\\temp\\p5d_shadow_false_baseline.json",
+  "false_workload_counts": {
+    "mixed_reuse": 8,
+    "repeat_same": 5,
+    "unique_once": 5
+  },
+  "field_status": {
+    "composite_gate": "PASS",
+    "decision_metadata": "NOT_PRESENT",
+    "gae_scoring.action_probabilities": "PASS",
+    "gae_scoring.ambiguous": "PASS",
+    "gae_scoring.factor_names": "PASS",
+    "gae_scoring.factor_vector": "PASS",
+    "gae_scoring.low_confidence": "PASS",
+    "gae_scoring.routing_zone": "PASS",
+    "gae_scoring.softmax_sum": "PASS",
+    "gae_scoring.temperature": "PASS",
+    "recommendation.action": "PASS",
+    "recommendation.confidence": "PASS",
+    "recommendation.routing_zone": "PASS",
+    "referral": "PASS",
+    "referral_debug": "PASS"
+  },
+  "input_ids_compared": [
+    "P5DSHADOW-0001",
+    "P5DSHADOW-0002",
+    "P5DSHADOW-0003",
+    "P5DSHADOW-0004",
+    "P5DSHADOW-0005"
+  ],
+  "performance": {
+    "mixed_reuse": {
+      "delta_percent": 62.8353615527408,
+      "delta_seconds": 0.08447397501065815,
+      "false_avg_seconds": 0.134437,
+      "shadow_overhead": true,
+      "true_avg_seconds": 0.21891097501065815
+    },
+    "repeat_same": {
+      "delta_percent": 110.64838788676738,
+      "delta_seconds": 0.18717059998149796,
+      "false_avg_seconds": 0.169158,
+      "shadow_overhead": true,
+      "true_avg_seconds": 0.35632859998149796
+    },
+    "unique_once": {
+      "delta_percent": -5.028143657150911,
+      "delta_seconds": -0.01932386001454295,
+      "false_avg_seconds": 0.384314,
+      "shadow_overhead": false,
+      "true_avg_seconds": 0.36499013998545704
+    }
+  },
+  "shadow_assertions": {
+    "canonical_route_output_preserved": true,
+    "differences_empty": true,
+    "failure_fallback_triggered_unexpectedly": false,
+    "matched_true_for_passing_cases": true,
+    "raw_sensitive_values_exposed": false,
+    "shadow_diagnostics_present": true,
+    "side_effect_zero": {
+      "counter_updates": true,
+      "decision_writes": true,
+      "graph_mutations": true,
+      "outcome_writes": true,
+      "proof_writes": true
+    },
+    "stack_traces_exposed": false
+  },
+  "status": "PASS",
+  "true_artifact": "scratch\\temp\\p5d_shadow_true_compare.json",
+  "true_workload_counts": {
+    "mixed_reuse": 8,
+    "repeat_same": 5,
+    "unique_once": 5
+  }
+}

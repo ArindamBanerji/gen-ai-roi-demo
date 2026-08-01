@@ -1,0 +1,67 @@
+{
+  "status": "PASS",
+  "graph": "soc_graph_p3g_entity_cache_250_clean_1",
+  "backend_url": "http://127.0.0.1:8001",
+  "contract": {
+    "launcher": "copilot-sdk/demo.py --diag-mode",
+    "graph_name": "soc_graph_p3g_entity_cache_250_clean_1",
+    "backend_port": 8001,
+    "use_entity_cache": "true",
+    "age_use_pool_requested": "true",
+    "age_use_pool": "true",
+    "connection_mode": "warm_fallback",
+    "pool_available": "false"
+  },
+  "proof": {
+    "verdict": "EXTERNAL_DIAGNOSTIC_F_PASS",
+    "proof_passed": true,
+    "valid_outcomes": 250,
+    "analyze_attempts": 250,
+    "outcome_attempts": 250,
+    "avg_analyze_seconds": 0.202,
+    "max_analyze_seconds": 0.571,
+    "avg_outcome_seconds": 0.44,
+    "max_outcome_seconds": 0.966,
+    "l5_dk_weight": 1,
+    "dk_welford_rows": 1,
+    "max_n_decisions_used": 250.0,
+    "decisions": 250,
+    "verified": 250,
+    "outcome_present": 250,
+    "l5_centroid": 1,
+    "shaped_by": 1,
+    "seed_failures": 0,
+    "seed_visibility_status": "visible"
+  },
+  "cache_after": {
+    "enabled": true,
+    "adapter_enabled": true,
+    "hits": 0,
+    "misses": 250,
+    "loads": 250,
+    "invalidations": 0,
+    "evictions": 0,
+    "size": 250,
+    "max_size": 4096
+  },
+  "reports": {
+    "json_report": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_P3GECACHE250CLEAN.json",
+    "md_report": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_P3GECACHE250CLEAN.md"
+  },
+  "performance_ledger": {
+    "p2e_baseline_avg_analyze_seconds": 0.193,
+    "p3f_prior_avg_analyze_seconds": 0.156,
+    "p3f_prior_max_analyze_seconds": 0.798,
+    "p3f_prior_avg_outcome_seconds": 0.574,
+    "p3g_parity_measurement": "false/true parity passed on 5 inputs; true cache diagnostics after repeat hits=1 misses=5 loads=5 size=5",
+    "p3g_d_avg_analyze_seconds": 0.202,
+    "p3g_d_max_analyze_seconds": 0.571,
+    "p3g_d_avg_outcome_seconds": 0.44,
+    "delta_vs_p2e_seconds": 0.009,
+    "delta_vs_p2e_percent": 4.7,
+    "delta_vs_p3f_seconds": 0.046,
+    "delta_vs_p3f_percent": 29.5,
+    "attribution_allowed": true,
+    "attribution_rationale": "Correctness attribution only: proof passed with USE_ENTITY_CACHE=true visible in strict contract and live diagnostics showed enabled=true with 250 misses/loads and size=250. Performance improvement is not claimed because P3G-D was slower than P2E/P3F."
+  }
+}

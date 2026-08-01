@@ -1,0 +1,6 @@
+
+StatusCode        : 200
+StatusDescription : OK
+Content           : {"status":"healthy","components":{"posterior_store":{"healthy":true}}}
+
+

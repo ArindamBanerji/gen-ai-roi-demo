@@ -16,28 +16,6 @@ from app.routers import triage
 _FV = [0.7, 0.8, 0.5, 0.4, 0.6, 0.9]
 
 
-class _Neo4j:
-    def __init__(self, *, category: str = "credential_access", action: str = "investigate"):
-        self.queries = []
-        self.category = category
-        self.action = action
-
-    async def run_query(self, query, params=None):
-        self.queries.append(query)
-        if "RETURN d.factor_vector AS factor_vector" in query:
-            return [
-                {
-                    "factor_vector": _FV,
-                    "action": self.action,
-                    "confidence": 0.85,
-                    "category": self.category,
-                    "alert_type": self.category,
-                    "campaign_id": "CAMP-TEST",
-                }
-            ]
-        return []
-
-
 class _LearningState:
     def __init__(self):
         self.decision_count = 0
@@ -104,7 +82,7 @@ class _Scorer:
 
 
 class _OutcomeResult:
-    graph_updates = []
+    graph_updates: list[object] = []
     consequence = "stable"
 
     def model_dump(self):
@@ -122,10 +100,10 @@ def _request(action: str | None = "investigate") -> OutcomeRequest:
 
 async def _run_outcome(
     monkeypatch,
+    harness,
     *,
     category: str = "credential_access",
     action: str = "investigate",
-    neo4j: _Neo4j | None = None,
 ):
     learning_state = _LearningState()
     scorer = _Scorer()
@@ -139,7 +117,15 @@ async def _run_outcome(
         guarded_calls.append(kwargs)
         return scorer_arg.update(**kwargs)
 
-    neo4j = neo4j or _Neo4j(category=category, action=action)
+    harness.add_decision(
+        decision_id="DEC-DUAL-UPDATE",
+        category=category,
+        action=action,
+        factors={f"f{i}": value for i, value in enumerate(_FV)},
+        factor_vector=_FV,
+        campaign_id="CAMP-TEST",
+    )
+    neo4j = harness.graph_client
     monkeypatch.setattr(triage, "neo4j_client", neo4j)
     monkeypatch.setattr(triage, "LEARNING_ENABLED", True)
     monkeypatch.setattr(triage, "get_feedback_status", lambda _alert_id: {"has_feedback": False})
@@ -184,8 +170,8 @@ def _apply_outcomes(scorer: _Scorer, category_index: int, n: int, vector: np.nda
 
 
 @pytest.mark.asyncio
-async def test_single_update_per_outcome(monkeypatch):
-    result = await _run_outcome(monkeypatch, category="credential_access")
+async def test_single_update_per_outcome(monkeypatch, soc_triage_harness):
+    result = await _run_outcome(monkeypatch, soc_triage_harness, category="credential_access")
 
     assert result.learning_state.update_calls == 0
     assert len(result.guarded_calls) == 1
@@ -258,9 +244,10 @@ def test_fix_preserves_correct_learning():
 
 
 @pytest.mark.asyncio
-async def test_fix_preserves_referral_behavior(monkeypatch):
+async def test_fix_preserves_referral_behavior(monkeypatch, soc_triage_harness):
     result = await _run_outcome(
         monkeypatch,
+        soc_triage_harness,
         category="credential_access",
         action="refer_to_analyst",
     )
@@ -272,14 +259,18 @@ async def test_fix_preserves_referral_behavior(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_fix_preserves_outcome_persistence(monkeypatch):
-    neo4j = _Neo4j(category="credential_access")
-    result = await _run_outcome(monkeypatch, category="credential_access", neo4j=neo4j)
+async def test_fix_preserves_outcome_persistence(monkeypatch, soc_triage_harness):
+    result = await _run_outcome(
+        monkeypatch,
+        soc_triage_harness,
+        category="credential_access",
+    )
 
-    persistence_query = "\n".join(neo4j.queries)
-    assert "d.analyst_action" in persistence_query
-    assert "d.was_override" in persistence_query
-    assert "d.quality_signal" in persistence_query
+    decision = soc_triage_harness.get_decision("DEC-DUAL-UPDATE")
+    assert decision is not None
+    assert decision["analyst_action"] == "investigate"
+    assert decision["was_override"] is False
+    assert decision["quality_signal"] is not None
     assert result.response["consequence"] == "stable"
 
 

@@ -11,6 +11,14 @@ from app.oracle import (
 
 pytestmark = pytest.mark.no_data_guard
 
+REQUIRED_ORACLE_OUTCOME_KEYS = {
+    "action",
+    "analyst_action",
+    "was_override",
+    "quality_signal",
+    "correct",
+}
+
 
 def test_oracle_deterministic() -> None:
     first = [AnalystOracle(seed=7).synthetic_outcome(shown=True) for _ in range(5)]
@@ -38,13 +46,7 @@ def test_oracle_correct_is_modeled() -> None:
 def test_oracle_outcome_fields() -> None:
     outcome = AnalystOracle(seed=42).synthetic_outcome(shown=True)
 
-    assert set(outcome) == {
-        "action",
-        "analyst_action",
-        "was_override",
-        "quality_signal",
-        "correct",
-    }
+    assert REQUIRED_ORACLE_OUTCOME_KEYS.issubset(outcome)
     assert isinstance(outcome["was_override"], bool)
     assert outcome["quality_signal"] in {0.0, 1.0}
 

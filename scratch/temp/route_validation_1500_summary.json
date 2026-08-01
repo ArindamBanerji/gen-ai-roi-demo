@@ -1,0 +1,80 @@
+{
+  "contract": {
+    "connection_mode": "warm_fallback",
+    "errors": [],
+    "graph": "soc_graph_a1_scale_1500_1",
+    "launcher": "copilot-sdk/demo.py --diag-mode",
+    "path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\scratch\\temp\\soc_diag_backend_contract.json",
+    "port": 8001,
+    "verified": true
+  },
+  "contract_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\scratch\\temp\\soc_diag_backend_contract.json",
+  "count": 5,
+  "env": {
+    "AGE_USE_POOL": "true",
+    "USE_ENTITY_CACHE": "false",
+    "USE_MATERIALIZED_COUNTERS": "false",
+    "USE_SOC_DECISION_PIPELINE_SHADOW": "false"
+  },
+  "failed_checks": [],
+  "graph": "soc_graph_a1_scale_1500_1",
+  "performance_ledger": {
+    "P2E baseline": "avg analyze 0.193s at 250 outcomes, warm_fallback",
+    "P3G-D clean proof": "avg analyze 0.202s, max 0.571s, avg outcome 0.440s; hits=0, misses=250, loads=250",
+    "P3H benchmark conclusion": "EntityCache correct but current route wiring is not a reliable performance win",
+    "buyer_facing_claim_allowed": false
+  },
+  "phase": "proof_250",
+  "prefix": "A1SCALE1500",
+  "proof_artifact_path": "scratch\\temp\\route_validation_1500_summary.json",
+  "proof_max_attempts": 2250,
+  "proof_prefix": "A1SCALE1500",
+  "proof_target_outcomes": 1500,
+  "proof_validation": {
+    "errors": [],
+    "expected": {
+      "dk_welford_rows": 1,
+      "graph_truth_proof_authority_preserved": true,
+      "l5_dk_weight": 1,
+      "max_n_decisions_used": 1500,
+      "valid_outcomes": 1500,
+      "verdict": "EXTERNAL_DIAGNOSTIC_F_PASS"
+    },
+    "passed": true,
+    "summary": {
+      "avg_analyze_seconds": 0.255,
+      "avg_outcome_seconds": 0.918,
+      "dk_welford_rows": 1,
+      "l5_dk_weight": 1,
+      "max_analyze_seconds": 1.823,
+      "max_n_decisions_used": 1500,
+      "max_outcome_seconds": 5.973,
+      "valid_outcomes": 1500
+    },
+    "timing": {
+      "avg_analyze_seconds": 0.255,
+      "avg_outcome_seconds": 0.918,
+      "max_analyze_seconds": 1.823,
+      "max_outcome_seconds": 5.973,
+      "p95_analyze_seconds": null,
+      "p95_analyze_status": "not_emitted",
+      "p95_outcome_seconds": null,
+      "p95_outcome_status": "not_emitted"
+    }
+  },
+  "returncode": 0,
+  "started_at": "2026-06-11T23:15:36.814165+00:00",
+  "status": "PASS",
+  "stderr_tail": "",
+  "stdout_tail": "n=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 1400, 'verified': 1400, 'outcome_present': 1400, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=1912.65s\n[SOC DIAG F] progress valid=1425 attempts=1425 current_attempt=1425 latest=A1SCALE1500-1425 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 1425, 'verified': 1425, 'outcome_present': 1425, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=1942.74s\n[SOC DIAG F] progress valid=1450 attempts=1450 current_attempt=1450 latest=A1SCALE1500-1450 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 1450, 'verified': 1450, 'outcome_present': 1450, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=1973.63s\n[SOC DIAG F] progress valid=1475 attempts=1475 current_attempt=1475 latest=A1SCALE1500-1475 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 1475, 'verified': 1475, 'outcome_present': 1475, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=2003.55s\n[SOC DIAG F] progress valid=1500 attempts=1500 current_attempt=1500 latest=A1SCALE1500-1500 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 1500, 'verified': 1500, 'outcome_present': 1500, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=2035.57s\n[SOC DIAG F] writing reports verdict=EXTERNAL_DIAGNOSTIC_F_PASS exit_code=0\n[SOC DIAG F] final verdict\n  verdict=EXTERNAL_DIAGNOSTIC_F_PASS\n  exit_code=0\n  json_report=C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_A1SCALE1500.json\n  md_report=C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_A1SCALE1500.md\n  proof_passed=True\n\nSOC Diagnostic Summary\nverdict: EXTERNAL_DIAGNOSTIC_F_PASS\nproof_passed: True\ngraph_name: soc_graph_a1_scale_1500_1\nbackend_url: http://127.0.0.1:8001\nprefix: A1SCALE1500\nvalid_outcomes: 1500\nanalyze_attempts: 1500\noutcome_attempts: 1500\nseed_failures: 0\nseed_visibility_status: visible\n\nTiming\navg_analyze_seconds: 0.255\nmax_analyze_seconds: 1.823\navg_outcome_seconds: 0.918\nmax_outcome_seconds: 5.973\navg_seed_seconds: 0.043\nmax_seed_seconds: 0.541\n\nReadback\ndecisions: 1500\nverified: 1500\noutcome_present: 1500\nl5_centroid: 1\nshaped_by: 1\nl5_dk_weight: 1\ndk_welford_rows: 1\nmax_n_decisions_used: 1500\n\nBackend Contract\ngraph_name: soc_graph_a1_scale_1500_1\nbackend_port: 8001\nage_use_pool_requested: true\nconnection_mode: warm_fallback\npool_available: false\n\nCriteria Failures\n- none\n\nTop Analyze Loops\nalert_id | action | confidence | analyze_seconds | outcome_seconds\nA1SCALE1500-1158 | investigate | 1.000 | 1.823 | 2.373\nA1SCALE1500-0716 | investigate | 1.000 | 1.062 | 2.381\nA1SCALE1500-1151 | investigate | 1.000 | 0.960 | 2.079\n\nTop Outcome Loops\nalert_id | action | confidence | analyze_seconds | outcome_seconds\nA1SCALE1500-0675 | investigate | 1.000 | 0.956 | 5.973\nA1SCALE1500-0671 | investigate | 1.000 | 0.453 | 4.857\nA1SCALE1500-0685 | investigate | 1.000 | 0.370 | 4.849\n\nReports\nreport_json_path: C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_A1SCALE1500.json\nreport_md_path: C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_A1SCALE1500.md\n",
+  "timing": {
+    "avg_analyze_seconds": 0.255,
+    "avg_outcome_seconds": 0.918,
+    "max_analyze_seconds": 1.823,
+    "max_outcome_seconds": 5.973,
+    "p95_analyze_seconds": null,
+    "p95_analyze_status": "not_emitted",
+    "p95_outcome_seconds": null,
+    "p95_outcome_status": "not_emitted"
+  }
+}

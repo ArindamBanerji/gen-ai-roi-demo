@@ -1,0 +1,697 @@
+INFO:     Started server process [13912]
+INFO:     Waiting for application startup.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1781196809.373733   11996 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196809.476558   10884 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196809.534992   31900 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196809.627510    4880 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196809.698276   11996 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196809.758504   50492 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196809.823395   42196 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196809.907303   32304 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196809.972515   10884 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196810.026699   11996 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196810.090476   42196 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196810.156565   20240 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196810.223926   32304 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196810.279435   31900 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196810.338349   43488 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196810.396175   47376 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196810.449385    4880 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+Failed to convert project number to project ID.
+Traceback (most recent call last):
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\google\api_core\grpc_helpers.py", line 75, in error_remapped_callable
+    return callable_(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\grpc\_interceptor.py", line 276, in __call__
+    response, ignored_call = self._with_call(
+                             ^^^^^^^^^^^^^^^^
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\grpc\_interceptor.py", line 331, in _with_call
+    return call.result(), call
+           ^^^^^^^^^^^^^
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\grpc\_channel.py", line 438, in result
+    raise self
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\grpc\_interceptor.py", line 314, in continuation
+    response, call = self._thunk(new_method).with_call(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\grpc\_channel.py", line 1180, in with_call
+    return _end_unary_response_blocking(state, call, True, None)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\grpc\_channel.py", line 996, in _end_unary_response_blocking
+    raise _InactiveRpcError(state)  # pytype: disable=not-instantiable
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+grpc._channel._InactiveRpcError: <_InactiveRpcError of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "failed to connect to all addresses; last error: UNKNOWN: ipv4:142.251.214.42:443: tcp handshaker shutdown"
+	debug_error_string = "UNKNOWN:Error received from peer  {grpc_status:14, grpc_message:"failed to connect to all addresses; last error: UNKNOWN: ipv4:142.251.214.42:443: tcp handshaker shutdown"}"
+>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 147, in retry_target
+    result = target()
+             ^^^^^^^^
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\google\api_core\timeout.py", line 130, in func_with_timeout
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\google\api_core\grpc_helpers.py", line 77, in error_remapped_callable
+    raise exceptions.from_grpc_error(exc) from exc
+google.api_core.exceptions.ServiceUnavailable: 503 failed to connect to all addresses; last error: UNKNOWN: ipv4:142.251.214.42:443: tcp handshaker shutdown
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\google\cloud\aiplatform\initializer.py", line 92, in _set_project_as_env_var_or_google_auth_default
+    project_id = resource_manager_utils.get_project_id(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\google\cloud\aiplatform\utils\resource_manager_utils.py", line 48, in get_project_id
+    project = projects_client.get_project(name=f"projects/{project_number}")
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\google\cloud\resourcemanager_v3\services\projects\client.py", line 814, in get_project
+    response = rpc(
+               ^^^^
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\google\api_core\gapic_v1\method.py", line 131, in __call__
+    return wrapped_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 294, in retry_wrapped_func
+    return retry_target(
+           ^^^^^^^^^^^^^
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\google\api_core\retry\retry_unary.py", line 156, in retry_target
+    next_sleep = _retry_error_helper(
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\google\api_core\retry\retry_base.py", line 229, in _retry_error_helper
+    raise final_exc from source_exc
+google.api_core.exceptions.RetryError: Timeout of 60.0s exceeded, last exception: 503 failed to connect to all addresses; last error: UNKNOWN: ipv4:142.251.214.42:443: tcp handshaker shutdown
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+I0000 00:00:1781196851.726546   47376 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196851.733550   37760 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196851.738154   47500 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196851.756385   50492 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196851.783936   32304 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196851.800097   42196 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196851.806787   11996 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196851.824913   32304 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196851.844436   47500 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196851.848733    4880 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196851.874800   37760 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196851.886894   50492 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196851.893523    4364 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196851.916950   45968 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196851.943553   37760 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196851.965056   10884 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196851.988567   37760 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196852.010267    4880 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196852.021242   20240 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196852.074882   47376 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196852.146016    4364 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196852.205833   42196 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196852.254114   11996 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196852.314475    4880 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196852.362019   47500 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 1328ea99-507a-4710-ac33-8406399e3c62
+I0000 00:00:1781196853.008871   43488 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196853.015692   50492 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 4dc7830e-b0da-4d32-9084-795b7eb4356a
+I0000 00:00:1781196853.117613   45968 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196853.159105   31900 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196853.249510   50492 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196853.355639   47376 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196853.423446   47500 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196853.557950   10884 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 050f7d84-d559-409d-88a9-a0377acc53e6
+[AUDIT] No decision entry for 9aeecc2c-1752-4f3c-a50e-bbef4855d5ff
+I0000 00:00:1781196854.473218   20240 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196854.597029   11996 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 6297400e-04cd-48e9-88b8-1842cec40e9e
+I0000 00:00:1781196854.711508   10884 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196854.770789   32304 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196854.784485   45968 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196854.931366   42196 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196854.983328    4880 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196855.022463   11996 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 685e7bb1-1cd4-40fd-9e57-4e89185e4412
+[AUDIT] No decision entry for d47f8e22-9df6-4c89-b54b-e305d2b2b0a9
+[AUDIT] No decision entry for 761982f3-1b5c-4ce4-97b9-7fc28c3fa282
+[AUDIT] No decision entry for 6f779634-bd10-4372-a885-b27502b712a1
+I0000 00:00:1781196856.763907   43488 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196857.040359   32304 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196857.141533   20368 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for f7c65364-1f33-4807-81fa-1d7b05e84d8b
+I0000 00:00:1781196857.183221   31900 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196857.248852   37760 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196857.263203    4880 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196857.489519   42196 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196857.668658    4880 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 368204e3-fcf3-47ad-9faa-66df3190bf71
+[AUDIT] No decision entry for 610bb705-75d5-4f8a-a0c4-c8087002915a
+[AUDIT] No decision entry for 15440717-e71b-4d61-9320-fb24d32569d4
+[AUDIT] No decision entry for 447bf470-9d36-4dd9-b3e9-0eb04cfbf81b
+[AUDIT] No decision entry for 53ecccb9-5b26-4609-8296-1e4505d6aa24
+[AUDIT] No decision entry for fcef483e-fabf-4088-938b-5984e0f830d6
+I0000 00:00:1781196860.443467    4364 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196860.640571   47500 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196860.831566   43488 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 74d272ed-eefc-4a88-b26e-d1e5e79b43f4
+I0000 00:00:1781196860.966328   10884 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196861.525974   20240 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 4ff13ef9-3025-4018-ac6e-a056cef79f70
+I0000 00:00:1781196861.705664   47500 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196861.714977   20368 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196861.925736   47376 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for cbf6c211-2a19-47eb-a997-448e75e74634
+[AUDIT] No decision entry for 57d8f0b5-3962-4069-b92a-49b1df4fe847
+[AUDIT] No decision entry for e8137735-53af-401c-89a2-b036205b1daf
+[AUDIT] No decision entry for 6f004ee5-f2f8-4881-a8df-4485404c8ec4
+[AUDIT] No decision entry for 8ec2bbe9-c09d-4281-951e-d32cbea5b471
+[AUDIT] No decision entry for 8bc2a449-c576-4789-b710-58e79ec90824
+[AUDIT] No decision entry for 5f43d70a-ea51-4523-b2fe-35233fe62d81
+[AUDIT] No decision entry for 114dbc76-8ede-42b5-af64-b788e2e72fb7
+I0000 00:00:1781196866.303423   10884 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 04425ec0-79ce-4f72-bded-2743777637a5
+I0000 00:00:1781196867.034445   20240 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 8c7fa35e-6461-4002-be8c-b2b8f8e84e91
+I0000 00:00:1781196867.168315    4880 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196867.451793   31900 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196867.484575   10884 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for c2e18187-c4f9-42b3-ac1f-9c9d01ebd764
+I0000 00:00:1781196868.233173   10884 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for a0053797-44b2-457f-9938-dd4e8b732bc4
+[AUDIT] No decision entry for ec774e6d-f108-4498-8263-68ceff361b87
+I0000 00:00:1781196868.900840   45968 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196869.016988   50492 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for a8f508e3-bcdf-4939-89b1-2794bb48b8c7
+[AUDIT] No decision entry for 42f5c2e7-33c0-416c-8a4b-7db13662f44a
+[AUDIT] No decision entry for 3beff63c-cf51-4eb0-9443-e4de786d84cd
+[AUDIT] No decision entry for 84cbe694-5406-4c10-8d19-953a612ca55e
+[AUDIT] No decision entry for bcdd4ded-b25c-4305-afae-d4c8b4ad4441
+[AUDIT] No decision entry for 504541fb-5d31-4350-a56d-22faff102b99
+[AUDIT] No decision entry for e76d4e03-e305-4742-9a94-19bf0ebd10d7
+[AUDIT] No decision entry for 63415ed6-427c-4928-99b4-ee29d17641c8
+[AUDIT] No decision entry for cdc8a443-40cf-4321-a8e2-a8c8e0fb817c
+[AUDIT] No decision entry for 2242a469-4e2c-4d0c-832c-7c97d93db181
+[AUDIT] No decision entry for 5082ce70-2e44-4978-a92b-3ae21adfacf8
+I0000 00:00:1781196875.492918   31900 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for a7e872b8-493e-4b6d-8611-7bb13fb15b2a
+[AUDIT] No decision entry for 9c4f8e1d-30e8-4c6f-96dd-ed243e50fe07
+I0000 00:00:1781196876.243487   43488 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 99354258-5f18-46cc-b1cd-efcedf0d4be6
+[AUDIT] No decision entry for e035fd84-33c9-4199-baa2-63a1f31b49f6
+I0000 00:00:1781196877.517550   43488 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 252fa5cb-48b5-47a6-85c7-4e3e296aedff
+I0000 00:00:1781196878.056516    4364 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196878.056668   11996 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196878.193069   45968 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for ce2e1b10-2f36-431c-87c0-8ee263dd4f4a
+I0000 00:00:1781196878.932780    4880 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 18007526-aa37-483e-8d0b-9c754f5af124
+I0000 00:00:1781196879.419622   11996 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 1d97adaf-746d-45a9-8129-c2c3ace65747
+[AUDIT] No decision entry for 840c555f-536b-4a80-a782-3782b4dc926f
+[AUDIT] No decision entry for 64500f96-ae3d-4026-b6e2-f328dcf3b64e
+[AUDIT] No decision entry for ecc23aea-a735-4c27-9d3b-98ce125f8e4d
+[AUDIT] No decision entry for 9a206cc6-4194-46fd-9df7-b8bdbd56f2fe
+[AUDIT] No decision entry for 63d28968-06b9-4ab2-a03a-405ff58f81d2
+[AUDIT] No decision entry for 860bed48-310c-4456-a4ea-f7c695fe4757
+[AUDIT] No decision entry for 21c11620-01f0-4b11-961e-d6ada6a91c6c
+[AUDIT] No decision entry for 1cfdb14b-8abd-4c11-8ad5-853ac5940320
+[AUDIT] No decision entry for 1c68e271-df11-4efa-a18f-4a2f8b7ee697
+[AUDIT] No decision entry for a9e303e8-5ea8-4b18-a0de-35584e18d98e
+[AUDIT] No decision entry for e6e96129-8fa0-491b-90f0-a85577e15eb8
+[AUDIT] No decision entry for 084eadfd-14e7-42c9-9b4e-a21c9630cdb1
+[AUDIT] No decision entry for 5b444fd8-00be-4ba0-aca5-61e5ca7bb541
+[AUDIT] No decision entry for 050d3f41-42e7-4d37-b453-15b4f0ca5899
+[AUDIT] No decision entry for cd816534-b466-42c7-ba06-390566202fa5
+I0000 00:00:1781196890.101556    4880 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for da96efac-42a6-4d77-8b5c-6e411685cf6a
+[AUDIT] No decision entry for c47380fd-5a83-4bbf-ab8b-4fb504afa011
+[AUDIT] No decision entry for 3359b6c2-a70c-4e98-bc6d-4dd6158e9ae6
+[AUDIT] No decision entry for 275512e8-8d34-42c1-8d43-798ea72d09d8
+I0000 00:00:1781196892.446927   37760 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 5f62cf2d-d30d-4c7a-b49c-2d6a687f6de2
+I0000 00:00:1781196892.984727   32304 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 16540432-fbaa-429d-b91e-de37fad9d407
+I0000 00:00:1781196893.509267   20368 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196893.573514    4364 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 6f8e7430-efd9-42c4-9a9b-764ffe0156ec
+I0000 00:00:1781196894.135810   11996 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 17a62dac-3317-4192-8827-8fdbbfbefed7
+[AUDIT] No decision entry for c9832524-76a4-48d7-bac8-2b164b0f2f0b
+[AUDIT] No decision entry for 973e1e9a-8832-4ed9-9ce1-d2a490150051
+[AUDIT] No decision entry for c0a99f3a-01ba-401e-afe3-90fa0a9af959
+[AUDIT] No decision entry for ebd67732-6f49-434a-b996-2098e53412e2
+I0000 00:00:1781196896.832694   42196 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for b8a4f2af-dbb1-4cd6-ae83-566cd230fb36
+[AUDIT] No decision entry for 12e47e39-0fa8-43a1-8cba-d94ad9e2f23c
+[AUDIT] No decision entry for 41a14d7b-3ff7-4ea2-bdc0-78c6dbb8d051
+I0000 00:00:1781196898.721686   45968 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 1159c329-61dd-4ec9-9369-6ba5d562170a
+[AUDIT] No decision entry for cd2d0971-75c3-47a0-b421-6642f9abd59a
+[AUDIT] No decision entry for a586ce77-0571-41cb-ba92-43f8eac3ea4a
+[AUDIT] No decision entry for 3b629798-dce4-4b55-905a-a7ea69de1f5a
+[AUDIT] No decision entry for 2f30df82-8456-4fb7-8059-707d9537618e
+[AUDIT] No decision entry for 88c2d29c-4edc-4bdf-a90a-5697901c72ed
+[AUDIT] No decision entry for 7d90de90-c711-420f-a88b-ed12e98e1ed5
+[AUDIT] No decision entry for a7ec1965-37fc-4822-bd25-76459adb8bde
+[AUDIT] No decision entry for e5b82638-fa25-47eb-88a5-e391518433de
+[AUDIT] No decision entry for 431f506f-500c-4890-abed-04f2fbb47592
+[AUDIT] No decision entry for e8f08606-aca3-4fd7-9d3f-7ba8c0878773
+[AUDIT] No decision entry for ac237f71-65ad-4b97-ac23-da3d40938721
+[AUDIT] No decision entry for 10df4986-615c-4c31-8a4c-ac146d89bb44
+[AUDIT] No decision entry for 3289e3c6-68ce-4346-946e-5c28fb29efab
+[AUDIT] No decision entry for 7225296b-8579-4142-8e18-c958c0d0f7f8
+[AUDIT] No decision entry for b8c0842d-3ea2-48b3-9ea7-7a2561a012e8
+[AUDIT] No decision entry for 29789b56-e658-4bca-851c-d5e3fbe377f5
+[AUDIT] No decision entry for c5b59982-2daf-4cd3-b38a-8c47d15f072a
+[AUDIT] No decision entry for 1a77af8b-c9cd-4612-8797-e8783904279a
+[AUDIT] No decision entry for 063f2519-5825-4ea3-b49c-7d18adf76dab
+[AUDIT] No decision entry for 8234a31c-1544-4800-8a91-ddcf4fe9ed15
+[AUDIT] No decision entry for 9e2b8ac7-c3fd-4265-9928-5c9e13ac5ff6
+[AUDIT] No decision entry for 83e7aeff-f152-4665-95a0-e08964debff4
+[AUDIT] No decision entry for 8285546a-8a52-46b7-8f1a-bb01ed69cc70
+[AUDIT] No decision entry for 760aa936-9d1a-436e-b38b-d33f039c8fca
+[AUDIT] No decision entry for 16c38868-de64-44dd-ad9e-4223a480468f
+[AUDIT] No decision entry for e8b6662c-4961-4064-b009-b5873ec49d46
+[AUDIT] No decision entry for 69630043-4c1b-4ed6-8c87-1b3c4ac4f76b
+[AUDIT] No decision entry for 3a826789-62d5-4489-a268-53274ad0dc34
+[AUDIT] No decision entry for 1419269e-c89c-4646-b394-6d6bff728c5c
+[AUDIT] No decision entry for 891dac70-20c4-494e-a2e6-8fc46985fe4e
+[AUDIT] No decision entry for 671b9e7b-d3ac-469d-a3a0-27e53b9cdbd1
+[AUDIT] No decision entry for 86ae9290-4e54-4f50-bddd-7f98468c43d0
+[AUDIT] No decision entry for f66d4abc-3c8f-433e-b39f-7583883d7c9f
+I0000 00:00:1781196917.940712   47500 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196917.981649   20368 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 8499dfa9-ecea-4249-8ee9-aa9769ecc8c3
+I0000 00:00:1781196918.477503   31900 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+I0000 00:00:1781196918.881524    4364 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 37e738e6-45ee-49d7-b595-9fd7d77d1ee9
+I0000 00:00:1781196919.285706   47500 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 2590c260-5b4e-4607-80ee-89d36c78f564
+[AUDIT] No decision entry for f5e9c14c-7df5-4edc-827b-067e0ff59584
+[AUDIT] No decision entry for f726333a-d1fe-468a-9379-49a2c84ce7be
+[AUDIT] No decision entry for 3a4e8f8e-e902-425b-937a-03f886b38571
+[AUDIT] No decision entry for 3b9f4428-d33b-4f37-aa64-d8d3f602e96a
+[AUDIT] No decision entry for 6b42e6f9-7f97-49c7-8729-ce985c255fe1
+I0000 00:00:1781196922.949296   43488 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 9b137a12-416f-4c48-9199-90c7312749ea
+[AUDIT] No decision entry for b9f8a094-03ff-4a30-8af1-0f40f14a4e2f
+I0000 00:00:1781196924.090627   11996 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 2f2965c4-0bd1-4170-aed8-fa2ee52f8f96
+[AUDIT] No decision entry for d190af18-a818-4101-b560-0d437e2ee055
+[AUDIT] No decision entry for 64d8e8ea-fc76-4651-8b18-f79143a14559
+[AUDIT] No decision entry for f3b3f8c9-3d21-4415-ba5b-71f5989f74f7
+[AUDIT] No decision entry for 33089591-a55e-4584-9306-2213f41a9636
+[AUDIT] No decision entry for 12fbb046-2f5b-4319-86d7-f3bfb04693d4
+[AUDIT] No decision entry for 8d572213-a482-4385-9bae-a5361897e5ce
+[AUDIT] No decision entry for b8441da7-90f1-4c26-8fdb-11d12bc254b1
+[AUDIT] No decision entry for d7943e3a-7162-4f58-8ffd-808cab4f78ee
+[AUDIT] No decision entry for acabdf90-5b56-4d70-9bc9-ef18ebf398ae
+[AUDIT] No decision entry for caa46877-39a7-4986-af2f-971e9fcf9fde
+[AUDIT] No decision entry for 5160739e-3fcd-4f68-a819-586e787fa50f
+I0000 00:00:1781196930.805151   37760 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 064d4696-f303-46f4-9a00-cc5b573d13c2
+[AUDIT] No decision entry for 7100cda6-39ed-4727-8747-50a1e2a7b1b8
+[AUDIT] No decision entry for f47e3ce7-1ba0-441e-8fb2-2a3609c5a364
+[AUDIT] No decision entry for 5a502fdf-04c0-47f9-a867-6c5342edb606
+[AUDIT] No decision entry for c80dde41-9bde-44de-b13b-756d79b50fe3
+[AUDIT] No decision entry for f55e4cdf-b820-4726-89f7-3c280cd848c1
+[AUDIT] No decision entry for c25fbcbb-81cc-418c-8dec-a5574011aa4f
+[AUDIT] No decision entry for 649dbf95-ff60-43bb-814d-cecd93a4c16a
+[AUDIT] No decision entry for 9c4d0236-0722-438c-977a-c9dd422fe2e3
+[AUDIT] No decision entry for 9c3288cd-df84-4fba-a15e-a09ee8aa387e
+[AUDIT] No decision entry for b0bd85ba-1d8f-4ebf-b27a-b8b19a8aa5e1
+[AUDIT] No decision entry for b00f97ef-78e2-48b2-b884-647adbea8690
+[AUDIT] No decision entry for 805ca7e7-dd9a-4720-8708-4b3483e5a0b9
+[AUDIT] No decision entry for 7d84f6c6-479e-45f0-a96b-bcd3be35516c
+[AUDIT] No decision entry for 6337cb45-6105-4bde-9c21-03cfc2ab52b1
+[AUDIT] No decision entry for d05de788-5a55-4880-aab2-8e17dab5b6a2
+[AUDIT] No decision entry for 7e45a69f-679d-4012-a13d-553912f46f03
+[AUDIT] No decision entry for a108187c-0dd2-4d90-b920-7e60d943c906
+[AUDIT] No decision entry for a875b642-f695-46bc-beff-4e0312597b8e
+[AUDIT] No decision entry for f4e3515e-3596-4c08-964e-edcf345d08fa
+[AUDIT] No decision entry for 150b49b9-4256-4697-ba1b-9814ee7e3c24
+[AUDIT] No decision entry for 551bc40a-3474-43c5-be85-4845b271038e
+[AUDIT] No decision entry for c0e77d66-5f54-4ea7-a9dd-ebe4f2eb9836
+[AUDIT] No decision entry for 2eb321ce-118d-45c1-9e06-403cec6b8ca0
+[AUDIT] No decision entry for d3dd4e8c-6306-47cd-99c9-14187dfc91f4
+[AUDIT] No decision entry for 40ddc85e-c1b3-42b6-8c60-e7b5f34d073c
+[AUDIT] No decision entry for fa53f5a1-abde-4574-a36e-58508af26254
+[AUDIT] No decision entry for 106531c1-383e-43fa-8a3d-171c32ea012a
+[AUDIT] No decision entry for d5a6b750-83ed-4187-a5ba-55c2b70cd319
+[AUDIT] No decision entry for 343dc298-1bb0-4a6f-809a-008ee5924e3c
+[AUDIT] No decision entry for 6f7fc89f-8ac7-4a4f-9ca0-3ceeec5205ba
+[AUDIT] No decision entry for 0414272e-7422-4565-a161-3d2d276df126
+[AUDIT] No decision entry for c82779ff-f0c9-47df-95e1-c8ea978541c6
+[AUDIT] No decision entry for b9f3076a-ff85-424d-a498-f9f2ba11ca35
+[AUDIT] No decision entry for cdabf9a0-0fbc-4aa0-93a2-24266bc616f7
+[AUDIT] No decision entry for 6dde82e6-fd64-4da4-9344-41a16a0c5d48
+[AUDIT] No decision entry for b22e0178-667c-47fe-920c-f00b4123508b
+[AUDIT] No decision entry for ad56370b-e101-4795-8928-19a98e9b7d5f
+[AUDIT] No decision entry for 0887850c-5787-4748-8973-650497251ec2
+[AUDIT] No decision entry for c2599fe7-2e0c-4e1b-b931-4ea09303ffb8
+[AUDIT] No decision entry for 10f0f88a-38b3-4af5-a9f0-9a12be33cbfb
+[AUDIT] No decision entry for 4964b99e-1489-4414-8c1f-5c3209467d7a
+I0000 00:00:1781196954.219821    4880 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 79056aca-7c66-4293-830a-8037c5314cd5
+[AUDIT] No decision entry for fe622d4c-5c8b-4dbb-8c92-eb90c4d2d42e
+[AUDIT] No decision entry for fccd5e71-e27a-409b-a91d-a78c6964bdb9
+[AUDIT] No decision entry for 0a05ed0f-64a0-415a-b976-e12643bbf53c
+[AUDIT] No decision entry for b91d8be8-78ee-4da3-b819-73b064f9b84a
+[AUDIT] No decision entry for df927a10-9da9-4d7a-aa65-84f87778555d
+[AUDIT] No decision entry for 8e77543d-a0e1-47e2-bf75-48934f00ba03
+[AUDIT] No decision entry for f0242e46-2fd0-4ff4-a60d-89ef4f9c5b17
+[AUDIT] No decision entry for 8ddce829-1bf7-4949-b820-8cb83b61d08c
+[AUDIT] No decision entry for e00e4126-ad29-452b-960b-6277f56a1c6f
+I0000 00:00:1781196959.578632   43488 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 5a4531ed-0b65-4fb9-991b-930904bc58c2
+[AUDIT] No decision entry for 6baaebb4-6bad-4247-908d-bcff36332ce2
+[AUDIT] No decision entry for 40107e59-a411-461e-a084-a608f7be42ad
+[AUDIT] No decision entry for 710989e4-3503-4591-bc55-695f7f04ea68
+[AUDIT] No decision entry for 442f2237-392f-4692-9509-3cac5ba11b93
+[AUDIT] No decision entry for 9fb5432e-a189-417e-8f0a-e3ebc9c226dc
+[AUDIT] No decision entry for a1a41634-e650-4a27-8b75-edd8eb69ccd5
+[AUDIT] No decision entry for ee63b2da-2176-40cf-891b-fd9472206eae
+[AUDIT] No decision entry for 53f708f3-c9a5-450d-b8f5-6f66090a9984
+I0000 00:00:1781196964.696220   47500 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 883d4ff6-330e-4ab4-9677-55c8ee7f34f6
+I0000 00:00:1781196965.008239    4880 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 28f823d7-61ff-4bdf-8362-9e7b0f7b03dd
+[AUDIT] No decision entry for 3d76a1ac-081c-48eb-93ec-5c1a2480a6b7
+[AUDIT] No decision entry for 19b8d846-432d-422a-81fb-b3a7369d0225
+[AUDIT] No decision entry for 7b0479d9-fde1-48bf-ab90-b85c8e02210e
+[AUDIT] No decision entry for c0667f52-b60e-424b-832c-12bf8bff331f
+[AUDIT] No decision entry for 5ef657ea-5592-467c-85a6-521ded7b3738
+[AUDIT] No decision entry for 1ac83e06-3a60-4552-9598-cffd6ade1a7d
+I0000 00:00:1781196969.718519   42196 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 4b272e58-f1cd-431b-ace7-9c6f30904370
+[AUDIT] No decision entry for 4bcdb14f-bd86-411a-8b65-2d3205a58bad
+I0000 00:00:1781196970.327094   31900 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 0f5b5b23-23e9-419a-b8cd-f70fd23409d7
+[AUDIT] No decision entry for 38833888-6c00-43da-9e9e-6b63e62e1226
+[AUDIT] No decision entry for c7c795b6-b596-4af4-b413-257fd5cfa817
+[AUDIT] No decision entry for f448bf4f-7091-4bc5-8227-ba997cf3a5b2
+I0000 00:00:1781196972.904443   50492 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for ec55c3ca-bdc6-499a-a355-89fc611c391e
+[AUDIT] No decision entry for 6f0b0c9a-9aa8-4293-93e3-69117d8ba509
+[AUDIT] No decision entry for 4d9b1406-1eb5-434a-aea6-3db213b3a3f8
+I0000 00:00:1781196974.930467   43488 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 799b73b4-536f-47d5-bd3e-b4b7027c6ecb
+[AUDIT] No decision entry for 26db7782-b6c7-4bb7-9f7d-8a05222520e1
+[AUDIT] No decision entry for c3fbbfef-328c-425f-8b96-6dddf44c95e6
+[AUDIT] No decision entry for dca73638-58f6-4d52-b9ed-05b99c0b233c
+[AUDIT] No decision entry for 4e2fbe43-56e0-43a7-b0e6-0cd69d9521b0
+[AUDIT] No decision entry for 4b72c3eb-2a55-4cf5-9ea6-e76e0edde4db
+[AUDIT] No decision entry for a90631b6-550b-47a2-99fc-beb7bbabb794
+[AUDIT] No decision entry for f9ea73cd-d38f-4796-a267-a2afaa38b36b
+[AUDIT] No decision entry for 18040ced-a821-47ae-a19e-0fadb65c45ec
+[AUDIT] No decision entry for a87df8ed-9054-4da8-ae3e-2046a9ae45e2
+[AUDIT] No decision entry for 17ca8f20-7477-4b16-b34c-4ee347aeb733
+[AUDIT] No decision entry for aca3f9bf-2066-40e0-afbd-c08a1d962b6a
+[AUDIT] No decision entry for 5a517c40-c62a-4709-be20-09252be0fbc0
+[AUDIT] No decision entry for d8638170-fd3a-4d5e-ac34-9da5e8b1005f
+[AUDIT] No decision entry for 33b24a64-95cf-4442-a7f4-36021f4f5dc4
+[AUDIT] No decision entry for c92179f1-d020-40d3-9076-614913322062
+[AUDIT] No decision entry for 52a611ab-9dc3-4789-a23a-13d5e22a526a
+[AUDIT] No decision entry for ed47074a-e1cf-4995-9fb8-5bb0550033a7
+[AUDIT] No decision entry for 31a66506-c185-4cc2-99d6-1e9a04e7483e
+[AUDIT] No decision entry for 348b8b91-2040-4da7-ae65-b9b8f0506b61
+[AUDIT] No decision entry for 025eee3a-9c60-47fe-ae61-6b6bc5ade9db
+[AUDIT] No decision entry for d7ed14cf-5b65-4deb-ab8d-acd45d2c5b75
+[AUDIT] No decision entry for ee1d2188-c3df-4b32-b488-e155e3d68168
+[AUDIT] No decision entry for c2ab4501-191c-46d0-9eb0-1c2ddde377ff
+[AUDIT] No decision entry for 7846d195-21ee-4179-861b-0543ecb924d1
+[AUDIT] No decision entry for 4c994f03-2a66-49f0-bd4f-d97813816456
+[AUDIT] No decision entry for 136e6aa4-39aa-4821-8cca-e17f2b0db7e5
+[AUDIT] No decision entry for c8b9ee66-b0a9-48c2-a450-438737141bfb
+[AUDIT] No decision entry for 65d70847-e492-4275-a2f7-59c0d817f48f
+[AUDIT] No decision entry for ef06d727-ba86-4800-819b-a197c4082c21
+[AUDIT] No decision entry for e2eec95c-eb55-45c6-a7ec-ad8627e9d452
+[AUDIT] No decision entry for 54020f51-d50c-419e-8514-16db05341d1c
+[AUDIT] No decision entry for 8b448ea2-912a-493c-a865-df27fdb57fbc
+[AUDIT] No decision entry for 52d7246f-8fd9-4510-8988-8fc580489da0
+[AUDIT] No decision entry for 339a801d-f279-40f8-a6c4-012f27abc06d
+[AUDIT] No decision entry for aee676ed-e190-470a-9296-1d1790351b43
+[AUDIT] No decision entry for 8577f007-dfc7-4455-9248-f4a5e7d81c7d
+[AUDIT] No decision entry for 801f2759-2f75-4ac8-b482-713e8d6c879b
+[AUDIT] No decision entry for 10054eff-93b2-452b-a30f-b5bae078317c
+[AUDIT] No decision entry for c661e402-845f-45c2-97f6-0bea8d3a5733
+[AUDIT] No decision entry for 5dcbf20f-1c64-4bef-b585-58388b5eafd2
+[AUDIT] No decision entry for 027e7094-1968-47c4-afd9-9bd514e253cd
+[AUDIT] No decision entry for 34f9b6af-ef61-4ec7-af4d-435074f10f4b
+[AUDIT] No decision entry for 17602bab-0928-4810-8040-17e53efa601c
+[AUDIT] No decision entry for bc6e65f4-06c5-4727-89ac-c7aa7bba1a78
+[AUDIT] No decision entry for 3752de03-1d33-4666-9caf-04042ec751be
+[AUDIT] No decision entry for bf14f020-e531-4eba-a6a7-245783e91bc3
+[AUDIT] No decision entry for 1acf7151-85b2-4a11-8908-61fdda9f14d8
+[AUDIT] No decision entry for 39aa53d4-b0ca-4292-8d02-de814e393e89
+[AUDIT] No decision entry for b5953b2e-b3bf-4115-84ed-d80023c19cdd
+[AUDIT] No decision entry for 254a1975-a0f5-4644-b130-2ecc82b92fc2
+[AUDIT] No decision entry for 5ba549a5-47d3-45ec-aaca-f4ea4add91f1
+[AUDIT] No decision entry for f16dc0f7-0d45-4889-a3f5-a88455fc510a
+[AUDIT] No decision entry for e0ba85ca-9d58-4bf4-baa9-4e0baa595939
+[AUDIT] No decision entry for 6b2c517e-4548-45f8-a598-cf85876e6d41
+[AUDIT] No decision entry for fb716006-8bc6-4adb-9879-4966826743fb
+[AUDIT] No decision entry for fa18eb79-5ea7-48ac-ac2d-1bbb30ddfc9d
+[AUDIT] No decision entry for 20e5ca63-befe-4812-b57e-04d436a38061
+[AUDIT] No decision entry for c6976000-127a-49cc-a90f-bd5f8bcc38bf
+[AUDIT] No decision entry for bf045e1d-621b-4083-b234-71cb1902c0ab
+[AUDIT] No decision entry for aeaacfc9-e002-4d30-8b44-5b36307430c4
+[AUDIT] No decision entry for 1eccf992-8b45-4890-aaf9-de91fdff6d5b
+I0000 00:00:1781197010.216079   11996 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 5869a7d1-13e8-4ebf-a58f-b0f50c5ddffb
+[AUDIT] No decision entry for 6c6fa39b-7fa7-41c6-977e-0facbe4ba64b
+[AUDIT] No decision entry for 06807b69-bb09-4a52-88fc-716823d8fe1c
+[AUDIT] No decision entry for 36d98415-d20a-4cce-aef7-0a6768c1247b
+[AUDIT] No decision entry for 7e2b999e-8cfe-451b-b154-8d98e18c4cc7
+[AUDIT] No decision entry for 869f9378-05f9-450f-af9c-a8aa61d35d0a
+[AUDIT] No decision entry for 2795fd7a-2e30-4bb5-85c0-92a3af8fa653
+[AUDIT] No decision entry for 72eabd35-6c14-4392-85a7-e05401cd4d72
+[AUDIT] No decision entry for 6e5c11d4-66ce-40b8-8886-dc0b66c61c67
+[AUDIT] No decision entry for f5e7fd62-f0b5-4067-86b2-da9f8779294f
+[AUDIT] No decision entry for 15abf1dc-4684-4bb8-a29c-7007162d6668
+[AUDIT] No decision entry for 8bbe3b76-99bc-4041-aaf5-e6a7a6cf9c14
+[AUDIT] No decision entry for 75f4ed84-45e0-4018-882c-c86b9311a76d
+[AUDIT] No decision entry for 8a67c401-1885-41ea-b1b3-b036e6d451ad
+[AUDIT] No decision entry for 3a3aefae-e02b-407b-a71b-0d0d95f3e3a1
+[AUDIT] No decision entry for 1d132c0f-f7ea-4cee-a750-e62bdb08d674
+[AUDIT] No decision entry for 0b5fc51f-83a8-48f4-aecc-a22641d7583f
+[AUDIT] No decision entry for 167d119b-7056-4040-b8bd-84c6ac33cd58
+[AUDIT] No decision entry for 8f06313a-3103-4dea-971c-22ea1b8a057a
+[AUDIT] No decision entry for e0686144-1915-493c-b5cc-935e19439780
+[AUDIT] No decision entry for 44cdbb80-8687-4f84-862d-ba22c642fbd1
+[AUDIT] No decision entry for 2c0db7ff-432e-40d5-96a1-5c2bff26176a
+[AUDIT] No decision entry for d91396eb-af4e-4af3-8b1d-73f1f1ae6472
+I0000 00:00:1781197023.436781   11996 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for ce1e8fca-f3fd-4b7d-8bab-632a5b10a13d
+[AUDIT] No decision entry for 468bcbbd-0b15-475e-b07a-ad0d312654c8
+[AUDIT] No decision entry for ce4b0336-d779-41a9-bf68-13a188bcd84c
+[AUDIT] No decision entry for cb8f10bd-50e2-4ee2-9db5-3d84045199e5
+[AUDIT] No decision entry for 53d94954-f44e-4d1d-8060-e22bb0045146
+I0000 00:00:1781197026.697272   20240 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for bd862fb2-e039-4c7c-9129-869628450741
+[AUDIT] No decision entry for d6f6c2c3-a80e-4e8a-aa79-3f55c6fa2836
+[AUDIT] No decision entry for fc073ed8-d1ae-4dff-baaf-369f621348ca
+[AUDIT] No decision entry for db53e1a9-23cb-460c-a5a3-9203d985412f
+[AUDIT] No decision entry for 32f67716-227e-4da0-ae91-17ed98e72a73
+[AUDIT] No decision entry for a1e80bfd-9acd-4127-8381-be7c1b464eab
+[AUDIT] No decision entry for eb550a47-5420-4c0e-8661-ae3070fb3be2
+[AUDIT] No decision entry for 36ab9f52-dc5a-404b-a2ea-1316b31c0a77
+[AUDIT] No decision entry for 775821e9-442c-4bf9-a61f-eee65cf8ed45
+[AUDIT] No decision entry for 306a1d24-f4fb-451f-a800-8b7c51c24552
+I0000 00:00:1781197032.526528   47376 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 4aac1cf5-0467-44ee-8d4f-17134c6a948a
+[AUDIT] No decision entry for eefb61ff-9012-4101-b7b1-2aeff6f7a348
+[AUDIT] No decision entry for b376d92a-ee0f-4479-92c0-c44d5cbc3d34
+[AUDIT] No decision entry for 46bd77c5-e80f-497f-a72b-27b225bd74ab
+[AUDIT] No decision entry for 40f4ef5d-2e9b-44c5-b270-e4eab59211b1
+[AUDIT] No decision entry for 57bbd5ea-7243-40fc-8969-f0b902e82b64
+[AUDIT] No decision entry for ad6e5fda-19f4-4282-8b49-e9f89e288d2e
+[AUDIT] No decision entry for 96faf742-911a-4f38-a12e-deccbf269435
+[AUDIT] No decision entry for d0550ef8-29e4-4e41-be0c-c677806d4afe
+[AUDIT] No decision entry for 307bf3c6-919d-4622-92b0-9e8b6a82f36a
+[AUDIT] No decision entry for bf19f247-4e72-407b-9e6d-e391f51e3676
+[AUDIT] No decision entry for d16611b2-aee5-4640-9f04-932e8d0a716f
+[AUDIT] No decision entry for 308155a4-be62-419c-b4fd-01846f483b9f
+[AUDIT] No decision entry for e84837bd-4e97-48cf-9fdf-70903631d81f
+[AUDIT] No decision entry for 00fdb02f-9983-4d2e-bf81-7d130dff0a72
+[AUDIT] No decision entry for 9b562018-2240-4bc5-83e8-993ee49b2015
+[AUDIT] No decision entry for fc71f78c-d454-4db4-aba5-81cdaa5600a7
+[AUDIT] No decision entry for 743562ac-538d-4fce-8b88-bf518d1e8d7c
+I0000 00:00:1781197043.009088   37760 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for f2da2f5f-e4e4-4097-8888-5c0b26e7e33b
+[AUDIT] No decision entry for 3689b27a-8d10-4e52-a400-5564583c689c
+[AUDIT] No decision entry for 6eb8ca61-5fa0-49c6-a39e-03aef91225c1
+[AUDIT] No decision entry for 1e302273-caf2-4aa2-8190-017dfae565a7
+[AUDIT] No decision entry for 0d4367af-0fd3-4970-a84e-8b3fa8b89bac
+I0000 00:00:1781197046.221724   27256 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 33d5bf29-342f-489b-90a4-215677435fcb
+[AUDIT] No decision entry for 94992609-d9a0-4b2a-b1c8-04102a7a2a40
+[AUDIT] No decision entry for 65f8b3e3-c00f-4cc9-acba-a61f335f1fad
+I0000 00:00:1781197048.178098   37760 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 08c43722-dace-4a1f-8a43-59ee3b4c700c
+[AUDIT] No decision entry for 8ed04ef9-2c92-418d-a5a6-3801d1241d7a
+[AUDIT] No decision entry for e8c3f1ff-d9a9-4d0e-bec1-72693fa1364d
+[AUDIT] No decision entry for ec151a7b-136d-47c6-986d-b4259a326973
+I0000 00:00:1781197050.470580   10884 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 68a669e1-1a85-497b-ae7a-8dbb0a72a1dc
+[AUDIT] No decision entry for d14a5ad9-50ba-49ba-9b11-e0ed16dfa092
+[AUDIT] No decision entry for c9bbfe91-3b50-4502-9a0b-95d113557fdb
+[AUDIT] No decision entry for 02673fda-ed38-46ad-a54c-16bfac3920c3
+[AUDIT] No decision entry for d2ddb9d0-17d4-4893-b217-ad363ef63119
+[AUDIT] No decision entry for f38cc22f-2a49-49bf-a9bb-8430344edd16
+[AUDIT] No decision entry for e2a59166-9ef1-499c-b776-e1af79f87bca
+[AUDIT] No decision entry for b950af2a-2d1c-4c55-a837-99c543ff55a3
+[AUDIT] No decision entry for c14e1f65-fedf-4015-9dfb-3ca1a4913d19
+[AUDIT] No decision entry for 4236cd13-b9fb-4f46-b649-cd920ea433cd
+[AUDIT] No decision entry for 6d31ce82-9ff3-4c21-9a77-404117fd972f
+[AUDIT] No decision entry for e0cb79d8-b528-4bc2-8f1d-f9913cb95601
+[AUDIT] No decision entry for d3e0c7ff-d1dc-473c-8b23-17978e5a6cce
+[AUDIT] No decision entry for d1e1d139-bfc1-4848-b115-5682ea9b8aff
+[AUDIT] No decision entry for baf5652c-3ebf-4473-ab9f-a7affbef6535
+[AUDIT] No decision entry for f8e872a8-0644-49ee-a894-dbbdbdfc441a
+[AUDIT] No decision entry for 2708aed7-664b-46e6-bef7-e4b40518b062
+[AUDIT] No decision entry for 01bada3b-eb0c-4963-a2f0-346519c8c9b4
+[AUDIT] No decision entry for de69fabf-56ed-4919-a8cd-2946b5282293
+[AUDIT] No decision entry for 2a9a3250-dfff-4168-8a1a-1333f2ffcabe
+[AUDIT] No decision entry for ce5c97b8-d927-4c5d-8b11-cf6a2b574238
+[AUDIT] No decision entry for e9bba634-27fe-4e1c-822a-093f645e5090
+[AUDIT] No decision entry for 79d6ba37-affb-4ce5-98a4-d30daa8f7f6c
+[AUDIT] No decision entry for 47792c20-b955-4b91-96db-a37318843db6
+[AUDIT] No decision entry for 220d7aff-5e40-4829-9827-79005d39eb4d
+[AUDIT] No decision entry for eb13ecbc-312a-45b8-8281-4ecc2ab491c7
+[AUDIT] No decision entry for c6a94377-1c6c-4c0c-9c3b-71b9bde5e576
+[AUDIT] No decision entry for cbaee49e-b154-4740-9574-132b882c1a22
+[AUDIT] No decision entry for 40582737-3161-4a83-9c9b-1222fb3aef98
+[AUDIT] No decision entry for ab264dea-c0cf-4e01-8763-ee330948a27d
+[AUDIT] No decision entry for 95f96519-ae4a-41a8-ad52-c15606d6e5d8
+[AUDIT] No decision entry for 225837a0-c9c6-4e22-a4b5-f65fd41b0b60
+[AUDIT] No decision entry for d7cb7ade-4375-4d98-aa20-20e348d0b249
+[AUDIT] No decision entry for b2ed98d7-4c47-4086-b8fd-3855a7639360
+[AUDIT] No decision entry for 0b58b948-e58b-42ef-9428-9875d216c96d
+[AUDIT] No decision entry for 817ba6c5-2520-45a2-8e3c-90a7c570bb0b
+[AUDIT] No decision entry for 4171ef6f-bf12-4a8f-904a-a316a8b22eb5
+[AUDIT] No decision entry for da096c7e-dd02-4a5e-86c6-ffd90b563bea
+[AUDIT] No decision entry for 2889a531-4c1c-4663-bd1c-1f2f7046399d
+[AUDIT] No decision entry for 3555641e-7b1a-4743-a28a-2aee1780a2ea
+[AUDIT] No decision entry for baa5bf75-ebc6-4fc6-8cd1-15fdb26b71b4
+[AUDIT] No decision entry for 9adb9a6a-f299-4450-b05d-fd92f6b18a58
+[AUDIT] No decision entry for 527eb58f-ac24-4b78-873c-92ac75d78e94
+[AUDIT] No decision entry for 5274afc3-5c79-441d-be38-fad05aa418c6
+[AUDIT] No decision entry for 973a6f64-5b7d-4c35-a0af-5b2b80ce4775
+[AUDIT] No decision entry for 965b9839-0e52-4544-bd80-01111115573c
+[AUDIT] No decision entry for 89486b08-0ff3-4b03-a8f3-ded38082aba8
+[AUDIT] No decision entry for 94b5a044-d87a-439d-b553-42498f4efba2
+[AUDIT] No decision entry for f827f48a-6173-4005-8885-59887f55a7e8
+[AUDIT] No decision entry for 78a653c8-bf31-4cde-8b81-0e10046734ea
+[AUDIT] No decision entry for 7f2b909a-e6a3-4858-9a2c-05b1f046e191
+[AUDIT] No decision entry for 64949456-4f43-4e41-ac1a-3b0c5777d5fe
+[AUDIT] No decision entry for 32c7a4fc-07d3-4aee-b2b4-2b83c08c4a59
+[AUDIT] No decision entry for 0d368f49-7ac1-4424-8771-c6b1a3381c83
+[AUDIT] No decision entry for 7595de76-38a7-42c9-9c42-ed21c927627b
+[AUDIT] No decision entry for 07111d2b-3917-4129-bf3f-c1bc773c856e
+[AUDIT] No decision entry for b8f711c3-b663-434e-b1ad-da938d93e9bf
+[AUDIT] No decision entry for 49d926f6-4502-451b-bac6-ff885dece947
+[AUDIT] No decision entry for 81ebd10b-e683-4ede-b64f-04b1e9a33124
+[AUDIT] No decision entry for e1c29cf5-56fd-4625-9f4c-3245d026ec31
+[AUDIT] No decision entry for ae3f7fcd-f1c0-477a-bbdb-962438bb9fbe
+[AUDIT] No decision entry for 20bfb6fb-da80-43dc-827f-f0947f4bb676
+[AUDIT] No decision entry for 20354f6c-6cae-48e1-bf15-a326d65bde3e
+[AUDIT] No decision entry for a3e9a115-6cc6-459b-b697-8ff53f74950a
+[AUDIT] No decision entry for 3dc9efe8-51bc-4e37-b609-7858d96c6e35
+[AUDIT] No decision entry for 30bce764-8419-4630-90e0-ebfb94dc9e72
+[AUDIT] No decision entry for a84fd2f5-7db3-4515-8eac-9b4eaf1eb458
+[AUDIT] No decision entry for b21485b6-ca98-4bb0-9920-17315e390930
+[AUDIT] No decision entry for 8f479f1f-43d5-476b-82f7-3f2b22d8a2b9
+[AUDIT] No decision entry for a3fc528a-9205-4a0c-844b-30f304aff822
+[AUDIT] No decision entry for d7896482-a0a9-45c2-ab73-cdb4b8e5f834
+[AUDIT] No decision entry for 3ddf766c-b099-4ea6-9759-17573f75dd28
+[AUDIT] No decision entry for 7f17ceab-9b7c-4ba9-a897-af56c2cf0243
+[AUDIT] No decision entry for adfb5e51-69a2-4d1e-86f4-79dae906f774
+[AUDIT] No decision entry for 60fe8328-cc71-44d0-b692-5bd4673c8cd7
+[AUDIT] No decision entry for 01c9bfe5-2c30-42ca-ba18-81091cb50c49
+[AUDIT] No decision entry for 16826477-5abf-4915-b0fa-ee807baec8b6
+[AUDIT] No decision entry for 11371a94-00df-4802-9736-4b1a3884d640
+[AUDIT] No decision entry for 3a3c86c3-a7f2-488e-8ff5-a7e7359d97d4
+[AUDIT] No decision entry for ae5ddb2e-fff5-417b-8e5f-f4ab9e7d9f8a
+[AUDIT] No decision entry for 7398ef63-7c92-4d00-b730-f505590d784d
+[AUDIT] No decision entry for 6d8a1200-1f75-4c3a-811b-6ffb660ddb18
+[AUDIT] No decision entry for 5833b369-50cf-4e17-a8c3-0683a553c8da
+[AUDIT] No decision entry for fa6a7566-471e-4ad8-bfbe-374f279be1d5
+[AUDIT] No decision entry for b9efd319-1e91-410c-a804-b7885abf273a
+[AUDIT] No decision entry for 0a17bf0d-b159-419b-9308-92815d19b722
+[AUDIT] No decision entry for 62672c76-fb56-4ca9-a932-4713d73d097c
+[AUDIT] No decision entry for 019f4d5d-8704-4477-a676-efbf46333828
+[AUDIT] No decision entry for 275b61ab-2c0d-485f-988e-dc45c69db7f5
+[AUDIT] No decision entry for cd1be26b-c185-459b-8145-01fbef55e600
+[AUDIT] No decision entry for a4a1fc1a-c31a-408c-bb30-be6dd91db9bd
+[AUDIT] No decision entry for 2b574211-2bbe-4af8-9adb-d8374f10b960
+[AUDIT] No decision entry for 6aa76693-0509-485e-bd44-27301ec0eeea
+[AUDIT] No decision entry for 7849587c-71bd-49aa-9cab-31fce346d936
+[AUDIT] No decision entry for 4da50e1a-5c87-42ad-94c0-156e17934b79
+[AUDIT] No decision entry for a8fc4510-680e-4cda-9f52-91947d00bd0b
+[AUDIT] No decision entry for c9c91f61-d234-4258-80fc-df6ffd5b6b22
+[AUDIT] No decision entry for 1253cb5e-f891-4005-ab3f-fb9088ba90be
+[AUDIT] No decision entry for 54ef70d3-596c-4ff2-8d8a-ceb3a9094043
+[AUDIT] No decision entry for 11c10346-d252-41d6-9f71-15d3df08de77
+[AUDIT] No decision entry for b9bbb6c4-d72c-4a47-aee2-0c2139d747d9
+[AUDIT] No decision entry for de10a4ff-8ca5-4e9f-8e54-095d9e3a70c2
+I0000 00:00:1781197111.793138   31900 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for ce8300af-7758-497f-8948-4049e3c2629b
+[AUDIT] No decision entry for a1def106-2f39-4e29-ac7a-e16c7502e6ee
+[AUDIT] No decision entry for 2e551189-6140-4c1f-9b55-fd431566ffe6
+[AUDIT] No decision entry for 7b406ddd-9a3d-4d48-b338-4306f60bea46
+[AUDIT] No decision entry for bbe3feac-1c2c-4d53-8b6e-2e6e12770410
+[AUDIT] No decision entry for e47684e7-0bbe-4a26-92e7-1849d7f545e9
+[AUDIT] No decision entry for 9527ea76-6883-43df-bb39-21bd122b20e1
+[AUDIT] No decision entry for da2c36e1-59a7-4e3e-92c8-74ddc2c48360
+[AUDIT] No decision entry for 29fd6e55-d5fa-4630-b956-dd090de42a09
+[AUDIT] No decision entry for 769d20ed-76a0-428b-8e53-78e9ad64f1a9
+[AUDIT] No decision entry for 354752a7-f6c1-4082-8c10-6db6c57cf597
+[AUDIT] No decision entry for 2baf0af9-8bb8-4a11-91e2-488499dee118
+[AUDIT] No decision entry for 4f74d9e4-b5d2-4a91-b61e-0a1282e630e4
+[AUDIT] No decision entry for 36674426-169d-41a7-b0c2-7d3a18c40540
+[AUDIT] No decision entry for c10b3f87-fd5f-4fe2-9af1-733298b8de86
+[AUDIT] No decision entry for 777a6b78-1c55-4574-b856-ee2d4ca80353
+[AUDIT] No decision entry for 1df2d865-1bf0-4480-af6c-f0f275371dd1
+[AUDIT] No decision entry for 91726b5d-5a4d-402f-a661-e14f1cb61b86
+[AUDIT] No decision entry for f85ae6b7-211e-4435-b2ad-67f37e8ba00a
+[AUDIT] No decision entry for 7e144eb9-306b-41f2-bbf1-b02ea7ef5185
+[AUDIT] No decision entry for 179826d8-35dc-4787-ac90-2e7297e22af5
+[AUDIT] No decision entry for 4bf12323-1808-4cec-9346-969516f8af26
+[AUDIT] No decision entry for aa59649b-5e2a-4b50-a001-2baf7e595f55
+I0000 00:00:1781197127.501469   37760 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for e08d30c4-d070-4a92-b68d-692b6fdfc8c5
+[AUDIT] No decision entry for 78267d93-9891-41b9-b0da-606b3eda33db
+[AUDIT] No decision entry for 3005af99-6296-4559-96c2-285bce1ee0d7
+[AUDIT] No decision entry for 73dd688c-c1a1-4802-bfef-235ea2a910d2
+[AUDIT] No decision entry for ebaa43f2-aa6f-4b40-a036-ad9518103aff
+[AUDIT] No decision entry for 86c1590e-52a8-45d3-95d7-3e3e7f0f63b5
+[AUDIT] No decision entry for c745c6e4-bf98-44ef-a441-b09316737c65
+[AUDIT] No decision entry for 10cee5c3-f3c2-4500-8bae-afadabe519dc
+[AUDIT] No decision entry for b85b0ca0-26fd-488c-bcf3-ef7eef62894d
+[AUDIT] No decision entry for 6b33a27c-d09a-4bc4-b1e3-4e72828a8a4f
+[AUDIT] No decision entry for 136f6664-fdcb-4e0a-b107-7df7ea43bcee
+[AUDIT] No decision entry for 13bd3bef-e7fa-4a68-8c49-83974256d6f0
+[AUDIT] No decision entry for 521f2e79-ce6e-468b-b186-1b0f64f4d65b
+I0000 00:00:1781197135.821570   27256 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 9e4edb4f-79d9-4f50-8d15-dd9bcc92ac68
+[AUDIT] No decision entry for fa1cd857-1cbe-45b1-afb9-09a223984f12
+[AUDIT] No decision entry for 3712e4bc-546f-4b3f-87d6-764c2402484c
+[AUDIT] No decision entry for 17317b80-37ac-4f0f-9655-cba44aaeda5f
+[AUDIT] No decision entry for 390d343e-fa28-439d-b5df-6f9db2a28703
+[AUDIT] No decision entry for 314a81aa-1320-4d11-a5b6-8eefb88b912a
+[AUDIT] No decision entry for 26d17af3-634b-4b1e-91ce-b1c5ddcd64ce
+[AUDIT] No decision entry for c827b0b9-241a-422e-9982-92889fe331e4
+[AUDIT] No decision entry for ea32adc7-85d2-467a-b9cb-75802bee3c2c
+[AUDIT] No decision entry for 7a0c1e74-a96b-4a43-86d6-a7f0939961e3
+[AUDIT] No decision entry for 5803a964-69e6-4c4f-a71e-6e6d68edc6e2
+[AUDIT] No decision entry for cbbc0b43-9cfb-4036-9a37-abf38a228a66
+I0000 00:00:1781197143.861006   43488 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for c4bb9e45-0a69-4bd7-ae14-d002e54443ee
+[AUDIT] No decision entry for 6feb8a55-27f2-48a2-848b-1b81fb914b1b
+[AUDIT] No decision entry for 02350ab1-af7d-4880-a1cb-108f96e0ed5a
+[AUDIT] No decision entry for dbeafcee-2bcd-423f-9628-f3edbf99069f
+[AUDIT] No decision entry for c0fcc986-5c8f-4c58-87a4-933d2dc31fae
+I0000 00:00:1781197147.171518   43488 ssl_transport_security.cc:1884] Handshake failed with error SSL_ERROR_SSL: error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate
+[AUDIT] No decision entry for 78618e25-04ce-46e3-a7cc-5a6d0ece2839

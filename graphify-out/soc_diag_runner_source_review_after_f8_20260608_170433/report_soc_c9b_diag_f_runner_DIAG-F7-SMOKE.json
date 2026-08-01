@@ -1,0 +1,413 @@
+{
+  "started_epoch": 1780962814.5056689,
+  "graph_name": "soc_graph_diag_f7",
+  "backend_url": "http://localhost:8001",
+  "prefix": "DIAG-F7-SMOKE",
+  "runner_ci_platform_import_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform\\ci_platform\\graph\\age_graph_store.py",
+  "runner_graph_dsn_redacted": "host=localhost port=5433 dbname=soc_copilot user=postgres password=***",
+  "runner_age_env": {
+    "GRAPH_BACKEND": "age",
+    "GRAPH_DSN": "host=localhost port=5433 dbname=soc_copilot user=postgres password=***",
+    "AGE_GRAPH_NAME": "soc_graph_diag_f7"
+  },
+  "runner_age_readback_status": "ok",
+  "runner_age_readback_attempts": 1,
+  "runner_age_error": null,
+  "rule40_validated": true,
+  "backend_contract": {
+    "graph_name": "soc_graph_diag_f7",
+    "backend_port": 8001,
+    "graph_dsn_redacted": "host=localhost port=5433 dbname=soc_copilot user=postgres password=***",
+    "soc_learning_enabled": "true",
+    "pythonpath": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform;C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend",
+    "ci_platform_import_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform\\ci_platform\\graph\\age_graph_store.py",
+    "launched_at": "2026-06-08T16:51:14.4940872-07:00"
+  },
+  "health": {
+    "status": "healthy",
+    "components": {
+      "posterior_store": {
+        "healthy": true
+      }
+    }
+  },
+  "dry_run": false,
+  "scenario": "diagnostic-f-dk",
+  "scenario_config": {
+    "name": "diagnostic-f-dk",
+    "target_category": "credential_access",
+    "target_outcomes": 10,
+    "max_attempts": 15,
+    "allowed_actions": [
+      "escalate",
+      "investigate",
+      "monitor",
+      "suppress"
+    ],
+    "skip_actions": [
+      "refer_to_analyst"
+    ],
+    "milestones": [
+      195,
+      200,
+      201,
+      205,
+      230,
+      250
+    ],
+    "input_provider": "fixed_c9b_stream",
+    "pass_criteria": [
+      "target_outcomes",
+      "l5_dk_weight",
+      "welford",
+      "dk_n_decisions_used"
+    ]
+  },
+  "mode": "streaming",
+  "max_attempts": 15,
+  "seed_count": 15,
+  "target_outcomes": 10,
+  "batch_size": 10,
+  "sanity_count": 1,
+  "seed_strategy": "direct-age",
+  "graph_dsn_source": "--graph-dsn or runner localhost default",
+  "seed_sleep_seconds": 0.15,
+  "attempt_sleep_seconds": 0.05,
+  "batch_sleep_seconds": 2.0,
+  "seed_timeout_seconds": 60.0,
+  "seed_max_retries": 3,
+  "max_seed_failures": 3,
+  "http_timeout_seconds": 120.0,
+  "http_max_retries": 3,
+  "http_retry_backoff_seconds": "1,3,5",
+  "http_retry_backoffs": [
+    1.0,
+    3.0,
+    5.0
+  ],
+  "preflight_seed_count": 5,
+  "seed_contract_source": "duplicated_from_current_seed_contract",
+  "seed_contract_todo": "P3: reuse scripts/soc_c9b_seed_alerts.py when a small proof-mode interface exists.",
+  "seed_shape": {
+    "alert_type": "anomalous_login",
+    "category": "credential_access",
+    "severity": "critical",
+    "risk_score": 0.92,
+    "asset_criticality": "critical",
+    "mfa_completed": false,
+    "device_fingerprint_match": false
+  },
+  "seed_attempted_count": 10,
+  "seed_completed_count": 10,
+  "seeded_alerts": 10,
+  "seed_failures": 0,
+  "seeded_alerts_readback": 10,
+  "current_attempt_index": 10,
+  "current_batch_index": null,
+  "current_batch_start": 10,
+  "current_batch_end": 10,
+  "seed_retries": 0,
+  "last_seed_error": null,
+  "latest_http_error": null,
+  "latest_timeout_recovery_action": null,
+  "analyze_retries": 0,
+  "outcome_retries": 0,
+  "analyze_timeout_recovered_by_readback": 0,
+  "outcome_timeout_recovered_by_readback": 0,
+  "latest_seed_seconds": 0.783,
+  "latest_analyze_seconds": 5.208,
+  "latest_outcome_seconds": 3.155,
+  "latest_readback_seconds": 0.521,
+  "avg_analyze_seconds": 4.483,
+  "avg_outcome_seconds": 3.221,
+  "max_analyze_seconds": 5.208,
+  "max_outcome_seconds": 3.396,
+  "analyze_attempts": 10,
+  "outcome_attempts": 10,
+  "valid_outcomes": 10,
+  "skipped_refer_to_analyst": 0,
+  "other_categories": 0,
+  "other_action_skips": 0,
+  "one_process_loop": true,
+  "latest_alert_id": "DIAG-F7-SMOKE-0010",
+  "latest_action": "investigate",
+  "latest_confidence": 0.9909440986111311,
+  "progress_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\scratch\\temp\\soc_diag_f_progress.json",
+  "failures": [],
+  "last_successful_phase": "age_readback_completed",
+  "exception": null,
+  "milestones": {},
+  "progress_readbacks": {},
+  "loops": [
+    {
+      "alert_id": "DIAG-F7-SMOKE-0001",
+      "analyze_status": 200,
+      "outcome_status": 200,
+      "category": "credential_access",
+      "action": "investigate",
+      "confidence": 0.8770461205137833,
+      "decision_id": "f1cef0c6-aa95-400d-b62c-7c3ee4e56c1f",
+      "outcome_id": null,
+      "skipped_reason": null,
+      "analyze_recovered_by_readback": false,
+      "outcome_recovered_by_readback": false,
+      "seed_seconds": null,
+      "analyze_seconds": 3.811,
+      "outcome_seconds": 3.396,
+      "analyze_retry_count": 0,
+      "outcome_retry_count": 0
+    },
+    {
+      "alert_id": "DIAG-F7-SMOKE-0002",
+      "analyze_status": 200,
+      "outcome_status": 200,
+      "category": "credential_access",
+      "action": "investigate",
+      "confidence": 0.9102820463848372,
+      "decision_id": "b405b3ac-9f3a-4821-b595-3aa34df2755f",
+      "outcome_id": null,
+      "skipped_reason": null,
+      "analyze_recovered_by_readback": false,
+      "outcome_recovered_by_readback": false,
+      "seed_seconds": null,
+      "analyze_seconds": 4.151,
+      "outcome_seconds": 3.188,
+      "analyze_retry_count": 0,
+      "outcome_retry_count": 0
+    },
+    {
+      "alert_id": "DIAG-F7-SMOKE-0003",
+      "analyze_status": 200,
+      "outcome_status": 200,
+      "category": "credential_access",
+      "action": "investigate",
+      "confidence": 0.934466659781363,
+      "decision_id": "a8a823b4-b2ba-4395-b5ee-a575f00b6012",
+      "outcome_id": null,
+      "skipped_reason": null,
+      "analyze_recovered_by_readback": false,
+      "outcome_recovered_by_readback": false,
+      "seed_seconds": null,
+      "analyze_seconds": 4.113,
+      "outcome_seconds": 3.195,
+      "analyze_retry_count": 0,
+      "outcome_retry_count": 0
+    },
+    {
+      "alert_id": "DIAG-F7-SMOKE-0004",
+      "analyze_status": 200,
+      "outcome_status": 200,
+      "category": "credential_access",
+      "action": "investigate",
+      "confidence": 0.9519262035604401,
+      "decision_id": "00016fdc-e3fd-4fe6-9a4e-1ff4a933e3db",
+      "outcome_id": null,
+      "skipped_reason": null,
+      "analyze_recovered_by_readback": false,
+      "outcome_recovered_by_readback": false,
+      "seed_seconds": null,
+      "analyze_seconds": 4.211,
+      "outcome_seconds": 3.172,
+      "analyze_retry_count": 0,
+      "outcome_retry_count": 0
+    },
+    {
+      "alert_id": "DIAG-F7-SMOKE-0005",
+      "analyze_status": 200,
+      "outcome_status": 200,
+      "category": "credential_access",
+      "action": "investigate",
+      "confidence": 0.964500221047202,
+      "decision_id": "0a89ac6a-baba-4e03-85c3-b6b2cf9af219",
+      "outcome_id": null,
+      "skipped_reason": null,
+      "analyze_recovered_by_readback": false,
+      "outcome_recovered_by_readback": false,
+      "seed_seconds": null,
+      "analyze_seconds": 4.343,
+      "outcome_seconds": 3.184,
+      "analyze_retry_count": 0,
+      "outcome_retry_count": 0
+    },
+    {
+      "alert_id": "DIAG-F7-SMOKE-0006",
+      "analyze_status": 200,
+      "outcome_status": 200,
+      "category": "credential_access",
+      "action": "investigate",
+      "confidence": 0.9735686342937944,
+      "decision_id": "c203f704-852b-4257-9079-70e3075d6a40",
+      "outcome_id": null,
+      "skipped_reason": null,
+      "analyze_recovered_by_readback": false,
+      "outcome_recovered_by_readback": false,
+      "seed_seconds": null,
+      "analyze_seconds": 4.284,
+      "outcome_seconds": 3.246,
+      "analyze_retry_count": 0,
+      "outcome_retry_count": 0
+    },
+    {
+      "alert_id": "DIAG-F7-SMOKE-0007",
+      "analyze_status": 200,
+      "outcome_status": 200,
+      "category": "credential_access",
+      "action": "investigate",
+      "confidence": 0.9801231270995451,
+      "decision_id": "f69cfd14-aef4-4846-a917-c736bac254ff",
+      "outcome_id": null,
+      "skipped_reason": null,
+      "analyze_recovered_by_readback": false,
+      "outcome_recovered_by_readback": false,
+      "seed_seconds": null,
+      "analyze_seconds": 4.419,
+      "outcome_seconds": 3.136,
+      "analyze_retry_count": 0,
+      "outcome_retry_count": 0
+    },
+    {
+      "alert_id": "DIAG-F7-SMOKE-0008",
+      "analyze_status": 200,
+      "outcome_status": 200,
+      "category": "credential_access",
+      "action": "investigate",
+      "confidence": 0.9848788369226502,
+      "decision_id": "f4c93bbc-3be8-4fc8-855a-63511f3aa6f2",
+      "outcome_id": null,
+      "skipped_reason": null,
+      "analyze_recovered_by_readback": false,
+      "outcome_recovered_by_readback": false,
+      "seed_seconds": null,
+      "analyze_seconds": 5.097,
+      "outcome_seconds": 3.255,
+      "analyze_retry_count": 0,
+      "outcome_retry_count": 0
+    },
+    {
+      "alert_id": "DIAG-F7-SMOKE-0009",
+      "analyze_status": 200,
+      "outcome_status": 200,
+      "category": "credential_access",
+      "action": "investigate",
+      "confidence": 0.9883641249267874,
+      "decision_id": "701496aa-4da0-4881-8321-7a4b1e9f098a",
+      "outcome_id": null,
+      "skipped_reason": null,
+      "analyze_recovered_by_readback": false,
+      "outcome_recovered_by_readback": false,
+      "seed_seconds": null,
+      "analyze_seconds": 5.194,
+      "outcome_seconds": 3.287,
+      "analyze_retry_count": 0,
+      "outcome_retry_count": 0
+    },
+    {
+      "alert_id": "DIAG-F7-SMOKE-0010",
+      "analyze_status": 200,
+      "outcome_status": 200,
+      "category": "credential_access",
+      "action": "investigate",
+      "confidence": 0.9909440986111311,
+      "decision_id": "32bf40fa-2c1f-4b80-b676-b15db86bc7d5",
+      "outcome_id": null,
+      "skipped_reason": null,
+      "analyze_recovered_by_readback": false,
+      "outcome_recovered_by_readback": false,
+      "seed_seconds": null,
+      "analyze_seconds": 5.208,
+      "outcome_seconds": 3.155,
+      "analyze_retry_count": 0,
+      "outcome_retry_count": 0
+    }
+  ],
+  "readback": {
+    "decisions": [
+      {
+        "cnt": 10
+      }
+    ],
+    "verified": [
+      {
+        "cnt": 10
+      }
+    ],
+    "outcome_present": [
+      {
+        "cnt": 10
+      }
+    ],
+    "l5_centroid": [
+      {
+        "cnt": 1
+      }
+    ],
+    "shaped_by": [
+      {
+        "cnt": 1
+      }
+    ],
+    "l5_dk_weight": [
+      {
+        "cnt": 0
+      }
+    ],
+    "dk_welford_rows": []
+  },
+  "verdict": "L5DKWEIGHT_MISSING",
+  "exit_code": 1,
+  "proof_passed": false,
+  "criteria_failures": [
+    "L5DKWeight count is 0"
+  ],
+  "report_json_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_DIAG-F7-SMOKE.json",
+  "report_md_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_DIAG-F7-SMOKE.md",
+  "backend_runtime_contract_statement": "Backend import path cannot be directly introspected without a debug endpoint; proof assumes backend was launched by run_soc_diag_backend.ps1 or demo.py --diag-mode with matching graph/env.",
+  "runner_age_readback": [
+    {
+      "total": 1
+    }
+  ],
+  "_seed_seconds_values": [
+    0.857,
+    0.811,
+    0.797,
+    0.768,
+    0.823,
+    0.697,
+    0.824,
+    0.885,
+    0.671,
+    0.783
+  ],
+  "avg_seed_seconds": 0.792,
+  "max_seed_seconds": 0.885,
+  "_analyze_seconds_values": [
+    3.811,
+    4.151,
+    4.113,
+    4.211,
+    4.343,
+    4.284,
+    4.419,
+    5.097,
+    5.194,
+    5.208
+  ],
+  "_outcome_seconds_values": [
+    3.396,
+    3.188,
+    3.195,
+    3.172,
+    3.184,
+    3.246,
+    3.136,
+    3.255,
+    3.287,
+    3.155
+  ],
+  "_readback_seconds_values": [
+    0.521
+  ],
+  "avg_readback_seconds": 0.521,
+  "max_readback_seconds": 0.521
+}

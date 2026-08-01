@@ -1,0 +1,84 @@
+=== Campaign v6.0 Context Injection — Pre-Design Discovery Scan ===
+Timestamp: 2026-06-17T11:50:20.0570823-07:00
+Repo: C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50
+Mode: read-only PowerShell scan
+Git used: NO
+Servers started/stopped: NO
+
+
+>>> SCAN 1A: CampaignMatch references
+
+
+>>> SCAN 1B: CampaignMatch class body
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\scratch\temp\campaign_v6_scan_c8dd0678116e4010a5cb19af1769b5b5.py", line 9
+    print("--- CampaignMatch class body ---")
+    ^
+IndentationError: expected an indented block after 'if' statement on line 8
+
+
+>>> SCAN 2: check_alert return type/value
+
+
+>>> SCAN 2B: check_alert implementation excerpt
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\scratch\temp\campaign_v6_scan_78890b54d0b24f19862f3befefde5d80.py", line 8
+    m = re.search(rf"(?ms)^\s*(async\s+def|def)\s+{name}\b.*?(?=^\s*(async\s+def|def)\s+|\nclass |\Z)", content)
+    ^
+IndentationError: expected an indented block after 'for' statement on line 7
+
+
+>>> SCAN 3A: CampaignAsyncState cache/index/pending structure
+
+
+>>> SCAN 3B: CampaignAsyncState class body
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\scratch\temp\campaign_v6_scan_a40dbfeb830b4844801a92193ba5dac7.py", line 9
+    print("--- CampaignAsyncState class body ---")
+    ^
+IndentationError: expected an indented block after 'if' statement on line 8
+
+
+>>> SCAN 4: SOC situation context builder candidates
+
+
+>>> SCAN 5: triage.py campaign/check_alert/situation usage
+
+
+>>> SCAN 5B: triage.py local campaign/check_alert excerpts
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\scratch\temp\campaign_v6_scan_6a5c66162cd240d598c19e8eca5bd49f.py", line 5
+    print("[MISS] triage.py not found")
+    ^
+IndentationError: expected an indented block after 'if' statement on line 4
+
+
+>>> SCAN 6: Evidence/advisory/narration/template candidates
+
+
+>>> SCAN 7: Campaign node properties in campaigns.py
+
+
+>>> SCAN 7B: campaign write/read property excerpts
+  File "C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\scratch\temp\campaign_v6_scan_ba2023c987ad4cfb9ef10fcabc665bef.py", line 17
+    m = re.search(rf"(?ms)^\s*(async\s+def|def)\s+{name}\b.*?(?=^\s*(async\s+def|def)\s+|\nclass |\Z)", content)
+    ^
+IndentationError: expected an indented block after 'for' statement on line 16
+
+
+>>> SCAN 8: Graph state from latest Phase 3B closeout
+Latest known live closeout:
+Campaign nodes: 259
+MEMBER_OF edges: 520
+CampaignSeed total: 104
+Distinct seed keys: 104
+Duplicate seed keys: 0
+CONTINUES edges: 0
+BELONGS_TO edges: 0
+M8 p95: 1.8458ms
+M8 cache-hit path observed: 100/100
+M8 AGE campaign lookup skipped on cache hit: YES, 0 campaign lookup queries
+Measured/proven identity path: shared_entity
+Broader trigger_rule / temporal / null lookup: OPEN P3
+
+
+>>> SCAN 9: Existing campaign context in responses/schemas/tests
+
+
+>>> SCAN 10: Verdict guide for Roadmap

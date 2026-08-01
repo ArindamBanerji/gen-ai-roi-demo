@@ -32,7 +32,7 @@ import math
 import os
 import sys
 
-from copilot_sdk.config import GraphConfig
+from copilot_sdk.config import GraphConfig, require_shared_graph
 
 log = logging.getLogger(__name__)
 
@@ -207,9 +207,13 @@ _DATA_LABELS = ["Decision", "Alert"]
 _DATA_ORIGINS = [SYNTHETIC_ORIGIN, DEMO_ORIGIN]
 
 
-def _configured_age_client(graph_name: str | None = None):
-    """Build an AGE client from the canonical SOC graph configuration."""
-    config = GraphConfig.load("soc")
+def _configured_age_client(
+    graph_name: str | None = None,
+    *,
+    profile: str = "production",
+):
+    """Build the authorized DDL client from canonical SOC configuration."""
+    config = GraphConfig.load("soc", profile=profile)
     if config.backend != "age":
         raise RuntimeError(
             "SOC graph seeding requires GraphConfig backend=age; "
@@ -220,8 +224,38 @@ def _configured_age_client(graph_name: str | None = None):
     target_graph = (graph_name or config.graph).strip()
     if not target_graph:
         raise ValueError("An explicit AGE target graph is required for seeding")
+    require_shared_graph(
+        backend=config.backend,
+        graph=target_graph,
+        domain=config.domain,
+        profile=profile,
+        test_mode=config.active_test_mode,
+    )
     from ci_platform.graph import get_graph_client
     return get_graph_client(config.dsn, target_graph)
+
+
+def _configured_graph_store(graph_name: str, *, profile: str = "production"):
+    """Build the authorized GraphStore used for Decision seed writes."""
+    from copilot_sdk.graph.factory import create_graph_store
+
+    config = GraphConfig.load("soc", profile=profile)
+    require_shared_graph(
+        backend=config.backend,
+        graph=graph_name,
+        domain=config.domain,
+        profile=profile,
+        test_mode=config.active_test_mode,
+    )
+    return create_graph_store(
+        backend=config.backend,
+        domain=config.domain,
+        dsn=config.dsn,
+        graph_name=graph_name,
+        profile=profile,
+        test_mode=config.active_test_mode,
+        shared_graph_authorization=config.authorized,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -457,6 +491,7 @@ async def seed_graph(
     *,
     graph_name=None,
     allow_production_seed=False,
+    profile="production",
 ):
     """Create complete graph from zero_day_decisions_v5.json.
 
@@ -483,14 +518,15 @@ async def seed_graph(
             "An explicit target graph is required for synthetic seeding"
         )
     target_graph = graph_name.strip()
-    if target_graph == "soc_graph" and not (
+    if profile == "production" and target_graph == "soc_graph" and not (
         allow_production_seed or os.getenv("ALLOW_PRODUCTION_SEED") == "1"
     ):
         raise RuntimeError(
             "Refusing to seed soc_graph without ALLOW_PRODUCTION_SEED=1"
         )
+    graph_store = _configured_graph_store(target_graph, profile=profile)
     if client is None:
-        client = _configured_age_client(target_graph)
+        client = _configured_age_client(target_graph, profile=profile)
 
     users       = data.get("users", [])
     assets      = data.get("assets", [])
@@ -787,22 +823,44 @@ async def seed_graph(
     ok, fail = 0, 0
     for d in decisions:
         try:
-            await client.run_query(
-                "MATCH (a:Alert {alert_id: " + _S(d["alert_id"]) + "}) "
-                "CREATE (dd:Decision {"
-                "decision_id: " + _S(d["decision_id"]) + ", "
-                "domain: 'soc', "
-                "category: " + _S(d["category"]) + ", "
-                "action: " + _S(d["action"]) + ", "
-                "factor_vector: " + _S(d["factor_vector"]) + ", "
-                "confidence: " + _S(d["confidence"]) + ", "
-                "correct: " + _S(d["correct"]) + ", "
-                "outcome: " + _S(d["outcome"]) + ", "
-                "timestamp_epoch: " + _S(d["timestamp_epoch"]) + ", "
-                "origin: " + _S(SYNTHETIC_ORIGIN) + ", "
-                "source_id: " + _S(d.get("source_id", "synthetic")) + ", "
-                "user_id: " + _S(d.get("user_id", "")) +
-                "})-[:DECIDED_ON]->(a)"
+            if graph_store is None:
+                raise RuntimeError(
+                    "Decision seed writes require the authorized GraphStore"
+                )
+            graph_store.write_governed_decision(
+                decision_id=d["decision_id"],
+                domain="soc",
+                category=d["category"],
+                category_index=0,
+                recommended_action=d["action"],
+                recommended_index=0,
+                confidence=float(d["confidence"]),
+                probabilities=[],
+                factor_vector=list(d["factor_vector"]),
+                factor_names=[],
+                source="synthetic_seed",
+                metadata={
+                    "alert_id": d["alert_id"],
+                    "origin": SYNTHETIC_ORIGIN,
+                    "source_id": d.get("source_id", "synthetic"),
+                    "user_id": d.get("user_id", ""),
+                    "timestamp_epoch": d["timestamp_epoch"],
+                },
+            )
+            graph_store.write_outcome(
+                decision_id=d["decision_id"],
+                actual_action=d["action"],
+                is_correct=bool(d["correct"]),
+                domain="soc",
+                outcome=d["outcome"],
+                verified_at_epoch=float(d["timestamp_epoch"]),
+                metadata={"created_at": float(d["timestamp_epoch"])},
+            )
+            graph_store.link_decision_to_entity(
+                decision_id=d["decision_id"],
+                entity_id=d["alert_id"],
+                edge_type="DECIDED_ON",
+                domain="soc",
             )
             ok += 1
         except Exception as exc:

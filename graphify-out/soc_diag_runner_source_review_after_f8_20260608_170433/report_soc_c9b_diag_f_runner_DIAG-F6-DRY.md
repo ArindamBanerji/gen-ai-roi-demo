@@ -1,0 +1,48 @@
+# SOC C9B Diagnostic F Runner Result
+
+- verdict: `BACKEND_UNREACHABLE`
+- exit_code: `1`
+- proof_passed: `False`
+- graph: `soc_graph_diag_f6_dryrun`
+- prefix: `DIAG-F6-DRY`
+- dry_run: `True`
+- scenario: `diagnostic-f-dk`
+- mode: `streaming`
+- input_provider: `fixed_c9b_stream`
+- pass_criteria: `['target_outcomes', 'l5_dk_weight', 'welford', 'dk_n_decisions_used']`
+- max_attempts: `5`
+- seed_attempted_count: `0`
+- seed_completed_count: `0`
+- seeded_alerts: `0`
+- seed_failures: `0`
+- seed_strategy: `direct-age`
+- seed_sleep_seconds: `0.15`
+- attempt_sleep_seconds: `0.05`
+- batch_sleep_seconds: `2.0`
+- max_seed_failures: `3`
+- preflight_seed_count: `5`
+- current_attempt_index: `None`
+- current_batch_index: `None`
+- current_batch_start: `None`
+- current_batch_end: `None`
+- seed_retries: `0`
+- last_seed_error: `None`
+- analyze_attempts: `0`
+- outcome_attempts: `0`
+- valid_outcomes: `0`
+- skipped_refer_to_analyst: `0`
+- other_categories: `0`
+- other_action_skips: `0`
+- last_successful_phase: `backend_contract_validated`
+- criteria_failures: `['/health failed: timed out']`
+- exception: `/health failed: timed out`
+- backend_contract_statement: `Backend import path cannot be directly introspected without a debug endpoint; proof assumes backend was launched by run_soc_diag_backend.ps1 or demo.py --diag-mode with matching graph/env.`
+- report_json: `C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\docs\implementation_plans\soc_c9b_diag_f_runner_DIAG-F6-DRY.json`
+- report_md: `C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\docs\implementation_plans\soc_c9b_diag_f_runner_DIAG-F6-DRY.md`
+- progress_json: `C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\scratch\temp\soc_diag_f_progress.json`
+
+## Graph Hygiene
+- `soc_graph_diag_f3` is contaminated by an analyze-only failed run.
+- `soc_graph_diag_f4` is contaminated by a partial seed failure.
+- `soc_graph_diag_f5` is contaminated by a partial seed failure.
+- Next clean proof graph should be `soc_graph_diag_f6` with prefix `DIAG-F6-CRED`.

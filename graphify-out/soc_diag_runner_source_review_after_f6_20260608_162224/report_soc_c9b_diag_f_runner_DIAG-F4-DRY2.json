@@ -1,0 +1,72 @@
+{
+  "started_epoch": 1780942848.0838597,
+  "graph_name": "soc_graph_diag_f4_dryrun2",
+  "backend_url": "http://127.0.0.1:8001",
+  "prefix": "DIAG-F4-DRY2",
+  "runner_ci_platform_import_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform\\ci_platform\\graph\\age_graph_store.py",
+  "backend_contract": {
+    "mode": "user_asserted",
+    "graph_name": "soc_graph_diag_f4_dryrun2",
+    "graph_dsn_redacted": "host=127.0.0.1 port=5433 dbname=soc_copilot user=postgres password=***",
+    "ci_platform_import_path": null,
+    "statement": "Backend import path cannot be directly introspected without a debug endpoint; proof assumes backend was launched by run_soc_diag_backend.ps1 or demo.py --diag-mode with matching graph/env."
+  },
+  "health": {
+    "status": "healthy",
+    "components": {
+      "posterior_store": {
+        "healthy": true
+      }
+    }
+  },
+  "dry_run": true,
+  "seed_count": 5,
+  "target_outcomes": 2,
+  "batch_size": 5,
+  "sanity_count": 1,
+  "seed_contract_source": "duplicated_from_current_seed_contract",
+  "seed_contract_todo": "P3: reuse scripts/soc_c9b_seed_alerts.py when a small proof-mode interface exists.",
+  "seed_shape": {
+    "alert_type": "anomalous_login",
+    "category": "credential_access",
+    "severity": "critical",
+    "risk_score": 0.92,
+    "asset_criticality": "critical",
+    "mfa_completed": false,
+    "device_fingerprint_match": false
+  },
+  "seed_attempted_count": 0,
+  "seed_completed_count": 0,
+  "seeded_alerts_readback": 0,
+  "analyze_attempts": 0,
+  "outcome_attempts": 0,
+  "valid_outcomes": 0,
+  "skipped_refer_to_analyst": 0,
+  "other_categories": 0,
+  "other_action_skips": 0,
+  "latest_alert_id": null,
+  "latest_action": null,
+  "latest_confidence": null,
+  "progress_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\scratch\\temp\\soc_diag_f_progress.json",
+  "failures": [],
+  "last_successful_phase": "age_graph_ensured",
+  "exception": null,
+  "milestones": {},
+  "progress_readbacks": {},
+  "loops": [],
+  "readback": null,
+  "verdict": "DRY_RUN_ONLY",
+  "exit_code": 0,
+  "criteria_failures": [
+    "dry-run only; no proof loop was executed"
+  ],
+  "report_json_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_DIAG-F4-DRY2.json",
+  "report_md_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_DIAG-F4-DRY2.md",
+  "backend_runtime_contract_statement": "Backend import path cannot be directly introspected without a debug endpoint; proof assumes backend was launched by run_soc_diag_backend.ps1 or demo.py --diag-mode with matching graph/env.",
+  "dry_run_plan": {
+    "seed_batches": 1,
+    "first_alert_id": "DIAG-F4-DRY2-0001",
+    "last_alert_id": "DIAG-F4-DRY2-0005",
+    "note": "dry-run only; this is not Diagnostic F proof"
+  }
+}

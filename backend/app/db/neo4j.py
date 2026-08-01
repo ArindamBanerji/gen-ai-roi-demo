@@ -7,7 +7,7 @@ the GraphConfig-resolved AGE client below.
 import os
 import pathlib as _pathlib
 
-from copilot_sdk.config import GraphConfig, GraphConfigError
+from copilot_sdk.config import GraphConfig, GraphConfigError, require_shared_graph
 
 try:
     from dotenv import load_dotenv as _load_dotenv
@@ -28,6 +28,13 @@ def soc_decision_where(alias: str = "d", active_only: bool = True) -> str:
 try:
     _GRAPH_CONFIG = GraphConfig.load("soc")
     _GRAPH_BACKEND = _GRAPH_CONFIG.backend
+    require_shared_graph(
+        backend=_GRAPH_CONFIG.backend,
+        graph=_GRAPH_CONFIG.graph,
+        domain=_GRAPH_CONFIG.domain,
+        profile="production",
+        test_mode=_GRAPH_CONFIG.active_test_mode,
+    )
 except GraphConfigError:
     if os.getenv("GRAPH_BACKEND", "").strip().lower() == "neo4j":
         raise GraphConfigError(

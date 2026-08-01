@@ -1,0 +1,64 @@
+{
+  "md_report": "x.md",
+  "json_report": "x.json",
+  "result": {
+    "seed_visibility_status": "visible",
+    "backend_contract": {
+      "graph_name": "g",
+      "backend_port": 8001,
+      "mode": "user_asserted"
+    },
+    "analyze_attempts": 1,
+    "readback": {
+      "l5_dk_weight": [
+        {
+          "cnt": 0
+        }
+      ],
+      "verified": [
+        {
+          "cnt": 1
+        }
+      ],
+      "l5_centroid": [
+        {
+          "cnt": 0
+        }
+      ],
+      "dk_welford_rows": [],
+      "decisions": [
+        {
+          "cnt": 1
+        }
+      ],
+      "shaped_by": [
+        {
+          "cnt": 0
+        }
+      ],
+      "outcome_present": [
+        {
+          "cnt": 1
+        }
+      ]
+    },
+    "loops": [
+      {
+        "alert_id": "A1",
+        "analyze_seconds": 0.2,
+        "confidence": 0.9,
+        "outcome_seconds": 0.3,
+        "action": "investigate"
+      }
+    ],
+    "seed_failures": 0,
+    "outcome_attempts": 1,
+    "criteria_failures": [],
+    "verdict": "SMOKE",
+    "valid_outcomes": 1,
+    "prefix": "P",
+    "graph_name": "g",
+    "proof_passed": true,
+    "backend_url": "http://127.0.0.1:8001"
+  }
+}

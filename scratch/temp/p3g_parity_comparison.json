@@ -1,0 +1,133 @@
+{
+  "input_count": 3,
+  "action_parity": true,
+  "confidence_parity": true,
+  "factor_vector_parity": true,
+  "referral_output_parity": true,
+  "decision_metadata_parity": true,
+  "fresh_alert_subject_parity": true,
+  "false_cache": {
+    "enabled": false,
+    "adapter_enabled": true,
+    "hits": 0,
+    "misses": 0,
+    "loads": 0,
+    "invalidations": 0,
+    "evictions": 0,
+    "size": 0,
+    "max_size": 4096
+  },
+  "true_cache": {
+    "enabled": true,
+    "adapter_enabled": true,
+    "hits": 1,
+    "misses": 2,
+    "loads": 2,
+    "invalidations": 0,
+    "evictions": 0,
+    "size": 2,
+    "max_size": 4096
+  },
+  "false_contract": {
+    "launcher": "copilot-sdk/demo.py --diag-mode",
+    "graph_name": "soc_graph_p3g_cache_false_parity_1",
+    "backend_port": 8001,
+    "graph_dsn_redacted": "host=localhost port=5433 dbname=soc_copilot user=postgres password=***",
+    "soc_learning_enabled": "true",
+    "use_entity_cache": "false",
+    "age_use_pool_requested": "true",
+    "age_use_pool": "true",
+    "connection_mode": "warm_fallback",
+    "pool_available": "false",
+    "pythonpath": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform;C:\\Users\\baner\\CopyFolder\\IOT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend",
+    "ci_platform_import_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform\\ci_platform\\graph\\age_graph_store.py",
+    "health_url": "http://127.0.0.1:8001/health",
+    "launched_at": "2026-06-10T07:07:12-0700"
+  },
+  "true_contract": {
+    "launcher": "copilot-sdk/demo.py --diag-mode",
+    "graph_name": "soc_graph_p3g_cache_true_parity_1",
+    "backend_port": 8001,
+    "graph_dsn_redacted": "host=localhost port=5433 dbname=soc_copilot user=postgres password=***",
+    "soc_learning_enabled": "true",
+    "use_entity_cache": "true",
+    "age_use_pool_requested": "true",
+    "age_use_pool": "true",
+    "connection_mode": "warm_fallback",
+    "pool_available": "false",
+    "pythonpath": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform;C:\\Users\\baner\\CopyFolder\\IOT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend",
+    "ci_platform_import_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\ci-platform\\ci_platform\\graph\\age_graph_store.py",
+    "health_url": "http://127.0.0.1:8001/health",
+    "launched_at": "2026-06-10T07:09:30-0700"
+  },
+  "false_avg_elapsed_ms": 256.74,
+  "true_avg_elapsed_ms": 362.345,
+  "per_input": [
+    {
+      "alert_id": "P3GPARITY0610F-0001",
+      "fields": {
+        "action": true,
+        "confidence": true,
+        "routing_zone": true,
+        "factor_vector": true,
+        "factor_names": true,
+        "action_probabilities": true,
+        "category": true,
+        "alert_id": true,
+        "severity": true,
+        "source_location": true,
+        "referral": true,
+        "referral_debug": true,
+        "decision_method": true,
+        "composite_auto_approve": true,
+        "composite_reason_codes": true
+      },
+      "false_elapsed_ms": 639.073,
+      "true_elapsed_ms": 855.657
+    },
+    {
+      "alert_id": "P3GPARITY0610F-0002",
+      "fields": {
+        "action": true,
+        "confidence": true,
+        "routing_zone": true,
+        "factor_vector": true,
+        "factor_names": true,
+        "action_probabilities": true,
+        "category": true,
+        "alert_id": true,
+        "severity": true,
+        "source_location": true,
+        "referral": true,
+        "referral_debug": true,
+        "decision_method": true,
+        "composite_auto_approve": true,
+        "composite_reason_codes": true
+      },
+      "false_elapsed_ms": 61.048,
+      "true_elapsed_ms": 104.364
+    },
+    {
+      "alert_id": "P3GPARITY0610F-0003",
+      "fields": {
+        "action": true,
+        "confidence": true,
+        "routing_zone": true,
+        "factor_vector": true,
+        "factor_names": true,
+        "action_probabilities": true,
+        "category": true,
+        "alert_id": true,
+        "severity": true,
+        "source_location": true,
+        "referral": true,
+        "referral_debug": true,
+        "decision_method": true,
+        "composite_auto_approve": true,
+        "composite_reason_codes": true
+      },
+      "false_elapsed_ms": 70.1,
+      "true_elapsed_ms": 127.014
+    }
+  ]
+}

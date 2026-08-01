@@ -1,0 +1,96 @@
+[SOC DIAG F] starting scenario=c9b-final-proof graph=soc_graph_a1_scale_500_1 prefix=A1SCALE500 max_attempts=800 target_outcomes=500 mode=streaming backend_url=http://127.0.0.1:8001
+[SOC DIAG F] backend contract verified for graph=soc_graph_a1_scale_500_1
+[SOC DIAG F] /health OK payload={'status': 'healthy', 'components': {'posterior_store': {'healthy': True}, 'entity_cache': {'enabled': False, 'adapter_enabled': True, 'hits': 0, 'misses': 0, 'loads': 0, 'invalidations': 0, 'evictions': 0, 'size': 0, 'max_size': 4096}}}
+[SOC DIAG F] runner AGE readback OK graph=soc_graph_a1_scale_500_1 dsn=host=localhost port=5433 dbname=soc_copilot user=postgres password=*** attempts=1
+[SOC DIAG F] streaming proof starting max_attempts=800 target_outcomes=500 sanity_count=1
+[SOC DIAG F] sanity streaming phase starting count=1
+[SOC DIAG F] sanity outcome POST status=200 alert_id=A1SCALE500-0001 decision_id=1328ea99-507a-4710-ac33-8406399e3c62 valid_outcomes=1
+[SOC DIAG F] sanity attempt=1 alert_id=A1SCALE500-0001 category=credential_access action=investigate decision_id=1328ea99-507a-4710-ac33-8406399e3c62 outcome_status=200 valid=True
+[SOC DIAG F] sanity PASS valid_outcomes=1
+[SOC DIAG F] progress valid=25 attempts=25 current_attempt=25 latest=A1SCALE500-0025 outcome_status=200 action=investigate confidence=0.9992334005651832 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 25, 'verified': 25, 'outcome_present': 25, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 0} elapsed=14.71s
+[SOC DIAG F] progress valid=50 attempts=50 current_attempt=50 latest=A1SCALE500-0050 outcome_status=200 action=investigate confidence=0.999771004956509 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 50, 'verified': 50, 'outcome_present': 50, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 0} elapsed=29.1s
+[SOC DIAG F] progress valid=75 attempts=75 current_attempt=75 latest=A1SCALE500-0075 outcome_status=200 action=investigate confidence=0.9997821707782661 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 75, 'verified': 75, 'outcome_present': 75, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 0} elapsed=44.74s
+[SOC DIAG F] progress valid=100 attempts=100 current_attempt=100 latest=A1SCALE500-0100 outcome_status=200 action=investigate confidence=0.9997822847031783 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 100, 'verified': 100, 'outcome_present': 100, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 0} elapsed=59.22s
+[SOC DIAG F] progress valid=125 attempts=125 current_attempt=125 latest=A1SCALE500-0125 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 125, 'verified': 125, 'outcome_present': 125, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=73.46s
+[SOC DIAG F] progress valid=150 attempts=150 current_attempt=150 latest=A1SCALE500-0150 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 150, 'verified': 150, 'outcome_present': 150, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=87.52s
+[SOC DIAG F] progress valid=175 attempts=175 current_attempt=175 latest=A1SCALE500-0175 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 175, 'verified': 175, 'outcome_present': 175, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=101.6s
+[SOC DIAG F] milestone 195 attempt=195 alert_id=A1SCALE500-0195 outcome_status=200 action=investigate confidence=0.99978228493453 readback={'decisions': 195, 'verified': 195, 'outcome_present': 195, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=112.6s
+[SOC DIAG F] milestone 200 attempt=200 alert_id=A1SCALE500-0200 outcome_status=200 action=investigate confidence=0.99978228493453 readback={'decisions': 200, 'verified': 200, 'outcome_present': 200, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=115.47s
+[SOC DIAG F] milestone 201 attempt=201 alert_id=A1SCALE500-0201 outcome_status=200 action=investigate confidence=0.99978228493453 readback={'decisions': 201, 'verified': 201, 'outcome_present': 201, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=116.02s
+[SOC DIAG F] milestone 205 attempt=205 alert_id=A1SCALE500-0205 outcome_status=200 action=investigate confidence=0.99978228493453 readback={'decisions': 205, 'verified': 205, 'outcome_present': 205, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=118.4s
+[SOC DIAG F] progress valid=225 attempts=225 current_attempt=225 latest=A1SCALE500-0225 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 225, 'verified': 225, 'outcome_present': 225, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=129.81s
+[SOC DIAG F] milestone 230 attempt=230 alert_id=A1SCALE500-0230 outcome_status=200 action=investigate confidence=0.99978228493453 readback={'decisions': 230, 'verified': 230, 'outcome_present': 230, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=132.69s
+[SOC DIAG F] milestone 250 attempt=250 alert_id=A1SCALE500-0250 outcome_status=200 action=investigate confidence=0.99978228493453 readback={'decisions': 250, 'verified': 250, 'outcome_present': 250, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=144.07s
+[SOC DIAG F] progress valid=275 attempts=275 current_attempt=275 latest=A1SCALE500-0275 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 275, 'verified': 275, 'outcome_present': 275, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=158.69s
+[SOC DIAG F] progress valid=300 attempts=300 current_attempt=300 latest=A1SCALE500-0300 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 300, 'verified': 300, 'outcome_present': 300, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=173.2s
+[SOC DIAG F] progress valid=325 attempts=325 current_attempt=325 latest=A1SCALE500-0325 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 325, 'verified': 325, 'outcome_present': 325, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=187.94s
+[SOC DIAG F] progress valid=350 attempts=350 current_attempt=350 latest=A1SCALE500-0350 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 350, 'verified': 350, 'outcome_present': 350, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=203.24s
+[SOC DIAG F] progress valid=375 attempts=375 current_attempt=375 latest=A1SCALE500-0375 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 375, 'verified': 375, 'outcome_present': 375, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=218.07s
+[SOC DIAG F] progress valid=400 attempts=400 current_attempt=400 latest=A1SCALE500-0400 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 400, 'verified': 400, 'outcome_present': 400, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=232.79s
+[SOC DIAG F] progress valid=425 attempts=425 current_attempt=425 latest=A1SCALE500-0425 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 425, 'verified': 425, 'outcome_present': 425, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=247.88s
+[SOC DIAG F] progress valid=450 attempts=450 current_attempt=450 latest=A1SCALE500-0450 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 450, 'verified': 450, 'outcome_present': 450, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=263.72s
+[SOC DIAG F] progress valid=475 attempts=475 current_attempt=475 latest=A1SCALE500-0475 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 475, 'verified': 475, 'outcome_present': 475, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=280.17s
+[SOC DIAG F] progress valid=500 attempts=500 current_attempt=500 latest=A1SCALE500-0500 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 500, 'verified': 500, 'outcome_present': 500, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=296.52s
+[SOC DIAG F] writing reports verdict=EXTERNAL_DIAGNOSTIC_F_PASS exit_code=0
+[SOC DIAG F] final verdict
+  verdict=EXTERNAL_DIAGNOSTIC_F_PASS
+  exit_code=0
+  json_report=scratch\temp\soc_c9b_diag_f_runner_A1SCALE500.json
+  md_report=scratch\temp\soc_c9b_diag_f_runner_A1SCALE500.md
+  proof_passed=True
+
+SOC Diagnostic Summary
+verdict: EXTERNAL_DIAGNOSTIC_F_PASS
+proof_passed: True
+graph_name: soc_graph_a1_scale_500_1
+backend_url: http://127.0.0.1:8001
+prefix: A1SCALE500
+valid_outcomes: 500
+analyze_attempts: 500
+outcome_attempts: 500
+seed_failures: 0
+seed_visibility_status: visible
+
+Timing
+avg_analyze_seconds: 0.113
+max_analyze_seconds: 0.878
+avg_outcome_seconds: 0.310
+max_outcome_seconds: 0.605
+avg_seed_seconds: 0.039
+max_seed_seconds: 0.414
+
+Readback
+decisions: 500
+verified: 500
+outcome_present: 500
+l5_centroid: 1
+shaped_by: 1
+l5_dk_weight: 1
+dk_welford_rows: 1
+max_n_decisions_used: 500
+
+Backend Contract
+graph_name: soc_graph_a1_scale_500_1
+backend_port: 8001
+age_use_pool_requested: true
+connection_mode: warm_fallback
+pool_available: false
+
+Criteria Failures
+- none
+
+Top Analyze Loops
+alert_id | action | confidence | analyze_seconds | outcome_seconds
+A1SCALE500-0001 | investigate | 0.877 | 0.878 | 0.375
+A1SCALE500-0450 | investigate | 1.000 | 0.538 | 0.418
+A1SCALE500-0407 | investigate | 1.000 | 0.403 | 0.246
+
+Top Outcome Loops
+alert_id | action | confidence | analyze_seconds | outcome_seconds
+A1SCALE500-0054 | investigate | 1.000 | 0.102 | 0.605
+A1SCALE500-0059 | investigate | 1.000 | 0.109 | 0.565
+A1SCALE500-0328 | investigate | 1.000 | 0.111 | 0.521
+
+Reports
+report_json_path: scratch\temp\soc_c9b_diag_f_runner_A1SCALE500.json
+report_md_path: scratch\temp\soc_c9b_diag_f_runner_A1SCALE500.md

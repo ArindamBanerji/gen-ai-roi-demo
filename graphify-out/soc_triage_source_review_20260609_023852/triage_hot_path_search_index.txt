@@ -1,0 +1,584 @@
+   21: from app.services.policy import detect_policy_conflicts, get_conflict_history
+   22: from app.services.triage import get_decision_factors, append_confidence_snapshot
+   23: from app.services.audit import record_decision
+   30: from app.services.gae_state import get_learning_state, save_learning_state, get_profile_scorer
+   36: from app.models.responses import AlertQueueResponse, DecisionFactorsResponse, ProfileResponse
+   45: N_FACTORS,
+   47: from app.domains.soc.orchestrator import compute_factor_vector
+   53: _SOC_PERF_FALSE_VALUES = {"", "0", "false", "no", "off"}
+   54: _SOC_PERF_ALWAYS_SUMMARY_PHASES = {
+   60: def _soc_perf_repo_root() -> Path:
+   64: def _soc_perf_enabled() -> bool:
+   65: return os.getenv("SOC_PERF_TRACE_ENABLED", "false").strip().lower() not in _SOC_PERF_FALSE_VALUES
+   68: def _soc_perf_trace_level() -> str:
+   69: level = os.getenv("SOC_PERF_TRACE_LEVEL", "summary").strip().lower()
+   73: def _soc_perf_output_path() -> Path:
+   74: raw = os.getenv("SOC_PERF_TRACE_OUTPUT", "scratch/temp/soc_perf_trace.jsonl")
+   76: return path if path.is_absolute() else _soc_perf_repo_root() / path
+   79: def _soc_perf_slow_ms() -> float:
+   81: return float(os.getenv("SOC_PERF_TRACE_SLOW_MS", "500"))
+   86: def _soc_perf_safe_value(key: str, value: Any) -> Any:
+   90: if "factor_vector" in key_l or key_l in {"f", "fv", "vector"}:
+   95: if "cypher" in key_l or "query" in key_l:
+  102: return {str(k): _soc_perf_safe_value(str(k), v) for k, v in value.items()}
+  106: def _soc_perf_sanitize_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
+  108: str(key): _soc_perf_safe_value(str(key), value)
+  109: for key, value in (metadata or {}).items()
+  114: def _soc_perf_start() -> float:
+  115: return time.perf_counter()
+  118: def _soc_perf_emit_duration(
+  129: **metadata: Any,
+  131: if not _soc_perf_enabled():
+  133: duration_ms = (time.perf_counter() - started) * 1000.0
+  135: _soc_perf_trace_level() != "detailed"
+  136: and phase not in _SOC_PERF_ALWAYS_SUMMARY_PHASES
+  137: and duration_ms < _soc_perf_slow_ms()
+  152: "metadata": _soc_perf_sanitize_metadata(metadata),
+  156: output_path = _soc_perf_output_path()
+  165: def _soc_perf_phase(
+  173: **metadata: Any,
+  175: started = _soc_perf_start()
+  185: _soc_perf_emit_duration(
+  195: **metadata,
+  200: """Runtime SOC learning gate with legacy route-level monkeypatch support."""
+  208: def _soc_effective_conservation_status(health: Dict[str, Any]) -> tuple[str, str | None]:
+  209: """Return the ProfileScorer pause status without hard-freezing calibration runs."""
+  230: return "GREEN", f"under_calibrated_soc_conservation_{raw_status.lower()}"
+  238: def _validate_scoring_factor_vector(factor_vector) -> np.ndarray:
+  239: if factor_vector is None:
+  240: raise ValueError(f"factor_vector must have {N_FACTORS} elements, got None")
+  242: vector = np.asarray(factor_vector, dtype=np.float64)
+  244: raise ValueError(f"factor_vector must have {N_FACTORS} elements, got invalid") from exc
+  246: if actual != N_FACTORS:
+  247: raise ValueError(f"factor_vector must have {N_FACTORS} elements, got {actual}")
+  249: raise ValueError(f"factor_vector must have {N_FACTORS} finite elements")
+  268: async def get_alert_queue():
+  278: MATCH (alert:Alert {status: 'pending'})
+  279: MATCH (alert)-[:INVOLVES]->(user:User)
+  280: MATCH (alert)-[:DETECTED_ON]->(asset:Asset)
+  287: results = await neo4j_client.run_query(query)
+  311: import traceback
+  312: traceback.print_exc()
+  329: GAE-2d: Uses GAE scoring pipeline (Eq. 4) instead of hardcoded factors.
+  333: _perf_route = "/api/alert/analyze"
+  334: _perf_alert_id = getattr(request, "alert_id", None)
+  335: _perf_total_started = _soc_perf_start()
+  336: _perf_total_status = "ok"
+  337: _perf_total_exception = None
+  339: # Guard: ProfileScorer must be attached before any scoring attempt
+  340: with _soc_perf_phase("scorer_readiness", route=_perf_route, alert_id=_perf_alert_id):
+  341: from app.services.gae_state import get_profile_scorer as _get_scorer, init_learning_state as _init_ls
+  350: _perf_total_status = "error"
+  351: _perf_total_exception = "HTTPException"
+  354: detail="Scorer not ready — backend restarting or reset in progress"
+  358: with _soc_perf_phase("request_parse", route=_perf_route, alert_id=_perf_alert_id):
+  364: with _soc_perf_phase("alert_lookup", route=_perf_route, alert_id=alert_id):
+  365: alert_data = await neo4j_client.get_alert(alert_id)
+  373: with _soc_perf_phase("security_context_lookup", route=_perf_route, alert_id=alert_id):
+  374: context = await neo4j_client.get_security_context(alert_id)
+  382: with _soc_perf_phase("category_resolution", route=_perf_route, alert_id=alert_id):
+  389: "[TRIAGE] Unclassified alert_type=%r for alert_id=%s; skipping ProfileScorer",
+  405: # 4a. Compute factor vector via orchestrator (FactorComputers → Neo4j, one per factor)
+  408: with _soc_perf_phase(
+  409: "factor_vector_construction",
+  410: route=_perf_route,
+  414: print(f"[GAE] Computing factor vector for {alert_id}...")
+  415: computers = SOCDomainConfig.get_factor_computers()
+  416: f = await compute_factor_vector(alert_data, computers, neo4j_client)
+  417: f_2d = f.reshape(1, -1)  # kept for legacy reference; ProfileScorer uses f.flatten()
+  419: # DEPRECATED v5.0: W-matrix scoring replaced by ProfileScorer
+  420: # W       = get_learning_state().W
+  423: with _soc_perf_phase(
+  425: route=_perf_route,
+  428: factor_vector_len=len(f.flatten()),
+  431: scorer_actions = list(SCORER_ACTIONS)  # A=4 classification actions (ProfileScorer axis-1)
+  434: # v5.0: ProfileScorer centroid-proximity scoring (EXP-E1 validated L2, τ=0.1)
+  442: # Phase 0b gate: scorer outputs A=4 (escalate/investigate/suppress/monitor).
+  443: # refer_to_analyst is NOT a scorer action — the gate adds it when confidence
+  444: # is below CONFIDENCE_THRESHOLD (0.70).  This replaces the v5.5 ReferralPolicy
+  445: # centroid-proximity gate and raises accuracy ceiling from 80.6% → ~90-95%.
+  446: from app.services.composite_gate import CompositeDiscriminant as _CGD
+  456: "[TRIAGE-Phase0b] conf=%.3f < %.2f — gate overrides to refer_to_analyst (cat=%s)",
+  470: _rl_exploration_executed = False
+  484: (_health.get("conservation") or {}).get("headroom") or 0.0
+  488: from app.services.rl_engine import get_exploration_policy
+  491: _rl_exploration_decision = get_exploration_policy().propose(
+  506: _rl_exploration_executed = True
+  514: _rl_exploration_executed = False
+  532: # Step 4b: Referral VETO — independent of ProfileScorer (EXP-REFER-LAYERED)
+  534: # Evaluate before any action-dependent side effects. Referral must be
+  535: # authoritative over explored proposals for Decision, audit, Sentinel,
+  538: from gae.referral import ReferralEngine
+  539: from app.services.referral_rules import get_soc_referral_rules
+  546: # Referral runs before Decision creation so final-action side effects are
+  549: _referral_sequence_count = _sequence_count + 1
+  550: _referral_cross_category_count = _cross_category_count + 1
+  552: "[TRIAGE-Referral] source_id=%r seq=%d(+current=%d) user_id=%r cross_cat=%d(+current=%d)",
+  553: _source_id, _sequence_count, _referral_sequence_count,
+  554: _user_id, _cross_category_count, _referral_cross_category_count,
+  561: 'sequence_count':       _referral_sequence_count,
+  573: 'cross_category_count': _referral_cross_category_count,
+  574: # full factor vector for future rules
+  575: 'factor_values':        fv_list,
+  578: _referral_engine = ReferralEngine(rules=get_soc_referral_rules())
+  579: _referral = _referral_engine.evaluate(_alert_context)
+  581: if _referral.should_refer:
+  586: _rl_exploration_executed = False
+  588: "[TRIAGE-Referral] VETO fired — rules=%s audit=%s",
+  589: _referral.reason_codes,
+  590: _referral.audit_summary,
+  593: _referral_payload = {
+  594: 'should_refer':  _referral.should_refer,
+  595: 'reasons':       _referral.reason_codes,
+  596: 'audit_summary': _referral.audit_summary,
+  612: # MATCH (a:Alert {id: $alert_id})
+  613: # CREATE (d:Decision {id:..., action:..., confidence:..., factor_vector:...,
+  615: # CREATE (d)-[:DECIDED_ON]->(a)
+  619: with _soc_perf_phase(
+  621: route=_perf_route,
+  626: factor_vector_len=len(fv_list),
+  628: await neo4j_client.run_query(
+  630: MATCH (a:Alert {{alert_id: {_S(alert_id)}}})
+  631: CREATE (d:Decision {{
+  636: factor_vector:         {_S(json.dumps(fv_list))},
+  645: CREATE (d)-[:DECIDED_ON]->(a)
+  650: with _soc_perf_phase(
+  651: "audit_write",
+  652: route=_perf_route,
+  658: _audit_rec_analyze = await record_decision(
+  662: factors=[c.name for c in computers],
+  666: conservation_status="unknown",
+  668: _entry_hash_analyze = _audit_rec_analyze.get("hash", "")
+  669: _chain_index_analyze = _audit_rec_analyze.get("chain_index", -1)
+  671: await neo4j_client.run_query(
+  672: f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
+  673: f"SET d.entry_hash = {_S(_entry_hash_analyze)}, "
+  677: # F4b: Record confidence snapshot for trajectory tracking
+  679: with _soc_perf_phase(
+  680: "metadata_logging_snapshot_write",
+  681: route=_perf_route,
+  687: append_confidence_snapshot(
+  709: await neo4j_client.run_query(
+  710: f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
+  711: f"SET d.campaign_id = {_S(_campaign_id)}"
+  721: #   - action is escalate or investigate
+  728: and selected_action in ("escalate", "investigate")
+  755: factor_vector = tuple(fv_list),
+  763: # Step 7: Composite discriminant gate (Phase 5 / DISC-1)
+  765: from app.services.composite_gate import CompositeDiscriminant
+  771: factor_vector=f.flatten(),
+  776: await neo4j_client.run_query(
+  777: f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
+  778: "SET d.auto_approved = true"
+  781: logger.warning("[TRIAGE] composite gate failed: %s", _cg_exc)
+  785: "reason_codes": [f"gate error: {_cg_exc}"],
+  790: # Step 8a: Build factor provenance (Phase 6)
+  796: factor_names=[c.name for c in computers],
+  797: factor_values=fv_list,
+  806: "factors": [
+  808: "factor_name":           fp.factor_name,
+  809: "factor_value":          fp.factor_value,
+  814: for fp in _prov.factors
+  819: _provenance_payload = {"decision_id": decision_id, "factors": [], "error": str(_prov_exc)}
+  865: await neo4j_client.run_query(
+  867: MATCH (d:Decision {{decision_id: {_S(decision_id)}}})
+  868: SET d.action                  = {_S(selected_action)},
+  874: d.exploration_executed    = {'true' if _rl_exploration_executed else 'false'},
+  880: logger.warning("[RL] Exploration metadata write failed: %s", _rl_meta_exc)
+  882: _referral_debug = {
+  885: 'rules_evaluated':         [r.rule_id for r in get_soc_referral_rules()],
+  886: 'rules_fired':             list(_referral.reason_codes),
+  924: _cluster_history_payload = None
+  926: from app.services.cluster_history import get_cluster_history as _get_cluster_history
+  928: _cluster_history = await _get_cluster_history(
+  933: if _cluster_history is not None:
+  934: _cluster_history_payload = dataclasses.asdict(_cluster_history)
+  936: logger.warning("[TRIAGE] Cluster history failed for %s: %s", alert_id, _cluster_exc)
+  938: _perf_response_started = _soc_perf_start()
+  949: "subgraphs_traversed": ["User Profile", "Asset Inventory", "Travel Calendar", "Pattern Library", "Playbook Registry"],
+  965: "factor_vector":        fv_list,
+  966: "factor_names":         [c.name for c in computers],
+  974: "ProfileScorer centroid-proximity scoring "
+  975: "(n_factors × 5 actions × n_categories, "
+  981: "composite_gate": {
+  987: "referral":        _referral_payload,
+  988: "referral_debug":  _referral_debug,
+  989: "decision_method": "referral_override" if _referral.should_refer else _rl_decision_method,
+  991: if _cluster_history_payload is not None:
+  992: response["cluster_history"] = _cluster_history_payload
+  996: _ls = get_learning_state()
+  997: _factor_names_list = [c.name for c in computers]
+  998: _factors_for_narr  = [
+ 1000: for n, v in zip(_factor_names_list, fv_list)
+ 1003: max(_factors_for_narr, key=lambda x: x["value"])
+ 1004: if _factors_for_narr else {}
+ 1007: min(_factors_for_narr, key=lambda x: x["value"])
+ 1008: if _factors_for_narr else {}
+ 1014: "top_factor":     _top_f,
+ 1015: "bottom_factor":  _bot_f,
+ 1024: _alert_for_narr, _decision_for_narr, _factors_for_narr, calibration_context
+ 1026: _soc_perf_emit_duration(
+ 1028: _perf_response_started,
+ 1029: route=_perf_route,
+ 1038: _perf_total_status = "error"
+ 1039: _perf_total_exception = type(exc).__name__
+ 1042: _perf_total_status = "error"
+ 1043: _perf_total_exception = type(e).__name__
+ 1045: import traceback
+ 1046: traceback.print_exc()
+ 1049: _soc_perf_emit_duration(
+ 1051: _perf_total_started,
+ 1052: route=_perf_route,
+ 1053: status=_perf_total_status,
+ 1054: exception_type=_perf_total_exception,
+ 1055: alert_id=_perf_alert_id,
+ 1063: # POST /api/action/execute - Execute Closed Loop
+ 1066: @router.post("/action/execute")
+ 1067: async def execute_action(request: ProcessAlertRequest):
+ 1069: Execute the recommended action with full closed-loop verification.
+ 1072: 1. EXECUTED - Action taken in target system
+ 1074: 3. EVIDENCE - Decision trace captured
+ 1081: # Get context for decision trace
+ 1082: context = await neo4j_client.get_security_context(alert_id)
+ 1092: # Resolve correct situation_type and factor list for the audit ledger (H-1).
+ 1094: # used by /alert/analyze. Graceful fallback keeps the execute path safe.
+ 1096: factor_names: list = []
+ 1101: print(f"[EXECUTE] analyze_situation failed for {alert_id}: {exc}")
+ 1103: factors_result = await get_decision_factors(alert_id)
+ 1104: if factors_result:
+ 1105: factor_names = [f["name"] for f in factors_result.get("factors", [])]
+ 1107: print(f"[EXECUTE] get_decision_factors failed for {alert_id}: {exc}")
+ 1110: # Step 1: EXECUTED - Take action in target system
+ 1123: # Step 3: EVIDENCE - Create decision trace in Neo4j
+ 1130: # Replaces create_decision_trace() which used FOR_ALERT (wrong schema)
+ 1131: # and had a signature mismatch (category kwarg) that caused TypeError.
+ 1132: _ts_execute = int(datetime.utcnow().timestamp() * 1000)
+ 1133: await neo4j_client.run_query(
+ 1135: MATCH (a:Alert {{alert_id: {_S(alert_id)}}})
+ 1136: CREATE (d:Decision {{
+ 1140: factor_vector:   {_S(json.dumps([]))},
+ 1144: timestamp_epoch: {_ts_execute},
+ 1147: CREATE (d)-[:DECIDED_ON]->(a)
+ 1151: # Record decision in the in-memory audit ledger after graph write succeeds.
+ 1153: _audit_rec_execute = await record_decision(
+ 1157: factors=factor_names,
+ 1161: conservation_status="unknown",
+ 1163: _entry_hash_execute = _audit_rec_execute.get("hash", "")
+ 1164: _chain_index_execute = _audit_rec_execute.get("chain_index", -1)
+ 1165: if _entry_hash_execute:
+ 1166: await neo4j_client.run_query(
+ 1167: f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
+ 1168: f"SET d.entry_hash = {_S(_entry_hash_execute)}, "
+ 1169: f"d.decision_chain_index = {_chain_index_execute}"
+ 1177: factor_vector = (),  # rule-based path; no GAE factor vector here
+ 1185: await neo4j_client.run_query(
+ 1186: f"MATCH (alert:Alert {{alert_id: {_S(alert_id)}}}) SET alert.status = 'resolved'"
+ 1213: "trace_captured": True,
+ 1227: print(f"[ERROR] Failed to execute action: {e}")
+ 1232: # POST /api/alerts/reset - Reset Demo Alerts
+ 1238: Reset all alert statuses back to 'pending' for demo purposes.
+ 1239: Also resets feedback and policy conflict state.
+ 1242: print("[TRIAGE] POST /alerts/reset called - resetting all demo state")
+ 1245: # Reset only demo alerts (origin=zero_day_demo) — zero_day_synthetic training data is never touched
+ 1247: MATCH (alert:Alert)
+ 1249: SET alert.status = 'pending'
+ 1253: print("[TRIAGE] Running Cypher query to reset ALERT- demo alert statuses...")
+ 1254: result = await neo4j_client.run_query(query)
+ 1257: print(f"[TRIAGE] Reset {reset_count} ALERT- demo alerts to 'pending' status")
+ 1259: # Reset demo-cycle state only — deliberately skip 'learning_state' so
+ 1260: # ProfileScorer centroids (IKS) survive demo resets (BACKLOG-020).
+ 1261: # Full hard reset (including learning_state) is POST /api/admin/reset.
+ 1262: await state_manager.reset_except(["learning_state"])
+ 1268: logger.warning("[RL] Demo-cycle RL reset failed: %s", _rl_reset_exc)
+ 1274: "message": f"Reset {reset_count} alerts to 'pending' status. Cleared feedback, policy, audit, and evolver state.",
+ 1280: print(f"[ERROR] Failed to reset alerts: {e}")
+ 1283: detail=f"Failed to reset alerts: {str(e)}"
+ 1307: _perf_route = "/api/alert/outcome"
+ 1308: _perf_alert_id = getattr(request, "alert_id", None)
+ 1309: _perf_decision_id = getattr(request, "decision_id", None)
+ 1310: _perf_total_started = _soc_perf_start()
+ 1311: _perf_total_status = "ok"
+ 1312: _perf_total_exception = None
+ 1315: with _soc_perf_phase(
+ 1317: route=_perf_route,
+ 1318: alert_id=_perf_alert_id,
+ 1319: decision_id=_perf_decision_id,
+ 1321: _perf_outcome_label = request.outcome
+ 1324: with _soc_perf_phase(
+ 1326: route=_perf_route,
+ 1340: # MATCH (d:Decision {id: $decision_id})
+ 1341: # SET d.outcome, d.correct, d.verified_at
+ 1342: # RETURN d.factor_vector, d.action, d.confidence
+ 1348: centroid_update_payload = None  # populated below if wu.centroid_update is present
+ 1350: "l5_centroid_persisted": False,
+ 1354: "conservation_status": None,
+ 1355: "raw_conservation_status": None,
+ 1356: "conservation_status_reason": None,
+ 1371: with _soc_perf_phase(
+ 1373: route=_perf_route,
+ 1378: gae_result = await neo4j_client.run_query(
+ 1380: MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
+ 1381: OPTIONAL MATCH (d)-[:DECIDED_ON]->(a:Alert)
+ 1382: SET d.outcome           = {_S(outcome_label)},
+ 1387: RETURN d.factor_vector AS factor_vector,
+ 1393: d.exploration_executed AS exploration_executed,
+ 1408: # Audit chain — record outcome as separate event
+ 1410: with _soc_perf_phase(
+ 1411: "outcome_audit_write",
+ 1412: route=_perf_route,
+ 1416: from app.framework.audit import record_outcome as _audit_outcome
+ 1417: _outcome_rec = await _audit_outcome(
+ 1425: await neo4j_client.run_query(
+ 1426: f"MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}}) "
+ 1427: f"SET d.outcome_entry_hash = {_S(_oc_hash)}, "
+ 1431: logger.warning("[AUDIT] Outcome audit failed: %s", _e)
+ 1433: # Per-analyst η: query verified outcome history for this analyst
+ 1436: with _soc_perf_phase(
+ 1437: "analyst_history_scan",
+ 1438: route=_perf_route,
+ 1442: _q_rows = await neo4j_client.run_query(
+ 1443: f"MATCH (d:Decision) "
+ 1462: fv          = record.get("factor_vector")
+ 1468: print("[GAE] factor_vector string parse failed")
+ 1470: print(f"[GAE] factor_vector parsed: len={len(fv)}")
+ 1506: # action.  ProfileScorer has A=4 (SCORER_ACTIONS); skip learning.
+ 1510: print(f"[GAE] Decision node found but factor_vector is NULL — skipping weight update")
+ 1519: with _soc_perf_phase(
+ 1520: "learning_state_update",
+ 1521: route=_perf_route,
+ 1527: _ref_ls = get_learning_state()
+ 1530: save_learning_state()
+ 1532: with _soc_perf_phase(
+ 1533: "learning_state_update",
+ 1534: route=_perf_route,
+ 1540: f = _validate_scoring_factor_vector(fv)
+ 1542: learning_state = get_learning_state()
+ 1543: wu = learning_state.update(
+ 1550: save_learning_state()
+ 1557: _executed = _rl_bool(record.get("exploration_executed"))
+ 1560: _explored and _executed and not _vetoed
+ 1565: from app.services.rl_engine import get_exploration_policy
+ 1569: get_exploration_policy().update_posterior(
+ 1578: # SOC-Q3 / DRIFT-01: Wire conservation status → scorer auto-pause.
+ 1582: _conservation_block = False
+ 1585: with _soc_perf_phase(
+ 1586: "conservation_monitor",
+ 1587: route=_perf_route,
+ 1594: with _soc_perf_phase(
+ 1595: "l5_conservation_write",
+ 1596: route=_perf_route,
+ 1603: _eff_status, _eff_reason = _soc_effective_conservation_status(_health)
+ 1604: l5_persistence_status["conservation_status"] = _eff_status
+ 1605: l5_persistence_status["raw_conservation_status"] = str(
+ 1608: l5_persistence_status["conservation_status_reason"] = _eff_reason
+ 1610: logger.warning("Conservation status update failed: %s", _cse)
+ 1611: _conservation_block = True  # fail-closed: unknown health → block
+ 1613: # CORR-2 fix: ProfileScorer.update() — gated by LEARNING_ENABLED (default False).
+ 1625: "[GAE][LEARN] Skipping ProfileScorer.update for unclassified alert_type=%r",
+ 1645: get_soc_centroid as _get_soc_centroid,
+ 1647: persist_soc_centroid as _persist_soc_centroid,
+ 1648: persist_soc_dk_weights as _persist_soc_dk_weights,
+ 1649: update_dk_welford_tracker as _update_dk_welford_tracker,
+ 1651: if _conservation_block:
+ 1652: logger.warning("[B5] Conservation check failed — learning blocked (fail-closed)")
+ 1653: l5_persistence_status["l5_persistence_skipped_reason"] = "conservation_check_failed"
+ 1658: # reset cannot replace _learning_state between capture and update.
+ 1663: _pre_centroids = {
+ 1664: action_index: _get_soc_centroid(_ps_out, _cat_idx_out, action_index)
+ 1667: _pre_centroids[_gt_idx] = _get_soc_centroid(
+ 1692: if hasattr(_ps_out, "set_conservation_status"):
+ 1693: _ps_out.set_conservation_status(_eff_status)
+ 1695: # spike guards AND conservation freeze are enforced.
+ 1696: with _soc_perf_phase(
+ 1698: route=_perf_route,
+ 1703: factor_vector_len=len(f.flatten()),
+ 1719: with _soc_perf_phase(
+ 1720: "l5_dk_weight_write",
+ 1721: route=_perf_route,
+ 1727: _update_dk_welford_tracker(f.flatten(), bool(_correct))
+ 1730: "[GAE][LEARN] SOC DK Welford update failed: %s",
+ 1735: _reestimate_dk = getattr(_ps_out, "reestimate_dk", None)
+ 1736: if callable(_reestimate_dk):
+ 1737: _reestimate_dk()
+ 1739: except Exception as _dk_exc:
+ 1741: "[GAE][LEARN] SOC DK reestimate failed: %s",
+ 1742: _dk_exc,
+ 1745: with _soc_perf_phase(
+ 1746: "l5_centroid_write",
+ 1747: route=_perf_route,
+ 1753: _centroid_persisted = _persist_soc_centroid(
+ 1760: pre_centroid=_pre_centroids.get(
+ 1765: l5_persistence_status["l5_centroid_persisted"] = bool(
+ 1766: _centroid_persisted
+ 1769: _centroid_persisted and request.decision_id
+ 1772: None if _centroid_persisted
+ 1773: else "persist_soc_centroid_returned_false"
+ 1775: except Exception as _centroid_exc:
+ 1777: "[GAE][LEARN] SOC L5 centroid persistence failed: %s",
+ 1778: _centroid_exc,
+ 1781: "persist_soc_centroid_exception"
+ 1785: with _soc_perf_phase(
+ 1786: "l5_dk_weight_write",
+ 1787: route=_perf_route,
+ 1793: _persist_soc_dk_weights(_ps_out, logger=logger)
+ 1794: except Exception as _dk_persist_exc:
+ 1796: "[GAE][LEARN] SOC L5 DK persistence failed: %s",
+ 1797: _dk_persist_exc,
+ 1808: _guard_block_reason = "conservation_paused"
+ 1812: logger.info("[GAE][LEARN] Update blocked by conservation/spike/freeze guard")
+ 1815: f"[GAE][LEARN] ProfileScorer.update called: "
+ 1821: # Change 5: ProfileSnapshot every 50 decisions
+ 1823: with _soc_perf_phase(
+ 1824: "snapshot_evolution_logging",
+ 1825: route=_perf_route,
+ 1831: from app.services.snapshots import maybe_write_profile_snapshot
+ 1832: await maybe_write_profile_snapshot(learning_state.decision_count)
+ 1834: if wu and wu.centroid_update is not None:
+ 1835: cu = wu.centroid_update
+ 1836: # Write centroid_delta_norm back to the Decision node
+ 1837: _ts_centroid = int(datetime.utcnow().timestamp() * 1000)
+ 1838: await neo4j_client.run_query(
+ 1840: MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
+ 1841: SET d.centroid_delta_norm = {cu.centroid_delta_norm},
+ 1844: d.verified_at_epoch   = {_ts_centroid}
+ 1848: f"[GAE] Centroid updated: action={cu.action_name} "
+ 1851: f"centroid_delta_norm={cu.centroid_delta_norm:.4f} "
+ 1854: centroid_update_payload = {
+ 1855: "centroid_delta_norm": cu.centroid_delta_norm,
+ 1864: # BACKLOG-020 Phase 7: Update GraphSnapshot after graph write.
+ 1865: # Called AFTER the graph write succeeds — snapshot stays
+ 1869: from app.state.graph_snapshot import get_snapshot as _get_snap
+ 1875: "[SNAPSHOT] Skipping unclassified alert_type=%r",
+ 1878: raise ValueError("unclassified alert type is not snapshottable")
+ 1892: "[SNAPSHOT] verified_decisions increment failed: %s",
+ 1895: # Recompute IKS after centroid update (if centroid changed).
+ 1896: if wu and wu.centroid_update is not None:
+ 1907: "[SNAPSHOT] IKS recalculation failed: %s",
+ 1912: "[SNAPSHOT] Snapshot update failed (non-blocking): %s",
+ 1920: # Requires: mu from ProfileScorer, mu_zero from bootstrap JSON.
+ 1921: # PatternHistory is factor index 4 in SOC_FACTORS.
+ 1940: mu=_ps_dist.centroids,
+ 1942: pattern_history_value=_ph_value,
+ 1955: # FLYWHEEL: Create TRIGGERED_EVOLUTION edge for correct scorer
+ 1956: # actions — feeds PatternHistoryFactorComputer (CLAIM-W2).
+ 1960: _triggered_evolution_written = False
+ 1963: with _soc_perf_phase(
+ 1964: "snapshot_evolution_logging",
+ 1965: route=_perf_route,
+ 1973: _evo_dec_num = int(learning_state.decision_count)
+ 1975: await neo4j_client.run_query(
+ 1977: MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
+ 1978: CREATE (evo:EvolutionEvent {{
+ 1987: CREATE (d)-[:TRIGGERED_EVOLUTION {{
+ 1994: SET d.verified_correct  = true,
+ 1995: d.factor_snapshot   = {_S(json.dumps(fv if isinstance(fv, list) else []))},
+ 2000: _triggered_evolution_written = True
+ 2002: mutation_type="evolution",
+ 2006: "[FLYWHEEL] TRIGGERED_EVOLUTION edge created: %s → %s",
+ 2012: "[FLYWHEEL] TRIGGERED_EVOLUTION creation failed (non-blocking): %s",
+ 2022: and _triggered_evolution_written
+ 2030: current_decision_number=int(learning_state.decision_count),
+ 2042: # FEATURE-04: Auto-snapshot centroids every SNAPSHOT_INTERVAL
+ 2043: # verified decisions for the Centroid Time Machine.
+ 2048: maybe_write_centroid_snapshot as _maybe_snap,
+ 2060: "[SNAPSHOT] Centroid auto-snapshot failed (non-blocking): %s",
+ 2118: print(f"[FEEDBACK] centroid_update in response: {centroid_update_payload is not None}")
+ 2135: with _soc_perf_phase(
+ 2137: route=_perf_route,
+ 2144: response_body["centroid_update"] = centroid_update_payload
+ 2145: response_body["l5_centroid_persisted"] = l5_persistence_status[
+ 2146: "l5_centroid_persisted"
+ 2158: _perf_total_status = "error"
+ 2159: _perf_total_exception = type(exc).__name__
+ 2162: _perf_total_status = "error"
+ 2163: _perf_total_exception = type(exc).__name__
+ 2166: _perf_total_status = "error"
+ 2167: _perf_total_exception = type(e).__name__
+ 2169: import traceback
+ 2170: traceback.print_exc()
+ 2176: _soc_perf_emit_duration(
+ 2178: _perf_total_started,
+ 2179: route=_perf_route,
+ 2180: status=_perf_total_status,
+ 2181: exception_type=_perf_total_exception,
+ 2182: alert_id=_perf_alert_id,
+ 2183: decision_id=_perf_decision_id,
+ 2221: # GET /api/alert/policy-check - Check Policy Conflicts
+ 2224: _LEGACY_POLICY_CONTEXTS = {
+ 2239: async def _build_policy_context(alert_id: str) -> Dict[str, Any]:
+ 2240: """Build policy context from graph Alert data; legacy demo IDs are fallback only."""
+ 2241: rows = await neo4j_client.run_query(
+ 2243: MATCH (alert:Alert {{alert_id: {_S(alert_id)}}})
+ 2244: OPTIONAL MATCH (alert)-[:INVOLVES]->(user:User)
+ 2245: OPTIONAL MATCH (alert)-[:DETECTED_ON]->(detected_asset:Asset)
+ 2246: OPTIONAL MATCH (alert)-[:INVOLVES]->(involved_asset:Asset)
+ 2247: OPTIONAL MATCH (alert)-[:MATCHES]->(pattern:AttackPattern)
+ 2248: OPTIONAL MATCH (user)-[:HAS_TRAVEL]->(travel:TravelContext)
+ 2263: context = dict(_LEGACY_POLICY_CONTEXTS.get(alert_id, {}))
+ 2290: @router.get("/alert/policy-check")
+ 2291: async def check_policy_conflicts(alert_id: str):
+ 2299: PolicyConflict object with conflict detection results
+ 2301: print(f"[POLICY] GET /alert/policy-check called for {alert_id}")
+ 2304: context = await _build_policy_context(alert_id)
+ 2306: logger.debug("[POLICY] Resolved alert_type=%s for %s", alert_type, alert_id)
+ 2308: print(f"[POLICY] Context: {context}")
+ 2310: # Detect policy conflicts
+ 2311: result = detect_policy_conflicts(alert_id, context)
+ 2313: print(f"[POLICY] Conflict detected: {result.has_conflict}")
+ 2315: print(f"[POLICY] Policies in conflict: {[p.id for p in result.conflicting_policies]}")
+ 2316: print(f"[POLICY] Winner: {result.resolution.winning_policy}")
+ 2318: print(f"[POLICY] Policies applied: {[p.id for p in result.policies_applied]}")
+ 2323: print(f"[ERROR] Failed to check policy conflicts: {e}")
+ 2324: import traceback
+ 2325: traceback.print_exc()
+ 2328: detail=f"Failed to check policy conflicts: {str(e)}"
+ 2333: # GET /api/alert/policy-history - Get Conflict Resolution History
+ 2336: @router.get("/alert/policy-history")
+ 2337: async def get_policy_history():
+ 2339: Get all resolved policy conflicts for audit/reporting.
+ 2342: List of PolicyResolution objects
+ 2344: print("[POLICY] GET /alert/policy-history called")
+ 2347: history = get_conflict_history()
+ 2348: print(f"[POLICY] Returning {len(history)} resolved conflicts")
+ 2351: "conflicts": [resolution.model_dump() for resolution in history],
+ 2352: "total_count": len(history)
+ 2356: print(f"[ERROR] Failed to get policy history: {e}")
+ 2359: detail=f"Failed to get policy history: {str(e)}"
+ 2364: # GET /api/soc/profile - ProfileScorer state for Tab 2 centroid heatmap
+ 2370: Return current ProfileScorer state for frontend display.
+ 2371: Used by Tab 2 centroid heatmap (SOC-PROF-3).
+ 2385: "centroids": _np.zeros((n_cats, n_actions, 6)).tolist(),
+ 2409: # SOC_ACTIONS has 5 elements (includes refer_to_analyst for referral policy);
+ 2410: # ProfileScorer uses A=4 only (SCORER_ACTIONS). Iterating range(5) on a
+ 2413: decision_count = int(sum(  # SOURCE: in-memory ProfileScorer counts (resets on restart)
+ 2419: iks_result = compute_iks(scorer.centroids)  # SOURCE: computed from in-memory centroids (resets on restart)
+ 2423: # V-SWITCHING-COST-FACTORIAL: decisions_per_day = V × α
+ 2429: from app.services.gae_state import get_learning_state as _get_ls
+ 2433: # ProfileScorer may expose tau (temperature); V and alpha come from
+ 2453: "actions": SCORER_ACTIONS,         # A=4 — matches counts/centroids shape
+ 2454: "centroids": scorer.centroids.tolist(),   # shape (n_categories, n_actions, n_factors)
+ 2489: Return aggregated RL reward signal from all outcome feedback recorded
+ 2511: # GET /api/triage/decision-factors/{alert_id} - Decision Factor Breakdown (v3.0)
+ 2514: @router.get("/triage/decision-factors/{alert_id}", response_model=DecisionFactorsResponse)
+ 2515: async def decision_factors(alert_id: str):
+ 2517: Return the factor explainability matrix for an agent decision.
+ 2519: Factor 3 (threat_intel_enrichment) is queried live from Neo4j using the
+ 2521: The remaining 5 factors are pre-computed from demo context.
+ 2526: "factors":            list of 6 factor dicts,
+ 2533: Each factor dict:
+ 2537: print(f"[TRIAGE] GET /triage/decision-factors/{alert_id} called")
+ 2540: result = await get_decision_factors(alert_id)
+ 2549: f"[TRIAGE] Returning {len(result['factors'])} factors "
+ 2557: print(f"[ERROR] Failed to get decision factors: {e}")
+ 2560: detail=f"Failed to get decision factors: {str(e)}",
+ 2575: MATCH (alert:Alert {{alert_id: {_S(alert_id)}}})
+ 2576: MATCH (alert)-[:DETECTED_ON]->(asset:Asset)
+ 2577: MATCH (alert)-[:INVOLVES]->(user:User)
+ 2578: OPTIONAL MATCH (alert)-[:CLASSIFIED_AS]->(ap:AttackPattern)
+ 2579: OPTIONAL MATCH (user)-[:HAS_TRAVEL]->(travel:TravelContext)
+ 2580: OPTIONAL MATCH (alert)-[:MATCHES]->(pattern:AttackPattern)
+ 2581: OPTIONAL MATCH (ap)-[:HANDLED_BY]->(playbook:Playbook)
+ 2587: results = await neo4j_client.run_query(query)
+ 2631: # Add asset node
+ 2632: asset = record.get("asset")
+ 2633: asset_id = _node_id(asset, "asset") if asset else "unknown"

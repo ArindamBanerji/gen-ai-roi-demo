@@ -1,0 +1,39 @@
+AGE query error: syntax error at or near "count"
+LINE 2:     MATCH (n:L5Centroid) RETURN count(n) AS count
+                                                    ^
+Query: MATCH (n:L5Centroid) RETURN count(n) AS count
+Params: None
+AGE query error: syntax error at or near "count"
+LINE 2:     MATCH (n:L5DKWeight) RETURN count(n) AS count, max(n.n_d...
+                                                    ^
+Query: MATCH (n:L5DKWeight) RETURN count(n) AS count, max(n.n_decisions_used) AS max_n_decisions_used
+Params: None
+AGE query error: syntax error at or near "count"
+LINE 2:     MATCH (n:L5ConservationState) RETURN count(n) AS count
+                                                             ^
+Query: MATCH (n:L5ConservationState) RETURN count(n) AS count
+Params: None
+AGE query error: syntax error at or near "count"
+LINE 2: ...entroid)-[r:SHAPED_BY]->(:Decision) RETURN count(r) AS count
+                                                                  ^
+Query: MATCH (:L5Centroid)-[r:SHAPED_BY]->(:Decision) RETURN count(r) AS count
+Params: None
+## total_nodes
+[{'total': 12769}]
+## f6_decisions
+[{'decisions': 0}]
+## f6_verified
+[{'verified': None, 'outcome_present': None}]
+## l5_centroid
+## l5_centroid ERROR
+SyntaxError('syntax error at or near "count"\nLINE 2:     MATCH (n:L5Centroid) RETURN count(n) AS count\n                                                    ^')
+## l5_dk_weight
+## l5_dk_weight ERROR
+SyntaxError('syntax error at or near "count"\nLINE 2:     MATCH (n:L5DKWeight) RETURN count(n) AS count, max(n.n_d...\n                                                    ^')
+## l5_conservation
+## l5_conservation ERROR
+SyntaxError('syntax error at or near "count"\nLINE 2:     MATCH (n:L5ConservationState) RETURN count(n) AS count\n                                                             ^')
+## shaped_by
+## shaped_by ERROR
+SyntaxError('syntax error at or near "count"\nLINE 2: ...entroid)-[r:SHAPED_BY]->(:Decision) RETURN count(r) AS count\n                                                                  ^')
+

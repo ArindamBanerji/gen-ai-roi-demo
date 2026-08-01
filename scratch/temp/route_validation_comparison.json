@@ -1,0 +1,204 @@
+{
+  "buyer_facing_claim_allowed": false,
+  "diagnostics_summary": {
+    "false_profile": {
+      "mixed_reuse": {
+        "passed": true,
+        "profile": "generic"
+      },
+      "repeat_same": {
+        "passed": true,
+        "profile": "generic"
+      },
+      "unique_once": {
+        "passed": true,
+        "profile": "generic"
+      }
+    },
+    "true_profile": {
+      "mixed_reuse": {
+        "diagnostics_present": true,
+        "differences_empty": true,
+        "matched_true": true,
+        "passed": true,
+        "profile": "shadow",
+        "shadow_failed": false,
+        "side_effect_zero": {
+          "counter_updates": true,
+          "decision_writes": true,
+          "graph_mutations": true,
+          "outcome_writes": true,
+          "proof_writes": true
+        }
+      },
+      "repeat_same": {
+        "diagnostics_present": true,
+        "differences_empty": true,
+        "matched_true": true,
+        "passed": true,
+        "profile": "shadow",
+        "shadow_failed": false,
+        "side_effect_zero": {
+          "counter_updates": true,
+          "decision_writes": true,
+          "graph_mutations": true,
+          "outcome_writes": true,
+          "proof_writes": true
+        }
+      },
+      "unique_once": {
+        "diagnostics_present": true,
+        "differences_empty": true,
+        "matched_true": true,
+        "passed": true,
+        "profile": "shadow",
+        "shadow_failed": false,
+        "side_effect_zero": {
+          "counter_updates": true,
+          "decision_writes": true,
+          "graph_mutations": true,
+          "outcome_writes": true,
+          "proof_writes": true
+        }
+      }
+    }
+  },
+  "failed_checks": [],
+  "false_graph": "soc_graph_5d_runner_false_3",
+  "final_summary_status_contribution": "PASS",
+  "input_ids_compared": [
+    "P5DRUNNER-0001",
+    "P5DRUNNER-0002",
+    "P5DRUNNER-0003",
+    "P5DRUNNER-0004",
+    "P5DRUNNER-0005"
+  ],
+  "latency": {
+    "mixed_reuse": {
+      "delta_percent": -3.8445876959949477,
+      "delta_seconds": -0.00574162500561215,
+      "false_avg_seconds": 0.14934306249779183,
+      "shadow_overhead": false,
+      "true_avg_seconds": 0.14360143749217968
+    },
+    "repeat_same": {
+      "delta_percent": -7.045401947575021,
+      "delta_seconds": -0.011011060024611663,
+      "false_avg_seconds": 0.15628718001535163,
+      "shadow_overhead": false,
+      "true_avg_seconds": 0.14527611999073997
+    },
+    "unique_once": {
+      "delta_percent": -15.05981920884134,
+      "delta_seconds": -0.0381163000129163,
+      "false_avg_seconds": 0.25309932001400737,
+      "shadow_overhead": false,
+      "true_avg_seconds": 0.21498302000109107
+    }
+  },
+  "parity": {
+    "differences": [],
+    "excluded_fields": [
+      "decision IDs",
+      "timestamps",
+      "elapsed timings",
+      "generated UUIDs",
+      "narrative/rationale text"
+    ],
+    "field_status": {
+      "composite_gate": "PASS",
+      "decision_metadata": "NOT_PRESENT",
+      "gae_scoring.action_probabilities": "PASS",
+      "gae_scoring.ambiguous": "PASS",
+      "gae_scoring.factor_names": "PASS",
+      "gae_scoring.factor_vector": "PASS",
+      "gae_scoring.low_confidence": "PASS",
+      "gae_scoring.routing_zone": "PASS",
+      "gae_scoring.softmax_sum": "PASS",
+      "gae_scoring.temperature": "PASS",
+      "recommendation.action": "PASS",
+      "recommendation.confidence": "PASS",
+      "recommendation.routing_zone": "PASS",
+      "referral": "PASS",
+      "referral_debug": "PASS"
+    },
+    "matched": true
+  },
+  "pass": true,
+  "performance_ledger": {
+    "P2E baseline": "avg analyze 0.193s at 250 outcomes, warm_fallback",
+    "P3G-D clean proof": "avg analyze 0.202s, max 0.571s, avg outcome 0.440s; hits=0, misses=250, loads=250",
+    "P3H benchmark conclusion": "EntityCache correct but current route wiring is not a reliable performance win",
+    "buyer_facing_claim_allowed": false
+  },
+  "phase_status": {
+    "false_baseline": "PASS",
+    "true_compare": "PASS"
+  },
+  "profile_status": {
+    "false_baseline": {
+      "mixed_reuse": {
+        "passed": true,
+        "profile": "generic"
+      },
+      "repeat_same": {
+        "passed": true,
+        "profile": "generic"
+      },
+      "unique_once": {
+        "passed": true,
+        "profile": "generic"
+      }
+    },
+    "true_compare": {
+      "mixed_reuse": {
+        "diagnostics_present": true,
+        "differences_empty": true,
+        "matched_true": true,
+        "passed": true,
+        "profile": "shadow",
+        "shadow_failed": false,
+        "side_effect_zero": {
+          "counter_updates": true,
+          "decision_writes": true,
+          "graph_mutations": true,
+          "outcome_writes": true,
+          "proof_writes": true
+        }
+      },
+      "repeat_same": {
+        "diagnostics_present": true,
+        "differences_empty": true,
+        "matched_true": true,
+        "passed": true,
+        "profile": "shadow",
+        "shadow_failed": false,
+        "side_effect_zero": {
+          "counter_updates": true,
+          "decision_writes": true,
+          "graph_mutations": true,
+          "outcome_writes": true,
+          "proof_writes": true
+        }
+      },
+      "unique_once": {
+        "diagnostics_present": true,
+        "differences_empty": true,
+        "matched_true": true,
+        "passed": true,
+        "profile": "shadow",
+        "shadow_failed": false,
+        "side_effect_zero": {
+          "counter_updates": true,
+          "decision_writes": true,
+          "graph_mutations": true,
+          "outcome_writes": true,
+          "proof_writes": true
+        }
+      }
+    }
+  },
+  "route_latency_claim": false,
+  "status": "PASS",
+  "true_graph": "soc_graph_5d_runner_true_3"
+}

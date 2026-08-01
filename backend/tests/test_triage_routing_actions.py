@@ -10,6 +10,7 @@ import contextlib
 import json
 import os
 import sys
+from typing import Any, cast
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -28,23 +29,6 @@ _DECISION_ID = "DEC-TRIAGE-ROUTING-001"
 _ALERT_ID = "ALERT-TRIAGE-ROUTING-001"
 _CATEGORY = "credential_access"
 _FV_JSON = json.dumps([0.7, 0.8, 0.5, 0.4, 0.6, 0.9])
-
-
-def _make_neo4j(action: str = _ROUTING_ACTION, factor_vector=_FV_JSON):
-    async def _run(query, params=None):
-        if "RETURN d.factor_vector AS factor_vector" in query:
-            return [{
-                "factor_vector": factor_vector,
-                "action": action,
-                "confidence": 0.85,
-                "category": _CATEGORY,
-                "alert_type": _CATEGORY,
-            }]
-        return []
-
-    client = AsyncMock()
-    client.run_query.side_effect = _run
-    return client
 
 
 def _make_learning_state(decision_count: int = 100):
@@ -74,84 +58,77 @@ def _make_request(outcome: str = "correct") -> OutcomeRequest:
     return OutcomeRequest(
         alert_id=_ALERT_ID,
         decision_id=_DECISION_ID,
-        outcome=outcome,
+        outcome=cast(Any, outcome),
     )
 
 
-def _patches(neo4j, ls, scorer=None):
-    score_stub = scorer if scorer is not None else None
+def _patches(ls):
     return [
-        patch("app.routers.triage.neo4j_client", neo4j),
         patch("app.routers.triage.get_feedback_status", return_value={"has_feedback": False}),
         patch("app.routers.triage.process_outcome", return_value=_make_outcome_result()),
         patch("app.routers.triage.event_bus.emit", new_callable=AsyncMock),
         patch("app.routers.triage.get_learning_state", return_value=ls),
-        patch("app.routers.triage.get_profile_scorer", return_value=score_stub),
         patch("app.routers.triage.save_learning_state"),
         patch("app.framework.audit.record_outcome", new_callable=AsyncMock,
               return_value={"hash": "fakehash", "chain_index": 0}),
         patch("app.state.graph_snapshot.get_snapshot", return_value=MagicMock()),
         patch("app.services.gae_state.get_mu_zero", return_value=None),
-        patch("app.services.gae_state.get_profile_scorer", return_value=score_stub),
         patch("app.services.gae_state.maybe_write_centroid_snapshot", return_value=False),
     ]
 
 
-async def _call(neo4j, ls, outcome: str = "correct", scorer=None) -> dict:
+async def _call(harness, ls, outcome: str = "correct") -> dict[str, Any]:
+    harness.add_decision(
+        decision_id=_DECISION_ID,
+        category=_CATEGORY,
+        action=_ROUTING_ACTION,
+        factors={f"f{i}": value for i, value in enumerate([0.7, 0.8, 0.5, 0.4, 0.6, 0.9])},
+        factor_vector=None if outcome == "null-factor-vector" else _FV_JSON,
+    )
     with contextlib.ExitStack() as stack:
-        for p in _patches(neo4j, ls, scorer=scorer):
+        for p in _patches(ls):
             stack.enter_context(p)
-        return await report_decision_outcome(_make_request(outcome))
+        request_outcome = "correct" if outcome == "null-factor-vector" else outcome
+        return cast(dict[str, Any], await report_decision_outcome(_make_request(request_outcome)))
+    raise AssertionError("unreachable")
 
 
 def _run(coro):
     return asyncio.run(coro)
 
 
-def test_refer_to_analyst_increments_decision_count():
+def test_refer_to_analyst_increments_decision_count(soc_triage_harness):
     ls = _make_learning_state(decision_count=100)
     before = ls.decision_count
 
-    _run(_call(_make_neo4j(action=_ROUTING_ACTION), ls, outcome="correct"))
+    _run(_call(soc_triage_harness, ls, outcome="correct"))
 
     after = ls.decision_count
     assert after == before + 1
 
 
-def test_refer_to_analyst_does_not_update_centroids():
+def test_refer_to_analyst_does_not_update_centroids(soc_triage_harness):
     ls = _make_learning_state(decision_count=100)
-    scorer = SimpleNamespace(
-        centroids=np.arange(24, dtype=np.float64).reshape(1, 4, 6).copy()
-    )
-    before = scorer.centroids.copy()
+    before = np.array(soc_triage_harness.scorer._scorer.mu, copy=True)
 
-    _run(_call(_make_neo4j(action=_ROUTING_ACTION), ls, outcome="correct", scorer=scorer))
+    _run(_call(soc_triage_harness, ls, outcome="correct"))
 
-    after = scorer.centroids
-    assert np.array_equal(before, after)
+    after = np.array(soc_triage_harness.scorer._scorer.mu, copy=True)
+    assert np.array_equal(after, before)
 
 
-def test_fv_none_still_increments_decision_count():
+def test_fv_none_still_increments_decision_count(soc_triage_harness):
     ls = _make_learning_state(decision_count=100)
     before = ls.decision_count
 
-    _run(_call(_make_neo4j(action=_ROUTING_ACTION, factor_vector=None), ls, outcome="correct"))
+    _run(_call(soc_triage_harness, ls, outcome="null-factor-vector"))
 
     after = ls.decision_count
     assert after == before + 1
 
 
-def test_outcome_for_nonexistent_decision_returns_404():
-    async def _run_missing(query, params=None):
-        if "RETURN d.factor_vector AS factor_vector" in query:
-            return []
-        return []
-
-    neo4j = AsyncMock()
-    neo4j.run_query.side_effect = _run_missing
-
+def test_outcome_for_nonexistent_decision_returns_404(soc_triage_harness):
     with contextlib.ExitStack() as stack:
-        stack.enter_context(patch("app.routers.triage.neo4j_client", neo4j))
         stack.enter_context(
             patch("app.routers.triage.get_feedback_status", return_value={"has_feedback": False})
         )

@@ -1737,8 +1737,8 @@ async def report_decision_outcome(request: OutcomeRequest):
         # GAE-3a: Retrieve f(t) from Decision node, apply Hebbian learning
         #
         # MATCH (d:Decision {id: $decision_id})
-        # SET d.outcome, d.correct, d.verified_at
-        # RETURN d.factor_vector, d.action, d.confidence
+        # Record the outcome through the shared GraphStore contract, then read
+        # the decision context needed by the existing learning path.
         # ====================================================================
         outcome_int   = +1 if request.outcome == "correct" else -1
         correct_bool  = outcome_int == +1
@@ -1774,24 +1774,51 @@ async def report_decision_outcome(request: OutcomeRequest):
             decision_id=request.decision_id,
             action=getattr(request, "analyst_action", None),
         ):
+            _soc_scorer = get_profile_scorer()
+            _soc_store = getattr(_soc_scorer, "graph_store", None)
+            if _soc_store is None:
+                raise RuntimeError("SOC GraphStore is not available through the live scorer")
+            _decision_before = _soc_store.get_decision(
+                request.decision_id,
+                domain="soc",
+            )
+            if _decision_before is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=(
+                        f"Decision {request.decision_id} not found in graph. "
+                        "Outcome not recorded."
+                    ),
+                )
+            _recommended_action = _decision_before.get("recommended_action")
+            _actual_action = request.analyst_action or ""
+            _was_override = (
+                request.analyst_action is not None
+                and _recommended_action != request.analyst_action
+            )
+            _soc_store.write_outcome(
+                decision_id=request.decision_id,
+                actual_action=_actual_action,
+                is_correct=correct_bool,
+                domain="soc",
+                outcome=outcome_label,
+                verified_at_epoch=float(_ts_outcome),
+                quality_signal=1.0 if correct_bool else 0.0,
+                override_comment=request.override_comment or "",
+                verified_by=analyst_id,
+                analyst_action=request.analyst_action,
+                final_action=request.analyst_action,
+                recommended_action=(
+                    str(_recommended_action) if _recommended_action is not None else None
+                ),
+                was_override=_was_override,
+                metadata={"verified_at": _ts_outcome / 1000.0},
+            )
             gae_result = await neo4j_client.run_query(
                 f"""
                 MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
                 WHERE d.domain = 'soc'
                 OPTIONAL MATCH (d)-[:DECIDED_ON]->(a:Alert)
-                SET d.outcome           = {_S(outcome_label)},
-                    d.correct           = {'true' if correct_bool else 'false'},
-                    d.verified_at_epoch = {_ts_outcome},
-                    d.override_comment  = {_S(request.override_comment or '')},
-                    d.verified_by       = {_S(analyst_id)},
-                    d.analyst_action    = {_S(request.analyst_action)},
-                    d.final_action      = {_S(request.analyst_action)},
-                    d.recommended_action = d.action,
-                    d.was_override      = CASE
-                        WHEN {_S(request.analyst_action)} IS NULL THEN false
-                        ELSE d.action <> {_S(request.analyst_action)}
-                    END,
-                    d.quality_signal    = {1.0 if correct_bool else 0.0}
                 RETURN d.factor_vector AS factor_vector,
                        d.action        AS action,
                        d.confidence    AS confidence,
@@ -2295,15 +2322,12 @@ async def report_decision_outcome(request: OutcomeRequest):
                 if wu and wu.centroid_update is not None:
                     cu = wu.centroid_update
                     # Write centroid_delta_norm back to the Decision node
-                    _ts_centroid = int(datetime.utcnow().timestamp() * 1000)
                     await neo4j_client.run_query(
                         f"""
                         MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
                         WHERE d.domain = 'soc'
                         SET d.centroid_delta_norm = {cu.centroid_delta_norm},
-                            d.category            = {_S(cu.category_name)},
-                            d.correct             = {'true' if correct_bool else 'false'},
-                            d.verified_at_epoch   = {_ts_centroid}
+                            d.category            = {_S(cu.category_name)}
                         """
                     )
                     print(

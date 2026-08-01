@@ -1,0 +1,59 @@
+........................................................................ [  3%]
+........................................................................ [  7%]
+........................................................................ [ 10%]
+........................................................................ [ 14%]
+........................................................................ [ 17%]
+........................................................................ [ 21%]
+........................................................................ [ 24%]
+..............ssssssssssssss............................................ [ 28%]
+........................................................................ [ 31%]
+........................................................................ [ 35%]
+........................................................................ [ 38%]
+........................................................................ [ 42%]
+........................................................................ [ 45%]
+........................................................................ [ 49%]
+........................................................................ [ 52%]
+........................................................................ [ 56%]
+........................................................................ [ 59%]
+........................................................................ [ 63%]
+........................................................................ [ 67%]
+........................................................................ [ 70%]
+........................................................................ [ 74%]
+........................................................................ [ 77%]
+........................................................................ [ 81%]
+........................................................................ [ 84%]
+........................................................................ [ 88%]
+........................................................................ [ 91%]
+........................................................................ [ 95%]
+........................................................................ [ 98%]
+.........................                                                [100%]
+============================== warnings summary ===============================
+..\..\..\proj-envs\python_expts_venv\Lib\site-packages\pytest_freezegun.py:17: 4082 warnings
+  C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\pytest_freezegun.py:17: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    if LooseVersion(pytest.__version__) < LooseVersion('3.6.0'):
+
+tests/test_cross_repo_contracts.py::test_scoring_result_has_entropy
+  C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\backend\tests\test_cross_repo_contracts.py:25: DeprecationWarning: ProfileScorer.for_soc() is deprecated and will move to consumer code in a future release. Use the constructor directly.
+    scorer = ProfileScorer.for_soc(mu=np.full((6, 4, 6), 0.5))
+
+tests/test_cross_repo_contracts.py::test_scoring_result_has_confidence_gap
+  C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\backend\tests\test_cross_repo_contracts.py:36: DeprecationWarning: ProfileScorer.for_soc() is deprecated and will move to consumer code in a future release. Use the constructor directly.
+    scorer = ProfileScorer.for_soc(mu=np.full((6, 4, 6), 0.5))
+
+tests/test_cross_repo_contracts.py::test_centroids_setter_validates_nan
+  C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\backend\tests\test_cross_repo_contracts.py:47: DeprecationWarning: ProfileScorer.for_soc() is deprecated and will move to consumer code in a future release. Use the constructor directly.
+    scorer = ProfileScorer.for_soc(mu=np.full((6, 4, 6), 0.5))
+
+tests/test_s2p_sdk_validation.py::test_sdk_scoring_result_fields
+  C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\backend\tests\test_s2p_sdk_validation.py:61: DeprecationWarning: ProfileScorer.for_soc() is deprecated and will move to consumer code in a future release. Use the constructor directly.
+    scorer = ProfileScorer.for_soc(mu=np.full((6, 4, 6), 0.5))
+
+tests/test_saml_auth_extended.py::test_saml_enabled_bad_cookie_returns_401
+tests/test_saml_auth_extended.py::test_saml_enabled_valid_analyst_passes_auth
+tests/test_saml_auth_extended.py::test_saml_enabled_admin_path_denies_analyst
+tests/test_saml_auth_extended.py::test_saml_enabled_admin_path_allows_admin_jwt
+  C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\proj-envs\python_expts_venv\Lib\site-packages\starlette\testclient.py:488: DeprecationWarning: Setting per-request cookies=<...> is being deprecated, because the expected behaviour on cookie persistence is ambiguous. Set cookies directly on the client instance instead.
+    return super().request(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+2027 passed, 14 skipped, 4090 warnings in 204.86s (0:03:24)

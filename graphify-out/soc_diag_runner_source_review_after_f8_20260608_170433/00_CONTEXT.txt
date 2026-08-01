@@ -1,0 +1,18 @@
+CreatedAt: 2026-06-08T17:04:34.3926409-07:00
+Repo: C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50
+Runner: C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\scripts\diagnostics\run_soc_diag_f.py
+PrefixInFlight: DIAG-F8-CRED
+GraphInFlight: soc_graph_diag_f8
+BackendContract: C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\scratch\temp\soc_diag_backend_contract.json
+Progress: C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\scratch\temp\soc_diag_f_progress.json
+
+Known contaminated graphs:
+- soc_graph_diag_f3: analyze-only failed run
+- soc_graph_diag_f4: partial seed failure
+- soc_graph_diag_f5: partial seed failure
+- soc_graph_diag_f6: partial 160-outcome run, failed at DIAG-F6-CRED-0161 analyze timeout
+- soc_graph_diag_f7: smoke/performance run
+- soc_graph_diag_f8: current clean external proof run
+
+Rule40:
+Windows-side AGE/PostgreSQL DSNs must use localhost, not 127.0.0.1.

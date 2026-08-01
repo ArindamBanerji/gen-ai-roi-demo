@@ -1,0 +1,3853 @@
+# DK Runtime Execution Plan v6.8 — SDK + SOC Tracks to L5 COMPLETE
+**Date:** June 6, 2026
+**Priority:** P1 — execute BEFORE all other roadmap items
+**Goal:** All SDK copilots compute, persist, and score with learned DK weights
+**Timeline:** ~5-6 working days
+
+---
+
+### Current Roadmap Decision — L5 Current-State Upsert (Approved)
+
+```
+Roadmap accepts L5 current-state semantics:
+- L5Centroid: one current node per (domain, category, action)
+- SHAPED_BY: latest shaping Decision only
+- L5ConservationState: one current node per domain
+- TRIGGERED_BY: latest status-transition Decision only;
+  same-status updates preserve prior edge
+- L5DKWeight: one current node per domain;
+  Welford fields are the audit chain
+- No DETACH DELETE for normal L5 updates
+- No centroid version history in this phase
+- All three L5 update methods must use _l5_upsert_current()
+```
+
+---
+**Authority:** dk_runtime_fix_architecture_v3.md + p_welford_architecture_decision.md
+**Scan status:** Prompt 0 discovery scan COMPLETE. All GAE parameters confirmed.
+
+---
+
+## Why This Runs First
+
+DK runtime is the P1 gap that makes or breaks the product's core claims.
+Without it, "compounding intelligence" is aspirational for 5 of 5
+copilots. Every other roadmap item (migration, SOC Option C, demo build,
+blog publish, arxiv submission) is LESS urgent than making the
+intelligence loop actually run. Those items improve a working product;
+this item makes the product work.
+
+**Everything else waits until L5 COMPLETE (C9A + C9B = 15 cells).**
+
+---
+
+## Prerequisites (verify BEFORE Prompt 0)
+
+DK estimation reads verified decisions. If ghost decisions contaminate
+the verified pool, DK learns from garbage.
+
+| Prerequisite | MAP# | Status | Verify |
+|---|---|---|---|
+| **CONS-V-FIX** (V = verified only) | #111 | Must be SHIPPED | `curl http://localhost:8010/api/conservation/status` — total_decisions should match verified count, not inflated by ghosts |
+| **OBSERVATION-WIRING** (preview → write_observation) | #115 | Must be SHIPPED | `grep -rn "write_observation" copilot-sdk/` shows preview using observation path |
+| **BUNDLE-REGEN** (Trading d=10 bundle) | #102 | Must be SHIPPED | Trading cold-start produces d=10 centroids |
+| **GAE editable install** | — | ✅ DONE | `pip install -e ../graph-attention-engine-v50` verified — GAE imports from copilot-sdk |
+
+**If ANY prerequisite is not shipped, fix it BEFORE starting Prompt 0.**
+DK estimation on ghost-polluted data produces wrong weights — the
+intelligence loop would "learn" from noise, which is worse than static priors.
+
+---
+
+## Architectural Review Synopsis
+
+Twelve review passes shaped this plan. This synopsis captures the key
+decisions and their rationale so the coding session understands WHY,
+not just WHAT.
+
+### Review 1 — GPT feedback (6 points, all accepted)
+
+**1. Split Prompt 2 into 2a/2b/2c with behavioral gate.** The original
+plan had a 3-4d monolith. If Part A (construction change) is subtly
+wrong, Parts B-E build persistence and routing on a broken foundation.
+Fix: 2a ships the construction + behavioral gate (G1+G2). Only after
+G1+G2 pass does 2b (persistence) and 2c (routing) proceed.
+
+**2. Behavioral acceptance test is THE gate, not item 12 in a list.**
+All storage tests can pass and the system still not learn — e.g.,
+`reestimate_dk()` runs but returns near-prior weights, or weights
+compute but `score()` never consumes them. G1 proves the intelligence
+loop WORKS: feed a noisy factor, verify its weight drops, verify
+scoring shifts. G2 proves shrinkage: at low N weights stay near prior,
+at high N they diverge. These are the "pipeline runs" vs "intelligence
+works" distinction.
+
+**3. Ghost-fix prerequisite.** DK estimation reads verified decisions.
+If #111 CONS-V-FIX and #115 OBSERVATION-WIRING haven't shipped,
+ghost decisions contaminate the verified pool and DK learns from
+garbage. These prerequisites must be verified BEFORE Prompt 0.
+
+**4. Low-N shrinkage is built into GAE.** `FixedAlpha(0.5)` = 50%
+prior + 50% data. This IS the "graduating from domain prior to
+firm-specific" mechanism the blog claims. No James-Stein needed —
+GAE already has it. The graduation is continuous, not a threshold.
+
+**5. GAE as editable install, not sys.path.insert.** `pip install -e`
+makes GAE a proper importable package. Brittle path hacks break test
+suites and don't align with the open-source plan.
+
+**6. C9 gates everything, not just the roadmap.** The blog publish
+gate was "Option C only." Wrong — L5 COMPLETE (C9A + C9B) is what
+makes the 288-moat and Mirror TRUE. A buyer who deploys before L5
+COMPLETE and inspects DK weights sees the domain prior. Gate: C9A +
+C9B + #132 for blog/arxiv. + demo build for LOOM-V1.
+
+### Review 2 — No-hack architectural audit (3 findings)
+
+**Finding 1 (SIGNIFICANT): Option B (external DK bridge) was a hack.**
+The original plan created a `dk_bridge.py` that ran
+`CoordinateDescentEstimator` independently, injected `_dk_weights`
+via private attribute assignment, and read from GraphStore instead of
+the scorer's decision buffer. Three red flags: parallel computation
+path, monkey-patching, different data source. Fix: Option A — change
+`from_preset()` to construct ProfileScorer with full LearningStrategy.
+The scorer calls its own `reestimate_dk()` through its designed API.
+Persistence layer READS from the scorer, doesn't compute.
+
+**Finding 2 (resolved): Why not split persist-only (Phase 1.5) and
+activate (Phase 2)?** Three reasons the split was wrong:
+- "Don't change scoring" is circular — the conservation gate exists
+  precisely to catch accuracy degradation from DK activation
+- "Observe before trusting" is waste — DK weights in L5 that nobody
+  reads have zero commercial value
+- "Conservation should be GREEN first" is backwards — conservation
+  should monitor DK-weighted accuracy from day one, not switch later
+  with no baseline
+
+Combined: compute + persist + activate in one step. Conservation
+monitors DK-weighted accuracy as the safety net.
+
+**Finding 3 (resolved): No "minimal" LearningStrategy.** Use the FULL
+strategy from `for_soc_twophase()`: `DecisionCountPolicy(n=200)`,
+`CoordinateDescentEstimator()`, `FixedAlpha(0.5)`, `eta_override=0.01`,
+`auto_pause_on_amber=True`. These are the designed parameters. The
+product is a compounding intelligence system — the learning strategy
+should be full, not minimal.
+
+### Review 3 — Phase-aware centroid writes (1 significant finding)
+
+**Centroid L5 writes must be conditional on MEAN_CONVERGENCE phase.**
+When a category enters VARIANCE_LEARNING (after 200 decisions),
+`ProfileScorer.update()` freezes the centroid and buffers decisions
+for DK estimation instead. Writing an L5 centroid node with a
+SHAPED_BY edge for a frozen centroid is false provenance — it claims
+"this decision shaped this centroid" when the centroid didn't move.
+
+Fix: `_persist_centroid_l5()` checks `get_category_phase(category)`.
+If VARIANCE_LEARNING: skip centroid write (DK write fires instead).
+If MEAN_CONVERGENCE: write centroid with SHAPED_BY edge (truthful).
+
+This aligns with GAE's designed two-phase architecture:
+- Phase 1 (MEAN_CONVERGENCE): centroid learning active, L5 centroid writes active
+- Phase 2 (VARIANCE_LEARNING): DK learning active, L5 DK writes active
+- Both phases: conservation L5 writes always active
+
+### Review 4 — P27 centroid sequencing conflict (1 finding)
+
+**P-CENTROID-L5-WIRE was listed after C9 but required before P27.**
+The original plan said "centroids work via checkpoints — L5 adds
+auditability, lower priority." But P27's gate is "all three L5 node
+types." Without centroid L5 writes, P27 verifies 2 of 3 — which fails
+the gate dishonestly. Codex correctly stopped P27 and escalated.
+
+Fix: P-CENTROID-L5-WIRE moved to Prompt 3b (before P27). The wiring
+is in `scoring_router.py` (consistent with DK and conservation L5
+writes — all three in the router layer). `save_centroids()` checkpoint
+behavior is unchanged — L5 centroid write is ADDITIVE. S2P covered by
+the same pattern in its outcome handler.
+
+**Key distinction:** `save_centroids()` = full tensor checkpoint for
+scorer restore. `update_centroid()` = per-(category, action) L5 node
+with SHAPED_BY edge for audit. Both serve different purposes. Both
+coexist.
+
+### Review 5 — C9 live AGE blockers (8 issues, 3 code fixes)
+
+**C9 live AGE proof attempted after P27 passed. Five code/config
+issues and three accepted gaps found.**
+
+**Issue A — Conservation domain bug (CODE FIX).** Live AGE seeding
+produced 200+ verified decisions per copilot, but `compute_conservation_metrics()`
+returned V=0, q=0, alpha=0 → theta_min=inf. Root cause: count
+functions used implicit `graph_store.domain` (None for AGE stores that
+serve all domains) instead of the explicit domain the route passes.
+Fix: pass explicit domain through ALL count paths.
+
+**Issue B — AGE cannot serialize infinity (CODE FIX).** When
+theta_min=inf (legitimate for zero-data), AGE Cypher interprets `inf`
+as a variable name, not a numeric. Fix: sentinel string `"Infinity"`
+stored as TEXT, decoded to `float("inf")` on read. NaN always rejected
+(computation error upstream, not a valid state).
+
+**Issue C — DKWeight JSON/list read compatibility (CODE FIX).** AGEClient
+normalizes JSON string properties into Python lists on read. The
+`get_dk_weights()` read path expected JSON strings only. Fix: accept
+both `str` (parse with `json.loads`) and `list` (use directly). Same
+for Welford vector fields. Keep validation strict. Don't change write
+format.
+
+**Issue D — Old status-null Decision nodes.** Not migrated. New
+writes include status + domain. Historical cleanup is a separate
+later item.
+
+**Issue E — GRAPH_DSN vs DATABASE_URL auth mismatch.** Config issue.
+Standardize on DATABASE_URL for live AGE proof. Not a product bug.
+
+**Issue F — SOC remains #132 gap.** SOC L5 persistence is conditional
+on categories_with_data (P25c accepted behavior). SOC DK runtime
+addressed in collapsed SOC track (SOC-1+2). C9A passes for 4 non-SOC
+domains. C9B adds SOC after SOC track completes.
+
+**Issue G — TRIGGERED_BY edge requires status transition.** If live
+seeding keeps conservation at the same status throughout (e.g., GREEN
+from start), no TRIGGERED_BY edge is created — correct behavior, not
+a bug. Fix: seed starting from zero decisions (RED) through 200+
+(GREEN transition). That RED→GREEN produces a TRIGGERED_BY edge.
+
+**Issue H — Multi-process tracker coordination.** Future hardening.
+Not C9 blocker.
+
+**C9 revised proof standard:** 4 non-SOC domains × 3 node types =
+12 cells (not 15). SOC = #132 gap. TRIGGERED_BY = present if
+transition exercised, "not exercised" if not.
+
+### Review 6 — L5 upsert as core reusable capability (1 pattern, 3 callers)
+
+**L5Centroid used DKWeight's delete-create pattern, but L5Centroid has
+SHAPED_BY edges and DKWeight does not.** AGE refuses to DELETE a vertex
+with edges. This caused all repeated centroid writes to fail once the
+first SHAPED_BY edge existed.
+
+**The deeper fix:** updating an L5 current-state node is a BASIC
+REPEATABLE OPERATION — not three separate implementations with different
+mutation patterns. All three node types (Centroid, DKWeight,
+ConservationState) need the same capability: upsert a current-state node,
+handle duplicates from garbled state, manage optional provenance edges.
+
+Fix: `_l5_upsert_current()` — one method on AGEGraphStore that ALL
+three node types call. Handles 0 nodes (CREATE), 1 node (SET), N
+duplicates (cleanup → CREATE), edge replacement, missing edge target,
+and edge_condition gating. 10 parametrized tests cover every starting
+state × every node type.
+
+**All three L5 node types now use the SAME core method:**
+
+| Node | identity keys | edge_type | edge_condition |
+|---|---|---|---|
+| L5Centroid | (domain, category, action) | SHAPED_BY | Always (when in MEAN_CONVERGENCE) |
+| L5ConservationState | (domain) | TRIGGERED_BY | Only on status transitions |
+| L5DKWeight | (domain) | None | N/A (Welford is the audit chain) |
+
+**Seven design questions answered permanently:**
+
+1. L5Centroid model = **current-state** (one node per identity, SET-updated)
+2. SHAPED_BY = **latest decision only** (not accumulated history)
+3. Delete old SHAPED_BY edge = **YES** (delete EDGE, not NODE)
+4. C9 = **current-state proof** (exists + has SHAPED_BY = pass)
+5. P26 startup read = **one node per identity** (no latest-selection needed)
+6. update_centroid = **upsert via SET** (not delete-create)
+7. DETACH DELETE = **NEVER for L5 nodes** (delete edges explicitly)
+
+**Core design: L5 current-state upsert as a reusable capability.**
+
+Updating a current-state L5 node in AGE (centroid, DK weight, or
+conservation state) is a BASIC REPEATABLE OPERATION that every L5
+write path uses. It must be a single well-tested method — not three
+separate implementations with different mutation patterns.
+
+**The pattern (implemented once, used by all three node types):**
+
+```python
+def _l5_upsert_current(
+    self,
+    label: str,                    # "L5Centroid", "L5DKWeight", "L5ConservationState"
+    identity: dict[str, str],      # fields that define "same node" (domain + node-specific keys)
+    properties: dict[str, Any],    # all properties to SET/CREATE with
+    edge_type: str | None = None,  # "SHAPED_BY", "TRIGGERED_BY", or None
+    edge_target_label: str = "Decision",
+    edge_target_id: dict[str, str] | None = None,  # {domain: ..., decision_id: ...}
+    edge_condition: bool = True,   # False = skip edge ops (e.g., same-status conservation)
+) -> str | None:
+    """
+    Core L5 current-state upsert. Guarantees convergence to exactly
+    1 node + 0 or 1 edge regardless of starting state.
+    Returns node id if available, None otherwise.
+
+    Handles:
+    - 0 nodes → CREATE
+    - 1 node → SET properties
+    - N nodes → cleanup duplicates → CREATE fresh
+    - 0 edges → CREATE if edge_condition
+    - 1 edge → DELETE old + CREATE new if edge_condition
+    - N edges → DELETE ALL + CREATE 1 if edge_condition
+    - edge_condition=False → leave existing edges untouched
+    - Missing edge target → log warning, skip edge (non-fatal)
+
+    NOT atomic: makes 3-5 separate AGE queries. If a query fails
+    mid-sequence, state may be inconsistent — but the self-healing
+    property recovers on the NEXT call (garbled → cleanup → correct).
+    """
+    where_clause = " AND ".join(
+        f"n.{k} = {_S(v)}" for k, v in identity.items()
+    )
+
+    # Step 1: Count existing nodes for this identity
+    existing = self._client.query(
+        f"MATCH (n:{label}) WHERE {where_clause} RETURN n"
+    )
+
+    if len(existing) > 1:
+        # GARBLED STATE: duplicates from failed prior writes.
+        # Delete ALL edges in BOTH directions (outgoing AND incoming)
+        # to ensure nodes become edge-free and deletable.
+        # Uses -[r]-() not -[r]->() to catch any edge direction.
+        logger.warning(
+            f"{label} garbled state: {len(existing)} nodes for "
+            f"{identity}. Cleaning up."
+        )
+        self._client.query(
+            f"MATCH (n:{label})-[r]-() "
+            f"WHERE {where_clause} DELETE r"
+        )
+        self._client.query(
+            f"MATCH (n:{label}) WHERE {where_clause} DELETE n"
+        )
+        existing = []  # Force CREATE path
+
+    all_props = {**identity, **properties}
+    prop_str = ", ".join(f"{k}: {_S(v)}" for k, v in all_props.items())
+
+    if existing:
+        # EXACTLY ONE NODE: SET properties in place (never delete node)
+        set_clause = ", ".join(
+            f"n.{k} = {_S(v)}" for k, v in properties.items()
+        )
+        self._client.query(
+            f"MATCH (n:{label}) WHERE {where_clause} SET {set_clause}"
+        )
+        # Delete + replace edge ONLY when edge_condition is True.
+        # When edge_condition=False (e.g., conservation same-status),
+        # leave existing edges untouched — don't delete provenance
+        # from the last real transition.
+        if edge_type and edge_condition:
+            self._client.query(
+                f"MATCH (n:{label})-[r:{edge_type}]->() "
+                f"WHERE {where_clause} DELETE r"
+            )
+    else:
+        # NO NODE: CREATE fresh
+        self._client.query(f"CREATE (n:{label} {{{prop_str}}})")
+
+    # Step 3: CREATE new edge if conditions met
+    if edge_type and edge_condition and edge_target_id:
+        target_where = " AND ".join(
+            f"t.{k} = {_S(v)}" for k, v in edge_target_id.items()
+        )
+        target_exists = self._client.query(
+            f"MATCH (t:{edge_target_label}) WHERE {target_where} "
+            f"RETURN t"
+        )
+        if target_exists:
+            now = _S(str(time.time()))
+            self._client.query(
+                f"MATCH (n:{label}), (t:{edge_target_label}) "
+                f"WHERE {where_clause} AND {target_where} "
+                f"CREATE (n)-[:{edge_type} {{timestamp: {now}}}]->(t)"
+            )
+        else:
+            logger.warning(
+                f"{edge_type} edge target not found: {edge_target_id}"
+            )
+
+    return None  # AGE CREATE doesn't return id reliably; callers
+                 # generate their own ids if needed
+
+# RETURN VALUE CONTRACT (Clarification 4):
+# _l5_upsert_current() success = no exception raised.
+# Callers receive None — do NOT interpret None as failure.
+# persist_soc_centroid() must return True after a non-throwing
+# store.update_centroid() call. The prior "returned false"
+# observability problem was caused by treating None as failure.
+```
+
+**Each L5 node type calls the core method:**
+
+```python
+# L5Centroid — called from scoring_router after learn (MEAN_CONVERGENCE only)
+def update_centroid(self, domain, category, action, centroid_vector,
+                    count=None, eta_last=None, caused_by_decision_id=None):
+    self._l5_upsert_current(
+        label="L5Centroid",
+        identity={"domain": domain, "category": category, "action": action},
+        properties={
+            "centroid_vector_json": json.dumps(centroid_vector),
+            "count": count or 0,
+            "eta_last": eta_last or 0.0,
+            "updated_at_epoch": time.time(),
+        },
+        edge_type="SHAPED_BY",
+        edge_target_id={"domain": domain, "decision_id": caused_by_decision_id}
+            if caused_by_decision_id else None,
+    )
+
+# L5ConservationState — called from scoring_router after learn
+def update_conservation_state(self, domain, status, alpha, q, V, ...
+                              caused_by_decision_id=None, old_status=None):
+    is_transition = old_status is not None and old_status != status
+    self._l5_upsert_current(
+        label="L5ConservationState",
+        identity={"domain": domain},
+        properties={
+            "status": status, "alpha": alpha, "q": q, "V": V,
+            "theta_min": "Infinity" if math.isinf(theta_min) else theta_min,
+            # ... all other properties
+            "updated_at_epoch": time.time(),
+        },
+        edge_type="TRIGGERED_BY",
+        edge_target_id={"domain": domain, "decision_id": caused_by_decision_id}
+            if caused_by_decision_id else None,
+        edge_condition=is_transition,  # Only on status transitions
+    )
+
+# L5DKWeight — called from dk_persistence after reestimate_dk
+def update_dk_weights(self, domain, weight_tensor, n_decisions_used,
+                      computed_at, *, welford_state=None, ...):
+    # DECISION: DKWeight migrates to _l5_upsert_current (SET pattern).
+    # L5DKWeightArchive / supersedes chain from P24 is DROPPED.
+    # Rationale: Welford state IS the audit chain for DK weights —
+    # archive nodes were a pre-Welford mechanism, now redundant.
+    self._l5_upsert_current(
+        label="L5DKWeight",
+        identity={"domain": domain},
+        properties={
+            "weight_json": json.dumps(weight_tensor),
+            "n_decisions_used": n_decisions_used,
+            "computed_at": computed_at,
+            # Welford fields (nullable — absent for old rows):
+            **({"confirmed_mean_json": json.dumps(welford_state["confirmed_mean"]),
+                "confirmed_m2_json": json.dumps(welford_state["confirmed_m2"]),
+                "overridden_mean_json": json.dumps(welford_state["overridden_mean"]),
+                "overridden_m2_json": json.dumps(welford_state["overridden_m2"]),
+                "all_mean_json": json.dumps(welford_state["all_mean"]),
+                "all_m2_json": json.dumps(welford_state["all_m2"]),
+               } if welford_state else {}),
+            "updated_at_epoch": time.time(),
+        },
+        edge_type=None,  # No provenance edges — Welford IS the audit chain
+    )
+```
+
+**What this achieves:**
+
+| Before (three separate implementations) | After (one core method) |
+|---|---|
+| Centroid: delete-create (crashes on edges) | `_l5_upsert_current(edge_type="SHAPED_BY")` |
+| Conservation: SET (works but edge handling is separate code) | `_l5_upsert_current(edge_type="TRIGGERED_BY", edge_condition=is_transition)` |
+| DKWeight: delete-create + archive (separate pattern) | `_l5_upsert_current(edge_type=None)` |
+| Three mutation patterns, three edge-handling paths, three sets of tests | **One pattern, one test suite, three callers** |
+
+**Test suite for `_l5_upsert_current` (10 tests — covers ALL node types):**
+
+| # | Test | Starting state | Proves |
+|---|---|---|---|
+| 1 | `test_l5_upsert_create_fresh` | 0 nodes | CREATE works for any label |
+| 2 | `test_l5_upsert_set_existing` | 1 node, 0 edges | SET updates properties, node preserved |
+| 3 | `test_l5_upsert_replace_edge` | 1 node, 1 edge | Old edge deleted, new edge created |
+| 4 | `test_l5_upsert_cleanup_duplicates` | 3 nodes, mixed edges | Recovery → 1 node, 1 edge |
+| 5 | `test_l5_upsert_multiple_stale_edges` | 1 node, 4 edges | All old edges deleted, 1 new edge |
+| 6 | `test_l5_upsert_missing_edge_target` | 1 node, decision doesn't exist | Edge skipped, node updated, warning logged |
+| 7 | `test_l5_upsert_edge_condition_false` | 1 node, 1 old edge | edge_condition=False: old edge LEFT IN PLACE (no delete, no create). Conservation same-status update preserves last transition's TRIGGERED_BY. |
+| 8 | `test_l5_upsert_no_edge_type` | 1 node | edge_type=None: no edge operations (DKWeight pattern) |
+| 9 | `test_l5_upsert_edge_wanted_no_target_id` | 1 node, 1 old edge | edge_type set, edge_condition=True, but edge_target_id=None: old edge deleted, no new edge. Centroid without caused_by_decision_id. |
+| 10 | `test_l5_upsert_garbled_with_incoming_edges` | 2 nodes, 1 has incoming edge | Cleanup deletes both-direction edges, then deletes nodes, creates fresh. Verifies `-[r]-()` pattern. |
+
+**This test suite runs against ALL three label types** via parametrization:
+
+```python
+@pytest.fixture(params=["L5Centroid", "L5DKWeight", "L5ConservationState"])
+def label(request):
+    return request.param
+```
+
+Every label gets every test. One suite covers all three node types.
+
+### Review findings applied to `_l5_upsert_current` (7 issues found, all fixed)
+
+| # | Issue | Severity | Fix applied |
+|---|---|---|---|
+| 1 | `edge_condition=False` deleted old edge but skipped new → 0 edges. Conservation same-status lost its TRIGGERED_BY. | **BUG** | Edge deletion now gated on `edge_condition`. When False: edges untouched. |
+| 2 | DKWeight archive pattern conflict. P24 used L5DKWeightArchive + supersedes chain. `_l5_upsert_current` uses SET (no archive). | **DESIGN** | DKWeight archive DROPPED. Welford IS the audit chain — archive was pre-Welford, now redundant. |
+| 3 | Garbled cleanup only deleted `edge_type` edges. Nodes with unexpected edge types still had edges → DELETE failed. | **BUG** | Cleanup deletes ALL edges: `[r]-()` not `[r:{edge_type}]->()`. |
+| 4 | Return value mismatch. Protocol says `-> str`, method returned None. | **MINOR** | Returns `None` with note: AGE CREATE doesn't return id reliably. Callers generate ids if needed. |
+| 5 | Bare `time.time()` float in edge Cypher. AGE may interpret incorrectly. | **MINOR** | Wrapped in `_S(str(time.time()))` for serialization consistency. |
+| 6 | No atomicity documentation. 3-5 separate queries per upsert. | **MINOR** | Docstring added: "NOT atomic. Self-healing on next call." |
+| 7 | Garbled cleanup only deleted OUTGOING edges `(n)-[r]->()`. Incoming edges would cause DELETE node to fail. | **BUG** | Changed to both-direction pattern `(n)-[r]-()` in garbled cleanup. |
+
+### 8-Criteria Architectural Review of `_l5_upsert_current`
+
+**1. CORRECTNESS — State machine convergence:** ✅ PASS
+
+Every starting state in the table converges to (1 node, 0 or 1 edge).
+Traced all 9 paths:
+- 0 nodes + no target → (1, 0) ✅
+- 0 nodes + target → (1, 1) ✅
+- 1 node, 0 edges, condition=True → (1, 1) ✅
+- 1 node, 0 edges, condition=False → (1, 0) ✅
+- 1 node, 1 edge, condition=True → (1, 1) ✅
+- 1 node, 1 edge, condition=False → (1, 1 preserved) ✅
+- 1 node, N edges, condition=True → (1, 1) ✅
+- N nodes, mixed → cleanup → (1, 0 or 1) ✅
+- N nodes, condition=False → cleanup → (1, 0) ✅ (provenance lost but garbled state was already broken)
+
+**2. EDGE CASES — 3 additional starting states found:**
+
+| State | Handled? | Notes |
+|---|---|---|
+| 1 node with INCOMING edges `()-[r]->(n)` | ⚠️ **PARTIALLY** | The garbled cleanup deletes `(n)-[r]->()` (outgoing only). If an L5 node has incoming edges, the subsequent `DELETE n` crashes. No current code creates incoming edges to L5 nodes, but for robustness the cleanup should use `(n)-[r]-()` (both directions). |
+| edge_condition=True but edge_target_id=None | ✅ Handled | Line 331: `edge_type and edge_condition and edge_target_id` — all three must be truthy. With edge_target_id=None, edge creation is skipped. Old edge is deleted (line 321). Result: (1 node, 0 edges). Correct for centroid with no caused_by_decision_id. |
+| Duplicate Decision targets (violating Standing Rule #52) | ⚠️ **LOW RISK** | If two Decision nodes share (domain, decision_id), edge CREATE at line 341-344 produces 1×2=2 edges. Unlikely given Standing Rule #52 but worth a defensive LIMIT 1 on the target MATCH. |
+
+**Fix for incoming edges (apply to garbled cleanup):**
+```python
+# BEFORE (outgoing only):
+f"MATCH (n:{label})-[r]->() WHERE {where_clause} DELETE r"
+
+# AFTER (both directions):
+f"MATCH (n:{label})-[r]-() WHERE {where_clause} DELETE r"
+```
+
+**3. AGE COMPATIBILITY:** ✅ PASS
+
+All Cypher patterns are valid AGE syntax. No MERGE (Standing Rule #50).
+No ON CREATE SET. No partial constraints. SET on existing nodes is
+supported. DELETE on edge-free nodes is supported. CREATE with
+properties is supported. MATCH with WHERE clause is supported.
+
+One note: AGE's `MATCH (n), (t) WHERE ... CREATE (n)-[]->(t)` is a
+Cartesian product. With 1 L5 node and 1 Decision target, this produces
+exactly 1 edge. Safe given the cleanup ensures 1 L5 node.
+
+**4. CONCURRENCY:** ⚠️ DOCUMENTED RISK (acceptable)
+
+Two concurrent writers for the same identity:
+```
+Writer A: reads 0 nodes → CREATE → 1 node
+Writer B: reads 0 nodes → CREATE → 2 nodes (race)
+Next call: detects 2 → cleanup → 1 node
+```
+The self-healing property recovers on the next call. Between the race
+and the next call, reads may return either node — the ORDER BY LIMIT 1
+from P25-HARDENING mitigates this for readers. Documented as "NOT
+atomic. Self-healing on next call." Acceptable for single-process
+deployment per domain (current architecture).
+
+**5. PERFORMANCE:** ✅ PASS (minor optimization possible)
+
+| Path | Queries | Could optimize? |
+|---|---|---|
+| 1 node, edge_condition=True | 4 (MATCH, SET, DELETE edge, MATCH+CREATE edge) | Could combine SET + DELETE edge into one query. Minor. |
+| 1 node, edge_condition=False | 2 (MATCH, SET) | Optimal. |
+| 0 nodes, with edge | 3 (MATCH, CREATE, MATCH+CREATE edge) | Optimal. |
+| N nodes garbled | 5 (MATCH, DELETE edges, DELETE nodes, CREATE, CREATE edge) | Acceptable — rare path. |
+
+No unnecessary queries. The target_exists check before edge creation
+(lines 335-338) adds 1 query but provides clean logging when the
+Decision is missing — better than try/except on a failed CREATE.
+
+**6. API DESIGN:** ✅ PASS
+
+- `identity` vs `properties` separation is clean and correct
+- `edge_condition` gating works for all three callers
+- `edge_type=None` cleanly disables all edge operations (DKWeight)
+- Callers are thin (5-15 lines each) — all complexity is in the core method
+- The `edge_target_id` as optional dict handles "no provenance available" correctly
+
+**7. TEST COVERAGE:** ⚠️ 2 MISSING TESTS
+
+| # | Missing test | What it would prove |
+|---|---|---|
+| 9 | `test_l5_upsert_edge_wanted_no_target_id` | edge_type="SHAPED_BY", edge_condition=True, edge_target_id=None. Old edge deleted, no new edge created. Centroid without caused_by_decision_id. |
+| 10 | `test_l5_upsert_garbled_with_incoming_edges` | 2 nodes where one has an incoming edge. Cleanup deletes both-direction edges, then deletes nodes. Verifies the `-[r]-()` fix. |
+
+**8. BUGS:** 1 remaining after prior 6 fixes
+
+**Garbled cleanup only deletes OUTGOING edges.** Line 297-299 uses
+`(n)-[r]->()` which is direction-specific. If an L5 node has incoming
+edges (from any source), `DELETE n` at line 301-303 will fail.
+
+Fix: change `(n)-[r]->()` to `(n)-[r]-()` in the garbled cleanup.
+This matches edges in both directions. The normal single-node path
+(line 322-325) can stay direction-specific because it only manages
+known edge types which are always outgoing.
+
+### Review 7 — SOC track under-specification audit + collapse (18 → 0 gaps)
+
+**The SOC track was initially added as 6 separate prompts (SOC-0
+through SOC-5) but was under-specified at the level that causes Codex
+to fail.** 18 gaps found. Then collapsed to 4 prompts (SOC-0, SOC-1+2,
+SOC-3, SOC-4+5) reducing ~4-5d to ~3d with zero loss of coverage.
+
+**Critical findings (all resolved in collapsed track):**
+
+**SOC-0 expanded to 7 scans (was 4).** Added: score/learn API
+endpoints, categories/factor dimensions, graph store access, existing
+DK/Welford imports. Reduced scan time to 10-15 min (focused queries).
+
+**SOC has no CompoundingScorer.** SDK added `reestimate_dk_if_due()`
+to CompoundingScorer — SOC uses ProfileScorer directly. Fix: call
+`scorer.reestimate_dk()` directly in triage.py. No wrapper class.
+
+**SOC-1 and SOC-2 merged into SOC-1+2.** Construction change and L5
+wiring are naturally coupled — can't verify construction without
+wiring the persistence. Combined to 1.5d with 7 tests.
+
+**SOC-4 and SOC-5 merged into SOC-4+5.** `_l5_upsert_current()` is
+already tested 30 ways. SOC just proves the WIRING works, not the
+core method. Combined to 0.5d with 3 integration tests + C9B proof.
+
+**Conservation verification ordering fixed.** P25c is conditional on
+`categories_with_data > 0`. Before SOC-3 (#132), that may be 0.
+SOC-1+2 verifies centroid + DK only. Conservation verified in SOC-4+5
+after SOC-3 fixes the count.
+
+**SOC tests: 15 total** (7 for SOC-1+2, 5 for SOC-3, 3 for SOC-4+5).
+
+### Review 8 — SOC C9B live-proof contract (3 prerequisites)
+
+**SOC-4+5 live smoke succeeded partially but C9B could not pass.**
+Three concrete gaps discovered in the live proof path:
+
+**1. SOC Decision nodes lack `domain="soc"`.** L5 provenance edges
+(SHAPED_BY) are domain-scoped by design. SOC route-created Decisions
+omitted domain, so SHAPED_BY couldn't find them. Fix: add
+`domain="soc"` to SOC Decision creation. Do NOT weaken SHAPED_BY
+matching to ignore domain.
+
+**2. `refer_to_analyst` is routing-only.** Not a scorer action. Smoke
+loops that hit this action can't produce learning outcomes. Fix: C9B
+smoke skips routing-only actions, retries until valid scorer actions
+(escalate/investigate/suppress/monitor), reports skip count.
+`--loops N` means N valid outcomes, not N attempts.
+
+**3. Alert input context required.** `/api/alert/analyze` needs
+pre-existing Alert/User/Asset nodes. Seed script creates input
+context ONLY — not L5 proof data. Deterministic IDs (C9B-SOC-0001...).
+
+**C9B fixer added (0.5d):** Domain tag fix + smoke script updates +
+3 new tests. SOC track total: ~3d → ~4d.
+
+### Review 9 — SOC C9B proof-state hygiene (4 decisions)
+
+**The C9B micro-fix loop:** After domain tagging, smoke script fixes,
+and conservation compatibility, C9B STILL failed because the live
+graph contained stale L5Centroid rows from pre-fix writes. These
+pointed to old no-domain Decision IDs, so SHAPED_BY couldn't attach.
+Phase gate / conservation pause prevented natural refresh. Each run
+discovered one more gap. The design was under-specified, not the
+implementation.
+
+**Decision 1: Fresh proof graph (Option A).**
+
+C9B runs on `soc_graph_c9b`, not `soc_graph`. The proof starts from
+zero L5 nodes. No stale state. No cleanup ambiguity. Reproducible.
+
+Why: C9B is a proof gate that the final design works under the final
+code. Running against historical contamination proves navigation
+skills, not architecture correctness. A fresh graph proves the
+intelligence loop produces all 3 L5 node types + Welford + SHAPED_BY
+from seeded inputs and runtime routes — nothing else.
+
+**Decision 2: SHAPED_BY required from fresh MEAN_CONVERGENCE write.**
+
+C9B must produce at least one fresh L5Centroid write with SHAPED_BY
+pointing to a `Decision(domain="soc", decision_id=...)` that was
+created in the same proof run. Stale centroid rows from pre-fix
+writes do not satisfy the SHAPED_BY requirement.
+
+**Decision 3: Conservation — do not disable, start from clean state.**
+
+`auto_pause_on_amber=True` stays on. Fresh graph means conservation
+starts from zero decisions → status RED → progresses naturally through
+seeded valid outcomes. If conservation pause blocks ALL learning on a
+fresh graph, that is a real bug (conservation formula rejects clean
+data), not something to bypass.
+
+**Decision 4: `--loops N` = N valid scorer-action outcomes.** Confirmed.
+`refer_to_analyst` skipped. Max-attempts guard. Report attempts vs
+valid. Exhaustion = blocker.
+
+### Review 10 — SOC C9B DK phase proof: the actual requirement (3 fatal flaws fixed)
+
+**After 7 rounds of C9B fixes, the design was still wrong.** Each fix
+addressed a symptom. The root cause: the proof contract did not
+understand how DK learning works in GAE.
+
+**The three fatal flaws:**
+
+**Flaw 1: "210 loops" assumed single-category concentration.**
+SOC has 6 categories. 210 outcomes distributed across 6 categories =
+~35 per category. `DecisionCountPolicy(n=200)` requires 200 decisions
+in ONE category for VARIANCE_LEARNING phase transition. At 35 per
+category, no category ever transitions. No DK estimation runs. No
+DKWeight appears. The "210 loops" number was based on the SDK design
+where copilots often have fewer categories or where outcomes
+concentrate naturally — SOC distributes them.
+
+**Flaw 2: Process splitting invalidates DK proof.**
+ProfileScorer phase state and decision buffer are process-local. If
+the smoke run splits across two processes (167 + 43), no single
+process's scorer sees 200 decisions in any category. Graph-level
+V=210 is conservation proof (counts verified decisions in the graph).
+It is NOT DK proof (requires one scorer process to accumulate 200+
+decisions in one category's internal buffer).
+
+**Flaw 3: Conservation proof ≠ DK proof.**
+Conservation needs category COVERAGE: multiple categories with data,
+α = distinct_categories / C. DK needs category DEPTH: 200+ decisions
+in ONE category. These are opposing requirements if loop count is
+fixed. Mixing them into one "210 loops" target guaranteed neither
+would be optimally served.
+
+**The fix: separate the two proof goals, specify DK precisely.**
+
+**C9B is now two sub-proofs:**
+
+| Sub-proof | What it proves | Requirement |
+|---|---|---|
+| **C9B-CONS** (conservation) | SOC conservation computes correct α·q·V | ✅ Proven on prior diagnostic graph. Will RE-PROVE on fresh soc_graph_c9b at 250 loops (crosses 300 calibration threshold). |
+| **C9B-DK** (DK learning) | SOC DK estimation produces learned weights | 250 valid outcomes in ONE target category, in ONE uninterrupted process, producing L5DKWeight + Welford. Conservation also proven at 300+. |
+
+**C9B-CONS is done.** L5ConservationState exists with valid metrics.
+No more conservation proof loops needed.
+
+**C9B-DK is the only remaining gap.** Specification:
+
+1. **One target category.** Pick one SOC category (e.g.,
+   `credential_access`) and seed alerts that route to it. Do not
+   spread across all 6 categories.
+
+2. **230 valid outcomes in that ONE category.** First 200 = 
+   MEAN_CONVERGENCE (centroid learning). Decision 201 = phase
+   transition to VARIANCE_LEARNING. Decisions 201-230 = DK buffer
+   population. `reestimate_dk()` runs on buffered variance decisions.
+
+3. **One uninterrupted process.** No resume. No split. If the process
+   dies before DKWeight appears, restart from fresh `soc_graph_c9b`.
+   ProfileScorer state is process-local — there is no warm-start from
+   graph for the decision buffer.
+
+4. **Category targeting in seed script.** The seed script must create
+   alerts that SOC's triage reliably classifies into the target
+   category. This requires understanding which alert attributes
+   (type, severity, entity context) map to which SOC category.
+   If category assignment cannot be controlled → seed 1400 alerts
+   (230 × 6) and accept whichever category crosses 230 first.
+
+5. **Per-category counting in smoke output.** The smoke script must
+   report outcomes PER CATEGORY, not just total valid outcomes.
+   DK proof passes when the TARGET category's count ≥ 230, not
+   when total valid ≥ 230.
+
+**DK proof is NOT:**
+- Graph-level V ≥ 210 (that's conservation volume)
+- 210 valid outcomes spread across 6 categories (that's ~35 per category, below 200 threshold)
+- A resumed run across multiple processes (scorer state is process-local)
+- A domain-level aggregate (DK is per-category)
+
+**Verified from SOC code (Diagnostic A confirmed twice, Diagnostic B confirmed):**
+
+Category assignment IS controllable. `ALERT_TYPE_CATEGORY_MAP` in
+`config.py` maps `alert_type → category`. `resolve_alert_category()`
+in `triage.py` uses this mapping with EXACT-CASE lookup (no .lower()).
+
+The C9B seed script uses `CATEGORY_ALERT_TYPES["credential_access"]`
+= `"anomalous_login"` (lowercase). This maps to `credential_access`
+at config.py:268.
+
+**IMPORTANT (from Diagnostic A):** The mapping uses LOWERCASE keys.
+Uppercase alert_types (e.g., `CREDENTIAL_STUFFING`) would return
+`unclassified` → HTTP 422. The seed script already handles this
+correctly — do NOT override it with uppercase values.
+
+**Verified seed contract (from Diagnostic A + E runtime):**
+
+```
+alert_type:              "anomalous_login"  (maps to credential_access)
+Asset.criticality:       "critical"  (categorical, NOT numeric)
+severity:                "critical"
+risk_score:              0.92
+mfa_completed:           false
+device_fingerprint_match: false
+Required context:        Alert + User + Asset + INVOLVES + DETECTED_ON edges
+```
+
+C9B DK proof seeds ALL alerts with `alert_type="anomalous_login"`.
+Every alert routes to `credential_access`. One category, 250 decisions,
+one process. Phase transition at decision 200. DK estimation on
+decisions 201-250. After 300: conservation calibrates.
+
+**Verified outcome contract (from Diagnostic C):**
+
+```
+POST /api/alert/outcome
+Body: OutcomeRequest {
+    alert_id: str,
+    decision_id: str,
+    outcome: "correct" | "incorrect",
+    analyst_action: Optional[str],   # NOT "actual_action"
+    override_comment: Optional[str]
+}
+```
+
+**Verified runtime prerequisites (from Diagnostic D + E runtime):**
+
+```powershell
+$env:SOC_LEARNING_ENABLED = "true"    # Gates ProfileScorer/L5 path
+$env:GRAPH_DSN = "<postgres DSN>"      # Required for L5 store
+$env:AGE_GRAPH_NAME = "soc_graph_c9b"  # Fresh proof graph
+$env:GRAPH_BACKEND = "age"             # AGE backend
+```
+
+**Known runtime gates (from Diagnostic C Q11, verified at runtime):**
+
+| Gate | Default | Impact on proof | Action |
+|---|---|---|---|
+| LEARNING_ENABLED | False | Blocks ALL L5 writes | Set env var |
+| GRAPH_DSN | absent | L5 store = None → persistence returns False | Must be set |
+| Non-scorer action | skip learning | refer_to_analyst skips update | Seed scorable alerts |
+| Conservation fail-closed | blocks guarded_update | Fresh graph may RED-pause | Under-calibrated bypass shipped |
+| CALIBRATION_DECISIONS=300 | 300 | Conservation L5 not persisted until 300 decisions | OK for DK proof; conservation already proven |
+| Centroid phase gate | MEAN_CONVERGENCE only | Centroids not written in VARIANCE_LEARNING | Expected — centroid proof needs <200 outcomes |
+| Factor vector validation | fail on invalid | Blocks if fv missing/non-finite | Seed with valid factors |
+
+#### C9B-DK Codex Prompt (verified, self-contained)
+
+```
+TASK: Update SOC C9B seed + smoke scripts for DK proof mode.
+TASK TYPE: Script update + live proof run.
+
+WORKING DIRECTORY: gen-ai-roi-demo-v4-v50
+
+CONTEXT:
+- C9B conservation proof: proven on prior graph, will re-prove at 250 loops (>300 calibration)
+- C9B centroid proof is the NEXT gap (L5-UPSERT fix must ship first)
+- C9B DK proof requires 200+ decisions in ONE category in ONE process
+- SOC has 6 categories. DecisionCountPolicy(n=200) is PER-CATEGORY.
+- Category assignment: graph alert_type → resolve_alert_category() → category
+  (EXACT-CASE lookup, no .lower())
+- Seed alert_type for credential_access: "anomalous_login" (from CATEGORY_ALERT_TYPES)
+- DO NOT use uppercase alert_types — they return unclassified → 422
+
+PRE-CHECKS (run before any implementation):
+  # Verify the seed script's CATEGORY_ALERT_TYPES mapping:
+  Select-String -Path "scripts\soc_c9b_seed_alerts.py" -Pattern "CATEGORY_ALERT_TYPES"
+  # Verify resolve_alert_category mapping:
+  Select-String -Path "backend\app\domains\soc\config.py" -Pattern "anomalous_login"
+  # Verify SCORER_ACTIONS (4 actions, not 5):
+  Select-String -Path "backend\app\domains\soc\config.py" -Pattern "SCORER_ACTIONS"
+  # Verify OutcomeRequest field names:
+  Select-String -Path "backend\app\models\schemas.py" -Pattern "class OutcomeRequest" -Context 0,10
+
+STEP 1: Update seed script for DK proof mode
+
+File: scripts/soc_c9b_seed_alerts.py
+
+Add --dk-proof-mode flag. When set:
+- ALL seeded alerts use alert_type="anomalous_login" (credential_access)
+- Use the EXISTING CATEGORY_ALERT_TYPES mapping — do NOT hardcode alert_types
+- Set categorical Asset.criticality="critical" (NOT numeric)
+- Set severity="critical", risk_score=0.92, mfa_completed=false,
+  device_fingerprint_match=false
+- Count: 300 alerts (provides margin for refer_to_analyst skips)
+- Deterministic IDs: C9B-DK-0001 through C9B-DK-0300
+- Create User + Asset + INVOLVES + DETECTED_ON edges for each alert
+
+When NOT set (coverage mode): existing behavior (spread across categories)
+
+STEP 2: Update smoke script for DK proof mode
+
+File: scripts/soc_c9b_live_age_smoke.py
+
+Add --dk-proof-mode and --target-category flags. When set:
+- Count valid outcomes PER CATEGORY (not just total)
+- --loops N means N valid outcomes in the TARGET category
+- Print per-category counts every 50 attempts
+- Print phase transition evidence: log when scorer._category_states
+  shows target category entering VARIANCE_LEARNING
+- Print reestimate_dk evidence: log when _dk_weights changes from None
+- Stop when target category reaches N valid outcomes
+- Max attempts: N * 4 (guard against infinite retry)
+
+OUTPUT FORMAT:
+  C9B-DK Progress: credential_access=200/250, other=23, attempts=198
+  C9B-DK PHASE: credential_access entered VARIANCE_LEARNING at outcome 201
+  C9B-DK REESTIMATE: dk_weights shape=(6,6) after outcome 215
+  C9B-DK COMPLETE: credential_access=250, attempts=312, skipped=62
+
+STEP 3: Run DK proof
+
+Set-Location "$env:CLAUDE_PROJECTS\gen-ai-roi-demo-v4-v50"
+$env:PYTHONPATH = "backend"
+$env:AGE_GRAPH_NAME = "soc_graph_c9b"
+
+# Reset fresh graph (delete if exists, recreate)
+python -c "from ci_platform.graph.age_client import AGEClient; c = AGEClient(); c.ensure_graph('soc_graph_c9b'); print('Graph ready')"
+
+# Seed DK proof alerts
+python scripts/soc_c9b_seed_alerts.py --count 300 --prefix C9B-DK --graph-name soc_graph_c9b --dk-proof-mode --json
+
+# Run DK proof (ONE process, no resume)
+python scripts/soc_c9b_live_age_smoke.py --loops 250 --graph-name soc_graph_c9b --dk-proof-mode --target-category credential_access --readback --verbose
+
+STEP 4: Verify
+
+After the smoke completes, readback queries:
+
+MATCH (w:L5DKWeight) WHERE w.domain = 'soc' RETURN count(w), w.n_decisions_used
+MATCH (w:L5DKWeight) WHERE w.domain = 'soc' RETURN w.confirmed_mean_json IS NOT NULL AS has_welford
+
+If L5DKWeight count > 0 AND Welford present → DK proof PASSES.
+If L5DKWeight = 0 after 250 target-category outcomes in one process → STOP.
+This would mean reestimate_dk() or persist_dk failed — report as product bug.
+
+STOP CONDITIONS:
+- Do NOT resume across processes
+- Do NOT count other categories toward DK proof
+- Do NOT weaken the 200-decision phase gate
+- Do NOT change GAE DecisionCountPolicy
+- Do NOT change alert_category_mapping
+- If refer_to_analyst rate > 75% → STOP, seed data issue
+- If target category count plateaus (no new outcomes in 100 attempts) → STOP
+```
+
+### Review 11 — Diagnostic E runtime chain: 6 findings, 1 remaining blocker
+
+**Diagnostics A-D (code reading) ran twice each. All confirmed.**
+**Diagnostic E (5-decision live test) ran 3 times, exposing real
+runtime issues the code reading could not find.**
+
+The E runtime chain produced 6 findings. 5 were fixed. 1 remains.
+
+**Finding 1: LEARNING_ENABLED=False (Diagnostic C+D, confirmed at runtime)**
+
+The entire DK learning chain was gated OFF. Every prior C9B attempt
+(fresh graph, domain tags, target-category seeding) was correct but
+irrelevant because the gate was closed.
+
+Fix: `$env:SOC_LEARNING_ENABLED = "true"` before app startup.
+Uses existing env var mechanism in `is_learning_enabled()` at
+config.py:69-74. No code change to default — shadow-mode safety
+preserved.
+
+**Finding 2: All 5 alerts returned refer_to_analyst (E run 1)**
+
+Seed data used numeric `Asset.criticality` (e.g., 0.85).
+`AssetCriticalityFactor` expects categorical graph values
+(low/medium/high/critical). Numeric value fell back to 0.5, lowering
+confidence below scorer action threshold.
+
+Fix: Categorical seed shape — `criticality="critical"`,
+`severity="critical"`, `risk_score=0.92`, `mfa_completed=false`,
+`device_fingerprint_match=false`. GPT-5.5 review verdict:
+SYSTEMIC_FIX_CONFIRMED, not a hack. Aligned seed data with canonical
+graph contract.
+
+**Finding 3: Conservation RED/auto-pause blocked guarded_update (E run 2)**
+
+Fresh graph has zero verified decisions → conservation starts RED →
+`auto_pause_on_amber=True` blocks `ProfileScorer.update()` →
+`persist_soc_centroid` never reached.
+
+Fix: Under-calibrated SOC proof/bootstrap conditions bypass RED pause
+to allow initial centroid learning. GPT-5.5 review: PASS_WITH_P3,
+SYSTEMIC_FIX. No fake L5 writes, no global conservation disable.
+
+**Finding 4: L5Centroid=0, SHAPED_BY=0 despite centroid_update in response (E run 2)**
+
+Outcome responses showed `centroid_update` payloads with correct
+category/action, but these came from legacy in-memory
+`learning_state.update()`, NOT from L5 persistence. The L5 persistence
+path (`persist_soc_centroid`) was not reached because of Finding 3.
+
+After Finding 3 fix, E run 3 showed `l5_centroid_persisted=false`
+with `l5_persistence_skipped_reason="persist_soc_centroid_returned_false"`.
+
+**Finding 5: persist_soc_centroid returned False — STORE_WRITE_FAILS (E run 3)**
+
+Root cause: `AGEGraphStore.update_centroid()` uses plain `DELETE c`
+to remove existing L5Centroid before creating a new one. Once the
+L5Centroid has a SHAPED_BY edge, AGE rejects `DELETE` with:
+"Cannot delete a vertex that has edge(s)."
+
+Direct store probe confirmed:
+- First `update_centroid` write succeeds (CREATE, no existing node)
+- Second write to same (domain, category, action) fails (DELETE blocked by SHAPED_BY)
+
+**THIS IS THE v5.1/v5.2 BUG.** Review 6 identified this exact
+failure mode. `_l5_upsert_current()` was designed to fix it:
+SET for existing nodes, explicit edge deletion (not node deletion),
+edge replacement. The design exists in this document (lines 250-420).
+It was not fully applied to `AGEGraphStore.update_centroid()`.
+
+**Blast radius:** affects ALL three L5 update methods, not just
+centroid. `update_conservation_state()` with TRIGGERED_BY and
+`update_dk_weights()` have the same latent pattern.
+
+**Finding 6: Dual scorer update contradiction between Diagnostic C runs**
+
+First C run: `learning_state.update(f, action_index)` omits
+`category_index`, defaults to 0, delegates to ProfileScorer.update().
+Second C run: same call uses `action_name=`, `outcome=`,
+`confidence_at_decision=` — legacy W-matrix parameters, NOT
+ProfileScorer delegation.
+
+Status: UNRESOLVED. The `_l5_upsert_current` fixer's Phase 1 READ 5
+(LearningState.update signature) will determine whether this is a
+real double-update bug or a legacy-only path.
+
+**Current state after Findings 1-5:**
+
+| Finding | Status | Fix type |
+|---|---|---|
+| LEARNING_ENABLED=False | ✅ Fixed | Env var |
+| refer_to_analyst (seed shape) | ✅ Fixed | Categorical seed data |
+| Conservation RED/auto-pause | ✅ Fixed | Under-calibrated bypass |
+| L5Centroid=0 from in-memory only | ✅ Explained | Was Finding 3 consequence |
+| **DELETE+CREATE (STORE_WRITE_FAILS)** | **❌ CURRENT BLOCKER** | **_l5_upsert_current implementation** |
+| Dual scorer update | ✅ RESOLVED — confirmed real (F6 DKWeight at ~100 outcomes = dual update). P2 before pilot. | v6.7 Review 12 |
+
+**Additional findings from Diagnostic C (noted, not blocking C9B):**
+
+- **No Outcome node / HAS_OUTCOME edge:** The outcome route sets
+  Decision properties (outcome, correct, verified_at_epoch) but does
+  NOT create a graph Outcome node or HAS_OUTCOME edge.
+  `age_graph_store.py:1538-1555` expects `Decision-[:HAS_OUTCOME]->Outcome`
+  for `get_verified_decisions()`. This could affect conservation V
+  computation if V is sourced from graph-store verified queries.
+  Status: NON_BLOCKING for C9B (conservation already proven), but
+  track as P3 for product correctness.
+
+- **CALIBRATION_DECISIONS=300:** `LearningHealthMonitor` returns
+  CALIBRATING status before 300 decisions and does NOT persist
+  L5ConservationState during calibration. For Diagnostic F (210
+  target-category decisions), conservation L5 may not persist.
+  Not a blocker: conservation L5 was already proven in earlier runs.
+
+**Remaining path:**
+
+```
+1. Ship _l5_upsert_current systemic fix (all 3 L5 methods)     ← CURRENT
+2. Rerun Diagnostic E on fresh graph                            ← NEXT
+3. If E passes: run Diagnostic F (210-decision DK proof)
+4. If F passes: run C9B proof (250 loops on soc_graph_c9b)
+5. C9B PASS → L5 COMPLETE (C9A + C9B = 15 cells)
+```
+
+### Review 12 — Diagnostic F runtime: product path proven active (F6→F8)
+
+**F6 run (160/250 outcomes) proved the live L5/DK product chain is
+active.** All three L5 node types appeared on a fresh graph:
+
+| Readback | At 100 | At 125 | At 160 (final) |
+|---|---|---|---|
+| L5Centroid | 1 | 1 | 1 |
+| SHAPED_BY | 1 | 1 | 1 |
+| L5DKWeight | 0 | **1** | 1 |
+| Verified decisions | 100 | 125 | 160 |
+
+F6 is NOT a formal Diagnostic F pass — the run stopped at 160/250
+after a client-side analyze timeout at DIAG-F6-CRED-0161. A later
+read-only diagnostic confirmed the timeout was ambiguous: the backend
+DID write the Decision node, but the runner timed out before receiving
+the response and never posted the outcome.
+
+**Fix applied:** Readback-first timeout recovery. On analyze/outcome
+timeout, the runner checks AGE for evidence before retrying. GPT-5.5
+review: PASS, no P1/P2/P3 issues. This prevents both false failure
+and duplicate Decision/outcome risk.
+
+**DKWeight appeared at ~100-125 outcomes, not 200.**
+
+This resolves the dual-update contradiction (Finding 6 from Review 11).
+The first Diagnostic C run was correct: `learning_state.update()` at
+line 1224 DOES delegate to `ProfileScorer.update()` with default
+`category_index=0`. Every outcome produces TWO scorer updates. At
+~100 outcomes, the scorer accumulates ~200 decisions in category 0 →
+phase transition → DKWeight appears.
+
+**Dual update classification: P2 before pilot.**
+
+For credential_access (category index 0), the dual update is
+accidentally harmless — both updates hit the right category. For any
+non-zero-index target category, the unconditional update would corrupt
+credential_access centroids and distort DK/conservation evidence.
+Non-blocking for C9B proof; must be fixed before pilot/generalization.
+
+**F8 is the clean Diagnostic F proof run. ✅ PASS.**
+
+```
+verdict:           EXTERNAL_DIAGNOSTIC_F_PASS
+exit_code:         0
+proof_passed:      True
+graph:             soc_graph_diag_f8
+prefix:            DIAG-F8-CRED
+valid_outcomes:    250
+seed_failures:     0
+analyze_attempts:  250
+outcome_attempts:  250
+L5Centroid:        1
+SHAPED_BY:         1
+L5DKWeight:        1
+decisions:         250
+verified:          250
+outcome_present:   250
+```
+
+All gate criteria met: target≥250 ✅, L5DKWeight>0 ✅, Welford present ✅,
+L5Centroid>0 ✅, SHAPED_BY>0 ✅. Rule #40 validated, backend contract
+aligned, health OK throughout.
+
+**Diagnostic F = CLOSED. Proceed to C9B formal proof on `soc_graph_c9b`.**
+
+**Performance (P3 — post-proof diagnostic):**
+
+```
+avg_analyze_seconds:  25.602
+max_analyze_seconds:  49.915
+avg_outcome_seconds:   3.547
+max_outcome_seconds:   8.301
+```
+
+Analyze latency degraded substantially over the run (~4.5s early →
+~25.6s average → ~50s peak). This is likely AGE query cost growing
+with graph size. Not a proof blocker — the run completed. Needs
+focused performance diagnostic after C9B proof.
+
+**Performance: P3 unless F8 stalls.**
+
+F7 smoke showed ~0.8s seed + ~4.5s analyze + ~3.2s outcome per valid
+outcome. Analyze is the largest and growing leg. At ~10s/outcome,
+250 outcomes ≈ 42 minutes. Survivable with 120s timeout + recovery.
+
+After F8/C9B proof: isolate AGE query/connection overhead, analyze
+route cost, outcome route cost, and repeated readback/checkpoint cost.
+Do not optimize before the proof completes.
+
+**Contaminated graphs (do not reuse):**
+- soc_graph_diag_f3: analyze-only failed run
+- soc_graph_diag_f4: partial seed failure
+- soc_graph_diag_f5: partial seed failure
+- soc_graph_diag_f6: partial 160-outcome timeout run
+- soc_graph_diag_f7: smoke/performance only
+
+### L5-UPSERT Implementation — Codex Prompt (v6.6)
+
+**This prompt implements the `_l5_upsert_current` spec already in this
+document (lines 250-420 above). The spec has been through Reviews 6,
+v5.2, v5.3 (6 bugs fixed), and v5.4 (8-criteria architectural review).
+The implementation is applying a reviewed design, not creating a new one.**
+
+**Runtime prerequisites for Diagnostic E rerun after this fix:**
+
+```powershell
+$env:SOC_LEARNING_ENABLED = "true"
+$env:GRAPH_DSN = "<postgres connection string>"
+$env:AGE_GRAPH_NAME = "soc_graph_diag_e4"   # fresh graph for each rerun
+$env:GRAPH_BACKEND = "age"
+```
+
+**Graph naming sequence (do not mix proof graphs):**
+
+```
+After L5-UPSERT ships:
+1. Diagnostic E rerun → fresh soc_graph_diag_e4
+2. Diagnostic F       → fresh soc_graph_diag_f
+3. Final C9B proof    → fresh soc_graph_c9b
+Each step uses a FRESH graph. Do not reuse diagnostic graphs for C9B proof.
+```
+
+**Codex prompt:**
+
+```
+/model gpt-5.3
+Echo the current model name in the first line of output.
+
+TASK: Add _l5_upsert_current() core method to AGEGraphStore and
+rewrite all three L5 update methods to use it.
+TASK TYPE: Read source, confirm issue across all three methods, apply
+systemic fix, add parametrized test suite.
+
+WORKING DIRECTORY:
+C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects
+
+PRIMARY REPO: ci-platform
+
+CONTEXT:
+Read the _l5_upsert_current spec in the DK Runtime Execution Plan
+v6.6 document at:
+  gen-ai-roi-demo-v4-v50/docs/dk_runtime_execution_plan_v6_8.md
+
+The spec (in the "Review 6" and "_l5_upsert_current" sections) defines:
+- One core method for ALL three L5 node types
+- SET for existing nodes (never DELETE + CREATE)
+- Explicit edge deletion (SHAPED_BY, TRIGGERED_BY)
+- NEVER DETACH DELETE on L5 nodes
+- Self-healing for garbled state (duplicates)
+- 10 tests × 3 labels = 30 parametrized cases
+
+The design has been through 4 review passes and 7 bug fixes.
+Implement it as specified. Adapt to actual AGE client API.
+
+PRE-CHECKS (run before any implementation):
+
+  # 1. Verify AGE client API — what method does the store use to run queries?
+  Select-String -Path "ci-platform\ci_platform\graph\age_graph_store.py" -Pattern "def.*query|self\._client|self\.client|self\._conn|self\.conn" | Select-Object -First 10
+  # Report: what is the query execution method? _client.query()? execute()? run()?
+
+  # 2. Verify serialization helper — how are values escaped for Cypher?
+  Select-String -Path "ci-platform\ci_platform\graph\age_graph_store.py" -Pattern "def _S|def _sql_val|def _escape|def _serialize" | Select-Object -First 5
+  # Report: what helper is used? Use the SAME one in _l5_upsert_current.
+
+  # 3. Verify edge creation pattern used in existing code:
+  Select-String -Path "ci-platform\ci_platform\graph\age_graph_store.py" -Pattern "CREATE.*SHAPED_BY|CREATE.*TRIGGERED_BY" | Select-Object -First 5
+  # Report: what Cypher pattern is used for edge creation?
+
+  # 4. Verify L5 node labels actually used in AGE:
+  Select-String -Path "ci-platform\ci_platform\graph\age_graph_store.py" -Pattern "L5Centroid|L5DKWeight|L5ConservationState" | Select-Object -First 10
+  # Report: exact label strings used in queries.
+
+  # 5. Check if _l5_upsert_current already exists:
+  Select-String -Path "ci-platform\ci_platform\graph\*.py" -Pattern "_l5_upsert_current" -Recurse
+
+  # 6. Verify existing tests for L5 operations:
+  Select-String -Path "ci-platform\tests\*.py" -Pattern "update_centroid|update_conservation|update_dk_weights|L5Centroid|L5DKWeight" -Recurse | Select-Object -First 10
+  # Report: what test file(s) exist for L5 operations?
+
+  # 7. Verify ci-platform import path (source vs site-packages):
+  python -c "import ci_platform.graph.age_graph_store as m; print(m.__file__)"
+  # Report: is this the source repo or stale site-packages?
+  # If site-packages: the fix won't be picked up at runtime.
+  # Action: pip install -e ci-platform or set PYTHONPATH.
+
+  # Report PRE-CHECK results before proceeding:
+  # CI_PLATFORM_IMPORT_PATH: <path>
+  # SOURCE_REPO_OR_SITE_PACKAGES: <which>
+  # ACTION_NEEDED_BEFORE_RUNTIME: <yes/no, what>
+
+================================================================
+PHASE 1 — READ ALL THREE CURRENT METHODS
+================================================================
+
+READ 1: update_centroid
+
+Run in PowerShell:
+  Select-String -Path "ci-platform\ci_platform\graph\age_graph_store.py" -Pattern "def update_centroid" | ForEach-Object { $_.LineNumber }
+
+Read 60 lines from that line:
+  Get-Content "ci-platform\ci_platform\graph\age_graph_store.py" | Select-Object -Skip <LINE-2> -First 60
+
+Print the FULL method. Report:
+  - Uses DELETE + CREATE?  or  MATCH SET?
+  - Handles SHAPED_BY edge?  How?
+  - What properties does it write?
+
+READ 2: update_conservation_state
+
+  Select-String -Path "ci-platform\ci_platform\graph\age_graph_store.py" -Pattern "def update_conservation_state" | ForEach-Object { $_.LineNumber }
+
+Read 80 lines from that line. Print. Report same questions + TRIGGERED_BY.
+
+READ 3: update_dk_weights
+
+  Select-String -Path "ci-platform\ci_platform\graph\age_graph_store.py" -Pattern "def update_dk_weights" | ForEach-Object { $_.LineNumber }
+
+Read 60 lines from that line. Print. Report same questions.
+
+READ 4: Check if _l5_upsert_current already exists
+
+  Select-String -Path "ci-platform\ci_platform\graph\*.py" -Pattern "_l5_upsert_current" -Recurse
+
+If it exists, read it fully. If not, report "NOT FOUND — will implement."
+
+READ 5: The adapter layer
+
+  Select-String -Path "ci-platform\ci_platform\graph\age_sdk_adapter.py" -Pattern "update_centroid|update_conservation|update_dk" -Recurse
+
+Read each adapter method. Do they call AGEGraphStore methods directly?
+
+================================================================
+PHASE 2 — CONFIRM ISSUES ACROSS ALL THREE METHODS
+================================================================
+
+For EACH of the three methods, report:
+  - Uses DELETE + CREATE?   YES/NO
+  - Would fail on repeated update when node has edges?   YES/NO
+  - Has the same latent bug as update_centroid?   YES/NO
+
+If ANY method already uses MATCH SET correctly, report it and
+do NOT rewrite that method.
+
+================================================================
+PHASE 3 — IMPLEMENT _l5_upsert_current()
+================================================================
+
+Add to AGEGraphStore. Follow the spec in the execution plan document.
+Key requirements:
+
+- MATCH existing nodes by identity dict
+- If >1 node (garbled): delete ALL edges BOTH directions, delete
+  nodes, force CREATE path
+- If 1 node: SET properties (never delete node). If edge_condition:
+  delete old edge. If not edge_condition: leave edges untouched.
+- If 0 nodes: CREATE with identity + properties
+- If edge_type + edge_condition + edge_target_id: check target
+  exists, CREATE edge. Missing target = warning, not error.
+- Use ACTUAL serialization helpers from the existing code
+
+KEY RULES:
+- NEVER DETACH DELETE on L5 nodes
+- Delete edges EXPLICITLY before deleting nodes (garbled only)
+- Garbled cleanup: BOTH-direction edges  (n)-[r]-()  not  (n)-[r]->()
+- edge_condition=False: leave existing edges untouched
+- Use existing _S / _sql_val / whatever the code uses for Cypher values
+
+================================================================
+PHASE 4 — REWRITE ALL THREE CALLERS
+================================================================
+
+4A: update_centroid → calls _l5_upsert_current with:
+  label="L5Centroid"
+  identity={"domain": domain, "category": category, "action": action}
+  edge_type="SHAPED_BY"
+  Preserve EXACT property names from Phase 1 READ 1.
+
+4B: update_conservation_state → calls _l5_upsert_current with:
+  label="L5ConservationState"
+  identity={"domain": domain}
+  edge_type="TRIGGERED_BY"
+  edge_condition = (old_status is not None and old_status != status)
+  Preserve EXACT property names. Preserve infinity sentinel.
+
+4C: update_dk_weights → calls _l5_upsert_current with:
+  label="L5DKWeight"
+  identity={"domain": domain}
+  edge_type=None
+  Preserve EXACT property names including Welford fields.
+
+  NOTE on DKWeight archive: v6.6 design says L5DKWeightArchive /
+  supersedes chain is DROPPED (Welford is the audit chain). Before
+  removing or bypassing archive code:
+  - Check if L5DKWeightArchive / supersedes code exists:
+    Select-String -Path "ci-platform\ci_platform\graph\*.py" -Pattern "L5DKWeightArchive|supersedes" -Recurse
+  - If it exists: report exact files, callers, and tests.
+  - If no caller uses it: leave dead code, migrate update_dk_weights
+    to _l5_upsert_current only.
+  - If callers exist: report to Roadmap before removing.
+
+Do NOT change method signatures.
+Do NOT change adapter layer signatures.
+
+================================================================
+PHASE 5 — PARAMETRIZED TESTS
+================================================================
+
+Create: ci-platform/tests/test_l5_upsert_current.py
+
+@pytest.fixture(params=["L5Centroid", "L5DKWeight", "L5ConservationState"])
+def label(request):
+    return request.param
+
+10 core tests (parametrized × 3 labels = 30 cases):
+
+1. test_l5_upsert_create_fresh — 0 nodes → CREATE
+2. test_l5_upsert_set_existing — 1 node, 0 edges → SET
+3. test_l5_upsert_replace_edge — 1 node, 1 edge → replace edge
+   THIS IS THE TEST THAT CURRENTLY FAILS.
+4. test_l5_upsert_cleanup_duplicates — 3 nodes → cleanup → 1 node
+5. test_l5_upsert_multiple_stale_edges — 1 node, 4 edges → 1 edge
+6. test_l5_upsert_missing_edge_target — no target → skip edge, warn
+7. test_l5_upsert_edge_condition_false — old edge preserved
+8. test_l5_upsert_no_edge_type — edge_type=None → no edge ops
+9. test_l5_upsert_edge_wanted_no_target_id — old edge deleted, none created
+10. test_l5_upsert_garbled_with_incoming_edges — both-direction cleanup
+
+3 integration tests:
+
+11. test_update_centroid_repeated_write — same key twice → 1 node,
+    SHAPED_BY points to second Decision
+12. test_update_conservation_repeated_write — same domain twice →
+    1 node, TRIGGERED_BY on transition only
+13. test_update_dk_weights_repeated_write — same domain twice →
+    1 node, updated properties
+
+================================================================
+PHASE 6 — REGRESSION
+================================================================
+
+cd ci-platform
+python -m pytest -q --timeout=120
+
+cd ..\gen-ai-roi-demo-v4-v50
+$env:PYTHONPATH = "backend"
+python -m pytest backend/tests/ -q --timeout=120
+
+Report: total, passed, failed, errors for both.
+
+================================================================
+STOP CONDITIONS
+================================================================
+
+SCOPE CLARIFICATION: For this L5-UPSERT prompt only, changing
+update_conservation_state() and update_dk_weights() to call
+_l5_upsert_current() is explicitly IN SCOPE. Do NOT change
+conservation formulas, DK estimation formulas, Welford math,
+or ProfileScorer scoring/update behavior. Only the graph-store
+mutation pattern changes — the WHAT is written stays the same,
+the HOW it's written changes from DELETE+CREATE to SET-based upsert.
+
+- Do NOT use DETACH DELETE on L5 nodes
+- Do NOT change method signatures
+- Do NOT change adapter layer signatures
+- Do NOT change GAE library code
+- Do NOT change SOC triage.py
+- Do NOT change copilot-sdk code
+- If Phase 1 shows any method ALREADY uses MATCH SET → skip that
+  method's rewrite. Still add _l5_upsert_current and tests.
+- If Phase 2 shows conservation/DK don't have the same bug → skip
+  their rewrite. Still fix centroid and add tests for all three.
+```
+
+### Discovery scan resolution (Prompt 0 — COMPLETE)
+
+The scan confirmed every GAE parameter with zero unknowns:
+- `DecisionCountPolicy(n=200)`: categories transition after 200 decisions
+- `FixedAlpha(0.5)`: 50% prior + 50% data = shrinkage/graduation
+- `CoordinateDescentEstimator.estimate()`: takes (decisions, centroids, n_categories, n_dims), returns (C, d) ndarray
+- `VARIANCE_LEARNING` is a phase string on `CategoryState`, not a category-index set
+- `get_verified_decisions()` returns all needed fields (factor_vector, category_index, is_correct)
+- GAE editable install works from copilot-sdk
+- No custom cadence counter needed — call `reestimate_dk()` every learn, it returns early when not in VARIANCE_LEARNING
+
+### What this plan produces when complete
+
+**After C9A (✅ DONE),** every SDK copilot (Trading, Purchasing, DataOps, S2P):
+1. **Constructs** ProfileScorer with full LearningStrategy + estimator
+2. **Learns centroids** for the first 200 decisions per category (MEAN_CONVERGENCE)
+3. **Transitions** to DK estimation after 200 decisions (VARIANCE_LEARNING)
+4. **Estimates** DK precision weights via CoordinateDescentEstimator
+5. **Shrinks** estimated weights: 50% prior + 50% data (FixedAlpha)
+6. **Scores** with learned DK weights (factor precision affects recommendations)
+7. **Persists** centroids (MEAN_CONVERGENCE only), DK weights + Welford, and conservation state to L5
+8. **Monitors** DK-weighted accuracy via conservation gate (auto-pause on AMBER)
+9. **Survives restart** via P26 startup read from L5 store
+
+**After C9B (L5-UPSERT + diagnostics + proof remaining),** SOC does
+the same via its own construction path (`build_profile_scorer()` +
+direct `reestimate_dk()` in triage.py) + corrected conservation
+(#132 BUG-007/008). Current blocker: `_l5_upsert_current` not yet
+implemented in `AGEGraphStore` — the design exists (v5.2), the
+review is complete (v5.3/v5.4), the GPT-5.5 review approved (v6.7).
+
+**After L5 COMPLETE (C9A + C9B),** all 5 copilots have the full
+compounding intelligence loop. Trust traps are discovered. The
+288-moat is firm-specific. The Mirror shows learned insight. The
+product's three core claims become true.
+
+### Execution Plan Synopsis
+
+**What this plan is:** A two-track execution plan (SDK + SOC) that
+takes the platform from "scores with static DK priors" to "computes,
+persists, and scores with learned DK precision weights across all 5
+copilots." This is the P1 gap that makes or breaks the product's
+three core claims (trust-trap discovery, 288-moat, compounding
+intelligence).
+
+**SDK track (complete):**
+
+```
+Prompt 0:  Discovery scan           (30 min) ✅ COMPLETE
+Prompt 1:  P-WELFORD-A storage      (0.5d)   ✅ COMPLETE
+Prompt 2a: Construction change      (1d)     ✅ COMPLETE
+Prompt 2b: DK persistence + Welford (1d)     ✅ COMPLETE
+Prompt 2c: Router wiring + startup  (1d)     ✅ COMPLETE
+Prompt 3:  P26 startup read         (0.5d)   ✅ COMPLETE
+Prompt 3b: Centroid L5 write        (0.5d)   ✅ COMPLETE
+Prompt 4:  P27 full flow test       (0.5d)   ✅ COMPLETE
+C9-FIX:    Combined fixer           (0.5d)   ✅ COMPLETE
+C9A:       L5 proof (non-SOC)       (1h)     ✅ PASS — 12 cells
+```
+
+**SOC track (~4.5d, C9B formal proof remaining):**
+
+```
+SOC-0:     Diagnostic scan                                (10-15 min) ✅ COMPLETE
+SOC-1+2:   DK construction + L5 wiring + behavioral gate  (1.5d)     ✅ COMPLETE
+SOC-3:     #132 conservation correctness                  (1d)        ✅ COMPLETE
+SOC-4+5:   Test + live smoke                              (0.5d)      ✅ Partial
+C9B-FIX:   Env + seed shape + conservation gate          (0.5d)      ✅ COMPLETE
+L5-UPSERT: _l5_upsert_current systemic fix               (0.5d)      ✅ COMPLETE
+DIAG-E:    5-decision live test                            (15 min)   ✅ PASS
+DIAG-F:    250-decision DK proof (F8)                      (~45 min)  ✅ PASS (250/250)
+C9B:       Formal proof on fresh soc_graph_c9b             (~45 min)  ← NEXT
+           L5 COMPLETE: C9A + C9B = 15 cells
+```
+
+**Total effort:** SDK ~6.5d ✅ DONE. SOC ~4.5d (C9B formal proof remaining).
+
+**Post-L5-COMPLETE development backlog:**
+
+| Priority | Item | Status |
+|---|---|---|
+| P2 | Performance: analyze grows ~0.09s/outcome → 25s avg at 250 | Quick repro test available (3 commands, 30s). 4 hypotheses, microbenchmark ready. |
+| P2 | Dual update: unconditional scorer update corrupts non-zero categories | Confirmed by F6 DKWeight-at-100 evidence. Non-blocking for C9B (credential_access = index 0). |
+| P3 | Persistence logging, HAS_OUTCOME edge, runner hygiene (6 items) | Tracked, not blocking. |
+
+**What changed across versions (v1 → v6.8):**
+
+| Version | Key change | Why |
+|---|---|---|
+| v1 | Original 5-prompt plan: Prompt 0-4 + C9 | Initial plan, linear sequence |
+| v2 | +GPT 6-point feedback: split Prompt 2 (2a/2b/2c), behavioral gate G1+G2, ghost prerequisite, built-in shrinkage, editable install, C9 gates blog | Monolith was too risky. Behavioral test became THE gate. |
+| v2.1 | +Scan results: DecisionCountPolicy(n=200), FixedAlpha(0.5), no custom cadence | All GAE params confirmed. Custom cadence eliminated. |
+| v3 | Clean rebuild integrating scan results throughout | Removed all stale cadence=10 references. 200-decision phase gate in behavioral tests. |
+| v4 | +Prompt 3b (centroid L5 wire moved before P27). Sequencing conflict resolved. | P27 = "all 3 types" but centroid wire was listed after C9. |
+| v4.1 | +C9-FIX section: domain bug + inf sentinel + JSON compat | Live AGE proof found 3 code issues blocking ConservationState. |
+| v5 | Integrated C9-FIX. Synopsis expanded to 6 reviews. C9 = 12 cells (SOC = #132 gap). | Removed "addendum" label. All reviews in synopsis. |
+| v5.1 | +Review 6: L5Centroid upsert used wrong AGE pattern (delete-create → SET) | Centroid with SHAPED_BY edge couldn't be deleted. |
+| v5.2 | +Core `_l5_upsert_current()` method. 1 pattern, 3 callers, 10 tests. | Objectified the upsert as reusable capability. |
+| v5.3 | +Self-review: 6 bugs fixed (edge_condition gating, garbled cleanup, archive drop, timestamp, return type, atomicity doc) | Line-by-line code review of the core method. |
+| v5.4 | +8-criteria review: 1 more bug (incoming edges), 2 more tests, DKWeight archive formally dropped | 10 tests × 3 labels = 30 cases. |
+| v5.5 | +C9A PASS frozen. SOC track added (6 prompts). Gate: C9A+C9B=L5 COMPLETE. | SOC architecturally different (no CompoundingScorer). |
+| v5.6 | +SOC under-specification audit: 18 findings. Scans, tests, stop conditions. | Every SOC prompt was under-specified. All fixed. |
+| **v6** | +SOC collapsed from 6 prompts to 4. 7 review findings applied. Stale refs fixed. | ~4-5d → ~3d with zero coverage loss. |
+| **v6.1** | +Collapsed SOC track fully specified with code patterns, tests, stop conditions | Self-contained prompts ready for Codex. |
+| **v6.2** | +SOC-0/1+2/3 marked COMPLETE. C9B live-proof contract: domain tag, scorer-action loops, alert inputs. C9B-FIX added. | Live smoke exposed 3 prerequisites. SOC total ~3d → ~4d. |
+| **v6.3** | Final review: all stale refs fixed, prompt sequence updated to v6.3, C9-FIX/C9A marked COMPLETE, title updated. Synopsis complete with 8 reviews. | Document is self-consistent end-to-end. |
+| **v6.4** | +Review 9: C9B proof-state hygiene. Fresh graph `soc_graph_c9b` (Option A). Precise 10-step proof sequence. PASS/FAIL criteria tables. Graph-specific stop conditions. | Stop micro-fix loop. Design the proof, then execute once. |
+| **v6.5** | +Review 10: DK phase proof semantics. Graph V ≠ DK readiness. Single-category targeting. Single-process requirement. Verified from SOC code: alert_type controls category. Self-contained Codex prompt. | Stop patching. Verify assumptions from code before designing. |
+| **v6.6** | +Review 11: Diagnostic E runtime chain. 6 findings (LEARNING_ENABLED, seed shape, conservation gate, in-memory centroid, DELETE+CREATE STORE_WRITE_FAILS, dual update contradiction). 5 fixed, 1 remaining blocker. _l5_upsert_current systemic fix = CURRENT. | Runtime diagnostics found what code reading couldn't. |
+| **v6.7** | +GPT-5.5 review: 6 clarifications applied. Roadmap Decision box. Return value contract. DKWeight archive handling. Scope clarifier. ci-platform import validation. Graph naming sequence. Correct alert_types (anomalous_login). Verified seed/outcome contracts. +Review 12: F6 product path proven active (160/250). Dual update confirmed (P2). F8 clean proof gate. 350→250 target (dual update halves threshold). Contaminated graph registry. | Design authority approved. Runtime proof in progress. |
+| **v6.8** | +C9B formal proof execution spec (8 steps). F8 validation procedure. Pre-flight checklist. Fresh graph creation. Backend bind verification. Proof monitoring. C9B pass validation + manual queries. Failure recovery (prefix diagnostic). Post-L5-COMPLETE action table (9 items). | Post-F8 path fully specified. |
+
+**Key architectural decisions locked across all versions:**
+
+| Decision | Resolution | Version locked |
+|---|---|---|
+| DK affects live scoring? | YES — compute + persist + activate in one step | v2 (Phase 2 eliminated) |
+| Runtime strategy | Option A — scorer's own `reestimate_dk()`, not external bridge | v3 (hack rejected) |
+| LearningStrategy | FULL (not minimal): DecisionCountPolicy(200) + CoordinateDescentEstimator + FixedAlpha(0.5) | v3 |
+| Custom cadence | NONE — use GAE phase transitions | v2.1 (scan confirmed) |
+| Centroid L5 writes | MEAN_CONVERGENCE only (frozen in VARIANCE_LEARNING = skip) | v4 |
+| L5 upsert pattern | `_l5_upsert_current()`: SET for existing, CREATE for new, edge replacement | v5.2 |
+| DKWeight archive | DROPPED — Welford IS the audit chain | v5.3 |
+| C9 scope | C9A = 4 non-SOC (12 cells) ✅. C9B = SOC (3 cells). L5 COMPLETE = 15. | v5.5 → v6 |
+| DETACH DELETE | NEVER for L5 nodes | v5.1 |
+| theta_min = inf | Sentinel string `"Infinity"` decoded to `float("inf")` | v5 (C9-FIX) |
+| SOC scorer wrapper | NONE — call `scorer.reestimate_dk()` directly. No CompoundingScorer in SOC. | v5.6 |
+| SOC track collapse | 4 prompts (SOC-0, SOC-1+2, SOC-3, SOC-4+5) not 6 | v6.1 |
+| SOC → CompoundingScorer migration | DEFERRED to after L5 COMPLETE. Wire DK into existing architecture first. | v6.1 |
+| C9B proof graph | FRESH graph `soc_graph_c9b`. Do not run against contaminated `soc_graph`. | v6.4 |
+| C9B DK proof unit | ONE target category (credential_access), 250 outcomes, ONE process. Graph V ≠ DK proof. | v6.5 |
+| C9B conservation vs DK | Separate sub-proofs. Conservation ✅ DONE. DK is the remaining gap. | v6.5 |
+| L5 upsert fix scope | SYSTEMIC: _l5_upsert_current for all 3 methods (centroid + conservation + DK weights). Not single-method hack. | v6.6 |
+| C9B runtime prerequisites | SOC_LEARNING_ENABLED=true + GRAPH_DSN + AGE_GRAPH_NAME + categorical seed shape | v6.6 |
+| Dual scorer update | P2 before pilot. Non-blocking for C9B (credential_access = index 0). Fix before generalization. | v6.7 |
+| Diagnostic F gate | F8: target≥250 + L5DKWeight>0 + Welford present + n_decisions_used≥250. Classify failures from graph evidence, not runner summary. | v6.7 |
+
+**Standing rules added by this plan:**
+
+- All L5 node types use `_l5_upsert_current()` core method
+- L5 centroid writes are phase-aware (MEAN_CONVERGENCE only)
+- SHAPED_BY = latest decision only (not accumulated history)
+- DKWeight audit chain = Welford accumulators (not archive nodes)
+- Conservation same-status: properties updated, edges untouched
+- Garbled state: self-healing cleanup on next write
+- AGE serialization: infinity as sentinel, NaN always rejected
+- SOC uses ProfileScorer directly — no CompoundingScorer wrapper
+- SOC calls `scorer.reestimate_dk()` directly, not through a cadence wrapper
+- SOC L5 writes use `_l5_upsert_current()` — same core method as SDK
+- C9B proof runs on fresh `soc_graph_c9b` — never against stale `soc_graph`
+- C9B seed: alert_type="anomalous_login" (lowercase, exact-case match required)
+- C9B seed: categorical Asset.criticality="critical" (NOT numeric)
+- C9B runtime: SOC_LEARNING_ENABLED=true + GRAPH_DSN + AGE_GRAPH_NAME required
+- _l5_upsert_current return value: no exception = success; None ≠ failure
+- ci-platform must be source-installed (not stale site-packages) before runtime proof
+- Graph naming: soc_graph_diag_e4 → soc_graph_diag_f → soc_graph_c9b (never mixed)
+
+### CompoundingScorer vs ProfileScorer — architectural note
+
+**SDK copilots** use `CompoundingScorer` (copilot-sdk wrapper around
+ProfileScorer). **SOC** uses `ProfileScorer` directly. This is
+technical debt from SOC being built first (before copilot-sdk existed),
+not a design choice.
+
+**Commercial impact — bounded, not zero:**
+
+| Layer | Unified? | Impact |
+|---|---|---|
+| GAE ProfileScorer (math) | ✅ YES | Innovation lives here — both paths use same engine |
+| L5 graph (persistence) | ✅ YES | Same `_l5_upsert_current()`, same AGE graph, all 5 domains |
+| Conservation law (safety) | ✅ YES | Same α·q·V ≥ θ_min formula |
+| Scorer wrapper | ❌ NO | CompoundingScorer (SDK) vs direct ProfileScorer (SOC) |
+| Router / API | ❌ NO | scoring_router.py (SDK) vs triage.py (SOC) |
+
+The ❌ layers are plumbing. The ✅ layers are the product. The
+"compounding intelligence" claim is true at the math, graph, and
+safety layers. The wrapper difference is invisible to buyers and
+auditors who query the L5 graph.
+
+**Cost:** Every SDK feature must be re-wired for SOC (~1.5d per
+feature cycle). The DK runtime work proves this: SDK = 6.5d, SOC
+= 3d additional. If SOC used CompoundingScorer, SOC-1+2 would be
+zero.
+
+**Migration:** SOC should eventually migrate to CompoundingScorer,
+but AFTER L5 COMPLETE. SOC triage (1,887 lines) has domain-specific
+orchestration that CompoundingScorer.learn() doesn't accommodate.
+Migration is a 3-5d refactor with demo regression risk — not
+appropriate during the C9B sprint.
+
+```python
+from gae.profile_scorer import LearningStrategy, ProfileScorer
+from gae.dk_estimator import CoordinateDescentEstimator
+
+# EXACT parameters for_soc_twophase() uses — use these in from_preset():
+strategy = LearningStrategy(
+    phase_policy=DecisionCountPolicy(n=200),   # 200 decisions before VARIANCE_LEARNING
+    dk_estimator=CoordinateDescentEstimator(),  # coordinate descent on buffered decisions
+    shrinkage_schedule=FixedAlpha(0.5),         # 50% prior + 50% data = graduation
+)
+# Additional ProfileScorer params:
+# eta_override=0.01           (v14 canonical)
+# auto_pause_on_amber=True    (conservation integration)
+```
+
+**Phase behavior (GAE's designed architecture, NOT custom code):**
+- Category starts in `MEAN_CONVERGENCE`: `update()` does centroid learning only
+- After 200 verified decisions: `CategoryState.freeze()` → `VARIANCE_LEARNING`
+- In `VARIANCE_LEARNING`: `update()` buffers decisions for DK estimation
+- `reestimate_dk()` runs `CoordinateDescentEstimator.estimate()` on buffered decisions
+- `FixedAlpha(0.5)` shrinks results: `applied = 0.5 * prior + 0.5 * estimated`
+- `score()` uses `_dk_weights` when category is in `VARIANCE_LEARNING`
+
+**No custom cadence counter needed.** Call `reestimate_dk()` after every
+learn. It returns early when no category is in VARIANCE_LEARNING
+(negligible cost). `DecisionCountPolicy(n=200)` controls the phase
+transition — not our code.
+
+**CoordinateDescentEstimator.estimate() API (from scan):**
+```python
+estimate(
+    decisions,     # sequence of (factor_vector, category_index, correct_action_index)
+    centroids,     # (C, A, D) or (A, D) numpy array
+    n_categories,  # int
+    n_dims,        # int
+) -> np.ndarray   # shape (n_categories, n_dims)
+```
+
+---
+
+## Prompt Sequence
+
+```
+Prompt 0: DISCOVERY SCAN           (30 min, no code changes) ✅ COMPLETE
+Prompt 1: P-WELFORD-A              (0.5d, storage/protocol)
+Prompt 2: P-DK-RUNTIME-FULL        (3-4d, split into 3 sub-prompts)
+  Prompt 2a: CONSTRUCTION CHANGE   (1d, construction + behavioral gate)
+  ──── GATE: behavioral test proves DK weights change with data ────
+  Prompt 2b: PERSISTENCE + WELFORD (1d, dk_persistence.py + L5 writes)
+  Prompt 2c: ROUTER + STARTUP      (1d, scoring_router wiring + app init)
+Prompt 3: P26 STARTUP-READ         (0.5d, warm-start from L5)
+Prompt 3b: P-CENTROID-L5-WIRE      (0.5d, L5 centroid runtime write)
+Prompt 4: P27 FULL-FLOW-TEST       (0.5d, L5 completion gate)
+          C9: L5 PROOF             (manual, 1h)
+```
+
+---
+## Prompt 0 — Discovery Scan (30 min, no code changes)
+
+**Purpose:** Determine exact constructor parameters for ProfileScorer
+with full LearningStrategy. This is information gathering — Codex
+reads code and reports, does not modify anything.
+
+**Prompt:**
+
+```
+/model gpt-5.3
+Echo the current model name in the first line of output.
+
+TASK: Discovery scan only. Read code and report findings. NO code changes.
+TASK TYPE: Code analysis.
+
+WORKING DIRECTORY:
+C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects
+
+RUN THESE SCANS AND REPORT OUTPUT:
+
+SCAN 1 — ProfileScorer constructor and for_soc_twophase:
+
+Set-Location "$env:CLAUDE_PROJECTS\graph-attention-engine-v50"
+python -c @"
+import inspect
+from gae.profile_scorer import ProfileScorer
+
+print('=== for_soc_twophase FULL SOURCE ===')
+print(inspect.getsource(ProfileScorer.for_soc_twophase))
+
+print('=== __init__ FULL SOURCE ===')
+print(inspect.getsource(ProfileScorer.__init__))
+
+print('=== reestimate_dk FULL SOURCE ===')
+print(inspect.getsource(ProfileScorer.reestimate_dk))
+
+print('=== score DK-RELEVANT LINES ===')
+src = inspect.getsource(ProfileScorer.score)
+for i, line in enumerate(src.split(chr(10))):
+    if any(k in line for k in ['_dk_weights', 'VARIANCE', '_learning_strategy', 'learning']):
+        print(f'  L{i}: {line.strip()}')
+"@
+
+SCAN 2 — LearningStrategy class:
+
+python -c @"
+import inspect, sys
+sys.path.insert(0, '.')
+# Find LearningStrategy - may be in profile_scorer or separate module:
+try:
+    from gae.profile_scorer import LearningStrategy
+    print('=== LearningStrategy SOURCE ===')
+    print(inspect.getsource(LearningStrategy))
+except ImportError:
+    print('LearningStrategy not in profile_scorer')
+    # Search other modules:
+    import os
+    for f in os.listdir('gae'):
+        if f.endswith('.py'):
+            src = open(f'gae/{f}').read()
+            if 'class LearningStrategy' in src or 'VARIANCE_LEARNING' in src:
+                print(f'FOUND in gae/{f}')
+                for i, line in enumerate(src.split(chr(10))):
+                    if 'LearningStrategy' in line or 'VARIANCE' in line:
+                        print(f'  L{i}: {line}')
+"@
+
+SCAN 3 — CoordinateDescentEstimator.estimate() signature:
+
+python -c @"
+import inspect
+from gae.dk_estimator import CoordinateDescentEstimator
+print('=== estimate FULL SOURCE ===')
+print(inspect.getsource(CoordinateDescentEstimator.estimate))
+print('=== __init__ ===')
+print(inspect.getsource(CoordinateDescentEstimator.__init__))
+"@
+
+SCAN 4 — Can GAE be imported from copilot-sdk?
+
+Set-Location "$env:CLAUDE_PROJECTS\copilot-sdk"
+
+# First: install GAE as an editable package (correct dependency management):
+pip install -e ../graph-attention-engine-v50 --break-system-packages 2>&1 | Select-Object -Last 3
+
+# Then verify import:
+python -c @"
+try:
+    from gae.dk_estimator import CoordinateDescentEstimator
+    from gae.profile_scorer import ProfileScorer
+    print('GAE IMPORT: OK')
+    print(f'ProfileScorer methods: {[m for m in dir(ProfileScorer) if not m.startswith("_")]}')
+except ImportError as e:
+    print(f'GAE IMPORT FAILED: {e}')
+    print('RESOLUTION: GAE may need a setup.py/pyproject.toml for editable install')
+    print('Create a minimal pyproject.toml in graph-attention-engine-v50/ if missing')
+"@
+
+SCAN 5 — Current from_preset() and CompoundingScorer.learn():
+
+python -c @"
+import inspect
+from copilot_sdk.scoring.scorer import CompoundingScorer
+print('=== from_preset FULL SOURCE ===')
+print(inspect.getsource(CompoundingScorer.from_preset))
+print('=== learn FULL SOURCE ===')
+print(inspect.getsource(CompoundingScorer.learn))
+print('=== __init__ ===')
+print(inspect.getsource(CompoundingScorer.__init__))
+"@
+
+SCAN 6 — What get_verified_decisions returns:
+
+python -c @"
+import inspect
+from copilot_sdk.graph.sqlite_store import SQLiteGraphStore
+print('=== get_verified_decisions ===')
+print(inspect.getsource(SQLiteGraphStore.get_verified_decisions))
+"@
+
+OUTPUT REQUIRED:
+Report ALL scan output. Then answer these 5 questions:
+
+Q1: What parameters does for_soc_twophase() pass to ProfileScorer.__init__
+    that from_preset() does NOT? List each with its default value.
+
+Q2: What is the LearningStrategy constructor signature? What does
+    VARIANCE_LEARNING contain (set of category indices)?
+
+Q3: What does CoordinateDescentEstimator.estimate() expect as input?
+    (exact parameter names + types)
+
+Q4: Does GAE import from copilot-sdk? If not, what path fix is needed?
+
+Q5: What fields does get_verified_decisions() return per decision?
+    (exact dict keys)
+
+DO NOT MODIFY ANY CODE. Report only.
+```
+
+**Gate:** If Scan 4 fails (GAE import), resolve before proceeding:
+1. Check if `graph-attention-engine-v50/` has a `setup.py` or `pyproject.toml`
+2. If not, create a minimal `pyproject.toml` with `[project] name="gae"`
+3. Run `pip install -e ../graph-attention-engine-v50`
+4. Verify `from gae.dk_estimator import CoordinateDescentEstimator` works
+
+Do NOT use `sys.path.insert` — that's brittle, CWD-dependent, and
+breaks test suites. GAE must be a proper importable package, which
+also aligns with the open-source (Track A) plan.
+
+
+---
+
+## Prompt 1 — P-WELFORD-A: Storage Extension (0.5d)
+
+**Full spec:** p_welford_architecture_decision.md §P-WELFORD-A
+
+**Summary:** Extend L5LearningStore.update_dk_weights() with optional
+keyword-only `welford_state`, `n_confirmed`, `n_overridden`,
+`entity_group`. Add nullable columns to SQLite, InMemory, AGE stores.
+6 tests. Backward-compatible (old rows return welford_state=None).
+
+**Prerequisite:** Prompt 0 scan complete. ✅
+
+**Acceptance:** All existing tests pass + 6 new Welford storage tests.
+
+---
+
+## Prompt 2 — P-DK-RUNTIME-FULL (3-4d, split into 3 sub-prompts)
+
+**Full spec:** dk_runtime_fix_architecture_v3.md
+**This is the prompt sequence that makes the product's claims true.**
+
+### Prompt 2a — Construction Change + Behavioral Gate (1d)
+
+**The crux.** If this is wrong, everything built on it is wrong.
+
+**Scope:**
+1. Modify `CompoundingScorer.from_preset()` to construct `ProfileScorer`
+   with full `LearningStrategy` + `CoordinateDescentEstimator`.
+   Categories start in `MEAN_CONVERGENCE` and transition to
+   `VARIANCE_LEARNING` via `DecisionCountPolicy(n=200)` — this is
+   GAE's designed phase gate, not custom code.
+2. Add `reestimate_dk_if_due()` method that calls
+   `self._scorer.reestimate_dk()` after every learn. Returns early
+   if no category is in `VARIANCE_LEARNING` yet (negligible cost).
+   No custom cadence counter — GAE's phase policy controls timing.
+3. Add accessors: `get_dk_weights()`, `get_verified_count()`.
+
+**Exact construction change in `from_preset()`:**
+```python
+# BEFORE (current — no DK learning):
+self._scorer = ProfileScorer(mu=centroids, actions=actions, categories=categories)
+
+# AFTER (full intelligence loop):
+from gae.dk_estimator import CoordinateDescentEstimator
+strategy = LearningStrategy(
+    phase_policy=DecisionCountPolicy(n=200),
+    dk_estimator=CoordinateDescentEstimator(),
+    shrinkage_schedule=FixedAlpha(0.5),
+)
+self._scorer = ProfileScorer(
+    mu=centroids, actions=actions, categories=categories,
+    learning_strategy=strategy,
+    eta_override=0.01,
+    auto_pause_on_amber=True,
+)
+# If for_soc_twophase() hardcodes SOC-specific constants, use direct
+# constructor with these params instead. Either way: full strategy.
+```
+
+**File:** `copilot_sdk/scoring/scorer.py` ONLY.
+
+**CoordinateDescentEstimator.estimate() API (from scan):**
+```python
+estimate(
+    decisions,     # sequence of (factor_vector, category_index, correct_action_index)
+    centroids,     # (C, A, D) or (A, D) numpy array
+    n_categories,  # int
+    n_dims,        # int
+) -> np.ndarray   # shape (n_categories, n_dims)
+```
+
+**Verified-decision data (from scan — `get_verified_decisions()` keys):**
+```
+decision_id, domain, entity_id, category, category_index,
+factors, factor_vector, recommended_action, recommended_index,
+confidence, probabilities, status, metadata, created_at,
+actual_action, actual_index, is_correct, verified_at,
+context, outcome_metadata
+```
+
+**THE BEHAVIORAL GATE (must pass before Prompt 2b):**
+
+```python
+def test_dk_learning_actually_works():
+    """THE gate test. Proves the intelligence loop works, not just the pipeline.
+
+    Feed a dataset where factor 0 is pure noise (random uniform)
+    and factor 1 is highly predictive (correlates with correct action).
+    Must run 200+ decisions to pass DecisionCountPolicy phase gate,
+    then verify DK weights change.
+
+    (a) factor 0's DK weight drops measurably below the prior
+    (b) factor 1's DK weight rises measurably above the prior
+    (c) scoring output shifts with the updated weights
+    """
+    scorer = CompoundingScorer.from_preset("trading", graph_store=store)
+
+    # Phase 1: 200 decisions in MEAN_CONVERGENCE (centroid-only learning)
+    for i in range(200):
+        correct = (i % 2 == 0)
+        factors = {
+            "signal_alignment": random.random(),              # NOISE — random
+            "market_regime": 0.8 if correct else 0.2,         # SIGNAL — predictive
+            # ... other factors with moderate signal
+        }
+        result = scorer.score(category="momentum", factors=factors)
+        scorer.learn(decision_id=result.decision_id,
+                     actual_action="buy" if correct else "hold",
+                     outcome="correct" if correct else "incorrect")
+
+    # Category should now be in VARIANCE_LEARNING
+    scorer.reestimate_dk_if_due()
+
+    # Phase 2: 50 more decisions in VARIANCE_LEARNING (DK estimation active)
+    for i in range(50):
+        # ... same pattern
+        result = scorer.score(category="momentum", factors=factors)
+        scorer.learn(...)
+
+    scorer.reestimate_dk_if_due()
+    learned_weights = scorer.get_dk_weights()
+    assert learned_weights is not None, "DK weights should exist after VARIANCE_LEARNING"
+
+    # (a) Noisy factor weight should be lower
+    # (b) Signal factor weight should be higher
+    # (c) Scoring output should differ from prior-only scoring
+    # Exact assertions depend on weight matrix structure — see (C, d) shape
+```
+
+**Additional test: FixedAlpha(0.5) shrinkage verification:**
+
+```python
+def test_dk_shrinkage_via_fixed_alpha():
+    """FixedAlpha(0.5) means DK weights = 50% prior + 50% data-driven.
+    This IS the 'graduating from domain prior to firm-specific' mechanism.
+
+    At N=210 (just entered VARIANCE_LEARNING + 10 decisions): weights
+    are 50% prior + 50% of a small dataset (close to prior).
+    At N=410 (200 more decisions in VARIANCE_LEARNING): weights are
+    50% prior + 50% of a larger dataset (more data-driven, but still
+    bounded by alpha=0.5).
+
+    The FixedAlpha(0.5) blend ensures DK never fully abandons the prior.
+    """
+    scorer = CompoundingScorer.from_preset("trading", graph_store=store)
+
+    # Phase 1: 200 decisions → MEAN_CONVERGENCE → VARIANCE_LEARNING
+    for i in range(200):
+        # ... score + learn
+        pass
+
+    # 10 decisions in VARIANCE_LEARNING
+    for i in range(10):
+        # ... score + learn with noisy factor 0, signal factor 1
+        pass
+    scorer.reestimate_dk_if_due()
+    weights_210 = scorer.get_dk_weights()
+
+    # 200 more decisions in VARIANCE_LEARNING
+    for i in range(200):
+        # ... score + learn with same pattern
+        pass
+    scorer.reestimate_dk_if_due()
+    weights_410 = scorer.get_dk_weights()
+
+    # More data = more divergence from prior (within 50% alpha constraint)
+    # Both should exist and differ
+    assert weights_210 is not None
+    assert weights_410 is not None
+    # weights_410 should show more separation between noisy/signal factors
+```
+
+**Gate: If G1 + G2 do not pass, DO NOT proceed to Prompt 2b.**
+The GAE machinery (DecisionCountPolicy + FixedAlpha + CoordinateDescentEstimator)
+must produce the expected behavior. If it does not, investigate the GAE
+estimator — do not work around it.
+
+**Prompt 2a tests (4):**
+
+| # | Test | What it proves |
+|---|---|---|
+| G1 | `test_dk_learning_actually_works` | **THE gate.** Noisy factor down-weighted, signal factor up-weighted, scoring shifts. |
+| G2 | `test_dk_shrinkage_via_fixed_alpha` | FixedAlpha(0.5) graduation: 50% prior + 50% data. More data = more divergence. |
+| 3 | `test_dk_phase_transition` | After 200 decisions, category enters VARIANCE_LEARNING. Before 200: centroid-only. |
+| 4 | `test_dk_reestimate_early_return` | `reestimate_dk_if_due()` returns early when no category in VARIANCE_LEARNING (fast, no-op). |
+
+### ──── GATE: Prompt 2a behavioral tests G1+G2 must pass ────
+
+### Prompt 2b — Persistence + Welford (1d)
+
+**Scope:**
+1. Create `copilot_sdk/scoring/dk_persistence.py`:
+   - `WelfordAccumulator` class (online mean + M2)
+   - `DKWelfordTracker` class (confirmed + overridden + all)
+   - `persist_dk_after_reestimate()`: reads weights FROM scorer,
+     writes to L5 with Welford state. Non-fatal.
+2. Follows **persist-before-cache ordering** (Standing Rule #48):
+   persist to L5 store FIRST, then update cache/state. If both fail,
+   raise. If L5 fails but scorer has weights, log error and continue
+   (scorer is authoritative for scoring; L5 is for audit/restart).
+
+**File:** `copilot_sdk/scoring/dk_persistence.py` (NEW)
+
+**Prompt 2b tests (5):**
+
+| # | Test | What it proves |
+|---|---|---|
+| 5 | `test_welford_accumulator_math` | Mean + M2 match batch numpy |
+| 6 | `test_welford_confirmed_overridden_split` | is_correct routes correctly |
+| 7 | `test_welford_roundtrip_via_state` | Serialize/deserialize matches |
+| 8 | `test_persist_dk_reads_from_scorer` | Persistence reads scorer's weights, doesn't compute independently |
+| 9 | `test_persist_dk_nonfatal` | L5 failure → scoring continues |
+
+### Prompt 2c — Router Wiring + App Startup (1d)
+
+**Scope:**
+1. Wire inline DK persistence in `scoring_router.py` after conservation
+   L5 write. After every learn: call `scorer.reestimate_dk_if_due()`,
+   then if weights updated, call `persist_dk_after_reestimate()`.
+   Same non-fatal pattern as P25b.
+2. Wire same in S2P `s2p.py`.
+3. App startup: Welford tracker initialization + warm-start from L5.
+
+**Files:** `scoring_router.py`, `s2p.py`, Trading/Purchasing/DataOps/S2P `main.py`
+
+**Prompt 2c tests (5):**
+
+| # | Test | What it proves |
+|---|---|---|
+| 10 | `test_learn_persists_dk_weights_to_l5` | After 200+ learns (phase transition), L5 has DK weights |
+| 11 | `test_learn_dk_includes_welford_state` | L5 DK entry has Welford (6 vectors) |
+| 12 | `test_learn_dk_no_store_silent` | learning_store=None → no error |
+| 13 | `test_dk_welford_warm_start` | Tracker restored from L5 on startup |
+| 14 | `test_dk_weights_activated_in_scorer` | Scorer's own `_dk_weights` updated by `reestimate_dk()`, not external injection |
+
+### Full suite runs
+
+```powershell
+Set-Location "$env:CLAUDE_PROJECTS\copilot-sdk"
+python -m pytest tests/ -q --timeout=120
+python -m pytest apps/trading/backend/tests/ -q --timeout=120
+python -m pytest apps/purchasing/backend/tests/ -q --timeout=120
+python -m pytest apps/dataops/backend/tests/ -q --timeout=120
+
+Set-Location "$env:CLAUDE_PROJECTS\s2p-copilot\backend"
+python -m pytest tests/ -q --timeout=120
+```
+
+### Stop conditions
+
+- Do NOT modify GAE library code
+- Do NOT create a parallel DK computation path (no external bridge estimator)
+- Do NOT inject _dk_weights via private attribute assignment
+- Do NOT broaden GraphStore
+- Do NOT change conservation formulas
+- If GAE import fails → STOP, resolve path, report
+
+---
+
+## Prompt 3 — P26: Startup Read (0.5d)
+
+**Scope:** On copilot startup, read from L5 store:
+- Centroids → populate scorer centroids (if available)
+- DK weights + Welford → populate scorer DK weights + tracker
+- Conservation state → populate conservation monitor
+
+If AGE/L5 unavailable → fall back to SQLite checkpoint or cold-start
+defaults. Status must indicate source (AGE vs SQLite vs cold-start).
+
+**Tests:**
+- `test_startup_loads_dk_from_l5` — DK weights survive restart
+- `test_startup_loads_welford_from_l5` — Welford state survives restart
+- `test_startup_loads_conservation_from_l5` — conservation survives restart
+- `test_startup_fallback_on_l5_failure` — cold-start if L5 unavailable
+- `test_startup_status_indicates_source` — status reports AGE/SQLite/cold
+
+---
+
+## Prompt 4 — P27: Full Flow Integration Test (0.5d)
+
+**Scope:** End-to-end test that verifies the COMPLETE L5 schema:
+
+```
+score() → learn() → centroid updated (MEAN_CONVERGENCE phase)
+                   → after 200 decisions: phase transition to VARIANCE_LEARNING
+                   → DK re-estimated via reestimate_dk()
+                   → conservation state persisted
+                   → Welford accumulators updated
+                   → ALL nodes readable from L5 store
+                   → SHAPED_BY edge (centroid → decision)
+                   → TRIGGERED_BY edge (conservation → decision, on transition)
+```
+
+**Key tests:**
+- Test 58: `test_dk_welford_storage_roundtrip` — write + read Welford
+- Test 59: `test_full_learn_flow_writes_all_three` — 200+ learn calls
+  produce Centroid + DKWeight + ConservationState in L5, with edge
+  assertions
+
+**After P27 passes → C9 manual gate.**
+
+---
+
+## C9 — L5 Cross-Copilot Proof (manual, 1h)
+
+Query the AGE graph:
+
+```powershell
+# All 5 domains present with L5 nodes:
+# (run via psql or AGEClient)
+
+MATCH (c:L5Centroid) RETURN c.domain, count(c) ORDER BY c.domain
+MATCH (w:L5DKWeight) RETURN w.domain, count(w) ORDER BY w.domain
+MATCH (cs:L5ConservationState) RETURN cs.domain, cs.status ORDER BY cs.domain
+```
+
+**Pass criteria:** 4 non-SOC domains × 3 node types = 12 cells populated.
+SOC = #132 gap (3 cells added after #132 ships).
+DKWeight nodes have welford_state (not null). ConservationState has
+valid status. Centroids have count > 0.
+
+**Deliverable:** L5 proof report. L5 COMPLETE.
+
+---
+
+## What Runs AFTER SDK Track + SOC Track
+
+| Item | Effort | Status |
+|---|---|---|
+| ~~P-DK-RUNTIME-SOC~~ | — | **NOW SOC-1 + SOC-2 in SOC track** |
+| ~~#132 SOC-OPTION-C~~ | — | **NOW SOC-3 in SOC track** |
+| ~~P-CENTROID-L5-WIRE~~ | — | **MOVED to Prompt 3b (before P27).** |
+| #131 SQLITE-TO-AGE-MIGRATION | 2-3d | After L5 COMPLETE (C9A + C9B) |
+| #133 L5+ PROOF | 0.5d | After migration |
+| Demo build (#120-#127) | 11-16d | After L5 COMPLETE |
+| Blog/arxiv publish | Founder action | Gated on **C9A + C9B + #132** |
+
+### Updated gate language — C9A + C9B is upstream of EVERYTHING
+
+| Gate | What it unblocks | Why |
+|---|---|---|
+| **C9A (SDK/S2P)** ✅ | SDK/S2P L5 milestone. Internal. MAP progression. | 4 non-SOC copilots have live judgment memory. |
+| **C9B (SOC)** | "All copilots" claims. SOC L5 milestone. | SOC has live judgment memory with corrected conservation (#132). |
+| **C9A + C9B (L5 COMPLETE)** | 288-moat claim, Mirror demo beat, trust-trap discovery, blog/arxiv | All 5 copilots have learned DK weights. 288 is real (not 144). |
+| **C9A + C9B + demo build** | LOOM-V1 (#88) | Demo shows learned trust traps + correct SOC conservation. |
+
+---
+
+## Discovery Scan Results — Decision Summary (11 questions)
+
+| Q | Question | Answer | Source |
+|---|---|---|---|
+| 1 | DK affect live scoring? | **YES** | Architecture v3 decision |
+| 2 | Which option? | **A — for_soc_twophase() params** | Architecture v3 + scan confirms |
+| 3 | Change from_preset()? | **YES** | Architecture v3 decision |
+| 4 | S2P same path? | **YES — same from_preset()** | Scan: S2P uses CompoundingScorer.from_preset("s2p") |
+| 5 | Cadence? | **GAE DecisionCountPolicy(n=200) + reestimate_dk() every learn** | Scan: for_soc_twophase uses n=200 |
+| 6 | Use n=200 as-is? | **YES** | 200 decisions in MEAN_CONVERGENCE before VARIANCE_LEARNING |
+| 7 | Use FixedAlpha(0.5)? | **YES — this IS the shrinkage/graduation** | 50% prior + 50% data. The blog's "graduating" mechanism. |
+| 8 | eta_override=0.01 + auto_pause? | **YES — canonical values** | eta_override=0.01 = v14 math synopsis. auto_pause = conservation. |
+| 9 | P-WELFORD-A now? | **YES** | Already approved, storage only |
+| 10 | Test 58? | **Storage roundtrip (P-WELFORD-A). Behavioral gate (2a).** | Welford can't recompute coordinate descent alone |
+| 11 | P27 blocked on DK scoring? | **YES** | C9 requires DK weights USED in scoring, not just stored |
+
+---
+
+## Summary
+
+| Prompt | What | Effort | Outcome |
+|---|---|---|---|
+| **0** | Discovery scan (6 scans, no code) | 30 min | ✅ COMPLETE — all params confirmed |
+| **1** | P-WELFORD-A storage | 0.5d | ✅ L5 accepts Welford state |
+| **2a** | Construction change (for_soc_twophase params) + behavioral gate | 1d | ✅ **Scorer learns DK weights (PROVEN by G1+G2)** |
+| **2b** | Persistence + Welford tracking | 1d | ✅ DK weights + Welford in L5 store |
+| **2c** | Router wiring + app startup | 1d | ✅ Learn flow writes DK to L5 per copilot |
+| **3** | P26 startup read | 0.5d | ✅ Judgment memory survives restart |
+| **3b** | P-CENTROID-L5-WIRE | 0.5d | ✅ **L5 centroid writes from learn flow (MEAN_CONVERGENCE only)** |
+| **4** | P27 full flow test | 0.5d | ✅ L5 completion gate (ALL THREE node types) |
+| **C9-FIX** | Combined fixer: domain bug + inf sentinel + JSON compat + upsert | 0.5d | ✅ **Live AGE proof unblocked** |
+| | **C9A proof** | **1h** | **✅ PASS — 4 non-SOC domains, 12 cells** |
+| **SOC-0** | SOC diagnostic scan | 10-15 min | ✅ COMPLETE |
+| **SOC-1+2** | SOC DK construction + L5 wiring + behavioral gate | 1.5d | ✅ COMPLETE |
+| **SOC-3** | #132 SOC conservation correctness (BUG-007/008) | 1d | ✅ COMPLETE |
+| **SOC-4+5** | SOC test + live smoke (partial) | 0.5d | ✅ ConservationState + Centroid OK |
+| **C9B-FIX** | Env setup + seed shape + conservation gate fixes | 0.5d | ✅ COMPLETE (Findings 1-3) |
+| **L5-UPSERT** | _l5_upsert_current systemic fix (all 3 L5 methods) | 0.5d | ✅ COMPLETE (Finding 5) |
+| | **Diag E rerun** (5-decision live test after L5 fix) | **15 min** | ✅ PASS |
+| | **Diag F** (250-decision DK proof, F8 on soc_graph_diag_f8) | **~45 min** | ✅ PASS (250/250) |
+| | **C9B proof** (fresh `soc_graph_c9b`, 250 valid loops) | **~45 min** | ← NEXT |
+| | **L5 COMPLETE** | — | **C9A + C9B = 15 cells. All 5 copilots.** |
+| | **SDK total** | **~6.5d** | **✅ DONE (C9A PASS)** |
+| | **SOC total** | **~4.5d** | **C9B formal proof remaining** |
+
+---
+
+*DK Runtime Execution Plan v6.8 · June 7, 2026*
+*SDK track: 10 prompts + C9-FIX + C9A ✅ COMPLETE.*
+*SOC track: SOC-0/1+2/3 ✅ + C9B-FIX ✅ + L5-UPSERT ✅ + DIAG-E ✅ + DIAG-F ✅ → C9B NEXT.*
+*C9B = formal proof on fresh `soc_graph_c9b`. Seed: alert_type="anomalous_login".*
+*Runtime: SOC_LEARNING_ENABLED=true, GRAPH_DSN set, AGE_GRAPH_NAME set.*
+*Post-L5-COMPLETE dev items: dual update P2, persistence logging P3, perf diagnostic P3, HAS_OUTCOME P3.*
+*GAE params: LearningStrategy(DecisionCountPolicy(200), CoordinateDescentEstimator(), FixedAlpha(0.5)).*
+*L5 COMPLETE = C9A + C9B = 5 × 3 = 15 cells. All copilots.*
+
+---
+
+## Prompt 3b — P-CENTROID-L5-WIRE: L5 Centroid Runtime Write (0.5d)
+
+**Why this moved:** The original plan listed P-CENTROID-L5-WIRE after
+C9, reasoning "centroids work via checkpoints." But P27's gate is
+"all three L5 node types." Without centroid L5 writes, P27 can only
+verify 2 of 3 — and C9's 12-cell proof (4 non-SOC domains × 3 types) has
+empty cells. The sequencing conflict is resolved by moving this BEFORE
+P27.
+
+**Important distinction:** `save_centroids()` (existing checkpoint
+persistence) is NOT equivalent to `update_centroid()` (L5 graph node).
+Checkpoints serialize the full centroid tensor for scorer restore.
+L5 centroid nodes store per-(category, action) centroid vectors with
+SHAPED_BY edges linking them to the causing Decision node. Both serve
+different purposes. Both continue to exist.
+
+### Answers to all 8 questions
+
+**Q1:** YES — required before P27. See above.
+
+**Q2: Insertion point — Option B (scoring_router.py)**
+
+Consistent with DK and conservation L5 writes. All three L5 write
+types are in the router layer, after learn:
+
+```python
+# scoring_router.py learn handler, AFTER learn_result:
+
+# 1. Conservation L5 write (P25b — already wired)
+_persist_conservation_state_l5(...)
+
+# 2. DK re-estimation + L5 write (P-DK-RUNTIME-FULL — Prompt 2)
+scorer.reestimate_dk_if_due()
+persist_dk_after_reestimate(...)
+
+# 3. Centroid L5 write (P-CENTROID-L5-WIRE — THIS PROMPT)
+_persist_centroid_l5(
+    scorer=scorer,
+    learning_store=learning_store,
+    domain=domain,
+    category=learn_result.category,
+    actual_action=learn_result.actual_action,
+    caused_by_decision_id=learn_result.decision_id,
+)
+```
+
+**Q3: Field mapping for update_centroid()**
+
+| Field | Source | Notes |
+|---|---|---|
+| `domain` | `domain_config.domain` | Same as conservation/DK writes |
+| `category` | `learn_result.category` | The decision's category |
+| `action` | `learn_result.actual_action` | The action whose centroid was updated by `ProfileScorer.update()`. This is the ACTUAL action (the analyst's choice), because `update()` moves the centroid toward the observed factor vector for the action that was taken. |
+| `centroid_vector` | Read from scorer AFTER learn | `scorer.get_centroid(category, action)` or equivalent accessor. This is the POST-update centroid. |
+| `count` | From scorer | Number of decisions that have shaped this centroid |
+| `eta_last` | From scorer if available | Last learning rate used. None if not exposed. |
+| `caused_by_decision_id` | `learn_result.decision_id` | The decision that triggered this centroid update |
+
+**On delta_norm:** If the P21/P22 `update_centroid()` signature includes
+`delta_norm`, compute as `norm(post_centroid - pre_centroid)`. This
+requires capturing the centroid BEFORE `scorer.learn()`:
+
+```python
+# BEFORE learn:
+pre_centroid = scorer.get_centroid(category, action)
+
+# learn() updates centroid in-memory
+learn_result = scorer.learn(...)
+
+# AFTER learn:
+post_centroid = scorer.get_centroid(category, action)
+delta_norm = sum((a - b)**2 for a, b in zip(post_centroid, pre_centroid)) ** 0.5
+```
+
+If capturing pre-centroid is impractical (requires an extra read), set
+`delta_norm=None`. The centroid vector itself is the critical field.
+Delta is monitoring metadata, not structural.
+
+**Discovery required:** Read the actual `update_centroid()` signature
+from `copilot_sdk/graph/protocol.py` (P21 implementation) to confirm
+exact parameter names and which are required vs optional.
+
+**Q4: Non-fatal?** YES. Same try/except/log/continue pattern:
+
+```python
+def _persist_centroid_l5(scorer, learning_store, domain, category,
+                          actual_action, caused_by_decision_id):
+    if learning_store is None:
+        return
+
+    # CRITICAL: Only write L5 centroid when the category is in
+    # MEAN_CONVERGENCE (centroid actually updated by update()).
+    # In VARIANCE_LEARNING, centroids are FROZEN — update() buffers
+    # decisions for DK estimation instead. Writing an L5 centroid node
+    # with SHAPED_BY edge for a frozen centroid is false provenance.
+    category_phase = scorer.get_category_phase(category)
+    if category_phase == "VARIANCE_LEARNING":
+        return  # Centroid frozen — DK estimation active, not centroid learning
+
+    try:
+        centroid_vector = scorer.get_centroid(category, actual_action)
+        if centroid_vector is None:
+            return  # No centroid for this (category, action) yet
+        learning_store.update_centroid(
+            domain=domain,
+            category=category,
+            action=actual_action,
+            centroid_vector=centroid_vector,
+            # count, eta_last, delta_norm: discover from P21 signature
+            caused_by_decision_id=caused_by_decision_id,
+        )
+    except Exception as e:
+        logger.error(f"L5 centroid write failed for {domain}: {e}")
+```
+
+**Why the phase check matters:** Without it, a category that has been
+in VARIANCE_LEARNING for 1,000 decisions would have 1,000 L5 centroid
+nodes all pointing to the SAME frozen centroid vector, each falsely
+claiming to be "shaped by" a different decision. This is incorrect
+provenance that would mislead an auditor. The centroid stopped changing
+at decision 200 — only the first 200 L5 centroid nodes are real.
+
+**Q5: save_centroids() unchanged?** YES. L5 centroid write is ADDITIVE.
+The existing checkpoint mechanism continues to work exactly as before.
+Both coexist:
+- `save_centroids()`: full tensor checkpoint for scorer restore
+- `update_centroid()`: per-(category, action) L5 node for audit + graph
+
+**Q6: S2P in scope?** YES. S2P uses `CompoundingScorer.from_preset("s2p")`
+which shares the SDK learn path. The wiring in `scoring_router.py`
+covers Trading/Purchasing/DataOps. S2P's `/api/s2p/outcome` handler
+needs the same inline write (same pattern as P25b and P-DK-RUNTIME).
+
+**Q7: SHAPED_BY edge — P27 or C9?**
+
+- **P27 (automated):** Assert L5 centroid ROW/STATE exists after learn.
+  Verify `learning_store.get_centroid(domain, category, action)` returns
+  a populated dict with the expected centroid_vector.
+- **C9 (manual):** Assert SHAPED_BY edge exists in AGE. Requires live
+  AGE graph. `MATCH (c:L5Centroid)-[:SHAPED_BY]->(d:Decision) RETURN count(*)`
+
+P27 tests storage correctness. C9 tests graph topology. Both are needed;
+they test different things.
+
+**Q8: Updated sequencing — P-CENTROID-L5-WIRE is now Prompt 3b.**
+
+### Prompt 3b scope
+
+**Files to modify:**
+- `copilot_sdk/backend/scoring_router.py` — add `_persist_centroid_l5()` after DK write
+- `s2p-copilot/backend/app/routers/s2p.py` — same pattern for S2P outcome
+- `copilot_sdk/scoring/scorer.py` — add `get_centroid(category, action)` accessor if not already exposed
+
+**Files NOT to modify:**
+- `save_centroids()` checkpoint path — untouched
+- `update_centroid()` store implementations — already exist from P21/P22
+- Conservation or DK paths — already wired
+
+### Prompt 3b tests (5)
+
+| # | Test | What it proves |
+|---|---|---|
+| 1 | `test_learn_persists_centroid_to_l5` | After learn (MEAN_CONVERGENCE), L5 store has centroid for (domain, category, action) |
+| 2 | `test_centroid_l5_has_caused_by_decision_id` | SHAPED_BY provenance: which decision caused this centroid update |
+| 3 | `test_centroid_l5_nonfatal` | L5 failure → learn continues, checkpoint still works |
+| 4 | `test_centroid_l5_coexists_with_checkpoint` | Both save_centroids() and update_centroid() fire on same learn — no interference |
+| 5 | `test_centroid_l5_skipped_in_variance_learning` | After 200 decisions (VARIANCE_LEARNING), centroid L5 write is SKIPPED — no false provenance. DK L5 write fires instead. |
+
+### Required accessor additions
+
+```python
+# In CompoundingScorer (scorer.py):
+
+def get_centroid(self, category: str, action: str) -> list[float] | None:
+    """Read post-update centroid for (category, action). Read-only."""
+    # Thin wrapper over ProfileScorer centroid access
+    ...
+
+def get_category_phase(self, category: str) -> str:
+    """Return 'MEAN_CONVERGENCE' or 'VARIANCE_LEARNING' for a category.
+    Used by centroid L5 write to determine if centroid is frozen."""
+    # Read from ProfileScorer._category_states[category_index].phase
+    ...
+```
+
+**Discovery required:** Verify how `CategoryState.phase` is accessed
+in ProfileScorer. The phase field may be a string or an enum.
+
+### L5 write ordering note
+
+The L5 write order in the router is conservation (P25b) → DK (Prompt 2c)
+→ centroid (Prompt 3b). The spec's intended order is centroid → DK →
+conservation (matching the data flow: centroid update first, DK estimation
+second, conservation check last). The writes are independent — all
+reference a Decision node that already exists — so order doesn't affect
+correctness. However, if the team wants semantic clarity, the three
+inline calls can be reordered in `scoring_router.py` during Prompt 3b
+to match the spec.
+
+### P27 test runtime note
+
+P27's full-flow test requires 200+ decisions to trigger the VARIANCE_LEARNING
+phase transition. Running 200 score+learn cycles takes 1-3 minutes in
+automated tests. This is acceptable for an integration test that runs
+once per suite. If faster testing is needed, the test fixture can
+construct a scorer with a reduced phase threshold (e.g., `DecisionCountPolicy(n=10)`
+for test-only) — but this should be clearly marked as test-only and not
+affect production construction.
+
+### Stop conditions
+
+- Do NOT modify save_centroids() checkpoint behavior
+- Do NOT change centroid computation (that's ProfileScorer.update())
+- Do NOT change DK or conservation paths
+- Do NOT broaden GraphStore
+- Do NOT write L5 centroid nodes when category is in VARIANCE_LEARNING
+  (centroid is frozen — false SHAPED_BY provenance)
+- If `get_centroid(category, action)` accessor doesn't exist, add it
+  as a thin wrapper (read-only, no computation) — do NOT restructure scorer
+- If `get_category_phase(category)` accessor doesn't exist, add it
+  as a thin wrapper reading CategoryState.phase — do NOT restructure scorer
+
+---
+
+## Updated Prompt Sequence (v6.8)
+
+```
+SDK TRACK (✅ COMPLETE):
+Prompt 0:  DISCOVERY SCAN           (30 min) ✅ COMPLETE
+Prompt 1:  P-WELFORD-A              (0.5d)   ✅ COMPLETE
+Prompt 2a: CONSTRUCTION CHANGE     (1d)     ✅ COMPLETE
+Prompt 2b: PERSISTENCE + WELFORD   (1d)     ✅ COMPLETE
+Prompt 2c: ROUTER + STARTUP        (1d)     ✅ COMPLETE
+Prompt 3:  P26 STARTUP-READ         (0.5d)   ✅ COMPLETE
+Prompt 3b: P-CENTROID-L5-WIRE       (0.5d)   ✅ COMPLETE
+Prompt 4:  P27 FULL-FLOW-TEST       (0.5d)   ✅ COMPLETE
+C9-FIX:    COMBINED FIXER           (0.5d)   ✅ COMPLETE
+C9A:       L5 PROOF (non-SOC)       (1h)     ✅ PASS — 12 cells
+
+SOC TRACK (mostly complete):
+SOC-0:     DIAGNOSTIC SCAN          (10-15m) ✅ COMPLETE
+SOC-1+2:   DK CONSTRUCTION + L5     (1.5d)   ✅ COMPLETE
+SOC-3:     #132 CONSERVATION        (1d)     ✅ COMPLETE
+SOC-4+5:   TEST + LIVE SMOKE        (0.5d)   ✅ Partial
+C9B-FIX:   ENV + SEED SHAPE + CONSERVATION GATE  (0.5d)   ✅ COMPLETE
+L5-UPSERT: _l5_upsert_current SYSTEMIC FIX       (0.5d)   ✅ COMPLETE
+DIAG-E:    5-DECISION LIVE TEST                   (15 min) ✅ PASS
+DIAG-F:    250-DECISION DK PROOF (F8)             (~45 min)✅ PASS
+C9B:       FORMAL PROOF (fresh soc_graph_c9b)     (~45 min)← NEXT
+           L5 COMPLETE = C9A + C9B = 15 cells
+```
+
+**SDK total: ~6.5d ✅ DONE. SOC total: ~4d (C9B-FIX + proof remaining).**
+
+---
+
+## C9-FIX — Combined Live AGE Fixer (0.5d) ✅ COMPLETE
+
+**Date:** June 7, 2026
+**Context:** Prompts 0–4 complete. P27 passed. C9 live AGE proof
+attempted and found 3 code issues blocking ConservationState persistence.
+All fixed. C9A passed for 4 non-SOC domains.
+
+### Answers to All 10 Questions
+
+**Q1: Combined fixer.** Option A — fix Issues A+B+C together. All
+three are small (domain passthrough, infinity sentinel, list/string
+compat). Combined saves one review cycle. ~0.5d total.
+
+**Q2: theta_min = inf representation: Option A — sentinel string.**
+
+`"Infinity"` stored as TEXT, decoded to `float("inf")` on read.
+
+Rationale:
+- Preserves semantic value (infinity IS the correct theta_min when α=0 or V=0)
+- No information loss (unlike cap or null)
+- `json.dumps(float("inf"))` fails in standard JSON — so store as TEXT, not as a JSON numeric
+- Readback: `float(value) if value != "Infinity" else float("inf")`
+- Same pattern for negative infinity if ever needed: `"-Infinity"`
+
+Implementation in AGE serialization:
+```python
+# Write:
+theta_min_str = "Infinity" if math.isinf(theta_min) else str(theta_min)
+# In Cypher: theta_min: _S(theta_min_str)  (stored as string)
+
+# Read:
+theta_min_raw = row.get("theta_min", "0")
+theta_min = float("inf") if str(theta_min_raw) == "Infinity" else float(theta_min_raw)
+```
+
+**Q3: NaN always rejected.** YES. Add validation:
+```python
+if math.isnan(theta_min):
+    raise ValueError("theta_min cannot be NaN")
+```
+NaN in conservation metrics means a computation error upstream.
+Log error and skip L5 write rather than persisting garbage.
+
+**Q4: C9 with infinite theta_min?** After Issue A is fixed, seeded
+domains with 200+ decisions should have finite theta_min. Infinite
+theta_min is legitimate ONLY for zero-data state (no verified
+decisions yet). C9 proof domains all have 200+ seeded decisions, so
+theta_min MUST be finite for them. If still infinite after the fixer,
+that's a bug.
+
+**Q5: Explicit domain passthrough.** YES. The route knows the domain.
+Pass it through all conservation count paths. Do not rely on
+`graph_store.domain` or implicit state.
+
+**Q6: JSON/list read compat.** YES. `get_dk_weights()` and
+`get_conservation_state()` read paths should accept both JSON strings
+and AGEClient-decoded Python lists/dicts. Keep validation strict
+(correct types, correct dimensions). Do not change write format.
+
+**Q7: C9 without SOC?** YES. C9 passes for **4 non-SOC domains**
+(Trading, Purchasing, DataOps, S2P). SOC is documented as #132 gap.
+
+C9 proof matrix becomes:
+
+| Domain | L5Centroid | L5DKWeight | L5ConservationState | SHAPED_BY |
+|---|---|---|---|---|
+| Trading | ✅ 2 | ✅ 1 | **after fixer** | ✅ 2 |
+| Purchasing | ✅ 2 | ✅ 1 | **after fixer** | ✅ 2 |
+| DataOps | ✅ 2 | ✅ 1 | **after fixer** | ✅ 2 |
+| S2P | ✅ 2 | ✅ 1 | **after fixer** | ✅ 2 |
+| SOC | — | — | — | — | **#132 gap** |
+
+4 domains × 3 node types = **12 cells** (not 15). SOC adds 3 after #132.
+
+**Q8: TRIGGERED_BY edge?** The C9 seeding should exercise a status
+TRANSITION (e.g., RED→GREEN as decisions accumulate). If the seeding
+run produces a transition, TRIGGERED_BY edge MUST be present. If no
+transition occurred (conservation stayed GREEN throughout all 200+
+decisions), classify as "transition not exercised" — do not fake it.
+
+**Recommended seeding strategy for TRIGGERED_BY:**
+1. Start copilot with zero decisions → conservation = RED (V=0)
+2. Seed 10 decisions → still RED (insufficient data)
+3. Seed 200+ decisions → conservation transitions to GREEN
+4. That RED→GREEN transition produces a TRIGGERED_BY edge
+5. Verify edge exists in AGE
+
+**Q9: Old status-null Decision nodes?** NO. Not in this fixer.
+Later migration item. New decisions have correct status + domain.
+
+**Q10: Proof standard to unblock next roadmap item?**
+
+**4 non-SOC domains × 3 node types + SHAPED_BY edges.**
+
+| Requirement | Status |
+|---|---|
+| 4 domains × L5Centroid | ✅ Present |
+| 4 domains × L5DKWeight + Welford | ✅ Present |
+| 4 domains × L5ConservationState | **After fixer** |
+| SHAPED_BY edges (centroid→decision) | ✅ Present |
+| TRIGGERED_BY edge (conservation→decision) | After seeding exercises transition |
+| SOC (all 3 types) | #132 gap — documented, not blocking |
+| DKWeight readback | After Issue C compat fix |
+
+### Combined Fixer Spec
+
+**Effort:** 0.5d · **Risk:** Low · **Repos:** copilot-sdk, ci-platform
+
+**Fix A — Explicit-domain conservation metrics:**
+
+File: `copilot-sdk/copilot_sdk/backend/conservation_utils.py`
+
+`compute_conservation_metrics()` and its internal count helpers must
+use the explicit `domain` parameter for ALL count queries. The bug:
+some count paths fall through to `graph_store.domain` (which may be
+None or wrong for AGE-backed stores where the store serves all domains).
+
+```python
+# BEFORE (broken — implicit domain):
+verified = graph_store.count_verified_decisions()  # uses store.domain
+
+# AFTER (fixed — explicit domain):
+verified = graph_store.count_verified_decisions(domain)  # route's domain
+```
+
+Discovery required: read `compute_conservation_metrics()` to identify
+every count call. Ensure EACH one receives the explicit `domain` arg.
+The fix is: grep for every `count_` call in the function, verify each
+passes `domain`.
+
+Tests:
+- `test_conservation_metrics_explicit_domain` — construct store WITHOUT
+  `.domain` attribute, pass explicit domain, verify nonzero counts
+- `test_conservation_metrics_live_age_compat` — if feasible, test
+  against AGE adapter with multi-domain data
+
+**Fix B — Non-finite theta_min AGE serialization:**
+
+File: `ci-platform/ci_platform/graph/age_graph_store.py`
+
+In `update_conservation_state()`:
+```python
+import math
+
+# Validate: reject NaN
+if math.isnan(theta_min):
+    raise ValueError(f"theta_min cannot be NaN for domain {domain}")
+
+# Serialize: infinity as sentinel string
+theta_min_serialized = "Infinity" if math.isinf(theta_min) else theta_min
+# Use _S(theta_min_serialized) in Cypher for string sentinel
+# OR use numeric for finite values and string for infinite
+```
+
+In `get_conservation_state()`:
+```python
+# Deserialize: sentinel back to float
+raw = row.get("theta_min", "0")
+if str(raw) == "Infinity":
+    theta_min = float("inf")
+else:
+    theta_min = float(raw)
+```
+
+Tests:
+- `test_conservation_state_infinite_theta_min_roundtrip` — write inf,
+  read inf, verify `math.isinf(result["theta_min"])`
+- `test_conservation_state_nan_rejected` — write NaN, verify ValueError
+- `test_conservation_state_finite_unchanged` — write 0.467, read 0.467
+
+**Fix C — DKWeight JSON/list read compatibility:**
+
+File: `ci-platform/ci_platform/graph/age_graph_store.py`
+
+In `get_dk_weights()`:
+```python
+# Accept both JSON string and already-decoded list
+weight_raw = row.get("weight_json")
+if isinstance(weight_raw, str):
+    weight_tensor = json.loads(weight_raw)
+elif isinstance(weight_raw, list):
+    weight_tensor = weight_raw  # AGEClient already decoded
+else:
+    raise ValueError(f"Unexpected weight_json type: {type(weight_raw)}")
+
+# Same pattern for Welford vector fields:
+for field in ["confirmed_mean_json", "confirmed_m2_json",
+              "overridden_mean_json", "overridden_m2_json",
+              "all_mean_json", "all_m2_json"]:
+    raw = row.get(field)
+    if raw is None:
+        continue
+    if isinstance(raw, str):
+        decoded = json.loads(raw)
+    elif isinstance(raw, list):
+        decoded = raw
+    else:
+        raise ValueError(f"Unexpected {field} type: {type(raw)}")
+```
+
+Tests:
+- `test_dk_weight_read_json_string` — write as JSON, read succeeds
+- `test_dk_weight_read_decoded_list` — simulate AGEClient decoding, read succeeds
+- `test_welford_read_both_formats` — same for Welford fields
+
+### Regression
+
+```powershell
+Set-Location "$env:CLAUDE_PROJECTS\copilot-sdk"
+python -m pytest tests/ -q --timeout=120
+
+Set-Location "$env:CLAUDE_PROJECTS\ci-platform"
+python -m pytest tests/ -q --timeout=120
+python -m mypy ci_platform/graph --ignore-missing-imports --no-incremental
+```
+
+### After Fixer: C9 Proof Rerun
+
+```powershell
+# 1. Restart all 4 SDK copilots via demo.py
+# 2. Exercise score→learn loops (200+ per copilot for DK phase transition)
+# 3. Query AGE:
+#    MATCH (c:L5Centroid) RETURN c.domain, count(c) ORDER BY c.domain
+#    MATCH (w:L5DKWeight) RETURN w.domain, count(w) ORDER BY w.domain
+#    MATCH (cs:L5ConservationState) RETURN cs.domain, cs.status ORDER BY cs.domain
+#    MATCH (c:L5Centroid)-[:SHAPED_BY]->(d:Decision) RETURN c.domain, count(*)
+#    MATCH (cs:L5ConservationState)-[:TRIGGERED_BY]->(d:Decision) RETURN cs.domain, count(*)
+# 4. Verify: 4 domains × 3 types = 12 cells populated
+# 5. Verify: SHAPED_BY edges exist
+# 6. Verify: TRIGGERED_BY edge exists if transition was exercised
+# 7. Mark SOC as #132 gap
+```
+
+**C9 PASSES when:** 12 cells populated + SHAPED_BY edges present +
+DKWeight has Welford fields + ConservationState has finite theta_min.
+SOC is documented gap. TRIGGERED_BY is "present if exercised."
+
+---
+
+## C9A PASS — Non-SOC L5 Proof Complete (June 7, 2026)
+
+**Verdict: PASS.** 4 non-SOC domains × 3 node types = 12 cells.
+
+| Domain | L5Centroid | L5DKWeight | L5ConservationState | Welford | SHAPED_BY |
+|---|---|---|---|---|---|
+| Trading | 4 ✅ | 1 ✅ | 1 ✅ | ✅ | 4 ✅ |
+| Purchasing | 4 ✅ | 1 ✅ | 1 ✅ | ✅ | 4 ✅ |
+| DataOps | 4 ✅ | 1 ✅ | 1 ✅ | ✅ | 4 ✅ |
+| S2P | 2 ✅ | 1 ✅ | 1 ✅ | ✅ | 2 ✅ |
+
+GPT-5.5 reviewed: PASS. No P1/P2/P3 issues. Proof report does not
+overclaim — explicitly states 4 non-SOC domains only. TRIGGERED_BY
+correctly classified as "transition not exercised."
+
+**C9A unlocks:** SDK/S2P non-SOC L5 claims, internal milestone, MAP
+progression. Does NOT unlock "all copilots" claims, blog publish, or
+demo SOC beats.
+
+---
+
+## C9B — SOC L5 Proof (execution plan)
+
+### Gate structure
+
+| Gate | Scope | What it unlocks |
+|---|---|---|
+| **C9A** ✅ | 4 non-SOC domains × 3 types = 12 cells | SDK/S2P L5 milestone. Internal. |
+| **C9B** | SOC × 3 types = 3 cells | "All copilots" claims. Blog/arxiv publish. Demo SOC beats. |
+| **L5 COMPLETE** | C9A + C9B = 15 cells | Full product claim: "5 copilots with judgment memory." |
+
+### Why SOC is architecturally different
+
+| Aspect | SDK copilots | SOC |
+|---|---|---|
+| Scorer construction | `CompoundingScorer.from_preset()` → shared `scorer.py` | `SOCDomainConfig.build_profile_scorer()` → direct `ProfileScorer(...)` in `soc/config.py:692-708` |
+| Learn path | `scoring_router.py` (shared) | `triage.py` (~1,887 lines, SOC-specific) |
+| Centroid learning | `LEARNING_ENABLED` via preset (always on in SDK) | `LEARNING_ENABLED = False` by default (`soc/config.py:58-61`) |
+| Conservation hook | P25b in `scoring_router.py` | P25c in `learning_health.py` (conditional on categories_with_data) |
+| DK estimation | Wired in Prompt 2a-2c via `from_preset()` | NOT wired — `build_profile_scorer()` doesn't pass LearningStrategy |
+| Graph writes | Shared `_l5_upsert_current()` via AGE adapter | Same AGE adapter, but SOC routes don't call L5 centroid/DK writes |
+
+**The SDK fix (Prompt 2a changing `from_preset()`) does NOT cover SOC**
+because SOC doesn't use `from_preset()`. SOC needs its own construction
+change + wiring prompts.
+
+### SOC C9B pass criteria
+
+| Requirement | What it proves |
+|---|---|
+| SOC L5Centroid count > 0 | Centroid learning active + L5 persistence wired |
+| SOC L5DKWeight count > 0 | DK estimation active + L5 persistence wired |
+| SOC L5DKWeight has all 6 Welford fields | Welford tracking active |
+| SOC L5ConservationState count > 0 with valid status | Conservation with real categories_with_data (#132) |
+| SOC SHAPED_BY count > 0 | Centroid provenance (if centroid updates exercised) |
+| SOC TRIGGERED_BY | "Present if transition exercised" — not required if no transition |
+
+
+### SOC execution sequence (collapsed)
+
+```
+SOC-0:     Diagnostic scan                                (10-15 min) ✅ COMPLETE
+SOC-1+2:   DK construction + L5 wiring + behavioral gate  (1.5d)     ✅ COMPLETE
+           ── GATE: G1 behavioral test must pass ──
+SOC-3:     #132 conservation correctness                  (1d)        ✅ COMPLETE
+SOC-4+5:   Test + live smoke                              (0.5d)      ✅ Partial
+C9B-FIX:   Env setup + seed shape + conservation gate      (0.5d)     ✅ COMPLETE (Findings 1-3)
+L5-UPSERT: _l5_upsert_current systemic fix (all 3 methods) (0.5d)    ✅ COMPLETE (Finding 5)
+DIAG-E:    5-decision live test                             (15 min)  ✅ PASS
+DIAG-F:    250-decision DK proof (F8 on soc_graph_diag_f8)  (~45 min) ✅ PASS (250/250, all L5 types)
+           ── GATE: F8 passed all criteria ──
+C9B:       Formal proof on fresh soc_graph_c9b              (~45 min) ← NEXT
+           250 loops, same runner + seed, clean proof graph
+           ── C9B PASS = 3 cells (L5Centroid + L5DKWeight + L5ConservationState) ──
+           L5 COMPLETE = C9A (12 cells) + C9B (3 cells) = 15 cells
+```
+
+**Total SOC track: ~4.5 working days.** C9B formal proof remaining → L5 COMPLETE.
+
+---
+
+### SOC-0: Diagnostic Scan (10-15 min)
+
+**Purpose:** Identify exact SOC insertion points and verify scorer
+construction, learn/outcome path, graph/L5 store access, categories,
+factor dimensions, LEARNING_ENABLED, and current conservation bugs.
+No code changes.
+
+```powershell
+Set-Location "$env:CLAUDE_PROJECTS\gen-ai-roi-demo-v4-v50"
+$env:PYTHONPATH = "backend"
+
+# Scan 1: SOC scorer construction
+python -c @"
+import inspect
+from app.domains.soc.config import SOCDomainConfig
+print('=== build_profile_scorer FULL SOURCE ===')
+print(inspect.getsource(SOCDomainConfig.build_profile_scorer))
+"@
+
+# Scan 2: SOC learn/outcome path (specific keywords)
+python -c @"
+src = open('backend/app/routers/triage.py').read()
+lines = src.split('\n')
+for i, line in enumerate(lines):
+    if any(k in line for k in ['_scorer.update(', 'ProfileScorer.update(',
+                                 'guarded_update(', 'write_outcome(',
+                                 'write_decision(', '.learn(', '.score(',
+                                 'reestimate_dk', 'update_centroid',
+                                 'update_dk_weights', 'update_conservation',
+                                 'learning_store', 'graph_store',
+                                 'dk_persistence', 'welford',
+                                 'factor_vector', 'is_correct']):
+        print(f'  L{i+1}: {line.rstrip()}')
+"@
+
+# Scan 3: SOC LEARNING_ENABLED across all files
+python -c @"
+import os
+for root, dirs, files in os.walk('backend/app'):
+    for f in files:
+        if f.endswith('.py'):
+            path = os.path.join(root, f)
+            src = open(path).read()
+            if 'LEARNING_ENABLED' in src:
+                for i, line in enumerate(src.split('\n')):
+                    if 'LEARNING_ENABLED' in line:
+                        print(f'{path}:{i+1}: {line.strip()}')
+"@
+
+# Scan 4: SOC L5 store access
+python -c @"
+import os
+for f in ['backend/app/routers/triage.py', 'backend/app/main.py',
+          'backend/app/domains/soc/gae_state.py',
+          'backend/app/domains/soc/learning_health.py']:
+    if os.path.exists(f):
+        src = open(f).read()
+        for i, line in enumerate(src.split('\n')):
+            if any(k in line for k in ['graph_store', 'GraphStore', 'AGEGraph',
+                                        'learning_store', 'LearningStore',
+                                        'app.state', 'gae_state',
+                                        'update_centroid', 'update_dk_weights',
+                                        'update_conservation']):
+                print(f'{f}:{i+1}: {line.strip()}')
+"@
+
+# Scan 5: SOC score/learn API endpoints
+python -c @"
+import os
+for f in ['backend/app/routers/triage.py', 'backend/app/routers/feedback.py',
+          'backend/app/routers/soc.py']:
+    if os.path.exists(f):
+        src = open(f).read()
+        for i, line in enumerate(src.split('\n')):
+            if any(k in line for k in ['@router.post', '@router.get',
+                                        'def score', 'def learn', 'def triage',
+                                        'def outcome', 'def feedback',
+                                        'def confirm', 'def override']):
+                print(f'{f}:{i+1}: {line.strip()}')
+"@
+
+# Scan 6: SOC categories + factor dimensions
+python -c @"
+import inspect
+from app.domains.soc.config import SOCDomainConfig
+src = inspect.getsource(SOCDomainConfig.build_profile_scorer)
+for i, line in enumerate(src.split('\n')):
+    if any(k in line.lower() for k in ['categor', 'dim', 'factor', 'n_factor',
+                                         'shape', 'mu', 'action', 'n_dim']):
+        print(f'  L{i}: {line.strip()}')
+for attr in ['categories', 'CATEGORIES', 'n_categories', 'C',
+             'factors', 'n_factors', 'factor_names', 'd']:
+    if hasattr(SOCDomainConfig, attr):
+        print(f'{attr}: {getattr(SOCDomainConfig, attr)}')
+"@
+
+# Scan 7: SOC existing DK/Welford/conservation wiring
+python -c @"
+import os
+for root, dirs, files in os.walk('backend/app'):
+    for f in files:
+        if f.endswith('.py'):
+            path = os.path.join(root, f)
+            src = open(path).read()
+            if any(k in src for k in ['dk_persistence', 'WelfordTracker',
+                                       'DKWelfordTracker', 'persist_dk',
+                                       'reestimate_dk', 'conservation_state',
+                                       'categories_with_data']):
+                for i, line in enumerate(src.split('\n')):
+                    if any(k in line for k in ['dk_persistence', 'WelfordTracker',
+                                               'persist_dk', 'reestimate_dk',
+                                               'conservation_state',
+                                               'categories_with_data']):
+                        print(f'{path}:{i+1}: {line.strip()}')
+"@
+```
+
+**SOC-0 output required — answer these 7 questions:**
+
+1. How is ProfileScorer constructed in `build_profile_scorer()`? What
+   params are passed? What is MISSING vs the SDK LearningStrategy?
+2. Where is the learn/outcome path in triage.py? What method updates
+   centroids? Does it provide factor_vector, category, action, is_correct?
+3. Is LEARNING_ENABLED on or off? What controls it? Why?
+4. How does SOC access AGEGraphStore / learning_store? Via app.state,
+   gae_state global, or something else?
+5. What are SOC's API endpoints for score and learn/outcome?
+6. What are SOC's categories (C=?) and factor dimensions (d=?)?
+7. Which L5 writes are already wired (P25c conservation)? Which are
+   missing (centroid, DK/Welford)?
+
+**Gate:** If SOC's scorer is NOT ProfileScorer or cannot accept
+LearningStrategy → STOP. Report to Roadmap.
+
+---
+
+### SOC-1+2: DK Construction + L5 Wiring + Behavioral Gate (1.5d)
+
+**Purpose:** Enable SOC's ProfileScorer to use full LearningStrategy
+with CoordinateDescentEstimator + FixedAlpha(0.5), call
+`scorer.reestimate_dk()` after learn, and persist centroid +
+DKWeight/Welford to L5. Must include behavioral proof that SOC DK
+weights affect scoring.
+
+**Part A — Construction change:**
+
+Change `SOCDomainConfig.build_profile_scorer()` to construct
+ProfileScorer with full LearningStrategy. Use SOC-0 scan output for
+exact construction params (categories, factor dims, centroid shape).
+
+```python
+# BEFORE (current — no DK learning):
+scorer = ProfileScorer(mu=centroids, actions=actions, categories=categories)
+
+# AFTER (full intelligence loop — exact params from SOC-0):
+from gae.dk_estimator import CoordinateDescentEstimator
+strategy = LearningStrategy(
+    phase_policy=DecisionCountPolicy(n=200),
+    dk_estimator=CoordinateDescentEstimator(),
+    shrinkage_schedule=FixedAlpha(0.5),
+)
+scorer = ProfileScorer(
+    mu=centroids, actions=actions, categories=categories,
+    learning_strategy=strategy,
+    eta_override=0.01,
+    auto_pause_on_amber=True,
+)
+```
+
+Also set `LEARNING_ENABLED = True`. If SOC-0 Q3 reveals a documented
+reason for False, report before changing.
+
+**File:** `gen-ai-roi-demo-v4-v50/backend/app/domains/soc/config.py`
+
+**Part B — DK re-estimation wiring:**
+
+SOC uses ProfileScorer directly (no CompoundingScorer). Call
+`scorer.reestimate_dk()` directly after the learn/centroid-update
+path in triage.py. No wrapper class needed.
+
+```python
+# In triage.py after centroid update (SOC-0 Q2 identifies exact location):
+try:
+    scorer.reestimate_dk()  # returns early if not in VARIANCE_LEARNING
+except Exception as e:
+    logger.warning(f"SOC DK reestimate failed: {e}")
+```
+
+**Part C — L5 centroid + DK persistence wiring:**
+
+Wire L5 writes in triage.py after the learn path. Same non-fatal
+inline pattern as SDK. Uses `_l5_upsert_current()` core method.
+
+```python
+# After centroid update (MEAN_CONVERGENCE only):
+category_phase = scorer._category_states[cat_idx].phase  # or accessor
+if str(category_phase) != "VARIANCE_LEARNING":
+    try:
+        learning_store.update_centroid(
+            domain="soc", category=category, action=actual_action,
+            centroid_vector=scorer.mu[cat_idx][act_idx].tolist(),
+            caused_by_decision_id=decision_id,
+        )
+    except Exception as e:
+        logger.error(f"SOC L5 centroid write failed: {e}")
+
+# After reestimate_dk():
+if scorer._dk_weights is not None:
+    try:
+        persist_dk_after_reestimate(
+            scorer=scorer,
+            learning_store=learning_store,
+            welford_tracker=welford_tracker,
+            domain="soc",
+            factor_vector=factor_vector,
+            is_correct=is_correct,
+        )
+    except Exception as e:
+        logger.error(f"SOC L5 DK write failed: {e}")
+```
+
+**Part D — WelfordTracker initialization:**
+
+In SOC app startup (main.py or gae_state.py — SOC-0 Q4 identifies):
+
+```python
+from copilot_sdk.scoring.dk_persistence import DKWelfordTracker
+soc_welford_tracker = DKWelfordTracker(d=soc_d)  # d from SOC-0 Q6
+```
+
+**Part E — Conservation L5 verification:**
+
+P25c conservation is already wired in learning_health.py but may be
+conditional on `categories_with_data > 0`. Verify it fires after
+SOC-1+2 construction change. If it does NOT fire (because
+categories_with_data is still 0 before #132), that is expected —
+conservation L5 verification moves to SOC-4+5 (after SOC-3 fix).
+
+**Files:** `soc/config.py`, `routers/triage.py`, SOC startup.
+Exact file paths from SOC-0 Q2/Q4.
+
+**THE BEHAVIORAL GATE (must pass before SOC-3):**
+
+```python
+def test_soc_dk_learning_works():
+    """SOC-specific G1. Same logic as SDK G1 but using SOC categories,
+    factors, and scorer construction. After 200+ decisions, verify
+    noisy factor weight drops, signal factor weight rises, scoring
+    output differs from prior-only."""
+```
+
+**SOC-1+2 tests (7):**
+
+| # | Test | What it proves |
+|---|---|---|
+| G1 | `test_soc_dk_learning_works` | **THE gate.** SOC DK weights change with data. |
+| 2 | `test_soc_phase_transition` | After 200 decisions, category enters VARIANCE_LEARNING |
+| 3 | `test_soc_reestimate_dk_early_return` | Before 200 decisions, `reestimate_dk()` is no-op |
+| 4 | `test_soc_learn_persists_centroid_to_l5` | Centroid L5 write fires (MEAN_CONVERGENCE only) |
+| 5 | `test_soc_centroid_skipped_in_variance_learning` | Phase-aware: no false provenance |
+| 6 | `test_soc_learn_persists_dk_to_l5_with_welford` | DK + Welford in L5 after phase transition |
+| 7 | `test_soc_l5_writes_nonfatal` | L5 failure → triage continues |
+
+**SOC-1+2 regression:**
+```powershell
+$env:PYTHONPATH = "backend"
+Set-Location "$env:CLAUDE_PROJECTS\gen-ai-roi-demo-v4-v50"
+python -m pytest backend/tests/ -q --timeout=120
+```
+
+---
+
+### SOC-3: #132 SOC Conservation Correctness (1d)
+
+**Purpose:** Fix BUG-007 (wrong α formula) and BUG-008 (wrong decision
+count filter). These are correctness bugs that exist TODAY — fixing
+them is an obligation, not an L5 dependency.
+
+**Can run in parallel with SOC-1+2 if no file conflict.** If both
+touch the same functions in learning_health.py, run sequentially
+(SOC-1+2 first). Should receive its own review because it affects
+safety/conservation numbers.
+
+**Fix 1 — BUG-007: α = cumulative category coverage.**
+
+```python
+# BEFORE (wrong):
+alpha = override_rate  # or some non-coverage metric
+
+# AFTER (correct):
+# AGE Cypher: COUNT(DISTINCT d.category) WHERE d.domain = 'soc' AND d.status IS NOT NULL
+alpha = distinct_categories_with_data / C  # C from SOC-0 Q6
+```
+
+**Fix 2 — BUG-008: total_decisions must filter verified-only.**
+
+```python
+# BEFORE (wrong — counts ghosts):
+total = graph_store.count_decisions(domain="soc")
+
+# AFTER (correct):
+total = graph_store.count_decisions(domain="soc",
+    where="d.status IS NOT NULL AND d.verified_at_epoch IS NOT NULL")
+```
+
+**Fix 3 — Option C formula + complacency advisory.**
+
+Conservation gate: α·q·V ≥ θ_min. Complacency detection
+(override_rate < 0.02 for 200+ decisions) produces an ADVISORY
+log + response field, NOT a status change or gating action.
+
+**After #132:** P25c conservation persistence fires unconditionally
+(categories_with_data is now computable from real coverage data).
+
+**SOC-3 tests (5):**
+
+| # | Test | What it proves |
+|---|---|---|
+| 1 | `test_soc_alpha_equals_coverage` | α = COUNT(DISTINCT category) / C |
+| 2 | `test_soc_total_decisions_verified_only` | total_decisions WHERE status IS NOT NULL AND verified_at IS NOT NULL |
+| 3 | `test_soc_conservation_gate_uses_coverage` | Gate: coverage·q·V ≥ θ_min |
+| 4 | `test_soc_complacency_advisory_not_gating` | override_rate < 0.02 → log, NOT status change |
+| 5 | `test_soc_conservation_persists_to_l5` | After #132, P25c fires and ConservationState in L5 |
+
+**SOC-3 regression:**
+```powershell
+$env:PYTHONPATH = "backend"
+Set-Location "$env:CLAUDE_PROJECTS\gen-ai-roi-demo-v4-v50"
+python -m pytest backend/tests/ -q --timeout=120
+```
+
+---
+
+### SOC-4+5: Test + Live Smoke + C9B Proof (0.5d + C9B fixer 0.5d)
+
+**Purpose:** Prove SOC writes/reads all 3 L5 node types, then produce
+C9B proof. Do NOT re-test `_l5_upsert_current()` internals — those
+are already verified 30 ways (10 tests × 3 labels). Just prove SOC
+WIRING uses the already-reviewed L5 mechanism.
+
+**Status from initial SOC-4+5 run:**
+- ✅ SOC L5ConservationState appears in live AGE
+- ✅ Valid scorer-action outcomes can create L5Centroid rows
+- ✅ `/api/alert/analyze` and `/api/alert/outcome` succeed
+- ❌ SHAPED_BY missing — SOC Decision nodes lack `domain="soc"`
+- ❌ L5DKWeight + Welford missing — insufficient valid scorer-action loops
+- ❌ `refer_to_analyst` is routing-only, not a scorer action
+
+#### C9B Live-Proof Prerequisites (from SOC-4+5 findings)
+
+**Prerequisite 1 — Alert input context:**
+
+SOC `/api/alert/analyze` requires pre-existing Alert/User/Asset nodes.
+The C9B smoke runner must seed input context ONLY — not L5 proof data.
+
+Seed script creates:
+- Alert node/input with deterministic IDs (C9B-SOC-0001, C9B-SOC-0002, ...)
+- User node/input if required by the route
+- Asset node/input if required by the route
+- INVOLVES / DETECTED_ON context edges if required
+
+Seed script must NOT create:
+- Decision outcomes, verified_at_epoch, L5 nodes, SHAPED_BY, TRIGGERED_BY, Welford
+
+**Prerequisite 2 — SOC Decision domain tagging:**
+
+All new SOC route-created Decision nodes must include `domain = "soc"`.
+
+L5 provenance edges are domain-scoped. SHAPED_BY targets the Decision
+using `{domain: "soc", decision_id: ...}`. If SOC Decisions omit
+domain, SHAPED_BY cannot find them — which is exactly what happened
+in the initial run.
+
+Fix at SOC Decision creation time, NOT by weakening SHAPED_BY matching:
+- New SOC Decision writes include `domain="soc"`
+- Old no-domain SOC decisions remain supported by SOC-3 conservation
+  compatibility query
+- No migration/backfill for old no-domain rows
+- Do NOT broaden SHAPED_BY matching to ignore domain
+
+**Prerequisite 3 — Valid scorer-action loops only:**
+
+SOC scorer actions are: `escalate`, `investigate`, `suppress`, `monitor`.
+`refer_to_analyst` is routing-only and must NOT count as a learning proof.
+
+C9B smoke logic:
+- If `/api/alert/analyze` returns `refer_to_analyst` → skip, retry
+- Continue until requested number of valid scorer-action outcomes
+- `--loops N` means N valid outcomes, not N analyze attempts
+- Report: analyze attempts, valid outcomes, skipped routing-only, max-attempts guard
+
+#### C9B Proof Mode: Fresh Graph (Option A — APPROVED)
+
+**Graph name:** `soc_graph_c9b`
+
+All C9B proof operations run against this graph. The existing
+`soc_graph` is not touched. C9A proof data (trading/purchasing/
+dataops/s2p) lives in its own graph and is unaffected.
+
+**Why fresh graph:**
+- C9B proves the FINAL design works from clean state
+- No stale L5Centroid rows from pre-fix writes
+- No no-domain Decision IDs that SHAPED_BY can't target
+- No phase/conservation state from partially correct prior runs
+- Reproducible: delete `soc_graph_c9b` and rerun = same result
+
+**Fresh graph setup:**
+
+```powershell
+# Step 0: Create/reset the proof graph (run once)
+$env:PYTHONPATH = "backend"
+$env:AGE_GRAPH_NAME = "soc_graph_c9b"
+
+# Ensure graph exists in AGE:
+python -c @"
+from ci_platform.graph.age_client import AGEClient
+client = AGEClient()  # uses DATABASE_URL
+client.ensure_graph('soc_graph_c9b')
+print('Graph ready')
+"@
+```
+
+**The app must honor `AGE_GRAPH_NAME`.** If SOC's AGEGraphStore
+constructor reads the graph name from an environment variable or
+config, set it to `soc_graph_c9b` for the C9B proof run. If it's
+hardcoded to `soc_graph`, the C9B fixer must make it configurable.
+This is a one-line change (read from env with fallback to default).
+
+#### C9B Proof Sequence (precise, 10 steps)
+
+```
+Step 1:  Set AGE_GRAPH_NAME=soc_graph_c9b
+Step 2:  Start SOC app (reads AGE_GRAPH_NAME)
+Step 3:  Seed C9B Alert/User/Asset inputs (deterministic IDs)
+         Creates: Alert, User, Asset nodes + context edges
+         Does NOT create: Decisions, L5 nodes, outcomes
+Step 4:  Run /api/alert/analyze for first alert
+         Creates: Decision(domain="soc", decision_id=..., status="pending")
+Step 5:  If action = refer_to_analyst → skip, seed next alert, goto Step 4
+Step 6:  Run /api/alert/outcome for valid scorer action
+         Creates: Outcome, updates Decision status to confirmed
+         Triggers: centroid update (MEAN_CONVERGENCE) + L5Centroid write
+                   + SHAPED_BY edge to Decision(domain="soc")
+Step 7:  Repeat Steps 4-6 until 250 valid scorer-action outcomes
+         After 200: phase transition → VARIANCE_LEARNING
+         After 200: reestimate_dk() produces L5DKWeight + Welford
+         After 300: conservation calibration completes → L5ConservationState persists
+         After 250: margin — dual update means DK at ~100, conservation at ~150
+         Conservation computes: α·q·V vs θ_min throughout
+Step 8:  Run C9B proof queries against soc_graph_c9b
+Step 9:  Verify all pass criteria met
+Step 10: Generate C9B proof report
+```
+
+**What each step produces in the graph:**
+
+| Step | Nodes created | Edges created |
+|---|---|---|
+| 3 | Alert, User, Asset | INVOLVES, DETECTED_ON |
+| 4 | Decision(domain="soc", status="pending") | — |
+| 6 | Outcome; L5Centroid (first write for this category/action) | SHAPED_BY → Decision |
+| 6 (repeat) | L5Centroid SET-updated (same identity) | SHAPED_BY replaced → latest Decision |
+| 7 (after 200) | L5DKWeight + Welford fields | — |
+| 7 (conservation) | L5ConservationState | TRIGGERED_BY → Decision (if transition) |
+
+#### C9B Fixer Scope (0.5d)
+
+**Fix 1 — Make AGE_GRAPH_NAME configurable:**
+
+SOC's AGEGraphStore must read graph name from environment:
+```python
+graph_name = os.environ.get("AGE_GRAPH_NAME", "soc_graph")
+```
+One-line change. Verify by starting app with `AGE_GRAPH_NAME=soc_graph_c9b`
+and confirming queries hit `soc_graph_c9b`.
+
+**Fix 2 — Domain tag SOC Decisions (if not already done):**
+
+Verify new SOC Decision writes include `domain="soc"`. Already
+specified in v6.2 — confirm in live smoke.
+
+**Fix 3 — Smoke script honors AGE_GRAPH_NAME + valid-loop counting:**
+
+```python
+# c9b_soc_proof.py
+import os
+GRAPH_NAME = os.environ.get("AGE_GRAPH_NAME", "soc_graph_c9b")
+
+valid_outcomes = 0
+attempts = 0
+max_attempts = loops * 3
+
+while valid_outcomes < loops and attempts < max_attempts:
+    attempts += 1
+    alert_id = f"C9B-SOC-{attempts:04d}"
+    seed_alert(alert_id, graph_name=GRAPH_NAME)
+    result = analyze(alert_id)
+    
+    if result.action not in ("escalate", "investigate", "suppress", "monitor"):
+        logger.info(f"Skip routing-only: {result.action} (attempt {attempts})")
+        continue
+    
+    outcome(decision_id=result.decision_id, actual_action=result.action)
+    valid_outcomes += 1
+    
+    if valid_outcomes % 50 == 0:
+        logger.info(f"Progress: {valid_outcomes}/{loops} valid, {attempts} attempts")
+
+logger.info(f"DONE: {valid_outcomes} valid / {attempts} attempts / "
+            f"{attempts - valid_outcomes} skipped")
+```
+
+**Fix 4 — Tests:**
+
+| # | Test | What it proves |
+|---|---|---|
+| 1 | `test_soc_age_graph_name_configurable` | AGE_GRAPH_NAME env var controls graph name |
+| 2 | `test_soc_decision_has_domain` | New SOC Decisions include `domain="soc"` |
+| 3 | `test_soc_shaped_by_finds_domain_decision` | SHAPED_BY targets domain-tagged Decision |
+| 4 | `test_soc_fresh_graph_produces_all_three_types` | Clean graph → 250 target-category loops → L5Centroid + DKWeight + ConservationState + Welford + SHAPED_BY |
+
+#### SOC integration tests (3)
+
+| # | Test | What it proves |
+|---|---|---|
+| 1 | `test_soc_full_flow_all_three_l5_types` | 200+ valid SOC outcomes → L5Centroid + L5DKWeight + L5ConservationState + Welford + SHAPED_BY |
+| 2 | `test_soc_l5_survives_restart` | P26 startup reads SOC L5 state |
+| 3 | `test_soc_conservation_finite_theta_min` | After #132, theta_min is finite for seeded data |
+
+#### C9B proof queries (against soc_graph_c9b)
+
+```sql
+-- Run with AGE_GRAPH_NAME=soc_graph_c9b
+MATCH (c:L5Centroid) WHERE c.domain = 'soc' RETURN count(c)
+MATCH (w:L5DKWeight) WHERE w.domain = 'soc' RETURN count(w), w.n_decisions_used
+MATCH (cs:L5ConservationState) WHERE cs.domain = 'soc' RETURN cs.status, cs.alpha, cs.q
+MATCH (c:L5Centroid)-[:SHAPED_BY]->(d:Decision) WHERE c.domain = 'soc' RETURN count(*)
+MATCH (cs:L5ConservationState)-[:TRIGGERED_BY]->(d:Decision) WHERE cs.domain = 'soc' RETURN count(*)
+
+-- Verify Decision domain tagging:
+MATCH (d:Decision) WHERE d.domain = 'soc' RETURN count(d)
+-- Should equal total valid outcomes (250)
+
+-- Verify no stale no-domain Decisions:
+MATCH (d:Decision) WHERE d.domain IS NULL RETURN count(d)
+-- Should be 0 on fresh graph
+```
+
+**C9B PASSES when ALL of the following are true:**
+
+| Criterion | Threshold | Why |
+|---|---|---|
+| L5Centroid count | > 0 | Centroid learning ran in MEAN_CONVERGENCE |
+| SHAPED_BY count | > 0 | At least one centroid links to a domain-tagged Decision |
+| L5DKWeight count | > 0 | DK estimation ran after phase transition |
+| Welford fields | All 6 present | confirmed_mean/m2, overridden_mean/m2, all_mean/m2 |
+| L5ConservationState count | > 0 | Conservation computed with correct α formula |
+| ConservationState status | Valid (GREEN/AMBER/RED) | Not null, not error |
+| ConservationState theta_min | Finite | Not inf (enough data for finite threshold) |
+| Decision domain | All = "soc" | No stale no-domain Decisions on fresh graph |
+| TRIGGERED_BY | Present if transition exercised | Not required if status never changed |
+
+**C9B FAILS if ANY of these are true:**
+
+| Failure | Meaning |
+|---|---|
+| L5Centroid = 0 | Centroid learning never fired |
+| SHAPED_BY = 0 | Provenance edge never attached (domain mismatch or phase skip) |
+| L5DKWeight = 0 | Phase transition never reached or reestimate_dk() failed |
+| Welford missing | DK persistence didn't include Welford state |
+| L5ConservationState = 0 | Conservation path broken or categories_with_data = 0 |
+| theta_min = inf | Conservation formula produced infinity on seeded data |
+| Valid outcomes < 210 | Max-attempts exhausted — not enough scorer actions |
+
+---
+
+### After C9B: L5 COMPLETE
+
+```
+C9A (non-SOC): 4 × 3 = 12 cells  ✅ PASS
+C9B (SOC):     1 × 3 = 3 cells   ← F8 validates path → formal proof on soc_graph_c9b
+L5 COMPLETE:   5 × 3 = 15 cells  ← C9A + C9B
+```
+
+### C9B Formal Proof Execution Specification
+
+**F8 validates the product path. C9B is the formal proof on the
+designated clean graph. Same runner, same seed, same proof loop.
+Different graph name — `soc_graph_c9b` (locked decision, v6.4).**
+
+---
+
+#### Step 0: Validate F8 Results (10 min)
+
+Before starting C9B, confirm F8 passed its gate.
+
+Open the F8 report:
+```
+report_soc_c9b_diag_f_runner_DIAG-F8-CRED.json
+report_soc_c9b_diag_f_runner_DIAG-F8-CRED.md
+```
+
+Verify ALL of the following in the report:
+
+| Criterion | Required | Where to check |
+|---|---|---|
+| valid_outcomes | ≥ 250 | `valid_outcomes` in JSON |
+| L5DKWeight | > 0 | `progress_readbacks` last entry `l5_dk_weight` |
+| Welford | present | `welford_present: true` or `confirmed_mean_json IS NOT NULL` |
+| n_decisions_used | ≥ 250 | `dk_n_decisions_used` in readback |
+| L5Centroid | > 0 | `l5_centroid` in readback |
+| SHAPED_BY | > 0 | `shaped_by` in readback |
+| verdict | PASS or COMPLETED | `verdict` field |
+
+If ANY criterion fails: F8 did not pass. Run prefix diagnostic on
+`soc_graph_diag_f8` before classifying. Do NOT proceed to C9B.
+
+If ALL pass: Diagnostic F = CLOSED. Proceed to Step 1.
+
+---
+
+#### Step 1: Pre-Flight Checklist (5 min)
+
+Run each check. ALL must pass before starting C9B.
+
+```powershell
+# 1a. Verify ci-platform imports from SOURCE repo (not site-packages)
+python -c "import ci_platform.graph.age_graph_store as m; print('ci-platform path:', m.__file__)"
+# Must show: ...\ci-platform\ci_platform\graph\age_graph_store.py
+# If site-packages: pip install -e ci-platform first
+
+# 1b. Verify AGE is running
+python -c "
+import asyncio
+from ci_platform.graph.age_client import AGEClient
+async def main():
+    c = AGEClient()
+    graphs = await c.list_graphs()
+    print('AGE reachable, graphs:', graphs)
+asyncio.run(main())
+"
+
+# 1c. Verify soc_graph_c9b does NOT already exist (must be fresh)
+# If it exists from a prior attempt: delete or use a new name
+# soc_graph_c9b must be CLEAN for formal proof
+
+# 1d. Verify PostgreSQL is accessible
+python -c "
+import psycopg2
+conn = psycopg2.connect('host=localhost port=5433 dbname=soc_copilot user=postgres')
+print('PostgreSQL reachable')
+conn.close()
+"
+```
+
+---
+
+#### Step 2: Create Fresh Proof Graph (2 min)
+
+```powershell
+$env:PYTHONPATH = "backend"
+$env:AGE_GRAPH_NAME = "soc_graph_c9b"
+
+python -c "
+import asyncio
+from ci_platform.graph.age_client import AGEClient
+async def main():
+    c = AGEClient()
+    await c.ensure_graph('soc_graph_c9b')
+    # Verify it's empty
+    result = await c.query('soc_graph_c9b', 'MATCH (n) RETURN count(n) AS cnt')
+    print(f'soc_graph_c9b created, node count: {result}')
+asyncio.run(main())
+"
+# Expected: node count = 0 (fresh graph)
+```
+
+---
+
+#### Step 3: Start Backend Bound to soc_graph_c9b (5 min)
+
+```powershell
+# Set ALL required environment variables
+$env:SOC_LEARNING_ENABLED = "true"
+$env:GRAPH_DSN = "host=localhost port=5433 dbname=soc_copilot user=postgres password=<pwd>"
+$env:AGE_GRAPH_NAME = "soc_graph_c9b"
+$env:GRAPH_BACKEND = "age"
+
+# Start backend
+cd backend
+uvicorn app.main:app --port 8001
+```
+
+Wait for startup. Verify in the startup log:
+- `AGE_GRAPH_NAME=soc_graph_c9b` (not soc_graph, not diag_f8)
+- `SOC_LEARNING_ENABLED=true`
+- `Application startup complete`
+
+Then verify health:
+```powershell
+Invoke-RestMethod http://127.0.0.1:8001/health
+# Expected: {"status":"healthy","components":{"posterior_store":{"healthy":true}}}
+```
+
+---
+
+#### Step 4: Run C9B Proof (same runner as F8, ~45 min)
+
+```powershell
+cd ..  # back to repo root
+python scripts/diagnostics/run_soc_diag_f.py `
+    --graph-name soc_graph_c9b `
+    --prefix C9B-SOC `
+    --target-outcomes 250 `
+    --max-attempts 400 `
+    --scenario diagnostic-f-dk
+```
+
+**During the run, monitor for:**
+- Progress messages every 25 outcomes
+- DKWeight milestone at ~100-125 outcomes (dual update → ~200 scorer decisions)
+- No repeated timeout/recovery cycles (occasional is OK, persistent = investigate)
+- Per-outcome time staying under 30s (growing is expected, >60s = concern)
+
+**DO NOT interrupt the run.** The proof requires one uninterrupted
+process. If the terminal is closed or the process dies, the proof is
+invalid — restart from Step 2 with a fresh graph.
+
+---
+
+#### Step 5: Validate C9B Results (10 min)
+
+After the runner completes, two files are generated:
+```
+report_soc_c9b_diag_f_runner_C9B-SOC.json
+report_soc_c9b_diag_f_runner_C9B-SOC.md
+```
+
+**C9B PASSES when ALL of the following are true on `soc_graph_c9b`:**
+
+| Cell | Criterion | Threshold | Where to check |
+|---|---|---|---|
+| L5Centroid | count > 0 for domain=soc | Centroid learning ran | readback `l5_centroid` |
+| SHAPED_BY | count > 0 for domain=soc | Provenance edge present | readback `shaped_by` |
+| L5DKWeight | count > 0 for domain=soc | DK estimation succeeded | readback `l5_dk_weight` |
+| Welford | confirmed_mean_json NOT NULL | Welford audit chain | readback `welford_present` |
+| n_decisions_used | ≥ 250 | Enough decisions processed | readback `dk_n_decisions_used` |
+| L5ConservationState | count > 0 for domain=soc | Conservation computed | readback `l5_conservation` |
+| ConservationState status | GREEN or AMBER or RED | Valid status | readback `conservation_status` |
+| Decision domain | All = "soc" | No stale decisions | readback or manual query |
+
+**Manual verification queries (if report is ambiguous):**
+
+```powershell
+python -c "
+import asyncio
+from ci_platform.graph.age_client import AGEClient
+async def main():
+    c = AGEClient()
+    queries = [
+        ('L5Centroid', \"MATCH (c:L5Centroid) WHERE c.domain='soc' RETURN count(c)\"),
+        ('SHAPED_BY', \"MATCH (c:L5Centroid)-[:SHAPED_BY]->(d:Decision) RETURN count(*)\"),
+        ('L5DKWeight', \"MATCH (w:L5DKWeight) WHERE w.domain='soc' RETURN count(w)\"),
+        ('Welford', \"MATCH (w:L5DKWeight) WHERE w.domain='soc' RETURN w.confirmed_mean_json IS NOT NULL\"),
+        ('n_decisions', \"MATCH (w:L5DKWeight) WHERE w.domain='soc' RETURN w.n_decisions_used\"),
+        ('Conservation', \"MATCH (cs:L5ConservationState) WHERE cs.domain='soc' RETURN cs.status, cs.alpha, cs.q\"),
+        ('Decisions', \"MATCH (d:Decision) WHERE d.domain='soc' RETURN count(d)\"),
+    ]
+    for label, q in queries:
+        result = await c.query('soc_graph_c9b', q)
+        print(f'{label}: {result}')
+asyncio.run(main())
+"
+```
+
+---
+
+#### Step 6: If C9B PASSES — Close C9B and Declare L5 COMPLETE
+
+**6a. Record the proof:**
+
+Archive the proof report:
+```
+docs/implementation_plans/c9b_soc_live_age_readback_final.json  ← copy from runner report
+docs/implementation_plans/c9b_soc_l5_proof.md                   ← copy from runner report
+```
+
+**6b. Update the execution plan (this document) to v6.9:**
+- Mark C9B = ✅ PASS in execution sequence
+- Mark L5 COMPLETE = ✅ (15 cells)
+- Record proof graph name, date, outcome count
+
+**6c. Declare L5 COMPLETE:**
+
+```
+C9A ✅ (12 cells) + C9B ✅ (3 cells) = L5 COMPLETE (15 cells)
+All 5 copilots have live L5 judgment memory.
+```
+
+**6d. Unlocked by L5 COMPLETE** (tracked in MAP, not this document):
+- "All 5 copilots have compounding intelligence" claim → TRUE
+- Blog publish, arxiv submission, demo builds → see MAP
+- LOOM-V1 (#88) → see MAP
+
+---
+
+#### Step 7: If C9B FAILS After F8 Passed
+
+The product code works (F8 proved it). The failure is environmental.
+
+**7a. DO NOT re-run immediately.** Run prefix diagnostic first:
+```powershell
+python scripts/diagnostics/run_soc_diag_f.py `
+    --graph-name soc_graph_c9b `
+    --prefix C9B-SOC `
+    --dry-run `
+    --readback-only
+```
+
+**7b. Check these environmental factors:**
+- Backend AGE_GRAPH_NAME = soc_graph_c9b? (not diag_f8)
+- ci-platform import = source repo? (not site-packages)
+- Rule #40 DSN validated? (localhost, not remote)
+- Health endpoint healthy?
+- AGE reachable and soc_graph_c9b exists?
+
+**7c. Fix the environmental issue, then restart from Step 2 with a
+fresh graph** (delete soc_graph_c9b and recreate). Do NOT resume on
+a partially-written graph.
+
+---
+
+#### Post-L5-COMPLETE: Development Items
+
+| Priority | Item | Effort | Scope |
+|---|---|---|---|
+| **P2** | Dual update fix | 0.5d | Guard `learning_state.update()` in triage.py — blocks pilot for non-credential categories |
+| **P2** | Performance diagnostic + fix | 1d | Analyze latency grows ~0.09s/outcome → 25s avg at 250 outcomes. Blocks demo/pilot. See Root Cause Hypotheses below. |
+| **P3** | Persistence logging | 15 min | Log when persist returns False |
+| **P3** | HAS_OUTCOME edge | 0.5d | Outcome route missing Outcome node — affects graph-store verified queries |
+| **P3** | Runner hygiene (6 items) | 0.5d | Timing inflation P2-A, hardcoded graph hygiene P2-B, dead code P2-C, unreachable sanity P3-A, 127.0.0.1 default P3-B, non-atomic progress write P3-C |
+
+Publication, blog, arxiv, and document-update items (D-07, E-03,
+E-04, E-06) are tracked in the MAP document, not here.
+
+#### Performance Root Cause Hypotheses (from F8 analysis)
+
+F8 performance data:
+```
+Outcome 1:    analyze ~4.5s
+Outcome 33:   analyze ~6.5s (avg)
+Outcome 125:  analyze ~15s (projected)
+Outcome 250:  analyze ~25.6s (avg), 49.9s (peak)
+Growth rate:  ~0.09s per additional outcome on analyze leg
+```
+
+At this trajectory, individual outliers near outcome 200 approach
+the 120s HTTP timeout — which is exactly what caused the F6 failure
+at decision 161.
+
+**Four credible hypotheses (microbenchmark isolates which):**
+
+| Hypothesis | What to measure | Fix if confirmed |
+|---|---|---|
+| **A: No AGE connection pool** | Tier 2: fresh/warm connection ratio >5× | Pool AGEClient in FastAPI app state; reuse across requests |
+| **B: O(N) query in analyze** | Tier 3: STARTS WITH scan grows fastest | Replace STARTS WITH with direct alert_id lookup |
+| **C: Missing AGE index on alert_id** | Tier 3: point lookup >100ms | CREATE INDEX on AGE label table |
+| **D: Synchronous centroid checkpoint** | Tier 4: (analyze - fast-fail) >3s | Profile centroid write; consider async |
+
+**Microbenchmark decision gates:**
+
+```
+Tier 2 fresh/warm >10×     → connection pool missing → add pool
+Tier 3 point lookup >100ms → no index               → add index
+Tier 3 STARTS WITH grows   → O(N) readback          → replace with direct lookup
+Tier 4 fast-fail >500ms    → AGE read itself slow    → connection or index
+Tier 4 (analyze-fast-fail) → compute/write overhead  → profile centroid write
+```
+
+**Microbenchmark script:** `scripts/diagnostics/soc_diag_microbench.py`
+Safe to run during proof (read-only except one BenchNode write+delete).
+Run at 33 outcomes and again at 100+ to measure growth:
+```powershell
+python scripts/diagnostics/soc_diag_microbench.py `
+    --graph-name <proof_graph> `
+    --prefix <proof_prefix> `
+    --backend-url http://localhost:8001 `
+    --reps 5
+```
+
+#### Quick Performance Reproduction Test (30 seconds)
+
+Three commands reproduce the core issue using the existing F8 graph.
+No setup needed — just the running backend and the F8 graph.
+
+**Test 1: Analyze on full graph (250 decisions)**
+
+```powershell
+# Backend must be running bound to soc_graph_diag_f8
+Measure-Command {
+    Invoke-RestMethod -Method POST -Uri http://localhost:8001/api/alert/analyze `
+        -ContentType "application/json" `
+        -Body '{"alert_id": "DIAG-F8-CRED-0001"}'
+} | Select-Object TotalSeconds
+# Reproduces issue if: >20s
+# Expected healthy: 3-5s
+```
+
+**Test 2: Analyze on fresh graph (0 decisions)**
+
+```powershell
+# Restart backend with AGE_GRAPH_NAME=soc_graph_bench (fresh, empty)
+# Seed 1 alert with User/Asset/edges, then:
+Measure-Command {
+    Invoke-RestMethod -Method POST -Uri http://localhost:8001/api/alert/analyze `
+        -ContentType "application/json" `
+        -Body '{"alert_id": "BENCH-0001"}'
+} | Select-Object TotalSeconds
+# Expected: 3-5s (confirms issue is graph-size dependent)
+```
+
+**Test 3: Raw AGE query (no HTTP, no scorer)**
+
+```powershell
+python -c "
+import asyncio, time
+from ci_platform.graph.age_client import AGEClient
+
+async def main():
+    c = AGEClient()
+    t0 = time.perf_counter()
+    r = await c.run_query(\`"MATCH (a:Alert {alert_id: 'DIAG-F8-CRED-0001'}) RETURN a.alert_id\`")
+    print(f'Point lookup: {time.perf_counter()-t0:.3f}s')
+
+    t0 = time.perf_counter()
+    r = await c.run_query('MATCH (n) RETURN count(n) AS cnt')
+    print(f'Full scan: {time.perf_counter()-t0:.3f}s, count={r}')
+
+    t0 = time.perf_counter()
+    r = await c.run_query(\`"MATCH (d:Decision) WHERE d.domain='soc' RETURN count(d)\`")
+    print(f'Decision scan: {time.perf_counter()-t0:.3f}s')
+
+asyncio.run(main())
+"
+```
+
+**What each result tells you:**
+
+| Result | Root cause | Fix |
+|---|---|---|
+| Test 1 slow (>20s), Test 2 fast (<5s) | Graph-size dependent growth confirmed | Run full microbenchmark to isolate layer |
+| Test 3 point lookup >100ms | No AGE index on alert_id | CREATE INDEX on AGE label table |
+| Test 3 full scan >500ms | O(N) scan in analyze route | Replace STARTS WITH with direct lookup |
+| Test 1 slow, Test 3 fast | Python/FastAPI/scorer overhead, not AGE | Profile centroid write; check connection reuse |
+| Both Test 1 and Test 2 slow (>15s) | Not graph-size dependent | Connection cost or scorer init overhead |
+
+**Commercial impact of unresolved performance:**
+- Demo: 25-50s response time is disqualifying against Microsoft Security Copilot
+- Pilot: SOC teams won't tolerate minute-long waits by week 2
+- "Compounding" claim: system that slows as it learns contradicts the core narrative
+- Scaling: 250 decisions = 25s; 10,000 decisions = ? — buyers will ask
+
+#### C9B Proof: max_attempts Adjustment
+
+**From F8 analysis:** `--max-attempts=300` may be insufficient for
+`dk_n_decisions_used ≥ 250` criterion.
+
+The dual update causes DK to activate at ~100 outcomes (~200 scorer
+decisions). At that point `n_decisions_used` starts counting from 0.
+For `n_decisions_used ≥ 250` at max_attempts=300:
+
+```
+300 - DK_activation_outcome ≥ 250  →  DK must activate by outcome 50
+```
+
+F6 showed DK at ~100-125 outcomes. At DK activation = 100:
+```
+n_decisions_used at attempt 300 = 300 - 100 = 200  →  FAILS (200 < 250)
+```
+
+**Fix for C9B proof:** Use `--max-attempts 400`:
+```powershell
+python scripts/diagnostics/run_soc_diag_f.py `
+    --graph-name soc_graph_c9b `
+    --prefix C9B-SOC `
+    --target-outcomes 250 `
+    --max-attempts 400 `
+    --scenario diagnostic-f-dk
+```
+
+This gives:
+```
+400 - 100 (DK activation) = 300 n_decisions_used  →  PASSES (300 ≥ 250)
+```
+
+---
+
+### SOC track stop conditions
+
+**Architectural stops:**
+- If SOC construction path is NOT ProfileScorer or cannot support
+  LearningStrategy → STOP. Report to Roadmap.
+- If SOC learn/outcome path cannot provide factor_vector / category /
+  action / is_correct → STOP. Report to Roadmap.
+- If SOC-3 (#132) changes conflict with SOC-1+2 file changes → split
+  implementation (SOC-1+2 first, SOC-3 after, sequential).
+- Do NOT use CompoundingScorer in SOC unless SOC-0 diagnostic proves
+  it already belongs there.
+- Do NOT duplicate DK estimator logic outside GAE.
+- Do NOT change GAE library code.
+- Do NOT weaken conservation formulas.
+- Do NOT change SDK copilot behavior (scoring_router.py, scorer.py).
+- Do NOT change `_l5_upsert_current()` core method.
+- SOC L5 writes use `_l5_upsert_current()` — no separate SOC AGE pattern.
+
+**C9B proof-state stops:**
+- Do NOT run C9B against `soc_graph` (use `soc_graph_c9b` only)
+- Do NOT delete or modify `soc_graph` data (C9A proof + production data)
+- Do NOT weaken SHAPED_BY matching to ignore domain
+- Do NOT disable conservation or DK phase logic to force a proof
+- Do NOT direct-insert L5 nodes
+- Do NOT create Decision/Outcome data in the seed script (only Alert/User/Asset)
+- If AGE_GRAPH_NAME cannot be made configurable → STOP. Report.
+- If valid scorer-action outcomes cannot reach 250 (max-attempts exhausted) → STOP. Report.
+- If conservation pause blocks ALL learning on fresh graph → STOP. This is a real bug.
+- If SHAPED_BY = 0 after valid centroid writes on fresh graph → STOP. Domain tagging broken.
+- If L5DKWeight = 0 after 250 valid target-category outcomes on fresh graph → STOP. DK estimation broken.
+
+### SDK C9-FIX stop conditions (NOT applicable to SOC track)
+
+- Do NOT change conservation formulas (SDK)
+- Do NOT cap infinity to a finite value
+- Do NOT accept NaN anywhere
+- Do NOT migrate old status-null Decision nodes
+- Do NOT modify write format for DKWeight (only read compatibility)
+- Do NOT modify DK estimation or centroid update paths (SDK)
+
+### Updated C9 Definition
+
+**C9A:** 4 non-SOC domains × 3 node types = 12 cells. ✅ PASS.
+**C9B:** SOC × 3 node types = 3 cells. F8 validates path → formal proof on `soc_graph_c9b`.
+**L5 COMPLETE:** C9A + C9B = 5 × 3 = 15 cells. All copilots.
+

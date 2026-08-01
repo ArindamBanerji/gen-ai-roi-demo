@@ -274,27 +274,6 @@ def test_soc_outcome_route_uses_l5_helpers_not_direct_age_writes():
     assert "_l5_upsert_current" not in source
 
 
-class _RouteNeo4j:
-    def __init__(self, action: str = "escalate"):
-        self.record = {
-            "factor_vector": "[0.2, 0.3, 0.4, 0.1, 0.5, 0.6]",
-            "action": action,
-            "confidence": 0.8,
-            "campaign_id": "C-1",
-            "explored": False,
-            "explored_but_referred": False,
-            "exploration_executed": False,
-            "explored_action": None,
-            "category": "credential_access",
-            "alert_type": "anomalous_login",
-        }
-
-    async def run_query(self, query):
-        if "RETURN d.factor_vector AS factor_vector" in query:
-            return [dict(self.record)]
-        return []
-
-
 class _RouteScorer:
     n_categories = len(SOC_CATEGORIES)
 
@@ -332,6 +311,7 @@ def _centroid_update(action_index: int):
 
 async def _run_soc_outcome_with_route_patches(
     monkeypatch,
+    harness,
     *,
     predicted_action: str = "escalate",
     analyst_action: str | None = None,
@@ -342,12 +322,22 @@ async def _run_soc_outcome_with_route_patches(
     centroid_calls = []
     dk_calls = []
 
+    harness.add_decision(
+        decision_id="DEC-SOC-L5",
+        category="credential_access",
+        action=predicted_action,
+        confidence=0.8,
+        factors={f"f{i}": value for i, value in enumerate([0.2, 0.3, 0.4, 0.1, 0.5, 0.6])},
+        factor_vector="[0.2, 0.3, 0.4, 0.1, 0.5, 0.6]",
+        campaign_id="C-1",
+        alert_type="anomalous_login",
+    )
+
     @asynccontextmanager
     async def fake_acquire_scorer():
         yield scorer
 
     monkeypatch.setattr(triage, "LEARNING_ENABLED", True)
-    monkeypatch.setattr(triage, "neo4j_client", _RouteNeo4j(action=predicted_action))
     monkeypatch.setattr(triage, "get_feedback_status", lambda _alert_id: {"has_feedback": False})
     monkeypatch.setattr(triage, "get_learning_state", lambda: _RouteLearningState())
     monkeypatch.setattr(triage, "save_learning_state", lambda: None)
@@ -403,9 +393,10 @@ async def _run_soc_outcome_with_route_patches(
 
 
 @pytest.mark.asyncio
-async def test_soc_outcome_l5_centroid_uses_actual_action_on_override(monkeypatch):
+async def test_soc_outcome_l5_centroid_uses_actual_action_on_override(monkeypatch, soc_triage_harness):
     result = await _run_soc_outcome_with_route_patches(
         monkeypatch,
+        soc_triage_harness,
         predicted_action="escalate",
         analyst_action="suppress",
         outcome="incorrect",
@@ -424,9 +415,10 @@ async def test_soc_outcome_l5_centroid_uses_actual_action_on_override(monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_soc_outcome_l5_centroid_uses_predicted_when_actual_equals_predicted(monkeypatch):
+async def test_soc_outcome_l5_centroid_uses_predicted_when_actual_equals_predicted(monkeypatch, soc_triage_harness):
     result = await _run_soc_outcome_with_route_patches(
         monkeypatch,
+        soc_triage_harness,
         predicted_action="escalate",
         analyst_action="escalate",
         outcome="correct",
@@ -438,9 +430,10 @@ async def test_soc_outcome_l5_centroid_uses_predicted_when_actual_equals_predict
 
 
 @pytest.mark.asyncio
-async def test_soc_dk_persistence_skipped_when_reestimate_fails(monkeypatch):
+async def test_soc_dk_persistence_skipped_when_reestimate_fails(monkeypatch, soc_triage_harness):
     result = await _run_soc_outcome_with_route_patches(
         monkeypatch,
+        soc_triage_harness,
         predicted_action="escalate",
         analyst_action="escalate",
         outcome="correct",
@@ -453,9 +446,10 @@ async def test_soc_dk_persistence_skipped_when_reestimate_fails(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_soc_dk_persistence_runs_when_reestimate_succeeds(monkeypatch):
+async def test_soc_dk_persistence_runs_when_reestimate_succeeds(monkeypatch, soc_triage_harness):
     result = await _run_soc_outcome_with_route_patches(
         monkeypatch,
+        soc_triage_harness,
         predicted_action="escalate",
         analyst_action="escalate",
         outcome="correct",

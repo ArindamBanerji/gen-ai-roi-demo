@@ -1,0 +1,30 @@
+# SOC C9B Diagnostic F Runner Result
+
+- verdict: `DRY_RUN_ONLY`
+- exit_code: `0`
+- graph: `soc_graph_diag_f5_dryrun`
+- prefix: `DIAG-F5-DRY`
+- dry_run: `True`
+- seed_attempted_count: `0`
+- seed_completed_count: `0`
+- seed_strategy: `direct-age`
+- seed_sleep_seconds: `0.15`
+- batch_sleep_seconds: `2.0`
+- preflight_seed_count: `5`
+- current_batch_index: `None`
+- current_batch_start: `None`
+- current_batch_end: `None`
+- seed_retries: `0`
+- last_seed_error: `None`
+- analyze_attempts: `0`
+- outcome_attempts: `0`
+- valid_outcomes: `0`
+- skipped_refer_to_analyst: `0`
+- other_categories: `0`
+- last_successful_phase: `age_graph_ensured`
+- criteria_failures: `['dry-run only; no proof loop was executed']`
+- exception: `None`
+- backend_contract_statement: `Backend import path cannot be directly introspected without a debug endpoint; proof assumes backend was launched by run_soc_diag_backend.ps1 or demo.py --diag-mode with matching graph/env.`
+- report_json: `C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\docs\implementation_plans\soc_c9b_diag_f_runner_DIAG-F5-DRY.json`
+- report_md: `C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\docs\implementation_plans\soc_c9b_diag_f_runner_DIAG-F5-DRY.md`
+- progress_json: `C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\scratch\temp\soc_diag_f_progress.json`

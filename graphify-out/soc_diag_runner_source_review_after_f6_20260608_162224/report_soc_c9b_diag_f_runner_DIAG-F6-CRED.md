@@ -1,0 +1,53 @@
+# SOC C9B Diagnostic F Runner Result
+
+- verdict: `ANALYZE_HTTP_FAILURE`
+- exit_code: `1`
+- proof_passed: `False`
+- graph: `soc_graph_diag_f6`
+- prefix: `DIAG-F6-CRED`
+- dry_run: `False`
+- scenario: `diagnostic-f-dk`
+- mode: `streaming`
+- input_provider: `fixed_c9b_stream`
+- pass_criteria: `['target_outcomes', 'l5_dk_weight', 'welford', 'dk_n_decisions_used']`
+- max_attempts: `300`
+- seed_attempted_count: `161`
+- seed_completed_count: `161`
+- seeded_alerts: `161`
+- seed_failures: `0`
+- seed_strategy: `direct-age`
+- runner_graph_dsn_redacted: `host=localhost port=5433 dbname=soc_copilot user=postgres password=***`
+- runner_age_readback_status: `ok`
+- runner_age_readback_attempts: `1`
+- runner_age_error: `None`
+- rule40_validated: `True`
+- seed_sleep_seconds: `0.15`
+- attempt_sleep_seconds: `0.05`
+- batch_sleep_seconds: `2.0`
+- max_seed_failures: `3`
+- preflight_seed_count: `5`
+- current_attempt_index: `161`
+- current_batch_index: `None`
+- current_batch_start: `161`
+- current_batch_end: `161`
+- seed_retries: `0`
+- last_seed_error: `None`
+- analyze_attempts: `161`
+- outcome_attempts: `160`
+- valid_outcomes: `160`
+- skipped_refer_to_analyst: `0`
+- other_categories: `0`
+- other_action_skips: `0`
+- last_successful_phase: `sanity_completed`
+- criteria_failures: `['proof analyze failed for DIAG-F6-CRED-0161: timed out']`
+- exception: `proof analyze failed for DIAG-F6-CRED-0161: timed out`
+- backend_contract_statement: `Backend import path cannot be directly introspected without a debug endpoint; proof assumes backend was launched by run_soc_diag_backend.ps1 or demo.py --diag-mode with matching graph/env.`
+- report_json: `C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\docs\implementation_plans\soc_c9b_diag_f_runner_DIAG-F6-CRED.json`
+- report_md: `C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\docs\implementation_plans\soc_c9b_diag_f_runner_DIAG-F6-CRED.md`
+- progress_json: `C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\scratch\temp\soc_diag_f_progress.json`
+
+## Graph Hygiene
+- `soc_graph_diag_f3` is contaminated by an analyze-only failed run.
+- `soc_graph_diag_f4` is contaminated by a partial seed failure.
+- `soc_graph_diag_f5` is contaminated by a partial seed failure.
+- Next clean proof graph should be `soc_graph_diag_f6` with prefix `DIAG-F6-CRED`.

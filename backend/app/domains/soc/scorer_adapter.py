@@ -42,6 +42,11 @@ class SOCCompoundingScorerAdapter:
             return
         object.__setattr__(self, name, value)
 
+    @property
+    def graph_store(self) -> Any:
+        """Expose the contract store used by the wrapped compound scorer."""
+        return self._compound.graph_store
+
     def score(
         self,
         factor_vector: Any = None,

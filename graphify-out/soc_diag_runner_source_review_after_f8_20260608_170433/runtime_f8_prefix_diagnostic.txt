@@ -1,0 +1,60 @@
+{
+  "graph_name": "soc_graph_diag_f8",
+  "prefix": "DIAG-F8-CRED",
+  "graph_dsn_redacted": "host=localhost port=5433 dbname=soc_copilot user=postgres password=***",
+  "rule40_validated": true,
+  "backend_health": {
+    "status": "healthy",
+    "components": {
+      "posterior_store": {
+        "healthy": true
+      }
+    }
+  },
+  "max_n_decisions_used": 0,
+  "welford_present": false,
+  "raw": {
+    "decisions": [
+      {
+        "cnt": 34
+      }
+    ],
+    "verified": [
+      {
+        "cnt": 33
+      }
+    ],
+    "outcome_present": [
+      {
+        "cnt": 33
+      }
+    ],
+    "latest_alert": [
+      {
+        "alert_id": "DIAG-F8-CRED-0034",
+        "decision_id": "72b659e7-8d78-453e-af4c-2e13a5cb20b0",
+        "action": "investigate",
+        "outcome": null,
+        "correct": null,
+        "timestamp_epoch": 1780988677021
+      }
+    ],
+    "l5_centroid": [
+      {
+        "cnt": 1
+      }
+    ],
+    "shaped_by": [
+      {
+        "cnt": 1
+      }
+    ],
+    "l5_dk_weight": [
+      {
+        "cnt": 0
+      }
+    ],
+    "dk_welford": []
+  }
+}
+

@@ -1,0 +1,54 @@
+{
+  "contract": {
+    "connection_mode": "warm_fallback",
+    "errors": [],
+    "graph": "soc_graph_5d_runner_250_3",
+    "launcher": "copilot-sdk/demo.py --diag-mode",
+    "path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\scratch\\temp\\soc_diag_backend_contract.json",
+    "port": 8001,
+    "verified": true
+  },
+  "contract_path": "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\scratch\\temp\\soc_diag_backend_contract.json",
+  "count": 5,
+  "env": {
+    "AGE_USE_POOL": "true",
+    "USE_ENTITY_CACHE": "false",
+    "USE_SOC_DECISION_PIPELINE_SHADOW": "true"
+  },
+  "failed_checks": [],
+  "graph": "soc_graph_5d_runner_250_3",
+  "performance_ledger": {
+    "P2E baseline": "avg analyze 0.193s at 250 outcomes, warm_fallback",
+    "P3G-D clean proof": "avg analyze 0.202s, max 0.571s, avg outcome 0.440s; hits=0, misses=250, loads=250",
+    "P3H benchmark conclusion": "EntityCache correct but current route wiring is not a reliable performance win",
+    "buyer_facing_claim_allowed": false
+  },
+  "phase": "proof_250",
+  "prefix": "P5DRUNNER",
+  "proof_validation": {
+    "errors": [],
+    "expected": {
+      "dk_welford_rows": 1,
+      "graph_truth_proof_authority_preserved": true,
+      "l5_dk_weight": 1,
+      "max_n_decisions_used": 250,
+      "valid_outcomes": 250,
+      "verdict": "EXTERNAL_DIAGNOSTIC_F_PASS"
+    },
+    "passed": true,
+    "summary": {
+      "avg_analyze_seconds": 0.169,
+      "avg_outcome_seconds": 0.228,
+      "dk_welford_rows": 1,
+      "l5_dk_weight": 1,
+      "max_analyze_seconds": 0.476,
+      "max_n_decisions_used": 250,
+      "valid_outcomes": 250
+    }
+  },
+  "returncode": 0,
+  "started_at": "2026-06-10T23:43:41.763093+00:00",
+  "status": "PASS",
+  "stderr_tail": "",
+  "stdout_tail": ", 'l5_dk_weight': 1} elapsed=110.84s\n[SOC DIAG F] milestone 200 attempt=200 alert_id=P5DRUNNER250-0200 outcome_status=200 action=investigate confidence=0.99978228493453 readback={'decisions': 200, 'verified': 200, 'outcome_present': 200, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=113.68s\n[SOC DIAG F] milestone 201 attempt=201 alert_id=P5DRUNNER250-0201 outcome_status=200 action=investigate confidence=0.99978228493453 readback={'decisions': 201, 'verified': 201, 'outcome_present': 201, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=114.22s\n[SOC DIAG F] milestone 205 attempt=205 alert_id=P5DRUNNER250-0205 outcome_status=200 action=investigate confidence=0.99978228493453 readback={'decisions': 205, 'verified': 205, 'outcome_present': 205, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=116.6s\n[SOC DIAG F] progress valid=225 attempts=225 current_attempt=225 latest=P5DRUNNER250-0225 outcome_status=200 action=investigate confidence=0.99978228493453 skipped_referral=0 other_categories=0 other_action_skips=0 seed_failures=0 readback={'decisions': 225, 'verified': 225, 'outcome_present': 225, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=128.32s\n[SOC DIAG F] milestone 230 attempt=230 alert_id=P5DRUNNER250-0230 outcome_status=200 action=investigate confidence=0.99978228493453 readback={'decisions': 230, 'verified': 230, 'outcome_present': 230, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=131.21s\n[SOC DIAG F] milestone 250 attempt=250 alert_id=P5DRUNNER250-0250 outcome_status=200 action=investigate confidence=0.99978228493453 readback={'decisions': 250, 'verified': 250, 'outcome_present': 250, 'l5_centroid': 1, 'shaped_by': 1, 'l5_dk_weight': 1} elapsed=142.95s\n[SOC DIAG F] writing reports verdict=EXTERNAL_DIAGNOSTIC_F_PASS exit_code=0\n[SOC DIAG F] final verdict\n  verdict=EXTERNAL_DIAGNOSTIC_F_PASS\n  exit_code=0\n  json_report=C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_P5DRUNNER250.json\n  md_report=C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_P5DRUNNER250.md\n  proof_passed=True\n\nSOC Diagnostic Summary\nverdict: EXTERNAL_DIAGNOSTIC_F_PASS\nproof_passed: True\ngraph_name: soc_graph_5d_runner_250_3\nbackend_url: http://127.0.0.1:8001\nprefix: P5DRUNNER250\nvalid_outcomes: 250\nanalyze_attempts: 250\noutcome_attempts: 250\nseed_failures: 0\nseed_visibility_status: visible\n\nTiming\navg_analyze_seconds: 0.169\nmax_analyze_seconds: 0.476\navg_outcome_seconds: 0.228\nmax_outcome_seconds: 0.535\navg_seed_seconds: 0.037\nmax_seed_seconds: 0.255\n\nReadback\ndecisions: 250\nverified: 250\noutcome_present: 250\nl5_centroid: 1\nshaped_by: 1\nl5_dk_weight: 1\ndk_welford_rows: 1\nmax_n_decisions_used: 250\n\nBackend Contract\ngraph_name: soc_graph_5d_runner_250_3\nbackend_port: 8001\nage_use_pool_requested: true\nconnection_mode: warm_fallback\npool_available: false\n\nCriteria Failures\n- none\n\nTop Analyze Loops\nalert_id | action | confidence | analyze_seconds | outcome_seconds\nP5DRUNNER250-0001 | investigate | 0.877 | 0.476 | 0.384\nP5DRUNNER250-0168 | investigate | 1.000 | 0.406 | 0.193\nP5DRUNNER250-0074 | investigate | 1.000 | 0.359 | 0.194\n\nTop Outcome Loops\nalert_id | action | confidence | analyze_seconds | outcome_seconds\nP5DRUNNER250-0149 | investigate | 1.000 | 0.171 | 0.535\nP5DRUNNER250-0005 | investigate | 0.965 | 0.153 | 0.393\nP5DRUNNER250-0001 | investigate | 0.877 | 0.476 | 0.384\n\nReports\nreport_json_path: C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_P5DRUNNER250.json\nreport_md_path: C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\docs\\implementation_plans\\soc_c9b_diag_f_runner_P5DRUNNER250.md\n"
+}

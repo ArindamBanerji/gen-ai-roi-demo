@@ -1,0 +1,24 @@
+{
+  "buyer_facing_claim_allowed": false,
+  "contract_status": {},
+  "diagnostics_status": null,
+  "graphs": {
+    "false_baseline": "soc_graph_5d_runner_false_2",
+    "proof_250": "soc_graph_5d_runner_250_2",
+    "true_compare": "soc_graph_5d_runner_true_2"
+  },
+  "parity_status": null,
+  "performance_ledger": {
+    "P2E baseline": "avg analyze 0.193s at 250 outcomes, warm_fallback",
+    "P3G-D clean proof": "avg analyze 0.202s, max 0.571s, avg outcome 0.440s; hits=0, misses=250, loads=250",
+    "P3H benchmark conclusion": "EntityCache correct but current route wiring is not a reliable performance win",
+    "buyer_facing_claim_allowed": false
+  },
+  "phases_run": [
+    "false_baseline",
+    "true_compare",
+    "proof_250"
+  ],
+  "proof_status": "BLOCKED",
+  "status": "FAIL"
+}
