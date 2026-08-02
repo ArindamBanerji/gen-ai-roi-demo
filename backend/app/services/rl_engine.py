@@ -592,11 +592,11 @@ def get_credit_assigner() -> CreditAssigner:
     global _credit_assigner
     if _credit_assigner is None:
         try:
-            from app.db.neo4j import neo4j_client
+            from app.db.graph_client import graph_client
         except Exception as exc:
             log.warning("[RL] graph client unavailable for CreditAssigner: %s", exc)
-            neo4j_client = None
-        _credit_assigner = CreditAssigner(neo4j_client)
+            graph_client = None
+        _credit_assigner = CreditAssigner(graph_client)
     return _credit_assigner
 
 

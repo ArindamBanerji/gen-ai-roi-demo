@@ -31,7 +31,7 @@ def test_graph_stats_response_has_required_fields():
     from app.routers.evolution import get_graph_stats
 
     async def _run():
-        with patch("app.routers.evolution.neo4j_client") as mock_client:
+        with patch("app.routers.evolution.graph_client") as mock_client:
             mock_client.run_query = AsyncMock(side_effect=[
                 [{"node_count": 10}],
                 [{"rel_count": 20}],
@@ -51,7 +51,7 @@ def test_graph_stats_source_is_neo4j_on_success():
     from app.routers.evolution import get_graph_stats
 
     async def _run():
-        with patch("app.routers.evolution.neo4j_client") as mock_client:
+        with patch("app.routers.evolution.graph_client") as mock_client:
             mock_client.run_query = AsyncMock(side_effect=[
                 [{"node_count": 55}],
                 [{"rel_count": 132}],
@@ -70,7 +70,7 @@ def test_graph_stats_source_unavailable_on_error():
     from app.routers.evolution import get_graph_stats
 
     async def _run():
-        with patch("app.routers.evolution.neo4j_client") as mock_client:
+        with patch("app.routers.evolution.graph_client") as mock_client:
             mock_client.run_query = AsyncMock(side_effect=RuntimeError("Neo4j down"))
             return await get_graph_stats()
 
@@ -86,7 +86,7 @@ def test_graph_stats_counts_are_integers():
     from app.routers.evolution import get_graph_stats
 
     async def _run():
-        with patch("app.routers.evolution.neo4j_client") as mock_client:
+        with patch("app.routers.evolution.graph_client") as mock_client:
             mock_client.run_query = AsyncMock(side_effect=[
                 [{"node_count": 47}],
                 [{"rel_count": 127}],

@@ -602,18 +602,18 @@ async def enrich_evolution_events(client) -> dict[str, Any]:
 
 
 async def main(enrich_ae: bool = False) -> None:
-    from app.db.neo4j import neo4j_client
+    from app.db.graph_client import graph_client
 
     print("\n[seed_verified_decisions] Connecting to Neo4j...")
-    await neo4j_client.connect()
+    await graph_client.connect()
     try:
         if enrich_ae:
-            await enrich_evolution_events(neo4j_client)
+            await enrich_evolution_events(graph_client)
         else:
-            await maybe_seed_verified_decisions(neo4j_client)
-            await seed_demo_evolution_events(neo4j_client)
+            await maybe_seed_verified_decisions(graph_client)
+            await seed_demo_evolution_events(graph_client)
     finally:
-        await neo4j_client.close()
+        await graph_client.close()
 
 
 if __name__ == "__main__":

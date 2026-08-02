@@ -14,7 +14,7 @@ def test_legacy_neo4j_backend_is_retired():
     prev = os.environ.get("GRAPH_BACKEND")
     os.environ["GRAPH_BACKEND"] = "neo4j"
     try:
-        import app.db.neo4j as db_mod
+        import app.db.graph_client as db_mod
         with pytest.raises(GraphConfigError, match="Legacy Neo4j backend is retired"):
             importlib.reload(db_mod)
     finally:
@@ -32,7 +32,7 @@ def test_age_backend_import_error_without_ci_platform():
     age_mod = sys.modules.pop("ci_platform.graph.age_client", None)
     os.environ["GRAPH_BACKEND"] = "age"
     try:
-        import app.db.neo4j as db_mod
+        import app.db.graph_client as db_mod
         try:
             importlib.reload(db_mod)
         except ImportError as e:
@@ -47,8 +47,8 @@ def test_age_backend_import_error_without_ci_platform():
             sys.modules["ci_platform.graph.age_client"] = age_mod
 
 
-def test_neo4j_client_removed():
-    import app.db.neo4j as db_mod
+def test_graph_client_removed():
+    import app.db.graph_client as db_mod
 
     assert not hasattr(db_mod, "Neo4jClient")
 

@@ -62,7 +62,7 @@ def test_economics_zero_decisions_safe():
     from app.routers.metrics import get_economics
 
     async def _run():
-        with patch("app.routers.metrics.neo4j_client") as mock_neo:
+        with patch("app.routers.metrics.graph_client") as mock_neo:
             mock_neo.run_query = AsyncMock(side_effect=[
                 _dec_row(0, 0, 0, 0, 0, 0),
                 _usr_row(0, 0, 0),
@@ -94,7 +94,7 @@ def test_economics_cost_calculation():
     from app.routers.metrics import get_economics
 
     async def _run():
-        with patch("app.routers.metrics.neo4j_client") as mock_neo:
+        with patch("app.routers.metrics.graph_client") as mock_neo:
             mock_neo.run_query = AsyncMock(side_effect=[
                 _dec_row(100, 80, 20, 30, 30, 20),
                 _usr_row(200, 20, 40),
@@ -128,7 +128,7 @@ def test_risk_reduction_calculation():
     from app.routers.metrics import get_economics
 
     async def _run():
-        with patch("app.routers.metrics.neo4j_client") as mock_neo:
+        with patch("app.routers.metrics.graph_client") as mock_neo:
             mock_neo.run_query = AsyncMock(side_effect=[
                 _dec_row(100, 80, 20, 0, 0, 0),
                 _usr_row(0, 0, 0),
@@ -154,7 +154,7 @@ def test_total_value_is_sum():
     from app.routers.metrics import get_economics
 
     async def _run():
-        with patch("app.routers.metrics.neo4j_client") as mock_neo:
+        with patch("app.routers.metrics.graph_client") as mock_neo:
             mock_neo.run_query = AsyncMock(side_effect=[
                 _dec_row(50, 40, 10, 15, 15, 10),
                 _usr_row(100, 10, 20),
@@ -180,7 +180,7 @@ def test_economics_estimated_flag_always_true():
     from app.routers.metrics import get_economics
 
     async def _run():
-        with patch("app.routers.metrics.neo4j_client") as mock_neo:
+        with patch("app.routers.metrics.graph_client") as mock_neo:
             mock_neo.run_query = AsyncMock(side_effect=[
                 _dec_row(10, 8, 2, 3, 3, 2),
                 _usr_row(50, 5, 10),
@@ -204,7 +204,7 @@ def test_population_counts_in_response():
     from app.routers.metrics import get_economics
 
     async def _run():
-        with patch("app.routers.metrics.neo4j_client") as mock_neo:
+        with patch("app.routers.metrics.graph_client") as mock_neo:
             mock_neo.run_query = AsyncMock(side_effect=[
                 _dec_row(0, 0, 0, 0, 0, 0),
                 _usr_row(200, 20, 40),

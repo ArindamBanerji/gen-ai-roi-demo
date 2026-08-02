@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter
 
-from app.db.neo4j import neo4j_client
+from app.db.graph_client import graph_client
 from app.services.cohort_status import CohortStatusService
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ async def _read_decision_records() -> list[dict[str, Any]]:
         d.campaign_id AS campaign_id
     """
     try:
-        records = await neo4j_client.run_query(query)
+        records = await graph_client.run_query(query)
     except Exception as exc:
         logger.debug("cohort status graph read failed: %s", exc)
         return []

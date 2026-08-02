@@ -61,12 +61,12 @@ def test_process_503_when_scorer_none(client):
 
     with patch("app.routers.evolution.get_profile_scorer", return_value=None), \
          patch(
-             "app.db.neo4j.neo4j_client.get_alert",
+             "app.db.graph_client.graph_client.get_alert",
              new_callable=AsyncMock,
              return_value=minimal_alert,
          ), \
          patch(
-             "app.db.neo4j.neo4j_client.get_security_context",
+             "app.db.graph_client.graph_client.get_security_context",
              new_callable=AsyncMock,
              return_value=minimal_context,
          ), \

@@ -34,7 +34,7 @@ try:
 except ImportError:
     print("[env] WARNING: python-dotenv not installed")
 
-from app.db.neo4j import neo4j_client  # noqa: E402
+from app.db.graph_client import graph_client  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +160,7 @@ async def run_query(cypher: str, dry_run: bool):
     if dry_run:
         print(f"\n    CYPHER:\n{_indent(cypher)}")
         return None
-    rows = await neo4j_client.run_query(cypher)
+    rows = await graph_client.run_query(cypher)
     return rows
 
 
@@ -205,7 +205,7 @@ async def phase2_verify(dry_run: bool) -> None:
         if dry_run:
             print(f"\n    CYPHER:\n{_indent(cypher)}")
             continue
-        rows = await neo4j_client.run_query(cypher)
+        rows = await graph_client.run_query(cypher)
         if not rows:
             print("    (no nodes with epoch field -- may be empty or HealthLog absent)")
         else:
@@ -250,7 +250,7 @@ async def final_counts(dry_run: bool) -> None:
         if dry_run:
             print(f"\n    CYPHER:\n{_indent(cypher)}")
             continue
-        rows = await neo4j_client.run_query(cypher)
+        rows = await graph_client.run_query(cypher)
         n = rows[0]["n"] if rows else 0
         print(f"    {n} nodes")
 
@@ -260,7 +260,7 @@ async def final_counts(dry_run: bool) -> None:
         if dry_run:
             print(f"\n    CYPHER:\n{_indent(cypher)}")
             continue
-        rows = await neo4j_client.run_query(cypher)
+        rows = await graph_client.run_query(cypher)
         n = rows[0]["n"] if rows else 0
         print(f"    {n} rels")
 
@@ -295,7 +295,7 @@ async def main() -> None:
         print("  Mode: FULL MIGRATION (Phase 1 + Phase 3)")
 
     if not args.dry_run:
-        await neo4j_client.connect()
+        await graph_client.connect()
 
     try:
         # Phase 1 — add _epoch fields
@@ -334,7 +334,7 @@ async def main() -> None:
 
     finally:
         if not args.dry_run:
-            await neo4j_client.close()
+            await graph_client.close()
 
 
 if __name__ == "__main__":

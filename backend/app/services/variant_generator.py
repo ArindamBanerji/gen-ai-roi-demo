@@ -21,7 +21,7 @@ from gae.evolution import (
 from app.services import variant_registry as default_registry
 from app.domains.soc.config import DEFAULT_CATEGORY
 from app.services.variant_registry import CANDIDATE, VariantRecord
-from app.db.neo4j import soc_decision_where
+from app.db.graph_client import soc_decision_where
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class EvolutionRule(Protocol):
     artifact_type: str
     description: str
 
-    async def detect(self, neo4j_client: Any) -> Optional[GraphSignal]:
+    async def detect(self, graph_client: Any) -> Optional[GraphSignal]:
         ...
 
     def generate_variant(self, signal: GraphSignal) -> VariantRecord:
@@ -74,7 +74,7 @@ def _event_epoch_seconds(event: dict[str, Any]) -> float:
     return epoch
 
 
-async def _consult_history(neo4j_client: Any, variant_id: str) -> dict[str, Any]:
+async def _consult_history(graph_client: Any, variant_id: str) -> dict[str, Any]:
     try:
         module = importlib.import_module("app.framework.evolution_ledger")
         get_variant_history = getattr(module, "get_variant_history")
@@ -82,7 +82,7 @@ async def _consult_history(neo4j_client: Any, variant_id: str) -> dict[str, Any]
         promotion_approved = getattr(module, "PROMOTION_APPROVED")
         promotion_rejected = getattr(module, "PROMOTION_REJECTED")
         rollback = getattr(module, "ROLLBACK")
-        events = await get_variant_history(neo4j_client, variant_id)
+        events = await get_variant_history(graph_client, variant_id)
     except Exception as exc:
         log.debug("Variant history unavailable for %s: %s", variant_id, exc)
         return {"action": "proceed"}
@@ -212,7 +212,7 @@ def _trajectory_mean(category_item: dict[str, Any], current: float) -> Optional[
     return sum(accuracies) / len(accuracies)
 
 
-async def _load_accuracy_trajectory(neo4j_client: Any) -> dict[str, Any] | None:
+async def _load_accuracy_trajectory(graph_client: Any) -> dict[str, Any] | None:
     try:
         module = importlib.import_module("app.services.accuracy_trajectory")
     except ImportError:
@@ -223,9 +223,9 @@ async def _load_accuracy_trajectory(neo4j_client: Any) -> dict[str, Any] | None:
         return None
 
     live_data: dict[str, int] = {}
-    if neo4j_client is not None and hasattr(neo4j_client, "run_query"):
+    if graph_client is not None and hasattr(graph_client, "run_query"):
         try:
-            rows = await neo4j_client.run_query(
+            rows = await graph_client.run_query(
                 """
                 MATCH (d:Decision)
                 WHERE """ + soc_decision_where() + """
@@ -307,7 +307,7 @@ class CampaignEscalateRule:
     artifact_type = ARTIFACT_ROUTING_RULE
     description = "Escalate graph-correlated campaign patterns"
 
-    async def detect(self, neo4j_client: Any) -> Optional[GraphSignal]:
+    async def detect(self, graph_client: Any) -> Optional[GraphSignal]:
         try:
             module = importlib.import_module("app.services.cross_graph_discovery")
         except ImportError:
@@ -315,7 +315,7 @@ class CampaignEscalateRule:
         service = getattr(module, "discovery_service", None)
         if service is None or not hasattr(service, "refresh"):
             return None
-        envelope = await service.refresh("soc", neo4j_client)
+        envelope = await service.refresh("soc", graph_client)
         discoveries = envelope.get("discoveries", []) if isinstance(envelope, dict) else []
         for discovery in discoveries:
             if not isinstance(discovery, dict):
@@ -396,8 +396,8 @@ def _aggregate_accuracy_rows(rows: Any) -> dict[str, dict[str, int]]:
     return totals
 
 
-async def _get_per_category_accuracy_trends(neo4j_client: Any) -> dict[str, dict[str, Any]]:
-    run_query = getattr(neo4j_client, "run_query", None)
+async def _get_per_category_accuracy_trends(graph_client: Any) -> dict[str, dict[str, Any]]:
+    run_query = getattr(graph_client, "run_query", None)
     if run_query is None:
         return {}
 
@@ -456,9 +456,9 @@ class DriftThresholdRule:
     artifact_type = ARTIFACT_SCORING_THRESHOLD
     description = "Lower threshold for AMBER drift categories"
 
-    async def detect(self, neo4j_client: Any) -> Optional[GraphSignal]:
+    async def detect(self, graph_client: Any) -> Optional[GraphSignal]:
         try:
-            trends = await _get_per_category_accuracy_trends(neo4j_client)
+            trends = await _get_per_category_accuracy_trends(graph_client)
         except Exception as exc:
             log.warning("Drift threshold detection failed: %s", exc)
             return None
@@ -508,7 +508,7 @@ class OverridePromptRule:
     artifact_type = ARTIFACT_PROMPT_MODULE
     description = "Revise prompt framing for activated override patterns"
 
-    async def detect(self, neo4j_client: Any) -> Optional[GraphSignal]:
+    async def detect(self, graph_client: Any) -> Optional[GraphSignal]:
         try:
             module = importlib.import_module("app.services.override_detector")
         except ImportError:
@@ -567,7 +567,7 @@ class DKReorderRule:
         "campaign_correlation",
     ]
 
-    async def detect(self, neo4j_client: Any) -> Optional[GraphSignal]:
+    async def detect(self, graph_client: Any) -> Optional[GraphSignal]:
         data = _live_dk_learning_state()
         if not isinstance(data, dict):
             return None
@@ -609,8 +609,8 @@ class PlateauContextRule:
     artifact_type = ARTIFACT_CONTEXT_POLICY
     description = "Expand graph context when accuracy is flat below target"
 
-    async def detect(self, neo4j_client: Any) -> Optional[GraphSignal]:
-        trajectory = await _load_accuracy_trajectory(neo4j_client)
+    async def detect(self, graph_client: Any) -> Optional[GraphSignal]:
+        trajectory = await _load_accuracy_trajectory(graph_client)
         if not isinstance(trajectory, dict):
             return None
         categories = trajectory.get("categories")
@@ -659,9 +659,9 @@ class CoverageGapRule:
     artifact_type = ARTIFACT_CONTEXT_POLICY
     description = "Detect under-covered categories for graph traversal enrichment"
 
-    async def detect(self, neo4j_client: Any) -> Optional[GraphSignal]:
+    async def detect(self, graph_client: Any) -> Optional[GraphSignal]:
         try:
-            rows = await neo4j_client.run_query(
+            rows = await graph_client.run_query(
                 f"MATCH (d:Decision) WHERE {soc_decision_where()} "
                 "AND d.category IS NOT NULL "
                 "RETURN d.category AS category, count(*) AS cnt"
@@ -748,18 +748,18 @@ class VariantGenerator:
     def register_rule(self, rule: EvolutionRule) -> None:
         self.rules.append(rule)
 
-    async def scan_for_opportunities(self, neo4j_client: Any) -> list[VariantRecord]:
+    async def scan_for_opportunities(self, graph_client: Any) -> list[VariantRecord]:
         generated: list[VariantRecord] = []
         for rule in self.rules:
             try:
-                signal = await rule.detect(neo4j_client)
+                signal = await rule.detect(graph_client)
                 if signal is None:
                     continue
                 trigger_key = _trigger_key(signal)
                 if self.registry.has_active_or_shadow(trigger_key):
                     continue
                 candidate_id = _variant_id(signal.rule_id, signal.trigger_id)
-                history = await _consult_history(neo4j_client, candidate_id)
+                history = await _consult_history(graph_client, candidate_id)
                 history_action = history.get("action")
                 if history_action == "skip":
                     log.info(
@@ -796,7 +796,7 @@ class VariantGenerator:
                         warm_started = False
                         metadata["warm_started"] = False
                 await record_evolution_event(
-                    neo4j_client,
+                    graph_client,
                     event_type=VARIANT_CREATED,
                     variant_id=record.variant_id,
                     artifact_type=record.artifact_type,

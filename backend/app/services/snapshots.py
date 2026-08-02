@@ -37,14 +37,14 @@ async def maybe_write_profile_snapshot(decision_count: int) -> None:
 async def _write_profile_snapshot(decision_count: int) -> None:
     """Write one ProfileSnapshot node capturing the current mu tensor."""
     try:
-        from app.db.neo4j import neo4j_client
+        from app.db.graph_client import graph_client
         from app.services.gae_state import get_profile_scorer
 
         scorer = get_profile_scorer()
         mu_list = scorer.centroids.tolist()   # shape (n_categories, n_actions, n_factors)
         counts_list = scorer.counts.tolist()
 
-        await neo4j_client.run_query(
+        await graph_client.run_query(
             """
             CREATE (ps:ProfileSnapshot {
                 decision_count:  $decision_count,

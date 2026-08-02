@@ -29,8 +29,8 @@ def test_default_soc_route_is_not_wired_to_entity_cache_yet():
     source = inspect.getsource(triage.analyze_alert)
 
     assert "_soc_get_security_context_for_analyze(alert_id)" in source
-    assert "neo4j_client.get_sequence_count" in source
-    assert "neo4j_client.get_cross_category_count" in source
+    assert "graph_client.get_sequence_count" in source
+    assert "graph_client.get_cross_category_count" in source
 
 
 def test_soc_context_split_classifies_and_recomposes_current_flat_shape():
@@ -110,7 +110,7 @@ async def test_route_cache_flag_false_preserves_current_security_context_path(mo
         {"alert_id": "ALERT-1", "user_id": "user-1", "user_risk_score": 0.2},
     ]
     fake_client = _SecurityContextClient(flat_contexts)
-    monkeypatch.setattr(triage, "neo4j_client", fake_client)
+    monkeypatch.setattr(triage, "graph_client", fake_client)
     monkeypatch.setenv("USE_ENTITY_CACHE", "false")
 
     first = await triage._soc_get_security_context_for_analyze("ALERT-1")
@@ -138,7 +138,7 @@ async def test_route_cache_flag_true_recomposes_with_parity_and_cache_hit(monkey
         "nodes_consulted": 47,
     }
     fake_client = _SecurityContextClient([flat_context, flat_context])
-    monkeypatch.setattr(triage, "neo4j_client", fake_client)
+    monkeypatch.setattr(triage, "graph_client", fake_client)
     monkeypatch.setenv("USE_ENTITY_CACHE", "true")
 
     first = await triage._soc_get_security_context_for_analyze("ALERT-1")
@@ -173,7 +173,7 @@ async def test_route_cache_keeps_alert_subject_fresh_for_same_entity(monkeypatch
         },
     ]
     fake_client = _SecurityContextClient(flat_contexts)
-    monkeypatch.setattr(triage, "neo4j_client", fake_client)
+    monkeypatch.setattr(triage, "graph_client", fake_client)
     monkeypatch.setenv("USE_ENTITY_CACHE", "true")
 
     first = await triage._soc_get_security_context_for_analyze("ALERT-1")
@@ -195,7 +195,7 @@ async def test_route_cache_invalidation_reloads_updated_stable_context(monkeypat
         {"alert_id": "ALERT-2", "user_id": "user-1", "user_risk_score": 0.73},
     ]
     fake_client = _SecurityContextClient(flat_contexts)
-    monkeypatch.setattr(triage, "neo4j_client", fake_client)
+    monkeypatch.setattr(triage, "graph_client", fake_client)
     monkeypatch.setenv("USE_ENTITY_CACHE", "true")
 
     first = await triage._soc_get_security_context_for_analyze("ALERT-1")
@@ -220,7 +220,7 @@ async def test_health_exposes_entity_cache_diagnostics(monkeypatch):
         "user_risk_score": 0.42,
     }
     fake_client = _SecurityContextClient([flat_context, flat_context])
-    monkeypatch.setattr(triage, "neo4j_client", fake_client)
+    monkeypatch.setattr(triage, "graph_client", fake_client)
     monkeypatch.setenv("USE_ENTITY_CACHE", "true")
 
     await triage._soc_get_security_context_for_analyze("ALERT-1")

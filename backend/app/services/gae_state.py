@@ -696,7 +696,7 @@ RETURN ds.bootstrap_mu        AS bootstrap_mu,
 """
 
 
-async def write_bootstrap_state(neo4j_client, scorer) -> dict:
+async def write_bootstrap_state(graph_client, scorer) -> dict:
     """
     Persist the current bootstrap centroid tensor (mu_0) to a
     DeploymentState node in Neo4j.
@@ -717,11 +717,11 @@ async def write_bootstrap_state(neo4j_client, scorer) -> dict:
     _ver_s   = _S(_GAE_VERSION)
 
     try:
-        existing = await neo4j_client.run_query(
+        existing = await graph_client.run_query(
             "MATCH (ds:DeploymentState {id: 'current'}) RETURN ds"
         )
         if existing:
-            await neo4j_client.run_query(
+            await graph_client.run_query(
                 f"MATCH (ds:DeploymentState {{id: 'current'}})"
                 f" SET ds.bootstrap_mu = {_mu_s},"
                 f"     ds.bootstrap_shape = {_shape_s},"
@@ -729,7 +729,7 @@ async def write_bootstrap_state(neo4j_client, scorer) -> dict:
                 f"     ds.gae_version = {_ver_s}"
             )
         else:
-            await neo4j_client.run_query(
+            await graph_client.run_query(
                 f"CREATE (ds:DeploymentState {{"
                 f" id: 'current',"
                 f" bootstrap_mu: {_mu_s},"
@@ -749,13 +749,13 @@ async def write_bootstrap_state(neo4j_client, scorer) -> dict:
     }
 
 
-async def get_bootstrap_centroids(neo4j_client) -> dict | None:
+async def get_bootstrap_centroids(graph_client) -> dict | None:
     """
     Read bootstrap_centroids from the DeploymentState node.
     Returns {mu, shape, stored_at, gae_version} or None if not set.
     """
     try:
-        rows = await neo4j_client.run_query(READ_DEPLOYMENT_STATE)
+        rows = await graph_client.run_query(READ_DEPLOYMENT_STATE)
         if not rows or rows[0].get("bootstrap_mu") is None:
             return None
         r = rows[0]
@@ -787,7 +787,7 @@ _EXPORT_VERSION = "1.0"
 _EXPORT_GAE_VERSION = "0.7.21"
 
 
-async def build_centroid_export(scorer, neo4j_client) -> dict:
+async def build_centroid_export(scorer, graph_client) -> dict:
     """
     Build the 10-field portable centroid export artifact.
 
@@ -809,7 +809,7 @@ async def build_centroid_export(scorer, neo4j_client) -> dict:
     import json
     import time as _time
 
-    bootstrap = await get_bootstrap_centroids(neo4j_client)
+    bootstrap = await get_bootstrap_centroids(graph_client)
     current_mu = scorer.centroids.tolist()
 
     if bootstrap and bootstrap.get("mu") is not None:

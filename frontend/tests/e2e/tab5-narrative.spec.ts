@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { FRONTEND, navigateToTab } from './helpers';
+import { FRONTEND, collectConsoleErrors, expectNoConsoleErrors, navigateToTab } from './helpers';
 
 test.describe('Tab 5 executive narrative sections', () => {
   test('renders the three executive narrative sections', async ({ page }) => {
@@ -34,13 +34,7 @@ test.describe('Tab 5 executive narrative sections', () => {
   });
 
   test('sections survive reload without real console errors', async ({ page }) => {
-    const consoleErrors: string[] = [];
-    page.on('console', (msg) => {
-      if (msg.type() !== 'error') return;
-      const text = msg.text();
-      if (/favicon|ResizeObserver loop|Failed to fetch/i.test(text)) return;
-      consoleErrors.push(text);
-    });
+    const consoleErrors = collectConsoleErrors(page);
 
     await page.goto(FRONTEND);
     await navigateToTab(page, 5);
@@ -52,6 +46,6 @@ test.describe('Tab 5 executive narrative sections', () => {
     await expect(page.getByText('What the System Has Learned').first()).toBeVisible();
     await expect(page.getByText('Recommendations').first()).toBeVisible();
 
-    expect(consoleErrors, `Console errors:\n${consoleErrors.join('\n')}`).toEqual([]);
+    expectNoConsoleErrors(consoleErrors);
   });
 });

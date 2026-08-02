@@ -204,7 +204,7 @@ def test_evolution_router_get_deployments_still_works(monkeypatch):
 
     neo4j = AsyncMock()
     neo4j.run_query = AsyncMock(return_value=[{"n": 10}])
-    monkeypatch.setattr(evolution, "neo4j_client", neo4j)
+    monkeypatch.setattr(evolution, "graph_client", neo4j)
 
     response = TestClient(app).get("/api/deployments")
 

@@ -44,7 +44,7 @@ def test_quality_score_stable_at_baseline():
 
     async def _run():
         with patch("app.services.gae_state.get_profile_scorer", return_value=mock_scorer):
-            with patch("app.routers.soc.neo4j_client") as mock_neo:
+            with patch("app.routers.soc.graph_client") as mock_neo:
                 mock_neo.run_query = AsyncMock(
                     side_effect=[[] for _ in SOC_CATEGORIES]
                 )
@@ -75,7 +75,7 @@ def test_quality_score_drifting():
 
     async def _run():
         with patch("app.services.gae_state.get_profile_scorer", return_value=mock_scorer):
-            with patch("app.routers.soc.neo4j_client") as mock_neo:
+            with patch("app.routers.soc.graph_client") as mock_neo:
                 mock_neo.run_query = AsyncMock(
                     side_effect=[[] for _ in SOC_CATEGORIES]
                 )
@@ -103,7 +103,7 @@ def test_quality_score_diverged():
 
     async def _run():
         with patch("app.services.gae_state.get_profile_scorer", return_value=mock_scorer):
-            with patch("app.routers.soc.neo4j_client") as mock_neo:
+            with patch("app.routers.soc.graph_client") as mock_neo:
                 mock_neo.run_query = AsyncMock(
                     side_effect=[[] for _ in SOC_CATEGORIES]
                 )
@@ -131,7 +131,7 @@ def test_overall_quality_is_mean_of_categories():
 
     async def _run():
         with patch("app.services.gae_state.get_profile_scorer", return_value=mock_scorer):
-            with patch("app.routers.soc.neo4j_client") as mock_neo:
+            with patch("app.routers.soc.graph_client") as mock_neo:
                 mock_neo.run_query = AsyncMock(
                     side_effect=[[] for _ in SOC_CATEGORIES]
                 )
@@ -162,7 +162,7 @@ def test_noise_map_null_when_no_decisions():
 
     async def _run():
         with patch("app.services.gae_state.get_profile_scorer", return_value=mock_scorer):
-            with patch("app.routers.soc.neo4j_client") as mock_neo:
+            with patch("app.routers.soc.graph_client") as mock_neo:
                 mock_neo.run_query = AsyncMock(
                     side_effect=[[] for _ in SOC_CATEGORIES]
                 )
@@ -199,7 +199,7 @@ def test_noise_map_fp_rate_computed_correctly():
 
     async def _run():
         with patch("app.services.gae_state.get_profile_scorer", return_value=mock_scorer):
-            with patch("app.routers.soc.neo4j_client") as mock_neo:
+            with patch("app.routers.soc.graph_client") as mock_neo:
                 mock_neo.run_query = AsyncMock(side_effect=side_effects)
                 return await get_detection_engineering()
 

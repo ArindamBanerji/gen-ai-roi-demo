@@ -51,7 +51,7 @@ def test_mttd_estimated_when_no_timestamps():
     from app.routers.metrics import get_operational_metrics
 
     async def _run():
-        with patch("app.routers.metrics.neo4j_client") as mock_neo:
+        with patch("app.routers.metrics.graph_client") as mock_neo:
             mock_neo.run_query = AsyncMock(side_effect=[
                 [{"avg_mttd_seconds": None, "sample_size": 0}],   # MTTD
                 [{"avg_mttr_seconds": None, "sample_size": 0}],   # MTTR
@@ -78,7 +78,7 @@ def test_mttr_estimated_when_no_verified_outcomes():
     from app.routers.metrics import get_operational_metrics
 
     async def _run():
-        with patch("app.routers.metrics.neo4j_client") as mock_neo:
+        with patch("app.routers.metrics.graph_client") as mock_neo:
             mock_neo.run_query = AsyncMock(side_effect=[
                 [{"avg_mttd_seconds": None, "sample_size": 0}],   # MTTD
                 [{"avg_mttr_seconds": None, "sample_size": 0}],   # MTTR
@@ -105,7 +105,7 @@ def test_fp_rate_computed_correctly():
     from app.routers.metrics import get_operational_metrics
 
     async def _run():
-        with patch("app.routers.metrics.neo4j_client") as mock_neo:
+        with patch("app.routers.metrics.graph_client") as mock_neo:
             mock_neo.run_query = AsyncMock(side_effect=[
                 [{"avg_mttd_seconds": None, "sample_size": 0}],   # MTTD
                 [{"avg_mttr_seconds": None, "sample_size": 0}],   # MTTR
@@ -131,7 +131,7 @@ def test_fp_rate_zero_decisions_safe():
     from app.routers.metrics import get_operational_metrics
 
     async def _run():
-        with patch("app.routers.metrics.neo4j_client") as mock_neo:
+        with patch("app.routers.metrics.graph_client") as mock_neo:
             mock_neo.run_query = AsyncMock(side_effect=[
                 [{"avg_mttd_seconds": None, "sample_size": 0}],   # MTTD
                 [{"avg_mttr_seconds": None, "sample_size": 0}],   # MTTR
@@ -154,7 +154,7 @@ def test_board_export_shape():
     from app.routers.metrics import get_board_export
 
     async def _run():
-        with patch("app.routers.metrics.neo4j_client") as mock_neo:
+        with patch("app.routers.metrics.graph_client") as mock_neo:
             mock_neo.run_query = AsyncMock(side_effect=[
                 [{"total": 5}],                        # decision count
                 [{"correct": 4}],                      # correct count

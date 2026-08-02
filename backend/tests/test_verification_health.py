@@ -1,6 +1,6 @@
 """
 Block 7.6 -- tests for compute_verification_health().
-All tests use AsyncMock for neo4j_client -- no live Neo4j required.
+All tests use AsyncMock for graph_client -- no live Neo4j required.
 """
 import asyncio
 import os
@@ -23,7 +23,7 @@ def _neo4j_mock(total=1000, verified=300,
                 prior_total=100, prior_verified=30,
                 conservation_status="GREEN"):
     """
-    Build an AsyncMock neo4j_client whose run_query returns realistic data.
+    Build an AsyncMock graph_client whose run_query returns realistic data.
 
     Query dispatch is positional -- the order in compute_verification_health:
       call 0 : total decisions

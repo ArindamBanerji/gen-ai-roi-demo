@@ -140,7 +140,7 @@ def _install_analyze_patches(monkeypatch, action="escalate", confidence=0.9):
     neo4j.run_query = AsyncMock(return_value=[])
     neo4j.get_sequence_count = AsyncMock(return_value=0)
     neo4j.get_cross_category_count = AsyncMock(return_value=0)
-    monkeypatch.setattr(triage_router, "neo4j_client", neo4j)
+    monkeypatch.setattr(triage_router, "graph_client", neo4j)
     monkeypatch.setattr(
         triage_router,
         "compute_factor_vector",

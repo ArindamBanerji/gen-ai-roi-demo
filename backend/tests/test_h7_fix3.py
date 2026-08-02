@@ -72,10 +72,10 @@ def test_metrics_response_has_no_random_floats():
         return [_mock_rows, _mock_open, _mock_dec, _mock_correct, _mock_cat]
 
     async def _run():
-        with patch("app.routers.soc.neo4j_client") as m:
+        with patch("app.routers.soc.graph_client") as m:
             m.run_query = AsyncMock(side_effect=_side_effects())
             first = await get_soc_analytics()
-        with patch("app.routers.soc.neo4j_client") as m:
+        with patch("app.routers.soc.graph_client") as m:
             m.run_query = AsyncMock(side_effect=_side_effects())
             second = await get_soc_analytics()
         return first, second
@@ -95,7 +95,7 @@ def test_estimated_flag_populated_when_used():
     from app.routers.soc import get_soc_analytics
 
     async def _run():
-        with patch("app.routers.soc.neo4j_client") as m:
+        with patch("app.routers.soc.graph_client") as m:
             m.run_query = AsyncMock(side_effect=[
                 [{"total_alerts": 0}],
                 [{"open_alerts": 0}],
@@ -124,7 +124,7 @@ def test_category_breakdown_shape():
     from app.routers.soc import get_soc_analytics
 
     async def _run():
-        with patch("app.routers.soc.neo4j_client") as m:
+        with patch("app.routers.soc.graph_client") as m:
             m.run_query = AsyncMock(side_effect=[
                 [{"total_alerts": 10}],
                 [{"open_alerts": 3}],

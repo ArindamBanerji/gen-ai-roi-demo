@@ -19,7 +19,7 @@ import logging
 import re
 from typing import Any, Optional
 
-from app.db.neo4j import soc_decision_where
+from app.db.graph_client import soc_decision_where
 
 log = logging.getLogger(__name__)
 

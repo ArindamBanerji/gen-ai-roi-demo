@@ -110,7 +110,7 @@ def test_provenance_endpoint_not_found():
     async def fake_run_query(query, params=None):
         return []   # empty -> decision not found
 
-    with patch("app.routers.soc.neo4j_client") as mock_neo4j:
+    with patch("app.routers.soc.graph_client") as mock_neo4j:
         mock_neo4j.run_query = fake_run_query
         client = TestClient(app)
         resp = client.get("/api/soc/provenance/nonexistent-id-xyz")

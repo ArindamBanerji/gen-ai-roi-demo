@@ -32,7 +32,7 @@ class _SignalRule:
             description="test signal",
         )
 
-    async def detect(self, neo4j_client):
+    async def detect(self, graph_client):
         return self.signal
 
     def generate_variant(self, signal):
@@ -49,14 +49,14 @@ class _SignalRule:
 
 
 class _NullRule(_SignalRule):
-    async def detect(self, neo4j_client):
+    async def detect(self, graph_client):
         return None
 
 
 class _BoomRule(_SignalRule):
     rule_id = "RULE-BOOM"
 
-    async def detect(self, neo4j_client):
+    async def detect(self, graph_client):
         raise RuntimeError("boom")
 
 
@@ -133,7 +133,7 @@ class _WarmRule:
             description="warm signal",
         )
 
-    async def detect(self, neo4j_client):
+    async def detect(self, graph_client):
         return self.signal
 
     def generate_variant(self, signal):

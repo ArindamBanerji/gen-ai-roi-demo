@@ -192,7 +192,7 @@ class DiscoveryService:
             log.warning("Discovery '%s' failed: %s", name, e)
             return [], f"{name}: {str(e)}"
 
-    async def _get_as_of_epoch_ms(self, neo4j_client: Any) -> Optional[int]:
+    async def _get_as_of_epoch_ms(self, graph_client: Any) -> Optional[int]:
         queries = [
             (
                 "max_alert_epoch",
@@ -206,7 +206,7 @@ class DiscoveryService:
         values: list[int] = []
         for key, query in queries:
             try:
-                rows = await neo4j_client.run_query(query)
+                rows = await graph_client.run_query(query)
             except Exception as exc:
                 log.warning("Discovery graph clock query failed: %s", exc)
                 continue
@@ -256,7 +256,7 @@ class DiscoveryService:
         }
         return cached
 
-    async def refresh(self, domain: str, neo4j_client: Any) -> dict[str, Any]:
+    async def refresh(self, domain: str, graph_client: Any) -> dict[str, Any]:
         domain = self.validate_domain(domain)
         generated_at = _now_iso()
         stale_cache = self._cache.get(domain)
@@ -266,7 +266,7 @@ class DiscoveryService:
         algorithm_failures = 0
 
         try:
-            as_of_epoch_ms = await self._get_as_of_epoch_ms(neo4j_client)
+            as_of_epoch_ms = await self._get_as_of_epoch_ms(graph_client)
         except Exception as exc:
             errors.append(f"graph_clock: {exc}")
             log.warning("Discovery graph clock failed: %s", exc)
@@ -284,7 +284,7 @@ class DiscoveryService:
 
             t1 = time.monotonic()
             shared, err1 = await self._run_algorithm(
-                self._shared_entity_discovery(neo4j_client, baseline_cutoff, as_of_epoch_ms),
+                self._shared_entity_discovery(graph_client, baseline_cutoff, as_of_epoch_ms),
                 "shared_entity",
             )
             t_shared = time.monotonic() - t1
@@ -296,7 +296,7 @@ class DiscoveryService:
 
             t2 = time.monotonic()
             conv_result, err2 = await self._run_algorithm(
-                self._pattern_convergence_discovery(neo4j_client, baseline_cutoff),
+                self._pattern_convergence_discovery(graph_client, baseline_cutoff),
                 "pattern_convergence",
             )
             t_conv = time.monotonic() - t2
@@ -309,7 +309,7 @@ class DiscoveryService:
 
             t3 = time.monotonic()
             vel, err3 = await self._run_algorithm(
-                self._temporal_velocity_discovery(neo4j_client, recent_cutoff, baseline_cutoff),
+                self._temporal_velocity_discovery(graph_client, recent_cutoff, baseline_cutoff),
                 "temporal_velocity",
             )
             t_vel = time.monotonic() - t3
@@ -354,10 +354,10 @@ class DiscoveryService:
         self._cache_time[domain] = self.time_fn()
         return envelope
 
-    async def get_summary(self, domain: str, neo4j_client: Any) -> dict[str, Any]:
+    async def get_summary(self, domain: str, graph_client: Any) -> dict[str, Any]:
         envelope = self.get_discoveries(domain)
         if envelope is None:
-            envelope = await self.refresh(domain, neo4j_client)
+            envelope = await self.refresh(domain, graph_client)
         discoveries = envelope.get("discoveries", [])
         counts = {sev.value: 0 for sev in DiscoverySeverity}
         for discovery in discoveries:
@@ -448,7 +448,7 @@ class DiscoveryService:
 
     async def _shared_entity_discovery(
         self,
-        neo4j_client: Any,
+        graph_client: Any,
         baseline_cutoff: int,
         as_of_epoch_ms: int,
     ) -> list[Discovery]:
@@ -507,8 +507,8 @@ class DiscoveryService:
         """
 
         # Phase 1: aggregate queries
-        user_rows = await neo4j_client.run_query(user_agg_query)
-        asset_rows = await neo4j_client.run_query(asset_agg_query)
+        user_rows = await graph_client.run_query(user_agg_query)
+        asset_rows = await graph_client.run_query(asset_agg_query)
 
         # Pre-filter to qualifying entities before fetching TI
         def _qualify(rows: list[dict[str, Any]]) -> list[tuple]:
@@ -534,7 +534,7 @@ class DiscoveryService:
         # Phase 2: batch threat-intel (one query per entity type, only if needed)
         ti_by_user: dict[str, list[dict[str, Any]]] = {}
         if qualifying_users:
-            ti_user_rows = await neo4j_client.run_query(user_ti_batch_query)
+            ti_user_rows = await graph_client.run_query(user_ti_batch_query)
             for r in ti_user_rows or []:
                 eid = str(r.get("entity_id") or "")
                 if eid:
@@ -542,7 +542,7 @@ class DiscoveryService:
 
         ti_by_asset: dict[str, list[dict[str, Any]]] = {}
         if qualifying_assets:
-            ti_asset_rows = await neo4j_client.run_query(asset_ti_batch_query)
+            ti_asset_rows = await graph_client.run_query(asset_ti_batch_query)
             for r in ti_asset_rows or []:
                 eid = str(r.get("entity_id") or "")
                 if eid:
@@ -634,7 +634,7 @@ class DiscoveryService:
 
     async def _pattern_convergence_discovery(
         self,
-        neo4j_client: Any,
+        graph_client: Any,
         baseline_cutoff: int,
     ) -> tuple[list[Discovery], list[dict[str, Any]]]:
         """Algorithm 2: Pattern Convergence.
@@ -658,7 +658,7 @@ class DiscoveryService:
         ORDER BY d.timestamp_epoch DESC
         LIMIT {self.CONVERGENCE_LIMIT}
         """
-        rows = await neo4j_client.run_query(query)
+        rows = await graph_client.run_query(query)
 
         # Parse rows, attach "vector" key for Algorithm 4 reuse
         parsed: list[dict[str, Any]] = []
@@ -739,7 +739,7 @@ class DiscoveryService:
 
     async def _temporal_velocity_discovery(
         self,
-        neo4j_client: Any,
+        graph_client: Any,
         recent_cutoff: int,
         baseline_cutoff: int,
     ) -> list[Discovery]:
@@ -793,8 +793,8 @@ class DiscoveryService:
         ]
         discoveries: list[Discovery] = []
         for entity_type, recent_query, baseline_query in specs:
-            recent_rows = await neo4j_client.run_query(recent_query)
-            baseline_rows = await neo4j_client.run_query(baseline_query)
+            recent_rows = await graph_client.run_query(recent_query)
+            baseline_rows = await graph_client.run_query(baseline_query)
             baseline_by_id = {
                 str(r.get("entity_id")): int(r.get("cnt") or 0)
                 for r in baseline_rows or []

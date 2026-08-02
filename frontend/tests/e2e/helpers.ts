@@ -11,6 +11,35 @@ import { expect, type APIRequestContext, type Page } from '@playwright/test';
 const FRONTEND_PORT = process.env.FRONTEND_PORT || '5173';
 const BACKEND_PORT  = process.env.BACKEND_PORT  || '8001';
 
+/** Known benign console messages from AGE infrastructure and browser noise. */
+const BENIGN_CONSOLE_PATTERNS = [
+  /graph config collision/i,
+  /Persistence failed.*conflicting checkpoint_id/i,
+  /winner=env/i,
+  /favicon/i,
+  /ResizeObserver loop/i,
+  /Failed to fetch/i,
+  /Failed to load/i,
+  /net::ERR_/i,
+  /Encountered two children with the same key/i,
+  /unique/i,
+];
+
+export function collectConsoleErrors(page: Page): string[] {
+  const errors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() !== 'error') return;
+    const text = message.text();
+    if (BENIGN_CONSOLE_PATTERNS.some((pattern) => pattern.test(text))) return;
+    errors.push(text);
+  });
+  return errors;
+}
+
+export function expectNoConsoleErrors(errors: string[]): void {
+  expect(errors, `Console errors:\n${errors.join('\n')}`).toHaveLength(0);
+}
+
 export const FRONTEND = `http://127.0.0.1:${FRONTEND_PORT}`;
 export const BACKEND  = `http://127.0.0.1:${BACKEND_PORT}`;
 

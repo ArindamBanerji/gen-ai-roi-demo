@@ -51,7 +51,7 @@ LIMIT $limit
 
 
 async def log_reconvergence_event(
-    neo4j_client,
+    graph_client,
     convergence_start_decisions: int,
     convergence_end_decisions: int,
     graph_entity_count_at_start: int,
@@ -67,7 +67,7 @@ async def log_reconvergence_event(
 
     Parameters
     ----------
-    neo4j_client                      : async Neo4j client
+    graph_client                      : async Neo4j client
     convergence_start_decisions       : decision count when accuracy dropped
     convergence_end_decisions         : decision count when accuracy recovered
     graph_entity_count_at_start       : total graph nodes at event start
@@ -85,7 +85,7 @@ async def log_reconvergence_event(
     n_reconverge = max(0, convergence_end_decisions - convergence_start_decisions)
 
     try:
-        await neo4j_client.run_query(
+        await graph_client.run_query(
             _CREATE_EVENT_QUERY,
             {
                 "event_id":    event_id,
@@ -140,7 +140,7 @@ LIMIT $limit
 
 
 async def log_decision_distance(
-    neo4j_client,
+    graph_client,
     decision_id: str,
     mu: np.ndarray,
     mu_zero: np.ndarray,
@@ -160,7 +160,7 @@ async def log_decision_distance(
     try:
         centroid_distance = float(np.linalg.norm(mu.flatten() - mu_zero.flatten()))
 
-        await neo4j_client.run_query(
+        await graph_client.run_query(
             _CREATE_DISTANCE_LOG_QUERY,
             {
                 "decision_id": decision_id,
@@ -180,25 +180,25 @@ async def log_decision_distance(
         return None
 
 
-async def read_decision_distance_log(neo4j_client, limit: int = 50) -> list:
+async def read_decision_distance_log(graph_client, limit: int = 50) -> list:
     """
     Return the last `limit` DecisionDistanceLog entries. Returns [] on failure.
     """
     try:
-        rows = await neo4j_client.run_query(_READ_DISTANCE_LOG_QUERY, {"limit": limit})
+        rows = await graph_client.run_query(_READ_DISTANCE_LOG_QUERY, {"limit": limit})
         return [dict(r) for r in (rows or [])]
     except Exception as exc:
         log.warning("[EXP-G1] Failed to read DecisionDistanceLog: %s", exc)
         return []
 
 
-async def fetch_category_distribution(neo4j_client) -> dict:
+async def fetch_category_distribution(graph_client) -> dict:
     """
     Query Neo4j for the last 100 decisions and return category mix as dict.
     Returns {} on failure. Values sum to 1.0.
     """
     try:
-        rows = await neo4j_client.run_query(_READ_CATEGORY_DIST_QUERY, {})
+        rows = await graph_client.run_query(_READ_CATEGORY_DIST_QUERY, {})
         if not rows:
             return {}
         total = sum(int(r["cnt"]) for r in rows)
@@ -210,13 +210,13 @@ async def fetch_category_distribution(neo4j_client) -> dict:
         return {}
 
 
-async def read_reconvergence_events(neo4j_client, limit: int = 50) -> list:
+async def read_reconvergence_events(graph_client, limit: int = 50) -> list:
     """
     Read the last `limit` re-convergence events from Neo4j.
     Returns [] on any failure (never raises).
     """
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             _READ_EVENTS_QUERY,
             {"limit": limit},
         )

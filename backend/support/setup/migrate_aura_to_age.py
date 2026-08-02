@@ -165,13 +165,13 @@ def format_props_for_age(props: Dict) -> str:
 
 
 async def export_nodes_from_aura(
-    neo4j_client,
+    graph_client,
     label: str,
     skip: int = 0,
     limit: int = BATCH_SIZE,
 ) -> List[Dict]:
     """Export a batch of nodes from Aura."""
-    results = await neo4j_client.run_query(
+    results = await graph_client.run_query(
         f"MATCH (n:{label}) RETURN n SKIP {skip} LIMIT {limit}"
     )
     nodes = []
@@ -235,7 +235,7 @@ async def import_nodes_to_age(
 
 
 async def export_relationships_from_aura(
-    neo4j_client,
+    graph_client,
     rel_type: str,
     skip: int = 0,
     limit: int = BATCH_SIZE,
@@ -247,7 +247,7 @@ async def export_relationships_from_aura(
     e.g. ShadowDecision, AlertCategory, AnalystArchetype, would yield
     null when queried with a.id).
     """
-    results = await neo4j_client.run_query(
+    results = await graph_client.run_query(
         f"""
         MATCH (a)-[r:{rel_type}]->(b)
         RETURN
@@ -339,7 +339,7 @@ async def import_relationship_to_age(
 
 
 async def migrate_tier(
-    neo4j_client,
+    graph_client,
     age_client,
     tier: str,
     dry_run: bool,
@@ -361,7 +361,7 @@ async def migrate_tier(
         total = 0
         while True:
             batch = await export_nodes_from_aura(
-                neo4j_client, label, skip, BATCH_SIZE
+                graph_client, label, skip, BATCH_SIZE
             )
             if not batch:
                 break
@@ -382,7 +382,7 @@ async def migrate_tier(
         total = 0
         while True:
             batch = await export_relationships_from_aura(
-                neo4j_client, rel_type, skip, BATCH_SIZE
+                graph_client, rel_type, skip, BATCH_SIZE
             )
             if not batch:
                 break
@@ -461,7 +461,7 @@ async def run_migration(args):
     for tier in tiers:
         logger.info(f"\n--- Tier {tier.upper()} ---")
         results = await migrate_tier(
-            neo4j_client, age_client, tier, dry_run
+            graph_client, age_client, tier, dry_run
         )
         tier_nodes = sum(results["nodes"].values())
         tier_rels = sum(results["relationships"].values())

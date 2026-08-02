@@ -265,9 +265,9 @@ def get_all_variants(status_filter: str | None = None) -> list[VariantRecord]:
     return [_copy_record(record) for record in records]
 
 
-async def _query_events(neo4j_client: Any, event_type: str) -> tuple[list[dict[str, Any]], str | None]:
+async def _query_events(graph_client: Any, event_type: str) -> tuple[list[dict[str, Any]], str | None]:
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             "MATCH (e:EvolutionEvent) "
             f"WHERE e.event_type = {_S(event_type)} "
             "RETURN e.id AS id, e.event_type AS event_type, "
@@ -283,12 +283,12 @@ async def _query_events(neo4j_client: Any, event_type: str) -> tuple[list[dict[s
     return list(rows or []), None
 
 
-async def rebuild_registry(neo4j_client: Any) -> dict[str, Any]:
+async def rebuild_registry(graph_client: Any) -> dict[str, Any]:
     """Rebuild the in-memory registry from durable AE-04 EvolutionEvent nodes."""
     _REGISTRY.clear()
     errors: list[dict[str, str]] = []
 
-    created_rows, error = await _query_events(neo4j_client, VARIANT_CREATED)
+    created_rows, error = await _query_events(graph_client, VARIANT_CREATED)
     if error:
         errors.append({"event_type": VARIANT_CREATED, "error": error})
     for row in created_rows:
@@ -296,7 +296,7 @@ async def rebuild_registry(neo4j_client: Any) -> dict[str, Any]:
         if record is not None:
             _REGISTRY[record.variant_id] = record
 
-    promotion_rows, error = await _query_events(neo4j_client, PROMOTION_APPROVED)
+    promotion_rows, error = await _query_events(graph_client, PROMOTION_APPROVED)
     if error:
         errors.append({"event_type": PROMOTION_APPROVED, "error": error})
     for row in promotion_rows:
@@ -311,7 +311,7 @@ async def rebuild_registry(neo4j_client: Any) -> dict[str, Any]:
             epoch_ms=timestamp_epoch is not None,
         )
 
-    rollback_rows, error = await _query_events(neo4j_client, ROLLBACK)
+    rollback_rows, error = await _query_events(graph_client, ROLLBACK)
     if error:
         errors.append({"event_type": ROLLBACK, "error": error})
     for row in rollback_rows:
@@ -321,7 +321,7 @@ async def rebuild_registry(neo4j_client: Any) -> dict[str, Any]:
             continue
         record.status = ROLLED_BACK
 
-    rejection_rows, error = await _query_events(neo4j_client, PROMOTION_REJECTED)
+    rejection_rows, error = await _query_events(graph_client, PROMOTION_REJECTED)
     if error:
         errors.append({"event_type": PROMOTION_REJECTED, "error": error})
     for row in rejection_rows:

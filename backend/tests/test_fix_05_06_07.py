@@ -75,7 +75,7 @@ async def test_simulation_does_not_mutate_production_state():
                       new_callable=AsyncMock, return_value=factor_vec), \
          patch.object(sim_mod, "audit_record_decision",
                       new_callable=AsyncMock, return_value={}), \
-         patch("app.db.neo4j.neo4j_client", mock_neo4j), \
+         patch("app.db.graph_client.graph_client", mock_neo4j), \
          patch("app.services.situation.analyze_situation",
                return_value=MagicMock(situation_type="unknown")):
 

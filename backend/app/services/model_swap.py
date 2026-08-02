@@ -8,7 +8,7 @@ import numpy as np
 from fastapi import HTTPException
 
 from app.data.alert_pool import get_alert_pool
-from app.db.neo4j import neo4j_client
+from app.db.graph_client import graph_client
 from app.domains.soc.config import SOCDomainConfig, resolve_alert_category
 from app.domains.soc.orchestrator import compute_factor_vector
 from app.services.gae_state import get_profile_scorer
@@ -85,7 +85,7 @@ async def _score_alert(
 
 
 async def run_model_swap_trial(neo4j_service=None, n_alerts: int = 20) -> ModelSwapResult:
-    neo4j_service = neo4j_service or neo4j_client
+    neo4j_service = neo4j_service or graph_client
     scorer = get_profile_scorer()
     narrative_llm_used = _get_narrative_llm_name()
 

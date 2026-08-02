@@ -121,7 +121,7 @@ def _production_q() -> float | None:
         return None
 
 
-async def evaluate_promotion(variant_id: str, neo4j_client) -> PromotionResult:
+async def evaluate_promotion(variant_id: str, graph_client) -> PromotionResult:
     variant = get_variant(variant_id)
     if variant is None:
         return PromotionResult("reject", f"variant {variant_id} not found", None)
@@ -161,7 +161,7 @@ async def evaluate_promotion(variant_id: str, neo4j_client) -> PromotionResult:
             {"projected_q": projected_q, "correctness_floor": Q_FLOOR, "total": total, "win_rate": win_rate},
         )
 
-    conservation = await _check_conservation_for_variant(projected_q, neo4j_client)
+    conservation = await _check_conservation_for_variant(projected_q, graph_client)
     if not conservation.get("passed"):
         return PromotionResult(
             "reject",
@@ -175,7 +175,7 @@ async def evaluate_promotion(variant_id: str, neo4j_client) -> PromotionResult:
             },
         )
 
-    batch_stats = await _get_shadow_batch_stats(variant_id, neo4j_client)
+    batch_stats = await _get_shadow_batch_stats(variant_id, graph_client)
     batch_count = int(batch_stats.get("batch_count") or 0)
     if batch_count < MIN_SHADOW_BATCHES:
         return PromotionResult(
@@ -227,7 +227,7 @@ def _estimate_projected_accuracy(summary: dict[str, Any]) -> float:
     return round(min(production_q + improvement, 0.95), 4)
 
 
-async def _check_conservation_for_variant(projected_q: float, neo4j_client) -> dict[str, Any]:
+async def _check_conservation_for_variant(projected_q: float, graph_client) -> dict[str, Any]:
     components = _get_health_components()
     if components is None:
         return {"passed": True, "status": "UNKNOWN"}
@@ -279,9 +279,9 @@ def _shadow_win_rates(events: list[dict[str, Any]]) -> list[float]:
     return rates
 
 
-async def _get_shadow_batch_stats(variant_id: str, neo4j_client) -> dict[str, Any]:
+async def _get_shadow_batch_stats(variant_id: str, graph_client) -> dict[str, Any]:
     try:
-        events = await get_variant_history(neo4j_client, variant_id)
+        events = await get_variant_history(graph_client, variant_id)
         rates = _shadow_win_rates(events or [])
         batch_std = round(float(pstdev(rates)), 6) if len(rates) >= MIN_SHADOW_BATCHES else 0.0
         return {
@@ -294,12 +294,12 @@ async def _get_shadow_batch_stats(variant_id: str, neo4j_client) -> dict[str, An
         return {"batch_count": 0, "batch_std": 0.0, "win_rates": []}
 
 
-async def _compute_batch_std(variant_id: str, neo4j_client) -> float:
-    stats = await _get_shadow_batch_stats(variant_id, neo4j_client)
+async def _compute_batch_std(variant_id: str, graph_client) -> float:
+    stats = await _get_shadow_batch_stats(variant_id, graph_client)
     return _as_float(stats.get("batch_std"), 0.0)
 
 
-async def execute_promotion(variant_id: str, gate_evidence: dict[str, Any], neo4j_client):
+async def execute_promotion(variant_id: str, gate_evidence: dict[str, Any], graph_client):
     variant = get_variant(variant_id)
     if variant is None:
         raise ValueError(f"variant {variant_id} not found")
@@ -307,7 +307,7 @@ async def execute_promotion(variant_id: str, gate_evidence: dict[str, Any], neo4
         raise ValueError(f"variant {variant_id} is not shadow")
 
     await record_evolution_event(
-        neo4j_client=neo4j_client,
+        graph_client=graph_client,
         event_type=PROMOTION_APPROVED,
         variant_id=variant_id,
         artifact_type=variant.artifact_type,
@@ -322,7 +322,7 @@ async def execute_promotion(variant_id: str, gate_evidence: dict[str, Any], neo4
     return transition_status(variant_id, ACTIVE)
 
 
-async def execute_rejection(variant_id: str, reason: str, neo4j_client):
+async def execute_rejection(variant_id: str, reason: str, graph_client):
     variant = get_variant(variant_id)
     if variant is None:
         raise ValueError(f"variant {variant_id} not found")
@@ -330,7 +330,7 @@ async def execute_rejection(variant_id: str, reason: str, neo4j_client):
         raise ValueError(f"variant {variant_id} is not shadow")
 
     await record_evolution_event(
-        neo4j_client=neo4j_client,
+        graph_client=graph_client,
         event_type=PROMOTION_REJECTED,
         variant_id=variant_id,
         artifact_type=variant.artifact_type,
@@ -360,7 +360,7 @@ def _get_daily_volume() -> float:
     return volume if volume > 0 else 200.0
 
 
-async def check_rollback(neo4j_client, category: str | None = None):
+async def check_rollback(graph_client, category: str | None = None):
     candidates = [
         variant
         for variant in get_all_variants(status_filter=ACTIVE)
@@ -374,12 +374,12 @@ async def check_rollback(neo4j_client, category: str | None = None):
     window_seconds = _rollback_window_hours(_get_daily_volume()) * 3600
     if promoted_at <= 0 or time.time() - promoted_at > window_seconds:
         return None
-    return await _execute_rollback(most_recent, neo4j_client)
+    return await _execute_rollback(most_recent, graph_client)
 
 
-async def _execute_rollback(variant, neo4j_client):
+async def _execute_rollback(variant, graph_client):
     await record_evolution_event(
-        neo4j_client=neo4j_client,
+        graph_client=graph_client,
         event_type=ROLLBACK,
         variant_id=variant.variant_id,
         artifact_type=variant.artifact_type,
@@ -394,8 +394,8 @@ async def _execute_rollback(variant, neo4j_client):
     return transition_status(variant.variant_id, ROLLED_BACK)
 
 
-async def _async_rollback_check(neo4j_client):
-    return await check_rollback(neo4j_client)
+async def _async_rollback_check(graph_client):
+    return await check_rollback(graph_client)
 
 
 def _state_machine_for_scorer(scorer: Any) -> Any:
@@ -414,19 +414,19 @@ def _loop_is_open(loop: Any) -> bool:
     return not (callable(is_closed) and is_closed())
 
 
-def _create_rollback_task(loop: Any, neo4j_client) -> None:
-    loop.create_task(_async_rollback_check(neo4j_client))
+def _create_rollback_task(loop: Any, graph_client) -> None:
+    loop.create_task(_async_rollback_check(graph_client))
 
 
-def _schedule_rollback_check(neo4j_client) -> bool:
+def _schedule_rollback_check(graph_client) -> bool:
     loop = _ROLLBACK_LOOP
     if _loop_is_open(loop):
         try:
             call_soon = getattr(loop, "call_soon_threadsafe", None)
             if callable(call_soon):
-                call_soon(_create_rollback_task, loop, neo4j_client)
+                call_soon(_create_rollback_task, loop, graph_client)
             else:
-                _create_rollback_task(loop, neo4j_client)
+                _create_rollback_task(loop, graph_client)
             return True
         except RuntimeError as exc:
             log.warning("Promotion rollback scheduling failed on captured loop: %s", exc)
@@ -436,11 +436,11 @@ def _schedule_rollback_check(neo4j_client) -> bool:
     except RuntimeError:
         log.warning("Promotion rollback handler fired without an available event loop")
         return False
-    loop.create_task(_async_rollback_check(neo4j_client))
+    loop.create_task(_async_rollback_check(graph_client))
     return True
 
 
-def register_rollback_handler(neo4j_client) -> bool:
+def register_rollback_handler(graph_client) -> bool:
     global _ROLLBACK_LOOP
     try:
         from app.services.gae_state import get_profile_scorer
@@ -461,7 +461,7 @@ def register_rollback_handler(neo4j_client) -> bool:
             return True
 
         def _handler(old_state: str, new_state: str) -> None:
-            _schedule_rollback_check(neo4j_client)
+            _schedule_rollback_check(graph_client)
 
         state_machine.register_handler("*", "AMBER", _handler)
         state_machine.register_handler("*", "RED", _handler)

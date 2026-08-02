@@ -145,7 +145,7 @@ async def test_enrichment_records_with_valid_signature(monkeypatch):
             return []
 
     async def fake_record(
-        neo4j_client,
+        graph_client,
         event_type,
         variant_id,
         artifact_type,
@@ -159,7 +159,7 @@ async def test_enrichment_records_with_valid_signature(monkeypatch):
         magnitude=0.0,
         timestamp_override=None,
     ):
-        assert neo4j_client is not None
+        assert graph_client is not None
         assert event_type in VALID_EVENT_TYPES
         assert variant_id in EXPECTED_VARIANT_IDS
         assert artifact_type in {"routing_rule", "scoring_threshold"}

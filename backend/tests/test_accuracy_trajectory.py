@@ -32,7 +32,7 @@ def _get_trajectory(neo4j_rows=None):
     if neo4j_rows is None:
         neo4j_rows = []
     with patch(
-        "app.routers.soc.neo4j_client.run_query",
+        "app.routers.soc.graph_client.run_query",
         new_callable=AsyncMock,
         return_value=neo4j_rows,
     ):

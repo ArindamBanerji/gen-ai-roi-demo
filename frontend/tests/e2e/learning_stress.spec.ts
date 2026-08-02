@@ -22,6 +22,8 @@ import {
   makeNDecisions,
   navigateToTab,
   getApiData,
+  collectConsoleErrors,
+  expectNoConsoleErrors,
   resetDemoAlerts,
 } from './helpers';
 
@@ -55,10 +57,7 @@ test.describe('Learning stress tests', () => {
   test('mixed correct incorrect does not collapse', async ({ page }) => {
     test.slow(); // triples default timeout
 
-    const errors: string[] = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') errors.push(msg.text());
-    });
+    const errors = collectConsoleErrors(page);
 
     const before = await getApiData(page, '/api/soc/learning-state');
     const beforeDC: number = before.decision_count ?? 0;
@@ -72,22 +71,7 @@ test.describe('Learning stress tests', () => {
     expect(isNaN(after.iks_v2)).toBe(false);
     expect(after.decision_count).toBeGreaterThan(beforeDC);
 
-    // Filter navigation artifacts:
-    //   • React duplicate-key warnings from SYN-DEC-* event rows (known, BACKLOG)
-    //   • "Failed to fetch" / "Failed to load" — these are useEffect fetch aborts
-    //     triggered by page.goto() reloads in makeDecision, not real backend errors.
-    //     The backend's health is verified by the iks_v2 / decision_count assertions above.
-    const serious = errors.filter(e =>
-      !e.includes('Encountered two children with the same key') &&
-      !e.includes('unique') &&
-      !e.includes('Failed to fetch') &&
-      !e.includes('Failed to load') &&
-      !e.includes('net::ERR_'),
-    );
-    expect(
-      serious,
-      `Fatal console errors after ${made} decisions:\n${serious.join('\n')}`,
-    ).toHaveLength(0);
+    expectNoConsoleErrors(errors);
   });
 
   // ── Test 2 ──────────────────────────────────────────────────────────────────
@@ -178,10 +162,7 @@ test.describe('Learning stress tests', () => {
   test('all tabs reachable after 5 decisions', async ({ page }) => {
     test.slow();
 
-    const errors: string[] = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') errors.push(msg.text());
-    });
+    const errors = collectConsoleErrors(page);
 
     await page.goto(FRONTEND);
     const made = await makeNDecisions(page, 5);
@@ -208,17 +189,7 @@ test.describe('Learning stress tests', () => {
       expect(bodyText).not.toMatch(/Something went wrong|An error occurred|Unexpected error/i);
     }
 
-    const serious4 = errors.filter(e =>
-      !e.includes('Encountered two children with the same key') &&
-      !e.includes('unique') &&
-      !e.includes('Failed to fetch') &&
-      !e.includes('Failed to load') &&
-      !e.includes('net::ERR_'),
-    );
-    expect(
-      serious4,
-      `Fatal console errors during tab round-trip:\n${serious4.join('\n')}`,
-    ).toHaveLength(0);
+    expectNoConsoleErrors(errors);
   });
 
   // ── Test 5 ──────────────────────────────────────────────────────────────────
@@ -260,10 +231,7 @@ test.describe('Learning stress tests', () => {
     // from the beforeEach page.goto are not captured in this test's window.
     await page.goto(FRONTEND);
     await navigateToTab(page, 1);
-    const errors: string[] = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') errors.push(msg.text());
-    });
+    const errors = collectConsoleErrors(page);
 
     // Queue must have at least one card (reset in beforeEach restored them all)
     const alertCard = page.locator('button').filter({ hasText: /ALERT-|SIM-/i }).first();
@@ -272,15 +240,7 @@ test.describe('Learning stress tests', () => {
     expect(count).toBeGreaterThanOrEqual(1);
 
     // No console errors on idle Tab 1
-    const serious = errors.filter(e =>
-      !e.includes('Encountered two children with the same key') &&
-      !e.includes('unique') &&
-      !e.includes('Failed to fetch') &&
-      !e.includes('Failed to load') &&
-      !e.includes('favicon') &&
-      !e.includes('net::ERR_'),
-    );
-    expect(serious).toHaveLength(0);
+    expectNoConsoleErrors(errors);
   });
 
   // ── Test 7 ──────────────────────────────────────────────────────────────────
@@ -301,10 +261,7 @@ test.describe('Learning stress tests', () => {
     // a fresh page.goto so that the navigation's fetch-abort noise is excluded.
     await page.goto(FRONTEND);
     await navigateToTab(page, 1);
-    const errors: string[] = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') errors.push(msg.text());
-    });
+    const errors = collectConsoleErrors(page);
 
     // Click the first alert — this starts the async analysis fetch.
     const alertCard = page.locator('button').filter({ hasText: /ALERT-|SIM-/i }).first();
@@ -328,17 +285,7 @@ test.describe('Learning stress tests', () => {
     const ls = await getApiData(page, '/api/soc/learning-state');
     expect(ls.decision_count).toBeGreaterThanOrEqual(0);
 
-    const serious7 = errors.filter(e =>
-      !e.includes('Encountered two children with the same key') &&
-      !e.includes('unique') &&
-      !e.includes('Failed to fetch') &&
-      !e.includes('Failed to load') &&
-      !e.includes('net::ERR_'),
-    );
-    expect(
-      serious7,
-      `Fatal console errors during mid-flight tab switch:\n${serious7.join('\n')}`,
-    ).toHaveLength(0);
+    expectNoConsoleErrors(errors);
   });
 
 });

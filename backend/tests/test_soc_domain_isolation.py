@@ -5,7 +5,7 @@ import re
 import pytest
 
 from ci_platform.graph.age_client import AGEClient
-from app.db.neo4j import soc_decision_where
+from app.db.graph_client import soc_decision_where
 from app.services.graph_explorer import GraphExplorerService
 from app.services.state_manager import StateManager
 from app.state.graph_snapshot import GraphSnapshot

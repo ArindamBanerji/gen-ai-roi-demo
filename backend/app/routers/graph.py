@@ -20,7 +20,7 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, HTTPException
 
 from app.connectors.registry import registry
-from app.db.neo4j import neo4j_client
+from app.db.graph_client import graph_client
 from app.services.threat_intel import refresh_threat_intel
 
 router = APIRouter()
@@ -205,7 +205,7 @@ async def refresh_threat_intel_endpoint():
     from app.services.threat_indicator import ThreatIndicatorService
     indicators_persisted = 0
     try:
-        ti_rows = await neo4j_client.run_query(
+        ti_rows = await graph_client.run_query(
             """
             MATCH (ti:ThreatIntel)
             RETURN ti.name      AS name,
@@ -222,7 +222,7 @@ async def refresh_threat_intel_endpoint():
                 source          = row.get("source")    or "unknown",
                 severity        = row.get("severity")  or "unknown",
                 name            = row.get("name")      or "",
-                neo4j_service=neo4j_client,
+                neo4j_service=graph_client,
             )
             indicators_persisted += 1
         print(f"[GRAPH] ThreatIndicator MERGE: persisted={indicators_persisted}")
@@ -322,7 +322,7 @@ async def get_enrichment_aggregate(indicator: str):
     """
     print(f"[GRAPH] GET /graph/enrichment/aggregate/{indicator} called")
     try:
-        records = await neo4j_client.run_query(
+        records = await graph_client.run_query(
             _ENRICHMENT_QUERY_ONE, {"indicator": indicator}
         )
     except Exception as exc:
@@ -364,7 +364,7 @@ async def get_enrichment_summary():
     """
     print("[GRAPH] GET /graph/enrichment/summary called")
     try:
-        records = await neo4j_client.run_query(_ENRICHMENT_QUERY_ALL, {})
+        records = await graph_client.run_query(_ENRICHMENT_QUERY_ALL, {})
     except Exception as exc:
         print(f"[ERROR] Enrichment summary query failed: {exc}")
         raise HTTPException(
@@ -390,7 +390,7 @@ async def get_enrichment_summary():
     # Phase 7: include ThreatIndicator counts
     from app.services.threat_indicator import ThreatIndicatorService
     try:
-        ti_summary = await ThreatIndicatorService.get_all_indicators(neo4j_client)
+        ti_summary = await ThreatIndicatorService.get_all_indicators(graph_client)
         threat_indicators = {
             "total":       ti_summary["total"],
             "by_type":     ti_summary["by_type"],
@@ -442,7 +442,7 @@ async def get_enrichment_by_alert(alert_id: str):
     """
     print(f"[GRAPH] GET /graph/enrichment/by-alert/{alert_id} called")
     try:
-        records = await neo4j_client.run_query(
+        records = await graph_client.run_query(
             _ENRICHMENT_QUERY_BY_ALERT, {"alert_id": alert_id}
         )
     except Exception as exc:

@@ -44,7 +44,7 @@ def test_policy_check_resolves_known_alert_type():
 
     mock_neo4j = SimpleNamespace(run_query=AsyncMock(side_effect=fake_run_query))
 
-    with patch("app.routers.triage.neo4j_client", mock_neo4j), \
+    with patch("app.routers.triage.graph_client", mock_neo4j), \
          patch("app.routers.triage.detect_policy_conflicts", side_effect=fake_detect):
         client = TestClient(app)
         response = client.get("/api/alert/policy-check?alert_id=ALERT-IT-005")
@@ -79,7 +79,7 @@ def test_policy_check_unknown_only_for_missing_type():
 
     mock_neo4j = SimpleNamespace(run_query=AsyncMock(side_effect=fake_run_query))
 
-    with patch("app.routers.triage.neo4j_client", mock_neo4j), \
+    with patch("app.routers.triage.graph_client", mock_neo4j), \
          patch("app.routers.triage.detect_policy_conflicts", side_effect=fake_detect):
         client = TestClient(app)
         response = client.get("/api/alert/policy-check?alert_id=ALERT-MISSING-TYPE")

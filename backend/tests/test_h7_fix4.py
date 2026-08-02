@@ -57,7 +57,7 @@ def test_economics_endpoint_shape():
     from app.routers.metrics import get_decision_economics
 
     async def _run():
-        with patch("app.routers.metrics.neo4j_client") as mock_client:
+        with patch("app.routers.metrics.graph_client") as mock_client:
             mock_client.run_query = AsyncMock(side_effect=[
                 [{"total_decisions": 10}],
                 [{"correct_decisions": 8}],
@@ -86,7 +86,7 @@ def test_economics_zero_decisions_safe():
     from app.routers.metrics import get_decision_economics
 
     async def _run():
-        with patch("app.routers.metrics.neo4j_client") as mock_client:
+        with patch("app.routers.metrics.graph_client") as mock_client:
             mock_client.run_query = AsyncMock(side_effect=[
                 [{"total_decisions": 0}],
                 [{"correct_decisions": 0}],
@@ -112,7 +112,7 @@ def test_weekly_trends_empty_with_note_when_no_data():
     from app.routers.metrics import get_weekly_trends
 
     async def _run():
-        with patch("app.routers.metrics.neo4j_client") as mock_client:
+        with patch("app.routers.metrics.graph_client") as mock_client:
             mock_client.run_query = AsyncMock(return_value=[])
             return await get_weekly_trends()
 

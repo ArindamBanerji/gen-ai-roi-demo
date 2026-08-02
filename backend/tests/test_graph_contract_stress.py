@@ -18,7 +18,7 @@ import inspect
 import os
 import sys
 
-from app.db.neo4j import soc_decision_where
+from app.db.graph_client import soc_decision_where
 from copilot_sdk.testing.fixtures import age_available
 
 # Ensure backend is on path

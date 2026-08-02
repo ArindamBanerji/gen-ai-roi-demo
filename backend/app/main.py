@@ -173,7 +173,7 @@ async def startup_event():
     else:
         print("[AUTH] SAML disabled -- all routes open")
 
-    from app.db.neo4j import neo4j_client, soc_decision_where, _GRAPH_BACKEND
+    from app.db.graph_client import graph_client, soc_decision_where, _GRAPH_BACKEND
     import os as _os
     import pathlib as _pathlib
 
@@ -195,17 +195,17 @@ async def startup_event():
 
     # Neo4j needs an explicit connect(); AGEClient.connect() is a no-op.
     if _backend == "neo4j":
-        await neo4j_client.connect()
+        await graph_client.connect()
 
     # ── Bootstrap verification — MANDATORY, fail-fast ─────────
     try:
-        _verify = await neo4j_client.run_query(
+        _verify = await graph_client.run_query(
             "MATCH (n) RETURN count(n) AS total"
         )
         _node_count = _verify[0]["total"] if _verify else 0
         print(
             f"[STARTUP] Backend={_backend.upper()} | "
-            f"Client={type(neo4j_client).__name__} | "
+            f"Client={type(graph_client).__name__} | "
             f"Nodes={_node_count} | "
             f"Status=VERIFIED"
         )
@@ -226,12 +226,12 @@ async def startup_event():
     # on every restart so correct_decisions is never stale after a reboot.
     # The separate script is still useful for bulk historical migrations.
     try:
-        _total_res = await neo4j_client.run_query(
+        _total_res = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "AND d.outcome IS NOT NULL "
             "RETURN count(d) AS total"
         )
-        _correct_res = await neo4j_client.run_query(
+        _correct_res = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "AND d.correct = true "
             "RETURN count(d) AS correct"
@@ -255,7 +255,7 @@ async def startup_event():
 
     try:
         from gae.evolution import rebuild_shadow_index
-        _shadow_index = await rebuild_shadow_index(neo4j_client)
+        _shadow_index = await rebuild_shadow_index(graph_client)
         if _shadow_index:
             print(f"[STARTUP] Evolution shadow index rebuilt: {len(_shadow_index)} variants")
     except Exception as _shadow_exc:
@@ -263,7 +263,7 @@ async def startup_event():
 
     try:
         from app.services.variant_registry import rebuild_registry
-        _variant_registry = await rebuild_registry(neo4j_client)
+        _variant_registry = await rebuild_registry(graph_client)
         _variant_count = int(_variant_registry.get("rebuilt", 0))
         if _variant_count:
             print(f"[STARTUP] Variant registry rebuilt: {_variant_count} variants")
@@ -273,7 +273,7 @@ async def startup_event():
     # Load analyst correct-override examples into OverrideDetector.
     # Activates automatically when >= 50 examples are found in Neo4j.
     from app.services.override_detector import load_from_neo4j as _load_od
-    _od = await _load_od(neo4j_client)
+    _od = await _load_od(graph_client)
     print(
         f"[OverrideDetector] {'ACTIVATED' if _od.activated else 'inactive'} -- "
         f"{_od.example_count} correct-override examples loaded."
@@ -293,7 +293,7 @@ async def startup_event():
 
     try:
         from app.services.promotion_gate import register_rollback_handler
-        _rollback_registered = register_rollback_handler(neo4j_client)
+        _rollback_registered = register_rollback_handler(graph_client)
         print(
             "[STARTUP] Promotion rollback handler "
             f"{'registered' if _rollback_registered else 'not available'}"
@@ -305,7 +305,7 @@ async def startup_event():
     # Runs every startup so the centroid export endpoint always reflects current μ₀.
     try:
         from app.services.gae_state import write_bootstrap_state
-        await write_bootstrap_state(neo4j_client, get_profile_scorer())
+        await write_bootstrap_state(graph_client, get_profile_scorer())
     except Exception as _ds_exc:
         print(f"[GAE] DeploymentState write failed (non-blocking): {_ds_exc}")
 
@@ -320,7 +320,7 @@ async def startup_event():
     # Sync decision_count from Neo4j so IKS reflects historical decisions
     # on every server restart (fixes cold-start IKS = 1.7/100 regression).
     try:
-        _count_result = await neo4j_client.run_query(
+        _count_result = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "RETURN count(d) AS cnt"
         )
@@ -340,7 +340,7 @@ async def startup_event():
     # Runs after the total-count sync so it takes precedence when > 0.
     # Safe fallback: if result is 0 (empty DB / error), existing count preserved.
     try:
-        _verified_count = await neo4j_client.count_verified_decisions()
+        _verified_count = await graph_client.count_verified_decisions()
         if _verified_count > 0:
             from app.services.gae_state import get_learning_state as _get_ls_v
             _get_ls_v().decision_count = _verified_count
@@ -354,7 +354,7 @@ async def startup_event():
     # the current ProfileScorer state, not a stale bootstrap value.
     try:
         from app.state.graph_snapshot import GraphSnapshot, set_snapshot as _set_snapshot
-        _snap = await GraphSnapshot.from_graph(neo4j_client)
+        _snap = await GraphSnapshot.from_graph(graph_client)
         _set_snapshot(_snap)
         print(
             f"[SNAPSHOT] GraphSnapshot initialized: "
@@ -459,7 +459,7 @@ async def startup_event():
     # Prevents first GET /api/discoveries from triggering synchronous full refresh.
     try:
         from app.services.cross_graph_discovery import discovery_service
-        await discovery_service.refresh("soc", neo4j_client)
+        await discovery_service.refresh("soc", graph_client)
         logger.info("[Discovery] Cache warmed at startup")
     except Exception as _disc_exc:
         logger.warning("[Discovery] Startup warm failed (non-blocking): %s", _disc_exc)
@@ -469,7 +469,7 @@ async def startup_event():
     try:
         from app.domains.soc.campaigns import CampaignCorrelationEngine, CampaignRepository
         from app.domains.soc.config import SOCDomainConfig
-        _camp_repo = CampaignRepository(neo4j_client)
+        _camp_repo = CampaignRepository(graph_client)
         if not await _camp_repo.campaigns_exist():
             _camp_config = SOCDomainConfig.get_campaign_config()
             _camp_engine = CampaignCorrelationEngine(_camp_config)
@@ -502,7 +502,7 @@ async def shutdown_event():
     except Exception as _sentinel_exc:
         logger.warning("[Sentinel] Poller shutdown failed: %s", _sentinel_exc)
 
-    from app.db.neo4j import neo4j_client
-    if hasattr(neo4j_client, "close"):
-        await neo4j_client.close()
+    from app.db.graph_client import graph_client
+    if hasattr(graph_client, "close"):
+        await graph_client.close()
         print("[OK] Disconnected from AGE")

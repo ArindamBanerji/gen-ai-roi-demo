@@ -93,7 +93,7 @@ def _patch_common_outcome(monkeypatch, harness, record=None, *, fail_triggered_e
     rl_engine.reset_rl_state()
     decision = record or _decision_record()
     harness.graph_client.fail_triggered_evolution = fail_triggered_evolution
-    monkeypatch.setattr(triage, "neo4j_client", harness.graph_client)
+    monkeypatch.setattr(triage, "graph_client", harness.graph_client)
     harness.add_decision(
         decision_id="D-RL",
         category=decision["category"],
@@ -402,7 +402,7 @@ def _patch_common_analyze(
     )
     if incident_id:
         fake_neo4j.alert["incident_id"] = incident_id
-    monkeypatch.setattr(triage, "neo4j_client", fake_neo4j)
+    monkeypatch.setattr(triage, "graph_client", fake_neo4j)
     monkeypatch.setattr(
         triage,
         "compute_factor_vector",

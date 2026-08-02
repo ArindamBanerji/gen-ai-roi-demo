@@ -20,7 +20,7 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, cast
 
-from app.db.neo4j import neo4j_client
+from app.db.graph_client import graph_client
 
 
 # ============================================================================
@@ -174,7 +174,7 @@ async def _build_threat_intel_factor(alert_id: str) -> Dict[str, Any]:
     RETURN t.value AS ioc_value, t.severity AS severity, t.source AS source
     """
     try:
-        results = await neo4j_client.run_query(query, {"alert_id": alert_id})
+        results = await graph_client.run_query(query, {"alert_id": alert_id})
     except Exception as exc:
         print(f"[TRIAGE] AGE threat-intel query failed for {alert_id}: {exc}")
         results = []
@@ -229,7 +229,7 @@ async def _get_alert_type(alert_id: str) -> str:
     """
     query = "MATCH (a:Alert {alert_id: $alert_id}) RETURN a.alert_type AS alert_type LIMIT 1"
     try:
-        results = await neo4j_client.run_query(query, {"alert_id": alert_id})
+        results = await graph_client.run_query(query, {"alert_id": alert_id})
         if results:
             return results[0].get("alert_type") or ""
     except Exception as exc:

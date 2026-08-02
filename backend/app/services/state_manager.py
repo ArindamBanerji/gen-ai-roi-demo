@@ -10,14 +10,14 @@ All dependencies are injected so this module imports no SOC-specific code.
 
 Usage (see routers/admin.py):
     from app.services.state_manager import StateManager, ResetError
-    sm = StateManager(gae_state, audit, neo4j_client, domain_config)
+    sm = StateManager(gae_state, audit, graph_client, domain_config)
     await sm.soft_reset()
     await sm.hard_reset()
 """
 
 import logging
 
-from app.db.neo4j import soc_decision_where
+from app.db.graph_client import soc_decision_where
 
 log = logging.getLogger(__name__)
 

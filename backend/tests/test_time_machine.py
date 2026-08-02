@@ -336,7 +336,7 @@ def test_router_timeline(snapshot_env):
             "components": {"signal": 7.5},
             "interpretation": "cold",
         }),
-    ), patch("app.routers.time_machine_router.neo4j_client", DummyNeo4j()):
+    ), patch("app.routers.time_machine_router.graph_client", DummyNeo4j()):
         response = client.get("/api/time-machine/timeline")
 
     assert response.status_code == 200

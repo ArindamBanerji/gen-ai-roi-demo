@@ -157,7 +157,7 @@ def test_soc_and_metrics_paths_use_same_trajectory_assumptions():
         from app.routers.metrics import get_decision_economics
         from app.routers.soc import _tab4_content
 
-        with patch("app.routers.soc.neo4j_client") as soc_client:
+        with patch("app.routers.soc.graph_client") as soc_client:
             soc_client.run_query = AsyncMock(side_effect=[
                 [{"cnt": 18}],
                 timestamp_rows,
@@ -165,7 +165,7 @@ def test_soc_and_metrics_paths_use_same_trajectory_assumptions():
             ])
             soc_payload = await _tab4_content()
 
-        with patch("app.routers.metrics.neo4j_client") as metrics_client:
+        with patch("app.routers.metrics.graph_client") as metrics_client:
             metrics_client.run_query = AsyncMock(side_effect=[
                 [{"total_decisions": 18}],
                 [{"correct_decisions": 14}],

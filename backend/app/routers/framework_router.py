@@ -24,13 +24,13 @@ from ci_platform.graph.age_client import AGEClient
 _age_client = None
 # Compatibility seam for existing tests and service integrations. Production
 # code leaves this unset; _get_age_client always constructs the AGE client.
-neo4j_client = None
+graph_client = None
 
 
 def _get_age_client() -> AGEClient:
     global _age_client
-    if neo4j_client is not None:
-        return neo4j_client
+    if graph_client is not None:
+        return graph_client
     if _age_client is None:
         config = GraphConfig.load("soc")
         _age_client = AGEClient(dsn=config.dsn, graph_name=config.graph)

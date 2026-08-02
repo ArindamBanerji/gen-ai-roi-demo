@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext } from '@playwright/test'
-import { FRONTEND, BACKEND, navigateToTab, resetDemoAlerts } from './helpers'
+import { FRONTEND, BACKEND, collectConsoleErrors, expectNoConsoleErrors, navigateToTab, resetDemoAlerts } from './helpers'
 
 interface FactorContribution {
   name: string
@@ -73,10 +73,7 @@ test('factor_contribution_panel_visible_on_alert_triage', async ({ page }) => {
 })
 
 test('factor_contribution_panel_has_no_console_errors', async ({ page }) => {
-  const errors: string[] = []
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text())
-  })
+  const errors = collectConsoleErrors(page)
 
   await resetDemoAlerts(page)
   await page.goto(FRONTEND)
@@ -87,5 +84,5 @@ test('factor_contribution_panel_has_no_console_errors', async ({ page }) => {
   await alertCard.click()
 
   await expect(page.getByTestId('factor-contribution-panel')).toBeVisible({ timeout: 45_000 })
-  expect(errors).toEqual([])
+  expectNoConsoleErrors(errors)
 })

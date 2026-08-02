@@ -31,7 +31,7 @@ from typing import Any, Optional, cast
 import numpy as np
 
 from app.domains.soc.config import compute_phase3_minimum as _p3min
-from app.db.neo4j import soc_decision_where
+from app.db.graph_client import soc_decision_where
 from app.framework.iks_base import (  # noqa: F401 -- re-export for callers
     compute_iks as _compute_iks_base,
     interpret,
@@ -150,9 +150,9 @@ async def get_iks_trend() -> list[dict]:
     Returns [] if no snapshots exist or Neo4j is unavailable.
     """
     try:
-        from app.db.neo4j import neo4j_client
+        from app.db.graph_client import graph_client
 
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             """
             MATCH (ps:ProfileSnapshot)
             RETURN ps.decision_count AS decision_count,
@@ -311,9 +311,9 @@ async def _compute_delta_7d(current_iks: float) -> float:
     Returns current_iks - oldest_iks_within_7d_window, or 0.0 if insufficient data.
     """
     try:
-        from app.db.neo4j import neo4j_client
+        from app.db.graph_client import graph_client
 
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             """
             MATCH (ps:ProfileSnapshot)
             WHERE ps.timestamp_epoch >= $cutoff_epoch

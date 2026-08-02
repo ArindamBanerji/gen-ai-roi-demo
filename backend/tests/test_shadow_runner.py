@@ -378,7 +378,7 @@ async def test_fill_shadow_outcome_schedules_flush_when_threshold_reached(monkey
         return SimpleNamespace(done=lambda: False)
 
     monkeypatch.setattr(asyncio, "create_task", fake_create_task)
-    monkeypatch.setattr("app.db.neo4j.neo4j_client", object())
+    monkeypatch.setattr("app.db.graph_client.graph_client", object())
     for index in range(shadow_runner.SHADOW_BATCH_SIZE):
         shadow_runner._add_to_shadow_buffer(_comparison(alert_id=f"ALERT-{index}"))
 
@@ -598,7 +598,7 @@ async def test_stale_cleanup_prevents_repeated_flush_scheduling(monkeypatch):
         lambda variant_id: _variant(variant_id=variant_id, status="active"),
     )
     monkeypatch.setattr(asyncio, "create_task", fake_create_task)
-    monkeypatch.setattr("app.db.neo4j.neo4j_client", object())
+    monkeypatch.setattr("app.db.graph_client.graph_client", object())
     for index in range(shadow_runner.SHADOW_BATCH_SIZE):
         shadow_runner._add_to_shadow_buffer(
             _comparison(alert_id=f"ALERT-{index}", correct_action="escalate")

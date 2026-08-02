@@ -111,13 +111,13 @@ async def admin_reset(body: ResetRequest):
 
     from app.services.state_manager import StateManager, ResetError
     from app.services import gae_state, audit as audit_store
-    from app.db.neo4j import neo4j_client
+    from app.db.graph_client import graph_client
     from app.core.domain_registry import get_domain_config
 
     sm = StateManager(
         learning_state_service=gae_state,
         audit_store=audit_store,
-        neo4j_service=neo4j_client,
+        neo4j_service=graph_client,
         domain_config=get_domain_config(),
     )
 
@@ -183,9 +183,9 @@ async def _write_manifest_to_graph(
     graph_client: Any = None,
 ) -> Dict[str, Any]:
     if graph_client is None:
-        from app.db.neo4j import neo4j_client
+        from app.db.graph_client import graph_client
 
-        graph_client = neo4j_client
+        graph_client = graph_client
 
     nodes = list(getattr(manifest, "nodes", []) or [])
     relationships = list(getattr(manifest, "relationships", []) or [])
@@ -419,11 +419,11 @@ async def admin_ingest(body: OnboardRequest):
 @router.post("/admin/evolution-scan")
 async def admin_evolution_scan():
     """Run a manual AgentEvolver scan for graph-driven variant opportunities."""
-    from app.db.neo4j import neo4j_client
+    from app.db.graph_client import graph_client
     from app.services.variant_generator import VariantGenerator
 
     try:
-        variants = await VariantGenerator().scan_for_opportunities(neo4j_client)
+        variants = await VariantGenerator().scan_for_opportunities(graph_client)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -437,7 +437,7 @@ async def admin_evolution_scan():
 @router.post("/admin/shadow-start")
 async def admin_shadow_start(variant_id: str):
     """Start MVP automated shadow evaluation for a candidate AE variant."""
-    from app.db.neo4j import neo4j_client
+    from app.db.graph_client import graph_client
     from gae.evolution import SHADOW_STARTED, record_evolution_event
     from app.services.shadow_runner import SHADOW_TESTABLE_ARTIFACTS
     from app.services.variant_registry import CANDIDATE, SHADOW, get_variant, transition_status
@@ -455,7 +455,7 @@ async def admin_shadow_start(variant_id: str):
 
     try:
         await record_evolution_event(
-            neo4j_client=neo4j_client,
+            graph_client=graph_client,
             event_type=SHADOW_STARTED,
             variant_id=variant_id,
             artifact_type=variant.artifact_type,
@@ -482,7 +482,7 @@ async def admin_promote_evaluate(variant_id: Optional[str] = None):
     if not variant_id:
         raise HTTPException(status_code=400, detail="variant_id is required")
 
-    from app.db.neo4j import neo4j_client
+    from app.db.graph_client import graph_client
     from app.services.promotion_gate import (
         evaluate_promotion,
         execute_promotion,
@@ -495,11 +495,11 @@ async def admin_promote_evaluate(variant_id: Optional[str] = None):
         raise HTTPException(status_code=404, detail=f"Variant {variant_id} not found")
 
     try:
-        result = await evaluate_promotion(variant_id, neo4j_client)
+        result = await evaluate_promotion(variant_id, graph_client)
         if result.verdict == "promote":
-            await execute_promotion(variant_id, result.gate_evidence or {}, neo4j_client)
+            await execute_promotion(variant_id, result.gate_evidence or {}, graph_client)
         elif result.verdict == "reject":
-            await execute_rejection(variant_id, result.reason, neo4j_client)
+            await execute_rejection(variant_id, result.reason, graph_client)
     except HTTPException:
         raise
     except Exception as exc:

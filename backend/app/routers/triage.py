@@ -35,7 +35,7 @@ from app.services.gae_state import get_learning_state, save_learning_state, get_
 import dataclasses
 import numpy as np
 from app.core.state_manager import state_manager
-from app.db.neo4j import neo4j_client
+from app.db.graph_client import graph_client
 from app.graph_schema import _S
 from app.models.responses import AlertQueueResponse, DecisionFactorsResponse, ProfileResponse
 from app.models.schemas import ProcessAlertRequest, OutcomeRequest
@@ -61,27 +61,27 @@ _shadow_log = logging.getLogger("soc.referral.shadow")
 
 
 async def _legacy_sequence_count(source_id: str | None) -> int:
-    method = getattr(neo4j_client, "_legacy_sequence_count", None)
+    method = getattr(graph_client, "_legacy_sequence_count", None)
     if method is not None:
         result = method(source_id)
         if not inspect.isawaitable(result):
-            return int(await neo4j_client.get_sequence_count(source_id))
+            return int(await graph_client.get_sequence_count(source_id))
         return int((await result) or 0)
     # AGE deployments without the legacy helper retain the established count
     # semantics until the Alert-based implementation is provided by the client.
-    return int(await neo4j_client.get_sequence_count(source_id))
+    return int(await graph_client.get_sequence_count(source_id))
 
 
 async def _legacy_cross_category_count(user_id: str | None) -> int:
-    method = getattr(neo4j_client, "_legacy_cross_category_count", None)
+    method = getattr(graph_client, "_legacy_cross_category_count", None)
     if method is not None:
         result = method(user_id)
         if not inspect.isawaitable(result):
-            return int(await neo4j_client.get_cross_category_count(user_id))
+            return int(await graph_client.get_cross_category_count(user_id))
         return int((await result) or 0)
     # See _legacy_sequence_count: preserve behavior until the client exposes
     # a dedicated Alert-based legacy query.
-    return int(await neo4j_client.get_cross_category_count(user_id))
+    return int(await graph_client.get_cross_category_count(user_id))
 
 # Backward-compatible monkeypatch hook used by existing tests.
 compute_factor_vector = _compute_factor_vector
@@ -196,9 +196,9 @@ async def _soc_maybe_attach_decision_pipeline_shadow(
 
 async def _soc_get_security_context_for_analyze(alert_id: str) -> Dict[str, Any]:
     if not _soc_entity_cache_enabled():
-        return cast(Dict[str, Any], await neo4j_client.get_security_context(alert_id))
+        return cast(Dict[str, Any], await graph_client.get_security_context(alert_id))
 
-    flat_context = cast(Dict[str, Any], await neo4j_client.get_security_context(alert_id))
+    flat_context = cast(Dict[str, Any], await graph_client.get_security_context(alert_id))
     split = split_soc_security_context(flat_context)
     if split.cache_key is None:
         return split.recompose_for_current_route()
@@ -441,7 +441,7 @@ async def get_alert_queue():
         """
 
         print("[TRIAGE] Querying AGE for pending alerts...")
-        results = await neo4j_client.run_query(query)
+        results = await graph_client.run_query(query)
         print(f"[TRIAGE] AGE returned {len(results)} results")
 
         alerts = []
@@ -519,7 +519,7 @@ async def analyze_alert(request: ProcessAlertRequest):
         # Step 1: Get full alert details
         # ====================================================================
         with _soc_perf_phase("alert_lookup", route=_perf_route, alert_id=alert_id):
-            alert_data = await neo4j_client.get_alert(alert_id)
+            alert_data = await graph_client.get_alert(alert_id)
 
         if not alert_data:
             raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
@@ -571,7 +571,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             print(f"[GAE] Computing factor vector for {alert_id}...")
             computers = SOCDomainConfig.get_factor_computers()
             if compute_factor_vector is not _compute_factor_vector:
-                f = await compute_factor_vector(alert_data, computers, neo4j_client)
+                f = await compute_factor_vector(alert_data, computers, graph_client)
                 factor_provenance = {
                     name: {
                         "value": float(value),
@@ -582,7 +582,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                 }
             else:
                 f, factor_provenance = await compute_factor_vector_with_provenance(
-                    alert_data, computers, neo4j_client
+                    alert_data, computers, graph_client
                 )
             f_2d = f.reshape(1, -1)  # kept for legacy reference; ProfileScorer uses f.flatten()
 
@@ -670,7 +670,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                     try:
                         from app.services.learning_health import LearningHealthMonitor as _RLHealth
 
-                        _health = await _RLHealth.evaluate(neo4j_client)
+                        _health = await _RLHealth.evaluate(graph_client)
                         _headroom_ratio = float(
                             (_health.get("conservation") or {}).get("headroom") or 0.0
                         )
@@ -747,9 +747,9 @@ async def analyze_alert(request: ProcessAlertRequest):
         ):
             _source_id = alert_data.get('source_location')
             _user_id   = context.get('user_id')
-            _new_seq = await neo4j_client.get_sequence_count(_source_id)
+            _new_seq = await graph_client.get_sequence_count(_source_id)
             _legacy_seq = await _legacy_sequence_count(_source_id)
-            _new_cross = await neo4j_client.get_cross_category_count(_user_id)
+            _new_cross = await graph_client.get_cross_category_count(_user_id)
             _legacy_cross = await _legacy_cross_category_count(_user_id)
             if _new_seq != _legacy_seq:
                 _shadow_log.warning(
@@ -863,7 +863,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             action=selected_action,
             factor_vector_len=len(fv_list),
         ):
-            await neo4j_client.run_query(
+            await graph_client.run_query(
                 f"""
                 MATCH (a:Alert {{alert_id: {_S(alert_id)}}})
                 CREATE (d:Decision {{
@@ -907,7 +907,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             _entry_hash_analyze = _audit_rec_analyze.get("hash", "")
             _chain_index_analyze = _audit_rec_analyze.get("chain_index", -1)
             if _entry_hash_analyze:
-                await neo4j_client.run_query(
+                await graph_client.run_query(
                     f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
                     "WHERE d.domain = 'soc' "
                     f"SET d.entry_hash = {_S(_entry_hash_analyze)}, "
@@ -954,9 +954,9 @@ async def analyze_alert(request: ProcessAlertRequest):
                 )
                 _camp_config = SOCDomainConfig.get_campaign_config()
                 _camp_engine = CampaignCorrelationEngine(_camp_config)
-                _camp_repo = CampaignRepository(neo4j_client)
+                _camp_repo = CampaignRepository(graph_client)
                 _camp_matcher = CampaignMatcher(
-                    neo4j_client, _camp_config, _camp_engine, _camp_repo
+                    graph_client, _camp_config, _camp_engine, _camp_repo
                 )
                 _campaign_id = await _camp_matcher.check_alert(alert_id)
                 _campaign_context_payload, _campaign_context_flags = build_campaign_context_payload(
@@ -978,7 +978,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                     "d.campaign_advisory_version = "
                     f"{_S(_campaign_context_flags.get('campaign_advisory_version'))}"
                 )
-            await neo4j_client.run_query(
+            await graph_client.run_query(
                 f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
                 "WHERE d.domain = 'soc' "
                 f"SET {', '.join(_campaign_set_clauses)}"
@@ -1073,10 +1073,10 @@ async def analyze_alert(request: ProcessAlertRequest):
                     category=alert_category,
                     factor_vector=f.flatten(),
                     decision_position=0.0,
-                    neo4j_service=neo4j_client,
+                    neo4j_service=graph_client,
                 )
                 if _composite["auto_approve"] and not ShadowModeService.SHADOW_ENABLED:
-                    await neo4j_client.run_query(
+                    await graph_client.run_query(
                         f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
                         "WHERE d.domain = 'soc' SET d.auto_approved = true"
                     )
@@ -1199,7 +1199,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                     action=selected_action,
                 ):
                     _meta_ts = int(datetime.utcnow().timestamp() * 1000)
-                    await neo4j_client.run_query(
+                    await graph_client.run_query(
                         f"""
                         MATCH (d:Decision {{decision_id: {_S(decision_id)}}})
                         WHERE d.domain = 'soc'
@@ -1292,7 +1292,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                 _cluster_history = await _get_cluster_history(
                     source_user=context.get("user_id") or alert_data.get("user_id"),
                     current_decision_id=decision_id,
-                    graph_client=neo4j_client,
+                    graph_client=graph_client,
                 )
                 if _cluster_history is not None:
                     _cluster_history_payload = dataclasses.asdict(_cluster_history)
@@ -1476,7 +1476,7 @@ async def execute_action(request: ProcessAlertRequest):
         alert_id = request.alert_id
 
         # Get context for decision trace
-        context = await neo4j_client.get_security_context(alert_id)
+        context = await graph_client.get_security_context(alert_id)
 
         if not context:
             raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
@@ -1527,7 +1527,7 @@ async def execute_action(request: ProcessAlertRequest):
         # Replaces create_decision_trace() which used FOR_ALERT (wrong schema)
         # and had a signature mismatch (category kwarg) that caused TypeError.
         _ts_execute = int(datetime.utcnow().timestamp() * 1000)
-        await neo4j_client.run_query(
+        await graph_client.run_query(
             f"""
             MATCH (a:Alert {{alert_id: {_S(alert_id)}}})
             CREATE (d:Decision {{
@@ -1561,7 +1561,7 @@ async def execute_action(request: ProcessAlertRequest):
         _entry_hash_execute = _audit_rec_execute.get("hash", "")
         _chain_index_execute = _audit_rec_execute.get("chain_index", -1)
         if _entry_hash_execute:
-            await neo4j_client.run_query(
+            await graph_client.run_query(
                 f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
                 "WHERE d.domain = 'soc' "
                 f"SET d.entry_hash = {_S(_entry_hash_execute)}, "
@@ -1581,7 +1581,7 @@ async def execute_action(request: ProcessAlertRequest):
         ))
 
         # Update alert status in Neo4j
-        await neo4j_client.run_query(
+        await graph_client.run_query(
             f"MATCH (alert:Alert {{alert_id: {_S(alert_id)}}}) SET alert.status = 'resolved'"
         )
         await event_bus.emit(GraphMutated(
@@ -1650,7 +1650,7 @@ async def reset_demo_alerts():
         """
 
         print("[TRIAGE] Running Cypher query to reset ALERT- demo alert statuses...")
-        result = await neo4j_client.run_query(query)
+        result = await graph_client.run_query(query)
         reset_count = result[0]["reset_count"] if result else 0
 
         print(f"[TRIAGE] Reset {reset_count} ALERT- demo alerts to 'pending' status")
@@ -1814,7 +1814,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                 was_override=_was_override,
                 metadata={"verified_at": _ts_outcome / 1000.0},
             )
-            gae_result = await neo4j_client.run_query(
+            gae_result = await graph_client.run_query(
                 f"""
                 MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
                 WHERE d.domain = 'soc'
@@ -1857,7 +1857,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                 if _outcome_rec:
                     _oc_hash = _outcome_rec.get("hash", "")
                     _oc_idx = _outcome_rec.get("chain_index", -1)
-                    await neo4j_client.run_query(
+                    await graph_client.run_query(
                         f"MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}}) "
                         "WHERE d.domain = 'soc' "
                         f"SET d.outcome_entry_hash = {_S(_oc_hash)}, "
@@ -1875,7 +1875,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                     alert_id=request.alert_id,
                     decision_id=request.decision_id,
                 ):
-                    _q_rows = await neo4j_client.run_query(
+                    _q_rows = await graph_client.run_query(
                         f"MATCH (d:Decision) "
                         f"WHERE d.domain = 'soc' AND d.verified_by = {_S(analyst_id)} AND d.correct IS NOT NULL "
                         f"RETURN d.correct AS correct"
@@ -2044,7 +2044,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                             category=_resolved_category,
                             action=action_name,
                         ):
-                            _health = await LearningHealthMonitor.evaluate(neo4j_client)
+                            _health = await LearningHealthMonitor.evaluate(graph_client)
                         _eff_status, _eff_reason = _soc_effective_conservation_status(_health)
                         l5_persistence_status["conservation_status"] = _eff_status
                         l5_persistence_status["raw_conservation_status"] = str(
@@ -2322,7 +2322,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                 if wu and wu.centroid_update is not None:
                     cu = wu.centroid_update
                     # Write centroid_delta_norm back to the Decision node
-                    await neo4j_client.run_query(
+                    await graph_client.run_query(
                         f"""
                         MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
                         WHERE d.domain = 'soc'
@@ -2386,7 +2386,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                             _ps_snap = _get_ps_snap()
                             if _ps_snap is not None:
                                 _snap.on_iks_recalculated(
-                                    await _compute_visible_iks(neo4j_client, scorer=_ps_snap)
+                                    await _compute_visible_iks(graph_client, scorer=_ps_snap)
                                 )
                         except Exception as _snap_exc:
                             logger.warning(
@@ -2419,9 +2419,9 @@ async def report_decision_outcome(request: OutcomeRequest):
                         _ph_value = float(fv[4]) if len(fv) > 4 else 0.0
 
                         async def _g1_task():
-                            _cat_dist = await _fetch_cat_dist(neo4j_client)
+                            _cat_dist = await _fetch_cat_dist(graph_client)
                             await _log_dist(
-                                neo4j_client=neo4j_client,
+                                graph_client=graph_client,
                                 decision_id=request.decision_id,
                                 mu=_ps_dist.centroids,
                                 mu_zero=_mu_zero,
@@ -2458,7 +2458,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                             _evo_ts = int(datetime.utcnow().timestamp() * 1000)
                             _evo_dec_num = int(get_learning_state().decision_count)
                             _evo_ph = float(fv[3]) if (isinstance(fv, list) and len(fv) > 3) else 0.4
-                            await neo4j_client.run_query(
+                            await graph_client.run_query(
                                 f"""
                                 MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
                                 WHERE d.domain = 'soc'
@@ -2725,7 +2725,7 @@ _LEGACY_POLICY_CONTEXTS = {
 
 async def _build_policy_context(alert_id: str) -> Dict[str, Any]:
     """Build policy context from graph Alert data; legacy demo IDs are fallback only."""
-    rows = await neo4j_client.run_query(
+    rows = await graph_client.run_query(
         f"""
         MATCH (alert:Alert {{alert_id: {_S(alert_id)}}})
         OPTIONAL MATCH (alert)-[:INVOLVES]->(user:User)
@@ -3072,7 +3072,7 @@ async def get_graph_data(alert_id: str) -> Dict[str, Any]:
     """
 
     try:
-        results = await neo4j_client.run_query(query)
+        results = await graph_client.run_query(query)
 
         if not results:
             return {"nodes": [], "relationships": []}

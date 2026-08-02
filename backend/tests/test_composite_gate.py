@@ -222,7 +222,7 @@ def test_auto_approve_stats_endpoint():
             ]
         return []
 
-    with patch("app.routers.framework_router.neo4j_client") as mock_neo4j:
+    with patch("app.routers.framework_router.graph_client") as mock_neo4j:
         mock_neo4j.run_query = fake_run_query
         client = TestClient(app)
         resp = client.get("/api/soc/auto-approve-stats")
@@ -271,7 +271,7 @@ def test_analyze_includes_composite_gate():
     scorer = _scorer()
     mock_ls = MagicMock()
     mock_ls.decision_count = 10
-    with patch("app.routers.triage.neo4j_client", mock_neo4j), \
+    with patch("app.routers.triage.graph_client", mock_neo4j), \
          patch("app.routers.triage.get_profile_scorer", new=lambda: scorer), \
          patch("app.routers.triage.get_learning_state", return_value=mock_ls):
         client = TestClient(app)

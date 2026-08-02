@@ -74,17 +74,17 @@ def soc_stress_test_graph():
 def soc_triage_harness(tmp_path) -> Iterator[SOCTriageHarness]:
     """Inject one stateful Decision authority into the triage route."""
     previous_scorer = triage.get_profile_scorer
-    previous_client = triage.neo4j_client
+    previous_client = triage.graph_client
     previous_outbox = os.environ.get("CI_PERSISTENCE_OUTBOX_PATH")
     os.environ["CI_PERSISTENCE_OUTBOX_PATH"] = str(tmp_path / "soc-outbox")
     harness = SOCTriageHarness()
     triage.get_profile_scorer = harness.get_scorer
-    triage.neo4j_client = harness.graph_client
+    triage.graph_client = harness.graph_client
     try:
         yield harness
     finally:
         triage.get_profile_scorer = previous_scorer
-        triage.neo4j_client = previous_client
+        triage.graph_client = previous_client
         if previous_outbox is None:
             os.environ.pop("CI_PERSISTENCE_OUTBOX_PATH", None)
         else:

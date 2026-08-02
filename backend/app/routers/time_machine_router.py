@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.db.neo4j import neo4j_client
+from app.db.graph_client import graph_client
 from app.services.time_machine import (
     SnapshotCorruptError,
     SnapshotNotFoundError,
@@ -59,4 +59,4 @@ async def compare_bootstrap_endpoint(snapshot_id: str):
 
 @router.get("/time-machine/timeline")
 async def get_timeline_endpoint():
-    return await get_evolution_timeline(neo4j_client)
+    return await get_evolution_timeline(graph_client)

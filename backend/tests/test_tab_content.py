@@ -1,6 +1,6 @@
 """
 Step 11.1 -- Tab content export endpoint tests.
-All tests mock neo4j_client and service functions -- no live Neo4j required.
+All tests mock graph_client and service functions -- no live Neo4j required.
 """
 import asyncio
 import os
@@ -65,7 +65,7 @@ def _isolated_scorer_graph(monkeypatch):
 # ---------------------------------------------------------------------------
 
 def _neo4j_tab1_mock():
-    """Mock neo4j_client.run_query for Tab 1 queries."""
+    """Mock graph_client.run_query for Tab 1 queries."""
     mock = AsyncMock()
     mock.run_query.side_effect = [
         [{"cnt": 120}],                                          # alert_count
@@ -97,7 +97,7 @@ def test_tab1_returns_content():
     from app.routers.soc import _tab1_content
 
     mock_client = _neo4j_tab1_mock()
-    with patch("app.routers.soc.neo4j_client", mock_client):
+    with patch("app.routers.soc.graph_client", mock_client):
         content = _run(_tab1_content())
 
     assert "alert_count" in content,     "Missing alert_count"
@@ -170,7 +170,7 @@ def test_tab5_returns_narrative_fields():
         "app.services.executive_narrative.build_executive_narrative_async",
         new=AsyncMock(return_value=mock_narrative),
     ):
-        with patch("app.routers.soc.neo4j_client", mock_client_t2):
+        with patch("app.routers.soc.graph_client", mock_client_t2):
             content = _run(_tab5_content())
 
     assert "headline" in content,          "Missing headline"
@@ -219,7 +219,7 @@ def test_tab5_content_includes_sections():
         "app.services.executive_narrative.build_executive_narrative_async",
         new=AsyncMock(return_value=mock_narrative),
     ):
-        with patch("app.routers.soc.neo4j_client", mock_client_t2):
+        with patch("app.routers.soc.graph_client", mock_client_t2):
             content = _run(_tab5_content())
 
     assert "sections" in content
@@ -267,7 +267,7 @@ def test_tab2_has_decision_glossary():
     mock_client.run_query.return_value = [{"cnt": 12}]
 
     with patch("app.services.iks.compute_iks_v2", new=AsyncMock(return_value=mock_iks)):
-        with patch("app.routers.soc.neo4j_client", mock_client):
+        with patch("app.routers.soc.graph_client", mock_client):
             content = _run(_tab2_content())
 
     assert "decision_count_glossary" in content, "Missing decision_count_glossary"
@@ -305,7 +305,7 @@ def test_tab3_has_recommendation_and_kernel_weights():
         [],                # no pending alert -> centroid fallback
     ]
 
-    with patch("app.routers.soc.neo4j_client", mock_client):
+    with patch("app.routers.soc.graph_client", mock_client):
         content = _run(_tab3_content())
 
     assert "recommendation" in content, "Missing recommendation (FIX 2.4)"
@@ -356,7 +356,7 @@ def test_tab4_has_roi_methodology():
         [{"cnt": 180}],  # evolution events (correct decisions)
     ]
 
-    with patch("app.routers.soc.neo4j_client", mock_client):
+    with patch("app.routers.soc.graph_client", mock_client):
         content = _run(_tab4_content())
 
     assert "roi_methodology"        in content, "Missing roi_methodology (FIX 2.6)"
@@ -418,7 +418,7 @@ def test_tab5_has_w2_flywheel_claim():
         "app.services.executive_narrative.build_executive_narrative_async",
         new=AsyncMock(return_value=mock_narrative),
     ):
-        with patch("app.routers.soc.neo4j_client", mock_client):
+        with patch("app.routers.soc.graph_client", mock_client):
             content = _run(_tab5_content())
 
     wsk = content["what_system_knows"]
@@ -440,7 +440,7 @@ def test_tab5_has_w2_flywheel_claim():
         "app.services.executive_narrative.build_executive_narrative_async",
         new=AsyncMock(return_value=mock_narrative),
     ):
-        with patch("app.routers.soc.neo4j_client", mock_client_cold):
+        with patch("app.routers.soc.graph_client", mock_client_cold):
             content_cold = _run(_tab5_content())
 
     wsk_cold = content_cold["what_system_knows"]
@@ -479,7 +479,7 @@ def test_tab5_has_conservation_narrative():
             "app.services.executive_narrative.build_executive_narrative_async",
             new=AsyncMock(return_value=mock_narrative),
         ):
-            with patch("app.routers.soc.neo4j_client", mock_client):
+            with patch("app.routers.soc.graph_client", mock_client):
                 content = _run(_tab5_content())
 
         wsk = content["what_system_knows"]
@@ -524,7 +524,7 @@ def test_tab5_pre_activation_conservation_narrative():
         "app.services.executive_narrative.build_executive_narrative_async",
         new=AsyncMock(return_value=mock_narrative),
     ):
-        with patch("app.routers.soc.neo4j_client", mock_client):
+        with patch("app.routers.soc.graph_client", mock_client):
             content = _run(_tab5_content())
 
     wsk = content["what_system_knows"]
@@ -559,7 +559,7 @@ def test_tab1_alert_types_are_valid_categories():
         [],                                                      # per-category verified (empty ok)
     ]
 
-    with patch("app.routers.soc.neo4j_client", mock_client):
+    with patch("app.routers.soc.graph_client", mock_client):
         content = _run(_tab1_content())
 
     types = [t["type"] for t in content["top_alert_types"]]
@@ -596,7 +596,7 @@ def test_tab5_conservation_has_claim():
         "app.services.executive_narrative.build_executive_narrative_async",
         new=AsyncMock(return_value=mock_narrative),
     ):
-        with patch("app.routers.soc.neo4j_client", mock_client):
+        with patch("app.routers.soc.graph_client", mock_client):
             content = _run(_tab5_content())
 
     narrative = content["what_system_knows"]["conservation_narrative"]
@@ -628,7 +628,7 @@ def test_tab1_analyst_insight_gates_on_verified_count():
         [{"category": "credential_access", "alert_type": None, "n": 42}],
         [{"category": "credential_access", "verified": 150, "overrides": 5}],
     ]
-    with patch("app.routers.soc.neo4j_client", mock_with_decisions):
+    with patch("app.routers.soc.graph_client", mock_with_decisions):
         content_a = _run(_tab1_content())
 
     insight_a = content_a["top_alert_types"][0]["analyst_insight"]
@@ -644,7 +644,7 @@ def test_tab1_analyst_insight_gates_on_verified_count():
         [{"category": "credential_access", "alert_type": None, "n": 42}],
         [{"category": "credential_access", "verified": 0, "overrides": 0}],
     ]
-    with patch("app.routers.soc.neo4j_client", mock_no_decisions):
+    with patch("app.routers.soc.graph_client", mock_no_decisions):
         content_b = _run(_tab1_content())
 
     insight_b = content_b["top_alert_types"][0]["analyst_insight"]
@@ -670,7 +670,7 @@ def test_tab3_kernel_note_names_diagonal_kernel():
         [],
     ]
 
-    with patch("app.routers.soc.neo4j_client", mock_client):
+    with patch("app.routers.soc.graph_client", mock_client):
         content = _run(_tab3_content())
 
     kernel_note = content.get("kernel_note", "")
@@ -709,7 +709,7 @@ def test_tab5_flywheel_preactivation_reframe():
         "app.services.executive_narrative.build_executive_narrative_async",
         new=AsyncMock(return_value=mock_narrative),
     ):
-        with patch("app.routers.soc.neo4j_client", mock_client):
+        with patch("app.routers.soc.graph_client", mock_client):
             content = _run(_tab5_content())
 
     wsk = content["what_system_knows"]
@@ -752,7 +752,7 @@ def test_tab1_microsoft_only_above_threshold():
         [{"category": "malware_execution", "alert_type": None, "n": 30}],
         [{"category": "malware_execution", "verified": 12, "overrides": 1}],
     ]
-    with patch("app.routers.soc.neo4j_client", mock_low):
+    with patch("app.routers.soc.graph_client", mock_low):
         content_low = _run(_tab1_content())
 
     insight_low = content_low["top_alert_types"][0]["analyst_insight"]
@@ -771,7 +771,7 @@ def test_tab1_microsoft_only_above_threshold():
         [{"category": "credential_access", "alert_type": None, "n": 200}],
         [{"category": "credential_access", "verified": 1723, "overrides": 50}],
     ]
-    with patch("app.routers.soc.neo4j_client", mock_high):
+    with patch("app.routers.soc.graph_client", mock_high):
         content_high = _run(_tab1_content())
 
     insight_high = content_high["top_alert_types"][0]["analyst_insight"]
@@ -812,7 +812,7 @@ def test_tab5_centroid_summary_business_language():
         "app.services.executive_narrative.build_executive_narrative_async",
         new=AsyncMock(return_value=mock_narrative),
     ):
-        with patch("app.routers.soc.neo4j_client", mock_client):
+        with patch("app.routers.soc.graph_client", mock_client):
             content = _run(_tab5_content())
 
     summary = content["what_system_knows"]["centroid_summary"]
@@ -842,7 +842,7 @@ def test_tab3_recommendation_has_rationale():
         [],                # override rate query -> falls back to 15.0
     ]
 
-    with patch("app.routers.soc.neo4j_client", mock_client):
+    with patch("app.routers.soc.graph_client", mock_client):
         content = _run(_tab3_content())
 
     rec = content["recommendation"]
@@ -879,7 +879,7 @@ def test_tab5_flywheel_message_plain_english():
         "app.services.executive_narrative.build_executive_narrative_async",
         new=AsyncMock(return_value=mock_narrative),
     ):
-        with patch("app.routers.soc.neo4j_client", mock_client):
+        with patch("app.routers.soc.graph_client", mock_client):
             content = _run(_tab5_content())
 
     wsk = content["what_system_knows"]
@@ -914,7 +914,7 @@ def test_tab5_flywheel_detail_has_technical():
         "app.services.executive_narrative.build_executive_narrative_async",
         new=AsyncMock(return_value=mock_narrative),
     ):
-        with patch("app.routers.soc.neo4j_client", mock_client):
+        with patch("app.routers.soc.graph_client", mock_client):
             content = _run(_tab5_content())
 
     wsk = content["what_system_knows"]
@@ -950,7 +950,7 @@ def test_tab5_what_discovered_has_mechanism():
         "app.services.executive_narrative.build_executive_narrative_async",
         new=AsyncMock(return_value=mock_narrative),
     ):
-        with patch("app.routers.soc.neo4j_client", mock_client):
+        with patch("app.routers.soc.graph_client", mock_client):
             content = _run(_tab5_content())
 
     wd = content["what_discovered"]
@@ -984,7 +984,7 @@ def test_tab2_has_calibration_note():
     mock_client.run_query.return_value = [{"cnt": 12}]
 
     with patch("app.services.iks.compute_iks_v2", new=AsyncMock(return_value=mock_iks)):
-        with patch("app.routers.soc.neo4j_client", mock_client):
+        with patch("app.routers.soc.graph_client", mock_client):
             content = _run(_tab2_content())
 
     assert "calibration_note" in content, "Missing calibration_note (FIX 3C)"
@@ -1419,7 +1419,7 @@ def test_centroid_drift_nonzero_at_high_decisions():
     mock_neo4j.run_query.side_effect = _raise
 
     # Imports inside get_centroid_evolution happen at call time, so patch source modules.
-    with patch("app.routers.framework_router.neo4j_client", mock_neo4j), \
+    with patch("app.routers.framework_router.graph_client", mock_neo4j), \
          patch("app.services.gae_state.get_profile_scorer", return_value=mock_scorer), \
          patch("app.services.gae_state.get_learning_state", return_value=mock_learning_state), \
          patch("app.services.iks._load_mu_zero", return_value=mu_zero_val):

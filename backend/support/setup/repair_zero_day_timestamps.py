@@ -295,13 +295,13 @@ async def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     apply = bool(args.apply)
 
-    from app.db.neo4j import neo4j_client  # noqa: PLC0415
+    from app.db.graph_client import graph_client  # noqa: PLC0415
 
-    await neo4j_client.connect()
+    await graph_client.connect()
     try:
-        await repair_zero_day_timestamps(neo4j_client, apply=apply)
+        await repair_zero_day_timestamps(graph_client, apply=apply)
     finally:
-        await neo4j_client.close()
+        await graph_client.close()
 
 
 if __name__ == "__main__":

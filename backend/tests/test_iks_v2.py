@@ -146,7 +146,7 @@ def test_iks_trend_endpoint():
             return [{"category": "credential_access", "accuracy": 0.88}]
         return []
 
-    with patch("app.routers.soc.neo4j_client") as mock_neo4j:
+    with patch("app.routers.soc.graph_client") as mock_neo4j:
         mock_neo4j.run_query = _fake_run_query
         client = TestClient(app)
         response = client.get("/api/soc/iks-trend")
@@ -183,7 +183,7 @@ def test_learning_state_includes_iks_v2():
             return []
         return []
 
-    with patch("app.routers.soc.neo4j_client") as mock_neo4j:
+    with patch("app.routers.soc.graph_client") as mock_neo4j:
         mock_neo4j.run_query = _fake_run_query
         client = TestClient(app)
         response = client.get("/api/soc/learning-state")

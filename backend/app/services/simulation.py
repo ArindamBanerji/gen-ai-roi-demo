@@ -282,7 +282,7 @@ class SimulationOrchestrator:
         -------
         SimulationResult
         """
-        from app.db.neo4j import neo4j_client
+        from app.db.graph_client import graph_client
         from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
         from app.services.gae_state import get_profile_scorer
         from app.services.situation import analyze_situation
@@ -343,10 +343,10 @@ class SimulationOrchestrator:
 
             # ------------------------------------------------------------------
             # Step 2: Fetch full alert data from Neo4j
-            # (same as POST /api/alert/analyze → neo4j_client.get_alert)
+            # (same as POST /api/alert/analyze → graph_client.get_alert)
             # ------------------------------------------------------------------
             try:
-                alert_data = await neo4j_client.get_alert(alert_id)
+                alert_data = await graph_client.get_alert(alert_id)
             except Exception:
                 alert_data = None
             if alert_data is None:
@@ -360,7 +360,7 @@ class SimulationOrchestrator:
             # (same as POST /api/alert/analyze → analyze_situation)
             # ------------------------------------------------------------------
             try:
-                ctx = await neo4j_client.get_security_context(alert_id)
+                ctx = await graph_client.get_security_context(alert_id)
             except Exception:
                 ctx = None
             if not ctx:
@@ -376,7 +376,7 @@ class SimulationOrchestrator:
             # Step 4: Compute factor vector
             # (same as POST /api/alert/analyze → compute_factor_vector)
             # ------------------------------------------------------------------
-            f      = await compute_factor_vector(alert_data, computers, neo4j_client)
+            f      = await compute_factor_vector(alert_data, computers, graph_client)
             f_2d   = f.reshape(1, -1)
             fv_list = f.flatten().tolist()
 

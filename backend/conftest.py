@@ -84,8 +84,8 @@ def verify_persistent_data(request):
 
     async def _count_persistent() -> int:
         try:
-            from app.db.neo4j import neo4j_client
-            r = await neo4j_client.run_query(
+            from app.db.graph_client import graph_client
+            r = await graph_client.run_query(
                 "MATCH (d:Decision) WHERE d.origin = 'zero_day_synthetic' "
                 "AND d.correct IS NOT NULL "
                 "RETURN count(d) AS n"

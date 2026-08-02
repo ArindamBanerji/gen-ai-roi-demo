@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { collectConsoleErrors, expectNoConsoleErrors } from './helpers';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -811,19 +812,10 @@ test.describe('API contract – narrative and misc', () => {
 
 test.describe('Error and edge cases', () => {
   test('no console errors on initial page load', async ({ page }) => {
-    const errors: string[] = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') errors.push(msg.text());
-    });
+    const errors = collectConsoleErrors(page);
     await page.goto(FRONTEND);
     await page.waitForLoadState('networkidle');
-    // Filter out known benign errors (favicon 404, extensions)
-    const serious = errors.filter(e =>
-      !e.includes('favicon') &&
-      !e.includes('chrome-extension') &&
-      !e.includes('net::ERR_')
-    );
-    expect(serious).toHaveLength(0);
+    expectNoConsoleErrors(errors);
   });
 
   test('page title contains "SOC" or "Copilot"', async ({ page }) => {

@@ -18,29 +18,29 @@ import asyncio
 import sys
 from dotenv import load_dotenv
 
-# Load .env BEFORE importing neo4j_client (it reads os.getenv at import time)
+# Load .env BEFORE importing graph_client (it reads os.getenv at import time)
 load_dotenv()
 
-from app.db.neo4j import neo4j_client
+from app.db.graph_client import graph_client
 
 
 async def seed_data():
     """Seed Neo4j with sample security graph data"""
 
     print("[OK] Connecting to Neo4j...")
-    await neo4j_client.connect()
+    await graph_client.connect()
 
     _dry_run = "--dry-run" in sys.argv
     if _dry_run:
         print("[OK] --dry-run: skipping DETACH DELETE")
         return
     print("[OK] Clearing existing data...")
-    await neo4j_client.run_query("MATCH (n) DETACH DELETE n")
+    await graph_client.run_query("MATCH (n) DETACH DELETE n")
 
     print("[OK] Creating sample data...")
 
     # Create Asset nodes
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         CREATE (:Asset {
             id: 'LAPTOP-JSMITH',
             hostname: 'LAPTOP-JSMITH',
@@ -53,7 +53,7 @@ async def seed_data():
     """)
 
     # Create User nodes (LOW risk score for demo - travel scenario)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         CREATE (:User {
             id: 'jsmith@company.com',
             name: 'John Smith',
@@ -67,7 +67,7 @@ async def seed_data():
     print("  [OK] Created user: John Smith (risk_score: 0.25)")
 
     # Create TravelContext
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (user:User {id: 'jsmith@company.com'})
         CREATE (travel:TravelContext {
             id: 'TRAVEL-001',
@@ -81,7 +81,7 @@ async def seed_data():
     """)
 
     # Create AlertType
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         CREATE (:AlertType {
             id: 'anomalous_login',
             name: 'Anomalous Login',
@@ -92,7 +92,7 @@ async def seed_data():
     """)
 
     # Create AttackPattern
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         CREATE (:AttackPattern {
             id: 'PAT-TRAVEL-001',
             name: 'Travel False Positive',
@@ -104,7 +104,7 @@ async def seed_data():
     """)
 
     # Create Playbook
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         CREATE (:Playbook {
             id: 'PB-LOGIN-FP',
             name: 'Login False Positive Closure',
@@ -116,7 +116,7 @@ async def seed_data():
     """)
 
     # Create SLA
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'LAPTOP-JSMITH'})
         CREATE (sla:SLA {
             id: 'SLA-MEDIUM',
@@ -128,7 +128,7 @@ async def seed_data():
     """)
 
     # Create Alert ALERT-7823 (THE DEMO ALERT)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'LAPTOP-JSMITH'})
         MATCH (user:User {id: 'jsmith@company.com'})
         MATCH (alertType:AlertType {id: 'anomalous_login'})
@@ -161,14 +161,14 @@ async def seed_data():
     """)
 
     # Create Playbook relationship
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (alertType:AlertType {id: 'anomalous_login'})
         MATCH (playbook:Playbook {id: 'PB-LOGIN-FP'})
         CREATE (alertType)-[:HANDLED_BY]->(playbook)
     """)
 
     # Create User->Asset assignment
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (user:User {id: 'jsmith@company.com'})
         MATCH (asset:Asset {id: 'LAPTOP-JSMITH'})
         CREATE (user)-[:ASSIGNED_TO]->(asset)
@@ -181,7 +181,7 @@ async def seed_data():
     print("  [OK] Creating additional alerts for queue...")
 
     # Create additional users and assets for variety
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         CREATE (:User {
             id: 'alee@company.com',
             name: 'Alice Lee',
@@ -241,7 +241,7 @@ async def seed_data():
     """)
 
     # Create phishing alert type
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         CREATE (:AlertType {
             id: 'phishing',
             name: 'Phishing Attempt',
@@ -252,7 +252,7 @@ async def seed_data():
     """)
 
     # Create PAT-PHISH-KNOWN pattern (for ALERT-7824)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         CREATE (:AttackPattern {
             id: 'PAT-PHISH-KNOWN',
             name: 'Known Phishing Campaign',
@@ -264,7 +264,7 @@ async def seed_data():
     """)
 
     # Create PhishingCampaign node
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         CREATE (:PhishingCampaign {
             id: 'CAMP-2024-0142',
             name: 'Operation DarkHook',
@@ -276,7 +276,7 @@ async def seed_data():
     """)
 
     # Create PB-PHISH-AUTO playbook
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (alertType:AlertType {id: 'phishing'})
         CREATE (playbook:Playbook {
             id: 'PB-PHISH-AUTO',
@@ -290,7 +290,7 @@ async def seed_data():
     """)
 
     # ALERT-7822: Phishing (high severity)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'LAPTOP-ALEE'})
         MATCH (user:User {id: 'alee@company.com'})
         MATCH (alertType:AlertType {id: 'phishing'})
@@ -320,7 +320,7 @@ async def seed_data():
     """)
 
     # Create malware alert type
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         CREATE (:AlertType {
             id: 'malware_detection',
             name: 'Malware Detection',
@@ -331,7 +331,7 @@ async def seed_data():
     """)
 
     # ALERT-7821: Malware (critical severity)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'SRV-DB-PROD-01'})
         MATCH (user:User {id: 'mchen@company.com'})
         MATCH (alertType:AlertType {id: 'malware_detection'})
@@ -360,7 +360,7 @@ async def seed_data():
     """)
 
     # ALERT-7820: Another anomalous login (low severity)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'LAPTOP-ALEE'})
         MATCH (user:User {id: 'alee@company.com'})
         MATCH (alertType:AlertType {id: 'anomalous_login'})
@@ -389,7 +389,7 @@ async def seed_data():
     """)
 
     # ALERT-7819: Another phishing (medium severity)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'LAPTOP-JSMITH'})
         MATCH (user:User {id: 'jsmith@company.com'})
         MATCH (alertType:AlertType {id: 'phishing'})
@@ -418,7 +418,7 @@ async def seed_data():
     """)
 
     # ALERT-7824: Known phishing campaign (HIGH severity - for Prompt 5C)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'LAPTOP-MARYCHEN'})
         MATCH (user:User {id: 'marychen@company.com'})
         MATCH (alertType:AlertType {id: 'phishing'})
@@ -461,21 +461,21 @@ async def seed_data():
     print("  [OK] Creating Travel/VPN alerts (F2a Category 1)...")
 
     # New users
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'rjones@company.com'})
         SET u.name = 'Robert Jones', u.department = 'Sales',
             u.title = 'Sales Director', u.risk_score = 0.45,
             u.is_privileged = false
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'agarcia@company.com'})
         SET u.name = 'Ana Garcia', u.department = 'Marketing',
             u.title = 'Marketing Manager', u.risk_score = 0.30,
             u.is_privileged = false
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'kpatel@company.com'})
         SET u.name = 'Kavita Patel', u.department = 'Finance',
             u.title = 'CFO', u.risk_score = 0.90,
@@ -483,21 +483,21 @@ async def seed_data():
     """)
 
     # New assets
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'LAPTOP-RJONES'})
         SET a.hostname = 'LAPTOP-RJONES', a.type = 'endpoint',
             a.criticality = 'medium', a.business_unit = 'Sales',
             a.os = 'Windows 11', a.owner_id = 'rjones@company.com'
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'LAPTOP-AGARCIA'})
         SET a.hostname = 'LAPTOP-AGARCIA', a.type = 'endpoint',
             a.criticality = 'low', a.business_unit = 'Marketing',
             a.os = 'MacOS', a.owner_id = 'agarcia@company.com'
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'DESKTOP-KPATEL'})
         SET a.hostname = 'DESKTOP-KPATEL', a.type = 'endpoint',
             a.criticality = 'high', a.business_unit = 'Finance',
@@ -505,21 +505,21 @@ async def seed_data():
     """)
 
     # New attack patterns
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (p:AttackPattern {id: 'PAT-TRAVEL-002'})
         SET p.name = 'Travel Login After Hours',
             p.description = 'Login from travel location during late hours',
             p.fp_rate = 0.30, p.occurrence_count = 43, p.confidence = 0.78
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (p:AttackPattern {id: 'PAT-TRAVEL-003'})
         SET p.name = 'Travel Login Business Hours',
             p.description = 'Login from travel location during business hours',
             p.fp_rate = 0.55, p.occurrence_count = 8, p.confidence = 0.55
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (p:AttackPattern {id: 'PAT-TRAVEL-004'})
         SET p.name = 'VIP After Hours Login',
             p.description = 'Executive login from unusual location at late hours',
@@ -527,7 +527,7 @@ async def seed_data():
     """)
 
     # ALERT-7830: Tokyo / rjones (medium)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'LAPTOP-RJONES'})
         MATCH (user:User {id: 'rjones@company.com'})
         MATCH (alertType:AlertType {id: 'anomalous_login'})
@@ -556,7 +556,7 @@ async def seed_data():
     """)
 
     # ALERT-7835: London / agarcia (low)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'LAPTOP-AGARCIA'})
         MATCH (user:User {id: 'agarcia@company.com'})
         MATCH (alertType:AlertType {id: 'anomalous_login'})
@@ -586,7 +586,7 @@ async def seed_data():
 
     # ALERT-7841: Singapore / jsmith (high — no MFA, new device)
     # Reuses existing jsmith User + LAPTOP-JSMITH Asset + PAT-TRAVEL-001
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'LAPTOP-JSMITH'})
         MATCH (user:User {id: 'jsmith@company.com'})
         MATCH (alertType:AlertType {id: 'anomalous_login'})
@@ -615,7 +615,7 @@ async def seed_data():
     """)
 
     # ALERT-7845: Dubai / kpatel (medium — CFO, 2 AM)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'DESKTOP-KPATEL'})
         MATCH (user:User {id: 'kpatel@company.com'})
         MATCH (alertType:AlertType {id: 'anomalous_login'})
@@ -654,35 +654,35 @@ async def seed_data():
 
     # --- New AlertTypes ---
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (at:AlertType {id: 'brute_force'})
         SET at.name = 'Brute Force Attack',
             at.description = 'Repeated failed authentication attempts',
             at.severity = 'high', at.mitre_technique = 'T1110'
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (at:AlertType {id: 'privilege_escalation'})
         SET at.name = 'Privilege Escalation',
             at.description = 'Unauthorized elevation of user privileges',
             at.severity = 'critical', at.mitre_technique = 'T1098'
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (at:AlertType {id: 'credential_stuffing'})
         SET at.name = 'Credential Stuffing',
             at.description = 'Automated use of breached credentials against a target',
             at.severity = 'high', at.mitre_technique = 'T1110'
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (at:AlertType {id: 'c2_beacon'})
         SET at.name = 'C2 Beacon',
             at.description = 'Outbound communication to known command-and-control infrastructure',
             at.severity = 'critical', at.mitre_technique = 'T1071'
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (at:AlertType {id: 'threat_intel_match'})
         SET at.name = 'Threat Intel Match',
             at.description = 'Indicator matches active threat intelligence feed',
@@ -691,7 +691,7 @@ async def seed_data():
 
     # --- New Playbooks + HANDLED_BY ---
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (pb:Playbook {id: 'PB-BRUTE-001'})
         SET pb.name = 'Brute Force Response',
             pb.description = 'Lock account and escalate repeated auth failures',
@@ -703,7 +703,7 @@ async def seed_data():
         MERGE (at)-[:HANDLED_BY]->(pb)
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (pb:Playbook {id: 'PB-ESCALATE-001'})
         SET pb.name = 'Privilege Escalation Incident',
             pb.description = 'Revoke access and open IR ticket for privilege abuse',
@@ -715,7 +715,7 @@ async def seed_data():
         MERGE (at)-[:HANDLED_BY]->(pb)
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (pb:Playbook {id: 'PB-CREDSTUFF-001'})
         SET pb.name = 'Credential Stuffing Block',
             pb.description = 'Rate-limit and block sources of credential stuffing',
@@ -727,7 +727,7 @@ async def seed_data():
         MERGE (at)-[:HANDLED_BY]->(pb)
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (pb:Playbook {id: 'PB-INCIDENT-001'})
         SET pb.name = 'C2 Isolation Incident',
             pb.description = 'Isolate host and block C2 domain, open IR ticket',
@@ -739,7 +739,7 @@ async def seed_data():
         MERGE (at)-[:HANDLED_BY]->(pb)
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (pb:Playbook {id: 'PB-THREATINTEL-001'})
         SET pb.name = 'Threat Intel Remediation',
             pb.description = 'Quarantine and search for additional exposure',
@@ -753,35 +753,35 @@ async def seed_data():
 
     # --- New AttackPatterns ---
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (p:AttackPattern {id: 'PAT-BRUTE-001'})
         SET p.name = 'Brute Force Service Account',
             p.description = 'High-volume failed logins against a service account',
             p.fp_rate = 0.05, p.occurrence_count = 47, p.confidence = 0.88
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (p:AttackPattern {id: 'PAT-PRIVESC-001'})
         SET p.name = 'Unauthorized Privilege Escalation',
             p.description = 'Group membership change outside approved change window',
             p.fp_rate = 0.03, p.occurrence_count = 3, p.confidence = 0.92
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (p:AttackPattern {id: 'PAT-CREDSTUFF-001'})
         SET p.name = 'Credential Stuffing External',
             p.description = 'Large volume of unique credentials tested against a gateway',
             p.fp_rate = 0.02, p.occurrence_count = 312, p.confidence = 0.95
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (p:AttackPattern {id: 'PAT-C2-001'})
         SET p.name = 'C2 Beacon Cobaltstrike',
             p.description = 'Periodic outbound beacon matching known C2 profile',
             p.fp_rate = 0.01, p.occurrence_count = 5, p.confidence = 0.97
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (p:AttackPattern {id: 'PAT-APT-001'})
         SET p.name = 'APT Campaign Indicator Match',
             p.description = 'Sender or URL matches active APT campaign indicator feed',
@@ -790,35 +790,35 @@ async def seed_data():
 
     # --- New Users ---
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'svc-backup@system'})
         SET u.name = 'svc-backup', u.department = 'IT',
             u.title = 'Service Account', u.risk_score = 0.65,
             u.is_privileged = false
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'mwilson@company.com'})
         SET u.name = 'Mike Wilson', u.department = 'Engineering',
             u.title = 'Junior Developer', u.risk_score = 0.55,
             u.is_privileged = false
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'multiple@external'})
         SET u.name = 'multiple', u.department = 'External',
             u.title = 'External Attacker', u.risk_score = 0.75,
             u.is_privileged = false
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'unknown@external'})
         SET u.name = 'unknown', u.department = 'External',
             u.title = 'Unknown', u.risk_score = 0.95,
             u.is_privileged = false
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'tjiang@company.com'})
         SET u.name = 'Tom Jiang', u.department = 'Finance',
             u.title = 'Finance Analyst', u.risk_score = 0.60,
@@ -827,35 +827,35 @@ async def seed_data():
 
     # --- New Assets ---
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'SRV-BACKUP-01'})
         SET a.hostname = 'SRV-BACKUP-01', a.type = 'server',
             a.criticality = 'high', a.business_unit = 'IT',
             a.os = 'Ubuntu 22.04', a.owner_id = 'svc-backup@system'
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'LAPTOP-MWILSON'})
         SET a.hostname = 'LAPTOP-MWILSON', a.type = 'endpoint',
             a.criticality = 'medium', a.business_unit = 'Engineering',
             a.os = 'Windows 11', a.owner_id = 'mwilson@company.com'
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'VPN-GATEWAY-01'})
         SET a.hostname = 'VPN-GATEWAY-01', a.type = 'network',
             a.criticality = 'critical', a.business_unit = 'IT',
             a.os = 'Palo Alto PAN-OS', a.owner_id = 'mchen@company.com'
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'SRV-WEB-03'})
         SET a.hostname = 'SRV-WEB-03', a.type = 'server',
             a.criticality = 'critical', a.business_unit = 'IT',
             a.os = 'Ubuntu 22.04', a.owner_id = 'mchen@company.com'
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'LAPTOP-TJIANG'})
         SET a.hostname = 'LAPTOP-TJIANG', a.type = 'endpoint',
             a.criticality = 'medium', a.business_unit = 'Finance',
@@ -863,7 +863,7 @@ async def seed_data():
     """)
 
     # --- ALERT-7831: Brute Force / svc-backup (high) ---
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'SRV-BACKUP-01'})
         MATCH (user:User {id: 'svc-backup@system'})
         MATCH (alertType:AlertType {id: 'brute_force'})
@@ -894,7 +894,7 @@ async def seed_data():
     """)
 
     # --- ALERT-7836: Privilege Escalation / mwilson (critical) ---
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'LAPTOP-MWILSON'})
         MATCH (user:User {id: 'mwilson@company.com'})
         MATCH (alertType:AlertType {id: 'privilege_escalation'})
@@ -925,7 +925,7 @@ async def seed_data():
     """)
 
     # --- ALERT-7842: Credential Stuffing / multiple / VPN-GATEWAY (high) ---
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'VPN-GATEWAY-01'})
         MATCH (user:User {id: 'multiple@external'})
         MATCH (alertType:AlertType {id: 'credential_stuffing'})
@@ -956,7 +956,7 @@ async def seed_data():
     """)
 
     # --- ALERT-7825: C2 Beacon / unknown / SRV-WEB-03 (critical) ---
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'SRV-WEB-03'})
         MATCH (user:User {id: 'unknown@external'})
         MATCH (alertType:AlertType {id: 'c2_beacon'})
@@ -987,7 +987,7 @@ async def seed_data():
     """)
 
     # --- ALERT-7832: Threat Intel Match / tjiang (high) ---
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'LAPTOP-TJIANG'})
         MATCH (user:User {id: 'tjiang@company.com'})
         MATCH (alertType:AlertType {id: 'threat_intel_match'})
@@ -1028,28 +1028,28 @@ async def seed_data():
 
     # --- New AlertTypes ---
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (at:AlertType {id: 'data_exfil'})
         SET at.name = 'Data Exfiltration',
             at.description = 'Unusual volume of data transferred to external destination',
             at.severity = 'critical', at.mitre_technique = 'T1048'
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (at:AlertType {id: 'anomalous_behavior'})
         SET at.name = 'Anomalous Behavior',
             at.description = 'Activity deviating significantly from established baseline',
             at.severity = 'medium', at.mitre_technique = 'T1071'
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (at:AlertType {id: 'insider_threat'})
         SET at.name = 'Insider Threat',
             at.description = 'Suspicious data collection activity by internal user',
             at.severity = 'high', at.mitre_technique = 'T1048'
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (at:AlertType {id: 'cloud_config'})
         SET at.name = 'Cloud Misconfiguration',
             at.description = 'Cloud resource configuration change that introduces risk',
@@ -1058,7 +1058,7 @@ async def seed_data():
 
     # --- New Playbooks + HANDLED_BY ---
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (pb:Playbook {id: 'PB-EXFIL-001'})
         SET pb.name = 'Data Exfiltration Response',
             pb.description = 'Block connection and escalate to IR for data loss',
@@ -1070,7 +1070,7 @@ async def seed_data():
         MERGE (at)-[:HANDLED_BY]->(pb)
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (pb:Playbook {id: 'PB-BEHAVIOR-001'})
         SET pb.name = 'Anomalous Behavior Monitor',
             pb.description = 'Enrich with context and escalate if confirmed',
@@ -1082,7 +1082,7 @@ async def seed_data():
         MERGE (at)-[:HANDLED_BY]->(pb)
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (pb:Playbook {id: 'PB-INSIDER-001'})
         SET pb.name = 'Insider Threat Preservation',
             pb.description = 'Preserve evidence and notify HR/Legal before acting',
@@ -1094,7 +1094,7 @@ async def seed_data():
         MERGE (at)-[:HANDLED_BY]->(pb)
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (pb:Playbook {id: 'PB-CLOUD-001'})
         SET pb.name = 'Cloud Config Remediation',
             pb.description = 'Revert misconfiguration and audit access',
@@ -1108,35 +1108,35 @@ async def seed_data():
 
     # --- New AttackPatterns ---
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (p:AttackPattern {id: 'PAT-EXFIL-001'})
         SET p.name = 'Large Upload After Hours',
             p.description = 'Bulk data upload to external service outside business hours',
             p.fp_rate = 0.05, p.occurrence_count = 7, p.confidence = 0.91
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (p:AttackPattern {id: 'PAT-DNS-001'})
         SET p.name = 'Anomalous DNS Query Volume',
             p.description = 'DNS query rate significantly above user baseline',
             p.fp_rate = 0.15, p.occurrence_count = 15, p.confidence = 0.72
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (p:AttackPattern {id: 'PAT-INSIDER-001'})
         SET p.name = 'Departing Employee Mass Download',
             p.description = 'High-volume file collection shortly before departure',
             p.fp_rate = 0.08, p.occurrence_count = 4, p.confidence = 0.87
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (p:AttackPattern {id: 'PAT-CLOUD-001'})
         SET p.name = 'S3 Public Access Change',
             p.description = 'Cloud storage ACL changed to allow public read',
             p.fp_rate = 0.04, p.occurrence_count = 9, p.confidence = 0.83
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (p:AttackPattern {id: 'PAT-CLOUD-002'})
         SET p.name = 'Service Principal Owner Grant',
             p.description = 'Unexpected Owner role assigned to automation principal',
@@ -1145,28 +1145,28 @@ async def seed_data():
 
     # --- New Users (jsmith reused from existing data) ---
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'lchen@company.com'})
         SET u.name = 'Lisa Chen', u.department = 'Data Science',
             u.title = 'Data Scientist', u.risk_score = 0.40,
             u.is_privileged = false
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'rwang@company.com'})
         SET u.name = 'Richard Wang', u.department = 'Engineering',
             u.title = 'Departing Employee', u.risk_score = 0.80,
             u.is_privileged = false
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'system@automated'})
         SET u.name = 'system', u.department = 'IT',
             u.title = 'Automated Process', u.risk_score = 0.70,
             u.is_privileged = false
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'devops-pipeline@system'})
         SET u.name = 'devops-pipeline', u.department = 'DevOps',
             u.title = 'Service Principal', u.risk_score = 0.50,
@@ -1175,28 +1175,28 @@ async def seed_data():
 
     # --- New Assets (LAPTOP-JSMITH reused from existing data) ---
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'WORKSTATION-LCHEN'})
         SET a.hostname = 'WORKSTATION-LCHEN', a.type = 'endpoint',
             a.criticality = 'medium', a.business_unit = 'Data Science',
             a.os = 'Ubuntu 22.04', a.owner_id = 'lchen@company.com'
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'LAPTOP-RWANG'})
         SET a.hostname = 'LAPTOP-RWANG', a.type = 'endpoint',
             a.criticality = 'medium', a.business_unit = 'Engineering',
             a.os = 'Windows 11', a.owner_id = 'rwang@company.com'
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'AWS-PROD-ACCOUNT'})
         SET a.hostname = 'AWS-PROD-ACCOUNT', a.type = 'cloud',
             a.criticality = 'critical', a.business_unit = 'IT',
             a.os = 'AWS', a.owner_id = 'system@automated'
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'AZURE-SUB-PROD'})
         SET a.hostname = 'AZURE-SUB-PROD', a.type = 'cloud',
             a.criticality = 'high', a.business_unit = 'DevOps',
@@ -1205,7 +1205,7 @@ async def seed_data():
 
     # --- ALERT-7826: Data Exfil / jsmith / LAPTOP-JSMITH (critical, P1) ---
     # Reuses existing jsmith User + LAPTOP-JSMITH Asset
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'LAPTOP-JSMITH'})
         MATCH (user:User {id: 'jsmith@company.com'})
         MATCH (alertType:AlertType {id: 'data_exfil'})
@@ -1236,7 +1236,7 @@ async def seed_data():
     """)
 
     # --- ALERT-7833: Anomalous Behavior / lchen (medium, P2) ---
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'WORKSTATION-LCHEN'})
         MATCH (user:User {id: 'lchen@company.com'})
         MATCH (alertType:AlertType {id: 'anomalous_behavior'})
@@ -1267,7 +1267,7 @@ async def seed_data():
     """)
 
     # --- ALERT-7838: Insider Threat / rwang (high, P2) ---
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'LAPTOP-RWANG'})
         MATCH (user:User {id: 'rwang@company.com'})
         MATCH (alertType:AlertType {id: 'insider_threat'})
@@ -1297,7 +1297,7 @@ async def seed_data():
     """)
 
     # --- ALERT-7827: Cloud Config / system / AWS-PROD-ACCOUNT (high, P1) ---
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'AWS-PROD-ACCOUNT'})
         MATCH (user:User {id: 'system@automated'})
         MATCH (alertType:AlertType {id: 'cloud_config'})
@@ -1329,7 +1329,7 @@ async def seed_data():
 
     # --- ALERT-7834: Cloud Config / devops-pipeline / AZURE-SUB-PROD (medium, P2) ---
     # Reuses PB-CLOUD-001 playbook (wired to cloud_config AlertType above)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MATCH (asset:Asset {id: 'AZURE-SUB-PROD'})
         MATCH (user:User {id: 'devops-pipeline@system'})
         MATCH (alertType:AlertType {id: 'cloud_config'})
@@ -1376,7 +1376,7 @@ async def seed_data():
     # Ensure ALL ThreatIntel nodes (including those from seed_simulation_alerts)
     # carry the ThreatIndicator label so ThreatIndicatorService queries work.
     # Idempotent — nodes already labelled are unaffected.
-    await neo4j_client.run_query("MATCH (ti:ThreatIntel) SET ti:ThreatIndicator")
+    await graph_client.run_query("MATCH (ti:ThreatIntel) SET ti:ThreatIndicator")
 
     print("[SUCCESS] Sample data created successfully!")
     print("\nCreated:")
@@ -1406,7 +1406,7 @@ async def seed_data():
     print("  - ALERT-7823 -> FALSE_POSITIVE_CLOSE (travel scenario)")
     print("  - ALERT-7824 -> AUTO_REMEDIATE (known phishing campaign)")
 
-    await neo4j_client.close()
+    await graph_client.close()
 
 
 async def _seed_gae_factor_data():
@@ -1423,7 +1423,7 @@ async def _seed_gae_factor_data():
     # The existing TravelContext nodes remain; TravelRecord is the new label.
     # ========================================================================
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'jsmith@company.com'})
         MERGE (t:TravelRecord {id: 'TR-JSMITH-SGP-001'})
         SET t.destination  = 'Singapore',
@@ -1433,7 +1433,7 @@ async def _seed_gae_factor_data():
         MERGE (u)-[:HAS_TRAVEL]->(t)
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'rjones@company.com'})
         MERGE (t:TravelRecord {id: 'TR-RJONES-TYO-001'})
         SET t.destination  = 'Tokyo',
@@ -1443,7 +1443,7 @@ async def _seed_gae_factor_data():
         MERGE (u)-[:HAS_TRAVEL]->(t)
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'agarcia@company.com'})
         MERGE (t:TravelRecord {id: 'TR-AGARCIA-LON-001'})
         SET t.destination  = 'London',
@@ -1453,7 +1453,7 @@ async def _seed_gae_factor_data():
         MERGE (u)-[:HAS_TRAVEL]->(t)
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'kpatel@company.com'})
         MERGE (t:TravelRecord {id: 'TR-KPATEL-DXB-001'})
         SET t.destination  = 'Dubai',
@@ -1469,7 +1469,7 @@ async def _seed_gae_factor_data():
     # DataClass nodes — required by AssetCriticalityFactor ([:STORES])
     # ========================================================================
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'LAPTOP-JSMITH'})
         MERGE (dc:DataClass {id: 'DC-FINANCE-REPORTS'})
         SET dc.name           = 'Finance Reports',
@@ -1478,7 +1478,7 @@ async def _seed_gae_factor_data():
         MERGE (a)-[:STORES]->(dc)
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'SRV-DB-PROD-01'})
         MERGE (dc:DataClass {id: 'DC-CUSTOMER-PII'})
         SET dc.name           = 'Customer PII',
@@ -1487,7 +1487,7 @@ async def _seed_gae_factor_data():
         MERGE (a)-[:STORES]->(dc)
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'LAPTOP-MARYCHEN'})
         MERGE (dc:DataClass {id: 'DC-ENG-DOCS'})
         SET dc.name           = 'Engineering Documentation',
@@ -1496,7 +1496,7 @@ async def _seed_gae_factor_data():
         MERGE (a)-[:STORES]->(dc)
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'LAPTOP-ALEE'})
         MERGE (dc:DataClass {id: 'DC-SOURCE-CODE'})
         SET dc.name           = 'Source Code',
@@ -1512,7 +1512,7 @@ async def _seed_gae_factor_data():
     # ========================================================================
 
     # ALERT-7824: DarkHook phishing campaign — 2 corroborating sources
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (ti:ThreatIntel {id: 'TI-DARKHOOK-001'})
         SET ti.name      = 'DarkHook Phishing Campaign',
             ti.severity  = 'high',
@@ -1524,7 +1524,7 @@ async def _seed_gae_factor_data():
         MERGE (ti)-[:ASSOCIATED_WITH]->(a)
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (ti:ThreatIntel {id: 'TI-DARKHOOK-002'})
         SET ti.name      = 'DarkHook URL Indicator',
             ti.severity  = 'high',
@@ -1537,7 +1537,7 @@ async def _seed_gae_factor_data():
     """)
 
     # ALERT-7821: Malware on production server — 1 source
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (ti:ThreatIntel {id: 'TI-MALWARE-001'})
         SET ti.name      = 'Cobalt Strike Implant Signature',
             ti.severity  = 'critical',
@@ -1550,7 +1550,7 @@ async def _seed_gae_factor_data():
     """)
 
     # ALERT-7825: C2 beacon — 2 corroborating sources
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (ti:ThreatIntel {id: 'TI-C2-001'})
         SET ti.name      = 'Cobalt Strike C2 Domain',
             ti.severity  = 'critical',
@@ -1562,7 +1562,7 @@ async def _seed_gae_factor_data():
         MERGE (ti)-[:ASSOCIATED_WITH]->(a)
     """)
 
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (ti:ThreatIntel {id: 'TI-C2-002'})
         SET ti.name      = 'Known C2 Infrastructure IP',
             ti.severity  = 'critical',
@@ -1575,7 +1575,7 @@ async def _seed_gae_factor_data():
     """)
 
     # Add ThreatIndicator label so ThreatIndicatorService queries work on seeded nodes
-    await neo4j_client.run_query("MATCH (ti:ThreatIntel) SET ti:ThreatIndicator")
+    await graph_client.run_query("MATCH (ti:ThreatIntel) SET ti:ThreatIndicator")
 
     print("  [GAE-OK] ThreatIntel nodes + [:ASSOCIATED_WITH] edges: ALERT-7824, ALERT-7821, ALERT-7825")
 
@@ -1598,7 +1598,7 @@ async def _seed_gae_factor_data():
         ("ALERT-7845", False),   # 22:30 -- after hours
     ]
     for alert_id, bhl in bhl_values:
-        await neo4j_client.run_query(
+        await graph_client.run_query(
             "MATCH (a:Alert {id: $id}) SET a.business_hours_login = $bhl",
             {"id": alert_id, "bhl": bhl},
         )
@@ -1611,7 +1611,7 @@ async def _seed_gae_factor_data():
     if realistic:
         print("[SEED-2] Running realistic seed (200+ users)...")
         from app.scripts.seed_realistic import seed_realistic
-        await seed_realistic(neo4j_client)
+        await seed_realistic(graph_client)
         print("[SEED-2] Realistic seed complete.")
 
 

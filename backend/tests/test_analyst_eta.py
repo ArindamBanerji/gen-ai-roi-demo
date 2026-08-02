@@ -30,7 +30,7 @@ def _run(coro):
 # ---------------------------------------------------------------------------
 
 def _mock_neo4j(rows):
-    """Return an AsyncMock neo4j_client whose run_query yields `rows`."""
+    """Return an AsyncMock graph_client whose run_query yields `rows`."""
     mock = AsyncMock()
     mock.run_query.return_value = rows
     return mock

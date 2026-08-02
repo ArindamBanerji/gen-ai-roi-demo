@@ -71,8 +71,8 @@ def test_unclassified_alert_is_not_scored(monkeypatch):
         raise AssertionError("compute_factor_vector should not run for unclassified alert")
 
     monkeypatch.setattr("app.services.gae_state.get_profile_scorer", lambda: DummyScorer())
-    monkeypatch.setattr(triage.neo4j_client, "get_alert", fake_get_alert)
-    monkeypatch.setattr(triage.neo4j_client, "get_security_context", fake_context)
+    monkeypatch.setattr(triage.graph_client, "get_alert", fake_get_alert)
+    monkeypatch.setattr(triage.graph_client, "get_security_context", fake_context)
     monkeypatch.setattr(triage, "compute_factor_vector", fail_factor_vector)
 
     with pytest.raises(HTTPException) as exc:
@@ -136,7 +136,7 @@ def test_tab3_unclassified_alert_skips_live_and_baseline_scorers(monkeypatch):
     fake_client = FakeNeo4jClient()
     monkeypatch.setattr("app.services.gae_state.get_profile_scorer", lambda: DummyLiveScorer())
     monkeypatch.setattr(soc, "_get_baseline_scorer", fail_baseline_scorer)
-    monkeypatch.setattr(soc, "neo4j_client", fake_client)
+    monkeypatch.setattr(soc, "graph_client", fake_client)
 
     content = asyncio.run(soc._tab3_content())
     recommendation = content["recommendation"]

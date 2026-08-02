@@ -126,7 +126,7 @@ async def _run_outcome(
         campaign_id="CAMP-TEST",
     )
     neo4j = harness.graph_client
-    monkeypatch.setattr(triage, "neo4j_client", neo4j)
+    monkeypatch.setattr(triage, "graph_client", neo4j)
     monkeypatch.setattr(triage, "LEARNING_ENABLED", True)
     monkeypatch.setattr(triage, "get_feedback_status", lambda _alert_id: {"has_feedback": False})
     monkeypatch.setattr(triage, "get_learning_state", lambda: learning_state)

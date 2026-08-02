@@ -163,12 +163,12 @@ def _maybe_schedule_flush() -> None:
         log.debug("Shadow flush threshold reached but no running event loop is available")
         return
 
-    from app.db.neo4j import neo4j_client
+    from app.db.graph_client import graph_client
 
-    asyncio.create_task(_flush_shadow_batch(neo4j_client))
+    asyncio.create_task(_flush_shadow_batch(graph_client))
 
 
-async def _flush_shadow_batch(neo4j_client: Any) -> None:
+async def _flush_shadow_batch(graph_client: Any) -> None:
     async with _flush_lock:
         verified = [
             comparison
@@ -212,7 +212,7 @@ async def _flush_shadow_batch(neo4j_client: Any) -> None:
 
             try:
                 await record_evolution_event(
-                    neo4j_client=neo4j_client,
+                    graph_client=graph_client,
                     event_type=SHADOW_RESULT,
                     variant_id=variant_id,
                     artifact_type=variant.artifact_type,

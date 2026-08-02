@@ -295,9 +295,9 @@ async def rebuild_from_age() -> int:
     Called once during startup to restore the hash chain after restart.
     Skipped (returns 0) if the ledger already has entries (hot reload).
     """
-    from app.db.neo4j import neo4j_client  # noqa: PLC0415
+    from app.db.graph_client import graph_client  # noqa: PLC0415
 
-    rows = await neo4j_client.run_query(
+    rows = await graph_client.run_query(
         "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
         "WHERE d.domain = 'soc' AND d.timestamp_epoch IS NOT NULL "
         "RETURN d.decision_id AS decision_id, "

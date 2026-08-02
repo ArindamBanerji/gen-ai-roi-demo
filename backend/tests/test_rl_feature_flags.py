@@ -79,7 +79,7 @@ async def test_reset_demo_alerts_clears_rl_state(monkeypatch):
         async def run_query(self, query):
             return [{"reset_count": 1}]
 
-    monkeypatch.setattr(triage, "neo4j_client", FakeNeo4j())
+    monkeypatch.setattr(triage, "graph_client", FakeNeo4j())
     monkeypatch.setattr(
         triage.state_manager,
         "reset_except",

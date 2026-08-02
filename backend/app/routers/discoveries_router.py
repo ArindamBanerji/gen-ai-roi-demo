@@ -3,7 +3,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from app.db.neo4j import neo4j_client
+from app.db.graph_client import graph_client
 from app.services.cross_graph_discovery import discovery_service
 
 
@@ -73,7 +73,7 @@ async def get_discoveries(domain: str = Query("soc")):
     if cached is not None:
         return cached
     try:
-        return await discovery_service.refresh(domain, neo4j_client)
+        return await discovery_service.refresh(domain, graph_client)
     except Exception as exc:
         return {
             "domain": domain,
@@ -95,7 +95,7 @@ async def get_discoveries(domain: str = Query("soc")):
 async def refresh_discoveries(domain: str = Query("soc")):
     domain = _validate_domain(domain)
     try:
-        return await discovery_service.refresh(domain, neo4j_client)
+        return await discovery_service.refresh(domain, graph_client)
     except Exception as exc:
         return {
             "domain": domain,
@@ -117,7 +117,7 @@ async def refresh_discoveries(domain: str = Query("soc")):
 async def get_discoveries_summary(domain: str = Query("soc")):
     domain = _validate_domain(domain)
     try:
-        return await discovery_service.get_summary(domain, neo4j_client)
+        return await discovery_service.get_summary(domain, graph_client)
     except Exception as exc:
         return {
             "domain": domain,

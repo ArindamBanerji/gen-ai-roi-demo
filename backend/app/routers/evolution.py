@@ -17,7 +17,7 @@ from app.services.situation import analyze_situation
 from app.services import evolver
 from app.services.event_bus import event_bus, DecisionMade, GraphMutated
 from app.services.gae_state import get_learning_state, get_profile_scorer, acquire_scorer
-from app.db.neo4j import neo4j_client, soc_decision_where
+from app.db.graph_client import graph_client, soc_decision_where
 from app.graph_schema import _S
 from app.models.schemas import ProcessAlertRequest
 from app.domains.soc.config import SOCDomainConfig, SOC_CATEGORIES, SOC_FACTORS, SCORER_ACTIONS
@@ -61,7 +61,7 @@ async def get_deployments():
 
     # Get decision count from AGE (proxy for learned pattern coverage)
     try:
-        _rows = await neo4j_client.run_query(
+        _rows = await graph_client.run_query(
             f"MATCH (d:Decision)-[:DECIDED_ON]->() "
             f"WHERE {soc_decision_where()} RETURN count(d) AS n"
         )
@@ -126,12 +126,12 @@ async def process_alert(request: ProcessAlertRequest):
         # Step 1: Get Alert Data + Security Context
         # ====================================================================
 
-        alert_data = await neo4j_client.get_alert(request.alert_id)
+        alert_data = await graph_client.get_alert(request.alert_id)
 
         if not alert_data:
             raise HTTPException(status_code=404, detail=f"Alert {request.alert_id} not found")
 
-        context = await neo4j_client.get_security_context(request.alert_id)
+        context = await graph_client.get_security_context(request.alert_id)
 
         if not context:
             raise HTTPException(status_code=404, detail=f"Alert {request.alert_id} not found")
@@ -154,7 +154,7 @@ async def process_alert(request: ProcessAlertRequest):
 
         print(f"[GAE][TAB2] Computing factor vector for {request.alert_id}...")
         computers = SOCDomainConfig.get_factor_computers()
-        f = await compute_factor_vector(alert_data, computers, neo4j_client)
+        f = await compute_factor_vector(alert_data, computers, graph_client)
 
         _scorer = get_profile_scorer()
         if _scorer is None:
@@ -216,7 +216,7 @@ async def process_alert(request: ProcessAlertRequest):
 
         decision_id = f"DEC-{uuid.uuid4().hex[:4].upper()}"
 
-        await neo4j_client.run_query(
+        await graph_client.run_query(
             """
             MATCH (a:Alert {alert_id: $alert_id})
             CREATE (d:Decision {
@@ -264,7 +264,7 @@ async def process_alert(request: ProcessAlertRequest):
         )
         _entry_hash_evo = _evo_audit_rec.get("hash", "")
         if _entry_hash_evo:
-            await neo4j_client.run_query(
+            await graph_client.run_query(
                 f"MATCH (d:Decision {{decision_id: {_S(decision_id)}}}) "
                 f"WHERE {soc_decision_where()} "
                 f"SET d.entry_hash = {_S(_entry_hash_evo)}"
@@ -300,7 +300,7 @@ async def process_alert(request: ProcessAlertRequest):
 
                 event_id = f"EVO-{uuid.uuid4().hex[:4].upper()}"
 
-                await neo4j_client.create_evolution_event(
+                await graph_client.create_evolution_event(
                     event_id=event_id,
                     event_type=event_type,
                     triggered_by=decision_id,
@@ -444,7 +444,7 @@ async def process_alert_blocked(request: ProcessAlertRequest):
 
     try:
         # Get security context (same as normal flow)
-        context = await neo4j_client.get_security_context(request.alert_id)
+        context = await graph_client.get_security_context(request.alert_id)
 
         if not context:
             raise HTTPException(status_code=404, detail=f"Alert {request.alert_id} not found")
@@ -465,7 +465,7 @@ async def process_alert_blocked(request: ProcessAlertRequest):
 
         from app.domains.soc.config import resolve_alert_category as _resolve_cat_evo
         _evo_category = _resolve_cat_evo(alert_type) if alert_type else "unknown"
-        await neo4j_client.create_decision_trace(
+        await graph_client.create_decision_trace(
             decision_id=decision_id,
             alert_id=request.alert_id,
             action=decision.action,
@@ -675,7 +675,7 @@ async def simulate_failure():
 async def get_recent_evolution():
     """Get recent evolution events from real Decision graph data."""
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
             f"WHERE {soc_decision_where()} "
             "RETURN d.decision_id AS did, d.action AS action, "
@@ -717,7 +717,7 @@ async def get_recent_evolution():
 async def get_variant_history(variant_id: str = Query(..., description="Variant id")):
     """Return graph-backed AE lifecycle events for one variant."""
     try:
-        events = await get_ledger_variant_history(neo4j_client, variant_id)
+        events = await get_ledger_variant_history(graph_client, variant_id)
         return {"variant_id": variant_id, "events": events, "count": len(events)}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -733,7 +733,7 @@ async def get_variant_history(variant_id: str = Query(..., description="Variant 
 async def get_evolution_summary():
     """Return aggregate graph-backed AE lifecycle statistics."""
     try:
-        return await get_ledger_evolution_summary(neo4j_client)
+        return await get_ledger_evolution_summary(graph_client)
     except Exception as exc:
         raise HTTPException(status_code=503, detail="AGE query failed for evolution summary") from exc
 
@@ -742,11 +742,11 @@ async def get_evolution_summary():
 async def get_soc_rejection_summary():
     """Return SOC AgentEvolver rejection counts and recent failed clauses."""
     try:
-        summary = await get_ledger_evolution_summary(neo4j_client)
+        summary = await get_ledger_evolution_summary(graph_client)
     except Exception as exc:
         raise HTTPException(status_code=503, detail="AGE query failed for rejection summary") from exc
     try:
-        events = await get_ledger_recent_events(neo4j_client, 100)
+        events = await get_ledger_recent_events(graph_client, 100)
     except Exception as exc:
         raise HTTPException(status_code=503, detail="AGE query failed for rejection events") from exc
 
@@ -783,7 +783,7 @@ async def get_soc_rejection_summary():
 async def get_recent_events(limit: int = Query(20, ge=1, le=100)):
     """Return recent graph-backed AE lifecycle events across variants."""
     try:
-        events = await get_ledger_recent_events(neo4j_client, limit)
+        events = await get_ledger_recent_events(graph_client, limit)
         return {"events": events, "count": len(events), "limit": limit}
     except Exception as exc:
         raise HTTPException(status_code=503, detail="AGE query failed for recent events") from exc
@@ -899,13 +899,13 @@ async def get_graph_stats():
     Falls back to zeros with source='unavailable' if Neo4j is unreachable.
     """
     try:
-        node_result = await neo4j_client.run_query(
+        node_result = await graph_client.run_query(
             "MATCH (n) RETURN count(n) AS node_count"
         )
-        rel_result = await neo4j_client.run_query(
+        rel_result = await graph_client.run_query(
             "MATCH ()-[r]->() RETURN count(r) AS rel_count"
         )
-        dec_result = await neo4j_client.run_query(
+        dec_result = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "RETURN count(d) AS dec_count"
         )

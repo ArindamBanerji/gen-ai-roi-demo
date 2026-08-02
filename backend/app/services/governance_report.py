@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Any, cast
 from uuid import uuid4
 
-from app.db.neo4j import neo4j_client
+from app.db.graph_client import graph_client
 
 
 REPORT_TITLE = "Evidence supporting human oversight"
@@ -106,7 +106,7 @@ def _section(article: str, title: str, status: str, summary: str, evidence: dict
 async def _collect_learning_health() -> dict[str, Any]:
     from app.services.learning_health import LearningHealthMonitor
 
-    return await LearningHealthMonitor.evaluate(neo4j_client)
+    return await LearningHealthMonitor.evaluate(graph_client)
 
 
 async def _collect_audit_evidence() -> tuple[dict[str, Any], dict[str, Any]]:
@@ -127,7 +127,7 @@ async def _collect_centroid_export() -> dict[str, Any]:
     scorer = get_profile_scorer()
     if scorer is None:
         return {"status": "cold_start", "message": "No centroid data yet"}
-    return await build_centroid_export(scorer, neo4j_client)
+    return await build_centroid_export(scorer, graph_client)
 
 
 async def _collect_tab2_evidence() -> dict[str, Any]:
@@ -139,7 +139,7 @@ async def _collect_tab2_evidence() -> dict[str, Any]:
 async def _collect_executive_narrative() -> dict[str, Any]:
     from app.services.executive_narrative import build_executive_narrative_async
 
-    return cast(dict[str, Any], await build_executive_narrative_async(neo4j_client))
+    return cast(dict[str, Any], await build_executive_narrative_async(graph_client))
 
 
 async def _collect_auto_approve_stats() -> dict[str, Any]:

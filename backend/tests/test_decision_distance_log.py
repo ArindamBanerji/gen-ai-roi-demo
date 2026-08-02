@@ -91,7 +91,7 @@ def test_decision_stores_triage_entropy():
 
     with (
         patch.object(triage_mod, "get_profile_scorer") as mock_scorer_factory,
-        patch("app.routers.triage.neo4j_client") as mock_neo4j,
+        patch("app.routers.triage.graph_client") as mock_neo4j,
     ):
         mock_scorer = MagicMock()
         mock_scorer.score.return_value = fake_result

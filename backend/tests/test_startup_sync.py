@@ -19,7 +19,7 @@ async def _run_sync(neo4j_count: int, initial_ls_count: int) -> int:
     Execute the sync block in isolation and return the final decision_count.
 
     Mimics:
-        _count_result = await neo4j_client.run_query(...)
+        _count_result = await graph_client.run_query(...)
         _historical_count = _count_result[0]["cnt"] if _count_result else 0
         _ls = get_learning_state()
         if _ls.decision_count < _historical_count:

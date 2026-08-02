@@ -39,7 +39,7 @@ RETURN sd.alert_idx     AS alert_idx,
 """
 
 
-async def load_from_neo4j(neo4j_client: Any) -> OverrideDetector:
+async def load_from_neo4j(graph_client: Any) -> OverrideDetector:
     """
     Query Neo4j for correct-override ShadowDecision nodes and load them
     into the module-level singleton.
@@ -48,16 +48,16 @@ async def load_from_neo4j(neo4j_client: Any) -> OverrideDetector:
 
     Parameters
     ----------
-    neo4j_client:
+    graph_client:
         Any object with an async `run_query(query, params)` method
-        (e.g. app.db.neo4j.neo4j_client).
+        (e.g. app.db.graph_client.graph_client).
 
     Returns
     -------
     The loaded OverrideDetector singleton (activated iff count >= 50).
     """
     try:
-        results = await neo4j_client.run_query(_QUERY, {})
+        results = await graph_client.run_query(_QUERY, {})
         examples = [dict(r) for r in results] if results else []
     except Exception as exc:
         log.warning("[OverrideDetector] Neo4j query failed -- using empty set: %s", exc)

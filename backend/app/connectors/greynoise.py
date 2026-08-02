@@ -30,7 +30,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from app.connectors.base import ConnectorResult, HealthStatus, UCLConnector
-from app.db.neo4j import neo4j_client
+from app.db.graph_client import graph_client
 
 
 logger = logging.getLogger(__name__)
@@ -249,11 +249,11 @@ class GreyNoiseConnector(UCLConnector):
         for entry in enriched:
             try:
                 _ip = _S(entry["ip"])
-                existing = await neo4j_client.run_query(
+                existing = await graph_client.run_query(
                     f"MATCH (gn:GreyNoiseEnrichment {{ip: {_ip}}}) RETURN gn"
                 )
                 if existing:
-                    await neo4j_client.run_query(
+                    await graph_client.run_query(
                         f"MATCH (gn:GreyNoiseEnrichment {{ip: {_ip}}})"
                         f" SET gn.classification = {_S(entry.get('classification', 'unknown'))},"
                         f"     gn.noise = {_S(entry.get('noise', False))},"
@@ -265,7 +265,7 @@ class GreyNoiseConnector(UCLConnector):
                         f"     gn.refreshed_at = {_S(_now_epoch)}"
                     )
                 else:
-                    await neo4j_client.run_query(
+                    await graph_client.run_query(
                         f"CREATE (gn:GreyNoiseEnrichment {{"
                         f" ip: {_ip},"
                         f" classification: {_S(entry.get('classification', 'unknown'))},"
@@ -290,12 +290,12 @@ class GreyNoiseConnector(UCLConnector):
         for entry in enriched:
             try:
                 _ip = _S(entry["ip"])
-                edge_check = await neo4j_client.run_query(
+                edge_check = await graph_client.run_query(
                     f"MATCH (ti:ThreatIntel {{value: {_ip}}})"
                     f"-[:ENRICHED_BY]->(gn:GreyNoiseEnrichment {{ip: {_ip}}}) RETURN ti"
                 )
                 if not edge_check:
-                    await neo4j_client.run_query(
+                    await graph_client.run_query(
                         f"MATCH (ti:ThreatIntel {{value: {_ip}}})"
                         f" MATCH (gn:GreyNoiseEnrichment {{ip: {_ip}}})"
                         f" CREATE (ti)-[:ENRICHED_BY {{linked_at: {_S(_now_epoch)}}}]->(gn)"

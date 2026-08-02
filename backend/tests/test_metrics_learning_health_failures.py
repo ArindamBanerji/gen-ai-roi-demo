@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 async def test_metrics_evolution_failure_is_503_and_empty_is_valid():
     from app.routers.metrics import get_evolution_events
 
-    with patch("app.routers.metrics.neo4j_client") as client:
+    with patch("app.routers.metrics.graph_client") as client:
         client.run_query = AsyncMock(side_effect=RuntimeError("AGE down"))
         with pytest.raises(HTTPException) as error:
             await get_evolution_events()
@@ -22,7 +22,7 @@ async def test_metrics_evolution_failure_is_503_and_empty_is_valid():
 async def test_metrics_weekly_trends_failure_is_503_and_empty_is_valid():
     from app.routers.metrics import get_weekly_trends
 
-    with patch("app.routers.metrics.neo4j_client") as client:
+    with patch("app.routers.metrics.graph_client") as client:
         client.run_query = AsyncMock(side_effect=RuntimeError("AGE down"))
         with pytest.raises(HTTPException) as error:
             await get_weekly_trends()
@@ -37,7 +37,7 @@ async def test_metrics_weekly_trends_failure_is_503_and_empty_is_valid():
 async def test_metrics_decision_economics_failure_is_503_and_empty_is_valid():
     from app.routers.metrics import get_decision_economics
 
-    with patch("app.routers.metrics.neo4j_client") as client:
+    with patch("app.routers.metrics.graph_client") as client:
         client.run_query = AsyncMock(side_effect=RuntimeError("AGE down"))
         with pytest.raises(HTTPException) as error:
             await get_decision_economics()
@@ -52,7 +52,7 @@ async def test_metrics_decision_economics_failure_is_503_and_empty_is_valid():
 async def test_metrics_operational_failure_is_503_and_empty_is_valid():
     from app.routers.metrics import get_operational_metrics
 
-    with patch("app.routers.metrics.neo4j_client") as client:
+    with patch("app.routers.metrics.graph_client") as client:
         client.run_query = AsyncMock(side_effect=RuntimeError("AGE down"))
         with pytest.raises(HTTPException) as error:
             await get_operational_metrics()

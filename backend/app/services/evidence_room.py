@@ -175,10 +175,10 @@ class EvidenceRoomService:
         health_source = "learning_health"
         fallback_reason = None
         try:
-            from app.db.neo4j import neo4j_client
+            from app.db.graph_client import graph_client
             from app.services.learning_health import LearningHealthMonitor
 
-            health = await LearningHealthMonitor.evaluate(neo4j_client)
+            health = await LearningHealthMonitor.evaluate(graph_client)
         except Exception as exc:
             log.warning("[EvidenceRoom] conservation collection failed: %s", exc)
 
@@ -190,10 +190,10 @@ class EvidenceRoomService:
 
         if product == 0.0 and status in {"RED", "UNKNOWN"}:
             try:
-                from app.db.neo4j import neo4j_client
+                from app.db.graph_client import graph_client
                 from app.services.iks import compute_visible_iks
 
-                iks_score = float(await compute_visible_iks(neo4j_client))
+                iks_score = float(await compute_visible_iks(graph_client))
                 if iks_score >= 40.0:
                     status = "GREEN"
                     health_source = "iks_fallback"

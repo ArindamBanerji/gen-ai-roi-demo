@@ -86,7 +86,7 @@ async def test_iks_startup_matches_tab2():
     fake_client = _FakeNeo4jClient()
     with patch("app.services.gae_state.get_profile_scorer", return_value=_fake_scorer()):
         with patch("app.services.iks.compute_iks", return_value={"current": 89.0}):
-            with patch("app.routers.soc.neo4j_client", fake_client):
+            with patch("app.routers.soc.graph_client", fake_client):
                 snap = await GraphSnapshot.from_graph(fake_client)
                 tab2 = await _tab2_content()
 
@@ -117,7 +117,7 @@ async def test_iks_snapshot_matches_tab2_after_update():
 
     with patch("app.services.gae_state.get_profile_scorer", return_value=_fake_scorer()):
         with patch("app.services.iks.compute_iks", return_value={"current": 89.0}):
-            with patch("app.routers.soc.neo4j_client", fake_client):
+            with patch("app.routers.soc.graph_client", fake_client):
                 snap.on_iks_recalculated(await compute_visible_iks(fake_client, scorer=_fake_scorer()))
                 tab2 = await _tab2_content()
 
@@ -130,7 +130,7 @@ async def test_iks_all_paths_agree():
 
     with patch("app.services.gae_state.get_profile_scorer", return_value=_fake_scorer()):
         with patch("app.services.iks.compute_iks", return_value={"current": 89.0}):
-            with patch("app.routers.soc.neo4j_client", fake_client):
+            with patch("app.routers.soc.graph_client", fake_client):
                 startup = await GraphSnapshot.from_graph(fake_client)
                 tab2 = await _tab2_content()
             narrative = await build_executive_narrative_async(fake_client)

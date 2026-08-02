@@ -358,7 +358,7 @@ def compare_to_bootstrap(snapshot_id: str) -> dict[str, Any]:
     }
 
 
-async def get_evolution_timeline(neo4j_client: Any) -> dict[str, Any]:
+async def get_evolution_timeline(graph_client: Any) -> dict[str, Any]:
     timeline: list[dict[str, Any]] = []
     mu_zero = get_mu_zero()
     current_ceiling = _compute_current_ceiling_estimate()
@@ -388,7 +388,7 @@ async def get_evolution_timeline(neo4j_client: Any) -> dict[str, Any]:
         "interpretation": "unavailable",
     }
     try:
-        current_iks = await compute_iks_v2(neo4j_client)
+        current_iks = await compute_iks_v2(graph_client)
     except Exception as exc:
         log.warning("[TIME_MACHINE] IKS estimate unavailable: %s", exc)
 

@@ -389,7 +389,7 @@ async def seed_simulation_alerts() -> None:
     Create simulation alert graph entities in Neo4j.
 
     Called from seed_neo4j.seed_data() AFTER the main corpus and GAE factor
-    data are seeded.  Expects neo4j_client to be already connected.
+    data are seeded.  Expects graph_client to be already connected.
 
     Creates per category:
       credential_access  -> User + TravelRecord + HAS_TRAVEL, Asset, Alert nodes
@@ -401,49 +401,49 @@ async def seed_simulation_alerts() -> None:
     DeviceTrustFactor directly (business_hours_login, weekend_login,
     mfa_completed, device_fingerprint_match, vpn_provider).
     """
-    from app.db.neo4j import neo4j_client
+    from app.db.graph_client import graph_client
 
     print("\n[SIM-3a] Seeding simulation alerts (20 base alerts, 5 seeded categories)...")
 
     # -----------------------------------------------------------------------
     # Users
     # -----------------------------------------------------------------------
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'sim-ca-user1@company.com'})
         SET u.name = 'SIM CA User 1', u.department = 'Finance',
             u.title = 'Director', u.risk_score = 0.3, u.is_privileged = true
     """)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'sim-ca-user2@company.com'})
         SET u.name = 'SIM CA User 2', u.department = 'Legal',
             u.title = 'Counsel', u.risk_score = 0.25, u.is_privileged = false
     """)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'sim-ti-user@company.com'})
         SET u.name = 'SIM TI User', u.department = 'Engineering',
             u.title = 'Developer', u.risk_score = 0.35, u.is_privileged = false
     """)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'sim-lm-svc@internal'})
         SET u.name = 'SIM LM Service Account', u.department = 'IT',
             u.title = 'Service Account', u.risk_score = 0.6, u.is_privileged = true
     """)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'sim-de-user@company.com'})
         SET u.name = 'SIM DE User', u.department = 'Data Science',
             u.title = 'Analyst', u.risk_score = 0.45, u.is_privileged = false
     """)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'sim-it-user@company.com'})
         SET u.name = 'SIM IT User', u.department = 'HR',
             u.title = 'Manager', u.risk_score = 0.5, u.is_privileged = false
     """)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'sim-ci-svc@company-cloud.com'})
         SET u.name = 'SIM CI Service Account', u.department = 'Cloud Ops',
             u.title = 'Service Account', u.risk_score = 0.5, u.is_privileged = true
     """)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'sim-ci-admin@company-cloud.com'})
         SET u.name = 'SIM CI Admin', u.department = 'Cloud Ops',
             u.title = 'Cloud Administrator', u.risk_score = 0.4, u.is_privileged = true
@@ -453,37 +453,37 @@ async def seed_simulation_alerts() -> None:
     # -----------------------------------------------------------------------
     # Assets
     # -----------------------------------------------------------------------
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'SIM-ASSET-CA-01'})
         SET a.hostname = 'SIM-ASSET-CA-01', a.type = 'endpoint',
             a.criticality = 'high', a.business_unit = 'Finance',
             a.os = 'Windows 11', a.owner_id = 'sim-ca-user1@company.com'
     """)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'SIM-ASSET-TI-01'})
         SET a.hostname = 'SIM-ASSET-TI-01', a.type = 'server',
             a.criticality = 'critical', a.business_unit = 'Engineering',
             a.os = 'Ubuntu 22.04', a.owner_id = 'sim-ti-user@company.com'
     """)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'SIM-ASSET-LM-01'})
         SET a.hostname = 'SIM-ASSET-LM-01', a.type = 'server',
             a.criticality = 'critical', a.business_unit = 'IT',
             a.os = 'Ubuntu 22.04', a.owner_id = 'sim-lm-svc@internal'
     """)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'SIM-ASSET-DE-01'})
         SET a.hostname = 'SIM-ASSET-DE-01', a.type = 'server',
             a.criticality = 'critical', a.business_unit = 'Data Science',
             a.os = 'Ubuntu 22.04', a.owner_id = 'sim-de-user@company.com'
     """)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'SIM-ASSET-IT-01'})
         SET a.hostname = 'SIM-ASSET-IT-01', a.type = 'server',
             a.criticality = 'high', a.business_unit = 'HR',
             a.os = 'Windows Server 2022', a.owner_id = 'sim-it-user@company.com'
     """)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'SIM-ASSET-CI-01'})
         SET a.hostname = 'SIM-ASSET-CI-01', a.type = 'cloud_resource',
             a.criticality = 'critical', a.business_unit = 'Cloud Ops',
@@ -507,7 +507,7 @@ async def seed_simulation_alerts() -> None:
     ]
     for (aid, uid, asset_id, src_ip, location,
          mfa, fingerprint, weekend, technique) in ca_alerts:
-        await neo4j_client.run_query("""
+        await graph_client.run_query("""
             MERGE (alert:Alert {alert_id: $id})
             SET alert.alert_type             = 'anomalous_login',
                 alert.severity               = 'high',
@@ -549,7 +549,7 @@ async def seed_simulation_alerts() -> None:
         ("SIM-TI-004", True,  True,  True),
     ]
     for (aid, mfa, fingerprint, weekend) in ti_alerts:
-        await neo4j_client.run_query("""
+        await graph_client.run_query("""
             MERGE (alert:Alert {alert_id: $id})
             SET alert.alert_type             = 'threat_intel_match',
                 alert.severity               = 'critical',
@@ -586,7 +586,7 @@ async def seed_simulation_alerts() -> None:
         ("SIM-LM-004", False, False, False),
     ]
     for (aid, mfa, fingerprint, weekend) in lm_alerts:
-        await neo4j_client.run_query("""
+        await graph_client.run_query("""
             MERGE (alert:Alert {alert_id: $id})
             SET alert.alert_type             = 'privilege_escalation',
                 alert.severity               = 'critical',
@@ -623,7 +623,7 @@ async def seed_simulation_alerts() -> None:
         ("SIM-DE-004", False, True,  False),
     ]
     for (aid, mfa, fingerprint, weekend) in de_alerts:
-        await neo4j_client.run_query("""
+        await graph_client.run_query("""
             MERGE (alert:Alert {alert_id: $id})
             SET alert.alert_type             = 'data_exfil',
                 alert.severity               = 'critical',
@@ -655,7 +655,7 @@ async def seed_simulation_alerts() -> None:
     # All signals look benign (trusted insider paradox)
     # -----------------------------------------------------------------------
     for i in range(1, 5):
-        await neo4j_client.run_query("""
+        await graph_client.run_query("""
             MERGE (alert:Alert {alert_id: $id})
             SET alert.alert_type             = 'insider_threat',
                 alert.severity               = 'high',
@@ -717,7 +717,7 @@ async def seed_simulation_alerts() -> None:
     }
     for (aid, at, sev, src_ip, loc, biz_hrs, weekend, mfa, fp, vpn, desc, mitre_t, mitre_tac) in ci_alerts:
         uid = ci_user_map[aid]
-        await neo4j_client.run_query("""
+        await graph_client.run_query("""
             MERGE (alert:Alert {alert_id: $id})
             SET alert.alert_type             = $alert_type,
                 alert.severity               = $sev,
@@ -755,7 +755,7 @@ async def seed_simulation_alerts() -> None:
     # CORR-1b: credential_access and lateral_movement refer alerts; use existing
     # users and assets already seeded above.
     # -----------------------------------------------------------------------
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (alert:Alert {alert_id: 'SIM-CA-REF-001'})
         SET alert.alert_type             = 'ambiguous_login_location',
             alert.severity               = 'medium',
@@ -780,7 +780,7 @@ async def seed_simulation_alerts() -> None:
         MERGE (alert)-[:DETECTED_ON]->(asset)
         MERGE (alert)-[:INVOLVES]->(user)
     """, {"timestamp_epoch": int(datetime.utcnow().timestamp() * 1000)})
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (alert:Alert {alert_id: 'SIM-LM-REF-001'})
         SET alert.alert_type             = 'internal_scan_ambiguous',
             alert.severity               = 'medium',
@@ -811,7 +811,7 @@ async def seed_simulation_alerts() -> None:
     # TravelRecord nodes — required by TravelMatchFactor [:HAS_TRAVEL]
     # (credential_access category)
     # -----------------------------------------------------------------------
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'sim-ca-user1@company.com'})
         MERGE (t:TravelRecord {id: 'TR-SIM-CA-USER1-TYO'})
         SET t.destination  = 'Tokyo',
@@ -820,7 +820,7 @@ async def seed_simulation_alerts() -> None:
             t.vpn_expected = ['NTT', 'hotel-vpn']
         MERGE (u)-[:HAS_TRAVEL]->(t)
     """)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (u:User {id: 'sim-ca-user2@company.com'})
         MERGE (t:TravelRecord {id: 'TR-SIM-CA-USER2-BER'})
         SET t.destination  = 'Berlin',
@@ -842,7 +842,7 @@ async def seed_simulation_alerts() -> None:
         ("SIM-TI-004", "TI-SIM-APT-007", "TI-SIM-APT-008"),
     ]
     for (alert_id, ti1_id, ti2_id) in ti_iocs:
-        await neo4j_client.run_query("""
+        await graph_client.run_query("""
             MERGE (ti:ThreatIntel {id: $ti1_id})
             SET ti.name      = 'SIM APT Campaign Indicator',
                 ti.severity  = 'critical',
@@ -853,7 +853,7 @@ async def seed_simulation_alerts() -> None:
             MATCH (a:Alert {alert_id: $alert_id})
             MERGE (ti)-[:ASSOCIATED_WITH]->(a)
         """, {"ti1_id": ti1_id, "alert_id": alert_id})
-        await neo4j_client.run_query("""
+        await graph_client.run_query("""
             MERGE (ti:ThreatIntel {id: $ti2_id})
             SET ti.name      = 'SIM APT IP Indicator',
                 ti.severity  = 'high',
@@ -864,7 +864,7 @@ async def seed_simulation_alerts() -> None:
             MATCH (a:Alert {alert_id: $alert_id})
             MERGE (ti)-[:ASSOCIATED_WITH]->(a)
         """, {"ti2_id": ti2_id, "alert_id": alert_id})
-    await neo4j_client.run_query(
+    await graph_client.run_query(
         "MATCH (ti:ThreatIntel) WHERE NOT ti:ThreatIndicator SET ti:ThreatIndicator"
     )
     print("  [SIM-3a] ThreatIntel nodes + [:ASSOCIATED_WITH]: SIM-TI-001..004 (2 sources each)")
@@ -874,7 +874,7 @@ async def seed_simulation_alerts() -> None:
     # data_exfiltration → PII (adds +0.1 sensitivity bonus on top of CRITICAL)
     # insider_threat    → RESTRICTED (adds sensitivity bonus on top of HIGH)
     # -----------------------------------------------------------------------
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'SIM-ASSET-DE-01'})
         MERGE (dc:DataClass {id: 'DC-SIM-DE-PII'})
         SET dc.name           = 'Customer PII -- SIM',
@@ -882,7 +882,7 @@ async def seed_simulation_alerts() -> None:
             dc.classification = 'RESTRICTED'
         MERGE (a)-[:STORES]->(dc)
     """)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'SIM-ASSET-IT-01'})
         MERGE (dc:DataClass {id: 'DC-SIM-IT-HR'})
         SET dc.name           = 'HR Records -- SIM',
@@ -890,7 +890,7 @@ async def seed_simulation_alerts() -> None:
             dc.classification = 'CONFIDENTIAL'
         MERGE (a)-[:STORES]->(dc)
     """)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (a:Asset {id: 'SIM-ASSET-CA-01'})
         MERGE (dc:DataClass {id: 'DC-SIM-CA-FINANCE'})
         SET dc.name           = 'Financial Reports -- SIM',
@@ -935,7 +935,7 @@ async def seed_simulation_alerts() -> None:
         ('internal_scan_ambiguous',        'Internal Scan -- Ambiguous',
          'Internal network scan outside scheduled window from trusted host', 'medium', 'T1021'),
     ]:
-        await neo4j_client.run_query("""
+        await graph_client.run_query("""
             MERGE (at:AlertType {id: $id})
             SET at.name            = $name,
                 at.description     = $desc,
@@ -946,7 +946,7 @@ async def seed_simulation_alerts() -> None:
     print("  [SIM-FIX-2] AlertType nodes merged (5 types)")
 
     # Playbooks for the two new AlertTypes (optional — enriches graph viz)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (pb:Playbook {id: 'PB-EXFIL-001'})
         SET pb.name        = 'Data Exfiltration Response',
             pb.description = 'Block egress, preserve evidence, escalate to IR',
@@ -957,7 +957,7 @@ async def seed_simulation_alerts() -> None:
         MATCH (at:AlertType {id: 'data_exfil'})
         MERGE (at)-[:HANDLED_BY]->(pb)
     """)
-    await neo4j_client.run_query("""
+    await graph_client.run_query("""
         MERGE (pb:Playbook {id: 'PB-INSIDER-001'})
         SET pb.name        = 'Insider Threat Investigation',
             pb.description = 'Covert monitoring, collect evidence, escalate to HR and Legal',
@@ -992,7 +992,7 @@ async def seed_simulation_alerts() -> None:
         (['SIM-CA-REF-001'], 'ambiguous_login_location'),
         (['SIM-LM-REF-001'], 'internal_scan_ambiguous'),
     ]:
-        await neo4j_client.run_query("""
+        await graph_client.run_query("""
             MATCH (at:AlertType {id: $type_id})
             WITH at
             UNWIND $ids AS aid

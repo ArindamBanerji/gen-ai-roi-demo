@@ -61,7 +61,7 @@ class SimilarCasesBase(abc.ABC):
     async def _fetch_verified_decisions(
         self,
         category: str,
-        neo4j_client: Any,
+        graph_client: Any,
         limit: int = SIMILAR_CASES_MAX_SCAN,
     ) -> List[Dict[str, Any]]:
         """
@@ -72,7 +72,7 @@ class SimilarCasesBase(abc.ABC):
           decision_id, action, confidence, outcome, factor_vector, timestamp
         """
         try:
-            rows = await neo4j_client.run_query(
+            rows = await graph_client.run_query(
                 """
                 MATCH (d:Decision)
                 WHERE d.domain = 'soc'
@@ -121,7 +121,7 @@ class SimilarCasesBase(abc.ABC):
         self,
         factor_vector: List[float],
         category: str,
-        neo4j_client: Any,
+        graph_client: Any,
         k: int = SIMILAR_CASES_K,
     ) -> List[Dict[str, Any]]:
         """
@@ -132,7 +132,7 @@ class SimilarCasesBase(abc.ABC):
 
         Each returned dict adds a 'similarity' key (float in [0,1]).
         """
-        decisions = await self._fetch_verified_decisions(category, neo4j_client)
+        decisions = await self._fetch_verified_decisions(category, graph_client)
 
         if len(decisions) < SIMILAR_CASES_MIN_PRIOR:
             log.debug(

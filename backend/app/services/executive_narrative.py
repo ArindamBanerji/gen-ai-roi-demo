@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 
-from app.db.neo4j import soc_decision_where
+from app.db.graph_client import soc_decision_where
 
 
 def _safe_float(value, default: float = 0.0) -> float:
@@ -400,7 +400,7 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     F12 async: queries Neo4j directly with the correct field names.
 
     Fixes vs the legacy sync version:
-    - Awaits run_query() (neo4j_client is async)
+    - Awaits run_query() (graph_client is async)
     - Uses d.outcome / d.verified_at / d.correct (actual Decision fields)
     - Reads Campaign nodes (not AttackChain) for campaigns_detected
     - Calls compute_iks_v2() for a real IKS score

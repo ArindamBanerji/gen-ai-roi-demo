@@ -22,7 +22,7 @@ try:
 except ImportError:
     print("  WARNING: python-dotenv not installed")
 
-from app.db.neo4j import neo4j_client
+from app.db.graph_client import graph_client
 
 SOURCE_TAG  = "synthetic_v1"
 BATCH_SIZE  = 100
@@ -85,7 +85,7 @@ async def main():
 
     print(f"\n  Loaded {len(decisions)} decisions -- field names confirmed.")
 
-    await neo4j_client.connect()
+    await graph_client.connect()
     try:
         total = len(decisions)
         ingested = 0
@@ -106,15 +106,15 @@ async def main():
                 }
                 for rec in chunk
             ]
-            await neo4j_client.run_query(UPSERT_BATCH, {"batch": batch})
+            await graph_client.run_query(UPSERT_BATCH, {"batch": batch})
             ingested += len(chunk)
             if ingested % 500 == 0 or ingested == total:
                 print(f"  Progress: {ingested}/{total}")
 
-        r = (await neo4j_client.run_query(COUNT_QUERY, {"source": SOURCE_TAG}))[0]
+        r = (await graph_client.run_query(COUNT_QUERY, {"source": SOURCE_TAG}))[0]
         print(f"\nIngested {r['total']} decisions")
     finally:
-        await neo4j_client.close()
+        await graph_client.close()
 
 
 if __name__ == "__main__":

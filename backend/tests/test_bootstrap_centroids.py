@@ -83,7 +83,7 @@ def test_baseline_confidence_matches_bootstrap_scorer(monkeypatch):
     def no_live_scorer():
         raise RuntimeError("force centroid fallback category for baseline test")
 
-    monkeypatch.setattr(soc, "neo4j_client", FakeNeo4jClient())
+    monkeypatch.setattr(soc, "graph_client", FakeNeo4jClient())
     monkeypatch.setattr(gae_state, "get_profile_scorer", no_live_scorer)
     soc._reset_baseline_scorer_cache()
 

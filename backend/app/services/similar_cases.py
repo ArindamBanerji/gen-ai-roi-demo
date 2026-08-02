@@ -58,7 +58,7 @@ class SimilarCasesService(SimilarCasesBase):
     Usage
     -----
     svc = SimilarCasesService()
-    cases = await svc.get_similar_cases(factor_vector, category, neo4j_client)
+    cases = await svc.get_similar_cases(factor_vector, category, graph_client)
     pct   = svc.get_agreement_pct(cases, current_action)
     """
 

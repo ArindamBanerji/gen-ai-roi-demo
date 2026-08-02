@@ -216,14 +216,14 @@ async def start_simulation(body: StartSimulationRequest):
     Returns ``{"simulation_id": uuid, "status": "running"}``.
     """
     from app.services import gae_state, audit as audit_store
-    from app.db.neo4j import neo4j_client
+    from app.db.graph_client import graph_client
     from app.core.domain_registry import get_domain_config
 
     # Soft reset before simulation — ensures W starts from expert priors
     sm = StateManager(
         learning_state_service = gae_state,
         audit_store            = audit_store,
-        neo4j_service          = neo4j_client,
+        neo4j_service          = graph_client,
         domain_config          = get_domain_config(),
     )
     try:

@@ -13,7 +13,7 @@ import re
 import time
 from dataclasses import asdict
 
-from app.db.neo4j import neo4j_client, soc_decision_where
+from app.db.graph_client import graph_client, soc_decision_where
 from app.models.responses import (
     AnalyticsResponse,
     CampaignsResponse,
@@ -573,7 +573,7 @@ async def query_soc_metrics(request: SOCQueryRequest):
         # ====================================================================
         if metric_id in CROSS_CONTEXT_METRIC_IDS:
             try:
-                rows = await neo4j_client.run_query(
+                rows = await graph_client.run_query(
                     "MATCH (a:Alert)-[:HAS_INDICATOR]->(ti:ThreatIndicator) "
                     "RETURN a.alert_id AS alert_id, ti.source AS source, "
                     "ti.indicator_type AS ioc_type LIMIT 10",
@@ -689,7 +689,7 @@ async def get_detection_engineering():
         total = 0
         fp_rate = None
         try:
-            rows = await neo4j_client.run_query(
+            rows = await graph_client.run_query(
                 "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
                 f"WHERE {soc_decision_where()} AND a.category = $cat "
                 "RETURN count(d) AS total, "
@@ -776,7 +776,7 @@ async def get_threat_landscape():
 
     try:
         # ThreatIntel counts
-        ti_res = await neo4j_client.run_query(
+        ti_res = await graph_client.run_query(
             "MATCH (t:ThreatIntel) "
             "RETURN count(t) AS total, "
             "count(CASE WHEN t.severity IN ['critical','high'] THEN 1 END) AS high_sev",
@@ -786,11 +786,11 @@ async def get_threat_landscape():
             high_severity_iocs = int(ti_res[0].get("high_sev") or 0)
 
         # Alert counts — total and open (no Decision yet)
-        alert_res = await neo4j_client.run_query(
+        alert_res = await graph_client.run_query(
             "MATCH (a:Alert) RETURN count(a) AS total",
         )
         # Open alerts — separate query (AGE does not support NOT pattern in CASE)
-        open_res_tl = await neo4j_client.run_query(
+        open_res_tl = await graph_client.run_query(
             "MATCH (a:Alert) "
             "WHERE NOT exists((a)<-[:DECIDED_ON]-()) "
             "RETURN count(a) AS open_count",
@@ -801,31 +801,31 @@ async def get_threat_landscape():
             open_alerts = int(open_res_tl[0].get("open_count") or 0)
 
         # Decision count
-        dec_res = await neo4j_client.run_query(
+        dec_res = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} RETURN count(d) AS c",
         )
         if dec_res:
             decisions_total = int(dec_res[0].get("c") or 0)
 
         # Graph topology
-        node_res = await neo4j_client.run_query("MATCH (n) RETURN count(n) AS c")
+        node_res = await graph_client.run_query("MATCH (n) RETURN count(n) AS c")
         if node_res:
             nodes_count = int(node_res[0].get("c") or 0)
 
-        rel_res = await neo4j_client.run_query("MATCH ()-[r]->() RETURN count(r) AS c")
+        rel_res = await graph_client.run_query("MATCH ()-[r]->() RETURN count(r) AS c")
         if rel_res:
             rels_count = int(rel_res[0].get("c") or 0)
 
-        at_res = await neo4j_client.run_query("MATCH (t:AlertType) RETURN count(t) AS c")
+        at_res = await graph_client.run_query("MATCH (t:AlertType) RETURN count(t) AS c")
         if at_res:
             alert_types_count = int(at_res[0].get("c") or 0)
 
-        pat_res = await neo4j_client.run_query("MATCH (p:AttackPattern) RETURN count(p) AS c")
+        pat_res = await graph_client.run_query("MATCH (p:AttackPattern) RETURN count(p) AS c")
         if pat_res:
             patterns_count = int(pat_res[0].get("c") or 0)
 
         # BACKLOG-061: last_refreshed_minutes_ago — most recent ThreatIndicator.last_seen
-        ti_ts_res = await neo4j_client.run_query(
+        ti_ts_res = await graph_client.run_query(
             "MATCH (t:ThreatIndicator) WHERE t.last_seen IS NOT NULL "
             "RETURN max(t.last_seen) AS latest"
         )
@@ -835,7 +835,7 @@ async def get_threat_landscape():
             last_refreshed_minutes_ago = round((now_ms - latest_ms) / 60000, 1)
 
         # BACKLOG-062: avg_confidence — mean confidence across all Decision nodes
-        conf_res = await neo4j_client.run_query(
+        conf_res = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "AND d.confidence IS NOT NULL "
             "RETURN avg(d.confidence) AS avg_conf"
@@ -892,7 +892,7 @@ async def get_attack_tactic_breakdown():
     """
     breakdown = []
     try:
-        results = await neo4j_client.run_query(
+        results = await graph_client.run_query(
             """
             MATCH (a:Alert)-[:CLASSIFIED_AS]->(ap:AttackPattern)
             WHERE ap.tactic IS NOT NULL AND ap.tactic <> ''
@@ -927,13 +927,13 @@ async def get_soc_analytics():
     """
     try:
         # Metric 1 — Alert volume
-        alert_res = await neo4j_client.run_query(
+        alert_res = await graph_client.run_query(
             "MATCH (a:Alert) RETURN count(a) AS total_alerts"
         )
         total_alerts = int(alert_res[0]["total_alerts"]) if alert_res else 0
 
         # Metric 2 — Open alerts (no Decision yet)
-        open_res = await neo4j_client.run_query(
+        open_res = await graph_client.run_query(
             "MATCH (a:Alert) "
             "WHERE NOT exists((a)<-[:DECIDED_ON]-()) "
             "RETURN count(a) AS open_alerts"
@@ -941,14 +941,14 @@ async def get_soc_analytics():
         open_alerts = int(open_res[0]["open_alerts"]) if open_res else 0
 
         # Metric 3 — Total decisions
-        dec_res = await neo4j_client.run_query(
+        dec_res = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "RETURN count(d) AS total_decisions"
         )
         total_decisions = int(dec_res[0]["total_decisions"]) if dec_res else 0
 
         # Metric 4 — Correct decisions
-        correct_res = await neo4j_client.run_query(
+        correct_res = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "AND d.correct = true "
             "RETURN count(d) AS correct_decisions"
@@ -956,7 +956,7 @@ async def get_soc_analytics():
         correct_decisions = int(correct_res[0]["correct_decisions"]) if correct_res else 0
 
         # Metric 5 — Category breakdown
-        cat_res = await neo4j_client.run_query(
+        cat_res = await graph_client.run_query(
             "MATCH (a:Alert) "
             "RETURN a.category AS category, count(a) AS cnt "
             "ORDER BY cnt DESC"
@@ -1038,7 +1038,7 @@ async def get_learning_state_endpoint():
 
     # Query Neo4j for last verified_at
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             """
             MATCH (d:Decision)
             WHERE """ + soc_decision_where() + """
@@ -1057,7 +1057,7 @@ async def get_learning_state_endpoint():
     iks_v2_data = {}
     try:
         from app.services.iks import compute_iks_v2
-        iks_v2_data = await compute_iks_v2(neo4j_client)  # SOURCE: computed from graph (Decision nodes + centroids)
+        iks_v2_data = await compute_iks_v2(graph_client)  # SOURCE: computed from graph (Decision nodes + centroids)
     except Exception as exc:
         print(f"[SOC] learning-state iks_v2 failed: {exc}")
 
@@ -1125,7 +1125,7 @@ async def explain_decision(decision_id: str):
 
     # ── Step 1: Read Decision + linked Alert/User/Asset nodes ───────────────
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             """
             MATCH (d:Decision {decision_id: $decision_id})
             WHERE """ + soc_decision_where() + """
@@ -1194,7 +1194,7 @@ async def explain_decision(decision_id: str):
 
     # ── Step 2: Calibration count (verified decisions in category) ───────────
     try:
-        cal_rows = await neo4j_client.run_query(
+        cal_rows = await graph_client.run_query(
             "MATCH (d:Decision {category: $category}) "
             f"WHERE {soc_decision_where()} AND d.outcome IS NOT NULL "
             "RETURN count(d) AS cnt",
@@ -1217,7 +1217,7 @@ async def explain_decision(decision_id: str):
     # ── Step 2b: ThreatIndicator source (for malware_execution template) ────
     ti_source = "threat intelligence feed"
     try:
-        ti_rows = await neo4j_client.run_query(
+        ti_rows = await graph_client.run_query(
             """
             MATCH (d:Decision {decision_id: $decision_id})-[:DECIDED_ON]->(a:Alert)
             -[:HAS_INDICATOR]->(ti:ThreatIndicator)
@@ -1237,7 +1237,7 @@ async def explain_decision(decision_id: str):
         similar_cases = await similar_cases_svc.get_similar_cases(
             factor_vector=factor_vector,
             category=category,
-            neo4j_client=neo4j_client,
+            graph_client=graph_client,
         )
 
     similar_cases_message = (
@@ -1365,7 +1365,7 @@ async def get_decision_provenance(decision_id: str):
 
     result = await ProvenanceService.get_provenance_from_graph(
         decision_id,
-        neo4j_client,
+        graph_client,
         factor_names=list(SOC_FACTORS),
         resolve_category=resolve_alert_category,
     )
@@ -1403,7 +1403,7 @@ async def get_threat_intel_for_alert(alert_id: str):
     from app.services.threat_indicator import ThreatIndicatorService
 
     indicators = await ThreatIndicatorService.get_indicators_for_alert(
-        alert_id, neo4j_client
+        alert_id, graph_client
     )
     return {
         "alert_id":      alert_id,
@@ -1467,7 +1467,7 @@ async def attack_chains(hours_back: int = 72):
     hours_back : int -- look-back window in hours (default 72)
     """
     from app.services.attack_chain import AttackChainService
-    service = AttackChainService(neo4j_client)
+    service = AttackChainService(graph_client)
     campaigns = await service.scan_recent_alerts(hours_back=hours_back)
     return {
         "campaigns": [
@@ -1516,7 +1516,7 @@ async def _compliance_conservation_status() -> str:
     try:
         from app.services.learning_health import LearningHealthMonitor
 
-        health = await LearningHealthMonitor.evaluate(neo4j_client)
+        health = await LearningHealthMonitor.evaluate(graph_client)
         return str(health.get("status") or "UNKNOWN").upper()
     except Exception as exc:
         logger.warning("[COMPLIANCE] Conservation status unavailable: %s", exc)
@@ -1589,7 +1589,7 @@ async def benchmarking_report(
 ):
     """L-04: Analyst benchmarking report."""
     from app.services.benchmarking_report import BenchmarkingEngine
-    engine = BenchmarkingEngine(neo4j_client)
+    engine = BenchmarkingEngine(graph_client)
     report = engine.generate_report(start_date, end_date, analyst_hourly_cost)
     summary = engine.format_executive_summary(report)
     return {
@@ -1628,7 +1628,7 @@ async def benchmarking_report(
 async def executive_narrative():
     """F12: Executive narrative digest consumed by Tab 5."""
     from app.services.executive_narrative import build_executive_narrative_async
-    return await build_executive_narrative_async(neo4j_client)
+    return await build_executive_narrative_async(graph_client)
 
 
 @router.get("/soc/executive-narrative/pdf")
@@ -1643,7 +1643,7 @@ async def executive_narrative_pdf():
     from reportlab.lib.colors import HexColor
     from app.services.executive_narrative import build_executive_narrative_async
 
-    data = await build_executive_narrative_async(neo4j_client)
+    data = await build_executive_narrative_async(graph_client)
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=letter,
@@ -1930,7 +1930,7 @@ async def get_campaigns(
     """
     from app.domains.soc.campaigns import CampaignRepository
 
-    repo = CampaignRepository(neo4j_client)
+    repo = CampaignRepository(graph_client)
     campaigns_raw = await repo.get_campaigns(
         limit=limit,
         min_confidence=min_confidence,
@@ -1973,7 +1973,7 @@ async def get_campaign_timeline(limit: int = 10):
     """
     from app.domains.soc.campaigns import CampaignRepository
 
-    repo = CampaignRepository(neo4j_client)
+    repo = CampaignRepository(graph_client)
     rows = await repo.get_campaigns(limit=max(1, min(limit, 50)))
     now_epoch = int(datetime.utcnow().timestamp())
     timeline = []
@@ -2022,7 +2022,7 @@ async def get_campaign_detail(campaign_id: str):
     """Return full campaign detail including member decisions."""
     from app.domains.soc.campaigns import CampaignRepository
 
-    repo = CampaignRepository(neo4j_client)
+    repo = CampaignRepository(graph_client)
     detail = await repo.get_campaign_detail(campaign_id)
     if not detail:
         raise HTTPException(status_code=404, detail="Campaign not found")
@@ -2056,7 +2056,7 @@ async def get_accuracy_trajectory():
     sigma_per_category: dict[str, float] = {}
 
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             """
             MATCH (d:Decision)
             WHERE """ + soc_decision_where() + """
@@ -2096,7 +2096,7 @@ async def recorrelate_campaigns():
     from app.domains.soc.config import SOCDomainConfig
 
     config = SOCDomainConfig.get_campaign_config()
-    repo = CampaignRepository(neo4j_client)
+    repo = CampaignRepository(graph_client)
     engine = CampaignCorrelationEngine(config)
 
     events = await repo.fetch_all_events()
@@ -2133,7 +2133,7 @@ async def get_analyst_benchmarking():
 
     # ── 1. Overall ────────────────────────────────────────────────────────
     try:
-        overall_result = await neo4j_client.run_query(
+        overall_result = await graph_client.run_query(
             """
             MATCH (sd:ShadowDecision {source: $source})
             RETURN count(sd) AS total,
@@ -2164,7 +2164,7 @@ async def get_analyst_benchmarking():
 
     # ── 2. Per category ───────────────────────────────────────────────────
     try:
-        cat_result = await neo4j_client.run_query(
+        cat_result = await graph_client.run_query(
             """
             MATCH (sd:ShadowDecision {source: $source})
             RETURN sd.category AS category,
@@ -2228,7 +2228,7 @@ async def get_analyst_benchmarking():
 
     # ── 3. Per archetype ──────────────────────────────────────────────────
     try:
-        arch_result = await neo4j_client.run_query(
+        arch_result = await graph_client.run_query(
             """
             MATCH (sd:ShadowDecision {source: $source})
             RETURN sd.analyst AS analyst,
@@ -2252,7 +2252,7 @@ async def get_analyst_benchmarking():
 
     # ── 4. Day variance ───────────────────────────────────────────────────
     try:
-        day_result = await neo4j_client.run_query(
+        day_result = await graph_client.run_query(
             """
             MATCH (sd:ShadowDecision {source: $source})
             WITH sd.day AS day,
@@ -2360,7 +2360,7 @@ async def get_enrichment_advisor():
 
     ioc_coverage = 0.0
     try:
-        results = await neo4j_client.run_query(
+        results = await graph_client.run_query(
             """
             MATCH (a:Alert)
             OPTIONAL MATCH (a)-[:HAS_INDICATOR]->(ti:ThreatIndicator)
@@ -2483,7 +2483,7 @@ async def get_enrichment_status():
         last_refresh_epoch_s: int | None = None
 
         try:
-            rows = await neo4j_client.run_query(
+            rows = await graph_client.run_query(
                 f"MATCH (n:{label}) "
                 f"RETURN count(n) AS cnt, max(n.{prop}) AS last_refresh",
                 {},
@@ -2565,7 +2565,7 @@ async def get_reconvergence_log(limit: int = 50):
     """
     from app.services.reconvergence_logger import read_reconvergence_events
 
-    events = await read_reconvergence_events(neo4j_client, limit=max(1, min(limit, 500)))
+    events = await read_reconvergence_events(graph_client, limit=max(1, min(limit, 500)))
 
     return {
         "events":       events,
@@ -2590,7 +2590,7 @@ async def get_verification_health():
     Status: GREEN (all healthy) | AMBER (1-2 unhealthy) | RED (all unhealthy or 0 verifications)
     """
     from app.services.learning_health import compute_verification_health
-    return await compute_verification_health(neo4j_client)
+    return await compute_verification_health(graph_client)
 
 
 # =============================================================================
@@ -2758,7 +2758,7 @@ async def _tab1_content() -> dict:
     top_alert_types: list = []
 
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             "MATCH (a:Alert) RETURN count(a) AS cnt", {}
         )
         alert_count = int((rows[0].get("cnt") or 0) if rows else 0)
@@ -2766,7 +2766,7 @@ async def _tab1_content() -> dict:
         print(f"[SOC] tab2 alert_count query failed: {_exc}")
 
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             "MATCH (a:Alert) WHERE a.status IN ['pending', 'open'] "
             "RETURN count(a) AS cnt", {}
         )
@@ -2778,7 +2778,7 @@ async def _tab1_content() -> dict:
     # a.type is always None on live data — ignored.
     raw_top: list = []
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             "MATCH (a:Alert) "
             "RETURN a.category AS category, a.alert_type AS alert_type, count(a) AS n "
             "ORDER BY n DESC LIMIT 3", {}
@@ -2793,7 +2793,7 @@ async def _tab1_content() -> dict:
     if top_categories:
         try:
             _cats_literal = "[" + ", ".join(f"'{c}'" for c in top_categories) + "]"
-            rows = await neo4j_client.run_query(
+            rows = await graph_client.run_query(
                 f"""
                 MATCH (d:Decision)
                 WHERE {soc_decision_where()} 
@@ -2876,7 +2876,7 @@ async def _tab2_content() -> dict:
     # Same path as Tab 5 (executive_narrative.py). Avoids event-loop issues that
     # affect compute_iks_v2 async queries.
     try:
-        iks_score = await compute_visible_iks(neo4j_client)
+        iks_score = await compute_visible_iks(graph_client)
         iks_interpretation = interpret_iks_v2(iks_score)
     except Exception as _exc:
         print(f"[SOC] tab2 iks drift query failed: {_exc}")
@@ -2884,7 +2884,7 @@ async def _tab2_content() -> dict:
     # ── IKS v2: component breakdown + total_decisions (informational) ──────────
     # Also used as fallback for iks_score if drift path gave 0.0.
     try:
-        iks_data = await compute_iks_v2(neo4j_client)
+        iks_data = await compute_iks_v2(graph_client)
         category_accuracy_summary = iks_data.get("components", {})
         total_decisions            = iks_data.get("total_decisions", 0)
         if iks_score < 50.0:
@@ -2894,7 +2894,7 @@ async def _tab2_content() -> dict:
         print(f"[SOC] tab2 iks_v2 query failed: {_exc}")
 
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "AND d.confidence IS NOT NULL AND d.confidence < 0.50 "
             "RETURN count(d) AS cnt", {}
@@ -3105,7 +3105,7 @@ async def _tab3_content() -> dict:
         print(f"[SOC] tab3 factor_names query failed: {_exc}")
 
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             "MATCH (n) RETURN count(n) AS cnt", {}
         )
         graph_node_count = int((rows[0].get("cnt") or 0) if rows else 0)
@@ -3160,7 +3160,7 @@ async def _tab3_content() -> dict:
     if _scorer is not None:
         # Step 1: try a real pending alert
         try:
-            _rows = await neo4j_client.run_query(
+            _rows = await graph_client.run_query(
                 "MATCH (a:Alert {status: 'pending'}) "
                 "RETURN a.alert_id AS alert_id, a.category AS category, a.alert_type AS alert_type "
                 "LIMIT 1",
@@ -3215,7 +3215,7 @@ async def _tab3_content() -> dict:
     override_rate = 0.0 if _unclassified_alert else 15.0
     if not _unclassified_alert:
         try:
-            _ov_rows = await neo4j_client.run_query(
+            _ov_rows = await graph_client.run_query(
                 f"MATCH (d:Decision) "
                 f"WHERE {soc_decision_where()} "
                 f"AND d.category = '{rec_category}' AND d.outcome IS NOT NULL "
@@ -3233,7 +3233,7 @@ async def _tab3_content() -> dict:
 
     total_verified = 0
     try:
-        _tv_rows = await neo4j_client.run_query(
+        _tv_rows = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "AND d.outcome IS NOT NULL RETURN count(d) AS cnt",
             {},
@@ -3297,7 +3297,7 @@ async def _tab4_content() -> dict:
     learning_events_count = 0
 
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "RETURN count(d) AS cnt", {}
         )
@@ -3316,7 +3316,7 @@ async def _tab4_content() -> dict:
 
     try:
         # Estimate decisions/day from timestamp spread of Decision nodes
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             """
             MATCH (d:Decision)
             WHERE """ + soc_decision_where() + """
@@ -3335,7 +3335,7 @@ async def _tab4_content() -> dict:
         print(f"[SOC] tab4 decisions_per_day query failed: {_exc}")
 
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "AND d.correct = true RETURN count(d) AS cnt", {}
         )
@@ -3425,7 +3425,7 @@ async def _tab5_content() -> dict:
     from app.services.executive_narrative import build_executive_narrative_async
     from app.services.gae_state import get_profile_scorer
 
-    narr = await build_executive_narrative_async(neo4j_client)
+    narr = await build_executive_narrative_async(graph_client)
 
     what_changed_raw    = narr.get("what_changed", {})
     what_discovered_raw = narr.get("what_discovered", {})
@@ -3438,7 +3438,7 @@ async def _tab5_content() -> dict:
     # FIX 2.8 — W2 flywheel: structured fields for CISO audience
     flywheel_edge_count = 0
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             "MATCH ()-[r:TRIGGERED_EVOLUTION]->() RETURN count(r) AS cnt", {}
         )
         flywheel_edge_count = int((rows[0].get("cnt") or 0) if rows else 0)
@@ -3685,7 +3685,7 @@ async def get_deployment_state():
     Returns {mu, shape, stored_at, gae_version} or 404 if not yet stored.
     """
     from app.services.gae_state import get_bootstrap_centroids
-    result = await get_bootstrap_centroids(neo4j_client)
+    result = await get_bootstrap_centroids(graph_client)
     if result is None:
         raise HTTPException(
             status_code=404,
@@ -3730,7 +3730,7 @@ async def get_analyst_eta_weights_endpoint():
         print(f"[SOC] analyst-eta n_decisions query failed: {_exc}")
 
     # Fetch precision from Neo4j
-    precision = await compute_analyst_precision(neo4j_client)
+    precision = await compute_analyst_precision(graph_client)
 
     # Build GateConfig to compute calibrated weights via the validated formula
     cfg = GateConfig(
@@ -3809,7 +3809,7 @@ async def get_analyst_weights():
     # -- decision counts per analyst ------------------------------------------
     decision_counts: dict = {}
     try:
-        rows = await neo4j_client.run_query(_ANALYST_DECISION_COUNT_QUERY, {})
+        rows = await graph_client.run_query(_ANALYST_DECISION_COUNT_QUERY, {})
         decision_counts = {r["analyst"]: int(r["total"]) for r in (rows or [])}
     except Exception as _exc:
         print(f"[SOC] analyst-detail decision_counts query failed: {_exc}")
@@ -3821,7 +3821,7 @@ async def get_analyst_weights():
     except Exception as _exc:
         print(f"[SOC] analyst-detail n_decisions query failed: {_exc}")
 
-    precision = await compute_analyst_precision(neo4j_client)
+    precision = await compute_analyst_precision(graph_client)
 
     cfg = GateConfig(
         n_decisions=n_decisions,
@@ -3887,7 +3887,7 @@ async def get_volume_baseline():
     from app.services.learning_health import compute_volume_baseline
     from app.services.gae_state import is_volume_spike_active
 
-    baseline = await compute_volume_baseline(neo4j_client)
+    baseline = await compute_volume_baseline(graph_client)
     baseline["spike_active"] = is_volume_spike_active()
     return baseline
 
@@ -3919,7 +3919,7 @@ async def get_frozen_categories_endpoint():
         get_frozen_categories,
     )
 
-    category_baseline = await compute_category_baseline(neo4j_client)
+    category_baseline = await compute_category_baseline(graph_client)
 
     return {
         "spike_active":      is_volume_spike_active(),
@@ -3957,7 +3957,7 @@ async def get_spike_cap_status_endpoint():
     status = get_spike_cap_status()
     baseline_daily = 0.0
     try:
-        baseline = await compute_volume_baseline(neo4j_client)
+        baseline = await compute_volume_baseline(graph_client)
         baseline_daily = baseline.get("daily_mean", 0.0)
     except Exception as _exc:
         print(f"[SOC] learning-health baseline_daily query failed: {_exc}")
@@ -4007,7 +4007,7 @@ async def get_centroid_export(format: str = "json"):
         }
 
     # Build base export (current_mu, bootstrap_mu, sha256, categories, etc.)
-    raw = await build_centroid_export(scorer, neo4j_client)
+    raw = await build_centroid_export(scorer, graph_client)
 
     categories = raw["categories"]
     actions    = raw["actions"]
@@ -4046,7 +4046,7 @@ async def get_centroid_export(format: str = "json"):
     iks_score = 0.0
     try:
         from app.services.iks import compute_iks_v2
-        iks_data = await compute_iks_v2(neo4j_client)
+        iks_data = await compute_iks_v2(graph_client)
         iks_score = iks_data.get("iks_v2", 0.0)
     except Exception as _exc:
         print(f"[SOC] centroid-export iks_score query failed: {_exc}")
@@ -4207,7 +4207,7 @@ async def get_centroid_support():
 
     # Fetch bootstrap baseline
     try:
-        bootstrap = await get_bootstrap_centroids(neo4j_client)
+        bootstrap = await get_bootstrap_centroids(graph_client)
     except Exception as _exc:
         print(f"[SOC] centroid-evolution bootstrap query failed: {_exc}")
         bootstrap = None
@@ -4309,11 +4309,11 @@ async def get_decision_distance_log(limit: int = 50):
     (simulation: 3.0->2.4 over 600 decisions).
     """
     from app.services.reconvergence_logger import read_decision_distance_log
-    from app.db.neo4j import neo4j_client
+    from app.db.graph_client import graph_client
 
     entries = []
     try:
-        entries = await read_decision_distance_log(neo4j_client, limit=max(1, min(limit, 500)))
+        entries = await read_decision_distance_log(graph_client, limit=max(1, min(limit, 500)))
     except Exception as _exc:
         print(f"[SOC] reconvergence-log entries query failed: {_exc}")
 

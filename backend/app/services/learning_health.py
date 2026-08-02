@@ -28,7 +28,7 @@ import numpy as np
 from gae.calibration import compute_theta_min, derive_theta_min, check_conservation
 
 from app.services.gae_state import get_learning_state, get_learning_store
-from app.db.neo4j import soc_decision_where
+from app.db.graph_client import soc_decision_where
 
 log = logging.getLogger(__name__)
 
@@ -614,7 +614,7 @@ async def _persist_l5_conservation_state(health: dict) -> None:
 _VOLUME_WINDOW_DAYS = 30
 
 
-async def compute_volume_baseline(neo4j_client: Any) -> dict:
+async def compute_volume_baseline(graph_client: Any) -> dict:
     """
     Compute rolling 30-day alert volume baseline from Alert nodes.
 
@@ -639,7 +639,7 @@ async def compute_volume_baseline(neo4j_client: Any) -> dict:
 
     daily_counts: list[float] = []
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             f"""
             MATCH (a:Alert)
             WHERE a.timestamp_epoch > {cutoff_epoch}
@@ -679,13 +679,13 @@ async def compute_volume_baseline(neo4j_client: Any) -> dict:
     }
 
 
-async def detect_volume_spike(neo4j_client: Any, today_count: int) -> dict:
+async def detect_volume_spike(graph_client: Any, today_count: int) -> dict:
     """
     Compare today's alert count against the 30-day baseline.
 
     Parameters
     ----------
-    neo4j_client : async Neo4j client
+    graph_client : async Neo4j client
     today_count  : int -- number of alerts received so far today
 
     Returns
@@ -697,7 +697,7 @@ async def detect_volume_spike(neo4j_client: Any, today_count: int) -> dict:
       daily_mean      : float
       daily_std       : float
     """
-    baseline = await compute_volume_baseline(neo4j_client)
+    baseline = await compute_volume_baseline(graph_client)
     spike_detected = today_count > baseline["spike_threshold"]
 
     if spike_detected:
@@ -727,7 +727,7 @@ async def detect_volume_spike(neo4j_client: Any, today_count: int) -> dict:
 _FREEZE_MULTIPLIER = 2.0   # freeze when today_share > 2x baseline_share
 
 
-async def compute_category_baseline(neo4j_client: Any) -> dict[str, float]:
+async def compute_category_baseline(graph_client: Any) -> dict[str, float]:
     """
     Compute 30-day baseline category distribution of Alert nodes.
 
@@ -740,7 +740,7 @@ async def compute_category_baseline(neo4j_client: Any) -> dict[str, float]:
     cutoff_epoch = int(_time.time() * 1000) - _VOLUME_WINDOW_DAYS * 86_400_000
 
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             f"""
             MATCH (a:Alert)
             WHERE a.timestamp_epoch > {cutoff_epoch} AND a.category IS NOT NULL
@@ -763,7 +763,7 @@ async def compute_category_baseline(neo4j_client: Any) -> dict[str, float]:
 
 
 async def detect_frozen_categories(
-    neo4j_client: Any,
+    graph_client: Any,
     today_category_counts: dict,
 ) -> list:
     """
@@ -777,7 +777,7 @@ async def detect_frozen_categories(
 
     Parameters
     ----------
-    neo4j_client          : async Neo4j client
+    graph_client          : async Neo4j client
     today_category_counts : dict[str, int] -- alert counts by category for today
 
     Returns
@@ -793,7 +793,7 @@ async def detect_frozen_categories(
     if today_total == 0:
         return []
 
-    baseline = await compute_category_baseline(neo4j_client)
+    baseline = await compute_category_baseline(graph_client)
 
     frozen: list[str] = []
     for category, count in today_category_counts.items():
@@ -822,7 +822,7 @@ _MIN_ANALYST_DECISIONS = 10   # exclude analysts with fewer decisions
 _MIN_ANALYSTS_REQUIRED = 2    # return {} if fewer than 2 analysts qualify
 
 
-async def compute_analyst_precision(neo4j_client: Any) -> dict[str, float]:
+async def compute_analyst_precision(graph_client: Any) -> dict[str, float]:
     """
     Compute per-analyst override precision from Decision nodes.
 
@@ -837,7 +837,7 @@ async def compute_analyst_precision(neo4j_client: Any) -> dict[str, float]:
     """
     try:
         _soc_where = soc_decision_where()
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             f"""
             MATCH (d:Decision)
             WHERE {_soc_where}
@@ -869,7 +869,7 @@ async def compute_analyst_precision(neo4j_client: Any) -> dict[str, float]:
 # Block 7.6 — Verification rate health
 # ---------------------------------------------------------------------------
 
-async def compute_verification_health(neo4j_client: Any) -> dict:
+async def compute_verification_health(graph_client: Any) -> dict:
     """
     Compute verification rate health across 3 conditions.
 
@@ -894,7 +894,7 @@ async def compute_verification_health(neo4j_client: Any) -> dict:
     total_decisions    = 0
     verified_decisions = 0
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "RETURN count(d) AS total"
         )
@@ -903,7 +903,7 @@ async def compute_verification_health(neo4j_client: Any) -> dict:
         log.debug("[VERIF-HEALTH] total_decisions query failed: %s", exc)
 
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "AND d.outcome IS NOT NULL AND d.verified_at_epoch IS NOT NULL "
             "RETURN count(d) AS verified"
@@ -923,7 +923,7 @@ async def compute_verification_health(neo4j_client: Any) -> dict:
     prior_7d_total = prior_7d_verified = 0
     try:
         _soc_where = soc_decision_where()
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             f"""
             MATCH (d:Decision)
             WHERE {_soc_where}
@@ -941,7 +941,7 @@ async def compute_verification_health(neo4j_client: Any) -> dict:
 
     try:
         _soc_where = soc_decision_where()
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             f"""
             MATCH (d:Decision)
             WHERE {_soc_where}
@@ -970,7 +970,7 @@ async def compute_verification_health(neo4j_client: Any) -> dict:
     # ── Condition 3: conservation status ─────────────────────────────────────
     conservation_status = "UNKNOWN"
     try:
-        health = await LearningHealthMonitor.evaluate(neo4j_client)
+        health = await LearningHealthMonitor.evaluate(graph_client)
         conservation_status = health.get("status", "UNKNOWN")
     except Exception as exc:
         log.debug("[VERIF-HEALTH] conservation check failed: %s", exc)

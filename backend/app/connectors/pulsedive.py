@@ -26,7 +26,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from app.connectors.base import ConnectorResult, HealthStatus, UCLConnector
-from app.db.neo4j import neo4j_client
+from app.db.graph_client import graph_client
 
 
 logger = logging.getLogger(__name__)
@@ -336,7 +336,7 @@ class PulsediveConnector(UCLConnector):
             }
             try:
                 # Step A — update existing node
-                _match_result = await neo4j_client.run_query(
+                _match_result = await graph_client.run_query(
                     f"MATCH (ti:ThreatIntel {{value: {_S(_params['value'])}}}) "
                     f"SET ti.type         = {_S(_params['type'])}, "
                     f"    ti.severity     = {_S(_params['severity'])}, "
@@ -350,7 +350,7 @@ class PulsediveConnector(UCLConnector):
                 )
                 if not _match_result:
                     # Step B — node does not exist yet; create it
-                    await neo4j_client.run_query(
+                    await graph_client.run_query(
                         f"CREATE (ti:ThreatIntel {{"
                         f" value:        {_S(_params['value'])},"
                         f" type:         {_S(_params['type'])},"
@@ -375,13 +375,13 @@ class PulsediveConnector(UCLConnector):
         for alert_id, ioc_values in ALERT_IOC_MAP.items():
             for ioc_value in ioc_values:
                 try:
-                    edge_check = await neo4j_client.run_query(
+                    edge_check = await graph_client.run_query(
                         f"MATCH (ti:ThreatIntel {{value: {_S(ioc_value)}}})"
                         f"-[:ASSOCIATED_WITH]->(a:Alert {{alert_id: {_S(alert_id)}}})"
                         f" RETURN ti"
                     )
                     if not edge_check:
-                        await neo4j_client.run_query(
+                        await graph_client.run_query(
                             f"MATCH (ti:ThreatIntel {{value: {_S(ioc_value)}}})"
                             f" MATCH (a:Alert {{alert_id: {_S(alert_id)}}})"
                             f" CREATE (ti)-[:ASSOCIATED_WITH {{linked_at: {_S(_now_epoch)}}}]->(a)"

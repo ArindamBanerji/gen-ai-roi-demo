@@ -15,7 +15,7 @@ from pydantic import BaseModel
 
 from gae.judgment import compute_judgment
 from app.domains.soc.config import SOC_CATEGORIES, SOC_FACTORS, SOC_ACTIONS
-from app.db.neo4j import neo4j_client
+from app.db.graph_client import graph_client
 
 router = APIRouter()
 
@@ -145,7 +145,7 @@ async def explain_decision_get(alert_id: str):
     from app.services.gae_state import get_profile_scorer
 
     try:
-        rows = await neo4j_client.run_query(
+        rows = await graph_client.run_query(
             "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert {alert_id: $alert_id}) "
             "WHERE d.domain = 'soc' "
             "RETURN d ORDER BY d.timestamp_epoch DESC LIMIT 1",

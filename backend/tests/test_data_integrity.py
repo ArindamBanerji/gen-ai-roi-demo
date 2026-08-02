@@ -4,7 +4,7 @@ import asyncio
 import os
 
 from app.domains.soc.config import SOC_CATEGORIES
-from app.db.neo4j import soc_decision_where
+from app.db.graph_client import soc_decision_where
 
 pytestmark = pytest.mark.skipif(
     os.getenv("GRAPH_BACKEND") != "age",

@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from typing import Dict, List
 
 from app.connectors.base import ConnectorResult, HealthStatus, UCLConnector
-from app.db.neo4j import neo4j_client
+from app.db.graph_client import graph_client
 
 
 logger = logging.getLogger(__name__)
@@ -113,11 +113,11 @@ class CrowdStrikeMockConnector(UCLConnector):
         for device in EDR_DEVICES:
             try:
                 _did = _S(device["device_id"])
-                existing = await neo4j_client.run_query(
+                existing = await graph_client.run_query(
                     f"MATCH (cs:CrowdStrikeEnrichment {{device_id: {_did}}}) RETURN cs"
                 )
                 if existing:
-                    await neo4j_client.run_query(
+                    await graph_client.run_query(
                         f"MATCH (cs:CrowdStrikeEnrichment {{device_id: {_did}}})"
                         f" SET cs.hostname = {_S(device['hostname'])},"
                         f"     cs.os = {_S(device['os'])},"
@@ -127,7 +127,7 @@ class CrowdStrikeMockConnector(UCLConnector):
                         f"     cs.refreshed_at = {_S(_now_epoch)}"
                     )
                 else:
-                    await neo4j_client.run_query(
+                    await graph_client.run_query(
                         f"CREATE (cs:CrowdStrikeEnrichment {{"
                         f" device_id: {_did},"
                         f" hostname: {_S(device['hostname'])},"
@@ -155,7 +155,7 @@ class CrowdStrikeMockConnector(UCLConnector):
             try:
                 _host = _S(device["hostname"])
                 _did = _S(device["device_id"])
-                edge_check = await neo4j_client.run_query(
+                edge_check = await graph_client.run_query(
                     f"MATCH (asset:Asset {{hostname: {_host}}})"
                     f"-[:EDR_MANAGED_BY]->(cs:CrowdStrikeEnrichment {{device_id: {_did}}})"
                     f" RETURN asset"
@@ -167,7 +167,7 @@ class CrowdStrikeMockConnector(UCLConnector):
                         f"-[:EDR_MANAGED_BY]-> CrowdStrikeEnrichment({device['device_id']})"
                     )
                 else:
-                    result = await neo4j_client.run_query(
+                    result = await graph_client.run_query(
                         f"MATCH (asset:Asset {{hostname: {_host}}})"
                         f" MATCH (cs:CrowdStrikeEnrichment {{device_id: {_did}}})"
                         f" CREATE (asset)-[:EDR_MANAGED_BY {{linked_at: {_S(_now_epoch)}}}]->(cs)"

@@ -33,7 +33,7 @@ except ImportError:
     print("[env] WARNING: python-dotenv not installed")
 
 from app.connectors.sentinel_mock import SentinelMockConnector  # noqa: E402
-from app.db.neo4j import neo4j_client                           # noqa: E402
+from app.db.graph_client import graph_client                           # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Cypher — MERGE alert node; link to User/Asset if they already exist.
@@ -115,12 +115,12 @@ async def main() -> None:
         return
 
     # Live mode — write to Neo4j in batches
-    await neo4j_client.connect()
+    await graph_client.connect()
     try:
         ingested = 0
         for start in range(0, len(alerts), BATCH_SIZE):
             batch = alerts[start:start + BATCH_SIZE]
-            await neo4j_client.run_query(MERGE_ALERT, {"batch": batch})
+            await graph_client.run_query(MERGE_ALERT, {"batch": batch})
             ingested += len(batch)
             print(f"[sentinel-mock] Ingested {ingested}/{len(alerts)}")
             if args.speed_ms:
@@ -128,7 +128,7 @@ async def main() -> None:
 
         print(f"\n[sentinel-mock] Done -- {ingested} alerts merged into Neo4j")
     finally:
-        await neo4j_client.close()
+        await graph_client.close()
 
 
 if __name__ == "__main__":

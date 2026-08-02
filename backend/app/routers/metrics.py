@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from pydantic import BaseModel
 import logging
 
-from app.db.neo4j import neo4j_client, soc_decision_where
+from app.db.graph_client import graph_client, soc_decision_where
 from app.graph_schema import _S
 
 
@@ -204,7 +204,7 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
                 week_start = now_ms - i * WEEK_MS
                 week_num   = weeks - i + 1  # 1-based, oldest first
 
-                total_rows = await neo4j_client.run_query(
+                total_rows = await graph_client.run_query(
                     f"MATCH (d:Decision)-[:DECIDED_ON]->() "
                     f"WHERE {soc_decision_where()} "
                     f"AND d.timestamp_epoch > {_S(week_start)} "
@@ -213,7 +213,7 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
                 )
                 total = int(total_rows[0]["n"]) if total_rows else 0
 
-                correct_rows = await neo4j_client.run_query(
+                correct_rows = await graph_client.run_query(
                     f"MATCH (d:Decision)-[:DECIDED_ON]->() "
                     f"WHERE {soc_decision_where()} "
                     f"AND d.timestamp_epoch > {_S(week_start)} "
@@ -245,14 +245,14 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
         )
         if _all_zero:
             try:
-                _fb_total_rows = await neo4j_client.run_query(
+                _fb_total_rows = await graph_client.run_query(
                     f"MATCH (d:Decision {{origin: 'zero_day_synthetic'}}) "
                     f"WHERE {soc_decision_where()} "
                     "RETURN count(d) AS total"
                 )
                 _fb_total = int(_fb_total_rows[0]["total"]) if _fb_total_rows else 0
 
-                _fb_correct_rows = await neo4j_client.run_query(
+                _fb_correct_rows = await graph_client.run_query(
                     f"MATCH (d:Decision {{origin: 'zero_day_synthetic'}}) "
                     f"WHERE {soc_decision_where()} AND d.correct = true "
                     "RETURN count(d) AS correct"
@@ -276,7 +276,7 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
 
         # --- EVOLUTION EVENTS: Decision nodes from AGE via DECIDED_ON ---
         try:
-            evo_rows = await neo4j_client.run_query(
+            evo_rows = await graph_client.run_query(
                 "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
                 f"WHERE {soc_decision_where()} "
                 "RETURN d.decision_id AS id, d.action AS action, d.confidence AS confidence, "
@@ -352,7 +352,7 @@ async def reset_all_demo_data():
     """
     from app.services.state_manager import StateManager, ResetError
     from app.services import gae_state, audit as audit_store
-    from app.db.neo4j import neo4j_client
+    from app.db.graph_client import graph_client
     from app.core.domain_registry import get_domain_config
     from app.core.state_manager import state_manager
 
@@ -363,7 +363,7 @@ async def reset_all_demo_data():
         sm = StateManager(
             learning_state_service=gae_state,
             audit_store=audit_store,
-            neo4j_service=neo4j_client,
+            neo4j_service=graph_client,
             domain_config=get_domain_config(),
         )
         await sm.hard_reset(preserve_learning=True)
@@ -479,7 +479,7 @@ async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
     """
     print(f"[EVOLUTION EVENTS] Fetching {limit} recent Decision nodes from AGE")
     try:
-        results = await neo4j_client.run_query(
+        results = await graph_client.run_query(
             "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
             f"WHERE {soc_decision_where()} "
             "RETURN d.decision_id AS id, d.action AS action, d.confidence AS confidence, "
@@ -535,7 +535,7 @@ async def get_weekly_trends():
     estimated=True with an explanatory note.
     """
     try:
-        results = await neo4j_client.run_query(
+        results = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "AND d.timestamp_epoch IS NOT NULL "
             "RETURN d.timestamp_epoch AS ts, d.action AS action, d.confidence AS confidence "
@@ -582,13 +582,13 @@ async def get_decision_economics():
     Safe against division-by-zero when no decisions exist yet.
     """
     try:
-        dec_res = await neo4j_client.run_query(
+        dec_res = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "RETURN count(d) AS total_decisions"
         )
         total = int(dec_res[0]["total_decisions"]) if dec_res else 0
 
-        correct_res = await neo4j_client.run_query(
+        correct_res = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "AND d.correct = true "
             "RETURN count(d) AS correct_decisions"
@@ -600,7 +600,7 @@ async def get_decision_economics():
         time_saved_hours = correct_rate * total * 0.5
         decisions_per_day = 50.0
         try:
-            rows = await neo4j_client.run_query(
+            rows = await graph_client.run_query(
                 """
                 MATCH (d:Decision)
                 WHERE """ + soc_decision_where() + """
@@ -695,7 +695,7 @@ async def get_operational_metrics():
 
     # MTTD: alert creation → decision
     try:
-        mttd_result = await neo4j_client.run_query(
+        mttd_result = await graph_client.run_query(
             "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
             f"WHERE {soc_decision_where()} "
             "AND d.timestamp_epoch IS NOT NULL AND a.created_at_epoch IS NOT NULL "
@@ -724,7 +724,7 @@ async def get_operational_metrics():
 
     # MTTR: decision → outcome verification
     try:
-        mttr_result = await neo4j_client.run_query(
+        mttr_result = await graph_client.run_query(
             "MATCH (d:Decision) "
             f"WHERE {soc_decision_where()} "
             "AND d.timestamp_epoch IS NOT NULL AND d.verified_at_epoch IS NOT NULL "
@@ -753,7 +753,7 @@ async def get_operational_metrics():
 
     # FP Rate from Decision outcomes
     try:
-        fp_result = await neo4j_client.run_query(
+        fp_result = await graph_client.run_query(
             "MATCH (d:Decision) "
             f"WHERE {soc_decision_where()} "
             "RETURN count(d) AS total, "
@@ -801,20 +801,20 @@ async def get_board_export():
     total, correct, fp_count_val = 0, 0, 0
 
     try:
-        dec_res = await neo4j_client.run_query(
+        dec_res = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "RETURN count(d) AS total"
         )
         total = int(dec_res[0]["total"]) if dec_res else 0
 
-        correct_res = await neo4j_client.run_query(
+        correct_res = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "AND d.correct = true "
             "RETURN count(d) AS correct"
         )
         correct = int(correct_res[0]["correct"]) if correct_res else 0
 
-        fp_res = await neo4j_client.run_query(
+        fp_res = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "RETURN count(d) AS total, "
             "sum(CASE WHEN d.correct = false OR d.outcome = 'incorrect' "
@@ -865,7 +865,7 @@ async def get_economics():
     # 1. Decision volume + accuracy (single aggregating query)
     total = correct = escalations = suppressions = investigations = monitors = 0
     try:
-        dec_result = await neo4j_client.run_query(
+        dec_result = await graph_client.run_query(
             "MATCH (d:Decision) "
             f"WHERE {soc_decision_where()} "
             "RETURN "
@@ -890,7 +890,7 @@ async def get_economics():
     # 2. User population from realistic seed
     total_users = privileged = elevated = 0
     try:
-        user_result = await neo4j_client.run_query(
+        user_result = await graph_client.run_query(
             "MATCH (u:User) "
             "RETURN "
             "count(u) AS total_users, "
