@@ -461,6 +461,8 @@ export default function GovernanceTab() {
 
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
+  const [connectorAction, setConnectorAction] = useState<string | null>(null)
+  const [connectorMessage, setConnectorMessage] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -623,6 +625,47 @@ export default function GovernanceTab() {
     }
   }
 
+  const runConnectorAction = async (kind: 'servicenow' | 'sentinel') => {
+    setConnectorAction(kind)
+    setConnectorMessage(null)
+    const endpoint = kind === 'servicenow'
+      ? `${SOC_API}/api/servicenow/create-incident`
+      : `${SOC_API}/api/sentinel/writeback-test`
+    const body = kind === 'servicenow'
+      ? {
+          decision_id: 'governance-demo-decision',
+          alert_id: 'governance-demo-alert',
+          alert_type: 'governance_review',
+          category: 'Security',
+          confidence: 0.9,
+          nl_explanation: 'Analyst-requested governance connector verification.',
+        }
+      : {
+          incident_id: 'INC-GOVERNANCE-TEST',
+          action: 'escalate',
+          confidence: 0.9,
+          decision_id: 'governance-demo-decision',
+        }
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (response.status === 401) {
+        window.location.href = '/saml/login'
+        throw new Error('Unauthorized')
+      }
+      if (!response.ok) throw new Error(`Connector request failed: ${response.status}`)
+      setConnectorMessage(`${kind === 'servicenow' ? 'ServiceNow incident' : 'Sentinel write-back'} request accepted.`)
+    } catch (error) {
+      console.error(`[GovernanceTab] ${kind} connector action failed:`, error)
+      setConnectorMessage(`${kind === 'servicenow' ? 'ServiceNow' : 'Sentinel'} connector request failed.`)
+    } finally {
+      setConnectorAction(null)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 rounded-lg border border-cyan-500/40 bg-slate-950 p-6 shadow-2xl md:flex-row md:items-center md:justify-between">
@@ -645,6 +688,27 @@ export default function GovernanceTab() {
             {exporting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             {exporting ? 'Preparing...' : 'Export JSON'}
           </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              data-testid="create-servicenow-incident"
+              onClick={() => void runConnectorAction('servicenow')}
+              disabled={connectorAction !== null}
+              className="rounded-lg border border-blue-600 bg-blue-900/40 px-3 py-2 text-xs font-semibold text-blue-200 transition-colors hover:bg-blue-800/50"
+            >
+              {connectorAction === 'servicenow' ? 'Creating...' : 'Create ServiceNow Incident'}
+            </button>
+            <button
+              type="button"
+              data-testid="test-sentinel-writeback"
+              onClick={() => void runConnectorAction('sentinel')}
+              disabled={connectorAction !== null}
+              className="rounded-lg border border-violet-600 bg-violet-900/40 px-3 py-2 text-xs font-semibold text-violet-200 transition-colors hover:bg-violet-800/50"
+            >
+              {connectorAction === 'sentinel' ? 'Testing...' : 'Test Sentinel Writeback'}
+            </button>
+          </div>
+          {connectorMessage && <p data-testid="connector-action-status" className="text-xs font-semibold text-slate-300">{connectorMessage}</p>}
           {exportError && <p className="text-xs font-semibold text-red-300">{exportError}</p>}
         </div>
       </div>

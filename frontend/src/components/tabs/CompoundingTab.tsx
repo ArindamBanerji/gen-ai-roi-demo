@@ -645,7 +645,6 @@ export default function CompoundingTab() {
 
   // VIS-2: centroid evolution (replaces Chart A) + decision_count for label logic
   const [centroidEvolution, setCentroidEvolution] = useState<CentroidEvolutionEntry[]>([])
-  const [centroidEvolutionMock, setCentroidEvolutionMock] = useState(false)
   const [vis2DecisionCount, setVis2DecisionCount] = useState(0)
 
   // — real Tab 4 data (H7-FIX-4) —
@@ -947,16 +946,14 @@ export default function CompoundingTab() {
   useEffect(() => { loadEvolutionEventsReal() }, [])
 
   // VIS-2: load centroid evolution (Chart A replacement).
-  // On fetch error: renders ChartEmpty — no mock data (SOC-4 fix).
+  // On fetch error: renders ChartEmpty — no fabricated series (SOC-4 fix).
   const loadCentroidEvolution = async () => {
     try {
       const d = await getCentroidEvolution(200) as CentroidEvolutionEntry[]
       setCentroidEvolution(d)
-      setCentroidEvolutionMock(false)
     } catch {
       // Endpoint unavailable — show empty state instead of random illustrative data.
       setCentroidEvolution([])
-      setCentroidEvolutionMock(false)
     }
   }
   useEffect(() => { loadCentroidEvolution() }, [])
@@ -2034,12 +2031,6 @@ export default function CompoundingTab() {
           <p className="text-xs text-gray-500 mb-3">
             How far the ProfileScorer centroid moved per verified decision \u2014 green = reinforced, orange = corrected. Rolling 5-decision average shown as line.
           </p>
-          {centroidEvolutionMock && (
-            <div className="mb-2 flex items-center gap-2 px-3 py-1.5 bg-amber-900/40 border border-amber-500/50 rounded text-xs text-amber-300">
-              <span className="font-semibold">\u26a0 Mock data</span>
-              \u2014 /api/soc/centroid-evolution not yet built. Process alerts and verify outcomes to see real centroid drift.
-            </div>
-          )}
           <div className="bg-white rounded-md p-3">
             {centroidEvolution.length === 0 ? (
               <ChartEmpty message="Process alerts and provide outcome feedback to see centroid learning magnitude" />

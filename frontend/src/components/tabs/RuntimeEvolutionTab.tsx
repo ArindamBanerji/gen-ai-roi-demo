@@ -1786,7 +1786,7 @@ export default function RuntimeEvolutionTab() {
                     <div className="py-10 text-center text-gray-500 text-sm">Loading centroid evolution data...</div>
                   ) : centroidEvoError ? (
                     <div className="py-10 text-center text-gray-500 text-sm italic">
-                      Centroid evolution data not yet available.
+                      Current state: {decisionCount} verified decisions. Centroid evolution is unavailable until the learning-history response is populated.
                     </div>
                   ) : centroidChartData.length === 0 ? (
                     <div className="py-10 text-center text-gray-500 text-sm italic">

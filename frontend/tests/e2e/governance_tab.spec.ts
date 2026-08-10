@@ -26,6 +26,26 @@ test('governance_tab_renders_evidence_room_panels', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /Compliance/i })).toBeVisible();
   await expect(page.getByRole('heading', { name: /Evolution Audit/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /Export JSON/i })).toBeVisible();
+  await expect(page.getByTestId('create-servicenow-incident')).toBeVisible();
+  await expect(page.getByTestId('test-sentinel-writeback')).toBeVisible();
+});
+
+test('governance_tab_connector_controls_are_post_wired', async ({ page }) => {
+  test.setTimeout(60_000);
+  await goToEvidenceRoom(page);
+  const serviceNow = page.waitForRequest((request) => request.url().endsWith('/api/servicenow/create-incident') && request.method() === 'POST');
+  await page.getByTestId('create-servicenow-incident').click();
+  expect((await serviceNow).method()).toBe('POST');
+
+  const sentinel = page.waitForRequest((request) => request.url().endsWith('/api/sentinel/writeback-test') && request.method() === 'POST');
+  await page.getByTestId('test-sentinel-writeback').click();
+  expect((await sentinel).method()).toBe('POST');
+});
+
+test('governance_tab_centroid_empty_state_is_honest', async ({ page }) => {
+  test.setTimeout(60_000);
+  await goToEvidenceRoom(page);
+  await expect(page.getByText(/Mock data|not yet built|coming soon/i)).toHaveCount(0);
 });
 
 test('governance_tab_shows_evolution_events_or_empty_state', async ({ page }) => {
