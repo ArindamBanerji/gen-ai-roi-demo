@@ -183,7 +183,7 @@ def test_similar_cases_cosine():
 def test_similar_cases_category_filter():
     """
     get_similar_cases retrieves decisions filtered by category.
-    If the mock Neo4j returns decisions from a different category,
+    If the mock AGE returns decisions from a different category,
     they must not be returned (the Cypher WHERE clause enforces this,
     and the Python layer trusts the DB filter).
 
@@ -221,19 +221,19 @@ def test_similar_cases_category_filter():
             for d in fake_decisions
         ]
 
-    class FakeNeo4j:
+    class FakeAGE:
         run_query = staticmethod(mock_run_query)
 
     f = [0.7, 0.8, 0.6, 0.5, 0.4, 0.2]
     target_category = "credential_access"
 
     result = asyncio.run(
-        svc.get_similar_cases(f, target_category, FakeNeo4j())
+        svc.get_similar_cases(f, target_category, FakeAGE())
     )
 
     # The query MUST filter by the requested category
     assert captured_params.get("category") == target_category, (
-        f"Neo4j query must filter by category={target_category!r}, "
+        f"AGE query must filter by category={target_category!r}, "
         f"got category={captured_params.get('category')!r}"
     )
 
@@ -279,12 +279,12 @@ def test_similar_cases_min_prior_suppression():
             for d in few_decisions
         ]
 
-    class FakeNeo4j:
+    class FakeAGE:
         run_query = staticmethod(mock_run_query)
 
     f = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
     result = asyncio.run(
-        svc.get_similar_cases(f, "credential_access", FakeNeo4j())
+        svc.get_similar_cases(f, "credential_access", FakeAGE())
     )
 
     assert result == [], (

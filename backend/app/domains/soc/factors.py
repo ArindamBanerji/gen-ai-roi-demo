@@ -179,13 +179,13 @@ class TravelMatchFactor:
         ),
     )
 
-    async def compute(self, alert: Any, neo4j: Any) -> float:
+    async def compute(self, alert: Any, graph: Any) -> float:
         user_id = _get(alert, "user_id", "")
         geo = _get(alert, "source_location", "")
         if not user_id or not geo:
             return 0.5
         try:
-            results = await neo4j.run_query(
+            results = await graph.run_query(
                 f"""
                 MATCH (u:User {{id: {_S(user_id)}}})-[:HAS_TRAVEL]->(t:TravelRecord)
                 WHERE t.destination = {_S(geo)}
@@ -256,12 +256,12 @@ class AssetCriticalityFactor:
     }
     _SENSITIVE_CLASSES = {"PII", "RESTRICTED", "CONFIDENTIAL", "SECRET"}
 
-    async def compute(self, alert: Any, neo4j: Any) -> float:
+    async def compute(self, alert: Any, graph: Any) -> float:
         alert_id = _get(alert, "id", "")
         if not alert_id:
             return 0.5
         try:
-            results = await neo4j.run_query(
+            results = await graph.run_query(
                 f"""
                 MATCH (a:Alert {{alert_id: {_S(alert_id)}}})-[:DETECTED_ON]->(asset:Asset)
                 OPTIONAL MATCH (asset)-[:STORES]->(dc:DataClass)
@@ -317,7 +317,7 @@ class ThreatIntelEnrichmentFactor:
         "critical": 1.0,
     }
 
-    async def compute(self, alert: Any, neo4j: Any) -> float:
+    async def compute(self, alert: Any, graph: Any) -> float:
         alert_id = _get(alert, "id", "")
         if not alert_id:
             return 0.0
@@ -326,7 +326,7 @@ class ThreatIntelEnrichmentFactor:
         pass1_result = {"value": 0.0, "provenance_nodes": [],
                         "contribution": "IOC score 0.00"}
         try:
-            results = await neo4j.run_query(
+            results = await graph.run_query(
                 f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})"
                 f"-[:HAS_INDICATOR]->(ti:ThreatIndicator)"
                 f" RETURN ti.severity AS severity, ti.source AS source"
@@ -348,7 +348,7 @@ class ThreatIntelEnrichmentFactor:
         pass1_result["contribution"] = f"IOC score {pass1_result['value']:.2f}"
 
         # Pass 3: Internal campaign membership (highest signal when present)
-        pass3 = await self._internal_campaign_score(alert_id, neo4j)
+        pass3 = await self._internal_campaign_score(alert_id, graph)
 
         # Select the result with the lowest value (strongest escalate signal)
         # Pass 3 wins if campaign membership present (value < 0.50)
@@ -357,7 +357,7 @@ class ThreatIntelEnrichmentFactor:
         return float(best["value"])
 
     async def _internal_campaign_score(
-        self, alert_id: str, neo4j: Any
+        self, alert_id: str, graph: Any
     ) -> dict:
         """
         Pass 3: Check if alert is part of an internally correlated campaign.
@@ -369,7 +369,7 @@ class ThreatIntelEnrichmentFactor:
         Never raises -- exceptions return neutral 0.50.
         """
         try:
-            results = await neo4j.run_query(f"""
+            results = await graph.run_query(f"""
                 MATCH (a:Alert {{alert_id: {_S(alert_id)}}})-[:MEMBER_OF]->(c:Campaign)
                 RETURN c.confidence AS confidence,
                        c.severity AS severity,
@@ -436,7 +436,7 @@ class PatternHistoryFactor:
 
     _MIN_DECISIONS = 5
 
-    async def compute(self, alert: Any, neo4j: Any) -> float:
+    async def compute(self, alert: Any, graph: Any) -> float:
         situation_type = (
             _get(alert, "alert_type", "")
             or _get(alert, "situation_type", "")
@@ -444,7 +444,7 @@ class PatternHistoryFactor:
         if not situation_type:
             return 0.5
         try:
-            results = await neo4j.run_query(
+            results = await graph.run_query(
                 f"""
                 MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
                 WHERE d.domain = 'soc'
@@ -505,7 +505,7 @@ class PatternHistoryFactorComputer:
     async def compute(
         self,
         alert: Any,
-        neo4j: Any,
+        graph: Any,
         action_index: Optional[int] = None,
     ) -> float:
         """
@@ -541,7 +541,7 @@ class PatternHistoryFactorComputer:
                 LIMIT 50
                 """
 
-            results = await neo4j.run_query(query)
+            results = await graph.run_query(query)
         except Exception as exc:
             log.warning("PatternHistoryFactorComputer error: %s", exc)
             raise RuntimeError("AGE query failed for pattern computation") from exc
@@ -596,7 +596,7 @@ class TimeAnomalyFactor:
         ),
     )
 
-    async def compute(self, alert: Any, neo4j: Any) -> float:
+    async def compute(self, alert: Any, graph: Any) -> float:
         weekend = _get(alert, "weekend_login", None)
         if weekend is True:
             return 1.0
@@ -637,7 +637,7 @@ class DeviceTrustFactor:
         ),
     )
 
-    async def compute(self, alert: Any, neo4j: Any) -> float:
+    async def compute(self, alert: Any, graph: Any) -> float:
         mfa = bool(_get(alert, "mfa_completed", False))
         fingerprint = bool(_get(alert, "device_fingerprint_match", False))
         # vpn: explicit bool or inferred from vpn_provider presence

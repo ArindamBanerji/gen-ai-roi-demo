@@ -2,7 +2,7 @@
 CrowdStrikeMockConnector -- UCL connector simulating CrowdStrike Falcon EDR.
 
 No real API key required. All device records are hardcoded to match the
-canonical demo assets seeded by seed_neo4j.py.
+canonical demo assets seeded by seed_graph.py.
 
 Behaviour:
   refresh()  -- writes :CrowdStrikeEnrichment nodes and
@@ -95,7 +95,7 @@ class CrowdStrikeMockConnector(UCLConnector):
 
     async def refresh(self) -> ConnectorResult:
         """
-        Write mock CrowdStrike EDR data to Neo4j.
+        Write mock CrowdStrike EDR data to AGE.
 
         Steps:
           1. MERGE :CrowdStrikeEnrichment nodes for each managed device.

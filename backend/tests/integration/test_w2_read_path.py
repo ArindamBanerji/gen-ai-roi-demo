@@ -3,7 +3,7 @@ Integration Test 2 -- W2 read path regression.
 tests/integration/test_w2_read_path.py
 
 Prevents future regression of PatternHistoryFactorComputer after
-any refactoring of factors.py, config.py, or the Neo4j layer.
+any refactoring of factors.py, config.py, or the AGE layer.
 
 Four cases:
   Case 1 -- Fallback (0.40) when no TRIGGERED_EVOLUTION edges
@@ -33,8 +33,8 @@ def _make_alert(alert_type: str = "credential_access") -> dict:
     return {"id": "ALERT-W2-INT-001", "alert_type": alert_type}
 
 
-def _make_neo4j_mock(results: list) -> AsyncMock:
-    """Return a mock Neo4j client whose run_query returns `results`."""
+def _make_graph_mock(results: list) -> AsyncMock:
+    """Return a mock AGE client whose run_query returns `results`."""
     mock = AsyncMock()
     mock.run_query = AsyncMock(return_value=results)
     return mock
@@ -53,15 +53,15 @@ def test_w2_case1_fallback_when_no_edges():
     With no TRIGGERED_EVOLUTION edges (empty query result), the compute
     method must return exactly the 0.40 neutral baseline.
 
-    Verifies: _fallback_compute() is called when Neo4j returns [].
+    Verifies: _fallback_compute() is called when AGE returns [].
     """
     from app.domains.soc.factors import PatternHistoryFactorComputer
 
     computer = PatternHistoryFactorComputer()
     alert = _make_alert()
-    neo4j = _make_neo4j_mock([])
+    graph = _make_graph_mock([])
 
-    result = run(computer.compute(alert, neo4j, action_index=0))
+    result = run(computer.compute(alert, graph, action_index=0))
 
     assert abs(result - 0.40) < 0.001, (
         f"Expected fallback 0.40, got {result}. "
@@ -86,13 +86,13 @@ def test_w2_case2_read_path_live_when_edges_exist():
     computer = PatternHistoryFactorComputer()
     alert = _make_alert()
     results = [{"pattern_value": 0.80, "decision_num": 100}]
-    neo4j = _make_neo4j_mock(results)
+    graph = _make_graph_mock(results)
 
-    result = run(computer.compute(alert, neo4j, action_index=1))
+    result = run(computer.compute(alert, graph, action_index=1))
 
     assert result != 0.40, (
         f"Result was 0.40 (fallback). W2 path was NOT used even though "
-        "Neo4j returned edges. Check that PatternHistoryFactorComputer "
+        "AGE returned edges. Check that PatternHistoryFactorComputer "
         "reads the results list before calling _fallback_compute."
     )
     assert result > 0.40, (
@@ -137,9 +137,9 @@ def test_w2_case3_recency_weighting():
         {"pattern_value": 0.90, "decision_num": 100},   # recent
         {"pattern_value": 0.40, "decision_num": 100 - half_life},  # exactly half-life ago
     ]
-    neo4j = _make_neo4j_mock(results)
+    graph = _make_graph_mock(results)
 
-    result = run(computer.compute(alert, neo4j, action_index=0))
+    result = run(computer.compute(alert, graph, action_index=0))
 
     assert abs(result - expected) < 0.01, (
         f"Recency weighting failed. "

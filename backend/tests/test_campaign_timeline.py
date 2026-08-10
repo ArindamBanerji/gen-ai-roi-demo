@@ -68,8 +68,8 @@ class FakeCampaignRepository:
     calls = {"get_campaigns": 0, "get_campaign_detail": 0, "write_campaign": 0}
     rows = _rows()
 
-    def __init__(self, _neo4j):
-        self.neo4j = _neo4j
+    def __init__(self, _graph):
+        self.graph = _graph
 
     async def get_campaigns(self, limit=50, min_confidence=0.0, trigger_rule=None):
         FakeCampaignRepository.calls["get_campaigns"] += 1

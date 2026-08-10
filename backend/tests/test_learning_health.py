@@ -90,7 +90,7 @@ async def test_evaluate_calibrating():
     state   = _make_state(decision_count=10, history=history)
 
     with patch("app.services.learning_health.get_learning_state", return_value=state):
-        result = await LearningHealthMonitor.evaluate(neo4j_service=None)
+        result = await LearningHealthMonitor.evaluate(graph_service=None)
 
     assert result["status"] == "CALIBRATING"
     assert result["baseline"]     is None
@@ -107,7 +107,7 @@ async def test_evaluate_pre_activation_learning_disabled():
 
     with patch("app.services.learning_health.get_learning_state", return_value=state), \
          patch("app.services.learning_health._is_learning_enabled", return_value=False):
-        result = await LearningHealthMonitor.evaluate(neo4j_service=None)
+        result = await LearningHealthMonitor.evaluate(graph_service=None)
 
     assert result["status"] == "CALIBRATING"
     assert result["signal"] == 0.0
@@ -131,7 +131,7 @@ async def test_evaluate_empty_history_active_learning_stays_raw_red():
 
     with patch("app.services.learning_health.get_learning_state", return_value=state), \
          patch("app.services.learning_health._is_learning_enabled", return_value=True):
-        result = await LearningHealthMonitor.evaluate(neo4j_service=None)
+        result = await LearningHealthMonitor.evaluate(graph_service=None)
 
     assert result["status"] == "RED"
     assert result["pre_activation"] is False
@@ -164,7 +164,7 @@ async def test_evaluate_green():
     state   = _make_state(decision_count=400, history=history)
 
     with patch("app.services.learning_health.get_learning_state", return_value=state):
-        result = await LearningHealthMonitor.evaluate(neo4j_service=None)
+        result = await LearningHealthMonitor.evaluate(graph_service=None)
 
     assert result["status"] == "RED"
     assert result["conservation"]["passed"] is False
@@ -193,7 +193,7 @@ async def test_evaluate_amber():
     state   = _make_state(decision_count=len(history), history=history)
 
     with patch("app.services.learning_health.get_learning_state", return_value=state):
-        result = await LearningHealthMonitor.evaluate(neo4j_service=None)
+        result = await LearningHealthMonitor.evaluate(graph_service=None)
 
     assert result["components"]["q"] == pytest.approx(325 / 350, rel=1e-4)
     # Signal is degraded — current thresholds may classify AMBER or RED.
@@ -212,7 +212,7 @@ async def test_evaluate_red():
     state   = _make_state(decision_count=400, history=history)
 
     with patch("app.services.learning_health.get_learning_state", return_value=state):
-        result = await LearningHealthMonitor.evaluate(neo4j_service=None)
+        result = await LearningHealthMonitor.evaluate(graph_service=None)
 
     assert result["status"] == "RED"
     assert result["conservation"]["passed"] is False
@@ -241,7 +241,7 @@ async def test_soc_q3_conservation_wire_calls_scorer():
     with patch("app.services.learning_health.get_learning_state", return_value=state), \
          patch("app.routers.triage.get_profile_scorer", return_value=mock_scorer):
 
-        health = await LearningHealthMonitor.evaluate(neo4j_service=None)
+        health = await LearningHealthMonitor.evaluate(graph_service=None)
         expected_status = health["status"]
 
         # Simulate the SOC-Q3 wire directly
@@ -265,7 +265,7 @@ async def test_soc_q3_wire_skips_missing_scorer():
     with patch("app.services.learning_health.get_learning_state", return_value=state):
         # No scorer — hasattr guard prevents AttributeError
         scorer = None
-        health = await LearningHealthMonitor.evaluate(neo4j_service=None)
+        health = await LearningHealthMonitor.evaluate(graph_service=None)
         if scorer is not None and hasattr(scorer, "set_conservation_status"):
             scorer.set_conservation_status(health["status"])  # pragma: no cover
         # Reaching here without exception is the assertion

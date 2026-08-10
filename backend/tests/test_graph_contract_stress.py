@@ -42,7 +42,7 @@ def sm(isolated_client):
     return StateManager(
         learning_state_service=gae_state,
         audit_store=audit_store,
-        neo4j_service=isolated_client,
+        graph_service=isolated_client,
         domain_config=get_domain_config(),
     )
 

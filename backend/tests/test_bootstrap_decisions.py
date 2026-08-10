@@ -39,7 +39,7 @@ def test_bootstrap_creates_decision_records():
     Each record has source='bootstrap'.
     """
     from app.domains.soc.config import SOC_CATEGORIES
-    from app.services.bootstrap_neo4j import build_bootstrap_decisions
+    from app.services.bootstrap_graph import build_bootstrap_decisions
 
     scorer  = _make_scorer()
     d_per_c = _small_decisions_per_category()
@@ -77,11 +77,11 @@ def test_bootstrap_creates_decision_records():
 def test_factor_vector_native_storage():
     """
     factor_vector in each bootstrap Decision record is a Python list, not
-    a JSON-encoded string.  The Neo4j Python driver sends lists as native
-    Neo4j arrays; JSON strings would require an extra json.loads() step.
+    a JSON-encoded string.  The AGE Python driver sends lists as native
+    AGE arrays; JSON strings would require an extra json.loads() step.
     """
     from app.domains.soc.config import SOC_CATEGORIES
-    from app.services.bootstrap_neo4j import build_bootstrap_decisions
+    from app.services.bootstrap_graph import build_bootstrap_decisions
 
     scorer  = _make_scorer()
     d_per_c = {cat: 3 for cat in SOC_CATEGORIES}
@@ -132,10 +132,10 @@ def test_bootstrap_decision_has_required_fields():
     """
     Each bootstrap Decision record must contain: id, action, confidence,
     factor_vector, category, source.
-    (timestamp is set by Neo4j datetime() -- not in the Python dict.)
+    (timestamp is set by AGE datetime() -- not in the Python dict.)
     """
     from app.domains.soc.config import SOC_CATEGORIES
-    from app.services.bootstrap_neo4j import build_bootstrap_decisions
+    from app.services.bootstrap_graph import build_bootstrap_decisions
 
     REQUIRED_FIELDS = {"id", "action", "confidence", "factor_vector", "category", "source"}
 
@@ -176,7 +176,7 @@ def test_bootstrap_decision_has_required_fields():
 @pytest.mark.asyncio
 async def test_bootstrap_writer_uses_shared_age_batch_and_is_idempotent():
     from app.domains.soc.config import SOC_CATEGORIES
-    from app.services.bootstrap_neo4j import write_bootstrap_decisions
+    from app.services.bootstrap_graph import write_bootstrap_decisions
 
     client = AsyncMock()
     client.run_query = AsyncMock(side_effect=[
@@ -256,7 +256,7 @@ def test_bootstrap_weighted_distribution():
     from app.domains.soc.config import (
         SOC_CATEGORIES, BOOTSTRAP_CATEGORY_WEIGHTS, SOCDomainConfig,
     )
-    from app.services.bootstrap_neo4j import build_bootstrap_decisions
+    from app.services.bootstrap_graph import build_bootstrap_decisions
 
     scorer  = SOCDomainConfig().build_profile_scorer()
     # Use 100 total decisions (divisible, easy to reason about percentages)

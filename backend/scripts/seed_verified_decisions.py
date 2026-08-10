@@ -604,7 +604,7 @@ async def enrich_evolution_events(client) -> dict[str, Any]:
 async def main(enrich_ae: bool = False) -> None:
     from app.db.graph_client import graph_client
 
-    print("\n[seed_verified_decisions] Connecting to Neo4j...")
+    print("\n[seed_verified_decisions] Connecting to AGE...")
     await graph_client.connect()
     try:
         if enrich_ae:

@@ -116,7 +116,7 @@ class GraphExplorerService:
     @staticmethod
     async def run_safe_query(
         cypher: str,
-        neo4j_service: Any,
+        graph_service: Any,
         limit: int = 50,
     ) -> dict:
         """Run a validated read-only Cypher query.
@@ -138,7 +138,7 @@ class GraphExplorerService:
             cypher = cypher.rstrip().rstrip(";") + f" LIMIT {limit}"
 
         try:
-            result = await neo4j_service.run_query(cypher)
+            result = await graph_service.run_query(cypher)
             rows = [dict(r) for r in result]
             return {"rows": rows, "count": len(rows), "query": cypher}
         except Exception as exc:
@@ -147,7 +147,7 @@ class GraphExplorerService:
 
     @staticmethod
     async def get_top_nodes(
-        neo4j_service: Any,
+        graph_service: Any,
         node_type: Optional[str] = None,
         limit: int = 10,
     ) -> list:
@@ -191,14 +191,14 @@ class GraphExplorerService:
                     "count(r) AS connections "
                     "ORDER BY connections DESC LIMIT $limit"
                 )
-            result = await neo4j_service.run_query(query, {"limit": limit})
+            result = await graph_service.run_query(query, {"limit": limit})
             return [dict(r) for r in result]
         except Exception as exc:
             log.warning("[GRAPH-EXPLORER] get_top_nodes failed: %s", exc)
             return []
 
     @staticmethod
-    async def get_node_neighbors(node_id: str, neo4j_service: Any) -> dict:
+    async def get_node_neighbors(node_id: str, graph_service: Any) -> dict:
         """Get all neighbors of a specific node.
 
         Returns
@@ -206,7 +206,7 @@ class GraphExplorerService:
         {"node_id": str, "neighbors": [...], "total": int}
         """
         try:
-            result = await neo4j_service.run_query(
+            result = await graph_service.run_query(
                 """
                 MATCH (n {id: $id})-[r]-(m)
                 RETURN type(r)                                  AS relationship,
@@ -231,7 +231,7 @@ class GraphExplorerService:
         }
 
     @staticmethod
-    async def get_graph_summary(neo4j_service: Any) -> dict:
+    async def get_graph_summary(graph_service: Any) -> dict:
         """High-level graph statistics for the explorer header.
 
         Returns
@@ -244,7 +244,7 @@ class GraphExplorerService:
         }
         """
         try:
-            counts = await neo4j_service.run_query(
+            counts = await graph_service.run_query(
                 """
                 MATCH (n)
                 RETURN head(labels(n)) AS label, count(n) AS cnt
@@ -256,7 +256,7 @@ class GraphExplorerService:
             counts = []
 
         try:
-            rel_counts = await neo4j_service.run_query(
+            rel_counts = await graph_service.run_query(
                 """
                 MATCH ()-[r]->()
                 RETURN type(r) AS type, count(r) AS cnt
@@ -286,7 +286,7 @@ class GraphExplorerService:
         ]
 
     @staticmethod
-    async def run_prebuilt_query(query_name: str, neo4j_service: Any) -> dict:
+    async def run_prebuilt_query(query_name: str, graph_service: Any) -> dict:
         """Run a pre-built query by key name.
 
         Returns
@@ -302,7 +302,7 @@ class GraphExplorerService:
 
         cypher = meta["cypher"]
         try:
-            result = await neo4j_service.run_query(cypher)
+            result = await graph_service.run_query(cypher)
             rows = [dict(r) for r in result]
             return {"rows": rows, "count": len(rows), "query": cypher}
         except Exception as exc:

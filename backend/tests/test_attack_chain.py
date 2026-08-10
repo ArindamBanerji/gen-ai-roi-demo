@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.services.attack_chain import AttackChainService, Campaign
 
-# Minimal mock DB — unit tests don't touch Neo4j
+# Minimal mock DB — unit tests don't touch AGE
 mock_db = MagicMock()
 
 

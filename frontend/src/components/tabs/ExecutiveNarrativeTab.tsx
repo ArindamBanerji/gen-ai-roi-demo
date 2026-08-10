@@ -802,7 +802,7 @@ export default function ExecutiveNarrativeTab() {
       {/* Activity indicator */}
       <div className="flex items-center gap-2 text-xs text-gray-600">
         <Activity className="w-3 h-3" />
-        <span>Data reflects verified decisions stored in Neo4j. Refresh page to regenerate.</span>
+        <span>Data reflects verified decisions stored in AGE. Refresh page to regenerate.</span>
       </div>
     </div>
   )

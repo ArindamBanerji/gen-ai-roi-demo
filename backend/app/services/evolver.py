@@ -178,6 +178,11 @@ def _new_sdk_evolver_from_compat_state() -> PromptVariantEvolver:
 _evolver = PromptVariantEvolver(config=PromptEvolverConfig())
 
 
+def get_sdk_evolver() -> PromptVariantEvolver:
+    """Return the live SDK evolver used by the compatibility service."""
+    return _evolver
+
+
 def _sync_sdk_from_compat_state() -> None:
     global _evolver
     _evolver = _new_sdk_evolver_from_compat_state()

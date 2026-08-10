@@ -98,7 +98,7 @@ def compute_iks(mu_t: np.ndarray, mu_zero: Optional[np.ndarray] = None) -> dict:
 
 
 async def compute_visible_iks(
-    neo4j_service=None,
+    graph_service=None,
     scorer=None,
 ) -> float:
     """
@@ -131,9 +131,9 @@ async def compute_visible_iks(
         except Exception:
             pass
 
-    if neo4j_service is not None:
+    if graph_service is not None:
         try:
-            iks_data = await compute_iks_v2(neo4j_service)
+            iks_data = await compute_iks_v2(graph_service)
             return float(iks_data.get("iks_v2", 0.0))
         except Exception:
             pass
@@ -147,7 +147,7 @@ async def get_iks_trend() -> list[dict]:
 
     Each entry: {"decision_count": int, "iks": float, "timestamp": str}
 
-    Returns [] if no snapshots exist or Neo4j is unavailable.
+    Returns [] if no snapshots exist or AGE is unavailable.
     """
     try:
         from app.db.graph_client import graph_client
@@ -191,9 +191,9 @@ async def get_iks_trend() -> list[dict]:
 # IKS v2 — composite metric (replaces centroid-drift IKS for Chart A)
 # ---------------------------------------------------------------------------
 
-async def compute_iks_v2(neo4j_service) -> dict:
+async def compute_iks_v2(graph_service) -> dict:
     """
-    Compute IKS v2 from Neo4j graph state.
+    Compute IKS v2 from AGE graph state.
 
     IKS v2 = equal-weight composite of 4 components, each scaled 0-100:
       - Graph Richness:    min(total_decisions / 1000, 1.0) * 100
@@ -204,12 +204,12 @@ async def compute_iks_v2(neo4j_service) -> dict:
 
     Parameters
     ----------
-    neo4j_service : object with async run_query(query, params=None) method
+    graph_service : object with async run_query(query, params=None) method
     """
     # ── Component 1: Graph Richness ─────────────────────────────────────────
-    _neo4j_query_ok = True
+    _graph_query_ok = True
     try:
-        rows = await neo4j_service.run_query(
+        rows = await graph_service.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "RETURN count(d) AS total", {}
         )
@@ -223,7 +223,7 @@ async def compute_iks_v2(neo4j_service) -> dict:
     # ── Component 2: Decision Maturity ──────────────────────────────────────
     _dm_query_ok = True
     try:
-        rows = await neo4j_service.run_query(
+        rows = await graph_service.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "RETURN d.category AS category, count(d) AS n", {}
         )
@@ -243,7 +243,7 @@ async def compute_iks_v2(neo4j_service) -> dict:
 
     # ── Component 3: Trust Coverage ──────────────────────────────────────────
     try:
-        rows = await neo4j_service.run_query(
+        rows = await graph_service.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "AND d.confidence >= 0.70 RETURN count(d) AS high_conf", {}
         )
@@ -256,7 +256,7 @@ async def compute_iks_v2(neo4j_service) -> dict:
 
     # ── Component 4: Factor Quality ──────────────────────────────────────────
     try:
-        rows = await neo4j_service.run_query(
+        rows = await graph_service.run_query(
             """
             MATCH (d:Decision)
             WHERE """ + soc_decision_where() + """

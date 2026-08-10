@@ -3,7 +3,7 @@ app/services/accuracy_trajectory.py -- Accuracy trajectory builder.
 
 Produces the GET /api/soc/accuracy-trajectory response from:
   - app.domains.soc.constants  (published reference curves)
-  - live decision counts per category from Neo4j (injected by endpoint)
+  - live decision counts per category from AGE (injected by endpoint)
   - sigma per category (injected by endpoint, defaults to 0.18)
 
 No GAE math here -- pure interpolation against reference constants.
@@ -118,7 +118,7 @@ def build_accuracy_trajectory(
     Build the full accuracy-trajectory response.
 
     Args:
-        live_data:             {category: decision_count} from Neo4j
+        live_data:             {category: decision_count} from AGE
         decisions_per_day:     deployment rate (used for ETA)
         sigma_per_category:    {category: sigma} overrides; defaults to 0.18
 

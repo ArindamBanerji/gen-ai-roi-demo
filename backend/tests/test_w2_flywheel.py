@@ -41,7 +41,7 @@ def _factor_snapshot(pattern_history_value):
     return json.dumps([0.11, 0.22, 0.33, pattern_history_value, 0.55, 0.66])
 
 
-def _make_neo4j_mock(results):
+def _make_graph_mock(results):
     queries = []
 
     async def _run_query(query):
@@ -88,9 +88,9 @@ def test_extract_pattern_history_accepts_numeric_compatibility_value():
 
 def test_pattern_history_compute_returns_safe_default_with_zero_prior_decisions():
     computer = PatternHistoryFactorComputer()
-    neo4j = _make_neo4j_mock([])
+    graph = _make_graph_mock([])
 
-    result = _run(computer.compute(_make_alert(), neo4j))
+    result = _run(computer.compute(_make_alert(), graph))
 
     assert result == 0.40
 
@@ -100,15 +100,15 @@ def test_pattern_history_compute_uses_factor_snapshot_json_rows():
     rows = [
         {"factor_snapshot": _factor_snapshot(0.76), "decision_num": 100},
     ]
-    neo4j = _make_neo4j_mock(rows)
+    graph = _make_graph_mock(rows)
 
-    result = _run(computer.compute(_make_alert(), neo4j))
+    result = _run(computer.compute(_make_alert(), graph))
 
     assert result == 0.76
     assert result > 0.0
     assert result != 0.40
 
-    query = neo4j.queries[0]
+    query = graph.queries[0]
     assert "TRIGGERED_EVOLUTION" in query
     assert "d.factor_snapshot AS factor_snapshot" in query
     assert "d.decision_number AS decision_num" in query
@@ -127,8 +127,8 @@ def test_pattern_history_compute_changes_when_decision_history_changes():
         {"factor_snapshot": _factor_snapshot(0.20), "decision_num": 70},
     ]
 
-    one_decision = _run(computer.compute(alert, _make_neo4j_mock(one_decision_rows)))
-    mixed_history = _run(computer.compute(alert, _make_neo4j_mock(mixed_history_rows)))
+    one_decision = _run(computer.compute(alert, _make_graph_mock(one_decision_rows)))
+    mixed_history = _run(computer.compute(alert, _make_graph_mock(mixed_history_rows)))
 
     expected_mixed = (0.76 * 1.0 + 0.20 * 0.5) / 1.5
     assert one_decision == 0.76

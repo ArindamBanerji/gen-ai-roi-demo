@@ -1,5 +1,5 @@
 """
-H7-FIX-3 tests: Tab 1 SOC metrics served from real Neo4j queries, not mock
+H7-FIX-3 tests: Tab 1 SOC metrics served from real AGE queries, not mock
 generators.
 
 Run from backend/ directory:
@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 def test_no_random_generators_in_soc_router():
     """soc.py must not contain any random.random(), random.randint(), or
-    random.uniform() calls -- every number must trace to Neo4j or carry
+    random.uniform() calls -- every number must trace to AGE or carry
     estimated=True."""
     content = pathlib.Path("app/routers/soc.py").read_text()
     assert "random.random()" not in content, (
@@ -58,7 +58,7 @@ def test_metrics_endpoint_registered():
 # ============================================================================
 
 def test_metrics_response_has_no_random_floats():
-    """Calling the analytics endpoint twice with the same mocked Neo4j data
+    """Calling the analytics endpoint twice with the same mocked AGE data
     must produce identical responses.  Random generators would break this."""
     from app.routers.soc import get_soc_analytics
 

@@ -18,7 +18,7 @@ from app.services.iks import compute_visible_iks
 from app.state.graph_snapshot import GraphSnapshot
 
 
-class _FakeNeo4jClient:
+class _FakeGraphClient:
     def __init__(self):
         self.compute_iks = AsyncMock(return_value=0.0)
 
@@ -83,7 +83,7 @@ def _fake_scorer():
 
 @pytest.mark.asyncio
 async def test_iks_startup_matches_tab2():
-    fake_client = _FakeNeo4jClient()
+    fake_client = _FakeGraphClient()
     with patch("app.services.gae_state.get_profile_scorer", return_value=_fake_scorer()):
         with patch("app.services.iks.compute_iks", return_value={"current": 89.0}):
             with patch("app.routers.soc.graph_client", fake_client):
@@ -97,7 +97,7 @@ async def test_iks_startup_matches_tab2():
 
 @pytest.mark.asyncio
 async def test_iks_stable_after_single_decision():
-    fake_client = _FakeNeo4jClient()
+    fake_client = _FakeGraphClient()
     snap = GraphSnapshot(verified_decisions=4860, correct_decisions=3966, iks_score=89.0)
 
     with patch("app.services.gae_state.get_profile_scorer", return_value=_fake_scorer()):
@@ -112,7 +112,7 @@ async def test_iks_stable_after_single_decision():
 
 @pytest.mark.asyncio
 async def test_iks_snapshot_matches_tab2_after_update():
-    fake_client = _FakeNeo4jClient()
+    fake_client = _FakeGraphClient()
     snap = GraphSnapshot(iks_score=0.0)
 
     with patch("app.services.gae_state.get_profile_scorer", return_value=_fake_scorer()):
@@ -126,7 +126,7 @@ async def test_iks_snapshot_matches_tab2_after_update():
 
 @pytest.mark.asyncio
 async def test_iks_all_paths_agree():
-    fake_client = _FakeNeo4jClient()
+    fake_client = _FakeGraphClient()
 
     with patch("app.services.gae_state.get_profile_scorer", return_value=_fake_scorer()):
         with patch("app.services.iks.compute_iks", return_value={"current": 89.0}):

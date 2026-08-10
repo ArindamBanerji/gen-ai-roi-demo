@@ -3,7 +3,7 @@ GAE learning state endpoints -- weight matrix, history, convergence.
 
 Exposes the live LearningState singleton for dashboard display and
 convergence monitoring.  All responses come from the in-process
-singleton; no Neo4j queries needed.
+singleton; no AGE queries needed.
 
 Reference: docs/soc_copilot_design_v1.md Sec.14.
 """

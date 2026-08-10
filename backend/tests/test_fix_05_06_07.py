@@ -57,10 +57,10 @@ async def test_simulation_does_not_mutate_production_state():
     mock_scoring.selected_action = "suppress"
     mock_scoring.confidence = 0.75
 
-    mock_neo4j = MagicMock()
-    mock_neo4j.get_alert = AsyncMock(return_value=None)
-    mock_neo4j.get_security_context = AsyncMock(return_value=None)
-    mock_neo4j.run_query = AsyncMock(return_value=[])
+    mock_graph = MagicMock()
+    mock_graph.get_alert = AsyncMock(return_value=None)
+    mock_graph.get_security_context = AsyncMock(return_value=None)
+    mock_graph.run_query = AsyncMock(return_value=[])
 
     mock_eb = MagicMock()
     mock_eb.emit = AsyncMock()
@@ -75,7 +75,7 @@ async def test_simulation_does_not_mutate_production_state():
                       new_callable=AsyncMock, return_value=factor_vec), \
          patch.object(sim_mod, "audit_record_decision",
                       new_callable=AsyncMock, return_value={}), \
-         patch("app.db.graph_client.graph_client", mock_neo4j), \
+         patch("app.db.graph_client.graph_client", mock_graph), \
          patch("app.services.situation.analyze_situation",
                return_value=MagicMock(situation_type="unknown")):
 
@@ -149,7 +149,7 @@ async def test_evaluate_handles_none_history():
     state = SimpleNamespace(decision_count=5, history=None)
 
     with patch("app.services.learning_health.get_learning_state", return_value=state):
-        result = await LearningHealthMonitor.evaluate(neo4j_service=None)
+        result = await LearningHealthMonitor.evaluate(graph_service=None)
 
     assert result["status"] in ("CALIBRATING", "GREEN", "AMBER", "RED")
     assert "signal" in result

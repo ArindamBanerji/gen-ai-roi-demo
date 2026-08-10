@@ -55,7 +55,7 @@ class ThreatIndicatorService:
         source: str,
         severity: str,
         name: str,
-        neo4j_service: Any,
+        graph_service: Any,
     ) -> str:
         """MERGE a ThreatIndicator node. Idempotent -- updates timestamp on re-insert.
 
@@ -76,7 +76,7 @@ class ThreatIndicatorService:
             sev_s  = _S(severity)
             name_s = _S(name)
             # Step A — try MATCH (update existing node)
-            result = await neo4j_service.run_query(
+            result = await graph_service.run_query(
                 f"MATCH (ti:ThreatIndicator {{indicator: {val_s}, indicator_type: {type_s}}})"
                 f" SET ti.last_seen = {now_s},"
                 f"     ti.source = {src_s},"
@@ -87,7 +87,7 @@ class ThreatIndicatorService:
                 return cast(str, result[0]["id"])
             # Step B — CREATE (node does not exist yet)
             node_id = str(_uuid.uuid4())
-            result = await neo4j_service.run_query(
+            result = await graph_service.run_query(
                 f"CREATE (ti:ThreatIndicator {{"
                 f" id: {_S(node_id)},"
                 f" indicator: {val_s},"
@@ -112,19 +112,19 @@ class ThreatIndicatorService:
         indicator_value: str,
         indicator_type: str,
         alert_id: str,
-        neo4j_service: Any,
+        graph_service: Any,
     ) -> None:
         """Create [:HAS_INDICATOR] edge between Alert and ThreatIndicator."""
         try:
             val_s  = _S(indicator_value)
             type_s = _S(indicator_type)
             aid_s  = _S(alert_id)
-            edge_check = await neo4j_service.run_query(
+            edge_check = await graph_service.run_query(
                 f"MATCH (a:Alert {{alert_id: {aid_s}}})"
                 f"-[:HAS_INDICATOR]->(ti:ThreatIndicator {{indicator: {val_s}, indicator_type: {type_s}}}) RETURN ti"
             )
             if not edge_check:
-                await neo4j_service.run_query(
+                await graph_service.run_query(
                     f"MATCH (a:Alert {{alert_id: {aid_s}}})"
                     f" MATCH (ti:ThreatIndicator {{indicator: {val_s}, indicator_type: {type_s}}})"
                     f" CREATE (a)-[:HAS_INDICATOR]->(ti)"
@@ -136,10 +136,10 @@ class ThreatIndicatorService:
             )
 
     @staticmethod
-    async def get_indicators_for_alert(alert_id: str, neo4j_service: Any) -> list:
+    async def get_indicators_for_alert(alert_id: str, graph_service: Any) -> list:
         """Get all ThreatIndicators linked to an alert via [:HAS_INDICATOR]."""
         try:
-            result = await neo4j_service.run_query(
+            result = await graph_service.run_query(
                 f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})"
                 f"-[:HAS_INDICATOR]->(ti:ThreatIndicator)"
                 f" RETURN ti.id AS id, ti.name AS name,"
@@ -156,7 +156,7 @@ class ThreatIndicatorService:
             return []
 
     @staticmethod
-    async def get_all_indicators(neo4j_service: Any) -> dict:
+    async def get_all_indicators(graph_service: Any) -> dict:
         """Get all ThreatIndicator nodes with TTL status and grouped counts.
 
         Returns
@@ -169,7 +169,7 @@ class ThreatIndicatorService:
         }
         """
         try:
-            result = await neo4j_service.run_query(
+            result = await graph_service.run_query(
                 """
                 MATCH (ti:ThreatIndicator)
                 RETURN ti.id             AS id,
@@ -196,11 +196,11 @@ class ThreatIndicatorService:
         }
 
     @staticmethod
-    async def cleanup_expired(neo4j_service: Any) -> int:
+    async def cleanup_expired(graph_service: Any) -> int:
         """Remove ThreatIndicator nodes older than TTL_HOURS. Returns count removed."""
         try:
             cutoff = int((datetime.utcnow().timestamp() - ThreatIndicatorService.TTL_HOURS * 3600) * 1000)
-            result = await neo4j_service.run_query(
+            result = await graph_service.run_query(
                 f"MATCH (ti:ThreatIndicator)"
                 f" WHERE ti.last_seen < {_S(cutoff)}"
                 f" WITH ti DETACH DELETE ti"

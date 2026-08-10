@@ -7,7 +7,7 @@ Coverage:
   - ReferralEngine integration with SOC rules
   - Safe degradation on missing context
   - Triage response field presence
-  - Neo4j query helpers: get_sequence_count, get_cross_category_count
+  - AGE query helpers: get_sequence_count, get_cross_category_count
 """
 
 import asyncio
@@ -295,7 +295,7 @@ def test_triage_referral_veto_overrides_auto_approve():
 
 
 # ---------------------------------------------------------------------------
-# Neo4j query helpers: get_sequence_count and get_cross_category_count
+# AGE query helpers: get_sequence_count and get_cross_category_count
 # ---------------------------------------------------------------------------
 
 def test_r2_fires_when_sequence_count_at_threshold():
@@ -330,8 +330,8 @@ def test_r7_fires_when_cross_category_count_at_threshold():
     assert detail['cross_category_count'] == 2
 
 
-def test_r2_r7_safe_degradation_on_neo4j_failure():
-    """Neo4j exception -> both helpers return 0, neither rule fires (P-REF-2)."""
+def test_r2_r7_safe_degradation_on_graph_failure():
+    """AGE exception -> both helpers return 0, neither rule fires (P-REF-2)."""
     from ci_platform.graph.age_client import AGEClient
 
     client = object.__new__(AGEClient)

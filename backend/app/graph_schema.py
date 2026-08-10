@@ -552,7 +552,7 @@ async def seed_graph(
     # ── Phase 1: CLEAN ────────────────────────────────────────────────
     # Backbone labels (User, Asset, Campaign, etc.): delete ALL nodes.
     # We fully control these and recreate from JSON. Old nodes without
-    # origin fields (from seed_neo4j.py or campaign correlation engine)
+    # origin fields (from seed_graph.py or campaign correlation engine)
     # must not survive.
     # Decision + Alert: delete both zero_day_synthetic and zero_day_demo.
     # Session decisions (origin=NULL) survive a clean.

@@ -361,7 +361,7 @@ def get_threat_intel_coverage_data() -> List[MetricDataPoint]:
     ]
 
 
-# Cross-context metrics served from Neo4j (H7-FIX-3)
+# Cross-context metrics served from AGE (H7-FIX-3)
 CROSS_CONTEXT_METRIC_IDS = {
     "cross_context_travel_risk",
     "device_trust_gaps",
@@ -500,7 +500,7 @@ def get_provenance(metric_id: str) -> Provenance:
                 "ThreatIntel (Pulsedive API)",
                 "GreyNoise (API)",
                 "AlertHistory (SIEM)",
-                "GraphCorrelation (Neo4j)",
+                "GraphCorrelation (AGE)",
             ],
             freshness_hours=0.3,
             query_preview="MATCH (a:Alert) OPTIONAL MATCH (ti:ThreatIntel)-[:ASSOCIATED_WITH]->(a) RETURN ti.source, count(a) AS enriched_count, round(count(a)*100.0/50) AS coverage_pct",
@@ -569,7 +569,7 @@ async def query_soc_metrics(request: SOCQueryRequest):
 
         # ====================================================================
         # Step 2: Get metric data
-        # Cross-context metrics use real Neo4j queries (H7-FIX-3)
+        # Cross-context metrics use real AGE queries (H7-FIX-3)
         # ====================================================================
         if metric_id in CROSS_CONTEXT_METRIC_IDS:
             try:
@@ -757,10 +757,10 @@ async def get_threat_landscape():
     Returns a live snapshot of what the security graph knows right now.
     Displayed in the Tab 1 summary strip before any query is made.
 
-    Attempts a live Neo4j count of ThreatIntel nodes; falls back to
-    static numbers if Neo4j is unavailable.
+    Attempts a live AGE count of ThreatIntel nodes; falls back to
+    static numbers if AGE is unavailable.
     """
-    # Query Neo4j for all stats; fall back to zeros on failure (H7-FIX-3)
+    # Query AGE for all stats; fall back to zeros on failure (H7-FIX-3)
     ti_loaded = 0
     high_severity_iocs = 0
     alerts_total = 0
@@ -887,7 +887,7 @@ async def get_attack_tactic_breakdown():
     Return alert counts grouped by MITRE ATT&CK tactic.
 
     Queries Alert nodes for their mitre_tactic property (seeded by
-    seed_simulation_alerts).  Falls back to an empty list if Neo4j
+    seed_simulation_alerts).  Falls back to an empty list if AGE
     is unavailable.
     """
     breakdown = []
@@ -912,15 +912,15 @@ async def get_attack_tactic_breakdown():
 
 
 # ============================================================================
-# GET /api/soc/analytics — Real Neo4j SOC metrics for Tab 1 (H7-FIX-3)
+# GET /api/soc/analytics — Real AGE SOC metrics for Tab 1 (H7-FIX-3)
 # ============================================================================
 
 @router.get("/soc/analytics", response_model=AnalyticsResponse)
 async def get_soc_analytics():
     """
-    Return real Neo4j aggregations for the five core Tab 1 SOC metrics.
+    Return real AGE aggregations for the five core Tab 1 SOC metrics.
 
-    Metrics with sufficient graph data return live counts (source='neo4j').
+    Metrics with sufficient graph data return live counts (source='graph').
     Metrics that require data not seeded (e.g. MTTD, which needs per-decision
     timestamps) carry estimated=True and a descriptive note rather than a fake
     number.
@@ -976,7 +976,7 @@ async def get_soc_analytics():
                 if total_decisions > 0 else None
             ),
             "category_breakdown": category_breakdown,
-            "source": "neo4j",
+            "source": "graph",
             "estimated_metrics": [
                 {
                     "value": None,
@@ -1036,7 +1036,7 @@ async def get_learning_state_endpoint():
     except Exception as exc:
         print(f"[SOC] learning-state error: {exc}")
 
-    # Query Neo4j for last verified_at
+    # Query AGE for last verified_at
     try:
         rows = await graph_client.run_query(
             """
@@ -1153,7 +1153,7 @@ async def explain_decision(decision_id: str):
             {"decision_id": decision_id},
         )
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Neo4j query failed: {exc}")
+        raise HTTPException(status_code=500, detail=f"AGE query failed: {exc}")
 
     if not rows:
         raise HTTPException(status_code=404, detail=f"Decision {decision_id!r} not found")
@@ -1338,7 +1338,7 @@ async def explain_decision(decision_id: str):
 async def get_decision_provenance(decision_id: str):
     """Return factor provenance for a stored decision.
 
-    Retrieves the decision's factor_vector from the Decision node in Neo4j,
+    Retrieves the decision's factor_vector from the Decision node in AGE,
     then builds human-readable provenance for each of the 6 SOC factors.
 
     Response
@@ -1766,7 +1766,7 @@ async def benchmarking_level2():
 # ============================================================================
 
 def _parse_dt(dt_value) -> datetime:
-    """Parse datetime from Neo4j result (str or datetime)."""
+    """Parse datetime from AGE result (str or datetime)."""
     if isinstance(dt_value, datetime):
         return dt_value
     try:
@@ -1776,9 +1776,9 @@ def _parse_dt(dt_value) -> datetime:
 
 
 def _format_campaign(raw: dict) -> dict:
-    """Format raw Neo4j campaign row for API response."""
+    """Format raw AGE campaign row for API response."""
     c = raw.get("c", raw)  # handle both wrapped and unwrapped
-    if hasattr(c, "data"):   # Neo4j Node object
+    if hasattr(c, "data"):   # AGE Node object
         c = dict(c)
     # AGE serializes list properties as JSON strings — parse defensively.
     _cats = c.get("category_sequence", [])
@@ -2043,7 +2043,7 @@ async def get_accuracy_trajectory():
     Return current accuracy trajectory for each alert category.
 
     Combines:
-      - Live decision counts per category from Neo4j
+      - Live decision counts per category from AGE
       - Published reference curve (V-ACC-TRAJ-1b-v2) from constants.py
       - Interpolated current accuracy and progress toward enriched plateau
 
@@ -2144,7 +2144,7 @@ async def get_analyst_benchmarking():
         )
     except Exception as _exc:
         import logging as _log
-        _log.getLogger(__name__).warning("[analyst-benchmarking] Neo4j query failed: %s", _exc)
+        _log.getLogger(__name__).warning("[analyst-benchmarking] AGE query failed: %s", _exc)
         return {
             "status": "accumulating",
             "message": "Shadow decision data not yet loaded. Run Step 3 ingest first.",
@@ -2351,10 +2351,10 @@ async def get_f9_report():
 @router.get("/soc/enrichment-advisor")
 async def get_enrichment_advisor():
     """
-    Return enrichment opportunity rankings with live IOC coverage from Neo4j.
+    Return enrichment opportunity rankings with live IOC coverage from AGE.
 
     ioc_coverage = alerts with >=1 ThreatIndicator / total alerts.
-    Falls back to 0.0 if Neo4j is unavailable or graph is empty.
+    Falls back to 0.0 if AGE is unavailable or graph is empty.
     """
     from app.services.enrichment_advisor import get_enrichment_advice
 
@@ -2399,7 +2399,7 @@ async def get_enrichment_status():
 
     Health:
       GREEN : all sources active
-      AMBER : >=1 source stale, or Neo4j unreachable (graceful fallback)
+      AMBER : >=1 source stale, or AGE unreachable (graceful fallback)
       RED   : primary source unavailable or all sources stale
     """
     import time as _time
@@ -2408,8 +2408,8 @@ async def get_enrichment_status():
     now_epoch_ms = int(_time.time() * 1000)
     now_epoch_s  = now_epoch_ms // 1000
 
-    def _neo4j_dt_to_epoch_s(val) -> int | None:
-        """Convert Neo4j DateTime / Python datetime / epoch-ms int to epoch seconds."""
+    def _graph_dt_to_epoch_s(val) -> int | None:
+        """Convert AGE DateTime / Python datetime / epoch-ms int to epoch seconds."""
         if val is None:
             return None
         if isinstance(val, (int, float)):
@@ -2417,7 +2417,7 @@ async def get_enrichment_status():
             v = int(val)
             return v // 1000 if v > 1e11 else v
         try:
-            # neo4j.time.DateTime — has to_native()
+            # graph.time.DateTime — has to_native()
             native = val.to_native()
             if native.tzinfo is None:
                 native = native.replace(tzinfo=_tz.utc)
@@ -2474,7 +2474,7 @@ async def get_enrichment_status():
     sources: list = []
     total_enrichment_nodes = 0
     last_graph_update_epoch_ms: int | None = None
-    neo4j_reachable = True
+    graph_reachable = True
 
     for defn in _SOURCE_DEFS:
         label = defn["node_label"]
@@ -2490,9 +2490,9 @@ async def get_enrichment_status():
             )
             if rows:
                 count = int(rows[0].get("cnt") or 0)
-                last_refresh_epoch_s = _neo4j_dt_to_epoch_s(rows[0].get("last_refresh"))
+                last_refresh_epoch_s = _graph_dt_to_epoch_s(rows[0].get("last_refresh"))
         except Exception:
-            neo4j_reachable = False
+            graph_reachable = False
 
         total_enrichment_nodes += count
         status, staleness_h = _staleness(last_refresh_epoch_s)
@@ -2519,9 +2519,9 @@ async def get_enrichment_status():
 
     # ── Enrichment health ─────────────────────────────────────────────────
     statuses = [s["status"] for s in sources]
-    if not neo4j_reachable:
+    if not graph_reachable:
         enrichment_health = "AMBER"
-        health_reason = "Neo4j unreachable -- enrichment status estimated"
+        health_reason = "AGE unreachable -- enrichment status estimated"
     elif all(s == "unavailable" for s in statuses):
         enrichment_health = "RED"
         health_reason = "All enrichment sources unavailable -- run connector refresh"
@@ -2872,7 +2872,7 @@ async def _tab2_content() -> dict:
     override_learning_status = "inactive"
 
     # ── IKS primary: drift-based formula 100 × min(D(t)/κ*=0.20, 1.0) ────────
-    # Uses in-memory ProfileScorer centroid drift from μ₀ — no Neo4j required.
+    # Uses in-memory ProfileScorer centroid drift from μ₀ — no AGE required.
     # Same path as Tab 5 (executive_narrative.py). Avoids event-loop issues that
     # affect compute_iks_v2 async queries.
     try:
@@ -3305,7 +3305,7 @@ async def _tab4_content() -> dict:
     except Exception as _exc:
         print(f"[SOC] tab4 total_decisions query failed: {_exc}")
 
-    # Floor: when Neo4j returns 0, fall back to in-memory learning state
+    # Floor: when AGE returns 0, fall back to in-memory learning state
     # (same pattern as compute_iks_v2) so Tab 4 stays consistent with Tab 2.
     if total_decisions == 0:
         try:
@@ -3679,7 +3679,7 @@ async def get_industry_profile(industry: str = "generic"):
 @router.get("/soc/deployment-state")
 async def get_deployment_state():
     """
-    Return the bootstrap centroid tensor (mu_0) stored in the DeploymentState Neo4j node.
+    Return the bootstrap centroid tensor (mu_0) stored in the DeploymentState AGE node.
 
     Written at every startup by write_bootstrap_state().
     Returns {mu, shape, stored_at, gae_version} or 404 if not yet stored.
@@ -3729,7 +3729,7 @@ async def get_analyst_eta_weights_endpoint():
     except Exception as _exc:
         print(f"[SOC] analyst-eta n_decisions query failed: {_exc}")
 
-    # Fetch precision from Neo4j
+    # Fetch precision from AGE
     precision = await compute_analyst_precision(graph_client)
 
     # Build GateConfig to compute calibrated weights via the validated formula

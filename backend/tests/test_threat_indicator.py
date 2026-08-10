@@ -19,7 +19,7 @@ from app.services.threat_indicator import ThreatIndicatorService
 
 
 # ---------------------------------------------------------------------------
-# FakeNeo4j helpers
+# FakeAGE helpers
 # ---------------------------------------------------------------------------
 
 _SAMPLE_INDICATOR = {
@@ -34,8 +34,8 @@ _SAMPLE_INDICATOR = {
 }
 
 
-def _upsert_neo4j(returned_id: str = "ti-fake-001"):
-    """FakeNeo4j that returns a fixed ID for upsert (MATCH-then-CREATE) queries."""
+def _upsert_graph(returned_id: str = "ti-fake-001"):
+    """FakeAGE that returns a fixed ID for upsert (MATCH-then-CREATE) queries."""
     _created = {}  # track created IOCs to simulate idempotent upsert
 
     async def run_query(query, params=None):
@@ -50,20 +50,20 @@ def _upsert_neo4j(returned_id: str = "ti-fake-001"):
             _created[key] = returned_id
             return [{"id": returned_id}]
         return []
-    class _FakeNeo4j:
+    class _FakeAGE:
         pass
-    _FakeNeo4j.run_query = staticmethod(run_query)
-    return _FakeNeo4j()
+    _FakeAGE.run_query = staticmethod(run_query)
+    return _FakeAGE()
 
 
-def _query_neo4j(rows: list):
-    """FakeNeo4j that returns fixed rows for SELECT-style queries."""
+def _query_graph(rows: list):
+    """FakeAGE that returns fixed rows for SELECT-style queries."""
     async def run_query(query, params=None):
         return rows
-    class _FakeNeo4j:
+    class _FakeAGE:
         pass
-    _FakeNeo4j.run_query = staticmethod(run_query)
-    return _FakeNeo4j()
+    _FakeAGE.run_query = staticmethod(run_query)
+    return _FakeAGE()
 
 
 # ---------------------------------------------------------------------------
@@ -72,7 +72,7 @@ def _query_neo4j(rows: list):
 
 def test_upsert_creates_indicator():
     """upsert_indicator returns a non-empty string ID."""
-    neo4j = _upsert_neo4j("ti-fake-001")
+    graph = _upsert_graph("ti-fake-001")
 
     result_id = asyncio.run(
         ThreatIndicatorService.upsert_indicator(
@@ -81,7 +81,7 @@ def test_upsert_creates_indicator():
             source="pulsedive",
             severity="high",
             name="DarkHook Phishing Campaign",
-            neo4j_service=neo4j,
+            graph_service=graph,
         )
     )
 
@@ -94,20 +94,20 @@ def test_upsert_creates_indicator():
 
 def test_upsert_idempotent():
     """Two upserts for the same ioc_value both return the same ID (MERGE behaviour)."""
-    neo4j = _upsert_neo4j("ti-stable-id")
+    graph = _upsert_graph("ti-stable-id")
 
     id_first  = asyncio.run(
         ThreatIndicatorService.upsert_indicator(
             indicator_type="ip", indicator_value="10.0.3.15",
             source="greynoise", severity="critical",
-            name="Known C2 IP", neo4j_service=neo4j,
+            name="Known C2 IP", graph_service=graph,
         )
     )
     id_second = asyncio.run(
         ThreatIndicatorService.upsert_indicator(
             indicator_type="ip", indicator_value="10.0.3.15",
             source="greynoise", severity="critical",
-            name="Known C2 IP", neo4j_service=neo4j,
+            name="Known C2 IP", graph_service=graph,
         )
     )
 
@@ -122,10 +122,10 @@ def test_upsert_idempotent():
 
 def test_get_indicators_for_alert():
     """get_indicators_for_alert returns at least 1 indicator for ALERT-7824."""
-    neo4j = _query_neo4j([_SAMPLE_INDICATOR])
+    graph = _query_graph([_SAMPLE_INDICATOR])
 
     result = asyncio.run(
-        ThreatIndicatorService.get_indicators_for_alert("ALERT-7824", neo4j)
+        ThreatIndicatorService.get_indicators_for_alert("ALERT-7824", graph)
     )
 
     assert len(result) >= 1, f"Expected at least 1 indicator, got {len(result)}"
@@ -145,9 +145,9 @@ def test_get_all_indicators():
         {**_SAMPLE_INDICATOR, "id": "ti-003", "indicator": "10.0.0.1",
          "indicator_type": "ip", "severity": "high"},
     ]
-    neo4j = _query_neo4j(rows)
+    graph = _query_graph(rows)
 
-    result = asyncio.run(ThreatIndicatorService.get_all_indicators(neo4j))
+    result = asyncio.run(ThreatIndicatorService.get_all_indicators(graph))
 
     assert result["total"] == 3, f"Expected 3, got {result['total']}"
     assert "by_type"     in result, result
@@ -171,8 +171,8 @@ def test_threat_intel_alert_endpoint():
             return [_SAMPLE_INDICATOR]
         return []
 
-    with patch("app.routers.soc.graph_client") as mock_neo4j:
-        mock_neo4j.run_query = fake_run_query
+    with patch("app.routers.soc.graph_client") as mock_graph:
+        mock_graph.run_query = fake_run_query
         client = TestClient(app)
         resp = client.get("/api/soc/threat-intel/ALERT-7824")
 
@@ -199,8 +199,8 @@ def test_enrichment_summary_includes_indicators():
         # Existing ThreatIntel enrichment queries — return empty to keep response simple
         return []
 
-    with patch("app.routers.graph.graph_client") as mock_neo4j:
-        mock_neo4j.run_query = fake_run_query
+    with patch("app.routers.graph.graph_client") as mock_graph:
+        mock_graph.run_query = fake_run_query
         client = TestClient(app)
         resp = client.get("/api/graph/enrichment/summary")
 

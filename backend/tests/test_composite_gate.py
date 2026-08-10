@@ -62,17 +62,17 @@ def _make_score_result(action_index=0, confidence=0.85, n_actions=5):
     )
 
 
-def _cat_stats_neo4j(cat_count: int, correct: int = 0, verified: int = 0):
-    """Return a FakeNeo4j that answers DecisionHistoryService queries."""
+def _cat_stats_graph(cat_count: int, correct: int = 0, verified: int = 0):
+    """Return a FakeAGE that answers DecisionHistoryService queries."""
     async def run_query(query, params=None):
         if "d.category = $cat" in query:
             return [{"cat_count": cat_count, "correct_count": correct, "verified_count": verified}]
         return []
 
-    class FakeNeo4j:
+    class FakeAGE:
         pass
-    FakeNeo4j.run_query = staticmethod(run_query)
-    return FakeNeo4j()
+    FakeAGE.run_query = staticmethod(run_query)
+    return FakeAGE()
 
 
 # ---------------------------------------------------------------------------
@@ -83,10 +83,10 @@ def test_composite_evaluate_low_confidence():
     """confidence < CONFIDENCE_THRESHOLD (0.70) -> auto_approve=False."""
     f = [0.5] * 6
     result_sr = _make_score_result(action_index=0, confidence=0.50)
-    neo4j = _cat_stats_neo4j(cat_count=100, correct=90, verified=100)
+    graph = _cat_stats_graph(cat_count=100, correct=90, verified=100)
 
     result = asyncio.run(
-        CompositeDiscriminant.evaluate(result_sr, "credential_access", f, 0.0, neo4j)
+        CompositeDiscriminant.evaluate(result_sr, "credential_access", f, 0.0, graph)
     )
 
     assert result["auto_approve"] is False
@@ -103,10 +103,10 @@ def test_composite_evaluate_low_cat_count():
     """cat_count < MIN_CAT_COUNT (50) -> auto_approve=False even with high confidence."""
     f = [0.8, 0.9, 0.1, 0.7, 0.8, 0.2]
     result_sr = _make_score_result(action_index=0, confidence=0.90)
-    neo4j = _cat_stats_neo4j(cat_count=10)
+    graph = _cat_stats_graph(cat_count=10)
 
     result = asyncio.run(
-        CompositeDiscriminant.evaluate(result_sr, "credential_access", f, 0.0, neo4j)
+        CompositeDiscriminant.evaluate(result_sr, "credential_access", f, 0.0, graph)
     )
 
     assert result["auto_approve"] is False
@@ -133,10 +133,10 @@ def test_composite_evaluate_all_pass():
         probabilities: np.ndarray = dataclasses.field(default_factory=lambda: probs)
         distances: np.ndarray = dataclasses.field(default_factory=lambda: distances)
 
-    neo4j = _cat_stats_neo4j(cat_count=100, correct=92, verified=100)
+    graph = _cat_stats_graph(cat_count=100, correct=92, verified=100)
 
     result = asyncio.run(
-        CompositeDiscriminant.evaluate(SR(), "credential_access", [0.7, 0.8, 0.1, 0.6, 0.7, 0.2], 0.0, neo4j)
+        CompositeDiscriminant.evaluate(SR(), "credential_access", [0.7, 0.8, 0.1, 0.6, 0.7, 0.2], 0.0, graph)
     )
 
     assert result["auto_approve"] is True, f"Expected True: {result['reason_codes']}"
@@ -169,10 +169,10 @@ def test_composite_suppress_safety():
         distances: np.ndarray = dataclasses.field(default_factory=lambda: distances)
 
     # cat_count=100 so maturity gate passes — only suppress safety should block it
-    neo4j = _cat_stats_neo4j(cat_count=100, correct=90, verified=100)
+    graph = _cat_stats_graph(cat_count=100, correct=90, verified=100)
 
     result = asyncio.run(
-        CompositeDiscriminant.evaluate(SR(), "credential_access", [0.5]*6, 0.0, neo4j)
+        CompositeDiscriminant.evaluate(SR(), "credential_access", [0.5]*6, 0.0, graph)
     )
 
     assert result["auto_approve"] is False
@@ -193,10 +193,10 @@ def test_composite_features_computed():
         "factor_center_dist", "cat_count", "rolling_accuracy", "decision_position",
     }
     result_sr = _make_score_result(action_index=1, confidence=0.60)
-    neo4j = _cat_stats_neo4j(cat_count=20)
+    graph = _cat_stats_graph(cat_count=20)
 
     result = asyncio.run(
-        CompositeDiscriminant.evaluate(result_sr, "lateral_movement", [0.5]*6, 0.3, neo4j)
+        CompositeDiscriminant.evaluate(result_sr, "lateral_movement", [0.5]*6, 0.3, graph)
     )
 
     missing = EXPECTED_FEATURES - set(result["features"].keys())
@@ -222,8 +222,8 @@ def test_auto_approve_stats_endpoint():
             ]
         return []
 
-    with patch("app.routers.framework_router.graph_client") as mock_neo4j:
-        mock_neo4j.run_query = fake_run_query
+    with patch("app.routers.framework_router.graph_client") as mock_graph:
+        mock_graph.run_query = fake_run_query
         client = TestClient(app)
         resp = client.get("/api/soc/auto-approve-stats")
 
@@ -259,19 +259,19 @@ def test_analyze_includes_composite_gate():
     async def fake_run_query(query, params=None):
         return []   # empty is fine; Decision write, graph data etc. all tolerate []
 
-    mock_neo4j = MagicMock()
-    mock_neo4j.get_alert            = AsyncMock(return_value=_alert_data)
-    mock_neo4j.get_security_context = AsyncMock(return_value={
+    mock_graph = MagicMock()
+    mock_graph.get_alert            = AsyncMock(return_value=_alert_data)
+    mock_graph.get_security_context = AsyncMock(return_value={
         "alert_type": "anomalous_login", "alert_id": "ALERT-7823",
     })
-    mock_neo4j.run_query                = AsyncMock(side_effect=fake_run_query)
-    mock_neo4j.get_sequence_count       = AsyncMock(return_value=0)
-    mock_neo4j.get_cross_category_count = AsyncMock(return_value=0)
+    mock_graph.run_query                = AsyncMock(side_effect=fake_run_query)
+    mock_graph.get_sequence_count       = AsyncMock(return_value=0)
+    mock_graph.get_cross_category_count = AsyncMock(return_value=0)
 
     scorer = _scorer()
     mock_ls = MagicMock()
     mock_ls.decision_count = 10
-    with patch("app.routers.triage.graph_client", mock_neo4j), \
+    with patch("app.routers.triage.graph_client", mock_graph), \
          patch("app.routers.triage.get_profile_scorer", new=lambda: scorer), \
          patch("app.routers.triage.get_learning_state", return_value=mock_ls):
         client = TestClient(app)
@@ -297,12 +297,12 @@ def test_decision_history_empty_category():
     async def run_query(query, params=None):
         return [{"cat_count": 0, "correct_count": 0, "verified_count": 0}]
 
-    class FakeNeo4j:
+    class FakeAGE:
         pass
-    FakeNeo4j.run_query = staticmethod(run_query)
+    FakeAGE.run_query = staticmethod(run_query)
 
     result = asyncio.run(
-        DecisionHistoryService.get_category_stats("cloud_infrastructure", FakeNeo4j())
+        DecisionHistoryService.get_category_stats("cloud_infrastructure", FakeAGE())
     )
 
     assert result["cat_count"] == 0

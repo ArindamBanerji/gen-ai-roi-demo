@@ -1,6 +1,6 @@
 """
 H7-FIX-4 tests: Tab 4 weekly trends, evolution events, and decision economics
-served from Neo4j, not static/mock generators.
+served from AGE, not static/mock generators.
 
 Run from backend/ directory:
     pytest tests/test_h7_fix4.py -v
@@ -52,7 +52,7 @@ def test_evolution_events_endpoint_registered():
 # ============================================================================
 
 def test_economics_endpoint_shape():
-    """Mock Neo4j returning 10 decisions / 8 correct.  Assert the response
+    """Mock AGE returning 10 decisions / 8 correct.  Assert the response
     contains the expected computed fields."""
     from app.routers.metrics import get_decision_economics
 
@@ -81,7 +81,7 @@ def test_economics_endpoint_shape():
 # ============================================================================
 
 def test_economics_zero_decisions_safe():
-    """Mock Neo4j returning 0 decisions.  Endpoint must not raise and must
+    """Mock AGE returning 0 decisions.  Endpoint must not raise and must
     return correct_rate=0.0, time_saved_hours=0.0."""
     from app.routers.metrics import get_decision_economics
 
@@ -107,7 +107,7 @@ def test_economics_zero_decisions_safe():
 # ============================================================================
 
 def test_weekly_trends_empty_with_note_when_no_data():
-    """Mock Neo4j returning empty list.  Response must have estimated=True
+    """Mock AGE returning empty list.  Response must have estimated=True
     and a non-empty note string."""
     from app.routers.metrics import get_weekly_trends
 

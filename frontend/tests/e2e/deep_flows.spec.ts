@@ -4,7 +4,7 @@
  * Each test makes real API calls and verifies effects across multiple tabs.
  * Tests are independent: each starts with a fresh alert queue (beforeEach reset).
  *
- * WARNING: writes real data to Neo4j (decisions, outcomes).
+ * WARNING: writes real data to AGE (decisions, outcomes).
  * Do NOT run against production.
  *
  * Run:
@@ -71,7 +71,7 @@ async function makeDecision(
     await page.getByRole('button', { name: /Incorrect/i }).click();
   }
 
-  // Allow Neo4j write + in-memory state update to complete
+  // Allow AGE write + in-memory state update to complete
   await page.waitForTimeout(2000);
   return alertId;
 }
@@ -515,7 +515,7 @@ test('reset_returns_alerts_to_pending', async ({ page }) => {
   // ── Step 4: reset all alerts to pending ───────────────────────────────────
   await resetDemoAlerts(page);
 
-  // ── Step 5: wait 2 seconds for Neo4j write to propagate ──────────────────
+  // ── Step 5: wait 2 seconds for AGE write to propagate ──────────────────
   await page.waitForTimeout(2000);
 
   // ── Steps 6–7: reload, navigate to Tab 1, assert count >= baseline ────────

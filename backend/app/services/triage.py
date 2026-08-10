@@ -3,7 +3,7 @@ Decision Factor Breakdown Service -- Explainability for agent decisions
 
 Provides a weighted 6-factor matrix showing how the agent scored each
 decision. The sixth factor (threat_intel_enrichment) is queried live
-from Neo4j, using the ASSOCIATED_WITH relationship written by
+from AGE, using the ASSOCIATED_WITH relationship written by
 services/threat_intel.py during Threat Intel refresh.
 
 Factor schema:
@@ -162,7 +162,7 @@ def get_confidence_trajectory() -> Dict[str, List[Dict[str, Any]]]:
 
 async def _build_threat_intel_factor(alert_id: str) -> Dict[str, Any]:
     """
-    Query Neo4j for ThreatIntel nodes linked to alert_id via ASSOCIATED_WITH.
+    Query AGE for ThreatIntel nodes linked to alert_id via ASSOCIATED_WITH.
     Returns a factor dict for threat_intel_enrichment.
 
     Relationship direction (confirmed from threat_intel.py):
@@ -224,7 +224,7 @@ async def _build_threat_intel_factor(alert_id: str) -> Dict[str, Any]:
 
 async def _get_alert_type(alert_id: str) -> str:
     """
-    Query Neo4j for the alert_type property of the given alert_id.
+    Query AGE for the alert_type property of the given alert_id.
     Returns "" on miss or error (compute_soc_factors falls back to _default).
     """
     query = "MATCH (a:Alert {alert_id: $alert_id}) RETURN a.alert_type AS alert_type LIMIT 1"
@@ -242,14 +242,14 @@ async def get_decision_factors(alert_id: str) -> Optional[Dict[str, Any]]:
     Return the 6-factor decision breakdown for alert_id.
 
     Builds 5 static factors from SOC_FACTOR_TEMPLATES (keyed first by
-    alert_id, then by alert_type, then "_default"), queries Neo4j for the
+    alert_id, then by alert_type, then "_default"), queries AGE for the
     live threat_intel_enrichment factor, inserts it at index 2, and returns
     the full factor matrix.
 
     Final factor order:
       [0] primary factor (varies by alert type)
       [1] secondary factor
-      [2] threat_intel_enrichment  <- live Neo4j query
+      [2] threat_intel_enrichment  <- live AGE query
       [3] time_anomaly
       [4] device/source/pattern factor
       [5] pattern_history

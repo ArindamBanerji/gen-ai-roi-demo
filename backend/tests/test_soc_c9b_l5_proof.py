@@ -64,7 +64,7 @@ class _C9BStore:
         self.conservation.append(kwargs)
 
 
-class _C9BNeo4j:
+class _C9BAGE:
     def __init__(self) -> None:
         self.rows = [
             {
@@ -215,8 +215,8 @@ async def test_soc_c9b_full_flow_writes_all_three_l5_types(monkeypatch, soc_tria
 
     original_evaluate = LearningHealthMonitor.evaluate
 
-    async def evaluate_with_real_l5(_neo4j_service):
-        return await original_evaluate(_neo4j_service)
+    async def evaluate_with_real_l5(_graph_service):
+        return await original_evaluate(_graph_service)
 
     monkeypatch.setattr(
         "app.services.learning_health.get_learning_state",
@@ -255,7 +255,7 @@ async def test_soc_c9b_full_flow_writes_all_three_l5_types(monkeypatch, soc_tria
 
 @pytest.mark.asyncio
 async def test_soc_c9b_conservation_uses_no_domain_route_rows(monkeypatch):
-    graph = _C9BNeo4j()
+    graph = _C9BAGE()
     monkeypatch.setattr(learning_health, "get_learning_state", lambda: _LearningState())
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: None)
 

@@ -1,7 +1,7 @@
 """
 app/services/override_detector.py -- SOC override detector service.
 
-Loads analyst correct-override examples from Neo4j ShadowDecision nodes
+Loads analyst correct-override examples from AGE ShadowDecision nodes
 and activates the module-level OverrideDetector singleton when >= 50
 examples are available.
 
@@ -23,7 +23,7 @@ from app.framework.override_detector import OverrideDetector
 
 log = logging.getLogger(__name__)
 
-# Module-level singleton — loaded once at startup via load_from_neo4j().
+# Module-level singleton — loaded once at startup via load_from_graph().
 override_detector = OverrideDetector()
 
 _QUERY = """
@@ -39,9 +39,9 @@ RETURN sd.alert_idx     AS alert_idx,
 """
 
 
-async def load_from_neo4j(graph_client: Any) -> OverrideDetector:
+async def load_from_graph(graph_client: Any) -> OverrideDetector:
     """
-    Query Neo4j for correct-override ShadowDecision nodes and load them
+    Query AGE for correct-override ShadowDecision nodes and load them
     into the module-level singleton.
 
     Safe to call multiple times -- each call fully replaces the example set.
@@ -60,7 +60,7 @@ async def load_from_neo4j(graph_client: Any) -> OverrideDetector:
         results = await graph_client.run_query(_QUERY, {})
         examples = [dict(r) for r in results] if results else []
     except Exception as exc:
-        log.warning("[OverrideDetector] Neo4j query failed -- using empty set: %s", exc)
+        log.warning("[OverrideDetector] AGE query failed -- using empty set: %s", exc)
         examples = []
 
     override_detector.load(examples)

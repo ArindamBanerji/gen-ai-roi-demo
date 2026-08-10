@@ -1,6 +1,6 @@
 """
 Block 1.1 -- Industry profile tests.
-No live Neo4j required.
+No live AGE required.
 """
 import os
 import sys

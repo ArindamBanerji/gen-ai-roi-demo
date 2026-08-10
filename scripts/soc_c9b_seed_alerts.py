@@ -72,6 +72,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--prefix", default="C9B-SOC")
     parser.add_argument("--database-url", default=os.getenv("DATABASE_URL"))
     parser.add_argument("--graph-name", default=os.getenv("AGE_GRAPH_NAME", "soc_graph_c9b"))
+    parser.add_argument("--dk-proof-mode", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--verbose", action="store_true")
@@ -115,9 +116,9 @@ def deterministic_alert_id(prefix: str, index: int) -> str:
     return f"{prefix}-{index:04d}"
 
 
-def build_alert_spec(prefix: str, index: int) -> AlertSpec:
+def build_alert_spec(prefix: str, index: int, *, dk_proof_mode: bool = False) -> AlertSpec:
     categories = list(CATEGORY_ALERT_TYPES)
-    category = categories[(index - 1) % len(categories)]
+    category = "credential_access" if dk_proof_mode else categories[(index - 1) % len(categories)]
     severity = ["low", "medium", "high", "critical"][index % 4]
     if category == "credential_access":
         severity = "critical"
@@ -137,9 +138,9 @@ def build_alert_spec(prefix: str, index: int) -> AlertSpec:
         timestamp_epoch=1_725_000_000_000 + index,
         source_location=f"c9b-seed-zone-{index % 6}",
         risk_score=0.92 if category == "credential_access" else round(0.35 + ((index % 6) * 0.08), 3),
-        criticality=criticality_by_severity[severity],
+        criticality="critical" if dk_proof_mode else criticality_by_severity[severity],
         mfa_completed=False if category == "credential_access" else index % 3 == 0,
-        device_fingerprint_match=False if category == "credential_access" else index % 4 != 0,
+        device_fingerprint_match=False if dk_proof_mode or category == "credential_access" else index % 4 != 0,
     )
 
 
@@ -232,8 +233,9 @@ async def seed_alerts(
     dsn_source: str,
     dry_run: bool,
     verbose: bool = False,
+    dk_proof_mode: bool = False,
 ) -> SeedSummary:
-    specs = [build_alert_spec(prefix, index) for index in range(1, count + 1)]
+    specs = [build_alert_spec(prefix, index, dk_proof_mode=dk_proof_mode) for index in range(1, count + 1)]
     if dry_run:
         return SeedSummary(
             created=0,
@@ -379,6 +381,7 @@ async def _run(args: argparse.Namespace) -> SeedSummary:
         dsn_source=source,
         dry_run=args.dry_run,
         verbose=args.verbose,
+        dk_proof_mode=args.dk_proof_mode,
     )
 
 

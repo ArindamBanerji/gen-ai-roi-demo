@@ -8,7 +8,7 @@ from app.domains.soc.factors import ThreatIntelEnrichmentFactor
 from app.domains.soc.orchestrator import compute_factor_vector_with_provenance
 
 
-class FakeNeo4j:
+class FakeAGE:
     def __init__(self, responses=None):
         self.responses = responses or []
         self.queries = []
@@ -26,7 +26,7 @@ async def test_threat_intel_fallback_labeled_fixture_fallback():
     vector, provenance = await compute_factor_vector_with_provenance(
         alert,
         [ThreatIntelEnrichmentFactor()],
-        FakeNeo4j(),
+        FakeAGE(),
     )
 
     assert vector.shape == (1,)
@@ -50,7 +50,7 @@ async def test_factor_provenance_has_all_six_soc_factors():
     vector, provenance = await compute_factor_vector_with_provenance(
         alert,
         SOCDomainConfig.get_factor_computers(),
-        FakeNeo4j(),
+        FakeAGE(),
     )
 
     assert vector.shape == (6,)

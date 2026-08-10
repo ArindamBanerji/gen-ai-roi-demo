@@ -84,7 +84,7 @@ ALERT_CATEGORIES: Dict[str, Dict[str, Any]] = {
 # ---------------------------------------------------------------------------
 
 _CA: List[Dict[str, Any]] = [
-    # credential_access: travel login anomaly — TravelRecord seeded in Neo4j
+    # credential_access: travel login anomaly — TravelRecord seeded in AGE
     {
         "alert_id": "SIM-CA-001", "id": "SIM-CA-001",
         "alert_type": "anomalous_login", "category": "credential_access",
@@ -132,7 +132,7 @@ _CA: List[Dict[str, Any]] = [
 ]
 
 _TI: List[Dict[str, Any]] = [
-    # threat_intel_match: ThreatIntel nodes + ASSOCIATED_WITH seeded in Neo4j
+    # threat_intel_match: ThreatIntel nodes + ASSOCIATED_WITH seeded in AGE
     {
         "alert_id": "SIM-TI-001", "id": "SIM-TI-001",
         "alert_type": "threat_intel_match", "category": "malware_execution",
@@ -381,14 +381,14 @@ def get_alert_pool() -> List[Dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
-# Neo4j seed function
+# AGE seed function
 # ---------------------------------------------------------------------------
 
 async def seed_simulation_alerts() -> None:
     """
-    Create simulation alert graph entities in Neo4j.
+    Create simulation alert graph entities in AGE.
 
-    Called from seed_neo4j.seed_data() AFTER the main corpus and GAE factor
+    Called from seed_graph.seed_data() AFTER the main corpus and GAE factor
     data are seeded.  Expects graph_client to be already connected.
 
     Creates per category:
@@ -904,7 +904,7 @@ async def seed_simulation_alerts() -> None:
     # SIM-FIX-2: AlertType nodes — required by get_security_context()
     #
     # anomalous_login, threat_intel_match, and privilege_escalation are
-    # already created by the main seed_neo4j.py corpus.  Only data_exfil
+    # already created by the main seed_graph.py corpus.  Only data_exfil
     # and insider_threat are new; the others use MERGE for safety.
     # -----------------------------------------------------------------------
     for at_id, at_name, at_desc, at_severity, at_mitre in [
@@ -974,7 +974,7 @@ async def seed_simulation_alerts() -> None:
     # SIM-FIX-2: [:CLASSIFIED_AS] edges — the missing link
     #
     # get_security_context() uses a mandatory MATCH on this relationship.
-    # MERGE is idempotent; re-running seed_neo4j.py will not create duplicates.
+    # MERGE is idempotent; re-running seed_graph.py will not create duplicates.
     # -----------------------------------------------------------------------
     for ids, type_id in [
         (['SIM-CA-001', 'SIM-CA-002', 'SIM-CA-003', 'SIM-CA-004'], 'anomalous_login'),

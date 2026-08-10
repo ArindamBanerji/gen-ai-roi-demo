@@ -52,7 +52,7 @@ def test_process_503_when_scorer_none(client):
     """process_alert returns 503 when ProfileScorer is None.
 
     The scorer guard (evolution.py:137-139) fires after the alert fetch,
-    so we mock neo4j and the factor computation to reach the guard.
+    so we mock graph and the factor computation to reach the guard.
     """
     import numpy as np
 

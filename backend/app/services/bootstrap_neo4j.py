@@ -2,21 +2,21 @@
 Bootstrap Decision node writer (CORR-3).
 
 After bootstrap_calibration() calibrates ProfileScorer centroids, this module
-writes representative Decision nodes to Neo4j so that GATE-R, similar-cases
+writes representative Decision nodes to AGE so that GATE-R, similar-cases
 retrieval, and IKS v2 can access bootstrap history.
 
 Design:
   - Generates sum(decisions_per_category.values()) Decision nodes total,
     round-robining through actions within each category.
   - factor_vector = centroid + small noise (sigma=0.02, seed=42), clipped [0,1].
-    Stored as a native Python list -> Neo4j native array (NOT json.dumps string).
+    Stored as a native Python list -> AGE native array (NOT json.dumps string).
   - source='bootstrap' distinguishes these from live triage decisions.
   - No [:DECIDED_ON] relationship (bootstrap uses synthetic, not real, alerts).
   - Idempotent: skipped when any bootstrap Decision nodes already exist in AGE.
 
 This is migration/seed infrastructure, not a live decision path. The writer
 accepts the shared AGE client resolved by ``GraphConfig.load("soc")`` and uses
-its governed ``run_query`` interface; it does not construct a legacy Neo4j
+its governed ``run_query`` interface; it does not construct a legacy AGE
 client or bypass the shared AGE graph.
 
 Reference: docs/soc_copilot_design_v1.md Sec.14 (CORR-3).
@@ -87,7 +87,7 @@ def build_bootstrap_decisions(
 
     Returns a list of dicts ready for batch UNWIND insertion.  Each dict
     contains all scalar fields; factor_vector is a Python list (not a JSON
-    string), which the Neo4j Python driver stores as a native array.
+    string), which the AGE Python driver stores as a native array.
 
     Parameters
     ----------
@@ -113,7 +113,7 @@ def build_bootstrap_decisions(
         total = sum(decisions_per_category.values())
         decisions_per_category = _apply_weights(total, categories, weights)
         log.debug(
-            "[BOOTSTRAP-NEO4J] Weighted distribution applied: %s",
+            "[BOOTSTRAP-GRAPH] Weighted distribution applied: %s",
             decisions_per_category,
         )
 
@@ -142,8 +142,8 @@ def build_bootstrap_decisions(
                 "id":               str(uuid.uuid4()),
                 "action":           action_name,
                 "confidence":       float(score_result.confidence),
-                "factor_vector":    fv,              # native list for Neo4j
-                "centroid_snapshot": centroid.tolist(),  # native list for Neo4j
+                "factor_vector":    fv,              # native list for AGE
+                "centroid_snapshot": centroid.tolist(),  # native list for AGE
                 "category":         category,
                 "source":           "bootstrap",
                 "domain":           "soc",
@@ -188,18 +188,18 @@ async def write_bootstrap_decisions(
     existing = check[0]["cnt"] if check else 0
     if existing > 0:
         log.info(
-            "[BOOTSTRAP-NEO4J] Skipping -- %d bootstrap Decision nodes already exist",
+            "[BOOTSTRAP-GRAPH] Skipping -- %d bootstrap Decision nodes already exist",
             existing,
         )
-        print(f"[BOOTSTRAP-NEO4J] Skipping -- {existing} bootstrap Decision nodes already exist")
+        print(f"[BOOTSTRAP-GRAPH] Skipping -- {existing} bootstrap Decision nodes already exist")
         return 0
 
     records = build_bootstrap_decisions(scorer, categories, decisions_per_category)
     if not records:
-        log.info("[BOOTSTRAP-NEO4J] No decisions to write (empty pool)")
+        log.info("[BOOTSTRAP-GRAPH] No decisions to write (empty pool)")
         return 0
 
-    # UNWIND batch: factor_vector passed as Python list → native Neo4j array.
+    # UNWIND batch: factor_vector passed as Python list → native AGE array.
     # No [:DECIDED_ON] relationship — bootstrap uses synthetic, not real, alerts.
     # ARCHITECTURAL NOTE: Bootstrap uses direct AGE client write
     # (not GraphStore) because it seeds initial data before the
@@ -228,12 +228,12 @@ async def write_bootstrap_decisions(
 
     n = len(records)
     log.info(
-        "[BOOTSTRAP-NEO4J] Wrote %d bootstrap Decision nodes "
+        "[BOOTSTRAP-GRAPH] Wrote %d bootstrap Decision nodes "
         "(%d categories, %d actions, factor_vector=native list)",
         n, len(categories), len(scorer.actions),
     )
     print(
-        f"[BOOTSTRAP-NEO4J] Wrote {n} bootstrap Decision nodes "
+        f"[BOOTSTRAP-GRAPH] Wrote {n} bootstrap Decision nodes "
         f"(source='bootstrap', factor_vector=native list)"
     )
     return n

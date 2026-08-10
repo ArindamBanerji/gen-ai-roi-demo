@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 
-def _neo4j_noop():
+def _graph_noop():
     mock = MagicMock()
     mock.run_query = AsyncMock(return_value=[])
     return mock

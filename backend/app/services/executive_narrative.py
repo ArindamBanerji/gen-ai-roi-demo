@@ -395,9 +395,9 @@ class ExecutiveNarrative:
         )
 
 
-async def build_executive_narrative_async(neo4j_service) -> Dict:
+async def build_executive_narrative_async(graph_service) -> Dict:
     """
-    F12 async: queries Neo4j directly with the correct field names.
+    F12 async: queries AGE directly with the correct field names.
 
     Fixes vs the legacy sync version:
     - Awaits run_query() (graph_client is async)
@@ -413,7 +413,7 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     # silently excluded 3,204 decisions, producing 5,225 instead of 8,429.
     verified_decisions = 0
     try:
-        rows = await neo4j_service.run_query(
+        rows = await graph_service.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "RETURN count(d) AS cnt"
         )
@@ -422,7 +422,7 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
         pass
 
     # Floor: align with IKS and Tab 4 — use in-memory learning state when
-    # Neo4j returns 0 so all tabs show the same verified_decisions count.
+    # AGE returns 0 so all tabs show the same verified_decisions count.
     if verified_decisions == 0:
         try:
             from app.services.gae_state import get_learning_state as _get_ls_en
@@ -433,7 +433,7 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     # ── 2. centroid_updates (correct decisions) ──────────────────────────────
     centroid_updates = 0
     try:
-        rows = await neo4j_service.run_query(
+        rows = await graph_service.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "AND d.correct = true RETURN count(d) AS cnt"
         )
@@ -444,7 +444,7 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     # ── 3. campaigns_detected ────────────────────────────────────────────────
     campaigns_detected = 0
     try:
-        rows = await neo4j_service.run_query(
+        rows = await graph_service.run_query(
             "MATCH (c:Campaign) RETURN count(c) AS cnt"
         )
         campaigns_detected = int((rows[0].get("cnt") or 0) if rows else 0)
@@ -454,7 +454,7 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     # ── 4. alerts_total ──────────────────────────────────────────────────────
     alerts_total = 0
     try:
-        rows = await neo4j_service.run_query(
+        rows = await graph_service.run_query(
             "MATCH (a:Alert) RETURN count(a) AS cnt"
         )
         alerts_total = int((rows[0].get("cnt") or 0) if rows else 0)
@@ -477,7 +477,7 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     if iks_current == 0.0:
         try:
             from app.services.iks import compute_iks_v2
-            iks_data = await compute_iks_v2(neo4j_service)
+            iks_data = await compute_iks_v2(graph_service)
             iks_current = float(iks_data.get("iks_v2", 0.0))
         except Exception:
             pass
@@ -485,7 +485,7 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     # ── 6. categories_calibrated (≥10 verified decisions each) ───────────────
     categories_calibrated = 0
     try:
-        rows = await neo4j_service.run_query(
+        rows = await graph_service.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "AND d.outcome IS NOT NULL "
             "RETURN d.category AS category, count(d) AS n"
@@ -507,7 +507,7 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     # categories_calibrated so recommendations can use both volume and accuracy.
     category_accuracy = []
     try:
-        rows = await neo4j_service.run_query(
+        rows = await graph_service.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "AND d.category IS NOT NULL AND d.outcome IS NOT NULL "
             "RETURN d.category AS category, count(d) AS total, "
@@ -527,7 +527,7 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     # ── 7. what_changed: top category/action pairs by correct-decision count ─
     top_shifts = []
     try:
-        rows = await neo4j_service.run_query(
+        rows = await graph_service.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
             "AND d.correct = true "
             "RETURN d.category AS category, d.action AS action, count(d) AS n "
@@ -549,7 +549,7 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     # ── 8. what_discovered: Campaign summaries ───────────────────────────────
     campaign_summaries = []
     try:
-        rows = await neo4j_service.run_query(
+        rows = await graph_service.run_query(
             "MATCH (c:Campaign) "
             "WHERE c.alert_count IS NOT NULL AND c.category_sequence IS NOT NULL "
             "RETURN c.campaign_id AS id, c.name AS name, "
@@ -607,7 +607,7 @@ async def build_executive_narrative_async(neo4j_service) -> Dict:
     try:
         from app.services.learning_health import LearningHealthMonitor
 
-        health_metadata = await LearningHealthMonitor.evaluate(neo4j_service)
+        health_metadata = await LearningHealthMonitor.evaluate(graph_service)
         health_status = str(health_metadata.get("status") or operational_knowledge_status)
         pre_activation = bool(health_metadata.get("pre_activation", False))
     except Exception:

@@ -18,11 +18,11 @@ from app.services.iks import compute_iks_v2, interpret_iks_v2
 
 
 # ---------------------------------------------------------------------------
-# FakeNeo4j helpers
+# FakeAGE helpers
 # ---------------------------------------------------------------------------
 
-def _make_neo4j(total: int, cat_counts: dict, high_conf: int, accuracies: list):
-    """Return a FakeNeo4j whose run_query answers the 4 IKS v2 queries."""
+def _make_graph(total: int, cat_counts: dict, high_conf: int, accuracies: list):
+    """Return a FakeAGE whose run_query answers the 4 IKS v2 queries."""
 
     async def run_query(query, params=None):
         q = query.strip()
@@ -37,11 +37,11 @@ def _make_neo4j(total: int, cat_counts: dict, high_conf: int, accuracies: list):
                     for c, acc in zip(cat_counts.keys(), accuracies)]
         return []
 
-    class FakeNeo4j:
+    class FakeAGE:
         pass
 
-    FakeNeo4j.run_query = staticmethod(run_query)
-    return FakeNeo4j()
+    FakeAGE.run_query = staticmethod(run_query)
+    return FakeAGE()
 
 
 # ---------------------------------------------------------------------------
@@ -50,7 +50,7 @@ def _make_neo4j(total: int, cat_counts: dict, high_conf: int, accuracies: list):
 
 def test_compute_iks_v2_cold_start():
     """IKS v2 at cold start (0 decisions) returns low score + cold-start interpretation."""
-    fake = _make_neo4j(total=0, cat_counts={}, high_conf=0, accuracies=[])
+    fake = _make_graph(total=0, cat_counts={}, high_conf=0, accuracies=[])
     result = asyncio.run(compute_iks_v2(fake))
 
     assert result["iks_v2"] < 30, (
@@ -69,7 +69,7 @@ def test_compute_iks_v2_cold_start():
 
 def test_compute_iks_v2_components_bounded():
     """All IKS v2 components are in [0, 100] and iks_v2 itself is in [0, 100]."""
-    fake = _make_neo4j(
+    fake = _make_graph(
         total=50,
         cat_counts={"credential_access": 20, "lateral_movement": 15, "insider_threat": 15},
         high_conf=35,
@@ -88,13 +88,13 @@ def test_compute_iks_v2_components_bounded():
 
 def test_compute_iks_v2_grows_with_decisions():
     """IKS v2 increases when total_decisions is higher."""
-    fake_low = _make_neo4j(
+    fake_low = _make_graph(
         total=10,
         cat_counts={"credential_access": 10},
         high_conf=7,
         accuracies=[0.70],
     )
-    fake_high = _make_neo4j(
+    fake_high = _make_graph(
         total=200,
         cat_counts={
             "credential_access": 50, "lateral_movement": 40,
@@ -146,8 +146,8 @@ def test_iks_trend_endpoint():
             return [{"category": "credential_access", "accuracy": 0.88}]
         return []
 
-    with patch("app.routers.soc.graph_client") as mock_neo4j:
-        mock_neo4j.run_query = _fake_run_query
+    with patch("app.routers.soc.graph_client") as mock_graph:
+        mock_graph.run_query = _fake_run_query
         client = TestClient(app)
         response = client.get("/api/soc/iks-trend")
 
@@ -183,8 +183,8 @@ def test_learning_state_includes_iks_v2():
             return []
         return []
 
-    with patch("app.routers.soc.graph_client") as mock_neo4j:
-        mock_neo4j.run_query = _fake_run_query
+    with patch("app.routers.soc.graph_client") as mock_graph:
+        mock_graph.run_query = _fake_run_query
         client = TestClient(app)
         response = client.get("/api/soc/learning-state")
 
@@ -218,7 +218,7 @@ def test_iks_reflects_historical_decisions():
         "data_exfil_attempt":        475,
         "anomalous_network_behavior": 476,   # sum = 2851
     }
-    fake = _make_neo4j(
+    fake = _make_graph(
         total=2851,
         cat_counts=_6_cats,
         high_conf=2138,   # ~75% of 2851
@@ -257,7 +257,7 @@ def test_iks_at_537_decisions():
         "data_exfil_attempt":        89,
         "anomalous_network_behavior": 90,   # sum = 537
     }
-    fake = _make_neo4j(
+    fake = _make_graph(
         total=537,
         cat_counts=_6_cats,
         high_conf=403,    # ~75% of 537

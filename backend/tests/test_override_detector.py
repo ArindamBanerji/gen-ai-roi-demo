@@ -79,27 +79,27 @@ def test_override_detector_activated_at_50():
 
 
 # ============================================================================
-# Test 3 — load_from_neo4j wires run_query results into the detector
+# Test 3 — load_from_graph wires run_query results into the detector
 # ============================================================================
 
-def test_load_from_neo4j_activates_with_50_results():
+def test_load_from_graph_activates_with_50_results():
     """
-    load_from_neo4j must call run_query with the correct source filter
-    and activate the singleton when Neo4j returns >= 50 rows.
+    load_from_graph must call run_query with the correct source filter
+    and activate the singleton when AGE returns >= 50 rows.
     """
-    from app.services.override_detector import load_from_neo4j, override_detector
+    from app.services.override_detector import load_from_graph, override_detector
 
-    mock_neo4j = AsyncMock()
-    mock_neo4j.run_query.return_value = _make_examples(50)
+    mock_graph = AsyncMock()
+    mock_graph.run_query.return_value = _make_examples(50)
 
-    asyncio.run(load_from_neo4j(mock_neo4j))
+    asyncio.run(load_from_graph(mock_graph))
 
     assert override_detector.activated, (
         f"override_detector singleton must be ACTIVATED after loading 50 rows. "
         f"Got example_count={override_detector.example_count}"
     )
     # Verify the correct query was issued (source filter present)
-    call_args = mock_neo4j.run_query.call_args
+    call_args = mock_graph.run_query.call_args
     query_str = call_args[0][0]
     assert "v_shadow_synthetic_v3" in query_str, (
         f"Query must filter by source='v_shadow_synthetic_v3'. Got: {query_str!r}"
@@ -110,19 +110,19 @@ def test_load_from_neo4j_activates_with_50_results():
 
 
 # ============================================================================
-# Test 4 — load_from_neo4j stays inactive with 49 results
+# Test 4 — load_from_graph stays inactive with 49 results
 # ============================================================================
 
-def test_load_from_neo4j_inactive_with_49_results():
+def test_load_from_graph_inactive_with_49_results():
     """
-    load_from_neo4j must leave the detector inactive when Neo4j returns < 50.
+    load_from_graph must leave the detector inactive when AGE returns < 50.
     """
-    from app.services.override_detector import load_from_neo4j, override_detector
+    from app.services.override_detector import load_from_graph, override_detector
 
-    mock_neo4j = AsyncMock()
-    mock_neo4j.run_query.return_value = _make_examples(49)
+    mock_graph = AsyncMock()
+    mock_graph.run_query.return_value = _make_examples(49)
 
-    asyncio.run(load_from_neo4j(mock_neo4j))
+    asyncio.run(load_from_graph(mock_graph))
 
     assert not override_detector.activated, (
         f"override_detector must NOT be activated with 49 rows. "

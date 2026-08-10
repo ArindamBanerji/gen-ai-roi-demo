@@ -134,13 +134,13 @@ def _install_analyze_patches(monkeypatch, action="escalate", confidence=0.9):
         "nodes_consulted": 4,
         "mfa_completed": True,
     }
-    neo4j = MagicMock()
-    neo4j.get_alert = AsyncMock(return_value=alert)
-    neo4j.get_security_context = AsyncMock(return_value=context)
-    neo4j.run_query = AsyncMock(return_value=[])
-    neo4j.get_sequence_count = AsyncMock(return_value=0)
-    neo4j.get_cross_category_count = AsyncMock(return_value=0)
-    monkeypatch.setattr(triage_router, "graph_client", neo4j)
+    graph = MagicMock()
+    graph.get_alert = AsyncMock(return_value=alert)
+    graph.get_security_context = AsyncMock(return_value=context)
+    graph.run_query = AsyncMock(return_value=[])
+    graph.get_sequence_count = AsyncMock(return_value=0)
+    graph.get_cross_category_count = AsyncMock(return_value=0)
+    monkeypatch.setattr(triage_router, "graph_client", graph)
     monkeypatch.setattr(
         triage_router,
         "compute_factor_vector",
@@ -181,7 +181,7 @@ def _install_analyze_patches(monkeypatch, action="escalate", confidence=0.9):
             return {"summary": "mock narrative"}
 
     monkeypatch.setattr(triage_router, "get_narrative_provider", lambda: _NarrativeProvider())
-    return neo4j
+    return graph
 
 
 def test_sentinel_alert_through_analyze(monkeypatch):

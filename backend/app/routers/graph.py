@@ -59,7 +59,7 @@ def _consensus_severity(sources: Dict[str, Dict]) -> str:
 
 def _build_view(record: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Convert a raw Neo4j record into the unified enrichment view shape.
+    Convert a raw AGE record into the unified enrichment view shape.
 
     The record is expected to contain columns returned by _ENRICHMENT_QUERY_*:
       value, type, severity, context, risk_factors  (from :ThreatIntel)
@@ -174,7 +174,7 @@ async def refresh_threat_intel_endpoint():
     Refresh threat intelligence for all curated IOCs.
 
     Calls Pulsedive live API if PULSEDIVE_API_KEY is set; otherwise uses the
-    hardcoded fallback set.  Writes / updates :ThreatIntel nodes in Neo4j and
+    hardcoded fallback set.  Writes / updates :ThreatIntel nodes in AGE and
     creates :ASSOCIATED_WITH relationships to relevant :Alert nodes.
 
     Phase 7: Also MERGEs each :ThreatIntel node as a :ThreatIndicator node
@@ -222,7 +222,7 @@ async def refresh_threat_intel_endpoint():
                 source          = row.get("source")    or "unknown",
                 severity        = row.get("severity")  or "unknown",
                 name            = row.get("name")      or "",
-                neo4j_service=graph_client,
+                graph_service=graph_client,
             )
             indicators_persisted += 1
         print(f"[GRAPH] ThreatIndicator MERGE: persisted={indicators_persisted}")
@@ -271,7 +271,7 @@ async def refresh_all_connectors():
     """
     Trigger refresh() on every registered UCL connector.
 
-    Each connector pulls from its source, writes to Neo4j, and returns a
+    Each connector pulls from its source, writes to AGE, and returns a
     ConnectorResult summary.  Failures per connector are captured and included
     in the response rather than aborting the whole request.
 
@@ -304,7 +304,7 @@ async def get_enrichment_aggregate(indicator: str):
     """
     Return a unified enrichment view for a single indicator (IP or domain).
 
-    Queries Neo4j for the :ThreatIntel node matching the indicator value and
+    Queries AGE for the :ThreatIntel node matching the indicator value and
     any linked :GreyNoiseEnrichment node (:ENRICHED_BY relationship).
 
     Response shape:

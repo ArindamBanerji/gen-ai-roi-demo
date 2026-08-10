@@ -11,7 +11,7 @@ can begin weighting analyst override patterns into its scoring logic.
 Usage
 -----
     detector = OverrideDetector()
-    detector.load(examples)          # list of dicts from Neo4j
+    detector.load(examples)          # list of dicts from AGE
     if detector.activated:
         ...                          # use override patterns
 
@@ -20,7 +20,7 @@ Design notes
 - Threshold 50 is the minimum population required for override frequency
   estimates to be stable (+/-10 pp at 95% CI for a 50/50 base rate).
 - `load()` is idempotent -- re-calling with a fresh query result is safe.
-- No external dependencies: pure Python, no Neo4j or domain imports here.
+- No external dependencies: pure Python, no AGE or domain imports here.
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ class OverrideDetector:
         """
         Replace the current example set with *examples*.
 
-        Typically called once at startup after querying Neo4j, and again
+        Typically called once at startup after querying AGE, and again
         after any batch of new ShadowDecision nodes are ingested.
 
         Parameters

@@ -4,7 +4,7 @@ Progressive RL impact tests.
 Validates that correct vs incorrect decisions have measurably different
 and asymmetric impact on ProfileScorer centroids.
 
-No live Neo4j required.
+No live AGE required.
 """
 import os
 import sys

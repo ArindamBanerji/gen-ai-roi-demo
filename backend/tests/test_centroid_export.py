@@ -1,6 +1,6 @@
 """
 Block 2.3 -- Centroid export tests.
-Requires Block 2.2 (bootstrap_centroids). No live Neo4j required.
+Requires Block 2.2 (bootstrap_centroids). No live AGE required.
 """
 import asyncio
 import hashlib
@@ -35,7 +35,7 @@ _SCORER = get_profile_scorer()
 _BOOTSTRAP_MU = _SCORER.centroids.tolist()   # use current mu as fake bootstrap
 
 
-def _neo4j_with_bootstrap(mu=None):
+def _graph_with_bootstrap(mu=None):
     """AsyncMock client that returns bootstrap data (or empty rows)."""
     mock = AsyncMock()
     if mu is not None:
@@ -62,7 +62,7 @@ def test_export_has_10_fields():
         "drift_from_bootstrap", "decision_count",
         "categories", "actions", "sha256",
     }
-    mock = _neo4j_with_bootstrap(_BOOTSTRAP_MU)
+    mock = _graph_with_bootstrap(_BOOTSTRAP_MU)
     export = _run(build_centroid_export(get_profile_scorer(), mock))
 
     missing = expected_fields - set(export.keys())
@@ -78,7 +78,7 @@ def test_export_has_10_fields():
 
 def test_sha256_computed_correctly():
     """sha256 must equal SHA-256 of canonical JSON of current_mu."""
-    mock = _neo4j_with_bootstrap(None)   # no bootstrap -- irrelevant for sha256
+    mock = _graph_with_bootstrap(None)   # no bootstrap -- irrelevant for sha256
     export = _run(build_centroid_export(get_profile_scorer(), mock))
 
     canonical = json.dumps({"mu": export["current_mu"]}, sort_keys=True)
@@ -103,13 +103,13 @@ def test_drift_computed_when_bootstrap_present():
     scorer = get_profile_scorer()
 
     # Case A: bootstrap == current → drift should be 0.0
-    mock_same = _neo4j_with_bootstrap(scorer.centroids.tolist())
+    mock_same = _graph_with_bootstrap(scorer.centroids.tolist())
     export_same = _run(build_centroid_export(scorer, mock_same))
     assert export_same["drift_from_bootstrap"] == pytest.approx(0.0, abs=1e-9)
 
     # Case B: bootstrap perturbed by +0.1 → drift ≈ 0.1
     perturbed = (scorer.centroids + 0.1).tolist()
-    mock_perturbed = _neo4j_with_bootstrap(perturbed)
+    mock_perturbed = _graph_with_bootstrap(perturbed)
     export_perturbed = _run(build_centroid_export(scorer, mock_perturbed))
     assert export_perturbed["drift_from_bootstrap"] == pytest.approx(0.1, abs=1e-6)
 
@@ -120,7 +120,7 @@ def test_drift_computed_when_bootstrap_present():
 
 def test_drift_none_when_no_bootstrap():
     """drift_from_bootstrap must be None when DeploymentState has no bootstrap."""
-    mock = _neo4j_with_bootstrap(None)   # no rows -> get_bootstrap_centroids returns None
+    mock = _graph_with_bootstrap(None)   # no rows -> get_bootstrap_centroids returns None
     export = _run(build_centroid_export(get_profile_scorer(), mock))
 
     assert export["drift_from_bootstrap"] is None,  "Expected None drift without bootstrap"

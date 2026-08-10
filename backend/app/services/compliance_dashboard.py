@@ -33,7 +33,7 @@ COMPLIANCE_MAP = [
         title="Record-Keeping",
         product_evidence=(
             "Every decision, outcome, centroid update, and intervention logged "
-            "to Neo4j graph with timestamps. Intervention audit trail (L-12). "
+            "to AGE graph with timestamps. Intervention audit trail (L-12). "
             "Checkpoint/rollback history preserved. "
             "Exportable as structured data."
         ),

@@ -1,5 +1,5 @@
 """
-Ingest synthetic_pilot_decisions.json as verified Decision nodes in Neo4j.
+Ingest synthetic_pilot_decisions.json as verified Decision nodes in AGE.
 Tab 5 executive narrative reads from these nodes.
 
 Run from gen-ai-roi-demo-v4-v50/backend/:
@@ -58,7 +58,7 @@ async def main():
         sys.exit(1)
 
     print(f"\n[ingest_synthetic_decisions] Loading {json_path}")
-    print(f"  NEO4J_URI: {os.getenv('NEO4J_URI', '(not set)')}")
+    print(f"  GRAPH_URI: {os.getenv('GRAPH_URI', '(not set)')}")
 
     with open(json_path) as f:
         raw = json.load(f)

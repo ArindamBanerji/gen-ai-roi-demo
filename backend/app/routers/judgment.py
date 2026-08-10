@@ -139,7 +139,7 @@ async def explain_decision_post(request: JudgmentRequest):
 async def explain_decision_get(alert_id: str):
     """
     Explain the most recent Decision for a given alert_id.
-    Loads factor values from the Decision node in Neo4j.
+    Loads factor values from the Decision node in AGE.
     Returns the same shape as POST /explain.
     """
     from app.services.gae_state import get_profile_scorer
@@ -152,7 +152,7 @@ async def explain_decision_get(alert_id: str):
             {"alert_id": alert_id},
         )
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Neo4j query failed: {exc}")
+        raise HTTPException(status_code=500, detail=f"AGE query failed: {exc}")
 
     if not rows:
         return {

@@ -110,7 +110,7 @@ def test_sentinel_normalize_missing_optional_fields():
 
 def test_sentinel_mock_connector_still_passes():
     # Regression: queue endpoint must exist. 500 is acceptable in full-suite
-    # runs when Neo4j event loop interference occurs — endpoint is not broken.
+    # runs when AGE event loop interference occurs — endpoint is not broken.
     resp = client.get("/api/alerts/queue")
     assert resp.status_code in (200, 500), \
         f"Unexpected status {resp.status_code} -- endpoint may be missing"

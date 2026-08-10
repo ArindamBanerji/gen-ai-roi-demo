@@ -125,8 +125,8 @@ async def _run_outcome(
         factor_vector=_FV,
         campaign_id="CAMP-TEST",
     )
-    neo4j = harness.graph_client
-    monkeypatch.setattr(triage, "graph_client", neo4j)
+    graph = harness.graph_client
+    monkeypatch.setattr(triage, "graph_client", graph)
     monkeypatch.setattr(triage, "LEARNING_ENABLED", True)
     monkeypatch.setattr(triage, "get_feedback_status", lambda _alert_id: {"has_feedback": False})
     monkeypatch.setattr(triage, "get_learning_state", lambda: learning_state)
@@ -151,7 +151,7 @@ async def _run_outcome(
     return SimpleNamespace(
         response=response,
         learning_state=learning_state,
-        neo4j=neo4j,
+        graph=graph,
         scorer=scorer,
         guarded_calls=guarded_calls,
     )

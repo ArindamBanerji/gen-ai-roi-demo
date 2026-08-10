@@ -2,7 +2,7 @@
 Tests for GET /api/soc/analyst-benchmarking (F9 enhancements)
 and GET /api/soc/f9-report.
 
-Requires V-SHADOW-SYNTHETIC-v3 data in Neo4j (1,500 ShadowDecision nodes).
+Requires V-SHADOW-SYNTHETIC-v3 data in AGE (1,500 ShadowDecision nodes).
 Tests that need live data skip gracefully when the data is absent.
 """
 
@@ -100,7 +100,7 @@ def test_f9_report_total_matches_benchmarking():
 
     f9 = client.get("/api/soc/f9-report").json()
     if f9.get("total_shadow_decisions", 0) == 0:
-        pytest.skip("f9-report secondary Neo4j call failed (event loop) -- skipping total check")
+        pytest.skip("f9-report secondary AGE call failed (event loop) -- skipping total check")
     assert f9.get("total_shadow_decisions") == bench.get("total_decisions")
 
 

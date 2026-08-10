@@ -1,5 +1,5 @@
 """
-ProfileSnapshot service -- persists centroid state to Neo4j every 50 decisions.
+ProfileSnapshot service -- persists centroid state to AGE every 50 decisions.
 
 A ProfileSnapshot node captures the full mu tensor at a point in time so that
 IKS trend computation has historical anchor points to compare against.
@@ -18,7 +18,7 @@ _SNAPSHOT_INTERVAL = 50  # decisions between snapshots
 
 async def maybe_write_profile_snapshot(decision_count: int) -> None:
     """
-    Write a ProfileSnapshot node to Neo4j if decision_count is a multiple of
+    Write a ProfileSnapshot node to AGE if decision_count is a multiple of
     _SNAPSHOT_INTERVAL (50).
 
     Call this after save_learning_state() in the outcome write-back path.
@@ -56,7 +56,7 @@ async def _write_profile_snapshot(decision_count: int) -> None:
             {
                 "decision_count":  decision_count,
                 "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000),
-                "mu":              str(mu_list),   # store as JSON string (Neo4j has no tensor type)
+                "mu":              str(mu_list),   # store as JSON string (AGE has no tensor type)
                 "counts":          str(counts_list),
             },
         )

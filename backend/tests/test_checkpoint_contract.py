@@ -1,8 +1,8 @@
 """
 CheckpointService contract tests (TD-033, Phase 4 Sec.17.5).
 
-Verifies create_checkpoint() and rollback() without a live Neo4j connection.
-Uses a lightweight in-memory mock for neo4j_service and a minimal scorer stub.
+Verifies create_checkpoint() and rollback() without a live AGE connection.
+Uses a lightweight in-memory mock for graph_service and a minimal scorer stub.
 
 4 tests.
 """
@@ -22,8 +22,8 @@ def _run(coro):
     return asyncio.run(coro)
 
 
-class _MockNeo4j:
-    """In-memory neo4j stub: captures CREATE payloads, serves them on MATCH."""
+class _MockAGE:
+    """In-memory graph stub: captures CREATE payloads, serves them on MATCH."""
 
     def __init__(self):
         self._checkpoints: dict = {}
@@ -76,12 +76,12 @@ def test_checkpoint_create_uses_centroids_not_mu():
     """
     centroids = np.array([[[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]])
     scorer    = _MockScorer(centroids=centroids, decision_count=42)
-    neo4j     = _MockNeo4j()
+    graph     = _MockAGE()
 
-    cp_id = _run(CheckpointService.create_checkpoint(scorer, neo4j, reason="test"))
+    cp_id = _run(CheckpointService.create_checkpoint(scorer, graph, reason="test"))
 
-    assert cp_id in neo4j._checkpoints, "Checkpoint must be stored in neo4j stub"
-    stored_mu = json.loads(neo4j._checkpoints[cp_id]["mu_snapshot"])
+    assert cp_id in graph._checkpoints, "Checkpoint must be stored in graph stub"
+    stored_mu = json.loads(graph._checkpoints[cp_id]["mu_snapshot"])
     assert np.allclose(
         np.array(stored_mu, dtype=np.float64),
         centroids,
@@ -100,16 +100,16 @@ def test_checkpoint_rollback_restores_exact_values():
     """
     centroids_a = np.array([[[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]])
     scorer      = _MockScorer(centroids=centroids_a.copy(), decision_count=10)
-    neo4j       = _MockNeo4j()
+    graph       = _MockAGE()
 
     # Checkpoint at state A
-    cp_id = _run(CheckpointService.create_checkpoint(scorer, neo4j, reason="state_A"))
+    cp_id = _run(CheckpointService.create_checkpoint(scorer, graph, reason="state_A"))
 
     # Mutate scorer (simulate subsequent learning updates)
     scorer.centroids = np.array([[[0.9, 0.8, 0.7, 0.6], [0.5, 0.4, 0.3, 0.2]]])
 
     # Rollback
-    result = _run(CheckpointService.rollback(cp_id, scorer, neo4j))
+    result = _run(CheckpointService.rollback(cp_id, scorer, graph))
 
     assert result.get("status") == "rolled_back", f"Expected rolled_back; got {result}"
     assert np.allclose(scorer.centroids, centroids_a, atol=1e-9), (
@@ -128,10 +128,10 @@ def test_checkpoint_rollback_rejects_nan_payload():
     """
     safe_centroids = np.array([[[0.5, 0.5, 0.5, 0.5]]])
     scorer         = _MockScorer(centroids=safe_centroids.copy(), decision_count=5)
-    neo4j          = _MockNeo4j()
+    graph          = _MockAGE()
 
     bad_cp_id = "bad-cp-nan-test-xyz"
-    neo4j._checkpoints[bad_cp_id] = {
+    graph._checkpoints[bad_cp_id] = {
         "mu_snapshot": json.dumps(
             [[[float("nan"), float("nan"), float("nan"), float("nan")]]],
             allow_nan=True,
@@ -140,7 +140,7 @@ def test_checkpoint_rollback_rejects_nan_payload():
         "decision_count":  5,
     }
 
-    result = _run(CheckpointService.rollback(bad_cp_id, scorer, neo4j))
+    result = _run(CheckpointService.rollback(bad_cp_id, scorer, graph))
 
     assert result is not None, "rollback must return a result dict (no unhandled exception)"
     assert "error" in result, (
@@ -162,10 +162,10 @@ def test_checkpoint_rollback_rejects_inf_centroids():
     """
     safe_centroids = np.array([[[0.3, 0.3, 0.3, 0.3]]])
     scorer         = _MockScorer(centroids=safe_centroids.copy(), decision_count=7)
-    neo4j          = _MockNeo4j()
+    graph          = _MockAGE()
 
     bad_cp_id = "bad-cp-inf-test-xyz"
-    neo4j._checkpoints[bad_cp_id] = {
+    graph._checkpoints[bad_cp_id] = {
         "mu_snapshot": json.dumps(
             [[[float("inf"), float("-inf"), float("inf"), float("inf")]]],
             allow_nan=True,
@@ -174,7 +174,7 @@ def test_checkpoint_rollback_rejects_inf_centroids():
         "decision_count":  7,
     }
 
-    result = _run(CheckpointService.rollback(bad_cp_id, scorer, neo4j))
+    result = _run(CheckpointService.rollback(bad_cp_id, scorer, graph))
 
     assert result is not None, "rollback must return a result dict (no unhandled exception)"
     assert "error" in result, (
@@ -196,18 +196,18 @@ def test_checkpoint_snapshot_immutable():
     """
     centroids_v1 = np.array([[[0.1, 0.2, 0.3, 0.4]]])
     scorer       = _MockScorer(centroids=centroids_v1.copy(), decision_count=1)
-    neo4j        = _MockNeo4j()
+    graph        = _MockAGE()
 
     # Create checkpoint at version 1
-    cp_id = _run(CheckpointService.create_checkpoint(scorer, neo4j, reason="v1"))
-    snapshot_at_create = json.loads(neo4j._checkpoints[cp_id]["mu_snapshot"])
+    cp_id = _run(CheckpointService.create_checkpoint(scorer, graph, reason="v1"))
+    snapshot_at_create = json.loads(graph._checkpoints[cp_id]["mu_snapshot"])
 
     # Mutate scorer (simulate learning updates)
     scorer.centroids      = np.array([[[0.9, 0.8, 0.7, 0.6]]])
     scorer.decision_count = 50
 
     # Re-read stored checkpoint — must be unchanged
-    snapshot_at_read = json.loads(neo4j._checkpoints[cp_id]["mu_snapshot"])
+    snapshot_at_read = json.loads(graph._checkpoints[cp_id]["mu_snapshot"])
 
     assert snapshot_at_create == snapshot_at_read, (
         "Checkpoint snapshot must be immutable after scorer modification"

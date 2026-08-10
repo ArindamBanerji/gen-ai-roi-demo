@@ -4,7 +4,7 @@
  * Verifies that decisions made on Tab 1 (Alert Triage) compound into
  * observable intelligence changes on Tabs 2–5 and across backend APIs.
  *
- * WARNING: writes real decisions to Neo4j.  Do not run against production.
+ * WARNING: writes real decisions to AGE.  Do not run against production.
  *
  * Run: npx playwright test tests/e2e/compounding.spec.ts --reporter=list
  */
@@ -109,7 +109,7 @@ test.describe('Cross-tab compounding', () => {
   // ── Test 5 ──────────────────────────────────────────────────────────────────
   //
   // /api/soc/executive-narrative exposes verified_decisions (Tab 5).
-  // Correct decisions that pass through OutcomeFeedback are persisted to Neo4j;
+  // Correct decisions that pass through OutcomeFeedback are persisted to AGE;
   // after making new decisions the count must be >= the baseline.
 
   test('decisions do not decrease tab5 verified count', async ({ page }) => {

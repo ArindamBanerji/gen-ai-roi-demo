@@ -1,7 +1,7 @@
 """
 app/services/reconvergence_logger.py -- EXP-G1 data collection.
 
-Logs re-convergence events to Neo4j so that the temporal compounding
+Logs re-convergence events to AGE so that the temporal compounding
 exponent (EXP-G1) can be measured when 90 days of pilot data exists.
 
 Design constraints:
@@ -60,14 +60,14 @@ async def log_reconvergence_event(
     domain: str,
 ) -> Optional[str]:
     """
-    Log a re-convergence event to Neo4j.
+    Log a re-convergence event to AGE.
 
     Called when accuracy drops below threshold and begins recovering.
     Required for EXP-G1 (temporal compounding exponent measurement).
 
     Parameters
     ----------
-    graph_client                      : async Neo4j client
+    graph_client                      : async AGE client
     convergence_start_decisions       : decision count when accuracy dropped
     convergence_end_decisions         : decision count when accuracy recovered
     graph_entity_count_at_start       : total graph nodes at event start
@@ -148,7 +148,7 @@ async def log_decision_distance(
     alert_category_distribution: dict,
 ) -> Optional[str]:
     """
-    Log per-decision EXP-G1 fields to a DecisionDistanceLog Neo4j node.
+    Log per-decision EXP-G1 fields to a DecisionDistanceLog AGE node.
 
     Fields logged:
       centroid_distance_to_canonical -- L2 norm(mu - mu_zero), primary gamma metric
@@ -194,7 +194,7 @@ async def read_decision_distance_log(graph_client, limit: int = 50) -> list:
 
 async def fetch_category_distribution(graph_client) -> dict:
     """
-    Query Neo4j for the last 100 decisions and return category mix as dict.
+    Query AGE for the last 100 decisions and return category mix as dict.
     Returns {} on failure. Values sum to 1.0.
     """
     try:
@@ -212,7 +212,7 @@ async def fetch_category_distribution(graph_client) -> dict:
 
 async def read_reconvergence_events(graph_client, limit: int = 50) -> list:
     """
-    Read the last `limit` re-convergence events from Neo4j.
+    Read the last `limit` re-convergence events from AGE.
     Returns [] on any failure (never raises).
     """
     try:

@@ -82,7 +82,7 @@ class _CsvConnector:
 @router.post("/admin/reset")
 async def admin_reset(body: ResetRequest):
     """
-    Atomically reset GAE learning state, audit chain, and Neo4j.
+    Atomically reset GAE learning state, audit chain, and AGE.
 
     - **soft**: reset W -> priors, clear Decision outcomes (keep nodes), fresh audit chain.
     - **hard**: same as soft, plus delete Decision nodes and re-seed graph.
@@ -117,7 +117,7 @@ async def admin_reset(body: ResetRequest):
     sm = StateManager(
         learning_state_service=gae_state,
         audit_store=audit_store,
-        neo4j_service=graph_client,
+        graph_service=graph_client,
         domain_config=get_domain_config(),
     )
 

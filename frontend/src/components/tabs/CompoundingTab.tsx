@@ -719,7 +719,7 @@ export default function CompoundingTab() {
   useEffect(() => { loadAutoApproveStats() }, [])
 
   const handleReseed = async () => {
-    if (!window.confirm('Re-seed Neo4j? This will DELETE all current data and restore the canonical demo dataset.')) return
+    if (!window.confirm('Re-seed AGE? This will DELETE all current data and restore the canonical demo dataset.')) return
     setReseeding(true); setReseedMessage(null)
     try {
       const result = await reseedDemoData() as { success: boolean; alert_count?: number; error?: string }
@@ -875,7 +875,7 @@ export default function CompoundingTab() {
   }
   useEffect(() => { loadConvergenceData() }, [])
 
-  // H7-FIX-4: load real decision economics from Neo4j
+  // H7-FIX-4: load real decision economics from AGE
   const loadDecisionEconomics = async () => {
     try {
       const resp = await fetch(`${SOC_API}/api/metrics/decision-economics`)
@@ -2620,7 +2620,7 @@ export default function CompoundingTab() {
           Economics Summary
           {economicsData && (
             <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
-              {economicsData.source === 'neo4j' ? 'live data' : economicsData.source}
+              {economicsData.source === 'graph' ? 'live data' : economicsData.source}
             </span>
           )}
         </h3>
@@ -2779,7 +2779,7 @@ export default function CompoundingTab() {
                 <Database className="w-5 h-5 text-white mx-auto mb-1" />
                 <div className="text-xs font-bold text-white leading-tight">Living Context</div>
                 <div className="text-xs font-bold text-white leading-tight">Graph</div>
-                <div className="text-xs text-gray-300 mt-1">(Neo4j)</div>
+                <div className="text-xs text-gray-300 mt-1">(AGE)</div>
               </div>
             </div>
             <div className="flex items-center text-gray-500 text-sm font-bold shrink-0">←</div>
@@ -2838,7 +2838,7 @@ export default function CompoundingTab() {
         </div>
       </div>
 
-      {/* ── 7. Evolution Events — REAL from Neo4j (H7-FIX-4) ───────────────── */}
+      {/* ── 7. Evolution Events — REAL from AGE (H7-FIX-4) ───────────────── */}
       <div className="bg-white rounded-lg border shadow p-6">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
@@ -2861,7 +2861,7 @@ export default function CompoundingTab() {
               onClick={handleReseed}
               disabled={reseeding || resetting}
               className="flex items-center gap-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors disabled:opacity-50 font-semibold"
-              title="Delete all Neo4j data and restore the canonical demo dataset"
+              title="Delete all AGE data and restore the canonical demo dataset"
             >
               <Database className={`w-4 h-4 ${reseeding ? 'animate-pulse' : ''}`} />
               {reseeding ? 'Re-seeding...' : 'Re-seed Data'}

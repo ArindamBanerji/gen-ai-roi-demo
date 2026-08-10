@@ -17,7 +17,7 @@ import requests
 from requests.exceptions import RequestException
 
 BASE = "http://127.0.0.1:8000"
-TIMEOUT = 45  # seconds -- generous for endpoints that hit Neo4j
+TIMEOUT = 45  # seconds -- generous for endpoints that hit AGE
 
 # Module-level results list; reset inside main() on each run.
 # Defined here so test() can reference it as a module-level name.

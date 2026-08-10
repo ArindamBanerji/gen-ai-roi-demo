@@ -10,6 +10,7 @@ Run from backend/:
 
 import sys
 import os
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -48,6 +49,18 @@ def test_make_campaign_identity_key_deterministic_and_member_independent():
     )
     assert id1 != different_category
     assert id1.startswith("L1-")
+
+
+def test_all_production_paths_use_stable_identity():
+    """Campaign creation uses the tuple-stable Phase 1 identity key."""
+    source = Path(__file__).parents[1].joinpath("app", "domains", "soc", "campaigns.py").read_text(
+        encoding="utf-8"
+    )
+    production = source.split("def make_campaign_id", 1)[1]
+    assert "make_campaign_identity_key(" in production
+    assert "campaign_id = make_campaign_identity_key(" in production
+    assert "campaign_id=make_campaign_identity_key(" in production
+    assert source.count("make_campaign_id(alert_ids") == 1
 
 
 # ============================================================================

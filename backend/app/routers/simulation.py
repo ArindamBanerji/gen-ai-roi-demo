@@ -223,7 +223,7 @@ async def start_simulation(body: StartSimulationRequest):
     sm = StateManager(
         learning_state_service = gae_state,
         audit_store            = audit_store,
-        neo4j_service          = graph_client,
+        graph_service          = graph_client,
         domain_config          = get_domain_config(),
     )
     try:

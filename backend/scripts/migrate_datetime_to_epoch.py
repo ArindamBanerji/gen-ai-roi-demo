@@ -1,5 +1,5 @@
 """
-migrate_datetime_to_epoch.py -- Convert Neo4j native datetime() fields to
+migrate_datetime_to_epoch.py -- Convert AGE native datetime() fields to
 epoch integers (milliseconds since Unix epoch) across all node types.
 
 PREREQUISITE: Aura snapshot taken 2026-04-04 00:40:11. Do NOT run without it.
@@ -271,7 +271,7 @@ async def final_counts(dry_run: bool) -> None:
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Migrate Neo4j datetime fields to epoch integers"
+        description="Migrate AGE datetime fields to epoch integers"
     )
     p.add_argument("--dry-run", action="store_true",
                    help="Print Cypher queries without executing")
@@ -284,7 +284,7 @@ async def main() -> None:
     args = parse_args()
 
     print("\n" + "=" * 60)
-    print("  Neo4j datetime -> epoch migration")
+    print("  AGE datetime -> epoch migration")
     print("  PREREQUISITE: Aura snapshot 2026-04-04 00:40:11 must exist")
     print("=" * 60)
     if args.dry_run:

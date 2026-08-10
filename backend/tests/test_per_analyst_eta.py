@@ -26,8 +26,8 @@ def test_high_precision_analyst_has_higher_weight():
 
     This is validated against the formula
       weight = clip(precision / mean_precision, 0.5, 1.5)
-    using synthetic precision values directly (not via Neo4j), since the
-    live Neo4j path requires >=10 decisions per analyst in the same session.
+    using synthetic precision values directly (not via AGE), since the
+    live AGE path requires >=10 decisions per analyst in the same session.
     """
     resp = client.get(_ENDPOINT)
     if resp.status_code == 404:

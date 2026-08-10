@@ -128,7 +128,7 @@ class LearningHealthMonitor:
         return {"alpha": alpha, "q": q, "V": V, "n": len(history)}
 
     @staticmethod
-    async def _apply_soc_conservation_components(comps: dict, neo4j_service: Any = None) -> dict:
+    async def _apply_soc_conservation_components(comps: dict, graph_service: Any = None) -> dict:
         """Replace legacy components with SOC verified coverage statistics.
 
         SOC-3/#132 defines alpha as cumulative verified category coverage, not
@@ -139,7 +139,7 @@ class LearningHealthMonitor:
         updated = dict(comps)
         updated["alpha_source"] = "soc_coverage_unavailable"
 
-        stats = await _query_soc_verified_conservation_stats(neo4j_service)
+        stats = await _query_soc_verified_conservation_stats(graph_service)
 
         if stats is None:
             # Legacy alpha_effective is a learning-rate trace. Treat missing
@@ -212,13 +212,13 @@ class LearningHealthMonitor:
     # -------------------------------------------------------------------------
 
     @staticmethod
-    async def evaluate(neo4j_service: Any = None) -> dict:
+    async def evaluate(graph_service: Any = None) -> dict:
         """
         Evaluate current learning health.
 
         Parameters
         ----------
-        neo4j_service : optional Neo4j client (for RED-day count from HealthLog nodes)
+        graph_service : optional AGE client (for RED-day count from HealthLog nodes)
 
         Returns
         -------
@@ -245,7 +245,7 @@ class LearningHealthMonitor:
 
         comps          = LearningHealthMonitor._extract_components(history)
         comps          = await LearningHealthMonitor._apply_soc_conservation_components(
-            comps, neo4j_service
+            comps, graph_service
         )
         alpha, q, V    = comps["alpha"], comps["q"], comps["V"]
         if alpha <= 0 or V <= 0:
@@ -334,7 +334,7 @@ class LearningHealthMonitor:
             status = "GREEN"
 
         # ── RED-day count (HealthLog nodes or approximation) ─────────────────
-        red_days          = await LearningHealthMonitor._count_red_days(neo4j_service)
+        red_days          = await LearningHealthMonitor._count_red_days(graph_service)
         auto_pause_active = red_days >= AUTO_PAUSE_RED_DAYS
 
         result = {
@@ -374,22 +374,22 @@ class LearningHealthMonitor:
     # -------------------------------------------------------------------------
 
     @staticmethod
-    async def _count_red_days(neo4j_service: Any) -> int:
+    async def _count_red_days(graph_service: Any) -> int:
         """
         Count distinct RED-status days in the 30-day lookback window.
 
         Cumulative, not consecutive -- matches the rolling-aggregate semantics of
         the conservation law (alpha, q, V use rolling windows, not consecutive runs).
-        Returns 0 if neo4j_service is None or the query has no rows.
+        Returns 0 if graph_service is None or the query has no rows.
         """
-        if neo4j_service is None:
+        if graph_service is None:
             return 0
         try:
             # Inline the cutoff as a literal integer — $param is forbidden in AGE
             # (AGEClient does naive string substitution, not driver parameterization).
             # Integer inlining is safe here: value is computed, never from user input.
             _cutoff = int((datetime.utcnow().timestamp() - AUTO_PAUSE_LOOKBACK_DAYS * 86400) * 1000)
-            rows = await neo4j_service.run_query(
+            rows = await graph_service.run_query(
                 f"""
                 MATCH (h:HealthLog)
                 WHERE h.status = 'RED'
@@ -468,8 +468,8 @@ def _coerce_int(value: Any) -> int:
         return 0
 
 
-async def _query_soc_verified_conservation_stats(neo4j_service: Any = None) -> dict | None:
-    if neo4j_service is None or not hasattr(neo4j_service, "run_query"):
+async def _query_soc_verified_conservation_stats(graph_service: Any = None) -> dict | None:
+    if graph_service is None or not hasattr(graph_service, "run_query"):
         return None
 
     valid_categories = _soc_category_names()
@@ -480,7 +480,7 @@ async def _query_soc_verified_conservation_stats(neo4j_service: Any = None) -> d
 
     try:
         _soc_where = soc_decision_where()
-        rows = await neo4j_service.run_query(
+        rows = await graph_service.run_query(
             f"""
             MATCH (d:Decision)
             WHERE {_soc_where}
@@ -685,7 +685,7 @@ async def detect_volume_spike(graph_client: Any, today_count: int) -> dict:
 
     Parameters
     ----------
-    graph_client : async Neo4j client
+    graph_client : async AGE client
     today_count  : int -- number of alerts received so far today
 
     Returns
@@ -777,7 +777,7 @@ async def detect_frozen_categories(
 
     Parameters
     ----------
-    graph_client          : async Neo4j client
+    graph_client          : async AGE client
     today_category_counts : dict[str, int] -- alert counts by category for today
 
     Returns

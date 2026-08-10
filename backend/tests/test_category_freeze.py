@@ -1,7 +1,7 @@
 """
 Block 9.3 -- D2 Category freeze tests.
 Coupled to D3 spike detector -- freeze only activates during volume spikes.
-No live Neo4j required.
+No live AGE required.
 """
 import asyncio
 import os
@@ -31,7 +31,7 @@ def _run(coro):
     return asyncio.run(coro)
 
 
-def _neo4j_with_baseline(category_rows):
+def _graph_with_baseline(category_rows):
     mock = AsyncMock()
     mock.run_query.return_value = category_rows
     return mock
@@ -48,13 +48,13 @@ def test_no_freeze_when_no_spike():
     """
     assert not is_volume_spike_active(), "Precondition: spike should be inactive"
 
-    mock = _neo4j_with_baseline([])    # baseline irrelevant -- guard fires first
+    mock = _graph_with_baseline([])    # baseline irrelevant -- guard fires first
     today = {"lateral_movement": 100, "malware": 10}
 
     result = _run(detect_frozen_categories(mock, today))
 
     assert result == [], f"Expected no frozen categories without spike, got {result}"
-    mock.run_query.assert_not_called()  # should not even query Neo4j
+    mock.run_query.assert_not_called()  # should not even query AGE
 
 
 # ---------------------------------------------------------------------------
@@ -72,7 +72,7 @@ def test_overrepresented_category_frozen():
         {"category": "malware",          "cnt": 50},
         {"category": "phishing",         "cnt": 35},
     ]
-    mock = _neo4j_with_baseline(baseline_rows)
+    mock = _graph_with_baseline(baseline_rows)
     today = {"lateral_movement": 90, "malware": 10}   # total = 100
 
     try:
@@ -104,7 +104,7 @@ def test_normal_category_not_frozen():
         {"category": "malware",          "cnt": 30},
         {"category": "phishing",         "cnt": 50},
     ]
-    mock = _neo4j_with_baseline(baseline_rows)
+    mock = _graph_with_baseline(baseline_rows)
     today = {"lateral_movement": 22, "malware": 28, "phishing": 50}   # total=100
 
     try:

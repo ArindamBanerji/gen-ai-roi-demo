@@ -89,7 +89,7 @@ _learning_store: Optional[object] = None
 _dk_welford_tracker: DKWelfordTracker = DKWelfordTracker()
 _dk_welford_lock = threading.Lock()
 _bootstrap_metadata: Optional[dict] = None
-_bootstrap_result: Optional[BootstrapResult] = None   # CORR-3: exposed for bootstrap_neo4j writer
+_bootstrap_result: Optional[BootstrapResult] = None   # CORR-3: exposed for bootstrap_graph writer
 
 # Block 9.1 — Per-analyst η weights (populated by apply_analyst_eta_weights).
 # Keyed by analyst name; values are multiplicative weights in [0.5, 1.5].
@@ -403,10 +403,12 @@ def persist_soc_centroid(
     caused_by_decision_id: str,
     pre_centroid: list[float] | None,
     logger: logging.Logger | None = None,
+    store: object | None = None,
+    raise_on_error: bool = False,
 ) -> bool:
     """Persist a SOC L5Centroid runtime write when centroid learning is active."""
-    store = get_learning_store()
-    if store is None or not hasattr(store, "update_centroid"):
+    target_store: Any = store if store is not None else get_learning_store()
+    if target_store is None or not hasattr(target_store, "update_centroid"):
         return False
     phase = get_soc_category_phase(scorer, category_index)
     if phase != "MEAN_CONVERGENCE":
@@ -423,7 +425,7 @@ def persist_soc_centroid(
             )
         )
     try:
-        store.update_centroid(
+        target_store.update_centroid(
             domain="soc",
             category=category,
             action=action,
@@ -432,9 +434,47 @@ def persist_soc_centroid(
             caused_by_decision_id=caused_by_decision_id,
         )
     except Exception as exc:
+        if raise_on_error:
+            raise
         (logger or log).warning("SOC L5 centroid persistence failed: %s", exc)
         return False
     return True
+
+
+async def persist_soc_outcome_and_centroid(
+    *,
+    store: Any,
+    outcome: dict[str, Any],
+    centroid: dict[str, Any],
+    checkpoint_writer: Any | None = None,
+    logger: logging.Logger | None = None,
+) -> bool:
+    """Persist the verified outcome and L5 centroid on one AGE transaction."""
+    run_transaction = getattr(store, "run_transaction", None)
+    if callable(run_transaction):
+        def operation(transaction) -> bool:
+            transaction.write_outcome(**outcome)
+            centroid_persisted = persist_soc_centroid(
+                **centroid,
+                logger=logger,
+                store=transaction,
+                raise_on_error=True,
+            )
+
+            if checkpoint_writer is not None:
+                checkpoint_writer(transaction)
+
+            return centroid_persisted
+
+        return cast(bool, await run_transaction(operation))
+
+    # Non-AGE stores used by local/test profiles have no transaction primitive.
+    # Preserve their existing behavior while production AGE remains atomic.
+    store.write_outcome(**outcome)
+    centroid_persisted = persist_soc_centroid(**centroid, logger=logger, store=store)
+    if checkpoint_writer is not None:
+        checkpoint_writer(None)
+    return centroid_persisted
 
 
 def get_profile_scorer():
@@ -682,7 +722,7 @@ def load_centroid_backup(backup_id: str | None = None) -> dict:
 
 
 # =============================================================================
-# Block 2.2 — DeploymentState persistence (bootstrap μ₀ → Neo4j)
+# Block 2.2 — DeploymentState persistence (bootstrap μ₀ → AGE)
 # =============================================================================
 
 _GAE_VERSION = "0.7.20"
@@ -699,7 +739,7 @@ RETURN ds.bootstrap_mu        AS bootstrap_mu,
 async def write_bootstrap_state(graph_client, scorer) -> dict:
     """
     Persist the current bootstrap centroid tensor (mu_0) to a
-    DeploymentState node in Neo4j.
+    DeploymentState node in AGE.
 
     Called at startup after ProfileScorer is attached so mu_0 survives
     server restarts and is available to the centroid export endpoint (Block 2.3).

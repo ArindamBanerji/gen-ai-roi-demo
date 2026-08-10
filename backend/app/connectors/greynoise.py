@@ -15,7 +15,7 @@ NOTE: GreyNoise Community only supports IPs, not domains. Domain IOCs in the
 Pulsedive curated list are silently skipped.
 
 After enrichment:
-  c. MERGE :GreyNoiseEnrichment nodes into Neo4j (idempotent -- updates
+  c. MERGE :GreyNoiseEnrichment nodes into AGE (idempotent -- updates
      refreshed_at if the node already exists).
   d. MERGE :ENRICHED_BY relationships from :ThreatIntel to :GreyNoiseEnrichment.
 """
@@ -177,7 +177,7 @@ class GreyNoiseConnector(UCLConnector):
     UCL connector for GreyNoise community IP enrichment.
 
     Live API if GREYNOISE_API_KEY is set; hardcoded fallback otherwise.
-    Writes :GreyNoiseEnrichment nodes and :ENRICHED_BY edges to Neo4j,
+    Writes :GreyNoiseEnrichment nodes and :ENRICHED_BY edges to AGE,
     cross-referencing existing :ThreatIntel nodes seeded by Pulsedive.
     """
 
@@ -195,7 +195,7 @@ class GreyNoiseConnector(UCLConnector):
 
         Steps:
           1. Fetch from GreyNoise live API (if key present), fallback per-IP.
-          2. MERGE :GreyNoiseEnrichment nodes into Neo4j.
+          2. MERGE :GreyNoiseEnrichment nodes into AGE.
           3. MERGE :ENRICHED_BY relationships from :ThreatIntel to :GreyNoiseEnrichment.
           4. Return ConnectorResult summary.
         """

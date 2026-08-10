@@ -1,18 +1,18 @@
 /**
  * learning_stress.spec.ts — Stress and resilience tests for the learning loop.
  *
- * These tests make real decisions (writes to Neo4j) and verify that:
+ * These tests make real decisions (writes to AGE) and verify that:
  *   - the system stays stable under load (10+ decisions)
  *   - no DEC-None artifacts appear after rapid decisions
  *   - tab switching mid-flight does not crash the app
  *   - reset→decide→reset cycles preserve data integrity
  *
- * WARNING: writes real data to Neo4j.  Do not run against production.
+ * WARNING: writes real data to AGE.  Do not run against production.
  *
  * Run: npx playwright test tests/e2e/learning_stress.spec.ts --reporter=list
  *
  * Note: most tests here call test.slow() to triple the default timeout —
- * each triage decision takes ~10–30 s (LLM round-trip + Neo4j write).
+ * each triage decision takes ~10–30 s (LLM round-trip + AGE write).
  */
 
 import { test, expect } from '@playwright/test';

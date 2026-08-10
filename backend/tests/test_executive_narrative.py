@@ -132,7 +132,7 @@ def test_f12_what_changed_structure():
 def _get_executive_narrative_payload():
     from unittest.mock import AsyncMock, patch
 
-    fake = _make_narrative_neo4j(verified=50, correct=40, campaigns=3, alerts=100)
+    fake = _make_narrative_graph(verified=50, correct=40, campaigns=3, alerts=100)
     health = {
         "status": "GREEN",
         "components": {"q": 0.80},
@@ -228,7 +228,7 @@ def test_strongest_not_overlaps_weakest():
 
 
 # ============================================================================
-# Tests for build_executive_narrative_async — unit-level with FakeNeo4j
+# Tests for build_executive_narrative_async — unit-level with FakeAGE
 # ============================================================================
 
 import asyncio
@@ -238,8 +238,8 @@ from app.services.executive_narrative import (
 )
 
 
-def _make_narrative_neo4j(verified: int, correct: int, campaigns: int, alerts: int):
-    """Return a fake async neo4j service for build_executive_narrative_async."""
+def _make_narrative_graph(verified: int, correct: int, campaigns: int, alerts: int):
+    """Return a fake async graph service for build_executive_narrative_async."""
 
     async def run_query(query, params=None):
         q = query.strip()
@@ -282,11 +282,11 @@ def _make_narrative_neo4j(verified: int, correct: int, campaigns: int, alerts: i
             ]
         return []
 
-    class FakeNeo4j:
+    class FakeAGE:
         pass
 
-    FakeNeo4j.run_query = staticmethod(run_query)
-    return FakeNeo4j()
+    FakeAGE.run_query = staticmethod(run_query)
+    return FakeAGE()
 
 
 def test_low_raw_iks_uses_zero_to_one_hundred_scale():
@@ -309,7 +309,7 @@ def test_low_raw_iks_uses_zero_to_one_hundred_scale():
 def test_category_accuracy_uses_verified_outcomes_not_pending_denominator():
     from unittest.mock import AsyncMock, patch
 
-    class FakeNeo4j:
+    class FakeAGE:
         async def run_query(self, query, params=None):
             q = query.strip()
             if "MATCH (d:Decision)" in q and "RETURN count(d) AS cnt" in q:
@@ -355,7 +355,7 @@ def test_category_accuracy_uses_verified_outcomes_not_pending_denominator():
                 "app.services.learning_health.LearningHealthMonitor.evaluate",
                 new=AsyncMock(return_value=health),
             ):
-                result = asyncio.run(build_executive_narrative_async(FakeNeo4j()))
+                result = asyncio.run(build_executive_narrative_async(FakeAGE()))
 
     recommendations = result["sections"][2]["items"]
     credential_items = [
@@ -368,8 +368,8 @@ def test_category_accuracy_uses_verified_outcomes_not_pending_denominator():
 
 
 def test_narrative_reads_verified_decisions():
-    """mock Neo4j returning 50 verified decisions -> metrics.decisions_verified == 50."""
-    fake = _make_narrative_neo4j(verified=50, correct=40, campaigns=0, alerts=100)
+    """mock AGE returning 50 verified decisions -> metrics.decisions_verified == 50."""
+    fake = _make_narrative_graph(verified=50, correct=40, campaigns=0, alerts=100)
     result = asyncio.run(build_executive_narrative_async(fake))
     assert result["metrics"]["decisions_verified"] == 50, (
         f"Expected decisions_verified=50, got {result['metrics']['decisions_verified']}"
@@ -378,7 +378,7 @@ def test_narrative_reads_verified_decisions():
 
 def test_narrative_campaigns():
     """mock 3 campaigns -> metrics.campaigns_detected == 3."""
-    fake = _make_narrative_neo4j(verified=10, correct=8, campaigns=3, alerts=50)
+    fake = _make_narrative_graph(verified=10, correct=8, campaigns=3, alerts=50)
     result = asyncio.run(build_executive_narrative_async(fake))
     assert result["metrics"]["campaigns_detected"] == 3, (
         f"Expected campaigns_detected=3, got {result['metrics']['campaigns_detected']}"

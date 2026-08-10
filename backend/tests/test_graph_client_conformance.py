@@ -5,6 +5,8 @@ from __future__ import annotations
 from importlib import import_module
 from pathlib import Path
 
+import pytest
+
 
 GRAPH_CLIENT_SOURCE = Path(__file__).parents[1] / "app" / "db" / "graph_client.py"
 
@@ -34,8 +36,7 @@ def test_no_neo4j_package_dependency() -> None:
     assert not any(line == "import neo4j" or line.startswith("from neo4j ") for line in import_lines)
 
 
-def test_backward_compat_alias_exists() -> None:
-    graph_module = import_module("app.db.graph_client")
-    legacy_module = import_module("app.db.neo4j")
-
-    assert legacy_module.neo4j_client is graph_module.graph_client
+def test_legacy_neo4j_module_removed() -> None:
+    """The retired Neo4j adapter must remain absent from the SOC app."""
+    with pytest.raises(ModuleNotFoundError):
+        import_module("app.db.neo4j")

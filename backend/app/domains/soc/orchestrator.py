@@ -1,5 +1,5 @@
 """
-SOC factor orchestrator -- async Neo4j -> FactorComputer -> GAE assembly.
+SOC factor orchestrator -- async AGE -> FactorComputer -> GAE assembly.
 
 Calls each FactorComputer in order, then delegates vector assembly to GAE.
 
@@ -12,7 +12,7 @@ from gae.contracts import SchemaContract, PropertySpec
 from gae.factors import assemble_factor_vector
 
 
-async def compute_factor_vector(alert, computers, neo4j):
+async def compute_factor_vector(alert, computers, graph):
     """
     Async orchestrator.  Calls each FactorComputer, then delegates to GAE.
 
@@ -22,19 +22,19 @@ async def compute_factor_vector(alert, computers, neo4j):
         Alert object with SOC context properties.
     computers : list[FactorComputer]
         Ordered list of FactorComputer instances (from config.get_factor_computers()).
-    neo4j : Neo4jClient
-        Async Neo4j client with run_query(query, params) method.
+    graph : GraphClient
+        Async AGE client with run_query(query, params) method.
 
     Returns
     -------
     np.ndarray, shape (d_f,)
         Dense factor vector assembled by GAE assemble_factor_vector (Eq. 2).
     """
-    vector, _ = await compute_factor_vector_with_provenance(alert, computers, neo4j)
+    vector, _ = await compute_factor_vector_with_provenance(alert, computers, graph)
     return vector
 
 
-async def compute_factor_vector_with_provenance(alert, computers, neo4j):
+async def compute_factor_vector_with_provenance(alert, computers, graph):
     """
     Compute the existing scorer factor vector plus per-factor provenance.
 
@@ -45,12 +45,12 @@ async def compute_factor_vector_with_provenance(alert, computers, neo4j):
     names = []
     provenance = {}
     for computer in computers:
-        raw = await computer.compute(alert, neo4j)
+        raw = await computer.compute(alert, graph)
         value = float(raw)
         name = computer.name
         values.append(value)
         names.append(name)
-        provenance[name] = await _factor_provenance(name, alert, neo4j, value)
+        provenance[name] = await _factor_provenance(name, alert, graph, value)
 
     # Build raw dict + schema, then delegate to GAE
     raw_dict = {name: val for name, val in zip(names, values)}
@@ -64,7 +64,7 @@ async def compute_factor_vector_with_provenance(alert, computers, neo4j):
     return assemble_factor_vector(raw_dict, schema), provenance
 
 
-async def _factor_provenance(name: str, alert: Any, neo4j: Any, value: float) -> dict:
+async def _factor_provenance(name: str, alert: Any, graph: Any, value: float) -> dict:
     """Return audit provenance for one extracted SOC factor."""
     if name == "privileged_identity_context":
         fields = (
@@ -82,7 +82,7 @@ async def _factor_provenance(name: str, alert: Any, neo4j: Any, value: float) ->
     if name == "asset_criticality":
         alert_id = _get(alert, "id", "")
         if alert_id and await _query_has_rows(
-            neo4j,
+            graph,
             f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})-[:DETECTED_ON]->(asset:Asset) "
             "RETURN asset.criticality AS criticality LIMIT 1",
         ):
@@ -90,12 +90,12 @@ async def _factor_provenance(name: str, alert: Any, neo4j: Any, value: float) ->
         return _provenance_record(value, "fixture_fallback", "neutral asset default")
 
     if name == "threat_intel_enrichment":
-        return await _threat_intel_provenance(alert, neo4j, value)
+        return await _threat_intel_provenance(alert, graph, value)
 
     if name == "pattern_history":
         category = _get(alert, "category", "") or _get(alert, "alert_type", "")
         if category and await _query_has_rows(
-            neo4j,
+            graph,
             f"MATCH (d:Decision)-[:TRIGGERED_EVOLUTION]->(evo:EvolutionEvent) "
              f"WHERE d.domain = 'soc' AND d.category = {_S(category)} "
              "AND d.verified_correct = true "
@@ -123,13 +123,13 @@ async def _factor_provenance(name: str, alert: Any, neo4j: Any, value: float) ->
     return _provenance_record(value, "unknown", "unclassified factor source")
 
 
-async def _threat_intel_provenance(alert: Any, neo4j: Any, value: float) -> dict:
+async def _threat_intel_provenance(alert: Any, graph: Any, value: float) -> dict:
     alert_id = _get(alert, "id", "")
     if not alert_id:
         return _provenance_record(value, "fixture_fallback", "missing alert_id")
 
     campaign_rows = await _query_rows(
-        neo4j,
+        graph,
         f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})-[:MEMBER_OF]->(c:Campaign) "
         "RETURN c.campaign_id AS campaign_id LIMIT 1",
     )
@@ -137,7 +137,7 @@ async def _threat_intel_provenance(alert: Any, neo4j: Any, value: float) -> dict
         return _provenance_record(value, "graph_context", "campaign membership graph context")
 
     ti_rows = await _query_rows(
-        neo4j,
+        graph,
         f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})-[:HAS_INDICATOR]->(ti:ThreatIndicator) "
         "RETURN ti.source AS source LIMIT 10",
     )
@@ -171,13 +171,13 @@ def _has_any(obj: Any, keys: tuple[str, ...]) -> bool:
     return any(_get(obj, key) is not None for key in keys)
 
 
-async def _query_has_rows(neo4j: Any, query: str) -> bool:
-    return bool(await _query_rows(neo4j, query))
+async def _query_has_rows(graph: Any, query: str) -> bool:
+    return bool(await _query_rows(graph, query))
 
 
-async def _query_rows(neo4j: Any, query: str) -> list:
+async def _query_rows(graph: Any, query: str) -> list:
     try:
-        rows = await neo4j.run_query(query)
+        rows = await graph.run_query(query)
         return rows if isinstance(rows, list) else []
     except Exception:
         return []

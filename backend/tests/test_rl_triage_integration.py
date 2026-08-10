@@ -12,7 +12,7 @@ from app.routers import triage
 from app.services import rl_engine
 
 
-class FakeNeo4j:
+class FakeAGE:
     def __init__(
         self,
         record=None,
@@ -140,10 +140,10 @@ async def _call_outcome(outcome="correct", analyst_action=None):
     )
 
 
-def _outcome_decision_update_query(fake_neo4j):
+def _outcome_decision_update_query(fake_graph):
     return next(
         query
-        for query in fake_neo4j.queries
+        for query in fake_graph.queries
         if "d.analyst_action" in query and "d.was_override" in query
     )
 
@@ -396,13 +396,13 @@ def _patch_common_analyze(
     cross_category_count=0,
     referral_evaluator=None,
 ):
-    fake_neo4j = FakeNeo4j(
+    fake_graph = FakeAGE(
         sequence_count=sequence_count,
         cross_category_count=cross_category_count,
     )
     if incident_id:
-        fake_neo4j.alert["incident_id"] = incident_id
-    monkeypatch.setattr(triage, "graph_client", fake_neo4j)
+        fake_graph.alert["incident_id"] = incident_id
+    monkeypatch.setattr(triage, "graph_client", fake_graph)
     monkeypatch.setattr(
         triage,
         "compute_factor_vector",
@@ -453,7 +453,7 @@ def _patch_common_analyze(
 
     monkeypatch.setattr("gae.referral.ReferralEngine", ReferralEngine)
     monkeypatch.setattr("app.services.referral_rules.get_soc_referral_rules", lambda: [])
-    return fake_neo4j
+    return fake_graph
 
 
 def _patch_campaign_check(monkeypatch, *, campaign_id=None, context=None, suppressed=False):
@@ -495,18 +495,18 @@ def _patch_campaign_check(monkeypatch, *, campaign_id=None, context=None, suppre
     )
 
 
-def _decision_creation_query(fake_neo4j):
+def _decision_creation_query(fake_graph):
     return next(
         query
-        for query in fake_neo4j.queries
+        for query in fake_graph.queries
         if "CREATE (d:Decision" in query
     )
 
 
-def _campaign_flag_query(fake_neo4j):
+def _campaign_flag_query(fake_graph):
     return next(
         query
-        for query in fake_neo4j.queries
+        for query in fake_graph.queries
         if "d.is_campaign_alert" in query
         and "d.campaign_context_shown" in query
     )
@@ -514,7 +514,7 @@ def _campaign_flag_query(fake_neo4j):
 
 @pytest.mark.asyncio
 async def test_campaign_context_treatment_response_and_decision_flags(monkeypatch):
-    fake_neo4j = _patch_common_analyze(monkeypatch)
+    fake_graph = _patch_common_analyze(monkeypatch)
     _patch_campaign_check(
         monkeypatch,
         campaign_id="campaign-1",
@@ -535,7 +535,7 @@ async def test_campaign_context_treatment_response_and_decision_flags(monkeypatc
     assert payload["category"] == "credential_access"
     assert payload["member_count"] == 3
     assert "Consider escalating the campaign" in payload["advisory"]
-    flag_query = _campaign_flag_query(fake_neo4j)
+    flag_query = _campaign_flag_query(fake_graph)
     assert "d.campaign_id = 'campaign-1'" in flag_query
     assert "d.is_campaign_alert = true" in flag_query
     assert "d.campaign_context_shown = true" in flag_query
@@ -544,7 +544,7 @@ async def test_campaign_context_treatment_response_and_decision_flags(monkeypatc
 
 @pytest.mark.asyncio
 async def test_campaign_context_suppressed_response_and_decision_flags(monkeypatch):
-    fake_neo4j = _patch_common_analyze(monkeypatch)
+    fake_graph = _patch_common_analyze(monkeypatch)
     _patch_campaign_check(
         monkeypatch,
         campaign_id="campaign-1",
@@ -560,7 +560,7 @@ async def test_campaign_context_suppressed_response_and_decision_flags(monkeypat
     response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
 
     assert response["campaign_context"] is None
-    flag_query = _campaign_flag_query(fake_neo4j)
+    flag_query = _campaign_flag_query(fake_graph)
     assert "d.campaign_id = 'campaign-1'" in flag_query
     assert "d.is_campaign_alert = true" in flag_query
     assert "d.campaign_context_shown = false" in flag_query
@@ -569,13 +569,13 @@ async def test_campaign_context_suppressed_response_and_decision_flags(monkeypat
 
 @pytest.mark.asyncio
 async def test_campaign_context_isolated_response_and_decision_flags(monkeypatch):
-    fake_neo4j = _patch_common_analyze(monkeypatch)
+    fake_graph = _patch_common_analyze(monkeypatch)
     _patch_campaign_check(monkeypatch, campaign_id=None)
 
     response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
 
     assert response["campaign_context"] is None
-    flag_query = _campaign_flag_query(fake_neo4j)
+    flag_query = _campaign_flag_query(fake_graph)
     assert "d.campaign_id =" not in flag_query
     assert "d.is_campaign_alert = false" in flag_query
     assert "d.campaign_context_shown = false" in flag_query
@@ -583,7 +583,7 @@ async def test_campaign_context_isolated_response_and_decision_flags(monkeypatch
 
 @pytest.mark.asyncio
 async def test_campaign_context_cold_cache_response(monkeypatch):
-    fake_neo4j = _patch_common_analyze(monkeypatch)
+    fake_graph = _patch_common_analyze(monkeypatch)
     _patch_campaign_check(monkeypatch, campaign_id="campaign-cold", context=None)
 
     response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
@@ -593,7 +593,7 @@ async def test_campaign_context_cold_cache_response(monkeypatch):
     assert payload["source"] == "graph_store_cached"
     assert payload["status"] == "cold_cache"
     assert "Emerging campaign pattern" in payload["advisory"]
-    flag_query = _campaign_flag_query(fake_neo4j)
+    flag_query = _campaign_flag_query(fake_graph)
     assert "d.is_campaign_alert = true" in flag_query
     assert "d.campaign_context_shown = true" in flag_query
     assert "d.campaign_advisory_version = 'phase4_temporal_v1'" in flag_query
@@ -601,7 +601,7 @@ async def test_campaign_context_cold_cache_response(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_exploration_proposal_in_analyze_when_enabled(monkeypatch):
-    fake_neo4j = _patch_common_analyze(monkeypatch)
+    fake_graph = _patch_common_analyze(monkeypatch)
     monkeypatch.setattr(soc_config, "RL_EXPLORATION_ENABLED", True)
     monkeypatch.setattr(triage, "LEARNING_ENABLED", True)
     policy = rl_engine.ExplorationPolicy(6, 4, epsilon_base=1.0, target_headroom=2.0)
@@ -612,23 +612,23 @@ async def test_exploration_proposal_in_analyze_when_enabled(monkeypatch):
     response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
 
     assert response["recommendation"]["action"] == "investigate"
-    assert any("d.explored                = true" in query for query in fake_neo4j.queries)
+    assert any("d.explored                = true" in query for query in fake_graph.queries)
 
 
 @pytest.mark.asyncio
 async def test_no_exploration_when_flag_false(monkeypatch):
-    fake_neo4j = _patch_common_analyze(monkeypatch)
+    fake_graph = _patch_common_analyze(monkeypatch)
     monkeypatch.setattr(soc_config, "RL_EXPLORATION_ENABLED", False)
 
     response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
 
     assert response["recommendation"]["action"] == "escalate"
-    assert not any("d.explored                = true" in query for query in fake_neo4j.queries)
+    assert not any("d.explored                = true" in query for query in fake_graph.queries)
 
 
 @pytest.mark.asyncio
 async def test_no_exploration_when_headroom_tight(monkeypatch):
-    fake_neo4j = _patch_common_analyze(monkeypatch)
+    fake_graph = _patch_common_analyze(monkeypatch)
     monkeypatch.setattr(soc_config, "RL_EXPLORATION_ENABLED", True)
     monkeypatch.setattr(
         "app.services.learning_health.LearningHealthMonitor.evaluate",
@@ -638,7 +638,7 @@ async def test_no_exploration_when_headroom_tight(monkeypatch):
     response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
 
     assert response["recommendation"]["action"] == "escalate"
-    assert not any("d.explored                = true" in query for query in fake_neo4j.queries)
+    assert not any("d.explored                = true" in query for query in fake_graph.queries)
 
 
 @pytest.mark.asyncio
@@ -652,7 +652,7 @@ async def test_rapid_succession_referral_count_includes_current_decision(monkeyp
             audit_summary="rapid succession",
         )
 
-    fake_neo4j = _patch_common_analyze(
+    fake_graph = _patch_common_analyze(
         monkeypatch,
         sequence_count=2,
         referral_evaluator=referral_evaluator,
@@ -668,7 +668,7 @@ async def test_rapid_succession_referral_count_includes_current_decision(monkeyp
         if call.args and call.args[0].__class__.__name__ == "DecisionMade"
     ]
     assert decision_events[0].action == "refer_to_analyst"
-    assert "action:                'refer_to_analyst'" in _decision_creation_query(fake_neo4j)
+    assert "action:                'refer_to_analyst'" in _decision_creation_query(fake_graph)
 
 
 @pytest.mark.asyncio
@@ -681,7 +681,7 @@ async def test_rapid_succession_referral_count_below_threshold_after_current(mon
             audit_summary="rapid succession",
         )
 
-    fake_neo4j = _patch_common_analyze(
+    fake_graph = _patch_common_analyze(
         monkeypatch,
         sequence_count=1,
         referral_evaluator=referral_evaluator,
@@ -690,7 +690,7 @@ async def test_rapid_succession_referral_count_below_threshold_after_current(mon
     response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
 
     assert response["recommendation"]["action"] == "escalate"
-    assert "action:                'escalate'" in _decision_creation_query(fake_neo4j)
+    assert "action:                'escalate'" in _decision_creation_query(fake_graph)
 
 
 @pytest.mark.asyncio
@@ -704,7 +704,7 @@ async def test_cross_category_referral_count_includes_current_decision(monkeypat
             audit_summary="cross category",
         )
 
-    fake_neo4j = _patch_common_analyze(
+    fake_graph = _patch_common_analyze(
         monkeypatch,
         cross_category_count=1,
         referral_evaluator=referral_evaluator,
@@ -714,7 +714,7 @@ async def test_cross_category_referral_count_includes_current_decision(monkeypat
 
     assert response["recommendation"]["action"] == "refer_to_analyst"
     assert triage.record_decision.await_args.kwargs["action_taken"] == "refer_to_analyst"
-    assert "action:                'refer_to_analyst'" in _decision_creation_query(fake_neo4j)
+    assert "action:                'refer_to_analyst'" in _decision_creation_query(fake_graph)
 
 
 @pytest.mark.asyncio
@@ -727,7 +727,7 @@ async def test_adjusted_count_referral_veto_blocks_explored_side_effects(monkeyp
             audit_summary="rapid succession",
         )
 
-    fake_neo4j = _patch_common_analyze(
+    fake_graph = _patch_common_analyze(
         monkeypatch,
         sequence_count=2,
         incident_id="INC-RL",
@@ -752,7 +752,7 @@ async def test_adjusted_count_referral_veto_blocks_explored_side_effects(monkeyp
     response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
 
     assert response["recommendation"]["action"] == "refer_to_analyst"
-    assert "action:                'refer_to_analyst'" in _decision_creation_query(fake_neo4j)
+    assert "action:                'refer_to_analyst'" in _decision_creation_query(fake_graph)
     assert triage.record_decision.await_args.kwargs["action_taken"] == "refer_to_analyst"
     decision_events = [
         call.args[0]
@@ -761,7 +761,7 @@ async def test_adjusted_count_referral_veto_blocks_explored_side_effects(monkeyp
     ]
     assert decision_events[0].action == "refer_to_analyst"
     assert sentinel_calls == []
-    metadata_query = "\n".join(fake_neo4j.queries)
+    metadata_query = "\n".join(fake_graph.queries)
     assert "d.explored_but_referred   = true" in metadata_query
     assert "d.original_action         = 'escalate'" in metadata_query
     assert "d.explored_action         = 'investigate'" in metadata_query
@@ -769,7 +769,7 @@ async def test_adjusted_count_referral_veto_blocks_explored_side_effects(monkeyp
 
 @pytest.mark.asyncio
 async def test_referral_veto_overrides_exploration_and_sets_veto_metadata(monkeypatch):
-    fake_neo4j = _patch_common_analyze(
+    fake_graph = _patch_common_analyze(
         monkeypatch,
         referral_should_refer=True,
         incident_id="INC-RL",
@@ -793,7 +793,7 @@ async def test_referral_veto_overrides_exploration_and_sets_veto_metadata(monkey
     response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
 
     assert response["recommendation"]["action"] == "refer_to_analyst"
-    assert "action:                'refer_to_analyst'" in _decision_creation_query(fake_neo4j)
+    assert "action:                'refer_to_analyst'" in _decision_creation_query(fake_graph)
     triage.record_decision.assert_awaited()
     assert triage.record_decision.await_args.kwargs["action_taken"] == "refer_to_analyst"
     decision_events = [
@@ -804,7 +804,7 @@ async def test_referral_veto_overrides_exploration_and_sets_veto_metadata(monkey
     assert decision_events
     assert decision_events[0].action == "refer_to_analyst"
     assert sentinel_calls == []
-    metadata_query = "\n".join(fake_neo4j.queries)
+    metadata_query = "\n".join(fake_graph.queries)
     assert "d.explored_but_referred   = true" in metadata_query
     assert "d.exploration_executed    = false" in metadata_query
     assert "d.original_action         = 'escalate'" in metadata_query
@@ -813,7 +813,7 @@ async def test_referral_veto_overrides_exploration_and_sets_veto_metadata(monkey
 
 @pytest.mark.asyncio
 async def test_explored_action_drives_side_effects_when_not_referred(monkeypatch):
-    fake_neo4j = _patch_common_analyze(monkeypatch)
+    fake_graph = _patch_common_analyze(monkeypatch)
     monkeypatch.setattr(soc_config, "RL_EXPLORATION_ENABLED", True)
     monkeypatch.setattr(triage, "LEARNING_ENABLED", True)
     policy = rl_engine.ExplorationPolicy(6, 4, epsilon_base=1.0, target_headroom=2.0)
@@ -832,7 +832,7 @@ async def test_explored_action_drives_side_effects_when_not_referred(monkeypatch
     ]
     assert decision_events
     assert decision_events[0].action == "investigate"
-    metadata_query = "\n".join(fake_neo4j.queries)
+    metadata_query = "\n".join(fake_graph.queries)
     assert "d.explored_but_referred   = false" in metadata_query
 
 

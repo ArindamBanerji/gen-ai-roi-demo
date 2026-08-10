@@ -11,7 +11,7 @@ Behaviour:
   b. If no key, or all calls fail: use the full hardcoded fallback set.
 
 After enrichment:
-  c. MERGE :ThreatIntel nodes into Neo4j (idempotent -- updates timestamp if
+  c. MERGE :ThreatIntel nodes into AGE (idempotent -- updates timestamp if
      the node already exists).
   d. MERGE :ASSOCIATED_WITH relationships to relevant :Alert nodes.
 """
@@ -242,7 +242,7 @@ class PulsediveConnector(UCLConnector):
     UCL connector for Pulsedive community threat intelligence.
 
     Live API if PULSEDIVE_API_KEY is set; hardcoded fallback otherwise.
-    Writes :ThreatIntel nodes and :ASSOCIATED_WITH edges to Neo4j.
+    Writes :ThreatIntel nodes and :ASSOCIATED_WITH edges to AGE.
     """
 
     name        = "pulsedive"
@@ -264,7 +264,7 @@ class PulsediveConnector(UCLConnector):
 
         Steps:
           1. Fetch from Pulsedive live API (if key present), fallback per-IOC.
-          2. MERGE :ThreatIntel nodes into Neo4j.
+          2. MERGE :ThreatIntel nodes into AGE.
           3. MERGE :ASSOCIATED_WITH relationships to :Alert nodes.
           4. Return ConnectorResult summary.
         """

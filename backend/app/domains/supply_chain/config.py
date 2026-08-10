@@ -16,7 +16,7 @@ What is fully defined (smoke-test scope):
 What is NOT yet implemented (raises NotImplementedError):
   classify_situation() -- supply_chain/situations.py not yet created
   compute_factors()    -- supply_chain/factors.py not yet created
-  get_seed_queries()   -- supply_chain/seed_neo4j.py not yet created
+  get_seed_queries()   -- supply_chain/seed_graph.py not yet created
   get_graph_query_templates() -- supply_chain Cypher templates not yet created
   get_narration_templates()   -- supply_chain LLM prompts not yet created
 """
@@ -334,7 +334,7 @@ class S2PDomainConfig(DomainConfig):
     # =========================================================================
     # Stubs — not yet implemented
     # These would live in supply_chain/situations.py, supply_chain/factors.py,
-    # supply_chain/seed_neo4j.py, etc. in a future prompt.
+    # supply_chain/seed_graph.py, etc. in a future prompt.
     # =========================================================================
 
     def classify_situation(self, po_type: str, context: Dict[str, Any]) -> str:
@@ -352,7 +352,7 @@ class S2PDomainConfig(DomainConfig):
         )
 
     def get_seed_queries(self) -> List[str]:
-        # TODO: Create domains/supply_chain/seed_neo4j.py in a future prompt
+        # TODO: Create domains/supply_chain/seed_graph.py in a future prompt
         return []
 
     def get_graph_query_templates(self) -> Dict[str, str]:

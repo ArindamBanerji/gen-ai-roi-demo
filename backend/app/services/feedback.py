@@ -5,7 +5,7 @@ Handles user feedback on decision outcomes and updates the graph accordingly.
 Answers the CISO question: "What happens when the system is wrong?"
 """
 import logging
-from typing import Dict, Any, List, Optional, Literal
+from typing import Dict, Any, List, Optional, Literal, cast
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
 from app.domains.soc.config import SOCDomainConfig
@@ -312,6 +312,14 @@ def get_feedback_status(alert_id: str) -> Dict[str, Any]:
             "has_feedback": False,
             "can_modify": True
         }
+
+
+def get_feedback_record(alert_id: str, decision_id: str) -> Optional[Dict[str, Any]]:
+    """Return the stored feedback only when it belongs to ``decision_id``."""
+    feedback = FEEDBACK_GIVEN.get(alert_id)
+    if feedback is None or feedback.get("decision_id") != decision_id:
+        return None
+    return cast(Dict[str, Any], feedback)
 
 
 def get_current_pattern_state() -> Dict[str, Any]:

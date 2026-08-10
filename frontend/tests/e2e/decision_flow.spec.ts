@@ -1,4 +1,4 @@
-// WARNING: writes real data to Neo4j — do not run against production
+// WARNING: writes real data to AGE — do not run against production
 // Run with: npm run test:e2e:integration
 
 import { test, expect, request } from '@playwright/test';
@@ -48,7 +48,7 @@ async function processAlert(page: import('@playwright/test').Page, outcomeCorrec
     await page.getByRole('button', { name: /Incorrect/i }).click();
   }
 
-  // Allow time for Neo4j write to complete
+  // Allow time for AGE write to complete
   await page.waitForTimeout(2000);
 }
 
@@ -205,7 +205,7 @@ test('learning_loop_validates_20_decisions', async ({ page }) => {
   // Reset alert queue to pending
   await resetDemoAlerts(page);
 
-  // Wait 1 second for Neo4j write to complete
+  // Wait 1 second for AGE write to complete
   await page.waitForTimeout(1000);
 
   // Navigate fresh to force alert queue reload

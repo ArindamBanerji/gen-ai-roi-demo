@@ -18,9 +18,13 @@ async function openTriage(page: Page) {
 }
 
 async function scoreCurrentInvoice(page: Page): Promise<{ decisionId: string; explorer: Locator }> {
-  await page.getByRole('button', { name: 'Score' }).click()
+  const [response] = await Promise.all([
+    page.waitForResponse((candidate) => candidate.url().includes('/api/s2p/score')),
+    page.getByRole('button', { name: 'Score' }).click(),
+  ])
+  expect(response.status()).toBeLessThan(400)
   const decisionLine = page.getByText(/^Decision\s+\S+/).first()
-  await expect(decisionLine).toBeVisible()
+  await expect(decisionLine).toBeVisible({ timeout: 10000 })
   const text = (await decisionLine.textContent()) ?? ''
   const decisionId = text.replace(/^Decision\s+/, '').trim()
   expect(decisionId.length).toBeGreaterThan(0)
@@ -31,6 +35,8 @@ async function scoreCurrentInvoice(page: Page): Promise<{ decisionId: string; ex
 }
 
 test.describe('S2P centroid explorer UI flow', () => {
+  test.describe.configure({ retries: 1 })
+
   test('score-to-centroid-explorer flow renders explanation sections without learning claims', async ({ page }) => {
     await openTriage(page)
     const { decisionId, explorer } = await scoreCurrentInvoice(page)

@@ -18,7 +18,12 @@ from app.services.agent import agent
 from app.services.reasoning import narrator
 from app.services.situation import analyze_situation
 from app.services.narrative import get_narrative_provider
-from app.services.feedback import process_outcome, get_feedback_status, get_reward_summary
+from app.services.feedback import (
+    process_outcome,
+    get_feedback_status,
+    get_feedback_record,
+    get_reward_summary,
+)
 from app.services.policy import detect_policy_conflicts, get_conflict_history
 from app.services.triage import get_decision_factors, append_confidence_snapshot
 from app.services.audit import record_decision
@@ -29,7 +34,7 @@ from ci_platform.copilot_core import EntityCache, EntityContextCacheAdapter
 
 
 def _node_id(entity: dict, prefix: str = "") -> str:
-    """Get node ID from entity dict -- AGE uses alert_id/user_id/etc, Neo4j uses id."""
+    """Get node ID from entity dict -- AGE uses alert_id/user_id/etc, AGE uses id."""
     return entity.get("id") or entity.get(f"{prefix}_id") or entity.get(f"{prefix}id") or "unknown"
 from app.services.gae_state import get_learning_state, save_learning_state, get_profile_scorer
 import dataclasses
@@ -430,7 +435,7 @@ async def get_alert_queue():
     print("[TRIAGE] GET /alerts/queue called")
 
     try:
-        # Query Neo4j for pending alerts
+        # Query AGE for pending alerts
         query = """
         MATCH (alert:Alert {status: 'pending'})
         MATCH (alert)-[:INVOLVES]->(user:User)
@@ -469,7 +474,7 @@ async def get_alert_queue():
         traceback.print_exc()
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to fetch alerts from Neo4j: {str(e)}"
+            detail=f"Failed to fetch alerts from AGE: {str(e)}"
         )
 
 
@@ -484,7 +489,7 @@ async def analyze_alert(request: ProcessAlertRequest):
     Returns full context, recommendation, and graph data for visualization.
 
     GAE-2d: Uses GAE scoring pipeline (Eq. 4) instead of hardcoded factors.
-    Writes Decision node to Neo4j after scoring.  Emits DecisionMade +
+    Writes Decision node to AGE after scoring.  Emits DecisionMade +
     GraphMutated events (design principle: every graph mutation emits events).
     """
     _perf_route = "/api/alert/analyze"
@@ -559,7 +564,7 @@ async def analyze_alert(request: ProcessAlertRequest):
         # ====================================================================
         # Step 4: GAE Scoring Pipeline (GAE-2d — replaces agent.decide())
         #
-        # 4a. Compute factor vector via orchestrator (FactorComputers → Neo4j, one per factor)
+        # 4a. Compute factor vector via orchestrator (FactorComputers → AGE, one per factor)
         # 4b. score_alert: Eq. 4  P(action|alert) = softmax(f·Wᵀ / τ)
         # ====================================================================
         with _soc_perf_phase(
@@ -692,12 +697,12 @@ async def analyze_alert(request: ProcessAlertRequest):
                         _rl_explored_action_name = scorer_actions[
                             _rl_exploration_decision.explored_action
                         ]
-                        if _soc_learning_enabled():
-                            selected_action = _rl_explored_action_name
-                            _rl_exploration_executed = True
-                            _rl_decision_method = "gae_scoring_explored"
-                        else:
-                            _rl_decision_method = "gae_scoring_explore_proposed"
+                        # G1 boundary (Option A strict): exploration proposes,
+                        # but never overrides the live centroid-selected action.
+                        # The proposal remains available for shadow evaluation
+                        # and learning; the decision path stays centroidal.
+                        _rl_exploration_executed = False
+                        _rl_decision_method = "gae_scoring_explore_proposed"
         except Exception as _rl_explore_exc:
             logger.warning("[RL] Exploration proposal failed: %s", _rl_explore_exc)
             _rl_exploration_decision = None
@@ -788,7 +793,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             _alert_context = {
                 # R1: executive account
                 'identity_tier':        alert_data.get('identity_tier', 'standard'),
-                # R2: rapid succession — live Neo4j count
+                # R2: rapid succession — live AGE count
                 'sequence_count':       _referral_sequence_count,
                 # R3: compliance mandate
                 'category':             alert_category,
@@ -800,7 +805,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                 'incident_active':      False,
                 # R6: new asset
                 'asset_age_days':       alert_data.get('asset_age_days', 365),
-                # R7: cross-category — live Neo4j count
+                # R7: cross-category — live AGE count
                 'cross_category_count': _referral_cross_category_count,
                 # full factor vector for future rules
                 'factor_values':        fv_list,
@@ -845,7 +850,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             reasoning = await narrator.generate_reasoning(alert_type, selected_action, context)
 
         # ====================================================================
-        # Step 5: Write Decision node to Neo4j (R4 — f(t) stored in graph)
+        # Step 5: Write Decision node to AGE (R4 — f(t) stored in graph)
         #
         # MATCH (a:Alert {id: $alert_id})
         # CREATE (d:Decision {id:..., action:..., confidence:..., factor_vector:...,
@@ -876,6 +881,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                     category:              {_S(alert_category)},
                     source_id:             {_S(alert_data.get("source_location", ""))},
                     user_id:               {_S(context.get("user_id", ""))},
+                    status:                'pending',
                     timestamp_epoch:       {_ts_analyze},
                     outcome:               null,
                     triage_entropy:        {triage_entropy},
@@ -1073,7 +1079,7 @@ async def analyze_alert(request: ProcessAlertRequest):
                     category=alert_category,
                     factor_vector=f.flatten(),
                     decision_position=0.0,
-                    neo4j_service=graph_client,
+                    graph_service=graph_client,
                 )
                 if _composite["auto_approve"] and not ShadowModeService.SHADOW_ENABLED:
                     await graph_client.run_query(
@@ -1268,7 +1274,7 @@ async def analyze_alert(request: ProcessAlertRequest):
         # ====================================================================
         # Build Response — existing structure preserved; gae_scoring added
         # ====================================================================
-        # ATT&CK fields: prefer Neo4j Alert node properties; fall back to
+        # ATT&CK fields: prefer AGE Alert node properties; fall back to
         # MITRE_ATTACK_MAP via situation_analysis (already populated above).
         attack_technique = (
             alert_data.get("mitre_technique") or situation_analysis.mitre_technique
@@ -1517,7 +1523,7 @@ async def execute_action(request: ProcessAlertRequest):
         verification_method = "API status check" if decision.action == "false_positive_close" else "Ticket existence verification"
 
         # ====================================================================
-        # Step 3: EVIDENCE - Create decision trace in Neo4j
+        # Step 3: EVIDENCE - Create decision trace in AGE
         # ====================================================================
         decision_id = f"DEC-{uuid.uuid4().hex[:4].upper()}"
 
@@ -1580,7 +1586,7 @@ async def execute_action(request: ProcessAlertRequest):
             affected_entities = (alert_id,),
         ))
 
-        # Update alert status in Neo4j
+        # Update alert status in AGE
         await graph_client.run_query(
             f"MATCH (alert:Alert {{alert_id: {_S(alert_id)}}}) SET alert.status = 'resolved'"
         )
@@ -1726,12 +1732,24 @@ async def report_decision_outcome(request: OutcomeRequest):
             alert_id=request.alert_id,
             decision_id=request.decision_id,
         ):
-            status = get_feedback_status(request.alert_id)
-            if status["has_feedback"]:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Feedback already provided for {request.alert_id}. Outcome cannot be changed."
-                )
+            previous = get_feedback_record(request.alert_id, request.decision_id)
+            if previous is not None:
+                if previous.get("outcome") != request.outcome:
+                    raise HTTPException(
+                        status_code=409,
+                        detail=(
+                            f"Conflicting feedback already provided for decision "
+                            f"{request.decision_id}."
+                        ),
+                    )
+                return {
+                    "alert_id": request.alert_id,
+                    "outcome": previous["outcome"],
+                    "graph_updates": previous.get("graph_updates", []),
+                    "consequence": "Outcome already recorded; no additional learning applied.",
+                    "next_alerts_override": None,
+                    "narrative": "The identical outcome was already recorded.",
+                }
 
         # ====================================================================
         # GAE-3a: Retrieve f(t) from Decision node, apply Hebbian learning
@@ -1796,24 +1814,24 @@ async def report_decision_outcome(request: OutcomeRequest):
                 request.analyst_action is not None
                 and _recommended_action != request.analyst_action
             )
-            _soc_store.write_outcome(
-                decision_id=request.decision_id,
-                actual_action=_actual_action,
-                is_correct=correct_bool,
-                domain="soc",
-                outcome=outcome_label,
-                verified_at_epoch=float(_ts_outcome),
-                quality_signal=1.0 if correct_bool else 0.0,
-                override_comment=request.override_comment or "",
-                verified_by=analyst_id,
-                analyst_action=request.analyst_action,
-                final_action=request.analyst_action,
-                recommended_action=(
+            _outcome_write_kwargs = {
+                "decision_id": request.decision_id,
+                "actual_action": _actual_action,
+                "is_correct": correct_bool,
+                "domain": "soc",
+                "outcome": outcome_label,
+                "verified_at_epoch": float(_ts_outcome),
+                "quality_signal": 1.0 if correct_bool else 0.0,
+                "override_comment": request.override_comment or "",
+                "verified_by": analyst_id,
+                "analyst_action": request.analyst_action,
+                "final_action": request.analyst_action,
+                "recommended_action": (
                     str(_recommended_action) if _recommended_action is not None else None
                 ),
-                was_override=_was_override,
-                metadata={"verified_at": _ts_outcome / 1000.0},
-            )
+                "was_override": _was_override,
+                "metadata": {"verified_at": _ts_outcome / 1000.0},
+            }
             gae_result = await graph_client.run_query(
                 f"""
                 MATCH (d:Decision {{decision_id: {_S(request.decision_id)}}})
@@ -1966,6 +1984,12 @@ async def report_decision_outcome(request: OutcomeRequest):
                         f"[GAE] Skipping learning update for routing action "
                         f"{action_name!r} (not in SCORER_ACTIONS)"
                     )
+                # Routing actions are intentionally excluded from centroid
+                # learning, but their verified outcome must still be written
+                # to the authoritative Decision node.  Without this write,
+                # analytics never observes d.correct for the learning-loop
+                # flow even though the decision was confirmed.
+                _soc_store.write_outcome(**_outcome_write_kwargs)
                 wu = None
                 # Still count this verified outcome so decision_count reflects
                 # all verified decisions, not only scorable actions.
@@ -2060,17 +2084,26 @@ async def report_decision_outcome(request: OutcomeRequest):
                 # falls back to predicted action_index only when analyst_action is absent.
                 # is_correct is re-derived from the comparison so it stays consistent.
                 _soc_learning_active = _soc_learning_enabled()
-                if not _soc_learning_active and action_name in SCORER_ACTIONS:
-                    l5_persistence_status["l5_persistence_skipped_reason"] = "soc_learning_disabled"
+                _unclassified_alert = False
                 if _soc_learning_active and action_name in SCORER_ACTIONS:
-                    from app.domains.soc.config import resolve_alert_category, SOCDomainConfig as _SDC_out
-                    _cat_name_out = resolve_alert_category(alert_type_for_cat)
-                    if _cat_name_out == "unclassified":
+                    from app.domains.soc.config import resolve_alert_category
+
+                    _unclassified_alert = (
+                        resolve_alert_category(alert_type_for_cat) == "unclassified"
+                    )
+                    if _unclassified_alert:
                         logger.warning(
                             "[GAE][LEARN] Skipping ProfileScorer.update for unclassified alert_type=%r",
                             alert_type_for_cat,
                         )
-                        raise ValueError("unclassified alert type is not scorable")
+                        l5_persistence_status["l5_persistence_skipped_reason"] = (
+                            "unclassified_alert_type"
+                        )
+                if not _soc_learning_active and action_name in SCORER_ACTIONS:
+                    l5_persistence_status["l5_persistence_skipped_reason"] = "soc_learning_disabled"
+                if _soc_learning_active and action_name in SCORER_ACTIONS and not _unclassified_alert:
+                    from app.domains.soc.config import resolve_alert_category, SOCDomainConfig as _SDC_out
+                    _cat_name_out = resolve_alert_category(alert_type_for_cat)
                     _cat_idx_out  = _SDC_out().get_category_index(_cat_name_out)
 
                     _analyst_action = request.analyst_action
@@ -2089,7 +2122,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                         acquire_scorer as _acquire_scorer,
                         get_soc_centroid as _get_soc_centroid,
                         guarded_update as _guarded_update,
-                        persist_soc_centroid as _persist_soc_centroid,
+                        persist_soc_outcome_and_centroid as _persist_soc_outcome_and_centroid,
                         persist_soc_dk_weights as _persist_soc_dk_weights,
                         update_dk_welford_tracker as _update_dk_welford_tracker,
                     )
@@ -2186,20 +2219,6 @@ async def report_decision_outcome(request: OutcomeRequest):
                                                 _snapshot_exc,
                                             )
                                 if _cu is not None:
-                                    if isinstance(_ps_out, SOCCompoundingScorerAdapter):
-                                        try:
-                                            _compound_scorer._persist_learning_artifacts(
-                                                request.decision_id,
-                                                actual_action=_scorer_acts[_gt_idx],
-                                                outcome=outcome_label,
-                                                is_correct=bool(_correct),
-                                                category=_cat_name_out,
-                                            )
-                                        except Exception as _artifact_exc:
-                                            logger.warning(
-                                                "[GAE][LEARN] SOC persistence artifacts failed: %s",
-                                                _artifact_exc,
-                                            )
                                     _actual_action_index = _gt_idx
                                     _actual_action_name = _scorer_acts[_actual_action_index]
                                     l5_persistence_status["l5_persistence_source"] = "profile_scorer"
@@ -2238,16 +2257,35 @@ async def report_decision_outcome(request: OutcomeRequest):
                                             category=getattr(_cu, "category_name", _cat_name_out),
                                             action=_actual_action_name,
                                         ):
-                                            _centroid_persisted = _persist_soc_centroid(
-                                                scorer=_ps_out,
-                                                category=getattr(_cu, "category_name", _cat_name_out),
-                                                category_index=getattr(_cu, "category_index", _cat_idx_out),
-                                                action=_actual_action_name,
-                                                action_index=_actual_action_index,
-                                                caused_by_decision_id=request.decision_id,
-                                                pre_centroid=_pre_centroids.get(
-                                                    _actual_action_index
-                                                ),
+                                            _centroid_persisted = await _persist_soc_outcome_and_centroid(
+                                                store=_soc_store,
+                                                outcome=_outcome_write_kwargs,
+                                                centroid={
+                                                    "scorer": _ps_out,
+                                                    "category": getattr(_cu, "category_name", _cat_name_out),
+                                                    "category_index": getattr(_cu, "category_index", _cat_idx_out),
+                                                    "action": _actual_action_name,
+                                                    "action_index": _actual_action_index,
+                                                    "caused_by_decision_id": request.decision_id,
+                                                    "pre_centroid": _pre_centroids.get(
+                                                        _actual_action_index
+                                                    ),
+                                                },
+                                                checkpoint_writer=(
+                                                    lambda transaction: _compound_scorer._persist_learning_artifacts(
+                                                        request.decision_id,
+                                                        actual_action=_scorer_acts[_gt_idx],
+                                                        outcome=outcome_label,
+                                                        is_correct=bool(_correct),
+                                                        category=_cat_name_out,
+                                                        evidence_already_persisted=True,
+                                                        skip_history_scan=True,
+                                                        transaction=transaction,
+                                                        raise_on_error=True,
+                                                    )
+                                                )
+                                                if isinstance(_ps_out, SOCCompoundingScorerAdapter)
+                                                else None,
                                                 logger=logger,
                                             )
                                         l5_persistence_status["l5_centroid_persisted"] = bool(
@@ -2261,13 +2299,11 @@ async def report_decision_outcome(request: OutcomeRequest):
                                             else "persist_soc_centroid_returned_false"
                                         )
                                     except Exception as _centroid_exc:
-                                        logger.warning(
+                                        logger.exception(
                                             "[GAE][LEARN] SOC L5 centroid persistence failed: %s",
                                             _centroid_exc,
                                         )
-                                        l5_persistence_status["l5_persistence_skipped_reason"] = (
-                                            "persist_soc_centroid_exception"
-                                        )
+                                        raise
                                     if _reestimate_ok:
                                         try:
                                             with _soc_perf_phase(
@@ -2292,19 +2328,37 @@ async def report_decision_outcome(request: OutcomeRequest):
                                 if hasattr(_ps_out, "eta_override"):
                                     _ps_out.eta_override = _orig_eta_override_out
                         if _cu is None:
+                            _soc_store.write_outcome(**_outcome_write_kwargs)
                             if "_ps_out" in locals() and getattr(_ps_out, "is_paused", False):
                                 _guard_block_reason = "conservation_paused"
                             if not _guard_block_reason:
                                 _guard_block_reason = "guarded_update_returned_none"
                             l5_persistence_status["l5_persistence_skipped_reason"] = _guard_block_reason
                             logger.info("[GAE][LEARN] Update blocked by conservation/spike/freeze guard")
-                        else:
-                            print(
-                                f"[GAE][LEARN] ProfileScorer.update called: "
-                                f"action={action_name} analyst_action={_analyst_action!r} "
-                                f"gt_action_index={_gt_idx} correct={_correct} "
-                                f"category={_cat_name_out} eta={_analyst_eta or _orig_eta_override_out}"
-                            )
+                else:
+                    print(
+                        f"[GAE][LEARN] ProfileScorer.update called: "
+                        f"action={action_name} analyst_action={_analyst_action!r} "
+                        f"gt_action_index={_gt_idx} correct={_correct} "
+                        f"category={_cat_name_out} eta={_analyst_eta or _orig_eta_override_out}"
+                    )
+
+                # Keep the convergence endpoint's LearningState counter in sync
+                # with every verified scorable outcome.  The SOC adapter owns the
+                # wrapped ProfileScorer counter, so it cannot update this separate
+                # convergence-state counter for us.
+                with _soc_perf_phase(
+                    "learning_state_update",
+                    route=_perf_route,
+                    alert_id=request.alert_id,
+                    decision_id=request.decision_id,
+                    category=_resolved_category,
+                    action=action_name,
+                ):
+                    _ref_ls = get_learning_state()
+                    if _ref_ls:
+                        _ref_ls.decision_count += 1
+                        save_learning_state()
 
                 # Change 5: ProfileSnapshot every 50 decisions
                 if wu is not None:
@@ -3004,7 +3058,7 @@ async def decision_factors(alert_id: str):
     """
     Return the factor explainability matrix for an agent decision.
 
-    Factor 3 (threat_intel_enrichment) is queried live from Neo4j using the
+    Factor 3 (threat_intel_enrichment) is queried live from AGE using the
     ASSOCIATED_WITH relationship written by the Threat Intel refresh endpoint.
     The remaining 5 factors are pre-computed from demo context.
 

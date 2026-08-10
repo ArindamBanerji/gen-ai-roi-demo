@@ -1,11 +1,11 @@
 """
-rebuild_neo4j_v6.py — Full database recreation for v6.0.
+rebuild_graph_v6.py — Full database recreation for v6.0.
 
-Wipes Neo4j and re-seeds from scratch in the correct dependency order.
+Wipes AGE and re-seeds from scratch in the correct dependency order.
 Use this as a recovery path if the Aura snapshot is unavailable.
 
 Run from repo root (gen-ai-roi-demo-v4-v50/):
-    python support/setup/rebuild_neo4j_v6.py \\
+    python support/setup/rebuild_graph_v6.py \\
         --shadow-json path/to/v_shadow_synthetic_results(1).json \\
         --pilot-json  path/to/synthetic_pilot_decisions.json
 
@@ -43,13 +43,13 @@ try:
 except ImportError:
     print("[env] WARNING: python-dotenv not installed")
 
-from app.db.neo4j import neo4j_client  # noqa: E402  (after sys.path insert)
+from app.db.graph_client import graph_client  # noqa: E402  (after sys.path insert)
 
 # -- Arg parsing --------------------------------------------------------------
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Rebuild Neo4j database for SOC Copilot v6.0"
+        description="Rebuild AGE database for SOC Copilot v6.0"
     )
     parser.add_argument(
         "--dry-run", action="store_true",
@@ -97,9 +97,9 @@ async def print_node_summary(dry_run: bool) -> None:
     if dry_run:
         print("       [dry-run] skipped")
         return
-    await neo4j_client.connect()
+    await graph_client.connect()
     try:
-        rows = await neo4j_client.run_query(COUNT_QUERY)
+        rows = await graph_client.run_query(COUNT_QUERY)
         if not rows:
             print("  (no nodes found)")
         else:
@@ -108,7 +108,7 @@ async def print_node_summary(dry_run: bool) -> None:
                 print(f"  {r['label']:<30} {r['count']:>6}")
             print(f"  {'TOTAL':<30} {total:>6}")
     finally:
-        await neo4j_client.close()
+        await graph_client.close()
 
 # -- Main ---------------------------------------------------------------------
 
@@ -120,12 +120,12 @@ async def wipe_database(dry_run: bool) -> None:
     if dry_run:
         print("       [dry-run] skipped")
         return
-    await neo4j_client.connect()
+    await graph_client.connect()
     try:
-        await neo4j_client.run_query(WIPE_QUERY)
+        await graph_client.run_query(WIPE_QUERY)
         print("       Done — all nodes deleted")
     finally:
-        await neo4j_client.close()
+        await graph_client.close()
 
 
 async def main() -> None:
@@ -135,13 +135,13 @@ async def main() -> None:
     pilot_json  = Path(args.pilot_json)
 
     print("\n" + "=" * 60)
-    print("  SOC Copilot — Neo4j Rebuild v6.0")
+    print("  SOC Copilot — AGE Rebuild v6.0")
     print("=" * 60)
     print(f"  Repo root   : {_REPO_ROOT}")
     print(f"  Backend     : {_BACKEND}")
     print(f"  Shadow JSON : {shadow_json}")
     print(f"  Pilot JSON  : {pilot_json}")
-    print(f"  NEO4J_URI   : {os.getenv('NEO4J_URI', '(not set)')}")
+    print(f"  GRAPH_URI   : {os.getenv('GRAPH_URI', '(not set)')}")
     if args.dry_run:
         print("  Mode        : DRY-RUN (no writes)")
 
@@ -161,11 +161,11 @@ async def main() -> None:
     await wipe_database(args.dry_run)
 
     # -- Step 2: base seed ----------------------------------------------------
-    _seed_cmd = [python, str(_BACKEND / "seed_neo4j.py")]
+    _seed_cmd = [python, str(_BACKEND / "seed_graph.py")]
     if args.dry_run:
         _seed_cmd.append("--dry-run")
     run_step(
-        "seed_neo4j.py — base Alert, User, Asset, ThreatIntel nodes",
+        "seed_graph.py — base Alert, User, Asset, ThreatIntel nodes",
         _seed_cmd,
         args.dry_run,
     )

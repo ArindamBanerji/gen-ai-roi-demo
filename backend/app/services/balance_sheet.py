@@ -102,21 +102,21 @@ def _safe_epistemic_state() -> tuple[dict[str, dict[str, Any]], int]:
         return {}, 0
 
 
-async def _safe_overall_iks(neo4j_service: Any) -> float:
+async def _safe_overall_iks(graph_service: Any) -> float:
     try:
-        return float(await compute_visible_iks(neo4j_service))
+        return float(await compute_visible_iks(graph_service))
     except Exception as exc:
         _log.warning("overall_iks(balance_sheet): IKS computation failed -- returning 0.0 (source=fallback): %s", exc)
         return 0.0
 
 
-async def _safe_centroid_drift(neo4j_service: Any) -> dict[str, float]:
+async def _safe_centroid_drift(graph_service: Any) -> dict[str, float]:
     try:
         scorer = get_profile_scorer()
         if scorer is None:
             return {category: 0.0 for category in SOC_CATEGORIES}
 
-        export = await build_centroid_export(scorer, neo4j_service)
+        export = await build_centroid_export(scorer, graph_service)
         current_mu = export.get("current_mu")
         bootstrap_mu = export.get("bootstrap_mu")
         categories = export.get("categories") or list(SOC_CATEGORIES)
@@ -135,9 +135,9 @@ async def _safe_centroid_drift(neo4j_service: Any) -> dict[str, float]:
         return {category: 0.0 for category in SOC_CATEGORIES}
 
 
-async def _safe_learning_health(neo4j_service: Any) -> dict[str, Any]:
+async def _safe_learning_health(graph_service: Any) -> dict[str, Any]:
     try:
-        return await LearningHealthMonitor.evaluate(neo4j_service)
+        return await LearningHealthMonitor.evaluate(graph_service)
     except Exception:
         return {"status": "unavailable"}
 
@@ -152,9 +152,9 @@ async def _safe_auto_approve_stats() -> dict[str, Any]:
         return {"by_category": {}, "coverage_pct": 0.0, "total_decisions": 0, "auto_approved": 0}
 
 
-async def _safe_timeline(neo4j_service: Any) -> dict[str, Any]:
+async def _safe_timeline(graph_service: Any) -> dict[str, Any]:
     try:
-        return await get_evolution_timeline(neo4j_service)
+        return await get_evolution_timeline(graph_service)
     except Exception:
         return {"timeline": [], "ceiling_estimate": None}
 
@@ -208,13 +208,13 @@ def _build_recommendation(
     )
 
 
-async def generate_balance_sheet(neo4j_service: Any = None) -> LearningBalanceSheet:
+async def generate_balance_sheet(graph_service: Any = None) -> LearningBalanceSheet:
     epistemic_state, total_verified = _safe_epistemic_state()
-    overall_iks = await _safe_overall_iks(neo4j_service)
-    centroid_drift = await _safe_centroid_drift(neo4j_service)
-    learning_health = await _safe_learning_health(neo4j_service)
+    overall_iks = await _safe_overall_iks(graph_service)
+    centroid_drift = await _safe_centroid_drift(graph_service)
+    learning_health = await _safe_learning_health(graph_service)
     auto_approve = await _safe_auto_approve_stats()
-    timeline = await _safe_timeline(neo4j_service)
+    timeline = await _safe_timeline(graph_service)
     overall_ceiling, snr_by_cat = _compute_structural_ceiling_report()
 
     auto_by_category = auto_approve.get("by_category") or {}

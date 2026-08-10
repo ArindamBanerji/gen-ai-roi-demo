@@ -44,7 +44,7 @@ async def _score_alert(
     alert: Dict[str, Any],
     scorer: Any,
     factor_computers: List[Any],
-    neo4j_service: Any,
+    graph_service: Any,
 ) -> Dict[str, Any]:
     """Compute factors and score a single alert through the real pipeline."""
     alert_payload = dict(alert)
@@ -66,7 +66,7 @@ async def _score_alert(
     alert_payload.setdefault("category", category)
     alert_payload.setdefault("alert_type", raw_category)
 
-    factor_vector = await compute_factor_vector(alert_payload, factor_computers, neo4j_service)
+    factor_vector = await compute_factor_vector(alert_payload, factor_computers, graph_service)
     category_index = SOCDomainConfig().get_category_index(category)
     scoring_result = scorer.score(factor_vector.flatten(), category_index=category_index)
 
@@ -84,8 +84,8 @@ async def _score_alert(
     }
 
 
-async def run_model_swap_trial(neo4j_service=None, n_alerts: int = 20) -> ModelSwapResult:
-    neo4j_service = neo4j_service or graph_client
+async def run_model_swap_trial(graph_service=None, n_alerts: int = 20) -> ModelSwapResult:
+    graph_service = graph_service or graph_client
     scorer = get_profile_scorer()
     narrative_llm_used = _get_narrative_llm_name()
 
@@ -147,7 +147,7 @@ async def run_model_swap_trial(neo4j_service=None, n_alerts: int = 20) -> ModelS
 
     for alert in selected_alerts:
         try:
-            result = await _score_alert(alert, scorer, factor_computers, neo4j_service)
+            result = await _score_alert(alert, scorer, factor_computers, graph_service)
             alert_results.append(result)
         except Exception as exc:
             errors.append(f"{alert.get('alert_id') or alert.get('id') or 'UNKNOWN'}: {exc}")
@@ -156,8 +156,8 @@ async def run_model_swap_trial(neo4j_service=None, n_alerts: int = 20) -> ModelS
     if alert_results:
         first_alert = selected_alerts[0]
         try:
-            first_run = await _score_alert(first_alert, scorer, factor_computers, neo4j_service)
-            second_run = await _score_alert(first_alert, scorer, factor_computers, neo4j_service)
+            first_run = await _score_alert(first_alert, scorer, factor_computers, graph_service)
+            second_run = await _score_alert(first_alert, scorer, factor_computers, graph_service)
             reproducibility_check = {
                 "passed": (
                     first_run["action_name"] == second_run["action_name"]

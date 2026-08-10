@@ -27,14 +27,14 @@ client = TestClient(app)
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _get_trajectory(neo4j_rows=None):
-    """Call GET /api/soc/accuracy-trajectory with optional Neo4j mock rows."""
-    if neo4j_rows is None:
-        neo4j_rows = []
+def _get_trajectory(graph_rows=None):
+    """Call GET /api/soc/accuracy-trajectory with optional AGE mock rows."""
+    if graph_rows is None:
+        graph_rows = []
     with patch(
         "app.routers.soc.graph_client.run_query",
         new_callable=AsyncMock,
-        return_value=neo4j_rows,
+        return_value=graph_rows,
     ):
         response = client.get("/api/soc/accuracy-trajectory")
     return response
@@ -46,10 +46,10 @@ def _get_trajectory(neo4j_rows=None):
 
 def test_accuracy_trajectory_cold_start_structure():
     """
-    With no decisions in Neo4j the endpoint must still return a valid response
+    With no decisions in AGE the endpoint must still return a valid response
     with all required top-level keys and at least one category entry.
     """
-    response = _get_trajectory(neo4j_rows=[])
+    response = _get_trajectory(graph_rows=[])
 
     assert response.status_code == 200, (
         f"Expected 200, got {response.status_code}: {response.text[:300]}"
@@ -72,11 +72,11 @@ def test_accuracy_trajectory_cold_start_structure():
 
 def test_accuracy_trajectory_live_data_reflected():
     """
-    When Neo4j returns a category with N decisions, the response must reflect
+    When AGE returns a category with N decisions, the response must reflect
     that count in the matching category entry.
     """
     rows = [{"category": "phishing", "cnt": 500}]
-    response = _get_trajectory(neo4j_rows=rows)
+    response = _get_trajectory(graph_rows=rows)
 
     assert response.status_code == 200
     body = response.json()
@@ -126,7 +126,7 @@ def test_accuracy_trajectory_points_monotone():
     {decisions, accuracy} dicts, with accuracy strictly increasing.
     """
     rows = [{"category": "malware", "cnt": 200}]
-    response = _get_trajectory(neo4j_rows=rows)
+    response = _get_trajectory(graph_rows=rows)
 
     assert response.status_code == 200
     body = response.json()

@@ -1,6 +1,6 @@
 """
 Block 9.2 -- D3 Spike detector tests.
-All Neo4j calls use AsyncMock -- no live Neo4j required.
+All AGE calls use AsyncMock -- no live AGE required.
 """
 import asyncio
 import os
@@ -35,7 +35,7 @@ def _day_rows(*counts):
     return [{"day_bucket": i, "daily_count": c} for i, c in enumerate(counts)]
 
 
-def _mock_neo4j(rows):
+def _mock_graph(rows):
     mock = AsyncMock()
     mock.run_query.return_value = rows
     return mock
@@ -53,7 +53,7 @@ def test_baseline_computed_from_history():
     threshold = 19.0 + 5.0 * max(7.746, 1.0) ~= 57.73
     """
     counts = [10, 20, 30, 10, 20, 30, 10, 20, 30, 10]
-    mock = _mock_neo4j(_day_rows(*counts))
+    mock = _mock_graph(_day_rows(*counts))
 
     # Force conservative spike_sigma via low n_decisions
     with patch("app.domains.soc.config.GateConfig") as MockGC:
@@ -82,7 +82,7 @@ def test_spike_detected_when_above_threshold():
     Baseline: mean=20, std=2, spike_sigma=5 -> threshold = 20 + 5*max(2,1) = 30.
     today_count=100 > 30 -> spike_detected=True.
     """
-    mock = _mock_neo4j(_day_rows(*([20] * 10)))   # flat baseline mean=20, std=0
+    mock = _mock_graph(_day_rows(*([20] * 10)))   # flat baseline mean=20, std=0
 
     with patch("app.domains.soc.config.GateConfig") as MockGC:
         instance = MockGC.return_value
@@ -104,7 +104,7 @@ def test_no_spike_when_normal_volume():
     Baseline: mean=20, std=0 (floored to 1), sigma=5 -> threshold=25.
     today_count=22 < 25 -> spike_detected=False.
     """
-    mock = _mock_neo4j(_day_rows(*([20] * 10)))
+    mock = _mock_graph(_day_rows(*([20] * 10)))
 
     with patch("app.domains.soc.config.GateConfig") as MockGC:
         instance = MockGC.return_value

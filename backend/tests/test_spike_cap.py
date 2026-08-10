@@ -1,7 +1,7 @@
 """
 Block 9.4 -- D7 Spike update cap tests.
 Coupled to D3 -- cap only enforced when volume spike is active.
-No live Neo4j required.
+No live AGE required.
 """
 import os
 import sys

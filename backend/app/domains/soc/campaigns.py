@@ -2,7 +2,7 @@
 campaigns.py -- Multi-Alert Campaign Correlation (F6).
 
 Campaign schema, Cypher queries, and pure-Python helper functions.
-No Neo4j calls in this module -- all graph I/O lives in the service layer.
+No AGE calls in this module -- all graph I/O lives in the service layer.
 
 Confidence model:
   technique_sequence  0.85  (kill-chain pattern matched)
@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, List, Optional, cast
 import asyncio
+import warnings
 import hashlib
 import json as _json
 import logging
@@ -236,7 +237,7 @@ def _chunks(values: List[str], size: int) -> List[List[str]]:
 
 
 def _to_python_dt(value):
-    """Convert neo4j DateTime / epoch int to Python datetime; pass through if already datetime."""
+    """Convert graph DateTime / epoch int to Python datetime; pass through if already datetime."""
     if isinstance(value, datetime):
         return value
     if hasattr(value, "to_native"):
@@ -481,10 +482,21 @@ RETURN
 """
 
 
-# ── Helper functions (pure Python, no Neo4j) ─────────────────────────────────
+# ── Helper functions (pure Python, no AGE) ─────────────────────────────────
 
 def make_campaign_id(alert_ids: List[str]) -> str:
-    """Deterministic UUID5 from sorted alert IDs -- order-independent."""
+    """Legacy alert-set identity; production paths must use the Phase 1 key.
+
+    This compatibility helper is intentionally retained for callers that still
+    consume the pre-Phase-2 API.  It is not a campaign-creation identity and
+    must not be used for new production paths; use
+    :func:`make_campaign_identity_key` instead.
+    """
+    warnings.warn(
+        "make_campaign_id() is legacy-only; use make_campaign_identity_key()",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return str(uuid.uuid5(uuid.NAMESPACE_OID, ",".join(sorted(alert_ids))))
 
 
@@ -603,7 +615,7 @@ def derive_severity(severities: List[str]) -> str:
 def _ts_to_seconds(ts) -> float:
     """Convert ts to a comparable float (seconds since epoch).
 
-    ts may be a Python datetime, a neo4j DateTime (has .to_native()), or an
+    ts may be a Python datetime, a graph DateTime (has .to_native()), or an
     epoch integer in milliseconds (as written by the migrated epoch fields).
     """
     if isinstance(ts, (int, float)):
@@ -679,8 +691,8 @@ class CampaignCorrelationEngine:
     Rule priority: technique_sequence > shared_entity > temporal.
     Campaign IDs are stable per Phase 1 L1 identity tuple:
     rule_type + derived entity + category + epoch-aligned bucket.
-    All methods accept plain dicts -- no Neo4j dependency in this class.
-    Neo4j queries live in CampaignRepository (Step 5).
+    All methods accept plain dicts -- no AGE dependency in this class.
+    AGE queries live in CampaignRepository (Step 5).
     """
 
     def __init__(self, config: dict):
@@ -908,18 +920,18 @@ class CampaignCorrelationEngine:
 
 class CampaignRepository:
     """
-    All Neo4j I/O for campaigns.
+    All AGE I/O for campaigns.
     Reads alert events from Decision/Alert nodes.
     Writes Campaign nodes and :MEMBER_OF edges.
     """
 
-    def __init__(self, neo4j):
-        self.neo4j = neo4j
+    def __init__(self, graph):
+        self.graph = graph
         self.temporal_contexts: dict[str, CampaignTemporalContext] = {}
 
     def _has_transactional_graph_client(self) -> bool:
         """True for real AGE clients/fakes with class-defined transactions."""
-        return callable(getattr(type(self.neo4j), "run_transaction", None))
+        return callable(getattr(type(self.graph), "run_transaction", None))
 
     async def _run_campaign_locked_transaction(
         self,
@@ -932,7 +944,7 @@ class CampaignRepository:
                 "Campaign Phase 2 requires a transaction-capable AGE client "
                 "for PostgreSQL advisory-lock race safety."
             )
-        run_transaction = self.neo4j.run_transaction
+        run_transaction = self.graph.run_transaction
 
         def _operation(tx):
             _acquire_campaign_advisory_xact_lock(tx, identity)
@@ -1253,7 +1265,7 @@ class CampaignRepository:
         Returns list of event dicts compatible with CampaignCorrelationEngine.
         """
         try:
-            results = await self.neo4j.run_query("""
+            results = await self.graph.run_query("""
                 MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
                 WHERE d.domain = 'soc'
                   AND d.source_id IS NOT NULL AND d.source_id <> 'synthetic'
@@ -1286,7 +1298,7 @@ class CampaignRepository:
                 trace,
                 "fetch_recent_events",
                 "read",
-                self.neo4j.run_query("""
+                self.graph.run_query("""
                     MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
                     WHERE d.domain = 'soc'
                       AND d.timestamp_epoch > $cutoff_epoch
@@ -1322,7 +1334,7 @@ class CampaignRepository:
                 trace,
                 "fetch_single_alert_event",
                 "read",
-                self.neo4j.run_query("""
+                self.graph.run_query("""
                     MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert {alert_id: $alert_id})
                     WHERE d.domain = 'soc'
                     RETURN a.alert_id AS alert_id,
@@ -1409,7 +1421,7 @@ class CampaignRepository:
                 trace,
                 "campaign_seed_promote",
                 "write",
-                self.neo4j.run_query(
+                self.graph.run_query(
                     f"MATCH (s:CampaignSeed {{seed_key: {_S(seed_key)}}})"
                     f" SET s.status = {_S('promoted')},"
                     f"     s.campaign_id = {_S(campaign.campaign_id)},"
@@ -1474,7 +1486,7 @@ class CampaignRepository:
                 trace,
                 "campaign_seed_expire_orphans",
                 "write",
-                self.neo4j.run_query(
+                self.graph.run_query(
                     f"MATCH (s:CampaignSeed)"
                     f" WHERE s.status = {_S('open')} AND s.updated_at_epoch < {_S(cutoff_epoch)}"
                     f" SET s.status = {_S('expired')},"
@@ -1495,7 +1507,7 @@ class CampaignRepository:
         trace: CampaignTraceCollector | None = None,
     ) -> bool:
         """
-        Write Campaign node and :MEMBER_OF edges to Neo4j.
+        Write Campaign node and :MEMBER_OF edges to AGE.
         Idempotent -- MATCH-then-CREATE (AGE has no MERGE).
         Returns True on success.
         """
@@ -1523,7 +1535,7 @@ class CampaignRepository:
                 trace,
                 "check_campaign_exists",
                 "read",
-                self.neo4j.run_query(
+                self.graph.run_query(
                     f"MATCH (c:Campaign {{campaign_id: {cid}}}) RETURN c"
                 ),
             )
@@ -1532,7 +1544,7 @@ class CampaignRepository:
                     trace,
                     "update_campaign",
                     "write",
-                    self.neo4j.run_query(
+                    self.graph.run_query(
                         f"MATCH (c:Campaign {{campaign_id: {cid}}})"
                         f" SET c.first_seen = {_S(campaign.first_seen.isoformat())},"
                         f"     c.last_seen = {_S(campaign.last_seen.isoformat())},"
@@ -1557,7 +1569,7 @@ class CampaignRepository:
                     trace,
                     "create_campaign",
                     "write",
-                    self.neo4j.run_query(
+                    self.graph.run_query(
                         f"CREATE (c:Campaign {{"
                         f" campaign_id: {cid},"
                         f" first_seen: {_S(campaign.first_seen.isoformat())},"
@@ -1590,7 +1602,7 @@ class CampaignRepository:
                     trace,
                     "member_edges_existing_read",
                     "read",
-                    self.neo4j.run_query(
+                    self.graph.run_query(
                         f"MATCH (a:Alert)-[:MEMBER_OF]->(c:Campaign {{campaign_id: {cid}}})"
                         f" WHERE {_alert_id_or_predicate('a', member_alert_ids)}"
                         f" RETURN a.alert_id AS alert_id"
@@ -1616,7 +1628,7 @@ class CampaignRepository:
                         trace,
                         "member_alert_nodes_read",
                         "read",
-                        self.neo4j.run_query(
+                        self.graph.run_query(
                             f"MATCH (a:Alert)"
                             f" WHERE {_alert_id_or_predicate('a', missing_edge_ids)}"
                             f" RETURN a.alert_id AS alert_id"
@@ -1655,7 +1667,7 @@ class CampaignRepository:
                         trace,
                         "member_edges_batch_create",
                         "write",
-                        self.neo4j.run_query(create_query),
+                        self.graph.run_query(create_query),
                     )
                     if trace is not None and trace.enabled:
                         trace.member_edges_created_count = (
@@ -1677,7 +1689,7 @@ class CampaignRepository:
             where_clause = "WHERE c.confidence >= $min_confidence"
             if trigger_rule:
                 where_clause += " AND c.trigger_rule = $trigger_rule"
-            results = await self.neo4j.run_query(f"""
+            results = await self.graph.run_query(f"""
                 MATCH (c:Campaign)
                 {where_clause}
                 OPTIONAL MATCH (a:Alert)-[:MEMBER_OF]->(c)
@@ -1693,7 +1705,7 @@ class CampaignRepository:
     async def get_campaign_detail(self, campaign_id: str) -> Optional[dict]:
         """Fetch full campaign detail for GET /api/soc/campaigns/{id}."""
         try:
-            results = await self.neo4j.run_query("""
+            results = await self.graph.run_query("""
                 MATCH (c:Campaign {campaign_id: $campaign_id})
                 OPTIONAL MATCH (a:Alert)-[:MEMBER_OF]->(c)
                 OPTIONAL MATCH (d:Decision)-[:DECIDED_ON]->(a)
@@ -1717,7 +1729,7 @@ class CampaignRepository:
     async def campaigns_exist(self) -> bool:
         """Check if any Campaign nodes exist (for startup recorrelation)."""
         try:
-            results = await self.neo4j.run_query(
+            results = await self.graph.run_query(
                 "MATCH (c:Campaign) RETURN count(c) AS n LIMIT 1", {}
             )
             return bool(results[0]["n"] > 0) if results else False
@@ -1826,14 +1838,14 @@ class CampaignMatcher:
 
     def __init__(
         self,
-        neo4j,
+        graph,
         config: dict,
         engine: CampaignCorrelationEngine,
         repo: CampaignRepository,
         background: bool = True,
         async_state: CampaignAsyncState | None = None,
     ):
-        self.neo4j = neo4j
+        self.graph = graph
         self.config = config
         self.engine = engine
         self.repo = repo
@@ -1940,14 +1952,14 @@ class CampaignMatcher:
         seed = self._shared_entity_seed(event)
         if not seed:
             return None
-        if self.neo4j is None or not hasattr(self.neo4j, "run_query"):
+        if self.graph is None or not hasattr(self.graph, "run_query"):
             return None
         try:
             rows = await _campaign_trace_query(
                 trace,
                 "check_materialized_campaign_by_identity",
                 "read",
-                self.neo4j.run_query(
+                self.graph.run_query(
                     f"MATCH (c:Campaign {{campaign_id: {_S(seed['campaign_id'])}}}) "
                     f"RETURN c.campaign_id AS campaign_id LIMIT 1"
                 ),
@@ -2074,7 +2086,7 @@ class CampaignMatcher:
                 trace,
                 "find_matching_campaign",
                 "read",
-                self.neo4j.run_query("""
+                self.graph.run_query("""
                     MATCH (a_new:Alert {alert_id: $alert_id})
                     MATCH (a_existing:Alert)-[:MEMBER_OF]->(c:Campaign)
                     WHERE a_existing.source_entity_id IS NOT NULL
@@ -2107,7 +2119,7 @@ class CampaignMatcher:
                 trace,
                 "existing_campaign_update",
                 "write",
-                self.neo4j.run_query(
+                self.graph.run_query(
                     f"MATCH (c:Campaign {{campaign_id: {cid}}})"
                     f" SET c.last_seen = {epoch}, c.alert_count = c.alert_count + 1"
                 ),
@@ -2116,7 +2128,7 @@ class CampaignMatcher:
                 trace,
                 "existing_campaign_edge_check",
                 "read",
-                self.neo4j.run_query(
+                self.graph.run_query(
                     f"MATCH (a:Alert {{alert_id: {aid}}})"
                     f"-[:MEMBER_OF]->(c:Campaign {{campaign_id: {cid}}}) RETURN a"
                 ),
@@ -2126,7 +2138,7 @@ class CampaignMatcher:
                     trace,
                     "existing_campaign_edge_create",
                     "write",
-                    self.neo4j.run_query(
+                    self.graph.run_query(
                         f"MATCH (a:Alert {{alert_id: {aid}}})"
                         f" MATCH (c:Campaign {{campaign_id: {cid}}})"
                         f" CREATE (a)-[:MEMBER_OF]->(c)"

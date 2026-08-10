@@ -100,6 +100,27 @@ def test_soc_startup_capture_produces_artifacts() -> None:
     assert not store._evidence_receipts
 
 
+def test_soc_learning_artifacts_write_v2_checkpoint() -> None:
+    store = InMemoryGraphStore(domain="soc")
+    adapter = _adapter(store)
+    _seed_verified(store, adapter._compound, count=1)
+
+    adapter._compound._persist_learning_artifacts(
+        "soc-capture-0",
+        actual_action=adapter._compound._preset.shape.action_names[0],
+        is_correct=True,
+        outcome="confirmed",
+        category=adapter._compound._preset.shape.category_names[0],
+    )
+
+    checkpoints = store.get_centroid_checkpoints("soc", include_v2=True, limit=None)
+    assert checkpoints
+    checkpoint = checkpoints[-1]
+    assert checkpoint["checkpoint_id"] is not None
+    assert checkpoint["factor_names_hash"]
+    assert checkpoint["iks"] == adapter._compound._compute_checkpoint_iks()
+
+
 def test_soc_capture_failure_does_not_block_startup(caplog: pytest.LogCaptureFixture) -> None:
     class FailingStore(InMemoryGraphStore):
         def write_conservation_status(self, *args: Any, **kwargs: Any) -> None:

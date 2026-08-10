@@ -202,9 +202,9 @@ def test_triage_passes_correct_category_field_non_blocking():
 def test_evolution_router_get_deployments_still_works(monkeypatch):
     from app.routers import evolution
 
-    neo4j = AsyncMock()
-    neo4j.run_query = AsyncMock(return_value=[{"n": 10}])
-    monkeypatch.setattr(evolution, "graph_client", neo4j)
+    graph = AsyncMock()
+    graph.run_query = AsyncMock(return_value=[{"n": 10}])
+    monkeypatch.setattr(evolution, "graph_client", graph)
 
     response = TestClient(app).get("/api/deployments")
 

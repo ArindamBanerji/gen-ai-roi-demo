@@ -1,7 +1,7 @@
 """
 tests/test_campaign_matcher.py -- F6 CampaignRepository + CampaignMatcher tests.
 
-4 tests using AsyncMock Neo4j -- no live database required.
+4 tests using AsyncMock AGE -- no live database required.
 
 Run from backend/:
     pytest tests/test_campaign_matcher.py -v
@@ -181,19 +181,19 @@ class FakeNoopMemberCreateGraph(FakeCampaignGraph):
 def test_check_alert_returns_none_on_exception():
     """
     CampaignMatcher.check_alert must never raise.
-    Neo4j failure -> log warning -> return None.
+    AGE failure -> log warning -> return None.
     """
-    mock_neo4j = AsyncMock()
-    mock_neo4j.run_query.side_effect = Exception("Neo4j down")
+    mock_graph = AsyncMock()
+    mock_graph.run_query.side_effect = Exception("AGE down")
 
     engine = CampaignCorrelationEngine(DEFAULT_CONFIG)
-    repo = CampaignRepository(mock_neo4j)
-    matcher = CampaignMatcher(mock_neo4j, DEFAULT_CONFIG, engine, repo)
+    repo = CampaignRepository(mock_graph)
+    matcher = CampaignMatcher(mock_graph, DEFAULT_CONFIG, engine, repo)
 
     result = run(matcher.check_alert("alert-123"))
 
     assert result is None, (
-        f"check_alert must return None on Neo4j failure, not raise. Got: {result!r}"
+        f"check_alert must return None on AGE failure, not raise. Got: {result!r}"
     )
 
 
@@ -241,16 +241,16 @@ def test_check_alert_reuses_stable_campaign_identity_after_correlation():
 
 def test_check_alert_returns_none_when_no_campaign():
     """
-    When no existing campaign and Neo4j returns no recent events,
+    When no existing campaign and AGE returns no recent events,
     check_alert must return None (not create a spurious campaign).
     """
-    mock_neo4j = AsyncMock()
+    mock_graph = AsyncMock()
     # All reads return empty — no existing campaign, no recent events
-    mock_neo4j.run_query.return_value = []
+    mock_graph.run_query.return_value = []
 
     engine = CampaignCorrelationEngine(DEFAULT_CONFIG)
-    repo = CampaignRepository(mock_neo4j)
-    matcher = CampaignMatcher(mock_neo4j, DEFAULT_CONFIG, engine, repo)
+    repo = CampaignRepository(mock_graph)
+    matcher = CampaignMatcher(mock_graph, DEFAULT_CONFIG, engine, repo)
 
     result = run(matcher.check_alert("alert-xyz"))
 
@@ -268,10 +268,10 @@ def test_repository_write_campaign_is_idempotent():
     Phase 1 write_campaign uses AGE-safe MATCH-then-CREATE semantics. Calling
     it twice with the same campaign_id must succeed without duplicate edges.
     """
-    mock_neo4j = AsyncMock()
-    mock_neo4j.run_query.return_value = None
+    mock_graph = AsyncMock()
+    mock_graph.run_query.return_value = None
 
-    repo = CampaignRepository(mock_neo4j)
+    repo = CampaignRepository(mock_graph)
 
     campaign = Campaign(
         campaign_id="c-001",

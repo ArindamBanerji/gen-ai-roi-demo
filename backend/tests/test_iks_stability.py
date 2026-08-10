@@ -29,8 +29,8 @@ client = TestClient(app)
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _neo4j_reset_mock():
-    """Mock that satisfies the Neo4j query inside reset_demo_alerts()."""
+def _graph_reset_mock():
+    """Mock that satisfies the AGE query inside reset_demo_alerts()."""
     mock = AsyncMock()
     mock.run_query = AsyncMock(return_value=[{"reset_count": 10}])
     return mock
@@ -47,7 +47,7 @@ def test_alerts_reset_preserves_profile_scorer():
     if iks_before == 0.0:
         pytest.skip("ProfileScorer not initialized -- no IKS data")
 
-    with patch("app.routers.triage.graph_client", _neo4j_reset_mock()):
+    with patch("app.routers.triage.graph_client", _graph_reset_mock()):
         resp = client.post("/api/alerts/reset")
     assert resp.status_code == 200
 
@@ -69,7 +69,7 @@ def test_alerts_reset_does_not_collapse_iks():
     if iks_before == 0.0:
         pytest.skip("ProfileScorer not initialized -- no IKS data")
 
-    with patch("app.routers.triage.graph_client", _neo4j_reset_mock()):
+    with patch("app.routers.triage.graph_client", _graph_reset_mock()):
         resp = client.post("/api/alerts/reset")
     assert resp.status_code == 200
 
@@ -143,9 +143,9 @@ def test_iks_stable_after_learning_decisions():
     assert iks_before >= 0, f"IKS must be non-negative before test: {iks_before}"
 
     # Simulate 5 demo-cycle resets (what beforeEach + explicit reset trigger)
-    mock_neo4j = _neo4j_reset_mock()
+    mock_graph = _graph_reset_mock()
     for _ in range(5):
-        with patch("app.routers.triage.graph_client", mock_neo4j):
+        with patch("app.routers.triage.graph_client", mock_graph):
             resp = client.post("/api/alerts/reset")
         assert resp.status_code == 200
 
@@ -174,7 +174,7 @@ def test_iks_above_70_after_alerts_reset():
     if iks_before <= 70:
         pytest.skip(f"IKS baseline is {iks_before:.1f} <= 70 -- bootstrap not complete")
 
-    with patch("app.routers.triage.graph_client", _neo4j_reset_mock()):
+    with patch("app.routers.triage.graph_client", _graph_reset_mock()):
         resp = client.post("/api/alerts/reset")
     assert resp.status_code == 200
 
@@ -199,7 +199,7 @@ def test_alerts_reset_preserves_iks_above_threshold():
     iks_before = before["content"]["iks_score"]
 
     # Call the reset endpoint
-    with patch("app.routers.triage.graph_client", _neo4j_reset_mock()):
+    with patch("app.routers.triage.graph_client", _graph_reset_mock()):
         reset_resp = client.post("/api/alerts/reset")
     assert reset_resp.status_code == 200
 

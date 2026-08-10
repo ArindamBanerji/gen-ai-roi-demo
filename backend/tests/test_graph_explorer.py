@@ -21,7 +21,7 @@ from app.services.graph_explorer import GraphExplorerService, PREBUILT_QUERIES
 # Shared mock helpers
 # ---------------------------------------------------------------------------
 
-def _fake_neo4j_for_summary():
+def _fake_graph_for_summary():
     """Returns two different result sets depending on which summary query is called."""
     call_count = [0]
 
@@ -42,19 +42,19 @@ def _fake_neo4j_for_summary():
             ]
         return []
 
-    class _FakeNeo4j:
+    class _FakeAGE:
         pass
-    _FakeNeo4j.run_query = staticmethod(run_query)
-    return _FakeNeo4j()
+    _FakeAGE.run_query = staticmethod(run_query)
+    return _FakeAGE()
 
 
-def _fake_neo4j_rows(rows: list):
+def _fake_graph_rows(rows: list):
     async def run_query(query, params=None):
         return rows
-    class _FakeNeo4j:
+    class _FakeAGE:
         pass
-    _FakeNeo4j.run_query = staticmethod(run_query)
-    return _FakeNeo4j()
+    _FakeAGE.run_query = staticmethod(run_query)
+    return _FakeAGE()
 
 
 # ---------------------------------------------------------------------------
@@ -108,8 +108,8 @@ def test_top_nodes_endpoint():
     async def fake_run_query(query, params=None):
         return sample_rows
 
-    with patch("app.routers.framework_router.graph_client") as mock_neo4j:
-        mock_neo4j.run_query = fake_run_query
+    with patch("app.routers.framework_router.graph_client") as mock_graph:
+        mock_graph.run_query = fake_run_query
         client = TestClient(app)
         resp = client.get("/api/soc/graph/top-nodes")
 
@@ -139,8 +139,8 @@ def test_graph_summary():
             return [{"type": "INVOLVES", "cnt": 6}]
         return []
 
-    with patch("app.routers.framework_router.graph_client") as mock_neo4j:
-        mock_neo4j.run_query = fake_run_query
+    with patch("app.routers.framework_router.graph_client") as mock_graph:
+        mock_graph.run_query = fake_run_query
         client = TestClient(app)
         resp = client.get("/api/soc/graph/summary")
 
@@ -195,8 +195,8 @@ def test_prebuilt_query_run():
     async def fake_run_query(query, params=None):
         return sample_user_rows
 
-    with patch("app.routers.framework_router.graph_client") as mock_neo4j:
-        mock_neo4j.run_query = fake_run_query
+    with patch("app.routers.framework_router.graph_client") as mock_graph:
+        mock_graph.run_query = fake_run_query
         client = TestClient(app)
         resp = client.post("/api/soc/graph/prebuilt/top_risk_users")
 

@@ -66,7 +66,7 @@ def test_bootstrap_below_converged():
 
 
 def test_baseline_confidence_matches_bootstrap_scorer(monkeypatch):
-    class FakeNeo4jClient:
+    class FakeGraphClient:
         async def run_query(self, query, params=None):
             if "MATCH (a:Alert {status: 'pending'})" in query:
                 return []
@@ -83,7 +83,7 @@ def test_baseline_confidence_matches_bootstrap_scorer(monkeypatch):
     def no_live_scorer():
         raise RuntimeError("force centroid fallback category for baseline test")
 
-    monkeypatch.setattr(soc, "graph_client", FakeNeo4jClient())
+    monkeypatch.setattr(soc, "graph_client", FakeGraphClient())
     monkeypatch.setattr(gae_state, "get_profile_scorer", no_live_scorer)
     soc._reset_baseline_scorer_cache()
 

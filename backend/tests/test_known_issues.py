@@ -52,15 +52,15 @@ on April 1, 2026.
 # in executive_narrative.py _what_knows() method.
 # Priority: P2 — cosmetic only
 
-# BACKLOG-008: rebuild_neo4j_v6.py end-to-end run not yet verified
-# Action: Run rebuild_neo4j_v6.py (without --dry-run) against a
+# BACKLOG-008: rebuild_graph_v6.py end-to-end run not yet verified
+# Action: Run rebuild_graph_v6.py (without --dry-run) against a
 # test/staging Aura instance to confirm full recreation works.
 # Do NOT run against production Aura until datetime migration is complete
 # and epoch integers are in all seed scripts.
 # Gate: node count summary matches pre-migration snapshot counts.
 # Priority: P1 — recovery path must be verified before pilot signing.
 # Dependency: datetime migration (Block 8.3) must complete first so
-# seed scripts write epoch integers, not Neo4j datetime objects.
+# seed scripts write epoch integers, not AGE datetime objects.
 
 # BACKLOG-009: V-NARRATIVE-CISO P0 — Tab 1 alert_type vs category
 # Root cause: GET /api/soc/tab/1/content was reading a.type (Sentinel
@@ -73,7 +73,7 @@ on April 1, 2026.
 
 # BACKLOG-010: Add E2E test — Tab 1 content endpoint returns real category names
 # Action: Add Playwright test that hits GET /api/soc/tab/1/content and asserts
-# top_alert_types[0].type != "unknown" (requires live Neo4j with seeded data).
+# top_alert_types[0].type != "unknown" (requires live AGE with seeded data).
 # Gate: Test passes against staging environment with synthetic pilot decisions.
 # Priority: P1 — regression guard for Fix 1.1.
 

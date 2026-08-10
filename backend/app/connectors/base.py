@@ -4,7 +4,7 @@ UCL Connector Base -- Abstract base class for all Universal Context Layer connec
 Every data source (Pulsedive, GreyNoise, CrowdStrike, ...) implements UCLConnector
 and returns ConnectorResult / HealthStatus from its two required async methods.
 
-Design: keep this file small. No Neo4j or HTTP imports here -- those belong
+Design: keep this file small. No AGE or HTTP imports here -- those belong
 in the concrete connector implementations.
 """
 from abc import ABC, abstractmethod
@@ -21,8 +21,8 @@ from typing import Dict, List
 class ConnectorResult:
     """Summary returned by UCLConnector.refresh()."""
     source: str                          # e.g. "pulsedive_live", "greynoise_fallback"
-    indicators_ingested: int             # IOC / detection nodes written to Neo4j
-    relationships_created: int           # Edges created / updated in Neo4j
+    indicators_ingested: int             # IOC / detection nodes written to AGE
+    relationships_created: int           # Edges created / updated in AGE
     enrichment_summary: List[Dict]       # Per-indicator detail rows (for logs / UI)
     timestamp: str = field(             # ISO-8601 UTC
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
@@ -82,7 +82,7 @@ class UCLConnector(ABC):
     @abstractmethod
     async def refresh(self) -> ConnectorResult:
         """
-        Pull fresh data from the source, write to Neo4j, return a summary.
+        Pull fresh data from the source, write to AGE, return a summary.
 
         Must be idempotent: running refresh() twice should not create duplicates
         (use MERGE in Cypher queries, not CREATE).

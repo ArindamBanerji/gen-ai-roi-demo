@@ -1,7 +1,7 @@
 """SOC AGE graph client. Uses GraphConfig → AGEClient.
 
-Historical name was neo4j.py — renamed to reflect actual AGE backend
-(no Neo4j dependency).
+Historical name was graph.py — renamed to reflect actual AGE backend
+(no AGE dependency).
 """
 
 import os
@@ -36,10 +36,10 @@ try:
         test_mode=_GRAPH_CONFIG.active_test_mode,
     )
 except GraphConfigError:
-    if os.getenv("GRAPH_BACKEND", "").strip().lower() == "neo4j":
+    configured_backend = os.getenv("GRAPH_BACKEND", "").strip().lower()
+    if configured_backend and configured_backend not in {"sqlite", "age", "dual_write"}:
         raise GraphConfigError(
-            "Legacy Neo4j backend is retired. Use GRAPH_BACKEND=age with "
-            "GraphConfig."
+            "Legacy AGE backend is retired. Use GRAPH_BACKEND=age with GraphConfig."
         ) from None
     raise
 
@@ -62,4 +62,4 @@ try:
 except Exception as _exc:
     raise SystemExit(f"FATAL: AGEClient init failed: {_exc}") from _exc
 
-neo4j_client = graph_client  # backward compat, will be removed
+graph_client = graph_client  # backward compat, will be removed

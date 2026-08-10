@@ -1,5 +1,5 @@
 """
-test_econ1.py -- ECON-1 unit tests (no live Neo4j required).
+test_econ1.py -- ECON-1 unit tests (no live AGE required).
 
 Tests the /api/soc/economics endpoint added to metrics.py.
 
@@ -58,7 +58,7 @@ def test_economics_endpoint_registered():
 # ============================================================================
 
 def test_economics_zero_decisions_safe():
-    """Mock Neo4j: 0 decisions, 0 users. Assert safe zero-state response."""
+    """Mock AGE: 0 decisions, 0 users. Assert safe zero-state response."""
     from app.routers.metrics import get_economics
 
     async def _run():

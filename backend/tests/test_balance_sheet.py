@@ -65,13 +65,13 @@ def _install_happy_path(monkeypatch):
         lambda: _SnapshotStub(categories=categories, verified_decisions=sum(v["count"] for v in categories.values())),
     )
 
-    async def fake_visible_iks(_neo4j=None):
+    async def fake_visible_iks(_graph=None):
         return 72.5
 
-    async def fake_build_centroid_export(_scorer, _neo4j=None):
+    async def fake_build_centroid_export(_scorer, _graph=None):
         return _fake_centroid_export()
 
-    async def fake_learning_health(_neo4j=None):
+    async def fake_learning_health(_graph=None):
         return {"status": "GREEN", "signal": 0.91}
 
     async def fake_auto_approve():
@@ -87,7 +87,7 @@ def _install_happy_path(monkeypatch):
             },
         }
 
-    async def fake_timeline(_neo4j=None):
+    async def fake_timeline(_graph=None):
         return {"timeline": [], "ceiling_estimate": None}
 
     monkeypatch.setattr(balance_sheet, "compute_visible_iks", fake_visible_iks)
@@ -208,7 +208,7 @@ def test_category_status_enum_is_restricted(monkeypatch):
 def test_learning_balance_sheet_endpoint_returns_200(monkeypatch):
     from app.main import app
 
-    async def fake_generate(_neo4j=None):
+    async def fake_generate(_graph=None):
         return balance_sheet.LearningBalanceSheet(
             categories=[
                 balance_sheet.CategoryBalance(
@@ -255,16 +255,16 @@ def test_generate_balance_sheet_handles_cold_start(monkeypatch):
     monkeypatch.setattr(balance_sheet, "get_snapshot", lambda: (_ for _ in ()).throw(RuntimeError("cold start")))
     monkeypatch.setattr(balance_sheet, "get_profile_scorer", lambda: None)
 
-    async def fake_visible_iks(_neo4j=None):
+    async def fake_visible_iks(_graph=None):
         return 0.0
 
-    async def fake_learning_health(_neo4j=None):
+    async def fake_learning_health(_graph=None):
         return {"status": "CALIBRATING"}
 
     async def fake_auto_approve():
         return {"by_category": {}, "coverage_pct": 0.0}
 
-    async def fake_timeline(_neo4j=None):
+    async def fake_timeline(_graph=None):
         return {"timeline": [], "ceiling_estimate": None}
 
     monkeypatch.setattr(balance_sheet, "compute_visible_iks", fake_visible_iks)

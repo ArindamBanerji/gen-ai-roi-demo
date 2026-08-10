@@ -83,7 +83,7 @@ def test_c9b_seed_creates_required_alert_context_edges():
 
 
 def test_asset_criticality_factor_contract_is_categorical():
-    class FakeNeo4j:
+    class FakeAGE:
         def __init__(self, criticality):
             self.criticality = criticality
 
@@ -92,9 +92,9 @@ def test_asset_criticality_factor_contract_is_categorical():
 
     factor = AssetCriticalityFactor()
 
-    assert asyncio.run(factor.compute({"id": "ALERT-CAT"}, FakeNeo4j("critical"))) == 1.0
-    assert asyncio.run(factor.compute({"id": "ALERT-CAT"}, FakeNeo4j("high"))) == 0.8
-    assert asyncio.run(factor.compute({"id": "ALERT-CAT"}, FakeNeo4j(0.92))) == 0.5
+    assert asyncio.run(factor.compute({"id": "ALERT-CAT"}, FakeAGE("critical"))) == 1.0
+    assert asyncio.run(factor.compute({"id": "ALERT-CAT"}, FakeAGE("high"))) == 0.8
+    assert asyncio.run(factor.compute({"id": "ALERT-CAT"}, FakeAGE(0.92))) == 0.5
 
 
 def test_low_confidence_credential_access_still_routes_to_analyst():

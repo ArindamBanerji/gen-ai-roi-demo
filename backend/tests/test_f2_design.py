@@ -152,7 +152,7 @@ def test_overall_quality_is_mean_of_categories():
 # ============================================================================
 
 def test_noise_map_null_when_no_decisions():
-    """Mock Neo4j returning total=0 for all categories.
+    """Mock AGE returning total=0 for all categories.
     All fp_rate must be None and estimated=True."""
     from app.routers.soc import get_detection_engineering
     from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SOC_CATEGORIES
@@ -183,7 +183,7 @@ def test_noise_map_null_when_no_decisions():
 # ============================================================================
 
 def test_noise_map_fp_rate_computed_correctly():
-    """Mock Neo4j: total=10, fp_count=3 for credential_access.
+    """Mock AGE: total=10, fp_count=3 for credential_access.
     fp_rate must equal 0.3 for that category."""
     from app.routers.soc import get_detection_engineering
     from app.domains.soc.config import SOC_PROFILE_CENTROIDS, SOC_CATEGORIES

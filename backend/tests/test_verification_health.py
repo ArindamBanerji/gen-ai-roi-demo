@@ -1,6 +1,6 @@
 """
 Block 7.6 -- tests for compute_verification_health().
-All tests use AsyncMock for graph_client -- no live Neo4j required.
+All tests use AsyncMock for graph_client -- no live AGE required.
 """
 import asyncio
 import os
@@ -18,7 +18,7 @@ from app.services.learning_health import compute_verification_health
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _neo4j_mock(total=1000, verified=300,
+def _graph_mock(total=1000, verified=300,
                 last_total=100, last_verified=30,
                 prior_total=100, prior_verified=30,
                 conservation_status="GREEN"):
@@ -59,7 +59,7 @@ def _patch_conservation(status: str):
 # ---------------------------------------------------------------------------
 
 def test_green_when_all_conditions_met():
-    mock, _ = _neo4j_mock(
+    mock, _ = _graph_mock(
         total=1000, verified=300,       # coverage = 0.30 >= 0.20 [OK]
         last_total=100, last_verified=30,   # last rate = 0.30
         prior_total=100, prior_verified=30, # prior rate = 0.30 -> no drift [OK]
@@ -79,7 +79,7 @@ def test_green_when_all_conditions_met():
 # ---------------------------------------------------------------------------
 
 def test_amber_when_coverage_low():
-    mock, _ = _neo4j_mock(
+    mock, _ = _graph_mock(
         total=1000, verified=100,       # coverage = 0.10 < 0.20 [FAIL]
         last_total=100, last_verified=10,
         prior_total=100, prior_verified=10,
@@ -97,7 +97,7 @@ def test_amber_when_coverage_low():
 # ---------------------------------------------------------------------------
 
 def test_amber_when_drift_detected():
-    mock, _ = _neo4j_mock(
+    mock, _ = _graph_mock(
         total=1000, verified=250,       # coverage 25% [OK]
         last_total=100, last_verified=10,   # last rate = 0.10
         prior_total=100, prior_verified=30, # prior rate = 0.30 -> drop = 67% [FAIL]
@@ -116,7 +116,7 @@ def test_amber_when_drift_detected():
 # ---------------------------------------------------------------------------
 
 def test_red_when_no_verifications():
-    mock, _ = _neo4j_mock(
+    mock, _ = _graph_mock(
         total=500, verified=0,          # coverage = 0.0
         last_total=50, last_verified=0,
         prior_total=50, prior_verified=0,
@@ -134,7 +134,7 @@ def test_red_when_no_verifications():
 # ---------------------------------------------------------------------------
 
 def test_status_logic_all_unhealthy_is_red():
-    mock, _ = _neo4j_mock(
+    mock, _ = _graph_mock(
         total=1000, verified=50,        # coverage = 0.05 < 0.20 [FAIL]
         last_total=100, last_verified=2,    # last rate = 0.02
         prior_total=100, prior_verified=20, # prior rate = 0.20 -> drop = 90% [FAIL]
@@ -149,7 +149,7 @@ def test_status_logic_all_unhealthy_is_red():
 
 
 def test_calibrating_conservation_is_healthy():
-    mock, _ = _neo4j_mock(
+    mock, _ = _graph_mock(
         total=1000, verified=300,
         last_total=100, last_verified=30,
         prior_total=100, prior_verified=30,

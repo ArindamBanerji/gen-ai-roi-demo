@@ -1,7 +1,7 @@
 """
 Threat Intel Service -- backward-compat wrapper (C3 refactor)
 
-All Pulsedive logic (constants, IOC list, fallback data, Neo4j writes) now
+All Pulsedive logic (constants, IOC list, fallback data, AGE writes) now
 lives in backend/app/connectors/pulsedive.py.
 
 This module exists solely so that existing callers (routers/graph.py) can

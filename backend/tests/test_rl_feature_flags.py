@@ -34,7 +34,7 @@ def test_learning_enabled_is_still_centroid_gate():
     assert "_soc_learning_active = _soc_learning_enabled()" in source
     assert "if _soc_learning_active and action_name in SCORER_ACTIONS:" in source
     assert "_guarded_update(" in source
-    assert triage.LEARNING_ENABLED is False
+    assert triage.LEARNING_ENABLED is True
 
 
 def test_binary_outcome_not_derived_from_graded_reward():
@@ -51,13 +51,13 @@ def test_binary_outcome_not_derived_from_graded_reward():
 async def test_no_exploration_metadata_when_flag_false(monkeypatch):
     from test_rl_triage_integration import _patch_common_analyze
 
-    fake_neo4j = _patch_common_analyze(monkeypatch)
+    fake_graph = _patch_common_analyze(monkeypatch)
     monkeypatch.setattr(soc_config, "RL_EXPLORATION_ENABLED", False)
 
     response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
 
     assert response["recommendation"]["action"] == "escalate"
-    assert not any("d.explored                = true" in query for query in fake_neo4j.queries)
+    assert not any("d.explored                = true" in query for query in fake_graph.queries)
 
 
 @pytest.mark.asyncio
@@ -75,11 +75,11 @@ async def test_reset_demo_alerts_clears_rl_state(monkeypatch):
         "escalate",
     )
 
-    class FakeNeo4j:
+    class FakeAGE:
         async def run_query(self, query):
             return [{"reset_count": 1}]
 
-    monkeypatch.setattr(triage, "graph_client", FakeNeo4j())
+    monkeypatch.setattr(triage, "graph_client", FakeAGE())
     monkeypatch.setattr(
         triage.state_manager,
         "reset_except",

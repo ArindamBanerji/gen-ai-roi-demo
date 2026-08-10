@@ -56,7 +56,7 @@ class SimilarCasesBase(abc.ABC):
     def get_theta(self, category: str) -> float:
         """Return per-category cosine similarity threshold for retrieval."""
 
-    # ── Neo4j query ──────────────────────────────────────────────────────────
+    # ── AGE query ──────────────────────────────────────────────────────────
 
     async def _fetch_verified_decisions(
         self,
@@ -65,7 +65,7 @@ class SimilarCasesBase(abc.ABC):
         limit: int = SIMILAR_CASES_MAX_SCAN,
     ) -> List[Dict[str, Any]]:
         """
-        Fetch up to *limit* verified Decision nodes for *category* from Neo4j,
+        Fetch up to *limit* verified Decision nodes for *category* from AGE,
         most-recent first.
 
         Returns a list of dicts with keys:
@@ -91,7 +91,7 @@ class SimilarCasesBase(abc.ABC):
                 {"category": category, "limit": limit},
             )
         except Exception as exc:
-            log.warning("[SIMILAR-CASES] Neo4j query failed for category=%r: %s", category, exc)
+            log.warning("[SIMILAR-CASES] AGE query failed for category=%r: %s", category, exc)
             return []
 
         results = []

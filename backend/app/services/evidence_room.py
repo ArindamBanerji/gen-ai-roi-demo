@@ -188,23 +188,6 @@ class EvidenceRoomService:
         product = _safe_float(health.get("signal"))
         threshold = _safe_float(health.get("theta_min"))
 
-        if product == 0.0 and status in {"RED", "UNKNOWN"}:
-            try:
-                from app.db.graph_client import graph_client
-                from app.services.iks import compute_visible_iks
-
-                iks_score = float(await compute_visible_iks(graph_client))
-                if iks_score >= 40.0:
-                    status = "GREEN"
-                    health_source = "iks_fallback"
-                    fallback_reason = "zero_product_learning_health"
-                elif iks_score >= 20.0:
-                    status = "AMBER"
-                    health_source = "iks_fallback"
-                    fallback_reason = "zero_product_learning_health"
-            except Exception as exc:
-                log.debug("[EvidenceRoom] IKS fallback unavailable: %s", exc)
-
         verified_decisions = 0
         try:
             from app.state.graph_snapshot import get_snapshot

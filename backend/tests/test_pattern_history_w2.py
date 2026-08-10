@@ -24,7 +24,7 @@ def _make_alert(alert_type="credential_access"):
     return {"id": "ALERT-TEST-001", "alert_type": alert_type}
 
 
-def _make_neo4j_mock(results):
+def _make_graph_mock(results):
     mock = AsyncMock()
     mock.run_query = AsyncMock(return_value=results)
     return mock
@@ -43,14 +43,14 @@ def run(coro):
 # ---------------------------------------------------------------------------
 
 def test_pattern_history_fallback_when_no_edges():
-    """Empty Neo4j results -> fallback value 0.40."""
+    """Empty AGE results -> fallback value 0.40."""
     from app.domains.soc.factors import PatternHistoryFactorComputer
 
     computer = PatternHistoryFactorComputer()
     alert = _make_alert()
-    neo4j = _make_neo4j_mock([])
+    graph = _make_graph_mock([])
 
-    result = run(computer.compute(alert, neo4j, action_index=0))
+    result = run(computer.compute(alert, graph, action_index=0))
 
     assert result == 0.40
 
@@ -70,9 +70,9 @@ def test_pattern_history_uses_triggered_evolution_edges():
         {"pattern_value": 0.80, "decision_num": 42},
         {"pattern_value": 0.80, "decision_num": 42},
     ]
-    neo4j = _make_neo4j_mock(results)
+    graph = _make_graph_mock(results)
 
-    result = run(computer.compute(alert, neo4j, action_index=1))
+    result = run(computer.compute(alert, graph, action_index=1))
 
     assert abs(result - 0.80) < 0.01
 
@@ -93,9 +93,9 @@ def test_pattern_history_recency_weighting():
         {"pattern_value": 0.90, "decision_num": 100},
         {"pattern_value": 0.40, "decision_num": 70},
     ]
-    neo4j = _make_neo4j_mock(results)
+    graph = _make_graph_mock(results)
 
-    result = run(computer.compute(alert, neo4j, action_index=0))
+    result = run(computer.compute(alert, graph, action_index=0))
 
     expected = (0.90 * 1.0 + 0.40 * 0.5) / 1.5  # ~= 0.7333
     assert abs(result - expected) < 0.01
@@ -109,8 +109,8 @@ def test_pattern_history_clips_to_unit_interval():
     alert = _make_alert()
 
     results = [{"pattern_value": 1.20, "decision_num": 10}]
-    neo4j = _make_neo4j_mock(results)
+    graph = _make_graph_mock(results)
 
-    result = run(computer.compute(alert, neo4j, action_index=2))
+    result = run(computer.compute(alert, graph, action_index=2))
 
     assert result <= 1.0

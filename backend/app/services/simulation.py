@@ -112,13 +112,13 @@ _ATTACK_TECHNIQUES: Dict[str, str] = {
 }
 
 # ---------------------------------------------------------------------------
-# Minimal fallback alert pool — used when Neo4j has no seeded alerts
+# Minimal fallback alert pool — used when AGE has no seeded alerts
 # ---------------------------------------------------------------------------
 # Each entry provides the fields that the 6 FactorComputers read from alert dicts:
 #   TravelMatchFactor     → user_id, source_location
-#   AssetCriticalityFactor→ id (alert_id), traverses Neo4j
-#   ThreatIntelFactor     → id, traverses Neo4j
-#   PatternHistoryFactor  → alert_type, traverses Neo4j
+#   AssetCriticalityFactor→ id (alert_id), traverses AGE
+#   ThreatIntelFactor     → id, traverses AGE
+#   PatternHistoryFactor  → alert_type, traverses AGE
 #   TimeAnomalyFactor     → weekend_login, business_hours_login
 #   DeviceTrustFactor     → mfa_completed, device_fingerprint_match, vpn_provider
 
@@ -257,13 +257,13 @@ class SimulationOrchestrator:
 
         For each decision:
           1. Pick alert from pool (round-robin)
-          2. Fetch full alert data from Neo4j (same as POST /api/alert/analyze)
+          2. Fetch full alert data from AGE (same as POST /api/alert/analyze)
           3. Run compute_factor_vector (same pipeline)
           4. score_alert -> select action (same pipeline)
-          5. Write Decision node to Neo4j with factor_vector stored (R4)
+          5. Write Decision node to AGE with factor_vector stored (R4)
           6. Emit DecisionMade + GraphMutated events
           7. Generate outcome: Bernoulli oracle with category success rate
-          8. Update Decision node outcome in Neo4j (same as POST /api/alert/outcome)
+          8. Update Decision node outcome in AGE (same as POST /api/alert/outcome)
           9. Read factor_vector back from graph + call learning_state.update() (same pipeline)
          10. save_learning_state()
          11. Emit OutcomeVerified + GraphMutated events
@@ -274,7 +274,7 @@ class SimulationOrchestrator:
         Parameters
         ----------
         n_decisions : int
-        alert_pool  : list of alert dicts (from Neo4j or fallback pool)
+        alert_pool  : list of alert dicts (from AGE or fallback pool)
         speed_ms    : milliseconds to sleep between decisions (0 = no delay)
         on_progress : optional async callable(step, total, record)
 
@@ -342,7 +342,7 @@ class SimulationOrchestrator:
             ground_truth_action = cast(str, alert_meta.get("ground_truth_action", "investigate"))
 
             # ------------------------------------------------------------------
-            # Step 2: Fetch full alert data from Neo4j
+            # Step 2: Fetch full alert data from AGE
             # (same as POST /api/alert/analyze → graph_client.get_alert)
             # ------------------------------------------------------------------
             try:

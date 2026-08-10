@@ -209,7 +209,7 @@ def get_demo_context_for_alert(alert_id: str) -> Dict[str, Any]:
     Get simulated context for demo alerts.
 
     This is for testing/demo purposes only.
-    In production, context comes from Neo4j.
+    In production, context comes from AGE.
     """
     if alert_id == "ALERT-7823":
         # John Smith - Traveling, high risk (CONFLICT scenario)

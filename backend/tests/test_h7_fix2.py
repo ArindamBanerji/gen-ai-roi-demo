@@ -1,5 +1,5 @@
 """
-H7-FIX-2 tests: GET /soc/graph-stats endpoint returns real Neo4j counts,
+H7-FIX-2 tests: GET /soc/graph-stats endpoint returns real AGE counts,
 not hardcoded values.
 
 Run from backend/ directory:
@@ -46,8 +46,8 @@ def test_graph_stats_response_has_required_fields():
     )
 
 
-def test_graph_stats_source_is_neo4j_on_success():
-    """source field equals 'neo4j' when all queries succeed."""
+def test_graph_stats_source_is_graph_on_success():
+    """source field equals 'graph' when all queries succeed."""
     from app.routers.evolution import get_graph_stats
 
     async def _run():
@@ -60,8 +60,8 @@ def test_graph_stats_source_is_neo4j_on_success():
             return await get_graph_stats()
 
     result = asyncio.run(_run())
-    assert result["source"] == "neo4j", (
-        f"Expected source='neo4j', got {result['source']!r}"
+    assert result["source"] == "graph", (
+        f"Expected source='graph', got {result['source']!r}"
     )
 
 
@@ -71,7 +71,7 @@ def test_graph_stats_source_unavailable_on_error():
 
     async def _run():
         with patch("app.routers.evolution.graph_client") as mock_client:
-            mock_client.run_query = AsyncMock(side_effect=RuntimeError("Neo4j down"))
+            mock_client.run_query = AsyncMock(side_effect=RuntimeError("AGE down"))
             return await get_graph_stats()
 
     with pytest.raises(HTTPException) as exc_info:

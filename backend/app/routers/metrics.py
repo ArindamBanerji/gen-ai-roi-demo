@@ -63,7 +63,7 @@ def generate_compounding_data(weeks: int = 4) -> CompoundingResponse:
     """
     Generate mock compounding data showing Week 1 vs Week 4 improvement.
 
-    In production, this would query Neo4j for:
+    In production, this would query AGE for:
     - Node count growth over time
     - Pattern occurrences
     - Evolution events
@@ -112,7 +112,7 @@ def generate_compounding_data(weeks: int = 4) -> CompoundingResponse:
         )
     ]
 
-    # Recent evolution events (from Neo4j in production)
+    # Recent evolution events (from AGE in production)
     evolution_events = [
         EvolutionEvent(
             id="EVO-0891",
@@ -317,20 +317,20 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
 
 
 # ============================================================================
-# POST /api/demo/seed - Seed Neo4j Database
+# POST /api/demo/seed - Seed AGE Database
 # ============================================================================
 
 @router.post("/demo/seed")
-async def seed_neo4j():
+async def seed_graph():
     """
     Legacy seed endpoint -- blocked on AGE backend.
-    seed_neo4j.py wipes the entire graph (all nodes, all labels). Use seed_zero_day.py.
+    seed_graph.py wipes the entire graph (all nodes, all labels). Use seed_zero_day.py.
     """
-    print("[DEMO] /demo/seed blocked -- seed_neo4j.py is LEGACY on AGE backend.")
+    print("[DEMO] /demo/seed blocked -- seed_graph.py is LEGACY on AGE backend.")
     return {
         "status": "disabled",
         "message": (
-            "seed_neo4j.py is LEGACY and blocked on the AGE backend. "
+            "seed_graph.py is LEGACY and blocked on the AGE backend. "
             "Re-seed manually: python backend/support/setup/seed_zero_day.py"
         ),
         "timestamp": datetime.now().isoformat(),
@@ -346,7 +346,7 @@ async def reset_all_demo_data():
     """
     Comprehensive demo reset - resets ALL demo data to original state.
 
-    Delegates the atomic GAE + Neo4j + audit reset to StateManager.hard_reset()
+    Delegates the atomic GAE + AGE + audit reset to StateManager.hard_reset()
     (TD-026), then resets remaining SOC-specific in-memory state via the
     legacy DemoStateManager so existing frontend behaviour is unchanged.
     """
@@ -363,7 +363,7 @@ async def reset_all_demo_data():
         sm = StateManager(
             learning_state_service=gae_state,
             audit_store=audit_store,
-            neo4j_service=graph_client,
+            graph_service=graph_client,
             domain_config=get_domain_config(),
         )
         await sm.hard_reset(preserve_learning=True)
@@ -401,13 +401,13 @@ async def reset_all_demo_data():
 
 
 # ============================================================================
-# POST /api/demo/reseed - Re-seed Neo4j from canonical dataset
+# POST /api/demo/reseed - Re-seed AGE from canonical dataset
 # ============================================================================
 
 @router.post("/demo/reseed")
 async def reseed_demo_data():
     """
-    Re-seed the Neo4j database from the canonical seed dataset.
+    Re-seed the AGE database from the canonical seed dataset.
 
     Clears all existing nodes/relationships and recreates the full demo graph
     (alerts, assets, users, patterns, decisions, evolution events, etc.).
@@ -416,11 +416,11 @@ async def reseed_demo_data():
     Returns {success, alert_count} for minimal, actionable feedback.
     Never raises HTTPException -- caller inspects the success flag instead.
     """
-    print("[RESEED] /demo/reseed blocked -- seed_neo4j.py is LEGACY on AGE backend.")
+    print("[RESEED] /demo/reseed blocked -- seed_graph.py is LEGACY on AGE backend.")
     return {
         "success": False,
         "message": (
-            "seed_neo4j.py is LEGACY and blocked on the AGE backend. "
+            "seed_graph.py is LEGACY and blocked on the AGE backend. "
             "Re-seed manually: python backend/support/setup/seed_zero_day.py"
         ),
     }
@@ -436,7 +436,7 @@ async def reset_demo_data():
     Reset demo data for repeated demonstrations.
 
     In production, this would:
-    - Reset Neo4j to Week 1 state
+    - Reset AGE to Week 1 state
     - Clear recent evolution events
     - Preserve metric contracts
 
@@ -471,7 +471,7 @@ async def reset_demo_data():
 @router.get("/metrics/evolution-events")
 async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
     """
-    Get recent decisions as evolution events from Neo4j (H7-FIX-4).
+    Get recent decisions as evolution events from AGE (H7-FIX-4).
 
     Queries Decision nodes ordered by timestamp DESC, formats each as an
     evolution event record so the Tab 4 panel shows real decision history.
@@ -526,7 +526,7 @@ async def get_evolution_events(limit: int = Query(10, ge=1, le=50)):
 @router.get("/metrics/weekly-trends")
 async def get_weekly_trends():
     """
-    Return a raw decision timeline from Neo4j for the Tab 4 weekly trend panel.
+    Return a raw decision timeline from AGE for the Tab 4 weekly trend panel.
 
     If Decision nodes exist and have timestamps, returns the ordered list of
     decision points (timestamp, action, confidence).
@@ -572,7 +572,7 @@ async def get_weekly_trends():
 @router.get("/metrics/decision-economics")
 async def get_decision_economics():
     """
-    Return decision economics computed from real Neo4j Decision nodes.
+    Return decision economics computed from real AGE Decision nodes.
 
     - decisions_made: total Decision node count
     - correct_rate: correct / total  (0.0 if no decisions)
@@ -785,7 +785,7 @@ async def get_operational_metrics():
         "mttd": mttd,
         "mttr": mttr,
         "fp_rate": fp_rate,
-        "source": "neo4j",
+        "source": "graph",
     }
 
 
@@ -943,7 +943,7 @@ async def get_economics():
                 "unhandled escalation at $150K average SMB breach cost."
             ),
         },
-        "source": "neo4j",
+        "source": "graph",
     }
 
 

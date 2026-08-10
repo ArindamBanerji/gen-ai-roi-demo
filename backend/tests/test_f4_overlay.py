@@ -1,6 +1,6 @@
 """
 F4-OVERLAY tests: Operational Outcome Metrics on the ROI dashboard.
-MTTD / MTTR / FP rate served from Neo4j, with estimated=True when no data.
+MTTD / MTTR / FP rate served from AGE, with estimated=True when no data.
 Board-ready JSON export endpoint.
 
 Run from backend/ directory:
@@ -46,7 +46,7 @@ def test_board_export_endpoint_registered():
 # ============================================================================
 
 def test_mttd_estimated_when_no_timestamps():
-    """Mock Neo4j returning sample_size=0 for MTTD.
+    """Mock AGE returning sample_size=0 for MTTD.
     Assert mttd['estimated']=True and mttd['value_minutes']=None."""
     from app.routers.metrics import get_operational_metrics
 
@@ -73,7 +73,7 @@ def test_mttd_estimated_when_no_timestamps():
 # ============================================================================
 
 def test_mttr_estimated_when_no_verified_outcomes():
-    """Mock Neo4j returning sample_size=0 for MTTR query.
+    """Mock AGE returning sample_size=0 for MTTR query.
     Assert mttr['estimated']=True and mttr['value_minutes']=None."""
     from app.routers.metrics import get_operational_metrics
 
@@ -100,7 +100,7 @@ def test_mttr_estimated_when_no_verified_outcomes():
 # ============================================================================
 
 def test_fp_rate_computed_correctly():
-    """Mock Neo4j: total=20, fp_count=4.
+    """Mock AGE: total=20, fp_count=4.
     Assert fp_rate['rate']=0.2, fp_rate['estimated']=False."""
     from app.routers.metrics import get_operational_metrics
 
@@ -127,7 +127,7 @@ def test_fp_rate_computed_correctly():
 # ============================================================================
 
 def test_fp_rate_zero_decisions_safe():
-    """Mock Neo4j: total=0. Assert fp_rate['rate']=None. No ZeroDivisionError."""
+    """Mock AGE: total=0. Assert fp_rate['rate']=None. No ZeroDivisionError."""
     from app.routers.metrics import get_operational_metrics
 
     async def _run():
@@ -150,7 +150,7 @@ def test_fp_rate_zero_decisions_safe():
 # ============================================================================
 
 def test_board_export_shape():
-    """Mock Neo4j calls. Assert response contains all required fields."""
+    """Mock AGE calls. Assert response contains all required fields."""
     from app.routers.metrics import get_board_export
 
     async def _run():

@@ -27,7 +27,7 @@ client = TestClient(app)
 def test_get_campaigns_returns_list():
     """
     GET /api/soc/campaigns must return 200 with 'campaigns', 'total',
-    and 'active_campaigns' keys. Empty Neo4j -> empty list, not 500.
+    and 'active_campaigns' keys. Empty AGE -> empty list, not 500.
     """
     response = client.get("/api/soc/campaigns")
 

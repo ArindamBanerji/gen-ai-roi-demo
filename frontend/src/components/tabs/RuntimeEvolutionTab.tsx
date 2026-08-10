@@ -183,7 +183,7 @@ interface GraphStats {
   nodes_traversed: number
   relationships_analyzed: number
   historical_decisions: number
-  source: 'neo4j' | 'unavailable'
+  source: 'graph' | 'unavailable'
 }
 
 interface IksState {
@@ -1134,7 +1134,7 @@ export default function RuntimeEvolutionTab() {
 
   const iks = profileStateFull?.iks ?? null
   // IKS v1 (centroid-drift) is 0 until centroids drift from bootstrap.
-  // Prefer IKS v2 (Neo4j composite) which reflects actual decision volume.
+  // Prefer IKS v2 (AGE composite) which reflects actual decision volume.
   const iksCurrentDisplay: number | null = learningStateData?.iks_v2 ?? iks?.current ?? null
   const decisionCount = iks?.decision_count ?? profileState?.decision_count ?? 0
   const conservationLearningStatus = getLearningStatusMeta(healthData?.status)
@@ -3561,7 +3561,7 @@ export default function RuntimeEvolutionTab() {
                     Knowledge Graph State
                   </h4>
                   {graphStats && (
-                    <span className={`text-xs font-mono px-2 py-0.5 rounded ${graphStats.source === 'neo4j' ? 'bg-green-900/30 text-green-400 border border-green-700/40' : 'bg-gray-800 text-gray-500'}`}>
+                    <span className={`text-xs font-mono px-2 py-0.5 rounded ${graphStats.source === 'graph' ? 'bg-green-900/30 text-green-400 border border-green-700/40' : 'bg-gray-800 text-gray-500'}`}>
                       {graphStats.source}
                     </span>
                   )}

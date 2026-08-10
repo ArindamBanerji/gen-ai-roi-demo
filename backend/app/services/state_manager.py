@@ -4,7 +4,7 @@ StateManager -- Atomic reset coordinator (TD-026).
 Orchestrates soft and hard resets across three stores:
   * GAE LearningState   (W matrix, history, decision_count)
   * Audit hash chain    (decision ledger)
-  * Neo4j graph         (Decision node outcomes / nodes)
+  * AGE graph         (Decision node outcomes / nodes)
 
 All dependencies are injected so this module imports no SOC-specific code.
 
@@ -41,7 +41,7 @@ class StateManager:
         reset_learning_state().
     audit_store : module
         Must expose reset_audit_state(), record_reset_marker(mode: str).
-    neo4j_service : Neo4jClient
+    graph_service : GraphClient
         Must expose run_query(cypher, params=None).
     domain_config : DomainConfig
         Active domain configuration (used to report metadata in responses).
@@ -57,10 +57,10 @@ class StateManager:
     )
     SESSION_FILTER    = PERSISTENT_FILTER  # alias used in _verify_deletion_safety calls
 
-    def __init__(self, learning_state_service, audit_store, neo4j_service, domain_config):
+    def __init__(self, learning_state_service, audit_store, graph_service, domain_config):
         self._ls_svc = learning_state_service
         self._audit  = audit_store
-        self._neo4j  = neo4j_service
+        self._graph  = graph_service
         self._domain_config = domain_config
 
     # ------------------------------------------------------------------
@@ -82,7 +82,7 @@ class StateManager:
         assert isinstance(filter_clause, str) and ";" not in filter_clause and "--" not in filter_clause, (
             f"Unsafe filter_clause: {filter_clause}"
         )
-        check = await self._neo4j.run_query(
+        check = await self._graph.run_query(
             f"MATCH (d:Decision) {filter_clause} "
             f"RETURN count(CASE WHEN d.origin = '{self.PERSISTENT_ORIGIN}' "
             f"THEN 1 ELSE null END) AS n"
@@ -93,7 +93,7 @@ class StateManager:
                 f"ABORT: {n_persistent} persistent nodes would be affected. "
                 f"Filter: {filter_clause}"
             )
-        count = await self._neo4j.run_query(
+        count = await self._graph.run_query(
             f"MATCH (d:Decision) {filter_clause} RETURN count(d) AS n"
         )
         return int(count[0]["n"]) if count else 0
@@ -101,13 +101,13 @@ class StateManager:
     async def clear_session_decisions(self) -> int:
         """REMOVE correct/outcome from session decisions only. Training data preserved."""
         await self._verify_deletion_safety(self.SESSION_FILTER)
-        result = await self._neo4j.run_query(
+        result = await self._graph.run_query(
             f"MATCH (d:Decision) {self.PERSISTENT_FILTER} "
             "REMOVE d.correct, d.outcome "
             "RETURN count(d) AS cleared"
         )
         cleared = int(result[0]["cleared"]) if result else 0
-        total_rows = await self._neo4j.run_query(
+        total_rows = await self._graph.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where(active_only=False)} "
             "RETURN count(d) AS total"
         )
@@ -119,13 +119,13 @@ class StateManager:
     async def delete_session_decisions(self) -> None:
         """DETACH DELETE session decisions only. Training data preserved."""
         await self._verify_deletion_safety(self.SESSION_FILTER)
-        preserved_rows = await self._neo4j.run_query(
+        preserved_rows = await self._graph.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where(active_only=False)} "
             "AND d.origin = 'zero_day_synthetic' "
             "RETURN count(d) AS n"
         )
         preserved_n = int(preserved_rows[0]["n"]) if preserved_rows else 0
-        await self._neo4j.run_query(
+        await self._graph.run_query(
             f"MATCH (d:Decision) {self.PERSISTENT_FILTER} "
             "OPTIONAL MATCH (d)-[:HAD_CONTEXT]->(ctx:DecisionContext) "
             "DETACH DELETE d, ctx"
@@ -150,7 +150,7 @@ class StateManager:
         Steps (ordered; no partial state on failure):
           1. W -> priors; history and decision_count cleared (skipped when
              preserve_learning=True).
-          2. Neo4j: REMOVE correct/outcome props from Decision nodes (keep nodes).
+          2. AGE: REMOVE correct/outcome props from Decision nodes (keep nodes).
           3. Audit: clear ledger, write RESET marker, start fresh hash chain.
 
         Returns
@@ -163,7 +163,7 @@ class StateManager:
         """
         ls = self._ls_svc.get_learning_state()
 
-        # Snapshot for best-effort rollback if Neo4j or audit fails
+        # Snapshot for best-effort rollback if AGE or audit fails
         rollback_W       = ls.W.copy()
         rollback_history = list(ls.history)
         rollback_count   = ls.decision_count
@@ -177,7 +177,7 @@ class StateManager:
 
             # Step 3: clear outcomes on session Decision nodes; keep nodes + training data
             await self.clear_session_decisions()
-            committed.append("neo4j_outcomes")
+            committed.append("graph_outcomes")
 
             # Step 4: audit — clear ledger, anchor fresh chain with RESET marker
             await self._audit.reset_audit_state()
@@ -216,7 +216,7 @@ class StateManager:
         Steps (ordered; no partial state on failure):
           1. W -> priors; history and decision_count cleared (skipped when
              preserve_learning=True).
-          2. Neo4j: DETACH DELETE session Decision nodes (training data preserved).
+          2. AGE: DETACH DELETE session Decision nodes (training data preserved).
           3. Audit: clear ledger, write RESET marker, start fresh hash chain.
 
         Returns
@@ -242,7 +242,7 @@ class StateManager:
 
             # Step 3: delete session Decision nodes; training data preserved
             await self.delete_session_decisions()
-            committed.append("neo4j_delete")
+            committed.append("graph_delete")
 
             # Step 4: audit reset + RESET marker
             await self._audit.reset_audit_state()

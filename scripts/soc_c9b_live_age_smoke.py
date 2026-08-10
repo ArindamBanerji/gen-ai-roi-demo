@@ -75,6 +75,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-attempts", type=int, default=None)
     parser.add_argument("--readback", action="store_true")
     parser.add_argument("--readback-only", action="store_true")
+    parser.add_argument("--dk-proof-mode", action="store_true")
+    parser.add_argument("--target-category", default=None)
     parser.add_argument("--graph-name", default=os.getenv("AGE_GRAPH_NAME", "soc_graph_c9b"))
     parser.add_argument("--database-url", default=os.getenv("DATABASE_URL"))
     parser.add_argument("--json", action="store_true")
@@ -334,6 +336,8 @@ def build_summary(args: argparse.Namespace) -> dict[str, Any]:
         "dsn_source": dsn_source,
         "graph_name": args.graph_name,
         "soc_learning_enabled": os.getenv("SOC_LEARNING_ENABLED"),
+        "dk_proof_mode": args.dk_proof_mode,
+        "target_category": args.target_category,
     }
     if dsn is None:
         return {
@@ -373,7 +377,7 @@ def build_summary(args: argparse.Namespace) -> dict[str, Any]:
             args.loops,
             alert_prefix=args.alert_prefix,
             start_index=args.start_index,
-            max_attempts=args.max_attempts,
+            max_attempts=args.max_attempts or (args.loops * 4 if args.dk_proof_mode else args.loops * 5),
         )
         route = route_result.__dict__
         if route_result.outcome_ok == 0 and route_result.failures:

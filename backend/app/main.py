@@ -133,6 +133,8 @@ from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae,
 from app.routers.servicenow_router import router as servicenow_router
 from app.routers.rl_router import router as rl_router
 from app.routers.cohort_status_router import router as cohort_status_router
+from app.services.evolver import get_sdk_evolver
+from copilot_sdk.backend.self_computation_router import mount_self_computation_router
 
 # Register routers
 app.include_router(evaluation.router, prefix="/api/soc", tags=["evaluation"])
@@ -159,6 +161,29 @@ app.include_router(rl_router, prefix="/api", tags=["RL Observability"])
 app.include_router(servicenow_router)
 from app.routers.auth import router as auth_router
 app.include_router(auth_router)
+
+
+def _soc_store_provider():
+    from app.services.gae_state import get_profile_scorer
+
+    return get_profile_scorer().graph_store
+
+
+def _soc_scorer_provider():
+    from app.services.gae_state import get_profile_scorer
+
+    scorer = get_profile_scorer()
+    return getattr(scorer, "_compound", scorer)
+
+
+# Shared centroid-history route (canonical checkpoint history).
+mount_self_computation_router(
+    app,
+    _soc_store_provider,
+    domain="soc",
+    scorer_provider=_soc_scorer_provider,
+    evolver_provider=get_sdk_evolver,
+)
 
 async def startup_event():
     """Initialize connections on startup"""
@@ -193,8 +218,8 @@ async def startup_event():
 
     _backend = _GRAPH_BACKEND
 
-    # Neo4j needs an explicit connect(); AGEClient.connect() is a no-op.
-    if _backend == "neo4j":
+    # AGE needs an explicit connect(); AGEClient.connect() is a no-op.
+    if _backend == "graph":
         await graph_client.connect()
 
     # ── Bootstrap verification — MANDATORY, fail-fast ─────────
@@ -271,8 +296,8 @@ async def startup_event():
         print(f"[STARTUP] Variant registry rebuild failed (non-blocking): {_registry_exc}")
 
     # Load analyst correct-override examples into OverrideDetector.
-    # Activates automatically when >= 50 examples are found in Neo4j.
-    from app.services.override_detector import load_from_neo4j as _load_od
+    # Activates automatically when >= 50 examples are found in AGE.
+    from app.services.override_detector import load_from_graph as _load_od
     _od = await _load_od(graph_client)
     print(
         f"[OverrideDetector] {'ACTIVATED' if _od.activated else 'inactive'} -- "
@@ -309,15 +334,15 @@ async def startup_event():
     except Exception as _ds_exc:
         print(f"[GAE] DeploymentState write failed (non-blocking): {_ds_exc}")
 
-    # CORR-3: Write bootstrap Decision nodes to Neo4j if bootstrap ran this startup.
+    # CORR-3: Write bootstrap Decision nodes to AGE if bootstrap ran this startup.
     # Skipped (get_bootstrap_result() is None) when loading an existing checkpoint.
     _bs_result = get_bootstrap_result()
     if _bs_result is not None:
         # RETIRED: orphan creator, replaced by support/setup/seed_zero_day.py
-        # from app.services.bootstrap_neo4j import write_bootstrap_decisions
+        # from app.services.bootstrap_graph import write_bootstrap_decisions
         pass  # seed_zero_day.py handles Decision seeding outside the startup path
 
-    # Sync decision_count from Neo4j so IKS reflects historical decisions
+    # Sync decision_count from AGE so IKS reflects historical decisions
     # on every server restart (fixes cold-start IKS = 1.7/100 regression).
     try:
         _count_result = await graph_client.run_query(
@@ -384,7 +409,7 @@ async def startup_event():
     # Iterates every registered domain and touches all @property accessors so
     # Python initialises any lazy sub-modules now, not on the first API request.
     # Without this, GET /api/demo/domains can stall 20+ seconds on a cold server
-    # immediately after a demo reset (neo4j reconnect + lazy S2P module init).
+    # immediately after a demo reset (graph reconnect + lazy S2P module init).
     import time as _time
     _wu_start = _time.perf_counter()
     from app.core.domain_registry import _DOMAIN_CONFIGS

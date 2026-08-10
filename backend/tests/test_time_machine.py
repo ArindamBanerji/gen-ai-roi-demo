@@ -24,7 +24,7 @@ class DummyScorer:
         self.centroids = np.array(centroids, dtype=np.float64)
 
 
-class DummyNeo4j:
+class DummyAGE:
     async def run_query(self, query, params=None):
         return []
 
@@ -176,7 +176,7 @@ def test_evolution_timeline_drift_increases(snapshot_env):
             "interpretation": "stable",
         }),
     ):
-        timeline = _run(time_machine.get_evolution_timeline(DummyNeo4j()))
+        timeline = _run(time_machine.get_evolution_timeline(DummyAGE()))
 
     drifts = [item["drift_from_bootstrap"] for item in timeline["timeline"]]
     assert drifts == sorted(drifts)
@@ -193,7 +193,7 @@ def test_timeline_ceiling_estimate_populated(snapshot_env):
             "interpretation": "stable",
         }),
     ):
-        timeline = _run(time_machine.get_evolution_timeline(DummyNeo4j()))
+        timeline = _run(time_machine.get_evolution_timeline(DummyAGE()))
 
     assert isinstance(timeline["ceiling_estimate"], float)
     assert timeline["ceiling_estimate"] > 0.0
@@ -242,7 +242,7 @@ def test_timeline_skips_corrupted_and_returns_monotonic_decision_counts(snapshot
     raw["sha256"] = "0" * 64
     bad_path.write_text(json.dumps(raw), encoding="utf-8")
 
-    timeline = _run(time_machine.get_evolution_timeline(DummyNeo4j()))
+    timeline = _run(time_machine.get_evolution_timeline(DummyAGE()))
     counts = [item["decision_count"] for item in timeline["timeline"]]
     assert counts == [10, 20, 30]
     assert all(earlier < later for earlier, later in zip(counts, counts[1:]))
@@ -336,7 +336,7 @@ def test_router_timeline(snapshot_env):
             "components": {"signal": 7.5},
             "interpretation": "cold",
         }),
-    ), patch("app.routers.time_machine_router.graph_client", DummyNeo4j()):
+    ), patch("app.routers.time_machine_router.graph_client", DummyAGE()):
         response = client.get("/api/time-machine/timeline")
 
     assert response.status_code == 200

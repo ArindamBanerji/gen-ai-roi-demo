@@ -155,7 +155,7 @@ def test_acm_qualification_threshold():
 def test_api_ols_status_returns_required_keys():
     """
     The endpoint must return HTTP 200 with all required keys.
-    With an empty Neo4j (no decisions), it should return warming_up status.
+    With an empty AGE (no decisions), it should return warming_up status.
     """
     response = client.get("/api/soc/ols-status")
 

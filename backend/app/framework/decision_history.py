@@ -19,7 +19,7 @@ class DecisionHistoryService:
     """Tracks per-category decision counts and rolling accuracy."""
 
     @staticmethod
-    async def get_category_stats(category: str, neo4j_service: Any) -> dict:
+    async def get_category_stats(category: str, graph_service: Any) -> dict:
         """
         Get decision count and rolling accuracy for a category.
 
@@ -35,7 +35,7 @@ class DecisionHistoryService:
         }
         """
         try:
-            result = await neo4j_service.run_query(
+            result = await graph_service.run_query(
                 """
                 MATCH (d:Decision)
                 WHERE d.domain = 'soc' AND d.category = $cat

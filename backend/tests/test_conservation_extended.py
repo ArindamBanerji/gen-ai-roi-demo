@@ -2,7 +2,7 @@
 Conservation extended tests.
 
 Covers LearningHealthMonitor._extract_components() and .evaluate()
-without a live Neo4j connection.  Uses SimpleNamespace stubs for
+without a live AGE connection.  Uses SimpleNamespace stubs for
 WeightUpdate objects (the real WeightUpdate needs 10+ args).
 
 9 tests.

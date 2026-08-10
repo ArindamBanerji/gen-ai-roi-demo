@@ -237,6 +237,17 @@ grep (0s) → curl (2s) → validate_contracts.py (5s) → targeted Playwright (
 - If a try/except computes OPTIONAL enrichment: bare pass is acceptable.
 - NEVER hardcode a number that looks like a computed metric without a comment.
 
+## Mypy Gate (Standing Rule #86)
+
+**Every code change must pass mypy on all changed files before completion.**
+
+This is mandatory. mypy errors in files you changed = NOT DONE.
+
+After completing all code changes and before declaring success, run:
+`python -m mypy <every changed Python file>`
+
+Run mypy before pytest. Do not weaken annotations or suppress errors with `# type: ignore`. A failed mypy gate means the task is incomplete.
+
 ## Rule #63 — Test Double Completeness
 
 No mock/monkeypatch in test code unless the external dependency is

@@ -112,7 +112,7 @@ async def process_alert(request: ProcessAlertRequest):
     2. GAE scoring: compute_factor_vector -> score_alert (replaces agent.decide)
     3. LLM generates reasoning (narration)
     4. Evaluate 4 gates (deterministic)
-    5. Write Decision node to Neo4j with factor_vector (R4)
+    5. Write Decision node to AGE with factor_vector (R4)
     6. Emit DecisionMade + GraphMutated events
     7. Check if evolution should trigger
     8. Create TRIGGERED_EVOLUTION relationship
@@ -147,7 +147,7 @@ async def process_alert(request: ProcessAlertRequest):
         # ====================================================================
         # Step 2: GAE Scoring Pipeline (v5.0 ProfileScorer — replaces agent.decide())
         #
-        # 2a. Compute factor vector via orchestrator (FactorComputers → Neo4j, one per factor)
+        # 2a. Compute factor vector via orchestrator (FactorComputers → AGE, one per factor)
         # 2b. ProfileScorer centroid-proximity scoring (L2 kernel, τ=0.1)
         #     P(action|f,cat) = softmax(−‖f−μ‖² / τ)
         # ====================================================================
@@ -211,7 +211,7 @@ async def process_alert(request: ProcessAlertRequest):
         eval_result = agent.evaluate_gates(bridge, context, reasoning)
 
         # ====================================================================
-        # Step 5: Write Decision Node to Neo4j (R4 — factor_vector stored in graph)
+        # Step 5: Write Decision Node to AGE (R4 — factor_vector stored in graph)
         # ====================================================================
 
         decision_id = f"DEC-{uuid.uuid4().hex[:4].upper()}"
@@ -887,16 +887,16 @@ async def get_trust_scores():
 
 
 # ============================================================================
-# GET /api/soc/graph-stats - Real Neo4j graph statistics (H7-FIX-2)
+# GET /api/soc/graph-stats - Real AGE graph statistics (H7-FIX-2)
 # ============================================================================
 
 @router.get("/soc/graph-stats")
 async def get_graph_stats():
     """
-    Return real Neo4j node, relationship, and Decision node counts.
+    Return real AGE node, relationship, and Decision node counts.
 
     Replaces the hardcoded 47 / 127 / 891 values displayed in Tab 2.
-    Falls back to zeros with source='unavailable' if Neo4j is unreachable.
+    Falls back to zeros with source='unavailable' if AGE is unreachable.
     """
     try:
         node_result = await graph_client.run_query(
@@ -913,7 +913,7 @@ async def get_graph_stats():
             "nodes_traversed": node_result[0]["node_count"] if node_result else 0,
             "relationships_analyzed": rel_result[0]["rel_count"] if rel_result else 0,
             "historical_decisions": dec_result[0]["dec_count"] if dec_result else 0,
-            "source": "neo4j",
+            "source": "graph",
         }
     except Exception as e:
         raise HTTPException(status_code=503, detail="AGE query failed for graph stats") from e

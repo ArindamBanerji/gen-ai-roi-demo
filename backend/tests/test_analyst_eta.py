@@ -1,6 +1,6 @@
 """
 Block 9.1 -- D5 Per-analyst eta weighting tests.
-All Neo4j calls use AsyncMock -- no live Neo4j required.
+All AGE calls use AsyncMock -- no live AGE required.
 """
 import asyncio
 import os
@@ -29,7 +29,7 @@ def _run(coro):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _mock_neo4j(rows):
+def _mock_graph(rows):
     """Return an AsyncMock graph_client whose run_query yields `rows`."""
     mock = AsyncMock()
     mock.run_query.return_value = rows
@@ -47,7 +47,7 @@ def test_compute_precision_returns_dict():
         {"analyst": "bob",   "precision": 0.71},
         {"analyst": "carol", "precision": 0.65},
     ]
-    mock = _mock_neo4j(rows)
+    mock = _mock_graph(rows)
     result = _run(compute_analyst_precision(mock))
 
     assert isinstance(result, dict), "Should return a dict"
@@ -70,7 +70,7 @@ def test_precision_excludes_analysts_below_10_decisions():
     _MIN_ANALYSTS_REQUIRED = 2.
     """
     rows = [{"analyst": "alice", "precision": 0.80}]   # only 1 row returned
-    mock = _mock_neo4j(rows)
+    mock = _mock_graph(rows)
     result = _run(compute_analyst_precision(mock))
 
     assert result == {}, (

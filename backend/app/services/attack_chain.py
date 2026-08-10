@@ -95,7 +95,7 @@ class AttackChainService:
     # -------------------------------------------------------------------------
 
     async def _fetch_recent_alerts(self, hours_back: int) -> List[Dict]:
-        """Fetch alerts with linked entities from Neo4j."""
+        """Fetch alerts with linked entities from AGE."""
         query = """
         MATCH (a:Alert)
         OPTIONAL MATCH (a)-[:INVOLVES]->(u:User)

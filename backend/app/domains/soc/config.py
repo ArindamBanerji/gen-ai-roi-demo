@@ -61,9 +61,9 @@ SOC_ROUTING_ACTIONS = list(SCORER_ACTIONS) + ["refer_to_analyst"]  # A=5 full li
 SOC_N_ACT           = len(SCORER_ACTIONS)                          # 4
 
 # Controls whether ProfileScorer.update() is called after verified outcomes.
-# Default False (frozen scorer). Set True per-customer after shadow mode
-# validates that learning improves outcomes.
-LEARNING_ENABLED = False
+# Learning is enabled by default; set SOC_LEARNING_ENABLED=false for an
+# explicitly frozen deployment.
+LEARNING_ENABLED = True
 
 
 def is_learning_enabled() -> bool:
@@ -77,8 +77,8 @@ def is_learning_enabled() -> bool:
 # review passes and triage integration is explicitly implemented.
 RL_REWARD_LEDGER_ENABLED = False
 
-# Phase 2: Thompson sampling exploration proposals. Defaults False until
-# explicit triage integration is reviewed and enabled.
+# G1 boundary: exploration proposes but does not override the
+# centroid-selected action. See soc_g1_boundary_decision_memo.md.
 RL_EXPLORATION_ENABLED = False
 
 # Phase 4: temporary eta multiplier from graded reward. Defaults False until
@@ -332,7 +332,7 @@ def resolve_alert_category(alert_type: str | None) -> str:
 
 
 # Category → canonical ATT&CK pattern for outcome feedback
-# These are the patterns seeded in the graph (seed_neo4j.py)
+# These are the patterns seeded in the graph (seed_graph.py)
 CATEGORY_PATTERN_MAP = {
     "credential_access":    "PAT-CRED-001",
     "malware_execution":    "PAT-THREAT-001",
@@ -371,7 +371,7 @@ class SOCDomainConfig(DomainConfig):
     # Final factor order (from get_decision_factors docstring):
     #   [0] privileged_identity_context
     #   [1] asset_criticality
-    #   [2] threat_intel_enrichment  (live Neo4j query)
+    #   [2] threat_intel_enrichment  (live AGE query)
     #   [3] time_anomaly
     #   [4] device_trust
     #   [5] pattern_history
@@ -398,7 +398,7 @@ class SOCDomainConfig(DomainConfig):
                 id="threat_intel_enrichment",
                 label="Threat Intel Enrichment",
                 description=(
-                    "Live IOC match against threat intelligence feeds via Neo4j "
+                    "Live IOC match against threat intelligence feeds via AGE "
                     "ASSOCIATED_WITH relationship"
                 ),
             ),
@@ -792,11 +792,11 @@ class SOCDomainConfig(DomainConfig):
     # =========================================================================
 
     def get_seed_queries(self) -> List[str]:
-        # TODO: Extract from services/seed_neo4j.py in a later prompt
+        # TODO: Extract from services/seed_graph.py in a later prompt
         return []
 
     def get_graph_query_templates(self) -> Dict[str, str]:
-        # TODO: Extract from db/neo4j.py and routers/soc.py in a later prompt
+        # TODO: Extract from db/graph.py and routers/soc.py in a later prompt
         return {}
 
     def get_narration_templates(self) -> Dict[str, str]:

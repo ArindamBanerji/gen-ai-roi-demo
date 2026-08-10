@@ -6,7 +6,7 @@ Verifies that conservation RED/auto-pause BLOCKS centroid updates via:
   2. guarded_update() B5 conservation gate (defense-in-depth)
   3. auto_pause_active forces effective status to RED (not overridden by GREEN)
 
-No live Neo4j required. 8 tests.
+No live AGE required. 8 tests.
 """
 import os
 import sys

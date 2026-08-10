@@ -2,7 +2,7 @@
 ServiceNow mock integration tests for the triage outcome path.
 
 These tests call report_decision_outcome() directly using the existing
-patched-neo4j pattern from the triage outcome tests. The goal is to prove the
+patched-graph pattern from the triage outcome tests. The goal is to prove the
 ServiceNow auto-create hook is wired to confirmed escalation outcomes.
 """
 import asyncio

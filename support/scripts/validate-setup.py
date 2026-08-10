@@ -54,14 +54,14 @@ def check_backend() -> Tuple[bool, Dict[str, Any]]:
             
             # Check health status
             is_healthy = data.get("status") == "healthy"
-            neo4j_connected = data.get("neo4j") == "connected"
+            graph_connected = data.get("graph") == "connected"
             node_count = data.get("nodes", 0)
             evolution_count = data.get("triggered_evolution_count", 0)
             demo_ready = data.get("demo_ready", False)
             
             return True, {
                 "healthy": is_healthy,
-                "neo4j": neo4j_connected,
+                "graph": graph_connected,
                 "nodes": node_count,
                 "evolution_count": evolution_count,
                 "demo_ready": demo_ready
@@ -114,7 +114,7 @@ def main() -> int:
     backend_ok, backend_info = check_backend()
     
     if backend_ok:
-        details = f"Neo4j: {'connected' if backend_info.get('neo4j') else 'disconnected'}\n"
+        details = f"AGE: {'connected' if backend_info.get('graph') else 'disconnected'}\n"
         details += f"Nodes: {backend_info.get('nodes', 0)}\n"
         details += f"TRIGGERED_EVOLUTION: {backend_info.get('evolution_count', 0)}"
         print_result("Backend", True, details)

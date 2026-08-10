@@ -1,6 +1,6 @@
 """
 Step 11.1 -- Tab content export endpoint tests.
-All tests mock graph_client and service functions -- no live Neo4j required.
+All tests mock graph_client and service functions -- no live AGE required.
 """
 import asyncio
 import os
@@ -64,7 +64,7 @@ def _isolated_scorer_graph(monkeypatch):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _neo4j_tab1_mock():
+def _graph_tab1_mock():
     """Mock graph_client.run_query for Tab 1 queries."""
     mock = AsyncMock()
     mock.run_query.side_effect = [
@@ -96,7 +96,7 @@ def test_tab1_returns_content():
     """GET /api/soc/tab/1/content returns alert_count, top_alert_types, pending_count."""
     from app.routers.soc import _tab1_content
 
-    mock_client = _neo4j_tab1_mock()
+    mock_client = _graph_tab1_mock()
     with patch("app.routers.soc.graph_client", mock_client):
         content = _run(_tab1_content())
 
@@ -1276,7 +1276,7 @@ def test_iks_consistent_tab2_tab5():
 
     # Tolerance of 35: catches gross divergence (0 vs 76, or filtered vs unfiltered
     # count bugs) while allowing for minor variation between two independent
-    # async compute_iks_v2 calls to the same Neo4j client.
+    # async compute_iks_v2 calls to the same AGE client.
     assert abs(iks_t2 - iks_t5) < 35.0, \
         f"Tab 2 IKS ({iks_t2}) differs from Tab 5 ({iks_t5}) by > 35 -- inconsistent data source"
 
@@ -1381,9 +1381,13 @@ def test_tab5_conservation_has_evidence_ledger():
 # ---------------------------------------------------------------------------
 
 def test_centroid_evolution_returns_data():
-    """centroid-evolution fails closed when AGE is unavailable."""
-    resp = client.get("/api/soc/centroid-evolution")
-    assert resp.status_code == 503
+    """centroid-evolution returns an empty array when no drift rows exist."""
+    mock_graph = AsyncMock()
+    mock_graph.run_query.return_value = []
+    with patch("app.routers.framework_router.graph_client", mock_graph):
+        resp = client.get("/api/soc/centroid-evolution")
+    assert resp.status_code == 200
+    assert resp.json() == []
 
 
 def test_centroid_drift_nonzero_at_high_decisions():
@@ -1415,11 +1419,11 @@ def test_centroid_drift_nonzero_at_high_decisions():
     async def _raise(*args, **kwargs):
         raise RuntimeError("forced-fail for fallback test")
 
-    mock_neo4j = AsyncMock()
-    mock_neo4j.run_query.side_effect = _raise
+    mock_graph = AsyncMock()
+    mock_graph.run_query.side_effect = _raise
 
     # Imports inside get_centroid_evolution happen at call time, so patch source modules.
-    with patch("app.routers.framework_router.graph_client", mock_neo4j), \
+    with patch("app.routers.framework_router.graph_client", mock_graph), \
          patch("app.services.gae_state.get_profile_scorer", return_value=mock_scorer), \
          patch("app.services.gae_state.get_learning_state", return_value=mock_learning_state), \
          patch("app.services.iks._load_mu_zero", return_value=mu_zero_val):

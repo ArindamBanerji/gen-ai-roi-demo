@@ -31,7 +31,7 @@ class _FakeState:
         self.decision_count = len(history)
 
 
-class _FakeNeo4j:
+class _FakeAGE:
     def __init__(self, rows: list[dict]):
         self.rows = rows
 
@@ -96,7 +96,7 @@ def test_conservation_check_matches_gae_signature():
 async def test_learning_health_uses_soc_coverage_not_alpha_effective(monkeypatch):
     history = _history(400, alpha_effective=0.01, outcome=1)
     state = _FakeState(history)
-    graph = _FakeNeo4j([
+    graph = _FakeAGE([
         {"category": "credential_access", "verified": 50, "correct": 40, "overrides": 5},
         {"category": "malware_execution", "verified": 50, "correct": 40, "overrides": 5},
         {"category": "lateral_movement", "verified": 50, "correct": 40, "overrides": 5},
@@ -117,7 +117,7 @@ async def test_learning_health_uses_soc_coverage_not_alpha_effective(monkeypatch
 async def test_learning_health_zero_coverage_is_conservative(monkeypatch):
     history = _history(400, alpha_effective=0.50, outcome=1)
     state = _FakeState(history)
-    graph = _FakeNeo4j([])
+    graph = _FakeAGE([])
 
     monkeypatch.setattr("app.services.learning_health.get_learning_state", lambda: state)
     monkeypatch.setattr("app.services.learning_health._is_learning_enabled", lambda: True)

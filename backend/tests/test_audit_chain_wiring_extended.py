@@ -2,7 +2,7 @@
 Audit chain wiring extended tests (adversarial sprint).
 
 Covers app.framework.audit functions, triage/simulation audit contracts,
-and the /api/audit/decisions router endpoint.  No live Neo4j required.
+and the /api/audit/decisions router endpoint.  No live AGE required.
 
 13 tests.
 """

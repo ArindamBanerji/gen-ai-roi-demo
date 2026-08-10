@@ -110,7 +110,7 @@ def test_tab3_unclassified_alert_skips_live_and_baseline_scorers(monkeypatch):
         def score(self, *_args, **_kwargs):
             raise AssertionError("Tab 3 live scorer should not score unclassified alert")
 
-    class FakeNeo4jClient:
+    class FakeGraphClient:
         def __init__(self):
             self.queries = []
 
@@ -133,7 +133,7 @@ def test_tab3_unclassified_alert_skips_live_and_baseline_scorers(monkeypatch):
     def fail_baseline_scorer():
         raise AssertionError("Tab 3 baseline scorer should not score unclassified alert")
 
-    fake_client = FakeNeo4jClient()
+    fake_client = FakeGraphClient()
     monkeypatch.setattr("app.services.gae_state.get_profile_scorer", lambda: DummyLiveScorer())
     monkeypatch.setattr(soc, "_get_baseline_scorer", fail_baseline_scorer)
     monkeypatch.setattr(soc, "graph_client", fake_client)

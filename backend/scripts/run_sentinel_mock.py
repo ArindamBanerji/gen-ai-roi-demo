@@ -2,7 +2,7 @@
 run_sentinel_mock.py -- CLI runner for SentinelMockConnector.
 
 Loads synthetic_pilot_alerts.json, normalizes each alert, and MERGEs it into
-Neo4j as an Alert node.  There is no /api/soc/import HTTP endpoint; the runner
+AGE as an Alert node.  There is no /api/soc/import HTTP endpoint; the runner
 writes directly to the graph (same pattern as seed scripts).
 
 Run from gen-ai-roi-demo-v4-v50/backend/:
@@ -70,7 +70,7 @@ BATCH_SIZE = 100
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Stream Sentinel mock alerts into Neo4j"
+        description="Stream Sentinel mock alerts into AGE"
     )
     p.add_argument("alerts_json", help="Path to synthetic_pilot_alerts.json")
     p.add_argument(
@@ -84,7 +84,7 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "--dry-run", action="store_true",
-        help="Print normalized alerts; do not write to Neo4j"
+        help="Print normalized alerts; do not write to AGE"
     )
     return p.parse_args()
 
@@ -100,7 +100,7 @@ async def main() -> None:
     if day_filter:
         print(f"[sentinel-mock] Day filter: {day_filter[0]}-{day_filter[1]}")
     if args.dry_run:
-        print("[sentinel-mock] Mode: DRY-RUN (no Neo4j writes)")
+        print("[sentinel-mock] Mode: DRY-RUN (no AGE writes)")
     print()
 
     alerts = list(connector.stream(day_filter=day_filter))
@@ -114,7 +114,7 @@ async def main() -> None:
         print(f"\n[sentinel-mock] Dry-run complete -- {len(alerts)} alerts printed")
         return
 
-    # Live mode — write to Neo4j in batches
+    # Live mode — write to AGE in batches
     await graph_client.connect()
     try:
         ingested = 0
@@ -126,7 +126,7 @@ async def main() -> None:
             if args.speed_ms:
                 time.sleep(args.speed_ms / 1000)
 
-        print(f"\n[sentinel-mock] Done -- {ingested} alerts merged into Neo4j")
+        print(f"\n[sentinel-mock] Done -- {ingested} alerts merged into AGE")
     finally:
         await graph_client.close()
 

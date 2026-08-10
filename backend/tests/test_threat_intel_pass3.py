@@ -34,8 +34,8 @@ def test_high_severity_campaign_returns_low_value():
     When alert is member of a HIGH severity campaign, Pass 3 must return
     value=0.05 -- the strongest escalate signal (lowest value).
     """
-    mock_neo4j = AsyncMock()
-    mock_neo4j.run_query.return_value = [{
+    mock_graph = AsyncMock()
+    mock_graph.run_query.return_value = [{
         "confidence": 0.85,
         "severity": "HIGH",
         "campaign_id": "camp-001",
@@ -44,7 +44,7 @@ def test_high_severity_campaign_returns_low_value():
     }]
 
     factor = ThreatIntelEnrichmentFactor()
-    result = run(factor._internal_campaign_score("alert-1", mock_neo4j))
+    result = run(factor._internal_campaign_score("alert-1", mock_graph))
 
     assert result["value"] == 0.05, (
         f"HIGH severity campaign must return value=0.05. Got: {result['value']}"
@@ -62,8 +62,8 @@ def test_medium_severity_campaign_returns_medium_value():
     """
     MEDIUM severity campaign -> value=0.20 (moderate escalate signal).
     """
-    mock_neo4j = AsyncMock()
-    mock_neo4j.run_query.return_value = [{
+    mock_graph = AsyncMock()
+    mock_graph.run_query.return_value = [{
         "confidence": 0.70,
         "severity": "MEDIUM",
         "campaign_id": "camp-002",
@@ -72,7 +72,7 @@ def test_medium_severity_campaign_returns_medium_value():
     }]
 
     factor = ThreatIntelEnrichmentFactor()
-    result = run(factor._internal_campaign_score("alert-2", mock_neo4j))
+    result = run(factor._internal_campaign_score("alert-2", mock_graph))
 
     assert result["value"] == 0.20, (
         f"MEDIUM severity campaign must return value=0.20. Got: {result['value']}"
@@ -88,14 +88,14 @@ def test_medium_severity_campaign_returns_medium_value():
 
 def test_no_campaign_returns_neutral():
     """
-    When alert is not part of any campaign (Neo4j returns []),
+    When alert is not part of any campaign (AGE returns []),
     Pass 3 must return neutral value=0.50 with empty provenance_nodes.
     """
-    mock_neo4j = AsyncMock()
-    mock_neo4j.run_query.return_value = []
+    mock_graph = AsyncMock()
+    mock_graph.run_query.return_value = []
 
     factor = ThreatIntelEnrichmentFactor()
-    result = run(factor._internal_campaign_score("alert-3", mock_neo4j))
+    result = run(factor._internal_campaign_score("alert-3", mock_graph))
 
     assert result["value"] == 0.50, (
         f"No campaign must return value=0.50 (neutral). Got: {result['value']}"
@@ -106,17 +106,17 @@ def test_no_campaign_returns_neutral():
 
 
 # ============================================================================
-# Test 4 — Neo4j failure → explicit error
+# Test 4 — AGE failure → explicit error
 # ============================================================================
 
-def test_neo4j_failure_raises_runtime_error():
+def test_graph_failure_raises_runtime_error():
     """
     When AGE raises an exception, _internal_campaign_score must surface the
     failure instead of synthesizing a neutral campaign score.
     """
-    mock_neo4j = AsyncMock()
-    mock_neo4j.run_query.side_effect = Exception("connection failed")
+    mock_graph = AsyncMock()
+    mock_graph.run_query.side_effect = Exception("connection failed")
 
     factor = ThreatIntelEnrichmentFactor()
     with pytest.raises(RuntimeError, match="AGE query failed for campaign score"):
-        run(factor._internal_campaign_score("alert-x", mock_neo4j))
+        run(factor._internal_campaign_score("alert-x", mock_graph))

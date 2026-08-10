@@ -91,12 +91,12 @@ def test_decision_stores_triage_entropy():
 
     with (
         patch.object(triage_mod, "get_profile_scorer") as mock_scorer_factory,
-        patch("app.routers.triage.graph_client") as mock_neo4j,
+        patch("app.routers.triage.graph_client") as mock_graph,
     ):
         mock_scorer = MagicMock()
         mock_scorer.score.return_value = fake_result
         mock_scorer_factory.return_value = mock_scorer
-        mock_neo4j.run_query = AsyncMock(side_effect=fake_run_query)
+        mock_graph.run_query = AsyncMock(side_effect=fake_run_query)
 
         # Extract triage fields as the analyze path does — mirror the exact logic.
         result = fake_result
