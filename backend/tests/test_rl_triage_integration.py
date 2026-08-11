@@ -39,7 +39,7 @@ class FakeAGE:
             "nodes_consulted": 4,
         }
 
-    async def run_query(self, query):
+    async def run_query(self, query, params=None):
         self.queries.append(query)
         if self.fail_triggered_evolution and "TRIGGERED_EVOLUTION" in query:
             raise RuntimeError("evolution write failed")
@@ -369,6 +369,7 @@ async def test_eta_restored_when_guarded_update_raises(monkeypatch, soc_triage_h
         eta_override=0.01,
         set_conservation_status=lambda _status: None,
     )
+    monkeypatch.setattr("app.services.gae_state.get_profile_scorer", lambda: scorer)
 
     @asynccontextmanager
     async def fake_acquire():
@@ -611,7 +612,9 @@ async def test_exploration_proposal_in_analyze_when_enabled(monkeypatch):
 
     response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
 
-    assert response["recommendation"]["action"] == "investigate"
+    # Exploration is a proposal only; the live centroid action remains
+    # authoritative for the decision path.
+    assert response["recommendation"]["action"] == "escalate"
     assert any("d.explored                = true" in query for query in fake_graph.queries)
 
 
@@ -823,15 +826,17 @@ async def test_explored_action_drives_side_effects_when_not_referred(monkeypatch
 
     response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
 
-    assert response["recommendation"]["action"] == "investigate"
-    assert triage.record_decision.await_args.kwargs["action_taken"] == "investigate"
+    # Exploration is recorded for learning/shadow evaluation but does not
+    # override the centroid-selected action.
+    assert response["recommendation"]["action"] == "escalate"
+    assert triage.record_decision.await_args.kwargs["action_taken"] == "escalate"
     decision_events = [
         call.args[0]
         for call in triage.event_bus.emit.await_args_list
         if call.args and call.args[0].__class__.__name__ == "DecisionMade"
     ]
     assert decision_events
-    assert decision_events[0].action == "investigate"
+    assert decision_events[0].action == "escalate"
     metadata_query = "\n".join(fake_graph.queries)
     assert "d.explored_but_referred   = false" in metadata_query
 

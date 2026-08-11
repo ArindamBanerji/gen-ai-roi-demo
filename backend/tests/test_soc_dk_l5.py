@@ -265,7 +265,7 @@ def test_soc_outcome_response_surfaces_l5_persistence_status():
 def test_soc_outcome_route_uses_l5_helpers_not_direct_age_writes():
     source = inspect.getsource(triage.report_decision_outcome)
 
-    assert "_persist_soc_centroid(" in source
+    assert "_persist_soc_outcome_and_centroid(" in source
     assert "_persist_soc_dk_weights(" in source
     assert "_update_dk_welford_tracker(" in source
     assert "reestimate_dk" in source
@@ -358,6 +358,7 @@ async def _run_soc_outcome_with_route_patches(
         AsyncMock(return_value={"status": "GREEN", "auto_pause_active": False}),
     )
     monkeypatch.setattr("app.services.gae_state.acquire_scorer", fake_acquire_scorer)
+    monkeypatch.setattr("app.services.gae_state.get_profile_scorer", lambda: scorer)
     monkeypatch.setattr("app.services.gae_state.get_soc_centroid", lambda *_args: [0.0] * 6)
     monkeypatch.setattr("app.services.gae_state.update_dk_welford_tracker", lambda *_args, **_kwargs: None)
 

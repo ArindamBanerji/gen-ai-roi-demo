@@ -1715,6 +1715,9 @@ async def report_decision_outcome(request: OutcomeRequest):
     _perf_total_started = _soc_perf_start()
     _perf_total_status = "ok"
     _perf_total_exception = None
+    # Keep this available to response and integration paths even when
+    # learning is disabled or gated before the conditional learning branch.
+    _analyst_action = request.analyst_action
 
     try:
         with _soc_perf_phase(
@@ -2120,6 +2123,7 @@ async def report_decision_outcome(request: OutcomeRequest):
 
                     from app.services.gae_state import (
                         acquire_scorer as _acquire_scorer,
+                        get_profile_scorer as _get_live_profile_scorer,
                         get_soc_centroid as _get_soc_centroid,
                         guarded_update as _guarded_update,
                         persist_soc_outcome_and_centroid as _persist_soc_outcome_and_centroid,
@@ -2127,21 +2131,47 @@ async def report_decision_outcome(request: OutcomeRequest):
                         update_dk_welford_tracker as _update_dk_welford_tracker,
                     )
                     from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
+                    # A detached process-wide scorer is a cold-start guard
+                    # condition.  Preserve explicitly injected acquire
+                    # contexts (used by alternate runtimes and tests).
+                    if (
+                        _get_live_profile_scorer() is None
+                        and getattr(_acquire_scorer, "__module__", "")
+                        == "app.services.gae_state"
+                    ):
+                        _conservation_block = True
+                        l5_persistence_status["l5_persistence_skipped_reason"] = (
+                            "scorer_not_attached"
+                        )
                     if _conservation_block:
                         logger.warning("[B5] Conservation check failed -- learning blocked (fail-closed)")
-                        l5_persistence_status["l5_persistence_skipped_reason"] = "conservation_check_failed"
-                        async with _acquire_scorer() as _ps_blocked:
-                            if isinstance(_ps_blocked, SOCCompoundingScorerAdapter):
-                                try:
-                                    _ps_blocked.capture_existing_state(
-                                        capture_reason="guarded_pause",
-                                        decision_id=request.decision_id,
-                                    )
-                                except Exception as _snapshot_exc:
-                                    logger.warning(
-                                        "[GAE][LEARN] SOC guarded-pause state capture failed: %s",
-                                        _snapshot_exc,
-                                    )
+                        if l5_persistence_status["l5_persistence_skipped_reason"] is None:
+                            l5_persistence_status["l5_persistence_skipped_reason"] = (
+                                "conservation_check_failed"
+                            )
+                        _soc_store.write_outcome(**_outcome_write_kwargs)
+                        try:
+                            async with _acquire_scorer() as _ps_blocked:
+                                if isinstance(_ps_blocked, SOCCompoundingScorerAdapter):
+                                    try:
+                                        _ps_blocked.capture_existing_state(
+                                            capture_reason="guarded_pause",
+                                            decision_id=request.decision_id,
+                                        )
+                                    except Exception as _snapshot_exc:
+                                        logger.warning(
+                                            "[GAE][LEARN] SOC guarded-pause state capture failed: %s",
+                                            _snapshot_exc,
+                                        )
+                        except Exception as _acquire_exc:
+                            # The outcome write above remains authoritative. A
+                            # cold-start scorer snapshot is only an optional
+                            # learning artifact and must not turn the route into
+                            # a 500 response.
+                            logger.warning(
+                                "[GAE][LEARN] SOC guarded-pause snapshot unavailable: %s",
+                                _acquire_exc,
+                            )
                     else:
                         _cu = None
                         _guard_block_reason = None
@@ -2248,6 +2278,31 @@ async def report_decision_outcome(request: OutcomeRequest):
                                             "[GAE][LEARN] SOC DK reestimate failed: %s",
                                             _dk_exc,
                                         )
+                                    _checkpoint_writer = None
+                                    if isinstance(_ps_out, SOCCompoundingScorerAdapter):
+                                        def _checkpoint_writer(transaction):
+                                            try:
+                                                return _compound_scorer._persist_learning_artifacts(
+                                                    request.decision_id,
+                                                    actual_action=_scorer_acts[_gt_idx],
+                                                    outcome=outcome_label,
+                                                    is_correct=bool(_correct),
+                                                    category=_cat_name_out,
+                                                    evidence_already_persisted=True,
+                                                    skip_history_scan=True,
+                                                    transaction=transaction,
+                                                    raise_on_error=True,
+                                                )
+                                            except KeyError as _checkpoint_exc:
+                                                # The authoritative graph outcome and
+                                                # centroid write already succeeded.
+                                                # A stale scorer-local decision index
+                                                # must not convert that result to 500.
+                                                logger.warning(
+                                                    "[GAE][LEARN] scorer checkpoint skipped: %s",
+                                                    _checkpoint_exc,
+                                                )
+                                                return None
                                     try:
                                         with _soc_perf_phase(
                                             "l5_centroid_write",
@@ -2271,21 +2326,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                                                         _actual_action_index
                                                     ),
                                                 },
-                                                checkpoint_writer=(
-                                                    lambda transaction: _compound_scorer._persist_learning_artifacts(
-                                                        request.decision_id,
-                                                        actual_action=_scorer_acts[_gt_idx],
-                                                        outcome=outcome_label,
-                                                        is_correct=bool(_correct),
-                                                        category=_cat_name_out,
-                                                        evidence_already_persisted=True,
-                                                        skip_history_scan=True,
-                                                        transaction=transaction,
-                                                        raise_on_error=True,
-                                                    )
-                                                )
-                                                if isinstance(_ps_out, SOCCompoundingScorerAdapter)
-                                                else None,
+                                                checkpoint_writer=_checkpoint_writer,
                                                 logger=logger,
                                             )
                                         l5_persistence_status["l5_centroid_persisted"] = bool(
@@ -2336,12 +2377,17 @@ async def report_decision_outcome(request: OutcomeRequest):
                             l5_persistence_status["l5_persistence_skipped_reason"] = _guard_block_reason
                             logger.info("[GAE][LEARN] Update blocked by conservation/spike/freeze guard")
                 else:
-                    print(
-                        f"[GAE][LEARN] ProfileScorer.update called: "
-                        f"action={action_name} analyst_action={_analyst_action!r} "
-                        f"gt_action_index={_gt_idx} correct={_correct} "
-                        f"category={_cat_name_out} eta={_analyst_eta or _orig_eta_override_out}"
-                    )
+                    # Learning may be disabled, or the alert may be
+                    # intentionally unclassified.  In either case the
+                    # verified outcome still belongs on the Decision node;
+                    # only scorer learning is skipped.
+                    _soc_store.write_outcome(**_outcome_write_kwargs)
+                    if l5_persistence_status["l5_persistence_skipped_reason"] == "not_attempted":
+                        l5_persistence_status["l5_persistence_skipped_reason"] = (
+                            "soc_learning_disabled"
+                            if not _soc_learning_active
+                            else "unclassified_alert_type"
+                        )
 
                 # Keep the convergence endpoint's LearningState counter in sync
                 # with every verified scorable outcome.  The SOC adapter owns the

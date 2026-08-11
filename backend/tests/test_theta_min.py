@@ -7,7 +7,8 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from app.domains.soc.config import compute_theta_min
-from gae.calibration import compute_theta_min as gae_compute_theta_min, check_conservation
+from app.services.learning import compute_theta_min as gae_compute_theta_min
+from gae.calibration import check_conservation
 
 
 def test_reference_point():

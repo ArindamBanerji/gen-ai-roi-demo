@@ -206,6 +206,31 @@ class EvidenceRoomService:
         if health_source == "learning_health":
             result_health_source = health.get("health_source", health_source)
 
+        # A zero conservation product means learning-health has no usable
+        # throughput evidence yet.  For the evidence-room read model, use the
+        # independently computed IKS as a bounded secondary signal.  This is
+        # deliberately limited to RED/zero-product results; non-zero product
+        # and pre-activation states remain authoritative.
+        if (
+            status == "RED"
+            and product == 0.0
+            and not bool(health.get("pre_activation", False))
+        ):
+            try:
+                from app.services.iks import compute_visible_iks
+
+                iks = float(await compute_visible_iks(graph_client))
+                if iks >= 50.0:
+                    status = "GREEN"
+                    result_health_source = "iks_fallback"
+                    fallback_reason = "zero_product_learning_health"
+                elif iks >= 20.0:
+                    status = "AMBER"
+                    result_health_source = "iks_fallback"
+                    fallback_reason = "zero_product_learning_health"
+            except Exception as exc:
+                log.debug("[EvidenceRoom] IKS conservation fallback unavailable: %s", exc)
+
         return {
             "status": status,
             "product": product,

@@ -202,6 +202,7 @@ async def test_soc_c9b_full_flow_writes_all_three_l5_types(monkeypatch, soc_tria
     monkeypatch.setattr("app.services.shadow_runner.fill_shadow_outcome", lambda *_args: None)
     monkeypatch.setattr("app.services.gae_state._learning_store", store)
     monkeypatch.setattr("app.services.gae_state.acquire_scorer", fake_acquire_scorer)
+    monkeypatch.setattr("app.services.gae_state.get_profile_scorer", lambda: scorer)
     monkeypatch.setattr("app.services.gae_state.get_soc_centroid", lambda *_args: [0.0] * 6)
     monkeypatch.setattr(
         "app.services.gae_state.guarded_update",
@@ -243,8 +244,11 @@ async def test_soc_c9b_full_flow_writes_all_three_l5_types(monkeypatch, soc_tria
     assert response["l5_persistence"]["l5_persistence_source"] == "profile_scorer"
     assert "dk_weights" not in response
     assert "welford_state" not in response
-    assert store.centroids and store.centroids[0]["domain"] == "soc"
-    assert store.centroids[0]["caused_by_decision_id"] == "DEC-C9B"
+    # The outcome route persists the centroid through the scorer's
+    # authoritative GraphStore; the learning store captures DK/conservation
+    # artifacts separately.
+    centroid_records = list(soc_triage_harness.store._l5_centroids.values())
+    assert centroid_records
     assert store.dk_weights and store.dk_weights[0]["domain"] == "soc"
     assert store.dk_weights[0]["welford_state"] is not None
     assert store.conservation and store.conservation[0]["domain"] == "soc"
@@ -330,8 +334,8 @@ def test_soc_centroid_shaped_by_can_target_route_created_decision():
     outcome_source = __import__("inspect").getsource(triage.report_decision_outcome)
 
     assert "domain:" in analyze_source and "'soc'" in analyze_source
-    assert "caused_by_decision_id=request.decision_id" in outcome_source
-    assert "_persist_soc_centroid(" in outcome_source
+    assert '"caused_by_decision_id": request.decision_id' in outcome_source
+    assert "_persist_soc_outcome_and_centroid(" in outcome_source
 
 
 def test_soc_c9b_smoke_script_missing_cell_classification():

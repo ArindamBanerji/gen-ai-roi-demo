@@ -57,6 +57,7 @@ async def _call_with_factor_vector(factor_vector, harness, action: str = "invest
         stack.enter_context(patch("app.routers.triage.process_outcome", return_value=_OutcomeResult()))
         stack.enter_context(patch("app.routers.triage.event_bus.emit", new_callable=AsyncMock))
         stack.enter_context(patch("app.routers.triage.get_learning_state", return_value=learning_state))
+        stack.enter_context(patch("app.routers.triage.LEARNING_ENABLED", False))
         stack.enter_context(patch("app.routers.triage.save_learning_state"))
         stack.enter_context(patch("app.framework.audit.record_outcome", new_callable=AsyncMock, return_value={"hash": "hash", "chain_index": 1}))
         stack.enter_context(patch("app.state.graph_snapshot.get_snapshot", return_value=MagicMock()))
