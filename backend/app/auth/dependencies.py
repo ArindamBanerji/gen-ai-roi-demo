@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Optional
 from fastapi import Request, HTTPException
 
@@ -16,7 +17,7 @@ def get_auth_config():
 
 
 EXEMPT_PREFIXES = (
-    "/health", "/saml/", "/docs", "/openapi.json",
+    "/health", "/saml/", "/docs", "/openapi.json", "/redoc",
 )
 
 ADMIN_PREFIXES = (
@@ -38,21 +39,32 @@ async def require_auth(request: Request) -> Optional[dict]:
     from app.auth.jwt_utils import verify_jwt
     config = get_auth_config()
 
-    if not config.saml_enabled:
+    # Infrastructure and API-discovery endpoints must remain reachable for
+    # load balancers, demo.py health waits, and monitoring even when auth is
+    # fail-closed for application routes.
+    path = request.url.path if request is not None else ""
+    if any(path.startswith(prefix) for prefix in EXEMPT_PREFIXES):
         return None
 
-    # Normalize path to prevent traversal bypass
+    if not config.saml_enabled:
+        if os.environ.get("SOC_DEMO_MODE", "false").lower() == "true":
+            return None
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Authentication required. Set SOC_DEMO_MODE=true "
+                "only for an explicit local demo."
+            ),
+        )
+
+    # Normalize path to prevent traversal bypass for authenticated routes.
     from urllib.parse import unquote
-    path = request.url.path
     path = unquote(path)
     # Collapse double slashes and resolve dot segments
     while "//" in path:
         path = path.replace("//", "/")
     if "/.." in path or "/../" in path:
         path = "/" + path.split("/")[-1]
-    if any(path.startswith(p) for p in EXEMPT_PREFIXES):
-        return None
-
     token = request.cookies.get("soc_auth_token")
     if not token:
         raise HTTPException(

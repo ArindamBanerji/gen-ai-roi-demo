@@ -378,6 +378,22 @@ def test_upload_endpoint_rejects_invalid_csv(client):
     assert response.json()["detail"] == "Expected a CSV upload"
 
 
+def test_upload_rejects_oversized_csv(client):
+    response = client.post(
+        "/api/eval/upload",
+        files={"file": ("oversized.csv", b"a" * (10 * 1024 * 1024 + 1), "text/csv")},
+    )
+    assert response.status_code == 413
+
+
+def test_upload_rejects_binary_content_named_csv(client):
+    response = client.post(
+        "/api/eval/upload",
+        files={"file": ("executable.csv", b"MZ\x00\x01\xff\xfe", "text/csv")},
+    )
+    assert response.status_code == 400
+
+
 def test_templates_endpoint_returns_formats(client):
     response = client.get("/api/eval/templates")
     assert response.status_code == 200

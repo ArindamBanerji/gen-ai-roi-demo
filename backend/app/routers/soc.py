@@ -1538,8 +1538,16 @@ def _build_eu_ai_act_summary(
     conservation_status: str,
     audit_chain_valid: bool,
 ) -> dict:
-    article_9_status = "COMPLIANT" if conservation_status == "GREEN" else "INVESTIGATION"
-    article_15_status = "COMPLIANT" if audit_chain_valid else "INVESTIGATION"
+    article_9_status = (
+        "EVIDENCE_SUPPORTING_OVERSIGHT"
+        if conservation_status == "GREEN"
+        else "INVESTIGATION"
+    )
+    article_15_status = (
+        "EVIDENCE_SUPPORTING_OVERSIGHT"
+        if audit_chain_valid
+        else "INVESTIGATION"
+    )
     return {
         "article_9": {
             "status": article_9_status,
@@ -3515,7 +3523,7 @@ async def _tab5_content() -> dict:
         f"Current signal: {signal}. "
         "Every system decision is logged in a tamper-evident "
         "Evidence Ledger -- full audit trail available for "
-        "regulatory review (EU AI Act Art. 13 compliant)."
+        "regulatory review (EU AI Act Art. 13 evidence supporting human oversight)."
     )
 
     return {

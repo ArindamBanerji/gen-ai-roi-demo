@@ -13,6 +13,7 @@ import os
 import time
 import jwt
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 
@@ -210,6 +211,63 @@ def test_saml_enabled_admin_path_allows_admin_jwt(saml_enabled_client):
         cookies={"soc_auth_token": token},
     )
     assert r.status_code != 403
+
+
+@pytest.mark.asyncio
+async def test_auth_fails_closed_by_default(monkeypatch):
+    import app.auth.dependencies as dep
+
+    monkeypatch.delenv("SOC_DEMO_MODE", raising=False)
+    monkeypatch.delenv("SAML_ENABLED", raising=False)
+    dep._auth_config = None
+
+    with pytest.raises(HTTPException) as exc_info:
+        await dep.require_auth(None)
+    assert exc_info.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_auth_allows_explicit_demo_mode(monkeypatch):
+    import app.auth.dependencies as dep
+
+    monkeypatch.setenv("SOC_DEMO_MODE", "true")
+    monkeypatch.delenv("SAML_ENABLED", raising=False)
+    dep._auth_config = None
+
+    assert await dep.require_auth(None) is None
+
+
+def test_health_always_open_without_demo_mode(app_client, monkeypatch):
+    monkeypatch.delenv("SOC_DEMO_MODE", raising=False)
+    monkeypatch.delenv("SAML_ENABLED", raising=False)
+    import app.auth.dependencies as dep
+    dep._auth_config = None
+
+    response = app_client.get("/health")
+
+    assert response.status_code == 200
+
+
+def test_auth_blocks_without_demo_mode(app_client, monkeypatch):
+    monkeypatch.delenv("SOC_DEMO_MODE", raising=False)
+    monkeypatch.delenv("SAML_ENABLED", raising=False)
+    import app.auth.dependencies as dep
+    dep._auth_config = None
+
+    response = app_client.get("/api/soc/tab/1/content")
+
+    assert response.status_code == 403
+
+
+def test_auth_allows_with_demo_mode(app_client, monkeypatch):
+    monkeypatch.setenv("SOC_DEMO_MODE", "true")
+    monkeypatch.delenv("SAML_ENABLED", raising=False)
+    import app.auth.dependencies as dep
+    dep._auth_config = None
+
+    response = app_client.get("/api/soc/tab/1/content")
+
+    assert response.status_code == 200
 
 
 # ---------------------------------------------------------------------------

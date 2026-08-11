@@ -17,7 +17,7 @@ def test_compliance_returns_200():
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["title"] == "EU AI Act Compliance Evidence"
+    assert payload["title"] == "EU AI Act Evidence Supporting Human Oversight"
     assert "articles" in payload
     assert "summary" in payload
 
@@ -36,7 +36,7 @@ def test_article_9_has_status_title_description():
 
     assert article["title"]
     assert article["description"]
-    assert article["status"] in {"COMPLIANT", "INVESTIGATION"}
+    assert article["status"] in {"EVIDENCE_SUPPORTING_OVERSIGHT", "INVESTIGATION"}
 
 
 def test_article_15_has_status_title_description():
@@ -44,14 +44,22 @@ def test_article_15_has_status_title_description():
 
     assert article["title"]
     assert article["description"]
-    assert article["status"] in {"COMPLIANT", "INVESTIGATION"}
+    assert article["status"] in {"EVIDENCE_SUPPORTING_OVERSIGHT", "INVESTIGATION"}
 
 
 def test_article_statuses_are_allowed():
     payload = client.get("/api/soc/compliance").json()["eu_ai_act"]
 
     statuses = {section["status"] for section in payload.values()}
-    assert statuses <= {"COMPLIANT", "INVESTIGATION"}
+    assert statuses <= {"EVIDENCE_SUPPORTING_OVERSIGHT", "INVESTIGATION"}
+
+
+def test_eu_ai_act_no_certification_language():
+    payload = client.get("/api/soc/compliance").json()
+    rendered = str(payload).upper()
+    for forbidden in ("COMPLIANT", "CERTIFIED", "CERTIFICATION", "MEETS REQUIREMENTS"):
+        assert forbidden not in rendered
+    assert "EVIDENCE" in rendered or "OVERSIGHT" in rendered
 
 
 def test_non_green_conservation_sets_article_9_investigation():
@@ -61,7 +69,7 @@ def test_non_green_conservation_sets_article_9_investigation():
     )
 
     assert payload["article_9"]["status"] == "INVESTIGATION"
-    assert payload["article_15"]["status"] == "COMPLIANT"
+    assert payload["article_15"]["status"] == "EVIDENCE_SUPPORTING_OVERSIGHT"
 
 
 def test_invalid_audit_chain_sets_article_15_investigation():
@@ -70,5 +78,5 @@ def test_invalid_audit_chain_sets_article_15_investigation():
         audit_chain_valid=False,
     )
 
-    assert payload["article_9"]["status"] == "COMPLIANT"
+    assert payload["article_9"]["status"] == "EVIDENCE_SUPPORTING_OVERSIGHT"
     assert payload["article_15"]["status"] == "INVESTIGATION"

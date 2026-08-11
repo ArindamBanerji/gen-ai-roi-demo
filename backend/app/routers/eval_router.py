@@ -22,13 +22,21 @@ from app.services.eval_service import (
 
 router = APIRouter()
 
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+MAX_ROWS = 50_000
+
 
 @router.post("/eval/upload")
 async def upload_eval_csv(file: UploadFile = File(...)):
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Expected a CSV upload")
 
-    raw = await file.read()
+    raw = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(raw) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"CSV exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)}MB limit",
+        )
     if not raw:
         raise HTTPException(status_code=400, detail="Uploaded CSV is empty")
 
@@ -52,7 +60,14 @@ async def upload_eval_csv(file: UploadFile = File(...)):
             },
         )
 
-    rows = list(enumerate(reader, start=2))
+    rows: list[tuple[int, dict[str, str]]] = []
+    for row_number, row in enumerate(reader, start=2):
+        if len(rows) >= MAX_ROWS:
+            raise HTTPException(
+                status_code=413,
+                detail=f"CSV exceeds {MAX_ROWS} row limit",
+            )
+        rows.append((row_number, row))
     if not rows:
         raise HTTPException(status_code=400, detail="CSV contains no data rows")
 

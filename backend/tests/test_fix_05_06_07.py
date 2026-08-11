@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+import ast
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -26,6 +27,20 @@ from app.services.learning_health import LearningHealthMonitor
 # ===========================================================================
 # FIX-05: Simulation must not mutate production learning state
 # ===========================================================================
+
+def test_simulation_learning_path_does_not_reacquire_or_snapshot_production():
+    source = open(sim_mod.__file__, encoding="utf-8").read()
+    tree = ast.parse(source)
+    scorer_calls = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "get_profile_scorer"
+    ]
+    assert len(scorer_calls) == 1
+    assert scorer_calls[0].lineno < 331
+    assert "maybe_write_centroid_snapshot" not in source
+    assert "Simulation clone is attached to the production ProfileScorer" in source
 
 @pytest.mark.asyncio
 async def test_simulation_does_not_mutate_production_state():

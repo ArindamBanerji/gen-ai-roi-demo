@@ -92,6 +92,14 @@ def test_validate_blocks_mutation():
         )
 
 
+def test_validate_rejects_call_procedures():
+    assert GraphExplorerService.validate_query("CALL db.labels()") is False
+
+
+def test_validate_allows_read_only_match():
+    assert GraphExplorerService.validate_query("MATCH (n) RETURN n LIMIT 10") is True
+
+
 # ---------------------------------------------------------------------------
 # Test 3: GET /api/soc/graph/top-nodes returns nodes list
 # ---------------------------------------------------------------------------

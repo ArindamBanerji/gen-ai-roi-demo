@@ -89,7 +89,7 @@ COMPLIANCE_MAP = [
 
 def generate_compliance_page() -> Dict:
     return {
-        'title': 'EU AI Act Compliance Evidence',
+        'title': 'EU AI Act Evidence Supporting Human Oversight',
         'enforcement_date': '2026-08-02',
         'last_updated': datetime.utcnow().isoformat(),
         'articles': [

@@ -89,10 +89,10 @@ class GraphExplorerService:
     """Safe graph exploration for the CISO demo."""
 
     # Whitelist of safe read-only Cypher prefixes
-    SAFE_PREFIXES = ["MATCH", "RETURN", "WITH", "OPTIONAL MATCH", "CALL", "UNWIND"]
+    SAFE_PREFIXES = ["MATCH", "RETURN", "WITH", "OPTIONAL MATCH", "UNWIND"]
 
     # Mutation keywords that are never allowed
-    BLOCKED_KEYWORDS = ["DELETE", "CREATE", "SET", "REMOVE", "MERGE", "DROP", "DETACH"]
+    BLOCKED_KEYWORDS = ["DELETE", "CREATE", "SET", "REMOVE", "MERGE", "DROP", "DETACH", "CALL"]
 
     @staticmethod
     def validate_query(cypher: str) -> bool:

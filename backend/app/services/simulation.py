@@ -460,42 +460,26 @@ class SimulationOrchestrator:
                     confidence_at_decision = scoring.confidence,
                 )
 
-                # CORR-2: ProfileScorer.update() — gated by LEARNING_ENABLED (default False).
-                # gt_action_index derived from ground_truth_action (always available in simulation).
+                # CORR-2: simulation learning is local to the cloned LearningState.
+                # Do not reacquire the production ProfileScorer here: the local
+                # sim_ls.update() above is the complete simulation learning path.
+                # A profile scorer must remain detached from the simulation clone.
                 if LEARNING_ENABLED and ground_truth_action in scorer_actions:
                     from app.domains.soc.config import resolve_alert_category, SOCDomainConfig as _SDC_sim
-                    from app.services.gae_state import guarded_update as _guarded_update_sim
                     _cat_name_sim = resolve_alert_category(category)
                     if _cat_name_sim == "unclassified":
                         continue
                     _cat_idx_sim  = _SDC_sim().get_category_index(_cat_name_sim)
                     _gt_idx_sim   = scorer_actions.index(ground_truth_action)
-                    _sim_scorer = get_profile_scorer()
-                    if _sim_scorer is not None:
-                        _cu_sim = _guarded_update_sim(
-                            _sim_scorer,
-                            f=f_for_update.flatten(),
-                            category_index=_cat_idx_sim,
-                            action_index=action_index,
-                            correct=correct,
-                            category_name=_cat_name_sim,
-                            gt_action_index=_gt_idx_sim,
+                    _sim_scorer = getattr(sim_ls, "profile_scorer", None)
+                    if _sim_scorer is profile_scorer:
+                        raise RuntimeError(
+                            "Simulation clone is attached to the production ProfileScorer"
                         )
-                        if _cu_sim is None:
-                            logger.info("[SIM] Learning update blocked by conservation/spike guard")
-                        # FEATURE-04: snapshot centroids for Time Machine
-                        try:
-                            from app.services.gae_state import maybe_write_centroid_snapshot as _snap_sim
-                            _snap_sim(
-                                _sim_scorer,
-                                decision_id=str(decision_id),
-                                category=_cat_name_sim,
-                            )
-                        except Exception as _snap_sim_exc:
-                            logger.warning(
-                                "[SNAPSHOT] Sim centroid snapshot failed (non-blocking): %s",
-                                _snap_sim_exc,
-                            )
+                    # sim_ls.update() above is the only state mutation.  Keep the
+                    # computed values referenced for audit/debug parity without
+                    # invoking a second scorer or writing centroid snapshots.
+                    _ = (_cat_idx_sim, _gt_idx_sim, _cat_name_sim)
 
             # ------------------------------------------------------------------
             # Step 11: Emit OutcomeVerified + GraphMutated
