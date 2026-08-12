@@ -27,6 +27,8 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List
 
+from app.domains.soc.factor_vector import validated_factor_vector
+
 import numpy as np
 
 log = logging.getLogger(__name__)
@@ -142,7 +144,7 @@ def build_bootstrap_decisions(
                 "id":               str(uuid.uuid4()),
                 "action":           action_name,
                 "confidence":       float(score_result.confidence),
-                "factor_vector":    fv,              # native list for AGE
+                "factor_vector":    validated_factor_vector(fv),
                 "centroid_snapshot": centroid.tolist(),  # native list for AGE
                 "category":         category,
                 "source":           "bootstrap",

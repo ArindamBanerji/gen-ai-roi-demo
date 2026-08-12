@@ -201,23 +201,26 @@ test.describe('API checks', () => {
     expect(body).toHaveProperty('ioc_coverage');
   });
 
-  // S2P Copilot runs on separate port — tested independently
-  test.skip('POST /api/s2p/score × 10 scenarios → all return valid action', async ({ request }) => {
+  test('POST /api/s2p/score × 10 scenarios → all return valid action', async ({ request }) => {
+    const s2pBackend = process.env.S2P_API_URL || 'http://127.0.0.1:8002';
     const scenarios = Array.from({ length: 10 }, (_, i) => ({
-      alert_id: `ALERT-TEST-${i + 1}`,
-      severity: ['low', 'medium', 'high', 'critical'][i % 4],
-      asset_criticality: Math.random(),
-      threat_intel_match: Math.random() > 0.5,
-      pattern_history: Math.random(),
-      time_anomaly: Math.random(),
-      device_trust: Math.random(),
-      travel_match: Math.random() > 0.5,
+      event_id: `PW-SCORE-${Date.now()}-${i + 1}`,
+      category: 'price_variance',
+      amount: 1000 + i * 100,
+      supplier_id: `SUP-PW-${i + 1}`,
+      match_status: 0.6,
+      amount_variance_ratio: 0.3,
+      duplicate_score: 0.2,
+      supplier_exception_history: 0.7,
+      payment_terms_impact: 0.4,
+      commodity_index_correlation: 0.5,
+      tax_regulatory_compliance: 0.8,
     }));
 
-    const validActions = ['escalate', 'investigate', 'monitor', 'dismiss', 'close', 'ignore'];
+    const validActions = ['auto_approve', 'hold_for_review', 'escalate_to_buyer', 'flag_leakage', 'refer_to_specialist'];
 
     for (const scenario of scenarios) {
-      const res = await request.post(`${BACKEND}/api/s2p/score`, { data: scenario });
+      const res = await request.post(`${s2pBackend}/api/s2p/score`, { data: scenario });
       expect(res.status()).toBe(200);
       const body = await res.json();
       expect(body).toHaveProperty('action');

@@ -18,6 +18,9 @@ if (existsSync(envPath)) {
 
 const BACKEND_PORT  = process.env.BACKEND_PORT  ?? '8001';
 const FRONTEND_PORT = process.env.FRONTEND_PORT ?? '5173';
+// S2P is a separate service in the demo stack.  Keep its endpoint explicit so
+// SOC E2E checks do not accidentally send S2P requests to the SOC backend.
+if (!process.env.S2P_API_URL) process.env.S2P_API_URL = 'http://127.0.0.1:8002';
 
 // Fail loudly if BACKEND_PORT is missing (no silent wrong-port tests)
 if (!process.env.BACKEND_PORT) {

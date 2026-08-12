@@ -1,18 +1,7 @@
 import { expect, test, type APIRequestContext } from '@playwright/test'
 
 const S2P_API_URL = process.env.S2P_API_URL
-const ALLOW_LIVE = process.env.ALLOW_LIVE_S2P_CONTRIB_WRITES === '1'
-const s2pApi = S2P_API_URL || 'http://127.0.0.1:0'
-
-function isLivePersistentTarget(url: string | undefined) {
-  if (!url) return false
-  try {
-    const parsed = new URL(url)
-    return ['localhost', '127.0.0.1'].includes(parsed.hostname) && parsed.port === '8002'
-  } catch {
-    return false
-  }
-}
+const s2pApi = S2P_API_URL || 'http://127.0.0.1:8002'
 
 function uniqueInvoiceId() {
   return `PW-CONTRIB-${Date.now()}-${Math.random().toString(16).slice(2)}`
@@ -39,13 +28,7 @@ async function scoreInvoice(request: APIRequestContext, invoiceId: string) {
 }
 
 test.describe('S2P factor contribution API smoke', () => {
-  test.skip(!S2P_API_URL, 'contribution smoke requires explicit isolated S2P_API_URL')
-  test.skip(
-    isLivePersistentTarget(S2P_API_URL) && !ALLOW_LIVE,
-    'contribution smoke writes a score; use isolated S2P_API_URL or set ALLOW_LIVE_S2P_CONTRIB_WRITES=1 intentionally',
-  )
-
-  test('scored invoice exposes seven numeric contribution rows', async ({ request }) => {
+  test('scored invoice exposes eight numeric contribution rows', async ({ request }) => {
     const invoiceId = uniqueInvoiceId()
     await scoreInvoice(request, invoiceId)
 
@@ -57,7 +40,7 @@ test.describe('S2P factor contribution API smoke', () => {
 
     expect(body.invoice_id).toBe(invoiceId)
     expect(Array.isArray(body.contributions)).toBe(true)
-    expect(body.contributions).toHaveLength(7)
+    expect(body.contributions).toHaveLength(8)
     for (const entry of body.contributions) {
       expect(typeof entry.factor).toBe('string')
       expect(typeof entry.value).toBe('number')

@@ -47,23 +47,29 @@ test('test_eval_section_renders', async ({ page }) => {
   await snap(page, '01_eval_section');
 });
 
-test.skip('test_eval_result_displays_accuracy', async ({ page }) => {
+test('test_eval_result_displays_accuracy', async ({ page }, testInfo) => {
   test.setTimeout(60_000);
   await goToCompounding(page);
 
-  // Check API to see if eval result data is accessible
-  const evalRes = await page.request.get('/api/soc/eval/demo').catch(() => null);
-  console.log(`/api/soc/eval/demo: ${evalRes ? `HTTP ${evalRes.status()}` : 'unavailable'}`);
+  const csvPath = testInfo.outputPath('eval-fixture.csv');
+  fs.writeFileSync(csvPath, [
+    'category,ground_truth_action,privileged_identity_context,asset_criticality,threat_intel_enrichment,pattern_history,time_anomaly,device_trust',
+    'credential_access,escalate,0.95,0.90,0.85,0.75,0.80,0.10',
+    'malware_execution,investigate,0.20,0.75,0.65,0.70,0.45,0.35',
+    'cloud_infrastructure,monitor,0.15,0.55,0.25,0.30,0.35,0.80',
+  ].join('\n'));
+  await page.locator('#eval-upload-input').setInputFiles(csvPath);
+  await page.getByRole('button', { name: /Upload CSV/i }).click();
 
-  // The accuracy display only appears after a file is uploaded and eval runs.
-  // We verify the section exists and the accuracy element structure is present.
+  // The accuracy display appears after the fixture upload completes.
   const evalSection = page.locator('text=Evaluate on Your Data').first();
   const sectionVisible = await evalSection.isVisible({ timeout: 5_000 }).catch(() => false);
   console.log(`Eval section visible: ${sectionVisible}`);
 
   // If a prior eval result is in state, accuracy card renders
   const accuracyEl = page.locator('text=Overall Accuracy').first();
-  const accuracyVisible = await accuracyEl.isVisible({ timeout: 3_000 }).catch(() => false);
+  await expect(accuracyEl).toBeVisible({ timeout: 30_000 });
+  const accuracyVisible = true;
   console.log(`Overall Accuracy card visible (requires prior upload): ${accuracyVisible}`);
 
   // Majority baseline section: present only after eval
@@ -72,6 +78,7 @@ test.skip('test_eval_result_displays_accuracy', async ({ page }) => {
   console.log(`Majority baseline visible: ${majorityVisible}`);
 
   expect(sectionVisible).toBe(true);
+  expect(accuracyVisible).toBe(true);
   await snap(page, '02_eval_accuracy');
 });
 

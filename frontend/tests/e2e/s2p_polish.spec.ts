@@ -9,13 +9,9 @@ async function navigateToS2PPreview(page: import('@playwright/test').Page) {
 test('supplier lead-time renders contractual and actual Q4 values', async ({ page }) => {
   await navigateToS2PPreview(page)
 
-  const supplierSection = page.locator('div').filter({ hasText: 'Supplier Intelligence' }).first()
-  const supplierVisible = await supplierSection.isVisible({ timeout: 5_000 }).catch(() => false)
-  if (!supplierVisible) {
-    test.skip(true, 'S2P preview backend unavailable; Supplier Intelligence section is not rendered.')
-  }
-
-  await expect(supplierSection.getByText('Lead time').first()).toBeVisible()
+  const supplierSection = page.locator('div').filter({ hasText: 'Supplier Profile' }).first()
+  await expect(supplierSection).toBeVisible({ timeout: 10_000 })
+  await expect(supplierSection.getByText('Lead time').first()).toBeVisible({ timeout: 10_000 })
   const sectionText = await supplierSection.innerText()
   expect(sectionText).not.toMatch(/undefined|NaN/i)
   expect(sectionText).toMatch(/\d+\s+contractual days/)

@@ -15,7 +15,9 @@ import WorkingCapitalPanel from '../WorkingCapitalPanel'
 // - No "sample" headline without sample badge (F-25 compliance)
 
 const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
-const S2P_API = env?.VITE_S2P_API_URL || 'http://127.0.0.1:8002'
+// Use the Vite same-origin proxy in the demo. A VITE override remains
+// available for standalone deployments.
+const S2P_API = env?.VITE_S2P_API_URL || ''
 
 interface QueueException {
   invoice_id?: string
@@ -61,6 +63,7 @@ interface SupplierProfile {
   recent_trend?: string
   risk_level?: string
   intelligence?: SupplierIntelligence
+  lead_time?: { contractual?: number; actual_q4?: number }
 }
 
 interface SuppliersResponse {
@@ -231,6 +234,14 @@ async function fetchJson<T>(path: string): Promise<T> {
   return response.json() as Promise<T>
 }
 
+async function fetchOptionalJson<T>(path: string, fallback: T, timeoutMs = 3000): Promise<T> {
+  const request = fetchJson<T>(path).catch(() => fallback)
+  return Promise.race([
+    request,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), timeoutMs)),
+  ])
+}
+
 function Badge({ children, tone = 'gray' }: { children: string; tone?: 'blue' | 'green' | 'yellow' | 'gray' | 'red' }) {
   const classes = {
     blue: 'border-blue-500/40 bg-blue-500/10 text-blue-200',
@@ -267,7 +278,10 @@ function MetricCard({ name, metric, kind }: { name: string; metric: ProvenancedM
   )
 }
 
-function SupplierIntelligenceProfilePanel({ profile }: { profile?: SupplierProfile | null }) {
+function SupplierIntelligenceProfilePanel({
+  profile,
+  supplier,
+}: { profile?: SupplierProfile | null; supplier?: SupplierProfile }) {
   const intelligence = profile?.intelligence
   const depth = intelligence?.depth
   const risk = intelligence?.risk
@@ -289,6 +303,14 @@ function SupplierIntelligenceProfilePanel({ profile }: { profile?: SupplierProfi
         <p className="mt-3 text-sm leading-6 text-gray-400">
           Supplier intelligence is not available yet. Process verified decisions to build learned supplier evidence.
         </p>
+        {supplier?.lead_time && (
+          <div className="mt-4 rounded border border-gray-800 bg-slate-950/60 p-3">
+            <div className="text-xs font-semibold text-gray-100">Lead time</div>
+            <div className="mt-1 font-mono text-sm text-gray-200">
+              {supplier.lead_time.contractual ?? 0} contractual days · {supplier.lead_time.actual_q4 ?? 0} actual Q4 days
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -307,6 +329,14 @@ function SupplierIntelligenceProfilePanel({ profile }: { profile?: SupplierProfi
           <p className="mt-4 rounded border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm leading-6 text-emerald-100">
             {intelligence.new_manager_summary}
           </p>
+        )}
+        {supplier?.lead_time && (
+          <div className="mt-4 rounded border border-gray-800 bg-slate-950/60 p-3">
+            <div className="text-xs font-semibold text-gray-100">Lead time</div>
+            <div className="mt-1 font-mono text-sm text-gray-200">
+              {supplier.lead_time.contractual ?? 0} contractual days · {supplier.lead_time.actual_q4 ?? 0} actual Q4 days
+            </div>
+          </div>
         )}
       </div>
 
@@ -521,7 +551,7 @@ export default function S2PPreviewTab() {
       setError(null)
       try {
         const [queue, conservation, suppliers] = await Promise.all([
-          fetchJson<QueueResponse>('/api/s2p/preview/queue'),
+          fetchOptionalJson<QueueResponse>('/api/s2p/preview/queue', {}, 2500),
           fetchJson<ConservationResponse>('/api/s2p/preview/conservation'),
           fetchJson<SuppliersResponse>('/api/s2p/preview/suppliers'),
         ])
@@ -530,7 +560,11 @@ export default function S2PPreviewTab() {
         const selectedSupplier = chenLin || supplierRows[0]
         let profile: SupplierProfile | null = null
         if (selectedSupplier?.supplier_id) {
-          profile = await fetchJson<SupplierProfile>(`/api/s2p/suppliers/${encodeURIComponent(selectedSupplier.supplier_id)}/profile`).catch(() => null)
+          profile = await fetchOptionalJson<SupplierProfile | null>(
+            `/api/s2p/suppliers/${encodeURIComponent(selectedSupplier.supplier_id)}/profile`,
+            null,
+            3000,
+          )
         }
         if (!cancelled) setData({ queue, conservation, suppliers, profile })
       } catch (err) {
@@ -692,13 +726,21 @@ export default function S2PPreviewTab() {
                     <div className="mt-1 font-mono text-green-300">{formatPct(supplierOtif(supplier), 1)}</div>
                   </div>
                 </div>
+                {supplier.lead_time && (
+                  <div className="mt-3 rounded border border-gray-800 bg-slate-900 p-3 text-xs">
+                    <div className="text-gray-500">Lead time</div>
+                    <div className="mt-1 font-mono text-gray-200">
+                      {supplier.lead_time.contractual ?? 0} contractual days · {supplier.lead_time.actual_q4 ?? 0} actual Q4 days
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <SupplierIntelligenceProfilePanel profile={intelligenceProfile} />
+      <SupplierIntelligenceProfilePanel profile={intelligenceProfile} supplier={preferredSuppliers[0]} />
 
       <div className="grid gap-6 xl:grid-cols-2">
         <FinancialImpactPanel />

@@ -26,6 +26,7 @@ from app.services.feedback import (
 )
 from app.services.policy import detect_policy_conflicts, get_conflict_history
 from app.services.triage import get_decision_factors, append_confidence_snapshot
+from app.domains.soc.factor_vector import validated_factor_vector
 from app.services.audit import record_decision
 from app.services.event_bus import event_bus, DecisionMade, OutcomeVerified, GraphMutated
 from app.services.soc_context_split import split_soc_security_context
@@ -730,7 +731,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             else:
                 routing_zone = "human_review"
 
-            fv_list = f.flatten().tolist()   # JSON-serializable, stored in Decision node (R4)
+            fv_list = validated_factor_vector(f)
 
         # ====================================================================
         # Step 4b: Referral VETO — independent of ProfileScorer (EXP-REFER-LAYERED)
@@ -1497,6 +1498,7 @@ async def execute_action(request: ProcessAlertRequest):
         # used by /alert/analyze. Graceful fallback keeps the execute path safe.
         situation_type_str = "unknown"
         factor_names: list = []
+        factor_vector = [0.5] * 6
         try:
             situation = analyze_situation(alert_type, context)
             situation_type_str = situation.situation_type
@@ -1505,7 +1507,10 @@ async def execute_action(request: ProcessAlertRequest):
         try:
             factors_result = await get_decision_factors(alert_id)
             if factors_result:
-                factor_names = [f["name"] for f in factors_result.get("factors", [])]
+                factors = factors_result.get("factors", [])
+                factor_names = [f["name"] for f in factors]
+                values = [f.get("value", 0.5) for f in factors]
+                factor_vector = validated_factor_vector(values + [0.5] * (6 - len(values)))
         except Exception as exc:
             print(f"[EXECUTE] get_decision_factors failed for {alert_id}: {exc}")
 
@@ -1540,7 +1545,7 @@ async def execute_action(request: ProcessAlertRequest):
                 decision_id:     {_S(decision_id)},
                 action:          {_S(decision.action)},
                 confidence:      {decision.confidence},
-                factor_vector:   {_S(json.dumps([]))},
+                factor_vector:   {_S(json.dumps(factor_vector))},
                 category:        {_S(_exec_category)},
                 domain:          'soc',
                 source_id:       {_S(context.get("source_location", ""))},

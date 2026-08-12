@@ -33,6 +33,7 @@ import os
 import sys
 
 from copilot_sdk.config import GraphConfig, require_shared_graph
+from app.domains.soc.factor_vector import validated_factor_vector
 
 log = logging.getLogger(__name__)
 
@@ -827,6 +828,9 @@ async def seed_graph(
                 raise RuntimeError(
                     "Decision seed writes require the authorized GraphStore"
                 )
+            factor_vector = validated_factor_vector(
+                d["factor_vector"], field=f"Decision {d['decision_id']}.factor_vector"
+            )
             graph_store.write_governed_decision(
                 decision_id=d["decision_id"],
                 domain="soc",
@@ -836,7 +840,7 @@ async def seed_graph(
                 recommended_index=0,
                 confidence=float(d["confidence"]),
                 probabilities=[],
-                factor_vector=list(d["factor_vector"]),
+                factor_vector=factor_vector,
                 factor_names=[],
                 source="synthetic_seed",
                 metadata={
@@ -845,6 +849,7 @@ async def seed_graph(
                     "source_id": d.get("source_id", "synthetic"),
                     "user_id": d.get("user_id", ""),
                     "timestamp_epoch": d["timestamp_epoch"],
+                    "created_at": float(d["timestamp_epoch"]) / 1000.0,
                 },
             )
             graph_store.write_outcome(

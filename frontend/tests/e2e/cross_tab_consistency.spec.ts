@@ -9,6 +9,7 @@
 import { test, expect } from "@playwright/test";
 
 const API = "http://127.0.0.1:8001";
+const S2P_API = process.env.S2P_API_URL ?? "http://127.0.0.1:8002";
 
 // ===========================================================================
 // X1: Conservation consistent across Tab 5 and Tab 7
@@ -174,9 +175,9 @@ test("conservation verified decisions > 0", async ({ request }) => {
 // S2P Preview structure
 // ===========================================================================
 
-test("S2P preview has (5,5,7) tensor", async ({ request }) => {
-  const resp = await request.get(`${API}/api/s2p/preview/config`);
-  if (!resp.ok()) { test.skip(); return; }
+test("S2P preview has (5,5,8) tensor", async ({ request }) => {
+  const resp = await request.get(`${S2P_API}/api/s2p/preview/config`);
+  expect(resp.ok()).toBeTruthy();
   const data = await resp.json();
-  expect(data?.tensor_shape).toBe("(5, 5, 7)");
+  expect(data?.tensor_shape).toBe("(5, 5, 8)");
 });

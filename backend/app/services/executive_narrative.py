@@ -613,6 +613,28 @@ async def build_executive_narrative_async(graph_service) -> Dict:
     except Exception:
         health_metadata = {}
 
+    # Keep the executive narrative aligned with Evidence Room's bounded IKS
+    # fallback when learning-health has no throughput product yet.
+    if (
+        health_status == "RED"
+        and float(health_metadata.get("signal") or 0.0) == 0.0
+        and not pre_activation
+    ):
+        try:
+            from app.services.iks import compute_visible_iks
+
+            visible_iks = float(await compute_visible_iks(graph_service))
+            if visible_iks >= 50.0:
+                health_status = "GREEN"
+                health_metadata["health_source"] = "iks_fallback"
+                health_metadata["status_reason"] = "zero_product_learning_health"
+            elif visible_iks >= 20.0:
+                health_status = "AMBER"
+                health_metadata["health_source"] = "iks_fallback"
+                health_metadata["status_reason"] = "zero_product_learning_health"
+        except Exception:
+            pass
+
     if pre_activation:
         _signal = (
             "Pre-activation -- Conservation law monitoring is configured, "

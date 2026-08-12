@@ -6,14 +6,26 @@ Run: python -m pytest tests/test_cross_tab_consistency.py -v --timeout=120 --run
 
 import re
 import warnings
+import asyncio
 
 import pytest
-import requests
+from fastapi.testclient import TestClient
 
-pytestmark = pytest.mark.live_backend
+from app.main import app
 
-BASE = "http://127.0.0.1:8001"
-HTTP_TIMEOUT = 60
+client: TestClient | None = None
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _started_app():
+    """Run the normal SOC lifespan so graph-backed read models are seeded."""
+    global client
+    from app.framework.audit import reset_audit_state
+    asyncio.run(reset_audit_state())
+    with TestClient(app) as started:
+        client = started
+        yield
+    client = None
 
 SOC_CATEGORIES = {
     "credential_access", "malware_execution", "lateral_movement",
@@ -22,25 +34,29 @@ SOC_CATEGORIES = {
 
 
 def _tab(n: int) -> dict:
-    resp = requests.get(f"{BASE}/api/soc/tab/{n}/content", timeout=HTTP_TIMEOUT)
+    assert client is not None
+    resp = client.get(f"/api/soc/tab/{n}/content")
     assert resp.status_code == 200, f"Tab {n} returned {resp.status_code}"
     return resp.json().get("content", {})
 
 
 def _evidence_room() -> dict:
-    resp = requests.get(f"{BASE}/api/soc/evidence-room", timeout=HTTP_TIMEOUT)
+    assert client is not None
+    resp = client.get("/api/soc/evidence-room")
     assert resp.status_code == 200
     return resp.json()
 
 
 def _evolution_summary() -> dict:
-    resp = requests.get(f"{BASE}/api/evolution/summary", timeout=HTTP_TIMEOUT)
+    assert client is not None
+    resp = client.get("/api/evolution/summary")
     assert resp.status_code == 200
     return resp.json()
 
 
 def _governance_summary() -> dict:
-    resp = requests.get(f"{BASE}/api/governance/summary", timeout=HTTP_TIMEOUT)
+    assert client is not None
+    resp = client.get("/api/governance/summary")
     assert resp.status_code == 200
     return resp.json()
 
@@ -117,7 +133,6 @@ class TestD1Categories:
 
 class TestD2Timestamps:
 
-    @pytest.mark.skip(reason='SOC-SEED-REDESIGN #9: seed_graph does not write Decision.timestamp to AGE')
     def test_unique_timestamps(self):
         er = _evidence_room()
         entries = er.get("audit_trail", {}).get("entries", [])

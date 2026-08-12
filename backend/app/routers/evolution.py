@@ -22,6 +22,7 @@ from app.graph_schema import _S
 from app.models.schemas import ProcessAlertRequest
 from app.domains.soc.config import SOCDomainConfig, SOC_CATEGORIES, SOC_FACTORS, SCORER_ACTIONS
 from app.domains.soc.orchestrator import compute_factor_vector
+from app.domains.soc.factor_vector import validated_factor_vector
 from gae.evolution import (
     get_evolution_summary as get_ledger_evolution_summary,
     get_recent_events as get_ledger_recent_events,
@@ -179,7 +180,7 @@ async def process_alert(request: ProcessAlertRequest):
         if confidence < _refer_threshold:
             selected_action = "refer_to_analyst"
         probs_flat      = _scoring_result.probabilities.tolist()
-        fv_list         = f.flatten().tolist()
+        fv_list         = validated_factor_vector(f)
         tau             = _scorer.tau   # 0.1
 
         print(f"[GAE][TAB2] action={selected_action} confidence={confidence:.3f} "
