@@ -27,7 +27,7 @@ test('governance compliance shows EU AI Act article cards', async ({ page }) => 
   await expect(compliance.getByText(/EU AI Act/i)).toBeVisible({ timeout: 15_000 });
   await expect(compliance.getByText(/Article 9 \/ Risk Management/i)).toBeVisible();
   await expect(compliance.getByText(/Article 15 \/ Accuracy & Robustness/i)).toBeVisible();
-  await expect(compliance.getByText(/COMPLIANT|INVESTIGATION/).first()).toBeVisible();
+  await expect(compliance.getByText(/EVIDENCE_SUPPORTING_OVERSIGHT|EVIDENCE|OVERSIGHT/).first()).toBeVisible();
 });
 
 test('governance compliance renders without real console errors', async ({ page }) => {

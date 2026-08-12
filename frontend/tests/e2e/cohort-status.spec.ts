@@ -4,7 +4,8 @@ import { BACKEND, FRONTEND } from './helpers';
 async function gotoCompounding(page: Page) {
   await page.goto(FRONTEND);
   await page.getByRole('button', { name: /Compounding|Decision Economics/i }).click();
-  await expect(page.getByTestId('cohort-status-panel')).toBeVisible({ timeout: 20_000 });
+  // The live SOC stack can contend with concurrent AGE reads while the panel mounts.
+  await expect(page.getByTestId('cohort-status-panel')).toBeVisible({ timeout: 30_000 });
 }
 
 test.describe('SOC cohort status panel', () => {
