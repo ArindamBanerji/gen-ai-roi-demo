@@ -6,6 +6,7 @@ import NoveltyPanel from '../NoveltyPanel'
 import ProcessFusionPanel from '../ProcessFusionPanel'
 import TrendCorrelationPanel from '../TrendCorrelationPanel'
 import WorkingCapitalPanel from '../WorkingCapitalPanel'
+import DomainApplicabilityPanel from '../DomainApplicabilityPanel'
 
 // S2P Preview provenance declaration (v1.2 section 7):
 // - Panels show SUMMARY context from S2P backend APIs
@@ -597,10 +598,13 @@ export default function S2PPreviewTab() {
 
   if (error || !data) {
     return (
-      <div className="rounded-lg border border-gray-800 bg-soc-card p-6">
-        <h2 className="text-lg font-semibold text-gray-100">S2P Preview</h2>
-        <p className="mt-2 text-sm text-gray-400">S2P service not connected. Preview data will appear when the S2P API is reachable.</p>
-        <p className="mt-3 font-mono text-xs text-gray-500">{error}</p>
+      <div className="space-y-6">
+        <div className="rounded-lg border border-gray-800 bg-soc-card p-6">
+          <h2 className="text-lg font-semibold text-gray-100">S2P Preview</h2>
+          <p className="mt-2 text-sm text-gray-400">S2P Preview backend is not available. Preview data will appear when the S2P service is reachable.</p>
+          <p className="mt-3 font-mono text-xs text-gray-500">{error}</p>
+        </div>
+        <DomainApplicabilityPanel />
       </div>
     )
   }
@@ -609,6 +613,7 @@ export default function S2PPreviewTab() {
 
   return (
     <div className="space-y-6">
+      <DomainApplicabilityPanel />
       <div className="rounded-lg border border-blue-500/30 bg-slate-900 p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -699,7 +704,7 @@ export default function S2PPreviewTab() {
       <div className="grid gap-6 xl:grid-cols-2">
         <CurveChart />
 
-        <div className="rounded-lg border border-gray-800 bg-soc-card">
+        <div data-testid="supplier-profile" className="rounded-lg border border-gray-800 bg-soc-card">
           <div className="flex items-center justify-between border-b border-gray-800 px-5 py-3">
             <h3 className="text-sm font-semibold text-gray-100">Supplier Profile</h3>
             <span className="text-xs text-gray-400">{data.suppliers.total || suppliers.length} suppliers</span>

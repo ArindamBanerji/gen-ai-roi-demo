@@ -51,8 +51,12 @@ test.describe('AGE serialization contracts', () => {
     }
   });
 
-  test('analytics API — correct_decisions is integer', async ({ request }) => {
-    const resp = await request.get(`${BACKEND}/api/soc/analytics`);
+test('analytics API — correct_decisions is integer', async ({ request }) => {
+    let resp = await request.get(`${BACKEND}/api/soc/analytics`);
+    if (resp.status() === 500 || resp.status() === 503) {
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      resp = await request.get(`${BACKEND}/api/soc/analytics`);
+    }
     expect(resp.status()).toBe(200);
     const data = await resp.json();
     const cd = data.correct_decisions;

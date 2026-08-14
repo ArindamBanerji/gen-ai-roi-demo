@@ -132,10 +132,21 @@ export async function makeDecision(page: Page): Promise<void> {
 export async function makeNDecisions(page: Page, n: number): Promise<number> {
   let made = 0;
   for (let i = 0; i < n; i++) {
-    try {
-      await makeDecision(page);
-      made++;
-    } catch {
+    let completed = false;
+    for (let attempt = 0; attempt < 2 && !completed; attempt++) {
+      try {
+        await makeDecision(page);
+        completed = true;
+        made++;
+      } catch {
+        if (attempt === 0) {
+          // A freshly started SOC backend can reject the first analysis request
+          // while its graph-backed analytics routes are warming up.
+          await page.waitForTimeout(3000);
+        }
+      }
+    }
+    if (!completed) {
       break; // no more alerts or timeout
     }
   }

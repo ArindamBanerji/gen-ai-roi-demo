@@ -1043,17 +1043,37 @@ export default function CompoundingTab() {
     }
   }
 
-  // — early return while seeded metrics load —
+  // The panel requests above are intentionally independent. Keep the Tab 4
+  // shell (and ROI calculator) interactive while the primary metrics request
+  // is still loading instead of hiding every panel behind one gate.
   if (loading || !data) {
     return (
       <div className="space-y-6">
         <SimulationPanel onSimulationComplete={loadGAECharts} />
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <Activity className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-600" />
-            <p className="text-gray-600">Loading compounding metrics...</p>
+        <div className="rounded-lg border border-purple-200 bg-white p-6 shadow">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Decision Economics</h2>
+              <p className="mt-1 text-sm text-gray-600">
+                {loading ? 'Loading live compounding metrics…' : 'Live compounding metrics are temporarily unavailable.'}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowROI(true)}
+              className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-white shadow-md transition hover:bg-purple-700"
+            >
+              <Calculator className="h-4 w-4" />
+              <span className="text-sm font-semibold">Calculate ROI</span>
+            </button>
           </div>
         </div>
+        <div className="flex h-48 items-center justify-center rounded-lg border border-gray-200 bg-white">
+          <div className="text-center">
+            <Activity className="mx-auto mb-3 h-8 w-8 animate-spin text-blue-600" />
+            <p className="text-gray-600">Loading compounding metrics…</p>
+          </div>
+        </div>
+        <ROICalculatorModal isOpen={showROI} onClose={() => setShowROI(false)} />
       </div>
     )
   }

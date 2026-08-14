@@ -129,7 +129,7 @@ async def health():
     }
 
 # Router imports
-from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae, admin, simulation, evaluation, judgment, framework_router, eval_router, governance_router, whatif_router, time_machine_router, discoveries_router, platform
+from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae, admin, simulation, evaluation, judgment, framework_router, eval_router, governance_router, whatif_router, time_machine_router, discoveries_router, platform, shadow
 from app.routers.servicenow_router import router as servicenow_router
 from app.routers.rl_router import router as rl_router
 from app.routers.cohort_status_router import router as cohort_status_router
@@ -156,6 +156,7 @@ app.include_router(eval_router.router, prefix="/api", tags=["Evaluation Upload"]
 app.include_router(time_machine_router.router, prefix="/api", tags=["Time Machine"])
 app.include_router(discoveries_router.router, prefix="/api", tags=["Cross-Graph Discovery"])
 app.include_router(platform.router, prefix="/api", tags=["Platform"])
+app.include_router(shadow.router, prefix="/api/soc", tags=["Shadow Promotion"])
 app.include_router(cohort_status_router, prefix="/api", tags=["Campaign Cohorts"])
 app.include_router(rl_router, prefix="/api", tags=["RL Observability"])
 app.include_router(servicenow_router)

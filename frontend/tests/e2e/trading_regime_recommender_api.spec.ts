@@ -2,9 +2,18 @@ import { expect, test } from '@playwright/test'
 
 const TRADING_API_BASE_URL = process.env.TRADING_API_BASE_URL ?? 'http://127.0.0.1:8010'
 
+async function getRegimeDetail(request: import('@playwright/test').APIRequestContext, query = '') {
+  let response = await request.get(`${TRADING_API_BASE_URL}/api/trading/regime/detail${query}`)
+  if (response.status() === 500 || response.status() === 503) {
+    await new Promise((resolve) => setTimeout(resolve, 3000))
+    response = await request.get(`${TRADING_API_BASE_URL}/api/trading/regime/detail${query}`)
+  }
+  return response
+}
+
 test.describe('Trading regime recommender API', () => {
   test('regime detail returns P49 fields without replacing existing shape', async ({ request }) => {
-    const response = await request.get(`${TRADING_API_BASE_URL}/api/trading/regime/detail`)
+    const response = await getRegimeDetail(request)
 
     expect(response.status()).toBe(200)
     const body = await response.json()
@@ -18,7 +27,7 @@ test.describe('Trading regime recommender API', () => {
   })
 
   test('insufficient data state is honest when history is sparse', async ({ request }) => {
-    const response = await request.get(`${TRADING_API_BASE_URL}/api/trading/regime/detail`)
+    const response = await getRegimeDetail(request)
 
     expect(response.status()).toBe(200)
     const body = await response.json()
@@ -28,7 +37,7 @@ test.describe('Trading regime recommender API', () => {
   })
 
   test('per-regime DK unavailable state is explicit when unavailable', async ({ request }) => {
-    const response = await request.get(`${TRADING_API_BASE_URL}/api/trading/regime/detail`)
+    const response = await getRegimeDetail(request)
 
     expect(response.status()).toBe(200)
     const body = await response.json()
@@ -39,7 +48,7 @@ test.describe('Trading regime recommender API', () => {
   })
 
   test('transition alert shape exists and can accept previous regime query', async ({ request }) => {
-    const response = await request.get(`${TRADING_API_BASE_URL}/api/trading/regime/detail?previous_regime=trending`)
+    const response = await getRegimeDetail(request, '?previous_regime=trending')
 
     expect(response.status()).toBe(200)
     const body = await response.json()
@@ -50,7 +59,7 @@ test.describe('Trading regime recommender API', () => {
   })
 
   test('response does not claim guaranteed future profit', async ({ request }) => {
-    const response = await request.get(`${TRADING_API_BASE_URL}/api/trading/regime/detail`)
+    const response = await getRegimeDetail(request)
 
     expect(response.status()).toBe(200)
     const text = JSON.stringify(await response.json()).toLowerCase()

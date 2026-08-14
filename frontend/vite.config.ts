@@ -27,6 +27,11 @@ export default defineConfig(({ mode }) => {
           target: `http://127.0.0.1:${s2pBackendPort}`,
           changeOrigin: true,
         },
+        '/s2p-health': {
+          target: `http://127.0.0.1:${s2pBackendPort}`,
+          changeOrigin: true,
+          rewrite: () => '/health',
+        },
         '/api': {
           target: `http://127.0.0.1:${backendPort}`,
           changeOrigin: true,
