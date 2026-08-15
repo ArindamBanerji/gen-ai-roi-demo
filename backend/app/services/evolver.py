@@ -5,16 +5,25 @@ The SOC service keeps the historical public module API used by routers/tests, wh
 delegating prompt variant selection, outcome stats, and promotion decisions to the
 SDK PromptVariantEvolver.
 """
-from typing import Any, Dict, List, Optional, cast
+import asyncio
+from datetime import datetime, timezone
+import os
+from pathlib import Path
+from threading import RLock
+from typing import Any, Callable, Dict, List, Optional, cast
 
 from pydantic import BaseModel
 
+from copilot_sdk.evolution.conservation_contract import (
+    CachedAsyncProvider,
+    ConservationState,
+    normalize_conservation_state,
+)
 from copilot_sdk.evolution.prompt_evolver import PromptEvolverConfig, PromptVariantEvolver
 from copilot_sdk.evolution.variant_store import (
-    CategoryVariantStats,
-    InMemoryVariantStore,
+    SQLiteVariantStore,
     VariantSpec,
-    VariantStats,
+    VariantStore,
 )
 
 
@@ -42,6 +51,90 @@ ACTIVE_PROMPTS: Dict[str, str] = _initial_active_prompts()
 RECENT_PROMOTIONS: Dict[str, Dict[str, Any]] = {}
 WEIGHT_HISTORY: List[Dict[str, Any]] = []
 _UCB_EXPLORATION = 1.0
+
+
+class SOCConservationProvider:
+    """Synchronous promotion snapshot fed by async learning-health evaluations."""
+
+    def __init__(
+        self,
+        freshness_ttl: float = 30.0,
+        clock: Callable[[], float] | None = None,
+        refresh_timeout: float = 5.0,
+    ) -> None:
+        self._ttl = float(freshness_ttl)
+        self._refresh_timeout = float(refresh_timeout)
+        self._clock = clock or __import__("time").time
+        self._lock = RLock()
+        self._updated_at = 0.0
+        self._snapshot: ConservationState = normalize_conservation_state(
+            {"status": "UNKNOWN", "reason": "no_learning_health_snapshot"},
+            domain="soc",
+            source="learning_health_monitor",
+        )
+        self._cached = CachedAsyncProvider(
+            self._read_snapshot,
+            freshness_ttl=self._ttl,
+            clock=self._clock,
+        )
+
+    def _read_snapshot(self) -> ConservationState:
+        with self._lock:
+            if float(self._clock()) - self._updated_at > self._ttl:
+                return normalize_conservation_state(
+                    {"status": "UNKNOWN", "reason": "learning_health_snapshot_stale"},
+                    domain="soc",
+                    source="learning_health_monitor",
+                )
+            return dict(self._snapshot)
+
+    def update_from_health(self, health: dict[str, Any]) -> None:
+        status = health.get("status") or (health.get("conservation") or {}).get("status")
+        components = health.get("components") or {}
+        with self._lock:
+            self._snapshot = normalize_conservation_state(
+                {
+                    "status": status,
+                    "domain": "soc",
+                    "source": str(health.get("health_source") or "learning_health_monitor"),
+                    "observed_at": datetime.now(timezone.utc).isoformat(),
+                    "verified_count": components.get("n", health.get("decision_count", 0)),
+                    "reason": health.get("status_reason"),
+                },
+                domain="soc",
+                source=str(health.get("health_source") or "learning_health_monitor"),
+            )
+            self._updated_at = float(self._clock())
+            self._cached.invalidate()
+
+    def mark_unknown(self, reason: str) -> None:
+        self.update_from_health({"status": "UNKNOWN", "status_reason": reason})
+
+    async def refresh(self, graph_service: Any = None) -> ConservationState:
+        try:
+            from app.services.learning_health import LearningHealthMonitor
+
+            health = await asyncio.wait_for(
+                LearningHealthMonitor.evaluate(graph_service),
+                timeout=self._refresh_timeout,
+            )
+            self.update_from_health(health)
+        except Exception as exc:
+            self.mark_unknown(f"learning_health_error:{exc}")
+        return self.get_state()
+
+    def get_state(self) -> ConservationState:
+        return self._cached.get_state()
+
+    def __call__(self) -> ConservationState:
+        return self.get_state()
+
+
+_SOC_CONSERVATION_PROVIDER = SOCConservationProvider()
+
+
+def get_soc_conservation_provider() -> SOCConservationProvider:
+    return _SOC_CONSERVATION_PROVIDER
 
 
 class OperationalImpact(BaseModel):
@@ -133,28 +226,21 @@ def _build_variant_specs() -> List[VariantSpec]:
     return specs
 
 
-def _seed_store_stats(store: InMemoryVariantStore) -> None:
+def _seed_store_stats(store: VariantStore) -> None:
     for variant_id, stats in PROMPT_STATS.items():
         successes = int(stats.get("success", 0))
         total = int(stats.get("total", 0))
-        store._global_stats[variant_id] = VariantStats(
-            successes=successes,
-            total=total,
-            failures=max(0, total - successes),
-        )
+        if store.get_global_stats(variant_id).total == 0 and total > 0:
+            for index in range(total):
+                store.record_outcome(variant_id, index < successes)
 
     for category, category_stats in CATEGORY_PROMPT_STATS.items():
-        store._category_stats[category] = {}
         for variant_id, stats in category_stats.items():
             successes = int(stats.get("success", 0))
             total = int(stats.get("total", 0))
-            store._category_stats[category][variant_id] = CategoryVariantStats(
-                category=category,
-                variant_id=variant_id,
-                successes=successes,
-                total=total,
-                failures=max(0, total - successes),
-            )
+            if store.get_category_stats(category, variant_id).total == 0 and total > 0:
+                for index in range(total):
+                    store.record_category_outcome(category, variant_id, index < successes)
 
 
 def _sdk_config() -> PromptEvolverConfig:
@@ -164,18 +250,33 @@ def _sdk_config() -> PromptEvolverConfig:
         promotion_improvement_threshold=0.05,
         promotion_min_samples=10,
         category_resolver=_category_resolver,
+        conservation_state_provider=get_soc_conservation_provider(),
     )
 
 
+_SOC_VARIANT_STORE: VariantStore | None = None
+
+
+def _soc_variant_store() -> VariantStore:
+    global _SOC_VARIANT_STORE
+    if _SOC_VARIANT_STORE is None:
+        configured_path = os.environ.get("SOC_EVOLUTION_DB_PATH")
+        if configured_path:
+            db_path = Path(configured_path)
+        else:
+            data_dir = Path(os.environ.get("CI_DATA_DIR", Path(__file__).resolve().parents[2] / "data"))
+            data_dir.mkdir(parents=True, exist_ok=True)
+            db_path = data_dir / "soc_evolution.sqlite3"
+        _SOC_VARIANT_STORE = SQLiteVariantStore(db_path)
+    return _SOC_VARIANT_STORE
+
+
 def _new_sdk_evolver_from_compat_state() -> PromptVariantEvolver:
-    store = InMemoryVariantStore()
+    store = _soc_variant_store()
     for spec in _build_variant_specs():
         store.register_variant(spec)
     _seed_store_stats(store)
     return PromptVariantEvolver(config=_sdk_config(), store=store)
-
-
-_evolver = PromptVariantEvolver(config=PromptEvolverConfig())
 
 
 def get_sdk_evolver() -> PromptVariantEvolver:
@@ -198,8 +299,10 @@ def _refresh_compat_stats_from_sdk() -> None:
             "success_rate": stats.success_rate,
         }
 
+    category_names = set(CATEGORY_PROMPT_STATS) | set(_get_soc_categories())
     CATEGORY_PROMPT_STATS.clear()
-    for category, category_stats in _evolver.store._category_stats.items():
+    for category in category_names:
+        category_stats = _evolver.store.get_all_category_stats(category)
         CATEGORY_PROMPT_STATS[category] = {}
         for variant_id, stats in category_stats.items():
             CATEGORY_PROMPT_STATS[category][variant_id] = {
@@ -243,6 +346,9 @@ def _normalize_category(
 
 def _category_resolver(context_key: str) -> Optional[str]:
     return _normalize_category(alert_type=context_key)
+
+
+_evolver = _new_sdk_evolver_from_compat_state()
 
 
 def _select_category_ucb_variant(category: Optional[str]) -> Optional[str]:
@@ -538,7 +644,7 @@ def get_variant_comparison(alert_type: str) -> Dict[str, Any]:
 
 
 def reset_evolver_state() -> None:
-    """Reset evolver in-memory state for deterministic demos/tests."""
+    """Reset compatibility and durable evolver state for deterministic resets."""
     PROMPT_STATS.clear()
     PROMPT_STATS.update(_initial_prompt_stats())
 
@@ -548,6 +654,7 @@ def reset_evolver_state() -> None:
     RECENT_PROMOTIONS.clear()
     CATEGORY_PROMPT_STATS.clear()
     WEIGHT_HISTORY.clear()
+    _soc_variant_store().reset()
     _sync_sdk_from_compat_state()
 
     try:
@@ -638,4 +745,5 @@ def seed_weight_history() -> None:
 
 
 _sync_sdk_from_compat_state()
+_refresh_compat_stats_from_sdk()
 seed_weight_history()

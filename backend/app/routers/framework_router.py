@@ -747,7 +747,17 @@ async def learning_health():
     }
     """
     from app.services.learning_health import LearningHealthMonitor
-    return await LearningHealthMonitor.evaluate(_get_age_client())
+    health = await LearningHealthMonitor.evaluate(_get_age_client())
+    from app.services.evolver import get_soc_conservation_provider
+
+    get_soc_conservation_provider().update_from_health(health)
+    provider_state = get_soc_conservation_provider().get_state()
+    return {
+        **health,
+        "provider_source": provider_state.get("source"),
+        "provider_observed_at": provider_state.get("observed_at"),
+        "overallSafe": provider_state.get("overallSafe", False),
+    }
 
 
 # ============================================================================

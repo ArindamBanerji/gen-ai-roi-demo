@@ -662,6 +662,9 @@ async def analyze_alert(request: ProcessAlertRequest):
                         from app.services.learning_health import LearningHealthMonitor as _RLHealth
 
                         _health = await _RLHealth.evaluate(graph_client)
+                        from app.services.evolver import get_soc_conservation_provider
+
+                        get_soc_conservation_provider().update_from_health(_health)
                         _headroom_ratio = float(
                             (_health.get("conservation") or {}).get("headroom") or 0.0
                         )
@@ -2066,6 +2069,9 @@ async def report_decision_outcome(request: OutcomeRequest):
                             action=action_name,
                         ):
                             _health = await LearningHealthMonitor.evaluate(graph_client)
+                        from app.services.evolver import get_soc_conservation_provider
+
+                        get_soc_conservation_provider().update_from_health(_health)
                         _eff_status, _eff_reason = _soc_effective_conservation_status(_health)
                         l5_persistence_status["conservation_status"] = _eff_status
                         l5_persistence_status["raw_conservation_status"] = str(

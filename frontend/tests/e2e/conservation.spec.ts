@@ -51,6 +51,16 @@ test.describe('Conservation law E2E', () => {
     expect(Number.isFinite(data.iks_v2)).toBe(true);
   });
 
+  test('learning health exposes the live conservation provider', async ({ page }) => {
+    test.setTimeout(10000);
+    const health = await getApiData(page, '/api/soc/learning-health');
+    expect(health.status).toMatch(/GREEN|AMBER|RED|CALIBRATING|UNKNOWN/);
+    expect(health.provider_source).toBeTruthy();
+    expect(health.provider_source).not.toBe('literal');
+    expect(typeof health.overallSafe).toBe('boolean');
+    expect(health.overallSafe).toBe(health.status === 'GREEN');
+  });
+
   // ── Test 2 ──────────────────────────────────────────────────────────────────
   //
   // Conservation narrative visible in Tab 5 DOM.

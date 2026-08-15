@@ -135,11 +135,18 @@ from app.routers.rl_router import router as rl_router
 from app.routers.cohort_status_router import router as cohort_status_router
 from app.services.evolver import get_sdk_evolver
 from copilot_sdk.backend.self_computation_router import mount_self_computation_router
+from copilot_sdk.backend.evolution_router import create_evolution_router
 
 # Register routers
 app.include_router(evaluation.router, prefix="/api/soc", tags=["evaluation"])
 app.include_router(judgment.router, prefix="/api/soc", tags=["judgment"])
 app.include_router(evolution.router, prefix="/api", tags=["Runtime Evolution"])
+app.include_router(
+    create_evolution_router(
+        domain="soc",
+        evolver_factory=get_sdk_evolver,
+    )
+)
 app.include_router(triage.router, prefix="/api", tags=["Alert Triage"])
 app.include_router(framework_router.router, prefix="/api", tags=["CopilotFramework"])
 app.include_router(soc.router, prefix="/api", tags=["SOC Analytics"])

@@ -154,6 +154,7 @@ def test_record_decision_outcome_tracks_category_stats():
 
 
 def test_promotion_gate_unchanged_global():
+    evolver.get_soc_conservation_provider().update_from_health({"status": "GREEN"})
     evolver.ACTIVE_PROMPTS["migration"] = "MIGRATION_v1"
     evolver.PROMPT_STATS["MIGRATION_v1"] = {
         "success": 5,
