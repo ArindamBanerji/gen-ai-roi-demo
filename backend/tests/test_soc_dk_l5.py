@@ -45,7 +45,7 @@ def test_soc_learning_enabled_gate_is_controlled(monkeypatch):
     assert soc_config.is_learning_enabled() is False
 
 
-def test_soc_under_calibrated_red_does_not_pause_l5_profile_path():
+def test_soc_under_calibrated_red_remains_red_for_l5_profile_path():
     status, reason = triage._soc_effective_conservation_status(
         {
             "status": "RED",
@@ -54,8 +54,31 @@ def test_soc_under_calibrated_red_does_not_pause_l5_profile_path():
         }
     )
 
-    assert status == "GREEN"
-    assert reason == "under_calibrated_soc_conservation_red"
+    assert status == "RED"
+    assert reason is None
+
+
+def test_soc_missing_status_is_unknown():
+    status, reason = triage._soc_effective_conservation_status({})
+
+    assert status == "UNKNOWN"
+    assert reason is None
+
+
+def test_soc_calibrating_status_is_not_green():
+    status, reason = triage._soc_effective_conservation_status(
+        {"status": "CALIBRATING", "auto_pause_active": False}
+    )
+
+    assert status == "CALIBRATING"
+    assert reason is None
+
+
+def test_soc_unrecognized_status_is_unknown():
+    status, reason = triage._soc_effective_conservation_status({"status": "BROKEN"})
+
+    assert status == "UNKNOWN"
+    assert reason == "unrecognized_learning_health_status"
 
 
 def test_soc_calibrated_red_still_pauses_l5_profile_path():

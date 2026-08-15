@@ -369,28 +369,13 @@ def _soc_learning_enabled() -> bool:
 
 
 def _soc_effective_conservation_status(health: Dict[str, Any]) -> tuple[str, str | None]:
-    """Return the ProfileScorer pause status without hard-freezing calibration runs."""
-    raw_status = str((health or {}).get("status") or "GREEN").upper()
+    """Return the verified conservation status without manufacturing GREEN."""
+    raw_status = str((health or {}).get("status") or "UNKNOWN").upper()
     if bool((health or {}).get("auto_pause_active")):
         return "RED", "auto_pause_active"
 
-    if raw_status == "CALIBRATING":
-        return "GREEN", "learning_health_calibrating"
-
-    components = (health or {}).get("components") or {}
-    verified = components.get("verified_decisions", components.get("n"))
-    try:
-        verified_count = int(verified) if verified is not None else None
-    except (TypeError, ValueError):
-        verified_count = None
-
-    if raw_status in {"AMBER", "RED"} and verified_count is not None:
-        try:
-            from app.services.learning_health import CALIBRATION_DECISIONS
-        except Exception:
-            CALIBRATION_DECISIONS = 300
-        if verified_count < int(CALIBRATION_DECISIONS):
-            return "GREEN", f"under_calibrated_soc_conservation_{raw_status.lower()}"
+    if raw_status not in {"GREEN", "AMBER", "RED", "CALIBRATING", "UNKNOWN"}:
+        return "UNKNOWN", "unrecognized_learning_health_status"
 
     return raw_status, None
 
@@ -2061,7 +2046,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                 # so that a brief GREEN window cannot clear an accumulated freeze.
                 # FIX 1: fail-closed — if health check throws, block learning (treat as RED).
                 _conservation_block = False
-                _eff_status = "GREEN"
+                _eff_status = "UNKNOWN"
                 try:
                     with _soc_perf_phase(
                         "conservation_monitor",
@@ -2084,7 +2069,7 @@ async def report_decision_outcome(request: OutcomeRequest):
                         _eff_status, _eff_reason = _soc_effective_conservation_status(_health)
                         l5_persistence_status["conservation_status"] = _eff_status
                         l5_persistence_status["raw_conservation_status"] = str(
-                            _health.get("status", "GREEN")
+                            _health.get("status", "UNKNOWN")
                         ).upper()
                         l5_persistence_status["conservation_status_reason"] = _eff_reason
                 except Exception as _cse:
