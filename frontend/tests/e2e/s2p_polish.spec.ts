@@ -47,7 +47,7 @@ test('domain applicability remains visible when S2P backend is unavailable', asy
   await page.route('**/s2p-health', (route) => route.abort())
   await navigateToS2PPreview(page)
 
-  await expect(page.getByText('S2P Preview backend is not available')).toBeVisible()
+  await expect(page.getByText('S2P service not connected. S2P Preview data will appear when the backend is reachable.')).toBeVisible()
   const visibleText = await page.locator('body').innerText()
   expect(visibleText).not.toContain('8002')
   expect(visibleText).not.toMatch(/port\s+8002/i)

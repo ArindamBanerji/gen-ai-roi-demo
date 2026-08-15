@@ -80,6 +80,7 @@ test('TrendCorrelation panel shows sample badge for fixture data', async ({ page
 
 test('not connected state does not render provenance badges', async ({ page }) => {
   await page.route('**/api/s2p/**', (route) => route.abort())
+  await page.route('**/s2p-health', (route) => route.abort())
   await goToS2PPreview(page)
 
   await expect(page.getByText(/S2P service not connected/i)).toBeVisible({ timeout: 15_000 })

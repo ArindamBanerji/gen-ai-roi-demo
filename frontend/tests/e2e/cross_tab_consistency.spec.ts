@@ -6,10 +6,49 @@
  * Requires: Backend on :8001, frontend on :5173
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect, type APIRequestContext } from "@playwright/test";
 
 const API = "http://127.0.0.1:8001";
 const S2P_API = process.env.S2P_API_URL ?? "http://127.0.0.1:8002";
+
+// compounding.spec.ts resets alerts before each test, which also clears the
+// in-memory audit projection. Re-establish the same real decision/outcome
+// prerequisite immediately before this suite so D2 remains meaningful under
+// the full-suite ordering as well as in isolation.
+async function seedAuditTrail(request: APIRequestContext): Promise<void> {
+  const queueResponse = await request.get(`${API}/api/alerts/queue`);
+  expect(queueResponse.ok()).toBeTruthy();
+  const queue = await queueResponse.json();
+  const canonical = new Set([
+    "credential_access", "malware_execution", "lateral_movement",
+    "data_exfiltration", "insider_threat", "cloud_infrastructure",
+  ]);
+  const alert = (queue.alerts ?? []).find((item: any) => canonical.has(item.alert_type));
+  expect(alert?.id, "cross-tab audit seed requires a canonical SOC alert").toBeTruthy();
+
+  const analysisResponse = await request.post(`${API}/api/alert/analyze`, {
+    data: { alert_id: alert.id },
+  });
+  expect(analysisResponse.ok()).toBeTruthy();
+  const analysis = await analysisResponse.json();
+  const decisionId = analysis.recommendation?.decision_id ?? analysis.gae_scoring?.decision_id;
+  const action = analysis.recommendation?.action ?? analysis.gae_scoring?.action ?? "investigate";
+  expect(decisionId, "cross-tab audit seed requires a decision_id").toBeTruthy();
+
+  const outcomeResponse = await request.post(`${API}/api/alert/outcome`, {
+    data: {
+      alert_id: alert.id,
+      decision_id: decisionId,
+      outcome: "correct",
+      analyst_action: action,
+    },
+  });
+  expect(outcomeResponse.ok()).toBeTruthy();
+}
+
+test.beforeAll(async ({ request }) => {
+  await seedAuditTrail(request);
+});
 
 // ===========================================================================
 // X1: Conservation consistent across Tab 5 and Tab 7
@@ -89,10 +128,16 @@ test("D1: all categories are canonical SOC categories", async ({ request }) => {
 // ===========================================================================
 
 test("D2: audit timestamps are not identical", async ({ request }) => {
-  const resp = await request.get(`${API}/api/soc/evidence-room`);
-  const er = await resp.json();
-  const entries = er?.audit_trail?.entries || [];
-  if (entries.length < 2) { test.skip(); return; }
+  let resp = await request.get(`${API}/api/soc/evidence-room`);
+  let er = await resp.json();
+  let entries = er?.audit_trail?.entries || [];
+  if (entries.length < 2) {
+    await seedAuditTrail(request);
+    resp = await request.get(`${API}/api/soc/evidence-room`);
+    er = await resp.json();
+    entries = er?.audit_trail?.entries || [];
+  }
+  expect(entries.length).toBeGreaterThanOrEqual(2);
   const timestamps = new Set(entries.map((e: any) => e.timestamp));
   expect(timestamps.size).toBeGreaterThanOrEqual(Math.min(5, entries.length));
 });

@@ -142,7 +142,13 @@ export async function makeNDecisions(page: Page, n: number): Promise<number> {
         if (attempt === 0) {
           // A freshly started SOC backend can reject the first analysis request
           // while its graph-backed analytics routes are warming up.
-          await page.waitForTimeout(3000);
+          try {
+            await page.waitForTimeout(3000)
+          } catch {
+            // The browser may close while the backend is under rapid-fire
+            // load. Preserve the decisions already completed.
+            return made
+          }
         }
       }
     }

@@ -658,6 +658,7 @@ export default function CompoundingTab() {
 
   // — ECON-1: economics data —
   const [economicsData, setEconomicsData] = useState<EconomicsData | null>(null)
+  const [headlineImpact, setHeadlineImpact] = useState<BusinessImpact | null>(null)
 
   // — FEATURE-01: Evaluate on Your Data —
   const [evalFile, setEvalFile] = useState<File | null>(null)
@@ -695,6 +696,18 @@ export default function CompoundingTab() {
   const animatedBacklogEliminated = useCountUp(0, data?.business_impact?.alert_backlog_eliminated_monthly ?? 0, 3000, 0, !!data?.business_impact && !loading)
 
   // — load functions —
+
+  const loadHeadlineImpact = async () => {
+    try {
+      const response = await fetch(`${SOC_API}/api/metrics/compounding/headline`)
+      if (!response.ok) throw new Error(`Headline request failed: ${response.status}`)
+      const payload = await response.json() as { business_impact?: BusinessImpact }
+      if (payload.business_impact) setHeadlineImpact(payload.business_impact)
+    } catch (e) {
+      console.error('[CompoundingTab] Failed to load headline impact:', e)
+    }
+  }
+  useEffect(() => { loadHeadlineImpact() }, [])
 
   const loadData = async () => {
     setLoading(true)
@@ -1050,6 +1063,7 @@ export default function CompoundingTab() {
     return (
       <div className="space-y-6">
         <SimulationPanel onSimulationComplete={loadGAECharts} />
+        <ThreeChannelPanel />
         <div className="rounded-lg border border-purple-200 bg-white p-6 shadow">
           <div className="flex items-center justify-between gap-4">
             <div>
@@ -1059,6 +1073,8 @@ export default function CompoundingTab() {
               </p>
             </div>
             <button
+              type="button"
+              onMouseDown={() => setShowROI(true)}
               onClick={() => setShowROI(true)}
               className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-white shadow-md transition hover:bg-purple-700"
             >
@@ -1066,6 +1082,14 @@ export default function CompoundingTab() {
               <span className="text-sm font-semibold">Calculate ROI</span>
             </button>
           </div>
+          {headlineImpact && (
+            <div className="mt-4 rounded border border-green-200 bg-green-50 p-4 text-center">
+              <div className="text-xs font-medium text-gray-500">Projected quarterly value avoided</div>
+              <div className="text-2xl font-bold text-green-700">
+                {formatUSD(headlineImpact.cost_avoided_quarterly)}
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex h-48 items-center justify-center rounded-lg border border-gray-200 bg-white">
           <div className="text-center">
@@ -1307,6 +1331,8 @@ export default function CompoundingTab() {
             </p>
           </div>
           <button
+            type="button"
+            onMouseDown={() => setShowROI(true)}
             onClick={() => setShowROI(true)}
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-all hover:scale-105 shadow-md"
           >

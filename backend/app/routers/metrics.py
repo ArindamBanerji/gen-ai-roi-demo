@@ -316,6 +316,20 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
         )
 
 
+@router.get("/metrics/compounding/headline")
+async def get_compounding_headline():
+    """Return projected headline business impact without AGE/chart queries.
+
+    Tab 4 uses this small response for its immediately visible headline while
+    the full compounding/economics panels load independently.
+    """
+    projected = generate_compounding_data(4)
+    return {
+        "business_impact": projected.business_impact.model_dump(),
+        "source": "projected",
+    }
+
+
 # ============================================================================
 # POST /api/demo/seed - Seed AGE Database
 # ============================================================================

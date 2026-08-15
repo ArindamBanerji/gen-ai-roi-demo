@@ -601,7 +601,7 @@ export default function S2PPreviewTab() {
       <div className="space-y-6">
         <div className="rounded-lg border border-gray-800 bg-soc-card p-6">
           <h2 className="text-lg font-semibold text-gray-100">S2P Preview</h2>
-          <p className="mt-2 text-sm text-gray-400">S2P Preview backend is not available. Preview data will appear when the S2P service is reachable.</p>
+          <p className="mt-2 text-sm text-gray-400">S2P service not connected. S2P Preview data will appear when the backend is reachable.</p>
           <p className="mt-3 font-mono text-xs text-gray-500">{error}</p>
         </div>
         <DomainApplicabilityPanel />

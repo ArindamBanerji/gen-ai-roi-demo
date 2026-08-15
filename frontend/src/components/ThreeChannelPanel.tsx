@@ -71,12 +71,20 @@ export default function ThreeChannelPanel() {
     }
   }, [])
 
-  if (loading || !data) return null
-
-  const channels = ensureArray<Channel>(data.channels)
-  const maxPP = Number.isFinite(data.irreducible_pp) && data.irreducible_pp > 0
-    ? data.irreducible_pp
-    : data.total_improvement_pp + data.remaining_boundary_pp
+  // Keep the panel structure visible while this independent request is in
+  // flight (or unavailable). This prevents an unrelated Tab 4 load from
+  // hiding the FW-10 evidence entirely.
+  const channels = ensureArray<Channel>(data?.channels)
+  const visibleChannels: Channel[] = channels.length > 0 ? channels : [
+    { id: 'scorer', label: 'Channel 1 (Scorer)', contribution_pp: 0, status: 'inactive', description: 'Loading scorer calibration…' },
+    { id: 'graph', label: 'Channel 2 (Graph)', contribution_pp: 0, status: 'active', description: 'Loading graph calibration…' },
+    { id: 'labels', label: 'Channel 3 (Labels)', contribution_pp: 0, status: 'not_active', description: 'Loading label calibration…' },
+  ]
+  const totalImprovement = data?.total_improvement_pp ?? 0
+  const remainingBoundary = data?.remaining_boundary_pp ?? 0
+  const maxPP = Number.isFinite(data?.irreducible_pp) && (data?.irreducible_pp ?? 0) > 0
+    ? data?.irreducible_pp ?? 0
+    : totalImprovement + remainingBoundary
   const barScale = (value: number) => {
     if (maxPP <= 0) return '2%'
     return `${Math.max(2, Math.min(100, (value / maxPP) * 100))}%`
@@ -88,16 +96,16 @@ export default function ThreeChannelPanel() {
         <div>
           <h3 className="text-base font-bold text-white"> Three-Channel Error Budget</h3>
           <p className="text-sm text-purple-300 font-medium mt-0.5">
-            Estimated improvement: +{data.total_improvement_pp}pp · Remaining: {data.remaining_boundary_pp}pp
+          Estimated improvement: {loading ? 'loading…' : `+${totalImprovement}pp · Remaining: ${remainingBoundary}pp`}
           </p>
         </div>
         <span className="text-xs uppercase tracking-wide rounded border border-purple-500/40 bg-purple-500/10 px-2 py-1 text-purple-200">
-          {data.strategy}
+          {data?.strategy ?? 'continuous'}
         </span>
       </div>
 
       <div className="h-4 bg-gray-800 rounded-full overflow-hidden flex mb-5">
-        {channels.filter((channel) => channel.contribution_pp > 0).map((channel) => (
+        {visibleChannels.filter((channel) => channel.contribution_pp > 0).map((channel) => (
           <div
             key={channel.id}
             className={`${channelColor(channel.id)} h-full`}
@@ -105,17 +113,17 @@ export default function ThreeChannelPanel() {
             title={`${channel.label}: +${channel.contribution_pp}pp`}
           />
         ))}
-        {data.remaining_boundary_pp > 0 && (
+        {remainingBoundary > 0 && (
           <div
             className="h-full bg-gray-700"
-            style={{ width: barScale(data.remaining_boundary_pp) }}
-            title={`Remaining boundary: ${data.remaining_boundary_pp}pp`}
+            style={{ width: barScale(remainingBoundary) }}
+            title={`Remaining boundary: ${remainingBoundary}pp`}
           />
         )}
       </div>
 
       <div className="space-y-3">
-        {channels.map((channel) => {
+        {visibleChannels.map((channel) => {
           const badge = statusBadge(channel.status)
           return (
             <div key={channel.id} className="rounded-lg border border-gray-800 bg-gray-900/60 p-4">
@@ -138,7 +146,7 @@ export default function ThreeChannelPanel() {
       </div>
 
       <p className="mt-4 pt-4 border-t border-gray-800 text-xs text-gray-500 italic">
-        {data.disclaimer}
+        {data?.disclaimer ?? 'Awaiting simulation calibration data.'}
       </p>
     </div>
   )

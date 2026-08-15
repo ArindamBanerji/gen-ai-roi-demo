@@ -903,7 +903,11 @@ async def analyze_alert(request: ProcessAlertRequest):
         ):
             _audit_rec_analyze = await record_decision(
                 alert_id=alert_id,
-                situation_type=situation_analysis.situation_type,
+                # Evidence Room exposes this field as the audit category;
+                # persist the canonical SOC category resolved above rather
+                # than the narrative situation label (for example,
+                # insider_threat_detected).
+                situation_type=alert_category,
                 action_taken=selected_action,
                 factors=[c.name for c in computers],
                 confidence=confidence,
