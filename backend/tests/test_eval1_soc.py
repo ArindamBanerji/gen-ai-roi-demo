@@ -68,8 +68,7 @@ def test_all_categories_represented():
 def test_all_factors_present():
     """Every scenario must have all 6 factors with values in [0.0, 1.0]."""
     FACTOR_NAMES = [
-        # Uses the legacy fixture key; canonical factor 0 is
-        # privileged_identity_context.
+        # quarantined: travel_match_v1 — changes with scenario migration.
         "travel_match", "asset_criticality", "threat_intel_enrichment",
         "pattern_history", "time_anomaly", "device_trust",
     ]
