@@ -7,7 +7,8 @@ why an action was recommended, which factors dominated, and confidence tier.
 Reference: docs/soc_copilot_design_v1.md Sec.18; gae/judgment.py.
 """
 
-from typing import Dict, Optional
+import logging
+from typing import Dict, Optional, cast
 
 import numpy as np
 from fastapi import APIRouter, HTTPException
@@ -18,6 +19,7 @@ from app.domains.soc.config import SOC_CATEGORIES, SOC_FACTORS, SOC_ACTIONS
 from app.db.graph_client import graph_client
 
 router = APIRouter()
+log = logging.getLogger(__name__)
 
 # ── Constants ────────────────────────────────────────────────────────────────
 # Factor names in centroid order — derived from SOC_FACTORS in config.py.
@@ -25,7 +27,8 @@ router = APIRouter()
 # SOC_ACTIONS imported from config — do not redeclare here (v5.5)
 # SOC_ACTIONS = ["escalate", "investigate", "suppress", "monitor", "refer_to_analyst"]
 
-# Backward-compat map: current factor name → legacy persisted property name
+# Backward-compat map: canonical factor name → legacy persisted property name.
+# The legacy property remains accepted during the bounded deprecation window.
 _LEGACY_FACTOR_NAMES: dict[str, str] = {
     "privileged_identity_context": "travel_match",
 }
@@ -42,10 +45,19 @@ class JudgmentRequest(BaseModel):
 # ── Pure helper — exported for tests ─────────────────────────────────────────
 
 def _build_factor_vector(factors: Dict[str, float]) -> np.ndarray:
-    return np.array(
-        [factors.get(f, 0.5) for f in SOC_FACTORS],
+    for canonical, legacy in _LEGACY_FACTOR_NAMES.items():
+        if canonical not in factors and legacy in factors:
+            log.warning(
+                "DEPRECATED: 'travel_match' alias used; migrate to "
+                "'privileged_identity_context'"
+            )
+    return cast(np.ndarray, np.array(
+        [
+            factors.get(f, factors.get(_LEGACY_FACTOR_NAMES.get(f, f), 0.5))
+            for f in SOC_FACTORS
+        ],
         dtype=np.float64,
-    )
+    ))
 
 
 def build_judgment_response(
@@ -174,6 +186,12 @@ async def explain_decision_get(alert_id: str):
         factors = {}
         for fname in SOC_FACTORS:
             legacy = _LEGACY_FACTOR_NAMES.get(fname, fname)
+            if fname not in d and legacy in d:
+                log.warning(
+                    "DEPRECATED: legacy factor property '%s' used; migrate to '%s'",
+                    legacy,
+                    fname,
+                )
             val = d.get(fname) if d.get(fname) is not None else d.get(legacy)
             if val is None:
                 raise KeyError(fname)

@@ -279,7 +279,8 @@ function computeFactorAttribution(
 }
 
 function formatFactorName(name: string): string {
-  // "TravelMatchFactor" → "Travel Match"
+  // Legacy TravelMatchFactor display; canonical factor 0 is
+  // privileged_identity_context.
   return name.replace(/Factor$/, '').replace(/([A-Z])/g, ' $1').trim()
 }
 

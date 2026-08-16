@@ -21,7 +21,8 @@
       "threat_intel_enrichment",
       "device_trust"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-CA-02",
@@ -45,7 +46,8 @@
       "asset_criticality",
       "threat_intel_enrichment"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-CA-03",
@@ -68,7 +70,8 @@
       "asset_criticality",
       "threat_intel_enrichment"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-CA-04",
@@ -90,7 +93,8 @@
     "dominant_factors": [
       "device_trust"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-CA-05",
@@ -112,7 +116,8 @@
     "dominant_factors": [
       "device_trust"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-CA-06",
@@ -135,7 +140,8 @@
       "asset_criticality",
       "device_trust"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-TI-01",
@@ -158,7 +164,8 @@
       "threat_intel_enrichment",
       "asset_criticality"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-TI-02",
@@ -182,7 +189,8 @@
       "asset_criticality",
       "travel_match"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-TI-03",
@@ -204,7 +212,8 @@
     "dominant_factors": [
       "threat_intel_enrichment"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-TI-04",
@@ -227,7 +236,8 @@
       "device_trust",
       "threat_intel_enrichment"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-TI-05",
@@ -249,7 +259,8 @@
     "dominant_factors": [
       "device_trust"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-TI-06",
@@ -271,7 +282,8 @@
     "dominant_factors": [
       "threat_intel_enrichment"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-LM-01",
@@ -294,7 +306,8 @@
       "pattern_history",
       "asset_criticality"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-LM-02",
@@ -318,7 +331,8 @@
       "threat_intel_enrichment",
       "pattern_history"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-LM-03",
@@ -341,7 +355,8 @@
       "pattern_history",
       "asset_criticality"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-LM-04",
@@ -364,7 +379,8 @@
       "travel_match",
       "device_trust"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-LM-05",
@@ -387,7 +403,8 @@
       "travel_match",
       "device_trust"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-LM-06",
@@ -409,7 +426,8 @@
     "dominant_factors": [
       "pattern_history"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-DE-01",
@@ -433,7 +451,8 @@
       "time_anomaly",
       "threat_intel_enrichment"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-DE-02",
@@ -456,7 +475,8 @@
       "asset_criticality",
       "pattern_history"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-DE-03",
@@ -479,7 +499,8 @@
       "asset_criticality",
       "time_anomaly"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-DE-04",
@@ -501,7 +522,8 @@
     "dominant_factors": [
       "device_trust"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-DE-05",
@@ -523,7 +545,8 @@
     "dominant_factors": [
       "device_trust"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-DE-06",
@@ -545,7 +568,8 @@
     "dominant_factors": [
       "asset_criticality"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-IT-01",
@@ -569,7 +593,8 @@
       "time_anomaly",
       "device_trust"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-IT-02",
@@ -593,7 +618,8 @@
       "pattern_history",
       "time_anomaly"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-IT-03",
@@ -616,7 +642,8 @@
       "pattern_history",
       "asset_criticality"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-IT-04",
@@ -638,7 +665,8 @@
     "dominant_factors": [
       "device_trust"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-IT-05",
@@ -660,7 +688,8 @@
     "dominant_factors": [
       "device_trust"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-IT-06",
@@ -682,7 +711,8 @@
     "dominant_factors": [
       "pattern_history"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-CI-01",
@@ -706,7 +736,8 @@
       "threat_intel_enrichment",
       "time_anomaly"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-CI-02",
@@ -729,7 +760,8 @@
       "asset_criticality",
       "threat_intel_enrichment"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-CI-03",
@@ -752,7 +784,8 @@
       "asset_criticality",
       "time_anomaly"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-CI-04",
@@ -774,7 +807,8 @@
     "dominant_factors": [
       "device_trust"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-CI-05",
@@ -796,7 +830,8 @@
     "dominant_factors": [
       "device_trust"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   },
   {
     "scenario_id": "SOC-CI-06",
@@ -818,6 +853,7 @@
     "dominant_factors": [
       "asset_criticality"
     ],
-    "provenance": "sample"
+    "provenance": "sample",
+    "factor_0_semantic_version": "travel_match_v1"
   }
 ]

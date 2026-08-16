@@ -72,7 +72,7 @@ def _write_simulation_decision(
     factor_values: list[float],
 ) -> str:
     """Persist one simulation Decision through the governed SOC store."""
-    return graph_store.write_decision(
+    return cast(str, graph_store.write_decision(
         domain="soc",
         category=category,
         action=action,
@@ -87,7 +87,7 @@ def _write_simulation_decision(
             "created_at": time.time(),
             "source": "soc_simulation",
         },
-    )
+    ))
 
 # ATT&CK technique labels for experiment log enrichment
 _ATTACK_TECHNIQUES: Dict[str, str] = {
@@ -115,7 +115,8 @@ _ATTACK_TECHNIQUES: Dict[str, str] = {
 # Minimal fallback alert pool — used when AGE has no seeded alerts
 # ---------------------------------------------------------------------------
 # Each entry provides the fields that the 6 FactorComputers read from alert dicts:
-#   TravelMatchFactor     → user_id, source_location
+#   LEGACY TravelMatchFactor → user_id, source_location;
+#   canonical factor 0 is privileged_identity_context.
 #   AssetCriticalityFactor→ id (alert_id), traverses AGE
 #   ThreatIntelFactor     → id, traverses AGE
 #   PatternHistoryFactor  → alert_type, traverses AGE

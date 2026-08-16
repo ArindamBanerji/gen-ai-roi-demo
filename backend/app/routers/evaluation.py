@@ -8,6 +8,7 @@ Reference: docs/soc_copilot_design_v1.md Sec.17; gae/evaluation.py.
 """
 
 import json
+import logging
 from pathlib import Path
 from typing import List
 
@@ -17,7 +18,10 @@ from fastapi import APIRouter, HTTPException
 from gae.evaluation import EvaluationScenario, EvaluationReport, run_evaluation
 from app.domains.soc.config import SOC_FACTORS
 
-# Backward-compat map: new factor name → old JSON key (FEATURE-05B rename)
+log = logging.getLogger(__name__)
+
+# Backward-compat map: canonical factor name → legacy fixture key.
+# The legacy key remains accepted during the bounded deprecation window.
 _LEGACY_FACTOR_NAMES: dict[str, str] = {
     "privileged_identity_context": "travel_match",
 }
@@ -44,6 +48,13 @@ def load_soc_scenarios() -> List[EvaluationScenario]:
     scenarios: List[EvaluationScenario] = []
     for s in raw:
         f = s["factors"]
+        if "privileged_identity_context" not in f and "travel_match" in f:
+            log.warning(
+                "DEPRECATED: 'travel_match' alias used; migrate to "
+                "'privileged_identity_context' (scenario=%s, semantic_version=%s)",
+                s.get("scenario_id", "unknown"),
+                s.get("factor_0_semantic_version", "unknown"),
+            )
         factors_list = [
             f.get(fname, f.get(_LEGACY_FACTOR_NAMES.get(fname, fname), 0.5))
             for fname in SOC_FACTORS

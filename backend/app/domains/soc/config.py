@@ -157,7 +157,7 @@ SOC_PROFILE_CENTROIDS = np.array([
   # refer_to_analyst is a routing action handled by the confidence gate in
   # triage.py; it has no centroid geometry and is excluded from this tensor.
   [
-    # escalate: travel anomaly + high asset + high threat_intel + low device_trust
+    # STALE: travel-derived prior for privileged_identity_context, pending V1 re-derivation.
     [0.75, 0.85, 0.80, 0.60, 0.65, 0.15],
     # investigate: moderate signals, some pattern history
     [0.60, 0.60, 0.55, 0.55, 0.50, 0.40],
@@ -185,7 +185,7 @@ SOC_PROFILE_CENTROIDS = np.array([
     [0.75, 0.80, 0.70, 0.85, 0.70, 0.20],
     # investigate: some lateral signals, moderate asset
     [0.60, 0.60, 0.50, 0.65, 0.55, 0.40],
-    # suppress: travel explains movement, trusted device
+    # STALE: travel-derived suppression prior for privileged_identity_context, pending V1 re-derivation.
     [0.30, 0.25, 0.15, 0.20, 0.25, 0.80],
     # monitor: single hop, low asset, normal hours
     [0.20, 0.40, 0.30, 0.40, 0.35, 0.65],

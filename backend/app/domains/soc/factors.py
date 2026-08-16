@@ -158,14 +158,17 @@ class PrivilegedIdentityContextFactor(FactorComputer):
 
 class TravelMatchFactor:
     """
-    Checks whether the alert user has a TravelRecord matching source_location.
+    LEGACY: checks whether the alert user has a TravelRecord matching
+    source_location. The canonical factor-0 implementation is
+    PrivilegedIdentityContextFactor; this class is retained pending a separate
+    deletion decision.
     Relationship traversal: (User)-[:HAS_TRAVEL]->(TravelRecord).
 
     Score: count / (count + 3).  Recency boost +0.15 if start_date < 7 days.
     No matching nodes -> 0.5.
     """
 
-    name = "travel_match"
+    name = "travel_match"  # LEGACY key; canonical factor-0 name is privileged_identity_context.
     factor_index = 0
 
     @property

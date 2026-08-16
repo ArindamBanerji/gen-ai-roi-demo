@@ -2,7 +2,7 @@
 SIM-3a: Simulation alert pool -- 5 categories, 20 alerts.
 
 Categories and their GAE factor signatures:
-  credential_access   -- TravelMatchFactor HIGH, TimeAnomaly HIGH, DeviceTrust LOW
+  credential_access   -- legacy travel signal HIGH, TimeAnomaly HIGH, DeviceTrust LOW
   threat_intel_match  -- ThreatIntelFactor HIGH, AssetCriticality CRITICAL
   lateral_movement    -- DeviceTrust LOW, AssetCriticality CRITICAL, TimeAnomaly HIGH
   data_exfiltration   -- AssetCriticality+DataClass HIGH, TimeAnomaly HIGH
@@ -75,7 +75,8 @@ ALERT_CATEGORIES: Dict[str, Dict[str, Any]] = {
 # Individual category pools (4 alerts each; refer_to_analyst alerts add 1 each
 # to credential_access, lateral_movement, and cloud_infrastructure)
 # Fields required by FactorComputers:
-#   TravelMatchFactor     → user_id, source_location
+#   LEGACY TravelMatchFactor → user_id, source_location;
+#   canonical factor 0 is privileged_identity_context.
 #   TimeAnomalyFactor     → business_hours_login, weekend_login
 #   DeviceTrustFactor     → mfa_completed, device_fingerprint_match, vpn_provider
 #   AssetCriticality/TI   → graph-based; seeded by seed_simulation_alerts()
@@ -808,7 +809,8 @@ async def seed_simulation_alerts() -> None:
     print("  [CORR-1b] refer_to_analyst alerts created (SIM-CA-REF-001, SIM-LM-REF-001)")
 
     # -----------------------------------------------------------------------
-    # TravelRecord nodes — required by TravelMatchFactor [:HAS_TRAVEL]
+    # Legacy TravelRecord nodes — retained for TravelMatchFactor compatibility;
+    # canonical factor 0 is privileged_identity_context.
     # (credential_access category)
     # -----------------------------------------------------------------------
     await graph_client.run_query("""
