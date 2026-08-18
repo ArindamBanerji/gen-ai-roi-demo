@@ -70,6 +70,22 @@ class ChannelDecompositionResponse(BaseModel):
     disclaimer: str
 
 
+class LearningControlRoomResponse(BaseModel):
+    """Unified SOC proof-of-learning surface contract."""
+
+    centroid_history: list[dict[str, Any]] = Field(default_factory=list)
+    centroid_state: list[dict[str, Any]] = Field(default_factory=list)
+    dk_weights: dict[str, Any] = Field(default_factory=dict)
+    conservation: dict[str, Any] = Field(default_factory=dict)
+    iks: dict[str, Any] = Field(default_factory=dict)
+    verified_count: dict[str, Any] = Field(default_factory=dict)
+    evolution_summary: dict[str, Any] = Field(default_factory=dict)
+    convergence: list[dict[str, Any]] = Field(default_factory=list)
+    learning_enabled: bool = True
+    evidence: dict[str, Any] = Field(default_factory=dict)
+    frozen_comparison: Optional[dict[str, Any]] = None
+
+
 # =============================================================================
 # 2. GET /api/soc/profile  →  ProfileResponse
 # =============================================================================

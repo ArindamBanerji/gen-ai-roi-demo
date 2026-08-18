@@ -115,6 +115,18 @@ export async function simulateFailedGate() {
   return fetchJSON('/eval/simulate-failure', { method: 'POST' })
 }
 
+export async function fetchLearningControlRoom() {
+  return fetchJSON<Record<string, unknown>>('/soc/learning/control-room')
+}
+
+export async function fetchFrozenComparison() {
+  return fetchJSON<Record<string, unknown>>('/soc/learning/frozen-comparison')
+}
+
+export async function initializeFrozenComparison() {
+  return fetchJSON<Record<string, unknown>>('/soc/learning/frozen-comparison/freeze', { method: 'POST' })
+}
+
 export async function fetchInterventionHistory(limit: number = 1) {
   return fetchJSON(`/soc/interventions/history?limit=${limit}`)
 }

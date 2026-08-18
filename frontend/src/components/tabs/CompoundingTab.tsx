@@ -33,6 +33,7 @@ import {
 } from '../../lib/api'
 import { domainConfig } from '../../lib/domain'
 import { ensureArray } from '../../lib/guards'
+import { LearningControlRoom } from '../LearningControlRoom'
 import {
   TrendingUp, Database, Activity, RefreshCw, Clock, DollarSign,
   TrendingDown, CheckCircle, Calculator, Shield, Download,
@@ -1062,6 +1063,7 @@ export default function CompoundingTab() {
   if (loading || !data) {
     return (
       <div className="space-y-6">
+        <LearningControlRoom />
         <SimulationPanel onSimulationComplete={loadGAECharts} />
         <ThreeChannelPanel />
         <div className="rounded-lg border border-purple-200 bg-white p-6 shadow">
@@ -1267,6 +1269,7 @@ export default function CompoundingTab() {
 
   return (
     <div className="space-y-6">
+      <LearningControlRoom />
 
       {/* ── Simulation Panel ────────────────────────────────────────────────── */}
       <SimulationPanel onSimulationComplete={loadGAECharts} />
