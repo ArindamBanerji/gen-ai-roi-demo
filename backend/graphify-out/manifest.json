@@ -1,0 +1,2814 @@
+{
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\age_experiments.py": {
+    "mtime": 1782130185.8165433,
+    "hash": "c20f9fbaf492078690b36689969c3166"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\analyze_cypher_compat.py": {
+    "mtime": 1782130185.8165433,
+    "hash": "6ccf15943429e84c3eb7c2a0391865bf"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\backfill_correct.py": {
+    "mtime": 1776115334.964357,
+    "hash": "46340ff72d82e150f634f516741977f5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\check_age.py": {
+    "mtime": 1782380502.634999,
+    "hash": "54ccc899cd884c683acf7943cf778005"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\check_and_clean.py": {
+    "mtime": 1782130185.831511,
+    "hash": "d9142a555ee1c5bc060cd16fed7a7d18"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\check_correct.py": {
+    "mtime": 1776115171.6292255,
+    "hash": "b8bca77565164e3ff9af807b38267fff"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\check_edge_types.py": {
+    "mtime": 1776037773.2685359,
+    "hash": "2c785d4ccea1be474d338407841c3f49"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\check_env.py": {
+    "mtime": 1775780094.48405,
+    "hash": "871496ecb11d6e04743347bc6af331ea"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\check_syn_props.py": {
+    "mtime": 1776115380.4380937,
+    "hash": "f31334509ffb62d65493357514be54d3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\cleanup_decisions.py": {
+    "mtime": 1785598871.4767206,
+    "hash": "292249bf20093485bc5a199d639735f9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\cleanup_orphans.py": {
+    "mtime": 1776126521.6995833,
+    "hash": "d78da3571f69c52c183930a32a733300"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\clean_orphans.py": {
+    "mtime": 1776041947.1533067,
+    "hash": "7cf44818bd37f18fa208778aca231b38"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\conftest.py": {
+    "mtime": 1785598872.67435,
+    "hash": "deea020480945e9dcadc05283bea8c09"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\diagnose_decisions.py": {
+    "mtime": 1785598880.7660863,
+    "hash": "79b13b7e99ad4fc40b4723481ee1aa77"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\exp7_merge.py": {
+    "mtime": 1776128041.504879,
+    "hash": "0ab88ebbb5a125e8779c2c334f08422a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\ingest_shadow_decisions.py": {
+    "mtime": 1785598893.5486789,
+    "hash": "3e318d5b1b3e531b35fc514f4368e85f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\property_audit.py": {
+    "mtime": 1782130273.2150836,
+    "hash": "ade25475843ca377093bf72c13835ba7"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\repro_orphan.py": {
+    "mtime": 1776126600.6450212,
+    "hash": "7a199399ad470d39155f050c73feac28"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\seed_neo4j.py": {
+    "mtime": 1785598895.0373125,
+    "hash": "2f50c3bea8d268914088d38177fab93d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\test_age_set.py": {
+    "mtime": 1782130185.8477535,
+    "hash": "c1eefde6ddd642e8e491e613bf2f75b0"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\graph_schema.py": {
+    "mtime": 1786515781.5252967,
+    "hash": "af2c4233afd2823c32c6d9d07c2fe208"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\main.py": {
+    "mtime": 1787081407.2660117,
+    "hash": "dabee4ed4790b608fbecd897e1621276"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\__init__.py": {
+    "mtime": 1773031407.6624246,
+    "hash": "0e9af97f4e1b963b1f4d3a7bb4e613a8"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\auth\\config.py": {
+    "mtime": 1784051549.9302785,
+    "hash": "09cdc4d004f372a83754d87a34b2deab"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\auth\\dependencies.py": {
+    "mtime": 1786400300.187294,
+    "hash": "6b2a287fa78756b6841fa954f28660d5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\auth\\jwt_utils.py": {
+    "mtime": 1782023339.731287,
+    "hash": "0ad7be6b0c9cf9ac2029456b79e0915e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\auth\\__init__.py": {
+    "mtime": 1776757577.238807,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\connectors\\base.py": {
+    "mtime": 1786342340.4912617,
+    "hash": "c2accf1cd945caab05a7a62017b4e7a5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\connectors\\crowdstrike_mock.py": {
+    "mtime": 1786342340.4912617,
+    "hash": "e29962f9db551055273eb2278218fed7"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\connectors\\greynoise.py": {
+    "mtime": 1786342340.5074568,
+    "hash": "d7c59f297a2b8321efea952937b866d9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\connectors\\mitre_client.py": {
+    "mtime": 1782023284.981971,
+    "hash": "46bd84451121e23b5dceb51d143ec8b1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\connectors\\nvd_client.py": {
+    "mtime": 1782023284.8736246,
+    "hash": "774c8e70ff1c8f3fea1615f54947947f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\connectors\\pulsedive.py": {
+    "mtime": 1786342340.5101078,
+    "hash": "86e6acf90283ad1ee41ac20c9800ffde"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\connectors\\registry.py": {
+    "mtime": 1782130185.8793132,
+    "hash": "8b5cc9efedbf39a5eaa21c0c2fd5e49f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\connectors\\sentinel_mock.py": {
+    "mtime": 1782130185.8793132,
+    "hash": "45a9423e5ff5fcd20ec1a14338553fcf"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\connectors\\sentinel_real.py": {
+    "mtime": 1782130185.8793132,
+    "hash": "8b60c4c9eeb48cf19272dcf07a9905a7"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\connectors\\threat_intel_provider.py": {
+    "mtime": 1782014281.3897896,
+    "hash": "fb9bf14b0e7469b09d5b0db4e4876b34"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\connectors\\__init__.py": {
+    "mtime": 1775293895.4559064,
+    "hash": "68b329da9893e34099c7d8ad5cb9c940"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\core\\domain_registry.py": {
+    "mtime": 1782130185.8955243,
+    "hash": "837e046e736617f0f8ec0b5215151d6b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\core\\state_manager.py": {
+    "mtime": 1782130185.8955243,
+    "hash": "746b5341db3cfea3c708c199bc2911ec"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\core\\__init__.py": {
+    "mtime": 1773031407.6664996,
+    "hash": "c0799e30d4e5c89817b81e93cd114e87"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\data\\alert_pool.py": {
+    "mtime": 1786844966.4143333,
+    "hash": "2abe8c634445a207b473c8256a33d32d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\data\\__init__.py": {
+    "mtime": 1773031407.6736586,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\db\\graph_client.py": {
+    "mtime": 1786342670.8934777,
+    "hash": "a926ebfba1d9224a8ce20389800a72f7"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\db\\__init__.py": {
+    "mtime": 1773031407.6776173,
+    "hash": "a684437ef4d7dadc619a18607a83de64"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\domains\\base.py": {
+    "mtime": 1781544772.9343703,
+    "hash": "8f83d80024103b1868642c763ba645f7"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\domains\\__init__.py": {
+    "mtime": 1773031407.6776173,
+    "hash": "19a40b30c6aa7d05a32db38a5342d769"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\domains\\soc\\campaigns.py": {
+    "mtime": 1786342340.5438912,
+    "hash": "ce5ab9762561a79b974237d0a0659ea4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\domains\\soc\\campaign_holdout.py": {
+    "mtime": 1781764307.1758292,
+    "hash": "0177320f07e21afb95e896b612e3aacb"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\domains\\soc\\config.py": {
+    "mtime": 1786865010.1787086,
+    "hash": "64a218076a1a8d567f23e4405f368c44"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\domains\\soc\\constants.py": {
+    "mtime": 1782219302.7529242,
+    "hash": "13e52e3d5b92038f396a5fb9fe9240d5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\domains\\soc\\factors.py": {
+    "mtime": 1786966953.068538,
+    "hash": "d43c10ad5d04c3e8071f19149d82e7c8"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\domains\\soc\\factor_vector.py": {
+    "mtime": 1786515778.7112186,
+    "hash": "2b9cf605af44c19329866b09c3e8c106"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\domains\\soc\\orchestrator.py": {
+    "mtime": 1786342340.55736,
+    "hash": "900a3e5c647109b06514a66058296167"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\domains\\soc\\policies.py": {
+    "mtime": 1782130185.9271626,
+    "hash": "8cbe964ea86c6a79e67cf0c152cdb1e1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\domains\\soc\\scorer_adapter.py": {
+    "mtime": 1785544237.001096,
+    "hash": "c6190531a32a528c00ee881ad0bf19e3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\domains\\soc\\severity.py": {
+    "mtime": 1778070251.120774,
+    "hash": "198c33674bbb88bb6018913ab828b984"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\domains\\soc\\situations.py": {
+    "mtime": 1782130185.9364414,
+    "hash": "fdbaf282f58a6b13ee66c4bee9dd653a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\domains\\soc\\__init__.py": {
+    "mtime": 1773031407.6796265,
+    "hash": "2c2d27c7ae86a7c22ca21a3dfbad8d9d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\domains\\supply_chain\\config.py": {
+    "mtime": 1786342340.55736,
+    "hash": "fc7446de8a98f60fdc530341fce47845"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\domains\\supply_chain\\__init__.py": {
+    "mtime": 1773031407.684519,
+    "hash": "b893f55674b3a893f513d6a9a01c6256"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\agent.py": {
+    "mtime": 1782022329.2705119,
+    "hash": "d6f1b60ba8b8e85ddfcd4bc107eb9ca8"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\audit.py": {
+    "mtime": 1785598896.6000695,
+    "hash": "ccc76cc5894df0d3ed799aca684e06e9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\checkpoint.py": {
+    "mtime": 1786342340.5768743,
+    "hash": "aab984c692c41145f268349667bdeccc"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\composite_gate.py": {
+    "mtime": 1786342274.210068,
+    "hash": "c766abbde74bde4bb0e54c4ab1611d12"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\convergence_math.py": {
+    "mtime": 1782130185.9441917,
+    "hash": "bededd6b2936da5029ffa42fcda7a6ce"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\decision_history.py": {
+    "mtime": 1786342274.210068,
+    "hash": "cba35013ce655db9ef549a12a5a56ba4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\economics.py": {
+    "mtime": 1782130185.9441917,
+    "hash": "386f69afae30b09bbca8489185a6771a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\event_bus.py": {
+    "mtime": 1782130185.9441917,
+    "hash": "41b391d483bfb3c1a098e8413acc32e2"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\evolution_ledger.py": {
+    "mtime": 1782130185.9441917,
+    "hash": "34c9de8ccc4e5489b51b4b24ce1c1aa6"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\feedback_base.py": {
+    "mtime": 1782130185.9441917,
+    "hash": "e291eeeba8d9704771b9ce702e0ff121"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\feedback_store.py": {
+    "mtime": 1774589801.5915568,
+    "hash": "02c98afb3a50542b88e20269ad812877"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\iks_base.py": {
+    "mtime": 1782130185.9547226,
+    "hash": "8c3ebd387a8d7a7c88f35781795cf716"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\intervention_controls.py": {
+    "mtime": 1786342340.5890038,
+    "hash": "15adf97d52ebf5dc998c847512cf3751"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\learning_state.py": {
+    "mtime": 1783836355.9303472,
+    "hash": "0d891b3caac0553d92586826a93029a5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\narrative_base.py": {
+    "mtime": 1782130185.9588454,
+    "hash": "880622503e649e8ffc0b0f3e9e4f01bf"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\ols_status.py": {
+    "mtime": 1782130185.9588454,
+    "hash": "08182635d18efbb835dcb006eafb01d7"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\override_detector.py": {
+    "mtime": 1786342340.5890038,
+    "hash": "b27226dc516c9b750fe0ca64d91d8cf4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\provenance.py": {
+    "mtime": 1786342340.5890038,
+    "hash": "2f4cb1d1032776137f299337c698759d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\shadow_mode.py": {
+    "mtime": 1786342274.2189226,
+    "hash": "ea758ef2a0601a2163b06632d2427736"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\similar_cases_base.py": {
+    "mtime": 1786342340.6050234,
+    "hash": "668392ec08011f7f0b4f6991978608c2"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\framework\\__init__.py": {
+    "mtime": 1782130185.9645,
+    "hash": "efb420a03000190547356cba2ed1c48b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\middleware\\pii_redaction.py": {
+    "mtime": 1782023420.5069394,
+    "hash": "2b7ae045061e98f0a5bab6932eb4ef78"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\middleware\\__init__.py": {
+    "mtime": 1777884975.0507736,
+    "hash": "68b329da9893e34099c7d8ad5cb9c940"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\models\\responses.py": {
+    "mtime": 1787057380.8736532,
+    "hash": "c0073dc6622f4e0b3ab7e99999a7e7e3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\models\\schemas.py": {
+    "mtime": 1777914491.858462,
+    "hash": "f08d6f1dcaab0813909b1b352814ae37"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\models\\__init__.py": {
+    "mtime": 1773031407.684519,
+    "hash": "12de4c0b71873e73d0de18c88ca7fdf1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\oracle\\analyst_oracle.py": {
+    "mtime": 1782213706.8969226,
+    "hash": "d8ad9833bec9e3d1033daa9b631b293e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\oracle\\pipeline_test.py": {
+    "mtime": 1782011545.280049,
+    "hash": "15cd6c51d5361db1f36538c000e627b8"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\oracle\\__init__.py": {
+    "mtime": 1782011545.0474396,
+    "hash": "633869c548759a3bf6bd33d3587c6f80"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\admin.py": {
+    "mtime": 1786342340.6206806,
+    "hash": "abd084fa918a852aef2d7338d85ec41e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\audit.py": {
+    "mtime": 1782125974.2636743,
+    "hash": "210d4cea15b1862c82887fa20edc474f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\auth.py": {
+    "mtime": 1776827101.2459178,
+    "hash": "9ce45c568ac2d19364d464d3b784d0cb"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\authority.py": {
+    "mtime": 1787081588.6079931,
+    "hash": "de6caaecf7b1d900e8ece3c51aad0cce"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\cohort_status_router.py": {
+    "mtime": 1785598995.178939,
+    "hash": "152d3372d7522677ee332327df48ccdf"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\discoveries_router.py": {
+    "mtime": 1785598989.8167672,
+    "hash": "085f78746188e00732f14afeb2ebee22"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\evaluation.py": {
+    "mtime": 1786844920.2180793,
+    "hash": "157869de2bac52e431319a1dae027f37"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\eval_router.py": {
+    "mtime": 1786399353.083459,
+    "hash": "29297abc1320dbdecfda783bc3a7af7e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\evolution.py": {
+    "mtime": 1786515796.9814906,
+    "hash": "4a8ee123b595a08e0aa770aa345286c8"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\framework_router.py": {
+    "mtime": 1786791540.3246615,
+    "hash": "83cbea7bdb695d87da902107ca9d650f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\gae.py": {
+    "mtime": 1786342340.6288538,
+    "hash": "03aadd7fb200c86f5f01a77acf3f29f1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\governance_router.py": {
+    "mtime": 1777601767.770183,
+    "hash": "a66636aa30460331824f509a37894cf5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\graph.py": {
+    "mtime": 1786342340.6364193,
+    "hash": "0b8c3120c571d6c72de69ed56bcc8b89"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\judgment.py": {
+    "mtime": 1786845098.7384865,
+    "hash": "d7ee6f4797192b513b49be1512ab8262"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\metrics.py": {
+    "mtime": 1786695645.9612336,
+    "hash": "3e324c928e97f4dfa4ebb73433cfa858"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\platform.py": {
+    "mtime": 1779075198.7700224,
+    "hash": "11125b1b425296ed9a28525b331e1323"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\rl_router.py": {
+    "mtime": 1778150436.7185977,
+    "hash": "0f9ab1236afc70d4108355c19b80df8e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\roi.py": {
+    "mtime": 1778825130.8791568,
+    "hash": "903bb76b639e3c6ad80e9d6d1674aba3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\servicenow_router.py": {
+    "mtime": 1777598910.6521933,
+    "hash": "f053a4201f09ad5efa3dde1a7e026ddf"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\shadow.py": {
+    "mtime": 1786688443.0924766,
+    "hash": "289f776cde121452f3444e35beb4fc14"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\simulation.py": {
+    "mtime": 1786342274.2434397,
+    "hash": "9d5d24ded1735c1e42cd01806227dded"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\soc.py": {
+    "mtime": 1786398562.4914043,
+    "hash": "cdfd1f969e1938c801fde85098b32455"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\soc_learning.py": {
+    "mtime": 1787058339.2648551,
+    "hash": "3ac24598959488d9b3e86d017800eb40"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\time_machine_router.py": {
+    "mtime": 1785599065.470989,
+    "hash": "800ae046ac6326ba584ada41b2bd8160"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\triage.py": {
+    "mtime": 1787081410.091954,
+    "hash": "f2602c64157e07354c76b93f1918c118"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\whatif_router.py": {
+    "mtime": 1777171773.5673966,
+    "hash": "32582e05544e0507181a9913b40813be"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\routers\\__init__.py": {
+    "mtime": 1773031407.6913834,
+    "hash": "224a84d847095dbb65922987db3f507d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\scripts\\__init__.py": {
+    "mtime": 1773031407.6998217,
+    "hash": "700b3a514542c0ac39f060963d7422d1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\seed\\alerts.py": {
+    "mtime": 1782023339.6217651,
+    "hash": "7e803639deb2182173367c636ddc342d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\seed\\campaigns.py": {
+    "mtime": 1778887361.9974265,
+    "hash": "badfd6cd623a9e75448ede077735cb14"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\seed\\config.py": {
+    "mtime": 1778888049.914873,
+    "hash": "a0c5e41d2445c69def003e41fe322712"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\seed\\decisions.py": {
+    "mtime": 1782009083.3796,
+    "hash": "c9d5a84e93ad9835d63e79fb0d6944f6"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\seed\\entities.py": {
+    "mtime": 1782023339.52416,
+    "hash": "aee590cda8960468ad1030b1a8f45720"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\seed\\metadata.py": {
+    "mtime": 1782009083.505587,
+    "hash": "2ab0f231cf64d26fa90b0111e22aea88"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\seed\\runner.py": {
+    "mtime": 1778887362.3701758,
+    "hash": "d89005b6a2c51ba3e5fecd252be15480"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\seed\\validate.py": {
+    "mtime": 1778887362.2748866,
+    "hash": "919a86c99a2fb40e5807b6419c9d3d9e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\seed\\__init__.py": {
+    "mtime": 1778887361.6384087,
+    "hash": "ad22d3a769b62c88c19553a04633fef1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\accuracy_trajectory.py": {
+    "mtime": 1786342340.6919715,
+    "hash": "a03ff5e38ae6b815b00403722b5e3e6c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\agent.py": {
+    "mtime": 1782130186.0378723,
+    "hash": "7850ae973f4d6d9ab54f7560cb1aa498"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\attack_chain.py": {
+    "mtime": 1786342340.6963525,
+    "hash": "bc03077bece828d2366f1336c4c61d46"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\audit.py": {
+    "mtime": 1782125974.296818,
+    "hash": "ff405a9ac64b30766777d919d5cbed80"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\authority_ladder.py": {
+    "mtime": 1787081583.0106285,
+    "hash": "c7f780d60c8de32c36b6a531281d64e1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\balance_sheet.py": {
+    "mtime": 1786342274.2498345,
+    "hash": "326d6ca98b4419e7428603e5ee9c52d7"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\benchmarking_level2.py": {
+    "mtime": 1782130186.0536542,
+    "hash": "3b4e5ca042463fd2bde82aaa7d576e1c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\benchmarking_report.py": {
+    "mtime": 1785155888.7198074,
+    "hash": "3f03fb66d17c0888a1bec9e4a76158e0"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\bootstrap_graph.py": {
+    "mtime": 1786425726.8918908,
+    "hash": "d6b92add372b6027fe530670aaffc865"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\bootstrap_neo4j.py": {
+    "mtime": 1786515794.2272768,
+    "hash": "aa30d7133c873057fb5c0bd520b7862d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\centroid_support.py": {
+    "mtime": 1782130186.0536542,
+    "hash": "5ea71dc48dafd9679a84666fda54c677"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\checkpoint.py": {
+    "mtime": 1782130186.0536542,
+    "hash": "d7c7764829a5178591c148db05161c9d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\cluster_history.py": {
+    "mtime": 1785155892.490527,
+    "hash": "00f76c7224355f059997c4560a774b2e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\cohort_status.py": {
+    "mtime": 1782215289.222489,
+    "hash": "17fd627e650a139038ae083cfd08a085"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\compliance_dashboard.py": {
+    "mtime": 1786398566.1703813,
+    "hash": "cf82d71e7c72d8b5ae1eed6036e6e580"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\composite_gate.py": {
+    "mtime": 1782130186.0593002,
+    "hash": "15a477b750a912d9d7ac952c2c9d439c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\convergence_calendar.py": {
+    "mtime": 1782130186.0593002,
+    "hash": "c084e049b03f6bd3717d728f3099c233"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\cross_graph_discovery.py": {
+    "mtime": 1785599083.8396504,
+    "hash": "789a1fa4b51b96f4b2c5dd6ead7741ba"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\decision_history.py": {
+    "mtime": 1782130186.0645292,
+    "hash": "dd4316bc85831bd556d554350d2e1ce9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\economics.py": {
+    "mtime": 1782130186.0645292,
+    "hash": "0cad77fdcf93a2f892d09638bb8e7dcf"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\enrichment_advisor.py": {
+    "mtime": 1782130186.0645292,
+    "hash": "2f316d790a22b7e130d3b8d2fe59ad7c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\eval_service.py": {
+    "mtime": 1782135776.006282,
+    "hash": "85dec8cb88d1315663b7f9b1fab8d7d1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\event_bus.py": {
+    "mtime": 1782130186.0698504,
+    "hash": "d43deded4352d468efdfc1f1057c1966"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\evidence_room.py": {
+    "mtime": 1786426426.8633285,
+    "hash": "b666b7038ad7133aeebf36baac2e3be9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\evolver.py": {
+    "mtime": 1786798548.4954183,
+    "hash": "0954ea953516dda3ab57dd99043c52ed"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\executive_narrative.py": {
+    "mtime": 1786516496.4448712,
+    "hash": "e13853daaa6911e6d14668b0cdbf796d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\factor_analysis.py": {
+    "mtime": 1777240526.0746453,
+    "hash": "c98aa4f84e7064e3593f3fce4721283f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\feedback.py": {
+    "mtime": 1786056038.0775566,
+    "hash": "ef33481b090e78c52eed56fc4c3690da"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\flywheel_comparison.py": {
+    "mtime": 1782130186.0698504,
+    "hash": "48e2ef1d08344fac3205404daa82c209"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\gae_state.py": {
+    "mtime": 1786342340.7431433,
+    "hash": "10e433c8376491057dc0e554d9f8b862"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\governance_report.py": {
+    "mtime": 1785599123.4129882,
+    "hash": "6e6516b4a4e64826bf1371eae356834c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\graph_explorer.py": {
+    "mtime": 1786398304.5825057,
+    "hash": "f15b975a0e84988ff94df7a447594fd4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\iks.py": {
+    "mtime": 1786342340.7483344,
+    "hash": "17d0f263904db6eb9cab08d7c00bbe1e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\industry_profile.py": {
+    "mtime": 1782130186.0855596,
+    "hash": "8c04a470bf280467121e5df7f7d19e2c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\intervention_controls.py": {
+    "mtime": 1782130186.0855596,
+    "hash": "e3087fef0e2b1ea9dfd430edce894ccf"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\learning.py": {
+    "mtime": 1786428008.5284343,
+    "hash": "544efae2634935cd039c9f7e6de58d01"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\learning_health.py": {
+    "mtime": 1786342340.7483344,
+    "hash": "e9becddf6f51d151374d95ba2e6fc9bb"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\model_swap.py": {
+    "mtime": 1786342274.288751,
+    "hash": "1f29d58bedc0a988b0264e102ea60074"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\narrative.py": {
+    "mtime": 1784051549.935123,
+    "hash": "ab18449b9531540d3670d897266a86fd"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\nl_templates.py": {
+    "mtime": 1782130186.1015034,
+    "hash": "b99dbef2cd5c2fc55e54aeaf2ec33a14"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\ols_status.py": {
+    "mtime": 1782130186.1015034,
+    "hash": "e4d121543f1cb4971f8a7a34b9f160c9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\override_detector.py": {
+    "mtime": 1786342340.7709274,
+    "hash": "a45e47f1f2413170d8ba498229513643"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\policy.py": {
+    "mtime": 1786342340.7757094,
+    "hash": "bc0f2484be87424e8419e73a3ded6357"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\posterior_store.py": {
+    "mtime": 1785130982.317942,
+    "hash": "a973c05ad57d964b8a56cedfa700713b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\promotion_gate.py": {
+    "mtime": 1785599137.3048897,
+    "hash": "7af6727a0dec49b012aa2367166a6efa"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\provenance.py": {
+    "mtime": 1782130186.1015034,
+    "hash": "86fa7215b9e5f039ad0a316fff8bcd0f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\reasoning.py": {
+    "mtime": 1782023284.4115486,
+    "hash": "dbb9e2191d3b2d946adc157ca9956d87"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\reconvergence_logger.py": {
+    "mtime": 1786342340.7805607,
+    "hash": "ea7fd3f86c07c2828203cb1eb4060326"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\referral_policy.py": {
+    "mtime": 1782130186.1015034,
+    "hash": "74251db26a7330ac8dfd355540ae3800"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\referral_rules.py": {
+    "mtime": 1782130186.1172857,
+    "hash": "613fe89aae024a76b4065a243f20db30"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\rl_engine.py": {
+    "mtime": 1785599146.8983567,
+    "hash": "3b991689b26b2cda61e1999dd92b3486"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\route_policy.py": {
+    "mtime": 1781228098.3534613,
+    "hash": "335e908670d4eb14fe23244c86666ae4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\sentinel_poller.py": {
+    "mtime": 1777909810.2297852,
+    "hash": "35045734bc46cbc17042db3789ae153a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\servicenow_mock.py": {
+    "mtime": 1777598941.5772183,
+    "hash": "420f0ec309c81d8e9fe338c76f3722a5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\shadow_mode.py": {
+    "mtime": 1782130186.1172857,
+    "hash": "e5fe5e15eb4c4e5c446b67b5e6ef38d7"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\shadow_promotion.py": {
+    "mtime": 1786689241.8618321,
+    "hash": "2bad8b18b7384335a5a9c63d0975bec3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\shadow_runner.py": {
+    "mtime": 1785599145.7603407,
+    "hash": "a4c7635c34b4e1c54f02a6290dc91184"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\similar_cases.py": {
+    "mtime": 1785599144.2394464,
+    "hash": "6fd7043019ca09dddc46876c768349e0"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\simulation.py": {
+    "mtime": 1786845021.2525074,
+    "hash": "a2389b423c2d04774cb9fe08d1bd0516"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\situation.py": {
+    "mtime": 1782130186.1314473,
+    "hash": "fcd1df9e1391ee47e3303c8d35796b01"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\snapshots.py": {
+    "mtime": 1786342340.7966142,
+    "hash": "223f3352b9798099519688171a4c8dd1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\soc_context_split.py": {
+    "mtime": 1781095311.846733,
+    "hash": "5d992f85e6dbc1d40912eeef702d90dd"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\soc_domain_profile.py": {
+    "mtime": 1781126304.9168785,
+    "hash": "d063b7df4738a20632284d7598fd1a04"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\soc_learning_control.py": {
+    "mtime": 1787058316.9757771,
+    "hash": "ce35bffca14a7b2d7b4f90d7004e4124"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\soc_situation_pattern.py": {
+    "mtime": 1782022462.0978549,
+    "hash": "ade82aa478a256ce674b1f0b8cbce3f4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\state_manager.py": {
+    "mtime": 1786342340.812613,
+    "hash": "a27e328bfe07de32397124e7c07cbbf5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\switching_cost.py": {
+    "mtime": 1778187098.6140914,
+    "hash": "ced715e6110168b1248f437c696d94d2"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\threat_indicator.py": {
+    "mtime": 1786342274.3100495,
+    "hash": "e74395369eb5960c0931c08d30982e6e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\threat_intel.py": {
+    "mtime": 1786342340.816269,
+    "hash": "262d6b9e40ab280e91843b7b8212dda4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\three_claims.py": {
+    "mtime": 1782130186.1401267,
+    "hash": "f522e9e385295e3d205901326120ddf7"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\timestamp_backfill.py": {
+    "mtime": 1785599151.5539486,
+    "hash": "7d786b117b0d28366bd63ef7d4614377"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\time_machine.py": {
+    "mtime": 1785599152.3216932,
+    "hash": "5b6c3549033b1b996732e795721c57fd"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\transparency_page.py": {
+    "mtime": 1782130186.14926,
+    "hash": "432de2d2bfd0f1bea6739d5d64910cfd"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\triage.py": {
+    "mtime": 1786342340.8249278,
+    "hash": "5ca30045cad5c7038841d9c75ca1ad11"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\variant_generator.py": {
+    "mtime": 1785599154.352654,
+    "hash": "3f7e05f3918815a09a07783bd978e4c6"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\variant_registry.py": {
+    "mtime": 1785599155.2222476,
+    "hash": "5db35ba94f2281777ec6b0e5ad2fbce5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\whatif_service.py": {
+    "mtime": 1785378811.3059003,
+    "hash": "7d039e59e5d1cd59b5516b5daac3d159"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\services\\__init__.py": {
+    "mtime": 1773031407.7071753,
+    "hash": "cab58a4fe342e25aef63cf4e736d6fca"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\state\\graph_snapshot.py": {
+    "mtime": 1785381243.6484847,
+    "hash": "6ab6ccde37ec13a4f5b6c86346014fc4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\app\\state\\__init__.py": {
+    "mtime": 1775728661.6122367,
+    "hash": "68b329da9893e34099c7d8ad5cb9c940"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\b0_v_reconciliation.py": {
+    "mtime": 1785012765.7917058,
+    "hash": "efad395206e62c4b33c557d36f2c23fc"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\centroid_diagnostics.py": {
+    "mtime": 1777238676.3799422,
+    "hash": "6940f7e0a55c949bae59f27681e1aabb"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp10_drivers.py": {
+    "mtime": 1777302545.2768831,
+    "hash": "30f1d70328be2465126f1aa9e969e17b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp11_different_n.py": {
+    "mtime": 1777302552.1848755,
+    "hash": "5fdf6304c829713dbb20b0a5a60ad376"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp12_different_prior.py": {
+    "mtime": 1777302571.0062993,
+    "hash": "5dd882c40d362891eb28b3b046af2deb"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp13_ablation.py": {
+    "mtime": 1777301594.5858195,
+    "hash": "bfa69ae92d6b85980357c53ae39193c5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp14_internal.py": {
+    "mtime": 1777302577.9602,
+    "hash": "8f653900761ba62a68fc2ed1d6cffe46"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp15_no_update.py": {
+    "mtime": 1782130186.1644433,
+    "hash": "ede80c8ff87760f1d0c179c99b40aec9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp16_kendall.py": {
+    "mtime": 1777302592.8378162,
+    "hash": "b1b077fc0d135546b41122ddbef7b863"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp17_staged.py": {
+    "mtime": 1782130186.1644433,
+    "hash": "a45de4e228212b0f808b2ef7139a4713"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp18_override.py": {
+    "mtime": 1777302601.6446712,
+    "hash": "a322ab9b386d67b96395d866f4317839"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp19_transfer_raw.py": {
+    "mtime": 1777298909.3065472,
+    "hash": "b72e4cb636b3d2bea1bce4d9bb3afa99"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp1_prior_gap.py": {
+    "mtime": 1782130186.1644433,
+    "hash": "7410303e8caaeb122fb14d406916f0d9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp20_larger_shifts.py": {
+    "mtime": 1777302635.3450074,
+    "hash": "6173efb1ac73f5b29dfc40f0172b0031"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp21_volume_batch.py": {
+    "mtime": 1777302643.474478,
+    "hash": "61e17d24a69058372b81a9023263d5f1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp22_calibration_value.py": {
+    "mtime": 1777298917.5631945,
+    "hash": "051e8d22b091241acf689e63b44c73ef"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp23_eta_schedule.py": {
+    "mtime": 1782130186.1644433,
+    "hash": "8a8e35d7814490f2b7318856059d504c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp24_second_deriv.py": {
+    "mtime": 1777302652.5325289,
+    "hash": "3ca8707db67d8df7e941bcb41b7de940"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp25_effective_params.py": {
+    "mtime": 1777301634.2706864,
+    "hash": "434b1c2a9727fd1575c584b511dbd4f8"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp26_coupling.py": {
+    "mtime": 1777301639.4037158,
+    "hash": "7ab1c3c55e1d82df8e31283b94864fc2"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp27_fixed_point.py": {
+    "mtime": 1777301644.575482,
+    "hash": "ba5d53f8f16887c7f8c92a8330477e1c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp28_coupling.py": {
+    "mtime": 1777302661.931492,
+    "hash": "6ae57b80717f450b67c1dbf80eb16b24"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp29_state_prediction.py": {
+    "mtime": 1777301661.3707259,
+    "hash": "bdb419b04e1e9ea407afdc1af29e87fe"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp2_confidence_cal.py": {
+    "mtime": 1782130186.180307,
+    "hash": "7f3ff8950df7ab153fdb6c243acbc6fd"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp30_phase_portrait.py": {
+    "mtime": 1782130186.180307,
+    "hash": "206c493382398c32598c63412454982c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp31_frequency.py": {
+    "mtime": 1777300387.5770435,
+    "hash": "0a41edf4ee24ddbb53583252358cef8d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp32_gain_margin.py": {
+    "mtime": 1777300393.059801,
+    "hash": "64218f342cd773a3c664fdcf3e1e1153"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp33_lyapunov.py": {
+    "mtime": 1777300397.2362788,
+    "hash": "13645dcee5bd5b97e1972534c1ecff8f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp34_dead_zone.py": {
+    "mtime": 1777300403.149161,
+    "hash": "6c58ee03d7bc54acde8bac6a2357d594"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp3_confidence_lockout.py": {
+    "mtime": 1782130186.180307,
+    "hash": "b8b723670edcc43bbad77373c5553ae3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp4_distribution_shift.py": {
+    "mtime": 1782130273.4722502,
+    "hash": "40f4dba5ad88f5d7d95bdf10f77dc912"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp5_sensitivity.py": {
+    "mtime": 1782130186.180307,
+    "hash": "ae8d3acb69f38dd930f3c671ccfb9f91"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp6_transfer.py": {
+    "mtime": 1777292224.055241,
+    "hash": "4bf41bc5053be618a371e76a8d8fa4e5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp7_regime_transitions.py": {
+    "mtime": 1782130273.485961,
+    "hash": "88aeb454cbc1e00699c0208d1a8c034d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp8_no_events.py": {
+    "mtime": 1777301626.6470108,
+    "hash": "00bcd53bc22d171da5f334b016ea9ac7"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp9_per_seed.py": {
+    "mtime": 1777302535.6321566,
+    "hash": "f6e6a8597a05219efbe71b03a72312c1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\expand_demo_alerts.py": {
+    "mtime": 1778796313.469954,
+    "hash": "1dc2e1341a463a57fe8f3aa8433963c3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_approx1_biasvar.py": {
+    "mtime": 1782130273.489289,
+    "hash": "1727b62fb40d1762d037d972b40bf053"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_approx2_curvature.py": {
+    "mtime": 1782130273.4901414,
+    "hash": "b04dce0e4d370233e6f5fd15fb1af795"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_c1_clean_ece.py": {
+    "mtime": 1777326729.420835,
+    "hash": "6fc0bd8bdc5d657e111831950ae8f8e4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_c2_pareto.py": {
+    "mtime": 1777326733.8610492,
+    "hash": "4cb735d1b11aa769199e7a9e7287da16"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_c3_cold_start.py": {
+    "mtime": 1777326741.0178938,
+    "hash": "287fb7a3ec84a047303b28a267a339c6"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_c4_transfer_ctrl.py": {
+    "mtime": 1777326748.1483288,
+    "hash": "493f7dade7854da6df1558c7fbca4dfb"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_c5_feedback.py": {
+    "mtime": 1782130186.1972413,
+    "hash": "bcd132d899eaca98216d64ee8d14e165"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_c6_per_cat_drift.py": {
+    "mtime": 1777326755.2638273,
+    "hash": "d9e6d41fabd034f4f099058460a49bea"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_c7_landscape.py": {
+    "mtime": 1777326759.3204288,
+    "hash": "7f71dff6b1504430c0bccea36ba20bf0"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_centroid_char.py": {
+    "mtime": 1782130273.4901414,
+    "hash": "f3a54eaa9843f01727fdafe5dfe899c1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_critical_three.py": {
+    "mtime": 1782130186.1972413,
+    "hash": "f6311d2030f4b5fef2e5b04a43069806"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_d1_candidates.py": {
+    "mtime": 1777326696.568398,
+    "hash": "abaaace99b89d8241d0e31b8753e8464"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_d2_signals.py": {
+    "mtime": 1777326702.132665,
+    "hash": "8ef033c06159d2693992a0ba9f8b9ae9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_d3_gains.py": {
+    "mtime": 1777326707.6767552,
+    "hash": "4f3fc5eab182ea458808f8080e7b8e63"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_d4_switching.py": {
+    "mtime": 1777326711.3721156,
+    "hash": "2ea12033752f97006f61972806478a59"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_d5_scope.py": {
+    "mtime": 1782130186.212167,
+    "hash": "91dcacd40a949f71230a96f1ae3bb5c1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_d6_combination.py": {
+    "mtime": 1777327497.0863333,
+    "hash": "c1dfee881c20d3b480a1f904844b6a7b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_d7_bootstrap.py": {
+    "mtime": 1777327502.417122,
+    "hash": "a7b0e42733d194ba170380d39c6c4a9b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_d8_sensitivity.py": {
+    "mtime": 1782130186.212167,
+    "hash": "3f35049f342b4b9b4b2d0200831b8e55"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_d9_update_rules.py": {
+    "mtime": 1777327511.7237802,
+    "hash": "99bcadaaab5535d8b5bb80e2ea3fa20d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_e1_error_space.py": {
+    "mtime": 1782130273.4984214,
+    "hash": "0759c97165c80bc28c872db96c6bed3e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_e2_error_dynamics.py": {
+    "mtime": 1782130273.4984214,
+    "hash": "8f71fa16d5f54bdd30b3a0a803815125"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_f12_signal_proj.py": {
+    "mtime": 1782130186.221851,
+    "hash": "1e4ee67f04f4b4fb412b69ff84da8302"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_f13_snr_estimation.py": {
+    "mtime": 1782130273.4984214,
+    "hash": "f58146bb010fab769cb84b867aae866a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_f14_bounded.py": {
+    "mtime": 1782130273.4984214,
+    "hash": "cdf0090766877c244b82950a75fa4113"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_f15_dk_wiener.py": {
+    "mtime": 1782130273.4984214,
+    "hash": "861d351d88c452f1b3de7f3b07eb1ab2"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_f1_alignment.py": {
+    "mtime": 1782130273.514946,
+    "hash": "67c8f022947a688a56e84e06cbe7cdab"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_f2_stability.py": {
+    "mtime": 1782130273.514946,
+    "hash": "aa6621e7528b7069cffaeb70ae233632"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_f3_orthogonality.py": {
+    "mtime": 1782130273.516955,
+    "hash": "f21cc3f3a109b097400ba6a3c4b085b4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_f4_order.py": {
+    "mtime": 1782130186.2315378,
+    "hash": "61a3124d76b68ecfd72dd97024507eb2"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_f5_observability.py": {
+    "mtime": 1782130186.2315378,
+    "hash": "9c9ede2161ddfe295d893f73b79e6274"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_f6f7_stack.py": {
+    "mtime": 1782130273.5189617,
+    "hash": "1514fc4d647f96234cb56632187f66e6"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_f8_conservation.py": {
+    "mtime": 1782130273.5209706,
+    "hash": "d5a1b72d79f4bf4a68fd1ec730e975df"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_f9_signal.py": {
+    "mtime": 1782130186.2382867,
+    "hash": "014f367a1b072f2bf1fe0088f6dc0303"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_g1_reconvergence.py": {
+    "mtime": 1782130273.5234754,
+    "hash": "1df1493e140280f30c1cb542bbd86b56"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_g7_boosting.py": {
+    "mtime": 1782130273.5234754,
+    "hash": "c929a565b4486db25724881179d07ff1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_g8_proper_dk.py": {
+    "mtime": 1782130273.5260043,
+    "hash": "b4fbfae52bda57f7c1a38d1a36ecfddf"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_g9_instability.py": {
+    "mtime": 1782130273.5260043,
+    "hash": "9ab427b02da50df9232adeaac79114cc"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_gap_closing.py": {
+    "mtime": 1782130186.2444203,
+    "hash": "53cad7b75c0a7eb5e8c58e7861af20ea"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_h1_subspace.py": {
+    "mtime": 1777336247.9059577,
+    "hash": "22c3a68cd76e0d46977ee30893b63b32"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_h2_boundary.py": {
+    "mtime": 1777336257.6873238,
+    "hash": "f73f210e0166cfc65f652707eb7154eb"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_h3_translation.py": {
+    "mtime": 1782130186.2444203,
+    "hash": "086a9ff8c47442b2da3ad20106380575"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_h4_opportunity.py": {
+    "mtime": 1777336264.7160125,
+    "hash": "375e7911d8ace526f027aae2c9f9ccc8"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_h5_combined.py": {
+    "mtime": 1777336270.916684,
+    "hash": "79b90ecb9c2ee31f4ef0285adc8bfbf3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_order1_dk_dynamics.py": {
+    "mtime": 1782130273.5308535,
+    "hash": "b8117ebe5606e32defa7414d399aeb1b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_order2_interaction.py": {
+    "mtime": 1782130186.2444203,
+    "hash": "8319177cb447499802192c8ec6868ea5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_order3_gaps.py": {
+    "mtime": 1782130186.2603395,
+    "hash": "d80aea2bbc101cf3fe522cc0c68da689"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_p1_temperature.py": {
+    "mtime": 1782130186.2603395,
+    "hash": "1fddaa452fa0eecd5df7a4323c0aff81"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_p2_dimensionality.py": {
+    "mtime": 1782130186.2644994,
+    "hash": "15e5ecec1862b7926a954d99bebe1a09"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_p3_metric.py": {
+    "mtime": 1782130186.2644994,
+    "hash": "60cc7fdef792f725afd793bc94a6c891"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_p4_separation.py": {
+    "mtime": 1782130186.2644994,
+    "hash": "5c24da620620158ad42fb0c19caae3d9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_p5_interaction.py": {
+    "mtime": 1782130186.2644994,
+    "hash": "02580eb657d5845f630db53ce3528b05"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_p6_decomposition.py": {
+    "mtime": 1782130273.5308535,
+    "hash": "609e9aafbff3858dd5305fc0b3af8793"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_p7_voronoi.py": {
+    "mtime": 1782130186.2644994,
+    "hash": "c4f3a53e625f191342795cdb01831ec9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_r1_boundary_linearity.py": {
+    "mtime": 1782130186.2644994,
+    "hash": "9e4d09b270f6b1602cba258982cb60f4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_r2_multimodality.py": {
+    "mtime": 1782130186.2644994,
+    "hash": "7260fc973c374f154fb31c2c324d79e5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_r3_interaction.py": {
+    "mtime": 1782130186.2761207,
+    "hash": "7c1fa9c6625e25fa983d3525bc48eedb"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_r4_variance.py": {
+    "mtime": 1782130186.2761207,
+    "hash": "fec4e100fa8df93d6be1ef424641eead"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_r5_alternatives.py": {
+    "mtime": 1782130186.2761207,
+    "hash": "2f3e4c6988be0724425c2139d0342276"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_r6_unmeasured.py": {
+    "mtime": 1777336309.5753818,
+    "hash": "f97e242df966fc5bb84fc009075d287d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_rate1_fast.py": {
+    "mtime": 1777408835.5913415,
+    "hash": "e8962ec37f10f84b520ce6ec43d16e3b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_rate1_longrun.py": {
+    "mtime": 1777381630.7668588,
+    "hash": "c9e5eeb90730954004a7c9f8a4a4afc9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_rate25_fast.py": {
+    "mtime": 1777408844.1775334,
+    "hash": "30521590c4ff7548eef21348c9c8deb1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_rate25_overlap.py": {
+    "mtime": 1777381640.7603781,
+    "hash": "37e130bb6ea9add4d169e85719791727"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_rate67_fast.py": {
+    "mtime": 1777408841.5390482,
+    "hash": "4821b9025a9f269bfd8a13ba18804e6b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_rate67_novelty.py": {
+    "mtime": 1777381636.1327963,
+    "hash": "bef9de118db5befa51007db1358873f8"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_rate9_fast.py": {
+    "mtime": 1782130186.2761207,
+    "hash": "35e04f89c7ce1dcd76ff590d5faeaaac"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_rate9_strengthen.py": {
+    "mtime": 1782130273.5573416,
+    "hash": "86f036b45656be18848b5f31a7853e37"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_reparam1_boundary.py": {
+    "mtime": 1782130273.5573416,
+    "hash": "a639ba236a7cf2eb36cc45b13f34e51a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_reparam2_split.py": {
+    "mtime": 1782130186.2919185,
+    "hash": "5ffe17032965bc6a0c5dba6d5699fe83"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_roadmap_remaining.py": {
+    "mtime": 1782130186.2975628,
+    "hash": "bec4ba081512fc36eec45596064d95a0"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_roadmap_rerun.py": {
+    "mtime": 1777434570.6396792,
+    "hash": "8380b2b8f0a23335fcbeb7bd92e594c4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_shared.py": {
+    "mtime": 1777292192.5065284,
+    "hash": "2f331443d3968edaaeb4a432cfbcd9c6"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\exp_smooth_mono.py": {
+    "mtime": 1777432232.151023,
+    "hash": "37ff3e0661a91dfc906bcdc3ddfba4ba"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\generate_seed.py": {
+    "mtime": 1778896432.979353,
+    "hash": "9afafc5b54edf9734b20722abdca7bd9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\ingest_synthetic_decisions.py": {
+    "mtime": 1786342341.283037,
+    "hash": "dec70851a44b4fa61c68245adcbf8b48"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\migrate_datetime_to_epoch.py": {
+    "mtime": 1786342341.283037,
+    "hash": "22a8cea6e7d7fb097acd5397bc0436e2"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\run_sentinel_mock.py": {
+    "mtime": 1786342341.283037,
+    "hash": "e172257bbbb7be4d8b1dd331c4616e57"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\seed_verified_decisions.py": {
+    "mtime": 1786342341.283037,
+    "hash": "8376d91b7275600f077faf7a8504e940"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\smoke_test_policy.py": {
+    "mtime": 1784051549.935123,
+    "hash": "834d5705746187d14a9114b6af7bfe52"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\soc_domain_census.py": {
+    "mtime": 1784981143.508896,
+    "hash": "3f492eb4bf62f39e21b89958c5b833d7"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\v_soc_31a_real_check.py": {
+    "mtime": 1785127126.6644013,
+    "hash": "8aad3d0b11aaef3c0f5308eabda2bf22"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\v_soc_37_investigation.py": {
+    "mtime": 1785126417.7162726,
+    "hash": "8978fb875f43f9eebb5e1a9d0dfc6c10"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\v_soc_canonical_scan.py": {
+    "mtime": 1785125768.4181454,
+    "hash": "1f73b0f6062c891a510d9317e6bbdca8"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\v_soc_diagnostic.py": {
+    "mtime": 1785126033.887224,
+    "hash": "4abd931257b46c0eb3bad9a85cd9b702"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\scripts\\write_mu_zero_sidecar.py": {
+    "mtime": 1782130186.307675,
+    "hash": "598d0280c945ed65d1bda37530841e35"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\support\\setup\\bootstrap_learning_loop.py": {
+    "mtime": 1782130186.307675,
+    "hash": "fc154a82f2623d2974e6c934362e622c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\support\\setup\\cleanup_orphaned_decisions.py": {
+    "mtime": 1782130186.3235438,
+    "hash": "de89d91556b3c5d799a8fca5517f49f9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\support\\setup\\enrich_zero_day_v5.py": {
+    "mtime": 1782130186.326164,
+    "hash": "596c9e07bb9641f10c19bd7a5819ae6d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\support\\setup\\fix_null_category_decisions.py": {
+    "mtime": 1782130186.326164,
+    "hash": "19f35b667910081c746e249f15cc66ad"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\support\\setup\\inject_errors.py": {
+    "mtime": 1776047210.3581321,
+    "hash": "e014948bfd64d0efa1c458322b47c6e4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\support\\setup\\migrate_aura_to_age.py": {
+    "mtime": 1785598909.737821,
+    "hash": "b7154b12e492758e477f9722d5a331ae"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\support\\setup\\rebuild_age_graph.py": {
+    "mtime": 1782130186.3382585,
+    "hash": "1db426a96058010e7e6289ff66e15d1b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\support\\setup\\repair_zero_day_timestamps.py": {
+    "mtime": 1785598911.3156211,
+    "hash": "3dee0efd135ab4c1532f245da69f409f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\support\\setup\\seed_shadow_decisions.py": {
+    "mtime": 1776242867.6100547,
+    "hash": "4e9c033b6d9a90be72215c66d2829a4c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\support\\setup\\seed_zero_day.py": {
+    "mtime": 1782130186.3484087,
+    "hash": "813e8c50c377a5168fc3b9a2abd1fbe0"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\conftest.py": {
+    "mtime": 1785598898.4211419,
+    "hash": "7d15061a00f95c811a086df53882a53a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_accuracy_trajectory.py": {
+    "mtime": 1786342340.8283298,
+    "hash": "b4579de7d5bc64925235b39aee728a33"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_ae_integration.py": {
+    "mtime": 1786342340.8283298,
+    "hash": "dca52768d30ba35e6d27c70e88df1a9f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_ae_sd_rl_seed.py": {
+    "mtime": 1778204988.0085447,
+    "hash": "0a39871c16959a9bb37bf4aa0f7a4d73"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_ae_seed_enrichment.py": {
+    "mtime": 1785598999.6755998,
+    "hash": "1b418b25ef0d9e228372db662367e5be"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_age_contracts.py": {
+    "mtime": 1785171065.277783,
+    "hash": "3aaeb879feee27afb063089444ca5b00"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_alert_pool.py": {
+    "mtime": 1782130186.3584514,
+    "hash": "d532714ab60a8fa00b7bc950440f0852"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_alert_pool_size.py": {
+    "mtime": 1778796313.6543171,
+    "hash": "443de1e86a67cfc45c3e2fe0f37c36f6"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_alert_type_routing.py": {
+    "mtime": 1782130186.3660722,
+    "hash": "4596a6b08ce7bb3ab4634c50173033a9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_analyst_benchmarking_f9.py": {
+    "mtime": 1786342340.845181,
+    "hash": "b2be31283df1c00fceeab2eb2f0c2006"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_analyst_eta.py": {
+    "mtime": 1786342340.845181,
+    "hash": "ace9e0a1d113a363a7022e89a96cb032"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_attack_chain.py": {
+    "mtime": 1786342340.845181,
+    "hash": "1d00e6274a4f9fd49a4ba4cc5745e519"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_audit_chain_contract.py": {
+    "mtime": 1782130186.3712358,
+    "hash": "ae89e233b80c8a9c13e79d88d31462b3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_audit_chain_wiring.py": {
+    "mtime": 1782130186.3712358,
+    "hash": "fee7e9f18e2163c59de5a62862ea7c81"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_audit_chain_wiring_extended.py": {
+    "mtime": 1786342340.845181,
+    "hash": "6378c767ac1033f1e311683067ebc1b1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_audit_ci_platform.py": {
+    "mtime": 1782130186.3712358,
+    "hash": "867712bdae754fd086dfc9303444b747"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_audit_concurrency.py": {
+    "mtime": 1777024396.6076021,
+    "hash": "181332d4da44bfca2e88f7a17eb5c24b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_audit_seed_timestamps.py": {
+    "mtime": 1778887714.4333634,
+    "hash": "74238924000bd23c355cd5d4e902ee7d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_authority_ladder.py": {
+    "mtime": 1787081509.2562404,
+    "hash": "80263520c2e2c4ea4d432071baa0ba76"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_auth_health.py": {
+    "mtime": 1786400920.022589,
+    "hash": "05947164edcdb941b993d8cc51358000"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_balance_sheet.py": {
+    "mtime": 1786342340.8591628,
+    "hash": "ae274a6e6cef0c28a3b3ffff5a5229c4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_benchmarking_level2.py": {
+    "mtime": 1773975681.846341,
+    "hash": "fd694da1dfef25c04ccec50a8bb244ee"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_benchmarking_report.py": {
+    "mtime": 1773969632.7108529,
+    "hash": "63a90a1f6c479b5ec2c7304dbcb1776e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_bootstrap_centroids.py": {
+    "mtime": 1786342274.3368962,
+    "hash": "43af5604df5bee57848fbc322563e7bc"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_bootstrap_decisions.py": {
+    "mtime": 1786342340.8644037,
+    "hash": "b5a4fcc87b729560698c64dae0f5ebee"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_bootstrap_persistence.py": {
+    "mtime": 1786342340.8665154,
+    "hash": "a166eae6f13c214d313656736a36c924"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_campaign_api.py": {
+    "mtime": 1786342340.8688436,
+    "hash": "9a239973d58cf467de1b6f6b2d095b6f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_campaign_engine.py": {
+    "mtime": 1782130186.3871572,
+    "hash": "269a04765816aa8db788ef22e375d58c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_campaign_frontend.py": {
+    "mtime": 1782130186.4029763,
+    "hash": "0db9c3c0fc59d0693072846b15639d0c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_campaign_holdout.py": {
+    "mtime": 1781764307.3401928,
+    "hash": "ec64ae18650ff71adf8bec1d1e7ec672"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_campaign_matcher.py": {
+    "mtime": 1786342340.8752155,
+    "hash": "e196ad81575119cba197e61e3deaae85"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_campaign_measurement_instrumentation.py": {
+    "mtime": 1785263270.1901064,
+    "hash": "76c8e4c28e5fa95eb301e33e7106d776"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_campaign_phase3_async.py": {
+    "mtime": 1782130186.4029763,
+    "hash": "9c602e8cbad9d431cf6ea6543d4bc694"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_campaign_phase4_continues.py": {
+    "mtime": 1782130186.4029763,
+    "hash": "a3ba0c3856a25f3bf01a5452be409313"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_campaign_schema.py": {
+    "mtime": 1786341040.090408,
+    "hash": "9ea5639b1da23ddefb9f003ae2f294a3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_campaign_seed_materialization.py": {
+    "mtime": 1782130186.4188354,
+    "hash": "8ae41140fb5821385008dc3ae3b38946"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_campaign_timeline.py": {
+    "mtime": 1786342340.8767247,
+    "hash": "103d7a5a2eb15a200e613d71aa30d8be"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_campaign_v6_context.py": {
+    "mtime": 1781865635.7228746,
+    "hash": "70dccfeb076dc4f3f09ec1fb4c3d53a2"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_category_freeze.py": {
+    "mtime": 1786342340.8767247,
+    "hash": "8b4d9442b58f36aed46c446c00934b50"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_centroid_export.py": {
+    "mtime": 1786342340.8767247,
+    "hash": "95ff50caf8a5ef251b3278fda65489b4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_centroid_heatmap.py": {
+    "mtime": 1777561293.735929,
+    "hash": "8d23756eabf662ee40a759aca36910d1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_centroid_pitr.py": {
+    "mtime": 1782130186.4316504,
+    "hash": "64596824c3d27a175edf3f82dd33baa5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_centroid_snapshot.py": {
+    "mtime": 1782130186.4316504,
+    "hash": "342215577dec9dd2ebab7ad1b116b893"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_centroid_support.py": {
+    "mtime": 1782130186.4348104,
+    "hash": "f94aafb2c563d2b30f3e56a4eae7f724"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_checkpoint_contract.py": {
+    "mtime": 1786342340.8933156,
+    "hash": "38624b3d33f6ba0bae1551b45a721e56"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_cluster_history.py": {
+    "mtime": 1778152473.0807056,
+    "hash": "1fafd0292f88eae1e1a087ff9df49761"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_cohort_status.py": {
+    "mtime": 1782215289.2242358,
+    "hash": "44f4be290a9572beab4691d4f68a3b2c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_cold_start_guards.py": {
+    "mtime": 1786342340.8969204,
+    "hash": "4f3664af270802d3d45bb4ee96930931"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_compliance_dashboard.py": {
+    "mtime": 1773966843.7033794,
+    "hash": "d60609c8ab9bc8d18d476d09ffd6fa2c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_composite_gate.py": {
+    "mtime": 1786342340.8969204,
+    "hash": "da728a01a1eaaac00717af756bd3773f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_compounding_gate.py": {
+    "mtime": 1784051549.935123,
+    "hash": "edad34e74558d8876b0470ed8a0ab218"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_concurrent_safety.py": {
+    "mtime": 1776944301.0030723,
+    "hash": "269a9d19b02bdf5a41a06eabe4d6c86d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_conservation_bugs.py": {
+    "mtime": 1778835727.315883,
+    "hash": "9a9ebdea29511a05e3321089362d433b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_conservation_enforcement.py": {
+    "mtime": 1786342340.9100602,
+    "hash": "4765ce598607d3d13000bec63d8c7f39"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_conservation_extended.py": {
+    "mtime": 1786342340.9100602,
+    "hash": "4d09570a573fa763d228a9fc11b18a11"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_conservation_formula.py": {
+    "mtime": 1786342340.9100602,
+    "hash": "4a780d5ad6fbff43d0ccf3e902d09193"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_control_room.py": {
+    "mtime": 1787057792.3359735,
+    "hash": "1e86c49b642708edcae05d1f592f73c0"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_convergence_calendar.py": {
+    "mtime": 1785263482.9780447,
+    "hash": "a6e00de4d43108026571fabbe2d88f51"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_cors.py": {
+    "mtime": 1778792007.6691687,
+    "hash": "b0eb2e7a90dbfa4d72ba009ae6eb4e52"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_credit_assigner.py": {
+    "mtime": 1778131314.2976363,
+    "hash": "8dd7e789648dcfa1200511f561c6f71f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_cross_graph_discovery.py": {
+    "mtime": 1782130186.4511924,
+    "hash": "936d20b73ca8b144bf0bbbfa6a820753"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_cross_repo_contracts.py": {
+    "mtime": 1782130186.4511924,
+    "hash": "148b2bf0970c6f0947e4a74c41af7edc"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_cross_signals.py": {
+    "mtime": 1778190101.2928393,
+    "hash": "f361cafdef742aadd9c7e2ae15d5f108"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_cross_tab_consistency.py": {
+    "mtime": 1786516306.602869,
+    "hash": "41b46f4f58bfef93e5af2fed1e99b229"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_d06_unmapped.py": {
+    "mtime": 1786342274.3759854,
+    "hash": "adc9667251cda2a0139795a677402f00"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_data_integrity.py": {
+    "mtime": 1785599136.1813831,
+    "hash": "717a238790649a0797953ce7ddd71290"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_decision_distance_log.py": {
+    "mtime": 1786342340.924985,
+    "hash": "ec25ba5e4b286dbb6d62bcf8289bbc3c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_discoveries_router.py": {
+    "mtime": 1777718456.3754604,
+    "hash": "5cef57701d7ce612841b6e6b4c703b97"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_domain_enforcement.py": {
+    "mtime": 1785574181.9185688,
+    "hash": "75a6427bb1114622455e0172966bcc68"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_domain_table.py": {
+    "mtime": 1781463921.7470267,
+    "hash": "13412efb1664a083c2a648e5f523a75c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_dual_update_fix.py": {
+    "mtime": 1786342340.924985,
+    "hash": "04d8da94e1f9618d38b6d26281f8f833"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_econ1.py": {
+    "mtime": 1786342340.924985,
+    "hash": "9b30609bf7a70562aa507bc94da3a0ce"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_economics.py": {
+    "mtime": 1774096575.8097658,
+    "hash": "d1811b304d62ec859ba85b7166a783ec"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_enrichment_advisor.py": {
+    "mtime": 1782130186.4663434,
+    "hash": "cd04f19050070f87943a46db9643248b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_enrichment_status.py": {
+    "mtime": 1775533407.9181259,
+    "hash": "a12ca535a97ca07ec64338d5ab96eafb"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_eta_cap.py": {
+    "mtime": 1782130186.4663434,
+    "hash": "f70b9eb7c533ca1b15832990bc64c29a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_eta_contract.py": {
+    "mtime": 1778066504.925089,
+    "hash": "f1e771d16fe945112d1987eba051e285"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_eval1_soc.py": {
+    "mtime": 1786869130.2184324,
+    "hash": "2db51c853dc217c48afcddd1ea3d80d9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_eval2_soc.py": {
+    "mtime": 1782130186.4821038,
+    "hash": "6a93196ce1106a0aae9293aa335d76e5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_eval_upload.py": {
+    "mtime": 1786398212.5201383,
+    "hash": "0572d14a88177c7d370ea636087961aa"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_evidence_room.py": {
+    "mtime": 1777601767.7943578,
+    "hash": "d1ff0e51a881910da237bbb570c6de9e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_evidence_room_conservation_fallback.py": {
+    "mtime": 1778047780.1463263,
+    "hash": "dee5bfdf7d9cc558ba4250696cc85e72"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_evolution_ledger.py": {
+    "mtime": 1785158714.6156366,
+    "hash": "1337b087768744c588076a5ab7e5f440"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_evolver_migration.py": {
+    "mtime": 1786795323.997293,
+    "hash": "a713edf06ee1464850cf5a4cc5b0c5b7"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_evolver_sdk_migration.py": {
+    "mtime": 1779324162.8066256,
+    "hash": "fe4adc58613e0046cd9cc5b2505fae11"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_executive_narrative.py": {
+    "mtime": 1786342340.9432886,
+    "hash": "e3afa4815c0892722ee2845dbae637d4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_exploration_policy.py": {
+    "mtime": 1785131402.799307,
+    "hash": "88ee38bd9493792344848a770291959f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_f2_design.py": {
+    "mtime": 1786342340.9432886,
+    "hash": "c3c00d531170439ea12b00ae8572c659"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_f4_overlay.py": {
+    "mtime": 1786342340.9432886,
+    "hash": "0498d85b6aad1601222f8f995dc079d6"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_factor_analysis.py": {
+    "mtime": 1777240538.447498,
+    "hash": "d7086ab9a1764fbcca56b9e35d37138f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_factor_contribution.py": {
+    "mtime": 1778885668.7966359,
+    "hash": "88de44efd7ad34afd86e53be9360d689"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_factor_provenance.py": {
+    "mtime": 1786342340.9432886,
+    "hash": "949642b3e16ffb710fc2b47d8c8f283e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_factor_validation.py": {
+    "mtime": 1786426920.1634154,
+    "hash": "2f9af51e644f57bbb90579f6835a50ba"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_fix_05_06_07.py": {
+    "mtime": 1786398767.0354884,
+    "hash": "f7a48b8bbe0d38ff8264bbc576be19e9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_flywheel_comparison.py": {
+    "mtime": 1782130186.497298,
+    "hash": "fa1ec056d19e0e79d682f85694a2e35a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_framework_discipline.py": {
+    "mtime": 1782130186.497298,
+    "hash": "5a454607d7a56ec89e216902fceb729a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_fw10_learning_display.py": {
+    "mtime": 1786342340.9547865,
+    "hash": "729089b1f13be2ce588d259d7688d651"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_g1_boundary.py": {
+    "mtime": 1786249619.788248,
+    "hash": "c35daa55b4e1c83ab9b0dd444c0d2bf0"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_gae_persistence.py": {
+    "mtime": 1782130186.5046418,
+    "hash": "5da7ea1cc433ff1016937643427bc583"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_gamma_reference.py": {
+    "mtime": 1782219345.3321705,
+    "hash": "8a1bb3adcbfda7c936f3daa1cc9fec1d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_gate_config.py": {
+    "mtime": 1782130186.5046418,
+    "hash": "8ab12ffb946288cf9715de06f557ad20"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_gate_r_routing.py": {
+    "mtime": 1782130186.5046418,
+    "hash": "89b9cf6531d1749005ef582b7f179bdd"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_governance_report.py": {
+    "mtime": 1778047780.2720375,
+    "hash": "d786efabbf9253dcca4ac2153e91a922"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_graph_backend_switcher.py": {
+    "mtime": 1786342340.9547865,
+    "hash": "2b8a5464206eed8c9659128c2a2c5cc2"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_graph_client_conformance.py": {
+    "mtime": 1786066572.5431046,
+    "hash": "49bed9490fbe71c7051a16f2e32c49cb"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_graph_contract_stress.py": {
+    "mtime": 1786342274.4236474,
+    "hash": "927fc62200e642186dd83d41112ec6f3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_graph_explorer.py": {
+    "mtime": 1786398307.6645103,
+    "hash": "b5eb851557bf65fd4df2c396f3359480"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_graph_snapshot.py": {
+    "mtime": 1782130186.513381,
+    "hash": "bfcf454c3a1433034cede97af68436ed"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_h7_fix1.py": {
+    "mtime": 1782130186.513381,
+    "hash": "748ff1a40e9b398b88405c605b0f6c96"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_h7_fix2.py": {
+    "mtime": 1786342340.9705408,
+    "hash": "8310d46af10ab04832822c6a73a98675"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_h7_fix3.py": {
+    "mtime": 1786342340.9705408,
+    "hash": "e3b5c7016c61a7ce91e4b081961fe024"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_h7_fix4.py": {
+    "mtime": 1786342340.9778545,
+    "hash": "b9f8d8c5f16ab3fe9c3d12eb233d693d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_iks_bootstrap.py": {
+    "mtime": 1782130186.513381,
+    "hash": "a13facad45ff8595d0f584b52b970e67"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_iks_consistency.py": {
+    "mtime": 1786342274.4236474,
+    "hash": "568663101d07f07ff0b3f7905d40c52f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_iks_stability.py": {
+    "mtime": 1786342340.9778545,
+    "hash": "adffdd600048d0fc33b94188db7b9bbe"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_iks_v2.py": {
+    "mtime": 1786342340.9866023,
+    "hash": "3a28e55124b2bce682543212caabf5f6"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_industry_profile.py": {
+    "mtime": 1786342340.9866023,
+    "hash": "37b435bdea3e73f72d6433699e7bbaa4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_ingest_endpoint.py": {
+    "mtime": 1777907255.0804908,
+    "hash": "c5732b4bd5ed1ae4699be402a48ae049"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_intervention_controls.py": {
+    "mtime": 1782130186.5292096,
+    "hash": "87f7b48d419f9f68278f96cc90c1e4a8"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_j6_state_capture.py": {
+    "mtime": 1786111829.6209772,
+    "hash": "27025cad0d1063dbc701ffde1132a38e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_jdoe_discovery.py": {
+    "mtime": 1778192149.2537885,
+    "hash": "018a7ab956202cf7a8a23a7af8f16bbb"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_judg1_soc.py": {
+    "mtime": 1786844945.271718,
+    "hash": "5dd2130f766cf2d741d18f0d359690c3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_known_issues.py": {
+    "mtime": 1786342340.9966688,
+    "hash": "7663887f311ba020028096e0f3904174"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_l5_conservation_soc_hook.py": {
+    "mtime": 1780859135.0524392,
+    "hash": "89be13b96adcdf47789c79638976c185"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_l5_learning_store_init.py": {
+    "mtime": 1785033233.8689992,
+    "hash": "b8d33a4c0c92132968d258eb3e13a005"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_learning_health.py": {
+    "mtime": 1786342274.4236474,
+    "hash": "8c51d7b4f7800db87be72ef13f21f0d3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_learning_toggle.py": {
+    "mtime": 1782130186.531328,
+    "hash": "975f69cc08fbf54d7ddfb84cc91a8072"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_lifespan.py": {
+    "mtime": 1779072891.53796,
+    "hash": "d1f571d3e38c1738e5f2314aa6b1c9dd"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_metrics_learning_health_failures.py": {
+    "mtime": 1785599170.460531,
+    "hash": "09ce6ca697ec538edc2de387af8181db"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_model_swap.py": {
+    "mtime": 1777276082.845587,
+    "hash": "2ca3276b5de83676e8ac38de6e9eb246"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_narrative_fixes.py": {
+    "mtime": 1782130186.5374627,
+    "hash": "7dbab53b756f2c45a9064d6a885d7d43"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_nl_templates.py": {
+    "mtime": 1786342341.0094998,
+    "hash": "bcf9622ac49c586bbcc645002816d2bd"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_no_destructive_decision_queries.py": {
+    "mtime": 1776204753.255353,
+    "hash": "3af434d069982f14ef6b6c38b60aa758"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_ols_status.py": {
+    "mtime": 1786342341.011567,
+    "hash": "5a91643c82f8ad3311e912122f42e771"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_onboarding_calendar.py": {
+    "mtime": 1773963085.85526,
+    "hash": "a3382360a1523e9629eca6d72357be3e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_oracle.py": {
+    "mtime": 1785550067.814625,
+    "hash": "c90f56363025afec7be7c7caf4ad244e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_oracle_contract.py": {
+    "mtime": 1785550088.5744226,
+    "hash": "a14aae5e4a3fe243acf8630dd868a329"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_oracle_integration.py": {
+    "mtime": 1782144683.6781397,
+    "hash": "95c601ce568d2c5bb2acdceba70132a8"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_oracle_pipeline.py": {
+    "mtime": 1782213706.9726553,
+    "hash": "bebe6415399a6200f677da90a8dd11a0"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_outcome_route_idempotency.py": {
+    "mtime": 1786055960.4718943,
+    "hash": "3436ef68f589e3538be18fe678159fac"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_override_detector.py": {
+    "mtime": 1786342341.0162284,
+    "hash": "344fc4dd9692ca1388a0c88c2f76d2b9"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_p77_migration.py": {
+    "mtime": 1785032977.7872617,
+    "hash": "1bf7e2d2a0ba182ba90ed0dc303223c0"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_pattern_history_w2.py": {
+    "mtime": 1786342341.0188568,
+    "hash": "a46a248aa0afbbfd85a762ee59ad0569"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_per_analyst_eta.py": {
+    "mtime": 1786342341.0188568,
+    "hash": "d535ad8d1d17b14307245cc1bda12a95"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_phase3_minimum.py": {
+    "mtime": 1782130186.5507774,
+    "hash": "3fe8895df68704a917526fb82645832b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_pii_middleware.py": {
+    "mtime": 1777884975.147409,
+    "hash": "fb47a1bf85eb2139d17c3ae93c139e07"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_policy_alert_type.py": {
+    "mtime": 1786342341.0250936,
+    "hash": "3ad1ab8ec301c0d10bf067ac4caa480f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_policy_endpoints.py": {
+    "mtime": 1782130186.5507774,
+    "hash": "80d3337febe33301727e92a7c7ece638"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_posterior_health.py": {
+    "mtime": 1778903334.7665956,
+    "hash": "e1dc4a7546dce6d8a37c64b9c0ce4172"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_posterior_store.py": {
+    "mtime": 1785131368.2805965,
+    "hash": "7289796b316528b963fa746649b9f425"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_privileged_identity_factor.py": {
+    "mtime": 1786966983.4632933,
+    "hash": "8f5ee6079f384eb589e2865d8258723e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_progressive_learning.py": {
+    "mtime": 1786342341.0261164,
+    "hash": "21cf64cea2381c8e951d1532ea58be80"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_promotion_gate.py": {
+    "mtime": 1778279003.6574087,
+    "hash": "b8e463cf985604e3b30a090eccdd4d66"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_provenance.py": {
+    "mtime": 1786342341.0261164,
+    "hash": "74abddd2d264a26b8072801af4fcdf9f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_provenance_label.py": {
+    "mtime": 1782008802.056124,
+    "hash": "dd8a0cea7cfcd67066855b35cca55f9a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_pydantic_v2.py": {
+    "mtime": 1778825131.064294,
+    "hash": "d1a51a0e1a7ad67376295f1c3ec04e45"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_quickfix_sweep.py": {
+    "mtime": 1779075250.5463724,
+    "hash": "ccd5eb55a2dcf2bd48549babfc6a007a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_reconvergence_logger.py": {
+    "mtime": 1775537964.6887405,
+    "hash": "ab5a0b1d8268f4f47dca87efedf01c49"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_referral_rules.py": {
+    "mtime": 1786342341.0432532,
+    "hash": "c625b7bb2b5fc72115b7c261956701d3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_refer_to_analyst.py": {
+    "mtime": 1782130186.56442,
+    "hash": "8cd20a12ed9b0ea3bf4e03708300734d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_rejection_summary.py": {
+    "mtime": 1783842419.958179,
+    "hash": "2d5e4e34b065aec4674d51784b844e3b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_retroactive_grading.py": {
+    "mtime": 1778150488.3745215,
+    "hash": "a6d03f171366b335df6228e0b4de09ff"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_reward_computer.py": {
+    "mtime": 1778150476.0528028,
+    "hash": "924e0eb7c8a3054c81b6da03981fb045"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_reward_ledger.py": {
+    "mtime": 1778150464.2090318,
+    "hash": "dd245bb7b1313b070d8b4fade643e4f4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_rl_api.py": {
+    "mtime": 1778150497.1397998,
+    "hash": "a2c82d93e712b04963e49002b5dff5be"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_rl_display.py": {
+    "mtime": 1778221856.1703002,
+    "hash": "3bc7e7418274c822d6c2f1c166a28207"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_rl_feature_flags.py": {
+    "mtime": 1786342341.0432532,
+    "hash": "30f544c85e508b3693c4a4fd8d2695f2"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_rl_full_pipeline.py": {
+    "mtime": 1786426433.2874787,
+    "hash": "2dc7fde3dc24206b6894b1f1d57abc43"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_rl_triage_integration.py": {
+    "mtime": 1786426182.7613602,
+    "hash": "d4d1bc211f0154a62c3c6c16f1a4be5a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_route_policy_resolver.py": {
+    "mtime": 1781228130.810547,
+    "hash": "f3328575e544774db44538bc2185a01c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_s2p_sdk_validation.py": {
+    "mtime": 1782130186.577461,
+    "hash": "c32995a23692addc44c67e4328a2a7a0"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_saml_auth.py": {
+    "mtime": 1776762443.430033,
+    "hash": "f8249f1a8ec18ba2d66a16a9fe13b468"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_saml_auth_extended.py": {
+    "mtime": 1786400336.2886856,
+    "hash": "28158dcb706633141c4a84c27836a5f5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_scorer_adapter.py": {
+    "mtime": 1785032967.8572142,
+    "hash": "1dd1378dd26235dadd6fcabff774ae99"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_seed_generator.py": {
+    "mtime": 1778891347.7912023,
+    "hash": "3d233bf0964b3b161a51883af48e8e8c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_seed_graph_gate.py": {
+    "mtime": 1778887714.3377385,
+    "hash": "72c595d4dec223335cec7cbc8e34934a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_seed_stability.py": {
+    "mtime": 1778896433.0648253,
+    "hash": "1778b09875183fa799a69e84912bfe8d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_seed_validation.py": {
+    "mtime": 1778887508.034936,
+    "hash": "780e1c890dc167d6bdf5d896658240e1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_seed_verified_decisions.py": {
+    "mtime": 1777981774.9612813,
+    "hash": "a1c87c87317ae75ba07aa7e878c97ec5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_sentinel_integration.py": {
+    "mtime": 1786342341.0737731,
+    "hash": "ae6e7145425e044da1c38984d06c803b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_sentinel_mock.py": {
+    "mtime": 1775293969.1885333,
+    "hash": "1cebc2388cce78c65c6e8b77f0ee7f2b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_sentinel_real.py": {
+    "mtime": 1786342341.076791,
+    "hash": "d6096d98a874781a876edeac6d61e2c0"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_sentinel_writeback.py": {
+    "mtime": 1782130186.577461,
+    "hash": "a4095db90327334224b3418fd3ec6ca8"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_servicenow_mock.py": {
+    "mtime": 1777598911.0024023,
+    "hash": "07586021fb47e5564087a50b500352fa"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_servicenow_router.py": {
+    "mtime": 1777598911.1110382,
+    "hash": "7ec38859a6f9c25c6df3e405d8c9d37b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_servicenow_triage_integration.py": {
+    "mtime": 1786342341.082824,
+    "hash": "ea87cdbffd7b263a61260487f64c97a5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_shadow_checkpoint.py": {
+    "mtime": 1786342341.0868526,
+    "hash": "98bf36833ae627d226c5026ed3c49045"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_shadow_promotion.py": {
+    "mtime": 1786688476.1526303,
+    "hash": "5b153fdc3c5baa5793000b6b77cd94e2"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_shadow_runner.py": {
+    "mtime": 1785599181.9502623,
+    "hash": "3c96cbd278712f0f1d257cc8c673f3f5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_simulate_failure_state.py": {
+    "mtime": 1784189924.1226196,
+    "hash": "c87730a6354cc7f478a239e8f4102867"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_simulation_eventloop.py": {
+    "mtime": 1782124296.0190725,
+    "hash": "afe24e2804bb6300814340df5b446ebc"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_simulation_graphstore.py": {
+    "mtime": 1785330403.3672729,
+    "hash": "b3564f52867e899e4644f6e8ec12d66e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_soc_c9b_l5_proof.py": {
+    "mtime": 1786426641.3620408,
+    "hash": "b4c8942701989fd11d80d05fda59630d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_soc_c9b_seed_contract.py": {
+    "mtime": 1786966942.2408612,
+    "hash": "cc5fe383de48f39b7890c7014fef2149"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_soc_conservation_132.py": {
+    "mtime": 1784985044.7582219,
+    "hash": "869f7dbf66ed8dd77f903449b2f04d40"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_soc_conservation_provider.py": {
+    "mtime": 1786791389.1952846,
+    "hash": "1b2713b65e67ae6bc4df03fae1de4421"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_soc_constants.py": {
+    "mtime": 1782130186.5990438,
+    "hash": "b1de8100fa5945e041739429e0f021f7"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_soc_dk_l5.py": {
+    "mtime": 1786786798.7228415,
+    "hash": "683c64807d233ccee2c477249ce89477"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_soc_domain_isolation.py": {
+    "mtime": 1785599183.9792383,
+    "hash": "1e34a58064492e37a2df1bbcb5939e1b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_soc_domain_profile_pipeline.py": {
+    "mtime": 1781126978.9834783,
+    "hash": "cb7abf62d9df04da6916fbb768c9ea03"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_soc_entity_cache_route_readiness.py": {
+    "mtime": 1785599184.757645,
+    "hash": "c2b88d36679ade70094056ed3806a7d3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_soc_learning_live.py": {
+    "mtime": 1785032989.8410697,
+    "hash": "017f05c57ff5d1d747b5b0547f1c2118"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_soc_route_validation_runner.py": {
+    "mtime": 1781199462.036322,
+    "hash": "1a05548cc0e2c60bb358ededed802982"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_soc_seed_lifecycle.py": {
+    "mtime": 1785584977.5055842,
+    "hash": "dd63c7a62d0523a0bb019a87540fa9ea"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_soc_situation_pattern.py": {
+    "mtime": 1781380669.8565302,
+    "hash": "7056713a4f1468a060f82c9be5ae29cc"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_soc_triage_harness.py": {
+    "mtime": 1785547224.4324367,
+    "hash": "6fc243e64889e5e814814f730a222715"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_spike_cap.py": {
+    "mtime": 1786342341.1163187,
+    "hash": "1072bd3864c13a5816ba06cdd72ee38a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_spike_detector.py": {
+    "mtime": 1786342341.1217186,
+    "hash": "7edaacd524e463b8047afad749d25fb8"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_startup_sync.py": {
+    "mtime": 1786342341.1253698,
+    "hash": "231db03c134e3808a970481e8ffc1cd1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_state_locking.py": {
+    "mtime": 1782130186.6091714,
+    "hash": "5c08a34437102af23bf5ef66f3b955e6"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_switching_cost.py": {
+    "mtime": 1785599187.4807096,
+    "hash": "facd009ff3ec949ebdbd2a9dc277fca8"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_tab7_governance.py": {
+    "mtime": 1786398570.0238519,
+    "hash": "dac00e5793f7489d5df7c6c66bf0c7a5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_tab_content.py": {
+    "mtime": 1786342341.1253698,
+    "hash": "2b444f665824ccf21d5ebae9e25fc0ea"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_theta_min.py": {
+    "mtime": 1786426431.0347733,
+    "hash": "1b46bfdf377a87929bf138353182ab3b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_threat_indicator.py": {
+    "mtime": 1786342341.137525,
+    "hash": "d0533b796e2075b6df76dc4b99b68196"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_threat_intel_cascade.py": {
+    "mtime": 1782035828.6103091,
+    "hash": "cc9f1b83fb1844b5ce77a56810493d0a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_threat_intel_pass3.py": {
+    "mtime": 1786342341.1433215,
+    "hash": "12bb47084324034c6dc97615c265febf"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_threat_intel_provider.py": {
+    "mtime": 1782014333.005452,
+    "hash": "d6b87cad01e3f9e303b74d041d1078fd"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_three_claims.py": {
+    "mtime": 1777820932.6288285,
+    "hash": "e863b1b0c497317cc7a6c61b40e7966c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_time_machine.py": {
+    "mtime": 1786342341.1433215,
+    "hash": "427ab1f54356b7b7d31fe537ce147bf2"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_transparency_page.py": {
+    "mtime": 1773967396.9761412,
+    "hash": "31c5eb88b880264130c25b7619bcbef6"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_triage_c2_compliance.py": {
+    "mtime": 1785546529.9290936,
+    "hash": "5f74fe8ff7c6b2adf82feabc1f8fe891"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_triage_outcome_contract.py": {
+    "mtime": 1785544884.4586804,
+    "hash": "cbf3fdf4dfdf55161895d153233ae1ca"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_triage_routing_actions.py": {
+    "mtime": 1785548008.5050561,
+    "hash": "5acd6d5c74ccfd927bd06fea4c592251"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_triggered_evolution.py": {
+    "mtime": 1785548565.695621,
+    "hash": "8a20e319f2214c486e9428e031c33786"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_variant_generator.py": {
+    "mtime": 1785599192.7734957,
+    "hash": "ca05ee53226de8df69578817a85e40fa"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_variant_registry.py": {
+    "mtime": 1777932007.4911304,
+    "hash": "283e875e20840ae559a91732818925a3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_verification_health.py": {
+    "mtime": 1786342341.1532652,
+    "hash": "c5815535b1c5d02dc1ec51774f0fd559"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_visual_smoke.py": {
+    "mtime": 1786342341.1532652,
+    "hash": "4496c8bee7823b3e2862c9b2c00e3cbe"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_w2_flywheel.py": {
+    "mtime": 1786342341.1695123,
+    "hash": "9df7cb3beda041a4dd161ea5a517d042"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_whatif_simulator.py": {
+    "mtime": 1777271615.36754,
+    "hash": "0e550aa611f1453f38f310fdc2d190b4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_whatif_theta.py": {
+    "mtime": 1779073257.0831087,
+    "hash": "7845b859e9f2990530786b209f3b2fd3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_write_roundtrips.py": {
+    "mtime": 1782130186.6411836,
+    "hash": "75145df54da1218f95e71dec5eab1c66"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\test_zero_day_timestamp_spread.py": {
+    "mtime": 1777991514.3635736,
+    "hash": "0c59a810bb1a68e2f076a535842ad38e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\integration\\test_w2_read_path.py": {
+    "mtime": 1786342341.1765962,
+    "hash": "6a0a504ae5ae63468393a7118178643c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\integration\\__init__.py": {
+    "mtime": 1774491945.4065728,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\support\\soc_triage_harness.py": {
+    "mtime": 1785548491.0600805,
+    "hash": "13ccc190cd8ff477c3c428ed45b16e45"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\tests\\support\\__init__.py": {
+    "mtime": 1785547164.1219304,
+    "hash": "d66068d45b9a58945492eb9cf71a7f7f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\CODEBASE.md": {
+    "mtime": 1777646594.3220496,
+    "hash": "b197d178ea2afe40613970acc5415781"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\CODE_GRAPH_REVIEW.md": {
+    "mtime": 1777637380.8320594,
+    "hash": "f7a2d1b3d05f1f3a7b2d91bf380af335"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\design_issues.md": {
+    "mtime": 1777753756.784717,
+    "hash": "f0c02c14abfa0b3890e583d07c72da6c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\DIAGNOSTIC_D04_D08.md": {
+    "mtime": 1777755065.6658218,
+    "hash": "e692e233c17668170ee9ee0baa1e5778"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\DIAGNOSTIC_REPORT.md": {
+    "mtime": 1777723482.4957132,
+    "hash": "d2d302c5f4ae8b289d23d237217ecbf2"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\FEATURE07_DESIGN.md": {
+    "mtime": 1777714821.5400362,
+    "hash": "666c5b2f282c22a55112bfa8c9984eba"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\requirements.txt": {
+    "mtime": 1776875056.631776,
+    "hash": "2a36ddb36dca871e6b604662df7690d6"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_approx1.txt": {
+    "mtime": 1777369149.0852308,
+    "hash": "6fc8d08b8ec0325824a83e76770896cb"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_approx2.txt": {
+    "mtime": 1777369378.445871,
+    "hash": "edb02a17d0435df32f511dc0e89ad0e6"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_c1.txt": {
+    "mtime": 1777327002.1933312,
+    "hash": "4d5556af1284a54b4c8fe0c115bc26d1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_c2.txt": {
+    "mtime": 1777327010.1528702,
+    "hash": "200534f18cc55a4e7488487b36d6aa99"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_c3.txt": {
+    "mtime": 1777327015.777262,
+    "hash": "01f92632a6594ce7c6364182a64a78f2"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_c4.txt": {
+    "mtime": 1777327023.4553475,
+    "hash": "8c62baa6cdc2661d4701eeb738cd738b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_c5.txt": {
+    "mtime": 1777327035.930109,
+    "hash": "238e353decd7bfc41bd2d58befb3219d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_c6.txt": {
+    "mtime": 1777327038.6211727,
+    "hash": "43299dc2997d64d9f2505f57bd54d8eb"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_c7.txt": {
+    "mtime": 1777327063.798108,
+    "hash": "62a280685b80e8d2f7eb5181a544716d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_centroid.txt": {
+    "mtime": 1777440434.7466378,
+    "hash": "34df479d92c72f8da7e07fbfc203dc59"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_critical.txt": {
+    "mtime": 1777433391.2559948,
+    "hash": "f782fd283e3c228a438e6f677bb0b732"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_d1.txt": {
+    "mtime": 1777327340.1904292,
+    "hash": "5b7a7565b82e32e54197a2a3ffde3892"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_d2.txt": {
+    "mtime": 1777327355.5269341,
+    "hash": "19f477fc8cf747153e2e673992386de8"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_d3.txt": {
+    "mtime": 1777327371.3032255,
+    "hash": "302742e34aa9ed9ccc230115c665ac93"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_d4.txt": {
+    "mtime": 1777327380.1056533,
+    "hash": "d5f92aa44634c1198dced9f37028c339"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_d5.txt": {
+    "mtime": 1777327387.7740514,
+    "hash": "8ca92186ad35b3be42a950a6cd0d0183"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_d6.txt": {
+    "mtime": 1777327604.8302536,
+    "hash": "5a16205be25c8cf7346769d6d985362d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_d7.txt": {
+    "mtime": 1777327615.2578008,
+    "hash": "dd73c9bcbb9faaf8abddb318269b0bfd"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_d8.txt": {
+    "mtime": 1777327649.5680895,
+    "hash": "b637fbb44492afc44713bf3da0a4ca86"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_d9.txt": {
+    "mtime": 1777327667.8998065,
+    "hash": "e29dd4b614762cfc8f57aece885e1840"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_e1.txt": {
+    "mtime": 1777330349.4204686,
+    "hash": "8a5f75c4f10060d3f4e08f015b4be66c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_e2.txt": {
+    "mtime": 1777330356.648446,
+    "hash": "14746334e904323fc2fc939d69c382fb"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp1.txt": {
+    "mtime": 1777292669.91126,
+    "hash": "77dc771fb086dc95f8c9962a9ebd481d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp10.txt": {
+    "mtime": 1777302812.3816211,
+    "hash": "76b714802f044a06e80ed06256c303d3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp11.txt": {
+    "mtime": 1777302826.7145827,
+    "hash": "bb3a60919d87767dd475dbc8a9c6909a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp12.txt": {
+    "mtime": 1777302834.2824967,
+    "hash": "36e1eee1a5e56391e566cba4322ce986"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp13.txt": {
+    "mtime": 1777301799.8081145,
+    "hash": "e40b121e0550c9b90e241b64a87ced64"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp14.txt": {
+    "mtime": 1777302840.8665836,
+    "hash": "223082b829c0801db17ab0b4383f7a22"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp15.txt": {
+    "mtime": 1777299077.8410916,
+    "hash": "8b311ea9850ac9c3fe9d598ef1b67497"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp16.txt": {
+    "mtime": 1777302815.3782575,
+    "hash": "11e3a224657ab5210527a495c0cc0dd2"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp17.txt": {
+    "mtime": 1777299450.602559,
+    "hash": "314e0fbd519ab4e87d17f75074f37e41"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp18.txt": {
+    "mtime": 1777302819.694293,
+    "hash": "4528b37d5d42e2502ae0648d0ffd6889"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp19.txt": {
+    "mtime": 1777299578.9336524,
+    "hash": "27684a7583764f6f3b06663b8f08da7a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp2.txt": {
+    "mtime": 1777292899.3853302,
+    "hash": "1d61d4ec320f3123132b9c643449f809"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp20.txt": {
+    "mtime": 1777302852.318635,
+    "hash": "1cf555df95e199fa34e0a817e2997240"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp21.txt": {
+    "mtime": 1777302857.671455,
+    "hash": "2901361bf3d4666e1fcbc203b6cbfcec"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp22.txt": {
+    "mtime": 1777299825.699762,
+    "hash": "eef2c411ce26ed0ce95648d94b58d374"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp23.txt": {
+    "mtime": 1777299905.3698196,
+    "hash": "d972adc194aa1dabe78365fea8612c1f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp24.txt": {
+    "mtime": 1777302861.0183656,
+    "hash": "7a813dd94243a747cf1eac2e8d0b552c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp25.txt": {
+    "mtime": 1777301801.9166317,
+    "hash": "bbe18f8a2f37c71c244ef3b91045d671"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp26.txt": {
+    "mtime": 1777301807.338101,
+    "hash": "6428b8afaea30bc0ef246dd54035c5fd"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp27.txt": {
+    "mtime": 1777301811.8494456,
+    "hash": "122af779c56b663fd5d9aee1eac1256d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp28.txt": {
+    "mtime": 1777302865.2268977,
+    "hash": "65bd3d1e0e24ae3aa55b8fe287f3ca51"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp29.txt": {
+    "mtime": 1777301819.318514,
+    "hash": "043c907150b2f04c6fa0d903324c1a47"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp3.txt": {
+    "mtime": 1777293030.3884776,
+    "hash": "fb6ae59c8e69b36e865f2abb7e4513ef"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp30.txt": {
+    "mtime": 1777300725.2072856,
+    "hash": "73ea077f3cf0335ed910923a1ed2e19f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp31.txt": {
+    "mtime": 1777300853.9759257,
+    "hash": "0c7c4473d117afb380d159b7f1ff7d23"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp32.txt": {
+    "mtime": 1777300861.7175913,
+    "hash": "db6173582f84e90be9def8ba4b6f4a59"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp33.txt": {
+    "mtime": 1777300953.060837,
+    "hash": "4a8fa80a64a0ee1cd0659977600a0797"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp34.txt": {
+    "mtime": 1777300970.8207283,
+    "hash": "ae79eb6a3f91f8ca923c5678fac8b0f5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp4.txt": {
+    "mtime": 1777293168.4134855,
+    "hash": "f60598bcbea08b75ea93e59a5fddc562"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp5.txt": {
+    "mtime": 1777293323.0085666,
+    "hash": "95a710df8a6f86df7268cda8540f6f6c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp6.txt": {
+    "mtime": 1777293473.3452213,
+    "hash": "707183a34f9c4a831bcb9846ac70aa8f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp7.txt": {
+    "mtime": 1777293610.7412565,
+    "hash": "c140cdf52dee6c19144e6aab832f3f44"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp8.txt": {
+    "mtime": 1777301791.7597086,
+    "hash": "6a6aeaec547cc470292d69c739b1e67f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_exp9.txt": {
+    "mtime": 1777302808.9998107,
+    "hash": "35e0b95beaad6a6f7bb1c41e751f2dbe"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_f1.txt": {
+    "mtime": 1777346335.2128663,
+    "hash": "bdd49eb4d625303f39e7d359b0d7fb64"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_f12.txt": {
+    "mtime": 1777346513.6118996,
+    "hash": "59a58ebf0ec244dc37620836269a1960"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_f13.txt": {
+    "mtime": 1777346383.324666,
+    "hash": "8b2db7cfa2b025fb8d83591320aed019"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_f14.txt": {
+    "mtime": 1777346576.6110094,
+    "hash": "c5b88755c077a16dfb4668b64a5b3cd4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_f15.txt": {
+    "mtime": 1777346585.5166733,
+    "hash": "6dbcbbac67f90bf113d368bd25853cd0"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_f2.txt": {
+    "mtime": 1777346464.3304825,
+    "hash": "7cf7aff50345ba45b4e85d8684b8f21e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_f3.txt": {
+    "mtime": 1777346351.7537467,
+    "hash": "1ee9dba02d782aac40beaf7f97cb63b1"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_f4.txt": {
+    "mtime": 1777346493.3912036,
+    "hash": "6743b9e12071380341ad375ebd601009"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_f5.txt": {
+    "mtime": 1777346352.5162933,
+    "hash": "fc26d19190eb06b0e148ae548cc76a90"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_f6f7.txt": {
+    "mtime": 1777347114.2220833,
+    "hash": "746894c9dba032409d0ecd7dfbd0881d"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_f8.txt": {
+    "mtime": 1777346380.562415,
+    "hash": "7aba3bbe0b9988852b90a8f6afaa4bee"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_f9.txt": {
+    "mtime": 1777346381.7311726,
+    "hash": "3742cc4fa5616e06b711adfe28ea2f14"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_g7.txt": {
+    "mtime": 1777361419.8572924,
+    "hash": "e396a9dc058a1b0da9a4b90ed38a8773"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_g8.txt": {
+    "mtime": 1777361552.8413053,
+    "hash": "11a0db097ae4441c3cdc1428e207fcf2"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_g9.txt": {
+    "mtime": 1777361557.467018,
+    "hash": "c75b30e390fdd317e435341d588a4ee8"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_gap.txt": {
+    "mtime": 1777361395.3819916,
+    "hash": "ec85758a05b48e45f42943d5dc641a8c"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_h1.txt": {
+    "mtime": 1777336424.3769522,
+    "hash": "b766aa5896424c0112045e9bab511380"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_h2.txt": {
+    "mtime": 1777336685.2400198,
+    "hash": "74ae69e181efcf48ecf1b626b7127053"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_h3.txt": {
+    "mtime": 1777336696.2441995,
+    "hash": "90f51910a7a2028245e60a6b5b022674"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_h4.txt": {
+    "mtime": 1777336719.9331236,
+    "hash": "35cf4cd2f0776a9fa5b9544d7a08f3f4"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_h5.txt": {
+    "mtime": 1777336734.767066,
+    "hash": "f6ba663d0771e0cda0338e247653abad"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_order1.txt": {
+    "mtime": 1777365866.784439,
+    "hash": "16f2e88aad5ba16c8801c132c714d91f"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_order2.txt": {
+    "mtime": 1777366144.0058384,
+    "hash": "bd7b752c03cc5f5dd01b399bc6062099"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_order3.txt": {
+    "mtime": 1777375985.2151024,
+    "hash": "f5e5ca263397858a8c064bae10cd7a18"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_p1.txt": {
+    "mtime": 1777328818.7238195,
+    "hash": "bb96e5da491e425d872a0c1fe1c09d20"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_p2.txt": {
+    "mtime": 1777328830.8005636,
+    "hash": "1875087d8bd8ad283aa7c86c280ecd29"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_p3.txt": {
+    "mtime": 1777328842.7705986,
+    "hash": "876afca5834e01284fbe514c384d8d87"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_p4.txt": {
+    "mtime": 1777328863.0689363,
+    "hash": "fe1def413fcd831022d8b8290b32fdd3"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_p5.txt": {
+    "mtime": 1777328886.2310097,
+    "hash": "bef120386e22a99b626488a22013567b"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_p6.txt": {
+    "mtime": 1777329616.416537,
+    "hash": "ebedf60beb817a044b15281f12090042"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_p7.txt": {
+    "mtime": 1777329622.283098,
+    "hash": "c928343770765f0d24f9c6010abf1940"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_r1.txt": {
+    "mtime": 1777336735.4729352,
+    "hash": "41da97d27589879663dae39b47747463"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_r2.txt": {
+    "mtime": 1777336740.3450518,
+    "hash": "acff7fde7c449ccde3491c3757065e1a"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_r3.txt": {
+    "mtime": 1777336741.8687165,
+    "hash": "01c9b86efb0b541f9148beaf1504b2d8"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_r4.txt": {
+    "mtime": 1777336743.3505864,
+    "hash": "afe537ed82b567bdced940ae363936de"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_r5.txt": {
+    "mtime": 1777336413.3074803,
+    "hash": "4f6bb43e56a49a378dce552280c07eff"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_r6.txt": {
+    "mtime": 1777336744.779042,
+    "hash": "42054e8f29cb19c6a6a610887ae694af"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_rate1.txt": {
+    "mtime": 1777410437.2220988,
+    "hash": "34ee859ce434b3bd72f75b36c32e46ad"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_rate25.txt": {
+    "mtime": 1777419713.740562,
+    "hash": "ff3ba6e43ba08f2e8195376e1eae11ce"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_rate67.txt": {
+    "mtime": 1777418104.6400292,
+    "hash": "c00239c4e4aad6c918bfa915b8ea7a76"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_rate9.txt": {
+    "mtime": 1777413228.115224,
+    "hash": "c0aff7f96ec411ff187eddf14411d60e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_reparam1.txt": {
+    "mtime": 1777369380.112876,
+    "hash": "b4fbbeb3a2534532072e616e4114eda6"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_reparam2.txt": {
+    "mtime": 1777371819.6567154,
+    "hash": "e2bd2cc4d4fcd9059df59725738149e5"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_roadmap.txt": {
+    "mtime": 1777433433.76783,
+    "hash": "082767c913c615ede4154bc61fdebc66"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_roadmap_rerun.txt": {
+    "mtime": 1777439719.7397563,
+    "hash": "ecb719ba3713c7e05f9c2724803c7588"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\results_smooth.txt": {
+    "mtime": 1777432355.8543763,
+    "hash": "f1d531858b7b70cfbe56a77dbf2ca0d0"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\REVIEW.md": {
+    "mtime": 1777648011.3355255,
+    "hash": "924a55da34d9d1baed7e32dc386fb390"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\REVIEW.part1.md": {
+    "mtime": 1777646942.3242414,
+    "hash": "ecbede2ce6b88c6c1c3d143d9994118e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\REVIEW.part2.md": {
+    "mtime": 1777647256.1717267,
+    "hash": "37f730f289d880c80c3c316c193d26bb"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\REVIEW.part3.md": {
+    "mtime": 1777647605.9431622,
+    "hash": "a7757e600235fbfcd07cf44b8c3b69fc"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\REVIEW.part4.md": {
+    "mtime": 1777647973.9233768,
+    "hash": "15609fe7dd7ab4ec355108bb28bc9052"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\test_results_final.txt": {
+    "mtime": 1775880663.5132227,
+    "hash": "61f9c032b48501514110c8f2b0e80e11"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\test_results_soc.txt": {
+    "mtime": 1775830460.1662593,
+    "hash": "b47223ef7ce7c1fe6949d52c1c05488e"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\_age_src.txt": {
+    "mtime": 1775732456.568302,
+    "hash": "6f4993e074d8fe2f628c2e9935cbddb7"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\docs\\campaign_v6_scan3_results.md": {
+    "mtime": 1782200570.067085,
+    "hash": "37f4452a8edfd7cf2ed989209b0559e0"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\docs\\soc_test_architecture_v1.md": {
+    "mtime": 1785546119.5517192,
+    "hash": "23156bbaf6d3146bc9467bcd4fa78c79"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\docs\\design\\soc_copilot_design_v5_8.md": {
+    "mtime": 1777505997.1903374,
+    "hash": "c79c6683d5bb7aeedded796d92faa194"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\docs\\design\\soc_domain_scoping_v1.md": {
+    "mtime": 1784979317.431713,
+    "hash": "2291fb454d74d5d5d2be69168c9b3658"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\docs\\design\\soc_domain_scoping_v1_1.md": {
+    "mtime": 1784980788.957923,
+    "hash": "a498a5771a6c84c5ac8158a4f0e3c3d6"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\docs\\design\\soc_domain_scoping_v1_2.md": {
+    "mtime": 1784981444.9989042,
+    "hash": "b49f1c04a4d3636f24047b1b6d263f94"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\docs\\implementation_plans\\ae_context_aware_selection.md": {
+    "mtime": 1779163035.2771225,
+    "hash": "065b0c6479f101675f30e6f7d2a83cc0"
+  },
+  "C:\\Users\\baner\\CopyFolder\\IoT_thoughts\\python-projects\\kaggle_experiments\\claude_projects\\gen-ai-roi-demo-v4-v50\\backend\\docs\\implementation_plans\\soc_seed_redesign.md": {
+    "mtime": 1778878875.8609257,
+    "hash": "7b06f93a2dd10fc08e4762fa06652af8"
+  }
+}

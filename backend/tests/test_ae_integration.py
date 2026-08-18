@@ -299,7 +299,7 @@ def test_analyze_schedules_shadow_compare_without_changing_response(monkeypatch)
     response = TestClient(app).post("/api/alert/analyze", json={"alert_id": "ALERT-SHADOW-ROUTE"})
 
     assert response.status_code == 200, response.text
-    assert response.json()["recommendation"]["action"] == "monitor"
+    assert response.json()["recommendation"]["action"] == "refer_to_analyst"
     assert len(created) == 1
 
 

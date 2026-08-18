@@ -28,13 +28,13 @@ class FakeAGE:
         self.alert = {
             "alert_id": "ALERT-RL",
             "id": "ALERT-RL",
-            "alert_type": "anomalous_login",
+            "alert_type": "credential_access",
             "severity": "medium",
             "source_location": "10.0.0.5",
             "asset_age_days": 100,
         }
         self.context = {
-            "alert_type": "anomalous_login",
+            "alert_type": "credential_access",
             "user_id": "user-1",
             "nodes_consulted": 4,
         }
@@ -73,7 +73,7 @@ def _decision_record(**overrides):
         "exploration_executed": False,
         "explored_action": None,
         "category": "credential_access",
-        "alert_type": "anomalous_login",
+        "alert_type": "credential_access",
     }
     record.update(overrides)
     return record
@@ -614,7 +614,7 @@ async def test_exploration_proposal_in_analyze_when_enabled(monkeypatch):
 
     # Exploration is a proposal only; the live centroid action remains
     # authoritative for the decision path.
-    assert response["recommendation"]["action"] == "escalate"
+    assert response["recommendation"]["action"] == "refer_to_analyst"
     assert any("d.explored                = true" in query for query in fake_graph.queries)
 
 
@@ -625,7 +625,7 @@ async def test_no_exploration_when_flag_false(monkeypatch):
 
     response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
 
-    assert response["recommendation"]["action"] == "escalate"
+    assert response["recommendation"]["action"] == "refer_to_analyst"
     assert not any("d.explored                = true" in query for query in fake_graph.queries)
 
 
@@ -640,7 +640,7 @@ async def test_no_exploration_when_headroom_tight(monkeypatch):
 
     response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
 
-    assert response["recommendation"]["action"] == "escalate"
+    assert response["recommendation"]["action"] == "refer_to_analyst"
     assert not any("d.explored                = true" in query for query in fake_graph.queries)
 
 
@@ -692,8 +692,8 @@ async def test_rapid_succession_referral_count_below_threshold_after_current(mon
 
     response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
 
-    assert response["recommendation"]["action"] == "escalate"
-    assert "action:                'escalate'" in _decision_creation_query(fake_graph)
+    assert response["recommendation"]["action"] == "refer_to_analyst"
+    assert "action:                'refer_to_analyst'" in _decision_creation_query(fake_graph)
 
 
 @pytest.mark.asyncio
@@ -828,15 +828,15 @@ async def test_explored_action_drives_side_effects_when_not_referred(monkeypatch
 
     # Exploration is recorded for learning/shadow evaluation but does not
     # override the centroid-selected action.
-    assert response["recommendation"]["action"] == "escalate"
-    assert triage.record_decision.await_args.kwargs["action_taken"] == "escalate"
+    assert response["recommendation"]["action"] == "refer_to_analyst"
+    assert triage.record_decision.await_args.kwargs["action_taken"] == "refer_to_analyst"
     decision_events = [
         call.args[0]
         for call in triage.event_bus.emit.await_args_list
         if call.args and call.args[0].__class__.__name__ == "DecisionMade"
     ]
     assert decision_events
-    assert decision_events[0].action == "escalate"
+    assert decision_events[0].action == "refer_to_analyst"
     metadata_query = "\n".join(fake_graph.queries)
     assert "d.explored_but_referred   = false" in metadata_query
 
@@ -854,7 +854,7 @@ async def test_exploration_failure_does_not_crash_analyze(monkeypatch):
 
     response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
 
-    assert response["recommendation"]["action"] == "escalate"
+    assert response["recommendation"]["action"] == "refer_to_analyst"
 
 
 def test_exploration_metadata_query_uses_s_serializer_and_no_params():

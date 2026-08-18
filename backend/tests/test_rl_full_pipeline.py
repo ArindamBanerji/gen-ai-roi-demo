@@ -33,7 +33,7 @@ async def test_all_flags_true_pipeline_exercises_rl_paths(monkeypatch, soc_triag
     analyze_graph = _patch_common_analyze(monkeypatch)
     analyze_response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
 
-    assert analyze_response["recommendation"]["action"] == "escalate"
+    assert analyze_response["recommendation"]["action"] == "refer_to_analyst"
     assert any("d.explored                = true" in query for query in analyze_graph.queries)
     before_posterior_alpha = policy.alphas[0][1]
 

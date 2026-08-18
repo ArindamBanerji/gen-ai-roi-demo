@@ -721,6 +721,37 @@ async def analyze_alert(request: ProcessAlertRequest):
 
             fv_list = validated_factor_vector(f)
 
+        # SOC-02 / SR-82: authority is a decision-path control, not a dashboard
+        # label.  The shared promotion state owns the persisted rung; the live
+        # SOC conservation provider supplies the RED veto input.
+        from app.services.authority_ladder import get_authority_manager
+        from app.services.evolver import get_soc_conservation_provider
+
+        _authority_manager = get_authority_manager()
+        _authority_state = get_soc_conservation_provider().get_state()
+        try:
+            _authority_decision = _authority_manager.evaluate(
+                alert_category,
+                selected_action,
+                _authority_state,
+                decision_id=alert_id,
+            )
+            _authority_veto_payload = _authority_decision.to_dict()
+            if not _authority_decision.allowed:
+                selected_action = "refer_to_analyst"
+                routing_zone = "human_review"
+        except Exception as _authority_exc:
+            # Authority is a safety layer, never a reason to take down triage.
+            # Preserve the original scorer action if the authority subsystem is
+            # unavailable or malformed; downstream referral rules still run.
+            logger.warning(
+                "[AUTHORITY] evaluation unavailable for %s: %s",
+                alert_category,
+                _authority_exc,
+            )
+            _authority_decision = None
+            _authority_veto_payload = None
+
         # ====================================================================
         # Step 4b: Referral VETO — independent of ProfileScorer (EXP-REFER-LAYERED)
         #
@@ -820,6 +851,12 @@ async def analyze_alert(request: ProcessAlertRequest):
                 'reasons':       _referral.reason_codes,
                 'audit_summary': _referral.audit_summary,
             }
+            if not _authority_decision.allowed:
+                _referral_payload["should_refer"] = True
+                _referral_payload["reasons"] = list(_referral_payload["reasons"]) + [
+                    _authority_decision.reason
+                ]
+                _referral_payload["authority_veto"] = _authority_veto_payload
 
         logger.info(
             "[TRIAGE-v5] action=%s conf=%.3f zone=%s",
@@ -1352,6 +1389,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             "referral_debug":  _referral_debug,
             "exploration_status": _rl_exploration_status,
             "decision_method": "referral_override" if _referral.should_refer else _rl_decision_method,
+            "authority": _authority_veto_payload,
         }
         if _cluster_history_payload is not None:
             response["cluster_history"] = _cluster_history_payload

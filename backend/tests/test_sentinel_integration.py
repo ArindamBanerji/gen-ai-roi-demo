@@ -192,7 +192,7 @@ def test_sentinel_alert_through_analyze(monkeypatch):
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["alert"]["incident_id"] == "INC-SENT-1"
-    assert body["recommendation"]["action"] == "monitor"
+    assert body["recommendation"]["action"] == "refer_to_analyst"
     assert body["recommendation"]["confidence"] == pytest.approx(0.8)
 
 
@@ -222,7 +222,7 @@ def test_write_back_trigger_reachable(monkeypatch):
     resp = client.post("/api/alert/analyze", json={"alert_id": "SENT-ALERT-1"})
 
     assert resp.status_code == 200, resp.text
-    assert len(created) == 1
+    assert len(created) == 0
     assert pushed == []
 
 

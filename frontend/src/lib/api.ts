@@ -127,6 +127,14 @@ export async function initializeFrozenComparison() {
   return fetchJSON<Record<string, unknown>>('/soc/learning/frozen-comparison/freeze', { method: 'POST' })
 }
 
+export async function fetchAuthorityLadder() {
+  return fetchJSON<Record<string, unknown>>('/soc/authority')
+}
+
+export async function circuitBreakAuthority(category: string) {
+  return fetchJSON<Record<string, unknown>>(`/soc/authority/${encodeURIComponent(category)}/circuit-break`, { method: 'POST' })
+}
+
 export async function fetchInterventionHistory(limit: number = 1) {
   return fetchJSON(`/soc/interventions/history?limit=${limit}`)
 }

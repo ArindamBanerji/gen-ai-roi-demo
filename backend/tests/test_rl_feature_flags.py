@@ -56,7 +56,7 @@ async def test_no_exploration_metadata_when_flag_false(monkeypatch):
 
     response = await triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-RL"))
 
-    assert response["recommendation"]["action"] == "escalate"
+    assert response["recommendation"]["action"] == "refer_to_analyst"
     assert not any("d.explored                = true" in query for query in fake_graph.queries)
 
 
