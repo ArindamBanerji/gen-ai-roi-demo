@@ -13,7 +13,7 @@ import json
 import logging
 import numpy as np
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from gae.contracts import SchemaContract, PropertySpec
 from gae.factors import FactorComputer
@@ -66,7 +66,9 @@ class PrivilegedIdentityContextFactor(FactorComputer):
     Computes privileged identity context risk from pre-resolved security context.
 
     Uses normalized user risk, title heuristics, and inverted trust signals
-    (missing MFA, fingerprint mismatch) when available. No usable context -> 0.5.
+    (missing MFA, fingerprint mismatch) when available. The IdP risk score is
+    a posterior that already incorporates related signals, so it receives the
+    largest weight; present signals are renormalized. No usable context -> 0.5.
     """
 
     name = "privileged_identity_context"
@@ -130,30 +132,32 @@ class PrivilegedIdentityContextFactor(FactorComputer):
         if ctx is None:
             return 0.5
 
-        components: List[float] = []
+        weighted_components: List[Tuple[float, float]] = []
 
         risk_score = _get(ctx, "user_risk_score")
         if risk_score is not None:
             try:
-                components.append(self._clamp(float(risk_score)))
+                weighted_components.append((self._clamp(float(risk_score)), 0.50))
             except (TypeError, ValueError):
                 pass
 
         title_risk = self._title_risk(_get(ctx, "user_title"))
         if title_risk is not None:
-            components.append(title_risk)
+            weighted_components.append((title_risk, 0.20))
 
         mfa_completed = _get(ctx, "mfa_completed")
         if mfa_completed is not None:
-            components.append(0.85 if not bool(mfa_completed) else 0.10)
+            weighted_components.append((0.85 if not bool(mfa_completed) else 0.10, 0.15))
 
         fingerprint_match = _get(ctx, "device_fingerprint_match")
         if fingerprint_match is not None:
-            components.append(0.80 if not bool(fingerprint_match) else 0.10)
+            weighted_components.append((0.80 if not bool(fingerprint_match) else 0.10, 0.15))
 
-        if not components:
+        if not weighted_components:
             return 0.5
-        return self._clamp(sum(components) / len(components))
+        total_weight = sum(weight for _value, weight in weighted_components)
+        weighted_sum = sum(value * weight for value, weight in weighted_components)
+        return self._clamp(weighted_sum / total_weight)
 
 
 class TravelMatchFactor:

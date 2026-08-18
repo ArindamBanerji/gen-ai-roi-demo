@@ -30,7 +30,11 @@ def test_c9b_credential_access_seed_scores_to_non_referral_action():
     assert spec.mfa_completed is False
     assert spec.device_fingerprint_match is False
 
-    privileged_identity_context = (spec.risk_score + 0.85 + 0.80) / 3.0
+    # C9B supplies risk, missing MFA, and an unknown device; title is absent.
+    # weighted: (risk×0.50 + 0.85×0.15 + 0.80×0.15) / (0.50+0.15+0.15)
+    privileged_identity_context = (
+        spec.risk_score * 0.50 + 0.85 * 0.15 + 0.80 * 0.15
+    ) / (0.50 + 0.15 + 0.15)
     factor_vector = [
         privileged_identity_context,
         1.0,  # AssetCriticalityFactor maps "critical" to 1.0.

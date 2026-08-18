@@ -1,5 +1,7 @@
 import asyncio
 
+import pytest
+
 from app.domains.soc.config import (
     SCORER_ACTIONS,
     SOC_CATEGORIES,
@@ -31,7 +33,8 @@ def test_privileged_identity_factor_admin_high_score():
 
     score = _run(factor.compute("alert-1", context))
 
-    assert score > 0.6
+    # weighted: 0.8×0.50 + 0.9×0.20 + 0.85×0.15 + 0.80×0.15 = 0.8275
+    assert score == pytest.approx(0.8275)
 
 
 def test_privileged_identity_factor_standard_user_low_score():
@@ -50,7 +53,8 @@ def test_privileged_identity_factor_standard_user_low_score():
 
     score = _run(factor.compute("alert-2", context))
 
-    assert score < 0.3
+    # weighted: 0.1×0.50 + 0.2×0.20 + 0.10×0.15 + 0.10×0.15 = 0.1200
+    assert score == pytest.approx(0.12)
 
 
 def test_privileged_identity_factor_no_context_returns_default():
@@ -59,6 +63,43 @@ def test_privileged_identity_factor_no_context_returns_default():
     score = _run(factor.compute("alert-3", None))
 
     assert score == 0.5
+
+
+def test_privileged_identity_factor_renormalizes_present_signals():
+    factor = PrivilegedIdentityContextFactor()
+
+    risk_only = _run(factor.compute("risk-only", {"user_risk_score": 0.85}))
+    # weighted: 0.85×0.50 / 0.50 = 0.8500
+    assert risk_only == pytest.approx(0.85)
+
+    risk_mfa_device = _run(
+        factor.compute(
+            "risk-mfa-device",
+            {
+                "user_risk_score": 0.95,
+                "mfa_completed": False,
+                "device_fingerprint_match": False,
+            },
+        )
+    )
+    # weighted: (0.95×0.50 + 0.85×0.15 + 0.80×0.15) / 0.80 = 0.903125
+    assert risk_mfa_device == pytest.approx(0.903125)
+
+
+def test_privileged_identity_factor_idp_risk_dominates_clean_auth_signals():
+    factor = PrivilegedIdentityContextFactor()
+    context = {
+        "user_risk_score": 0.85,
+        "user_title": "user",
+        "mfa_completed": True,
+        "device_fingerprint_match": True,
+    }
+
+    score = _run(factor.compute("insider-paradox", context))
+
+    # weighted: 0.85×0.50 + 0.20×0.20 + 0.10×0.15 + 0.10×0.15 = 0.4950
+    assert score == pytest.approx(0.495)
+    assert score > 0.40
 
 
 def test_soc_factors_includes_privileged_identity_context():
