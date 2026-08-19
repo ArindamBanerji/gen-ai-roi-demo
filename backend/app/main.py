@@ -129,7 +129,7 @@ async def health():
     }
 
 # Router imports
-from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae, admin, simulation, evaluation, judgment, framework_router, eval_router, governance_router, whatif_router, time_machine_router, discoveries_router, platform, shadow, soc_learning, authority
+from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae, admin, simulation, evaluation, judgment, framework_router, eval_router, governance_router, whatif_router, time_machine_router, discoveries_router, platform, shadow, soc_learning, authority, explain
 from app.routers.servicenow_router import router as servicenow_router
 from app.routers.rl_router import router as rl_router
 from app.routers.cohort_status_router import router as cohort_status_router
@@ -151,6 +151,7 @@ app.include_router(triage.router, prefix="/api", tags=["Alert Triage"])
 app.include_router(framework_router.router, prefix="/api", tags=["CopilotFramework"])
 app.include_router(soc_learning.router, prefix="/api", tags=["SOC Learning Control Room"])
 app.include_router(authority.router, prefix="/api", tags=["SOC Authority Ladder"])
+app.include_router(explain.router, prefix="/api", tags=["SOC Explainability"])
 app.include_router(soc.router, prefix="/api", tags=["SOC Analytics"])
 app.include_router(metrics.router, prefix="/api", tags=["Compounding Metrics"])
 app.include_router(roi.router, prefix="/api", tags=["ROI Calculator"])

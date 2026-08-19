@@ -192,6 +192,15 @@ export async function getDecisionFactors(alertId: string) {
   return fetchJSON(`/triage/decision-factors/${alertId}`)
 }
 
+export async function getNoPrecedent(alertId: string) {
+  return fetchJSON(`/soc/explain/no-precedent?alert_id=${encodeURIComponent(alertId)}`)
+}
+
+export async function getWhatIf(alertId: string, currentAction?: string) {
+  const action = currentAction ? `&current_action=${encodeURIComponent(currentAction)}` : ''
+  return fetchJSON(`/soc/explain/what-if?alert_id=${encodeURIComponent(alertId)}${action}`)
+}
+
 export const fetchJudgmentExplain = (alertId: string) =>
   fetchJSON(`/soc/judgment/explain/${alertId}`)
 

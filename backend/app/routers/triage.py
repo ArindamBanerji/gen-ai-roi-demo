@@ -721,6 +721,20 @@ async def analyze_alert(request: ProcessAlertRequest):
 
             fv_list = validated_factor_vector(f)
 
+        # SOC-03: novelty inspection is a read-only view over the same live
+        # centroids used for scoring. It never updates scorer or centroid state.
+        _no_precedent_payload = None
+        try:
+            from app.services.soc_explainability import build_detector
+
+            _no_precedent_payload = build_detector(_scorer).detect(
+                fv_list,
+                alert_category,
+                confidence=confidence,
+            ).to_dict()
+        except Exception as _novelty_exc:
+            logger.warning("[EXPLAIN] No-precedent inspection unavailable: %s", _novelty_exc)
+
         # SOC-02 / SR-82: authority is a decision-path control, not a dashboard
         # label.  The shared promotion state owns the persisted rung; the live
         # SOC conservation provider supplies the RED veto input.
@@ -851,10 +865,10 @@ async def analyze_alert(request: ProcessAlertRequest):
                 'reasons':       _referral.reason_codes,
                 'audit_summary': _referral.audit_summary,
             }
-            if not _authority_decision.allowed:
+            if _authority_decision is not None and not _authority_decision.allowed:
                 _referral_payload["should_refer"] = True
                 _referral_payload["reasons"] = list(_referral_payload["reasons"]) + [
-                    _authority_decision.reason
+                    _authority_decision.reason or "authority_veto"
                 ]
                 _referral_payload["authority_veto"] = _authority_veto_payload
 
@@ -1390,6 +1404,7 @@ async def analyze_alert(request: ProcessAlertRequest):
             "exploration_status": _rl_exploration_status,
             "decision_method": "referral_override" if _referral.should_refer else _rl_decision_method,
             "authority": _authority_veto_payload,
+            "no_precedent": _no_precedent_payload,
         }
         if _cluster_history_payload is not None:
             response["cluster_history"] = _cluster_history_payload

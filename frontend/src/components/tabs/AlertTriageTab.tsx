@@ -15,7 +15,7 @@ import {
   TrendingDown,
   RefreshCw,
 } from 'lucide-react'
-import { getAlerts, analyzeAlert, executeAction, resetAlerts, checkPolicyConflict, refreshThreatIntel, getDecisionFactors, getAlertEnrichment, fetchJudgmentExplain } from '../../lib/api'
+import { getAlerts, analyzeAlert, executeAction, resetAlerts, checkPolicyConflict, refreshThreatIntel, getDecisionFactors, getAlertEnrichment, fetchJudgmentExplain, getWhatIf } from '../../lib/api'
 import { ensureArray, ensureObject } from '../../lib/guards'
 import { domainConfig } from '../../lib/domain'
 import DiscoveryBanner from '../discovery/DiscoveryBanner'
@@ -126,6 +126,22 @@ interface AnalysisResult {
   campaign_alert_count?: number
   cluster_history?: ClusterHistoryData
   decision_method?: string
+  no_precedent?: {
+    is_novel: boolean
+    min_distance: number
+    threshold: number
+    known_evidence: string[]
+    missing_evidence: string[]
+    similar_count: number
+    nearest_action: string
+  } | null
+}
+
+interface WhatIfData {
+  explanation: string
+  current_action: string
+  nearest_alternative: { action: string; distance: number; factors_to_change: Array<{ factor_name: string; magnitude: number }> }
+  per_factor: Array<{ factor_name: string; current_value: number; boundary_value: number; direction: string; magnitude: number; target_action: string }>
 }
 
 interface ClosedLoopResult {
@@ -310,6 +326,7 @@ export default function AlertTriageTab() {
   const [activeStep, setActiveStep] = useState(0)
   const [resetting, setResetting] = useState(false)
   const [policyResolution, setPolicyResolution] = useState<PolicyResolutionData | null>(null)
+  const [whatIf, setWhatIf] = useState<WhatIfData | null>(null)
 
   // Ref to preserve feedback panel visibility (avoids stale closure bug)
   const preserveFeedbackRef = useRef(false)
@@ -468,10 +485,17 @@ export default function AlertTriageTab() {
     setActiveStep(0)
     setPolicyResolution(null)
     setDecisionFactors(null)
+    setWhatIf(null)
 
     try {
       const data = await analyzeAlert(alert.id) as AnalysisResult
       setAnalysis(data)
+      try {
+        const whatIfData = await getWhatIf(alert.id, data.recommendation?.action)
+        setWhatIf(whatIfData as WhatIfData)
+      } catch {
+        setWhatIf(null)
+      }
       try {
         const policyData = await checkPolicyConflict(alert.id)
         setPolicyResolution(policyData as PolicyResolutionData)
@@ -1540,6 +1564,23 @@ export default function AlertTriageTab() {
                 </button>
               </div>
             </div>
+          )}
+
+          {analysis?.no_precedent?.is_novel && (
+            <aside className="rounded-lg border border-amber-500/70 bg-amber-950/30 p-4" data-testid="no-precedent-sidebar">
+              <h3 className="font-semibold text-amber-200">No precedent found</h3>
+              <p className="mt-1 text-sm text-amber-100">I don&apos;t have enough evidence to identify a similar past decision.</p>
+              <p className="mt-2 text-xs text-amber-300">Nearest action profile: {analysis.no_precedent.nearest_action} · distance {analysis.no_precedent.min_distance.toFixed(3)} · boundary {analysis.no_precedent.threshold.toFixed(3)}</p>
+              {!!analysis.no_precedent.missing_evidence.length && <p className="mt-2 text-xs text-gray-300">Evidence gaps: {analysis.no_precedent.missing_evidence.map(formatDecisionFactorName).join(', ')}</p>}
+            </aside>
+          )}
+
+          {whatIf && (
+            <section className="rounded-lg border border-cyan-800/70 bg-slate-950/60 p-4" data-testid="what-if-panel">
+              <div className="flex items-center justify-between gap-3"><h3 className="font-semibold text-cyan-200">What would change the classification?</h3><span className="text-xs text-gray-400">nearest alternative: {whatIf.nearest_alternative.action}</span></div>
+              <p className="mt-2 text-sm text-gray-300">{whatIf.explanation}</p>
+              <div className="mt-3 overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="text-gray-500"><th className="pb-2">Factor</th><th className="pb-2">Current</th><th className="pb-2">Boundary</th><th className="pb-2">Direction</th><th className="pb-2">Delta</th></tr></thead><tbody>{whatIf.per_factor.map((item) => <tr key={item.factor_name} className="border-t border-gray-800 text-gray-300"><td className="py-2">{formatDecisionFactorName(item.factor_name)}</td><td className="py-2">{item.current_value.toFixed(3)}</td><td className="py-2">{item.boundary_value.toFixed(3)}</td><td className="py-2">{item.direction}</td><td className="py-2">{item.magnitude.toFixed(3)}</td></tr>)}</tbody></table></div>
+            </section>
           )}
 
           {/* VIS-2: Outcome Feedback elevated — sits ABOVE Closed Loop */}
