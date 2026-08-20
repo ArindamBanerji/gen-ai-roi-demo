@@ -13,6 +13,7 @@ import {
   downloadGovernanceReportJson,
   fetchGovernanceSummary,
 } from '../../lib/api'
+import ContinuityPanel from '../ContinuityPanel'
 
 const SOC_API = 'http://127.0.0.1:8001'
 
@@ -527,6 +528,8 @@ export default function ExecutiveNarrativeTab() {
         <MetricCard label="Campaigns Detected" value={metrics.campaigns_detected} />
         <MetricCard label="IKS Score" value={metrics.iks_current} />
       </div>
+
+      <ContinuityPanel />
 
       <NarrativeSectionCards sections={narrativeSections} />
 

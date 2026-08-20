@@ -58,9 +58,12 @@ export default function RejectionMomentPanel() {
   const rejected = summary?.rejected_variants || []
 
   return (
-    <section className="bg-soc-card border border-gray-800 rounded-lg p-5">
+    <section className="bg-soc-card border border-gray-800 rounded-lg p-5" aria-label="SOC rejection moment" data-testid="soc-rejection-moment">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-white">Agent Evolution Summary</h2>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">SOC rejection moment</p>
+          <h2 className="text-lg font-semibold text-white">Agent Evolution Summary</h2>
+        </div>
         {summary && <ProvenanceBadge source={summary.provenance || 'learned'} />}
       </div>
       {loading && <p className="mt-3 text-sm text-gray-400">Loading rejection summary...</p>}
@@ -96,6 +99,7 @@ export default function RejectionMomentPanel() {
               </div>
             )}
           </div>
+          <p className="text-xs text-gray-500">A rejection is a preserved safety decision: the variant remains inspectable but cannot change the active copilot until its failed gate is cleared.</p>
         </div>
       )}
     </section>

@@ -34,6 +34,7 @@ import {
 import { domainConfig } from '../../lib/domain'
 import { ensureArray } from '../../lib/guards'
 import { LearningControlRoom } from '../LearningControlRoom'
+import PromotionRejectionTable from '../PromotionRejectionTable'
 import {
   TrendingUp, Database, Activity, RefreshCw, Clock, DollarSign,
   TrendingDown, CheckCircle, Calculator, Shield, Download,
@@ -1064,6 +1065,7 @@ export default function CompoundingTab() {
     return (
       <div className="space-y-6">
         <LearningControlRoom />
+        <PromotionRejectionTable />
         <SimulationPanel onSimulationComplete={loadGAECharts} />
         <ThreeChannelPanel />
         <div className="rounded-lg border border-purple-200 bg-white p-6 shadow">
@@ -1270,6 +1272,8 @@ export default function CompoundingTab() {
   return (
     <div className="space-y-6">
       <LearningControlRoom />
+
+      <PromotionRejectionTable />
 
       {/* ── Simulation Panel ────────────────────────────────────────────────── */}
       <SimulationPanel onSimulationComplete={loadGAECharts} />
