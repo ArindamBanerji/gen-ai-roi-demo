@@ -1848,7 +1848,7 @@ def _campaign_events(campaign: dict, detail: dict | None, state: str) -> list[di
     last_seen = _epoch_seconds(campaign.get("last_seen"))
     events: list[dict] = [{"type": "CREATED", "at": first_seen}]
 
-    decisions = []
+    decisions: list[dict[str, Any]] = []
     if detail:
         decisions = detail.get("decisions") or []
     seen_alerts: set[str] = set()
@@ -1863,6 +1863,7 @@ def _campaign_events(campaign: dict, detail: dict | None, state: str) -> list[di
             "type": "ALERT_ADDED",
             "at": _epoch_seconds(decision.get("timestamp") or last_seen),
             "alert_id": alert_id,
+            "campaign_id": str(campaign.get("campaign_id") or ""),
         })
 
     if state == "CONTINUES":
@@ -2005,15 +2006,26 @@ async def get_campaign_timeline(limit: int = 10):
             else str(node.get("derived_entity_key") or node.get("name") or f"campaign:{campaign_id}")
         )
 
+        events = _campaign_events({**campaign, **detail_campaign}, detail, state)
+        alert_links = [
+            {
+                "alert_id": event["alert_id"],
+                "campaign_id": campaign_id,
+            }
+            for event in events
+            if event.get("type") == "ALERT_ADDED" and event.get("alert_id")
+        ]
         timeline.append({
             "campaign_id": campaign_id,
+            "identity_key": campaign_id,
             "entity_key": entity_key,
             "state": state,
             "created_at": first_seen,
             "last_alert_at": last_seen,
             "resolved_at": resolved_at,
             "alert_count": alert_count,
-            "events": _campaign_events({**campaign, **detail_campaign}, detail, state),
+            "events": events,
+            "alert_links": alert_links,
             "provenance": "learned",
         })
 

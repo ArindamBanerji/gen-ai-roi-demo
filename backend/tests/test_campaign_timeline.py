@@ -280,3 +280,21 @@ def test_campaign_timeline_keeps_concurrent_campaigns_for_same_entity(monkeypatc
     data = client.get("/api/soc/campaign-timeline").json()
     assert {campaign["campaign_id"] for campaign in data} == {"CAMP-ENTITY-1", "CAMP-ENTITY-2"}
     assert {campaign["entity_key"] for campaign in data} == {"user:shared"}
+
+
+def test_campaign_timeline_links_each_alert_to_its_campaign(monkeypatch):
+    _patch_repo(monkeypatch)
+    data = client.get("/api/soc/campaign-timeline").json()
+    for campaign in data:
+        for link in campaign["alert_links"]:
+            assert link["alert_id"]
+            assert link["campaign_id"] == campaign["campaign_id"]
+        for event in campaign["events"]:
+            if event["type"] == "ALERT_ADDED":
+                assert event["campaign_id"] == campaign["campaign_id"]
+
+
+def test_campaign_timeline_exposes_stable_identity_key(monkeypatch):
+    _patch_repo(monkeypatch)
+    data = client.get("/api/soc/campaign-timeline").json()
+    assert all(item["identity_key"] == item["campaign_id"] for item in data)
