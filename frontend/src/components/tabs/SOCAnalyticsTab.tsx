@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import CampaignIntelligencePanel from '../CampaignIntelligencePanel'
+import DayZeroReadinessPanel from '../DayZeroReadinessPanel'
 import {
   Shield,
   Search,
@@ -339,6 +340,8 @@ export default function SOCAnalyticsTab() {
           "Instant answers with provenance showing exactly where the data came from."
         </div>
       </div>
+
+      <DayZeroReadinessPanel />
 
       {/* Threat Landscape at a Glance — live graph snapshot */}
       {threatLandscapeLoading ? (

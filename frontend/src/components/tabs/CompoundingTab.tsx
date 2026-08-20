@@ -35,6 +35,8 @@ import { domainConfig } from '../../lib/domain'
 import { ensureArray } from '../../lib/guards'
 import { LearningControlRoom } from '../LearningControlRoom'
 import PromotionRejectionTable from '../PromotionRejectionTable'
+import AutonomyLadderPanel from '../AutonomyLadderPanel'
+import CoverageAtSafetyBarPanel from '../CoverageAtSafetyBarPanel'
 import {
   TrendingUp, Database, Activity, RefreshCw, Clock, DollarSign,
   TrendingDown, CheckCircle, Calculator, Shield, Download,
@@ -1066,6 +1068,8 @@ export default function CompoundingTab() {
       <div className="space-y-6">
         <LearningControlRoom />
         <PromotionRejectionTable />
+        <AutonomyLadderPanel />
+        <CoverageAtSafetyBarPanel />
         <SimulationPanel onSimulationComplete={loadGAECharts} />
         <ThreeChannelPanel />
         <div className="rounded-lg border border-purple-200 bg-white p-6 shadow">
@@ -1274,6 +1278,8 @@ export default function CompoundingTab() {
       <LearningControlRoom />
 
       <PromotionRejectionTable />
+      <AutonomyLadderPanel />
+      <CoverageAtSafetyBarPanel />
 
       {/* ── Simulation Panel ────────────────────────────────────────────────── */}
       <SimulationPanel onSimulationComplete={loadGAECharts} />

@@ -25,6 +25,8 @@ import LearningStatePanel from '../LearningStatePanel'
 import ClusterHistoryPanel, { type ClusterHistoryData } from '../ClusterHistoryPanel'
 import FactorContributionPanel from '../FactorContributionPanel'
 import ProvenanceBadge from '../ProvenanceBadge'
+import NoPrecedentSidebar from '../NoPrecedentSidebar'
+import WhatIfInspectorPanel from '../WhatIfInspectorPanel'
 
 interface Alert {
   id: string
@@ -893,6 +895,13 @@ export default function AlertTriageTab() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {selectedAlert && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <NoPrecedentSidebar alertId={selectedAlert.id} confidence={analysis?.situation_analysis?.situation_confidence} />
+              <WhatIfInspectorPanel alertId={selectedAlert.id} currentAction={analysis?.situation_analysis?.selected_option} />
             </div>
           )}
 

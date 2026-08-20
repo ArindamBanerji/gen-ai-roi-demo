@@ -44,7 +44,7 @@ export function LearningControlRoom() {
     try { await circuitBreakAuthority(category); await fetchAuthorityLadder().then(setAuthority) } finally { setBreaking(null) }
   }
 
-  return <section className="space-y-5 rounded-xl border border-cyan-800/60 bg-slate-950/80 p-5 shadow-lg">
+  return <section className="space-y-5 rounded-xl border border-cyan-800/60 bg-slate-950/80 p-5 shadow-lg" data-testid="learning-control-room-panel" aria-label="Learning control room">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">F16 / proof of learning</p><h2 className="text-2xl font-semibold text-white">Learning Control Room</h2></div>
       <span className="rounded-full border border-emerald-700/60 bg-emerald-950/40 px-3 py-1 text-xs text-emerald-300">{data.evidence?.control_room ?? 'T_O'} · live measurements</span>
