@@ -185,7 +185,7 @@ def test_exploration_decision_fields_complete_for_explored(monkeypatch):
 
 def test_get_exploration_policy_singleton_returns_same_object(monkeypatch):
     rl_engine.reset_rl_state()
-    monkeypatch.setattr("app.services.posterior_store.PosteriorStore", lambda: MemoryStore())
+    monkeypatch.setattr("app.services.posterior_store.PosteriorStore", lambda _config: MemoryStore())
     first = rl_engine.get_exploration_policy()
     second = rl_engine.get_exploration_policy()
     assert first is second
@@ -196,7 +196,7 @@ def test_singleton_shape_matches_soc_categories_and_actions(monkeypatch):
     from app.domains.soc.config import SCORER_ACTIONS, SOC_CATEGORIES
 
     rl_engine.reset_rl_state()
-    monkeypatch.setattr("app.services.posterior_store.PosteriorStore", lambda: MemoryStore())
+    monkeypatch.setattr("app.services.posterior_store.PosteriorStore", lambda _config: MemoryStore())
     policy = rl_engine.get_exploration_policy()
     assert policy.n_categories == len(SOC_CATEGORIES)
     assert policy.n_actions == len(SCORER_ACTIONS)
@@ -205,7 +205,7 @@ def test_singleton_shape_matches_soc_categories_and_actions(monkeypatch):
 
 def test_reset_rl_state_clears_exploration_singleton_and_fresh_priors(monkeypatch):
     store = MemoryStore()
-    monkeypatch.setattr("app.services.posterior_store.PosteriorStore", lambda: store)
+    monkeypatch.setattr("app.services.posterior_store.PosteriorStore", lambda _config: store)
     rl_engine.reset_rl_state()
     policy = rl_engine.get_exploration_policy()
     policy.update_posterior(0, 0, True)

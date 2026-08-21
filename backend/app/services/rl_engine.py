@@ -559,16 +559,18 @@ def get_exploration_policy() -> ExplorationPolicy:
     if _exploration_policy is None:
         from app.domains.soc.config import SCORER_ACTIONS, SOC_CATEGORIES
 
-        test_mode = bool(os.environ.get("PYTEST_CURRENT_TEST"))
         try:
             from app.services.posterior_store import PosteriorStore
+            from copilot_sdk.config import GraphConfig
 
-            _posterior_store = PosteriorStore()
+            graph_config = GraphConfig.load(
+                "soc",
+                profile="test" if os.environ.get("PYTEST_CURRENT_TEST") else "production",
+            )
+            _posterior_store = PosteriorStore(graph_config)
         except Exception as exc:
-            if not test_mode:
-                raise RuntimeError("[RL] PosteriorStore is required outside test mode") from exc
-            log.warning("[RL] test mode: PosteriorStore unavailable; using in-memory priors: %s", exc)
-            _posterior_store = None
+            log.error("[RL] graph configuration/posterior initialization failed: %s", exc)
+            raise RuntimeError("[RL] graph configuration is required for exploration") from exc
         try:
             _exploration_policy = ExplorationPolicy(
                 n_categories=len(SOC_CATEGORIES),
@@ -576,26 +578,19 @@ def get_exploration_policy() -> ExplorationPolicy:
                 posterior_store=_posterior_store,
             )
         except Exception as exc:
-            if not test_mode:
-                raise RuntimeError("[RL] PosteriorStore is required outside test mode") from exc
-            log.warning("[RL] test mode: posterior load unavailable; using in-memory priors: %s", exc)
-            _posterior_store = None
-            _exploration_policy = ExplorationPolicy(
-                n_categories=len(SOC_CATEGORIES),
-                n_actions=len(SCORER_ACTIONS),
-                posterior_store=None,
-            )
+            log.error("[RL] posterior graph load failed: %s", exc)
+            raise RuntimeError("[RL] posterior graph state is unavailable") from exc
     return _exploration_policy
 
 
 def get_credit_assigner() -> CreditAssigner:
     global _credit_assigner
     if _credit_assigner is None:
-        try:
-            from app.db.graph_client import graph_client
-        except Exception as exc:
-            log.warning("[RL] graph client unavailable for CreditAssigner: %s", exc)
-            graph_client = None
+        from app.db.graph_client import graph_client
+
+        if graph_client is None:
+            log.error("[RL] graph client is required for CreditAssigner")
+            raise RuntimeError("[RL] graph client is unavailable")
         _credit_assigner = CreditAssigner(graph_client)
     return _credit_assigner
 

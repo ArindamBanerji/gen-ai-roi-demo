@@ -3,7 +3,6 @@ Alert Triage API - Tab 3
 Graph-based reasoning and closed-loop execution
 """
 import contextlib
-import inspect
 import json
 import logging
 import os
@@ -62,32 +61,7 @@ from app.domains.soc.orchestrator import (
 from gae.scoring import score_alert
 
 logger = logging.getLogger(__name__)
-_REFERRAL_COUNT_SOURCE = os.environ.get("REFERRAL_COUNT_SOURCE", "legacy").strip().lower()
 _shadow_log = logging.getLogger("soc.referral.shadow")
-
-
-async def _legacy_sequence_count(source_id: str | None) -> int:
-    method = getattr(graph_client, "_legacy_sequence_count", None)
-    if method is not None:
-        result = method(source_id)
-        if not inspect.isawaitable(result):
-            return int(await graph_client.get_sequence_count(source_id))
-        return int((await result) or 0)
-    # AGE deployments without the legacy helper retain the established count
-    # semantics until the Alert-based implementation is provided by the client.
-    return int(await graph_client.get_sequence_count(source_id))
-
-
-async def _legacy_cross_category_count(user_id: str | None) -> int:
-    method = getattr(graph_client, "_legacy_cross_category_count", None)
-    if method is not None:
-        result = method(user_id)
-        if not inspect.isawaitable(result):
-            return int(await graph_client.get_cross_category_count(user_id))
-        return int((await result) or 0)
-    # See _legacy_sequence_count: preserve behavior until the client exposes
-    # a dedicated Alert-based legacy query.
-    return int(await graph_client.get_cross_category_count(user_id))
 
 # Backward-compatible monkeypatch hook used by existing tests.
 compute_factor_vector = _compute_factor_vector
@@ -787,23 +761,12 @@ async def analyze_alert(request: ProcessAlertRequest):
             _source_id = alert_data.get('source_location')
             _user_id   = context.get('user_id')
             _new_seq = await graph_client.get_sequence_count(_source_id)
-            _legacy_seq = await _legacy_sequence_count(_source_id)
             _new_cross = await graph_client.get_cross_category_count(_user_id)
-            _legacy_cross = await _legacy_cross_category_count(_user_id)
-            if _new_seq != _legacy_seq:
-                _shadow_log.warning(
-                    "SHADOW MISMATCH seq: decision=%d alert=%d source_id=%s",
-                    _new_seq, _legacy_seq, _source_id,
-                )
-            if _new_cross != _legacy_cross:
-                _shadow_log.warning(
-                    "SHADOW MISMATCH cross_cat: decision=%d alert=%d user_id=%s",
-                    _new_cross, _legacy_cross, _user_id,
-                )
-            if _REFERRAL_COUNT_SOURCE == "decision":
-                _sequence_count, _cross_category_count = _new_seq, _new_cross
-            else:
-                _sequence_count, _cross_category_count = _legacy_seq, _legacy_cross
+            # AGE's decision counters are explicitly domain-scoped (the
+            # client predicates d.domain = 'soc').  The retired Alert-based
+            # shadow counters were unscoped and could leak other copilots'
+            # history into SOC referral decisions, so they are not consulted.
+            _sequence_count, _cross_category_count = _new_seq, _new_cross
         # Referral runs before Decision creation so final-action side effects are
         # safe. The DB helpers count persisted Decisions only, so include the
         # current candidate decision in-memory to preserve previous R2/R7 semantics.

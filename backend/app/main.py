@@ -111,14 +111,25 @@ async def root():
 async def health():
     from app.services import rl_engine
     from app.services.posterior_store import PosteriorStore
+    from copilot_sdk.config import GraphConfig
 
     store = getattr(rl_engine, "_posterior_store", None)
-    if store is None:
-        store = PosteriorStore()
     try:
+        if store is None:
+            graph_config = GraphConfig.load(
+                "soc",
+                profile="test" if _cors_os.getenv("PYTEST_CURRENT_TEST") else "production",
+            )
+            store = PosteriorStore(graph_config)
         posterior_health = store.health_check()
     except Exception as exc:
-        posterior_health = {"healthy": False, "error": str(exc)}
+        logger.exception("PosteriorStore health check failed")
+        posterior_health = {
+            "healthy": False,
+            "status": "FAILED",
+            "reason": str(exc),
+            "error": str(exc),
+        }
 
     return {
         "status": "healthy",

@@ -7,7 +7,6 @@ from collections.abc import Iterator
 
 import pytest
 
-from copilot_sdk.config import GraphConfig
 from copilot_sdk.testing.fixtures import age_available
 from app.routers import triage
 from support import SOCTriageHarness
@@ -41,25 +40,24 @@ def _live_backend_reachable(timeout: float = 0.25) -> bool:
         return False
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def soc_stress_test_graph():
-    """Create an isolated AGE graph for destructive SOC contract tests."""
+    """Create a disposable AGE graph namespace for one test."""
+    graph_dsn = os.environ.get("GRAPH_DSN", "").strip()
+    if not graph_dsn:
+        pytest.skip("GRAPH_DSN not set")
     if not age_available():
         pytest.skip("AGE not reachable (no DSN configured or connection failed)")
-
-    config = GraphConfig.load("soc")
-    if not config.dsn:
-        pytest.skip("SOC AGE DSN is not configured")
 
     import psycopg
 
     graph_name = f"soc_stress_test_{uuid.uuid4().hex[:12]}"
-    conn = psycopg.connect(config.dsn, connect_timeout=3, autocommit=True)
+    conn = psycopg.connect(graph_dsn, connect_timeout=3, autocommit=True)
     try:
         conn.execute("LOAD 'age'")
         conn.execute('SET search_path = ag_catalog, "$user", public')
         conn.execute("SELECT create_graph(%s)", (graph_name,))
-        yield config.dsn, graph_name
+        yield graph_dsn, graph_name
     finally:
         try:
             if not conn.closed:

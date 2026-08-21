@@ -28,8 +28,38 @@ def _default_posteriors(n_categories: int, n_actions: int) -> dict[str, list[lis
 class PosteriorStore:
     """Tiny PostgreSQL store for per-category/action Beta posteriors."""
 
-    def __init__(self, dsn: str | None = None) -> None:
-        self._dsn = dsn or self._resolve_dsn()
+    _UNSET = object()
+
+    def __init__(self, graph_config: GraphConfig | str | None = _UNSET) -> None:
+        """Create a store from the typed SOC graph configuration.
+
+        A raw DSN remains accepted only for existing unit-level storage tests;
+        application code passes ``GraphConfig`` explicitly.  Passing ``None``
+        is an error so a missing graph contract cannot silently become an
+        in-memory posterior store.
+        """
+        was_unset = graph_config is self._UNSET
+        if was_unset:
+            graph_config = GraphConfig.load(
+                "soc",
+                profile="test" if os.environ.get("PYTEST_CURRENT_TEST") else "production",
+            )
+        if graph_config is None:
+            raise ValueError("PosteriorStore requires GraphConfig")
+
+        self._graph_config = graph_config if isinstance(graph_config, GraphConfig) else None
+        if isinstance(graph_config, str):
+            self._dsn = graph_config
+        else:
+            if not isinstance(graph_config, GraphConfig):
+                raise TypeError("PosteriorStore requires GraphConfig")
+            if not graph_config.dsn:
+                raise ValueError("PosteriorStore requires GraphConfig with a DSN")
+            self._dsn = graph_config.dsn
+            # POSTERIOR_DSN is deliberately limited to test runs.  It is a
+            # storage endpoint override, not a replacement for GraphConfig.
+            if was_unset and os.environ.get("PYTEST_CURRENT_TEST"):
+                self._dsn = self._resolve_dsn()
         self._table_ready = False
 
     @staticmethod
