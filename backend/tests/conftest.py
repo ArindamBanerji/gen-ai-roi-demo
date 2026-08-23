@@ -52,7 +52,10 @@ def soc_stress_test_graph():
     import psycopg
 
     graph_name = f"soc_stress_test_{uuid.uuid4().hex[:12]}"
-    conn = psycopg.connect(graph_dsn, connect_timeout=3, autocommit=True)
+    try:
+        conn = psycopg.connect(graph_dsn, connect_timeout=3, autocommit=True)
+    except psycopg.OperationalError as exc:
+        pytest.skip(f"AGE connection failed: {exc}")
     try:
         conn.execute("LOAD 'age'")
         conn.execute('SET search_path = ag_catalog, "$user", public')
