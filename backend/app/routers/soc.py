@@ -2620,15 +2620,15 @@ async def get_verification_health():
 @router.post("/soc/backup-centroid")
 async def backup_centroid():
     """
-    Serialize the live centroid tensor and write it to the backup store.
+    Persist the live centroid tensor as an AGE checkpoint.
     Returns backup metadata: {backup_id, sha256, shape, step, timestamp_epoch}.
     """
-    from app.services.gae_state import get_profile_scorer, write_centroid_backup
-    scorer = get_profile_scorer()
-    if scorer is None:
+    from app.services.gae_state import create_centroid_checkpoint
+    try:
+        payload = create_centroid_checkpoint()
+    except RuntimeError as exc:
         from fastapi import HTTPException
-        raise HTTPException(status_code=503, detail="ProfileScorer not ready")
-    payload = write_centroid_backup(scorer)
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     return {
         "backup_id":       payload["backup_id"],
         "sha256":          payload["sha256"],
@@ -2641,19 +2641,20 @@ async def backup_centroid():
 @router.post("/soc/restore-centroid")
 async def restore_centroid(body: dict = {}):
     """
-    Restore the centroid tensor from a backup.
-    Body: {"backup_id": "centroid_backup_<ts>"} or {} to use latest.
-    Returns 409 on SHA-256 checksum mismatch.
+    Restore the centroid tensor from an AGE checkpoint.
+    Body: {"backup_id": "soc:pitr:<id>"} or {} to use the latest checkpoint.
     """
     from fastapi import HTTPException
-    from app.services.gae_state import restore_centroid_from_backup
+    from app.services.gae_state import restore_centroid_checkpoint
     backup_id = (body or {}).get("backup_id") or None
     try:
-        payload = await restore_centroid_from_backup(backup_id)
+        payload = await restore_centroid_checkpoint(backup_id)
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc))
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     return {
         "restored":        True,
         "backup_id":       payload.get("backup_id"),
@@ -2664,13 +2665,17 @@ async def restore_centroid(body: dict = {}):
 
 
 @router.get("/soc/centroid-backups")
-async def list_centroid_backups_endpoint():
+async def list_centroid_checkpoints_endpoint():
     """
-    List all centroid backup files.
+    List all SOC centroid checkpoints from AGE.
     Returns [{backup_id, timestamp_epoch, step, sha256}] newest-first.
     """
-    from app.services.gae_state import list_centroid_backups
-    return {"backups": list_centroid_backups()}
+    from app.services.gae_state import list_centroid_checkpoints
+    try:
+        return {"backups": list_centroid_checkpoints()}
+    except RuntimeError as exc:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 # =============================================================================

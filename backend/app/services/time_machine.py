@@ -4,10 +4,9 @@ Centroid Time Machine service helpers.
 
 from __future__ import annotations
 
-import json
 import logging
-from pathlib import Path
-from typing import Any, cast
+import json
+from typing import Any
 
 import numpy as np
 
@@ -17,7 +16,6 @@ from app.domains.soc.config import SCORER_ACTIONS, SOC_FACTORS, SOC_FACTOR_SIGMA
 from app.services.gae_state import (
     _EXPORT_ACTIONS,
     _EXPORT_CATEGORIES,
-    _BACKUP_DIR as GAE_BACKUP_DIR,
     get_mu_zero,
     get_profile_scorer,
 )
@@ -30,72 +28,76 @@ _CEILING_NOTE = (
 
 log = logging.getLogger(__name__)
 
-_BACKUP_DIR = GAE_BACKUP_DIR
 _DEFAULT_FACTORS = list(SOC_FACTORS)
 
 
 class SnapshotNotFoundError(FileNotFoundError):
-    """Raised when a requested snapshot file does not exist."""
+    """Raised when a requested AGE checkpoint does not exist."""
 
 
 class SnapshotCorruptError(ValueError):
-    """Raised when a snapshot file is unreadable or fails validation."""
+    """Raised when an AGE checkpoint is unreadable or fails validation."""
 
 
-def _ensure_backup_dir() -> Path:
-    _BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-    return _BACKUP_DIR
+def _age_store() -> Any:
+    scorer = get_profile_scorer()
+    if scorer is None:
+        raise RuntimeError("SOC scorer is unavailable; AGE checkpoint access cannot proceed")
+    store = getattr(scorer, "graph_store", None)
+    if store is None:
+        raise RuntimeError("SOC GraphStore is unavailable; AGE checkpoint access cannot proceed")
+    return store
 
 
-def _snapshot_path(snapshot_id: str) -> Path:
-    return _ensure_backup_dir() / f"{snapshot_id}.json"
-
-
-def _canonical_snapshot_payload(payload: dict[str, Any]) -> dict[str, Any]:
+def _checkpoint_payload(raw: Any) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        raise SnapshotCorruptError("AGE checkpoint did not contain an object")
+    centroids = raw.get("centroids", raw.get("mu"))
+    if isinstance(centroids, str):
+        try:
+            centroids = json.loads(centroids)
+        except json.JSONDecodeError as exc:
+            raise SnapshotCorruptError("AGE checkpoint centroid tensor is invalid JSON") from exc
+    if centroids is None:
+        raise SnapshotCorruptError("AGE checkpoint does not contain centroid tensor")
+    metadata = raw.get("metadata") or {}
+    if isinstance(metadata, str):
+        try:
+            metadata = json.loads(metadata)
+        except json.JSONDecodeError as exc:
+            raise SnapshotCorruptError("AGE checkpoint metadata is invalid JSON") from exc
+    if not isinstance(metadata, dict):
+        metadata = {}
+    created_at = raw.get("created_at", raw.get("timestamp_epoch", 0))
+    timestamp_epoch = int(float(created_at) * 1000) if created_at else 0
+    if timestamp_epoch < 10_000_000_000:
+        timestamp_epoch *= 1000
+    checkpoint_id = str(raw.get("checkpoint_id") or raw.get("id") or "")
+    tensor = _coerce_tensor(
+        {"mu": centroids, "shape": raw.get("shape") or np.asarray(centroids).shape},
+        checkpoint_id or "unknown",
+    )
     return {
-        key: value
-        for key, value in payload.items()
-        if key not in {"sha256", "backup_id", "metadata"}
+        "backup_id": checkpoint_id,
+        "mu": tensor.tolist(),
+        "shape": list(tensor.shape),
+        "timestamp_epoch": timestamp_epoch,
+        "step": int(raw.get("step", raw.get("decisions_count", 0)) or 0),
+        "sha256": str(raw.get("sha256") or metadata.get("sha256") or ""),
+        "version": raw.get("version", "age-checkpoint"),
+        "metadata": metadata,
     }
 
 
-def _read_snapshot_file(path: Path) -> dict[str, Any]:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        raise SnapshotCorruptError(f"Failed to read snapshot {path.name}: {exc}") from exc
-
-    if not isinstance(payload, dict):
-        raise SnapshotCorruptError(f"Snapshot {path.name} did not contain a JSON object")
-
-    required = {"mu", "shape", "timestamp_epoch", "sha256"}
-    missing = required - set(payload)
-    if missing:
-        raise SnapshotCorruptError(
-            f"Snapshot {path.name} missing required keys: {sorted(missing)}"
-        )
-
-    try:
-        canonical = json.dumps(_canonical_snapshot_payload(payload), sort_keys=True)
-        expected_sha = __import__("hashlib").sha256(canonical.encode()).hexdigest()
-    except Exception as exc:
-        raise SnapshotCorruptError(f"Snapshot {path.name} could not be hashed: {exc}") from exc
-
-    if payload.get("sha256") != expected_sha:
-        raise SnapshotCorruptError(
-            f"Snapshot {path.name} checksum mismatch: stored={payload.get('sha256')!r} "
-            f"computed={expected_sha!r}"
-        )
-
-    return payload
-
-
-def _safe_read_snapshot(path: Path) -> dict[str, Any] | None:
-    try:
-        return _read_snapshot_file(path)
-    except SnapshotCorruptError as exc:
-        log.warning("[TIME_MACHINE] Skipping corrupted snapshot %s: %s", path.name, exc)
-        return None
+def _age_payloads() -> list[dict[str, Any]]:
+    rows = _age_store().get_centroid_checkpoints("soc", include_v2=True, limit=None)
+    payloads: list[dict[str, Any]] = []
+    for row in rows:
+        try:
+            payloads.append(_checkpoint_payload(row))
+        except SnapshotCorruptError as exc:
+            log.warning("[TIME_MACHINE] Skipping incomplete AGE checkpoint: %s", exc)
+    return payloads
 
 
 def _coerce_tensor(payload: dict[str, Any], snapshot_id: str) -> np.ndarray:
@@ -105,7 +107,7 @@ def _coerce_tensor(payload: dict[str, Any], snapshot_id: str) -> np.ndarray:
         raise SnapshotCorruptError(f"Snapshot {snapshot_id} tensor parse failed: {exc}") from exc
 
     shape = payload.get("shape")
-    if list(tensor.shape) != list(cast(Any, shape)):
+    if list(tensor.shape) != list(shape or []):
         raise SnapshotCorruptError(
             f"Snapshot {snapshot_id} shape mismatch: payload={shape}, actual={list(tensor.shape)}"
         )
@@ -121,15 +123,15 @@ def _decision_count(payload: dict[str, Any]) -> int:
         return 0
 
 
-def _snapshot_meta(payload: dict[str, Any], path: Path) -> dict[str, Any]:
+def _snapshot_meta(payload: dict[str, Any]) -> dict[str, Any]:
     return {
-        "snapshot_id": payload.get("backup_id", path.stem),
+        "snapshot_id": payload.get("backup_id", ""),
         "timestamp": int(payload.get("timestamp_epoch", 0)),
         "timestamp_epoch": int(payload.get("timestamp_epoch", 0)),
         "decision_count": _decision_count(payload),
         "step": int(payload.get("step", 0) or 0),
         "sha256": payload.get("sha256", ""),
-        "file_path": str(path),
+        "file_path": "",
         "version": payload.get("version"),
         "shape": payload.get("shape"),
         "metadata": payload.get("metadata"),
@@ -166,26 +168,26 @@ def list_snapshots() -> list[dict[str, Any]]:
     """
     Return valid snapshot metadata sorted by timestamp ascending.
     """
-    results: list[dict[str, Any]] = []
-    for path in _ensure_backup_dir().glob("centroid_backup_[0-9]*.json"):
-        payload = _safe_read_snapshot(path)
-        if payload is None:
-            continue
-        results.append(_snapshot_meta(payload, path))
+    results = [_snapshot_meta(payload) for payload in _age_payloads()]
 
     results.sort(key=lambda item: (item["timestamp_epoch"], item["snapshot_id"]))
     return results
 
 
-def _load_snapshot(snapshot_id: str) -> tuple[dict[str, Any], Path]:
-    path = _snapshot_path(snapshot_id)
-    if not path.exists():
-        raise SnapshotNotFoundError(f"Snapshot not found: {snapshot_id}")
-    return _read_snapshot_file(path), path
+def _load_snapshot(snapshot_id: str) -> dict[str, Any]:
+    payloads = _age_payloads()
+    if not snapshot_id:
+        if not payloads:
+            raise SnapshotNotFoundError("No AGE centroid checkpoints are available")
+        return max(payloads, key=lambda item: (item["timestamp_epoch"], item["snapshot_id"]))
+    for payload in payloads:
+        if payload.get("backup_id") == snapshot_id:
+            return payload
+    raise SnapshotNotFoundError(f"Snapshot not found: {snapshot_id}")
 
 
 def get_snapshot(snapshot_id: str) -> dict[str, Any]:
-    payload, path = _load_snapshot(snapshot_id)
+    payload = _load_snapshot(snapshot_id)
     tensor = _coerce_tensor(payload, snapshot_id)
 
     mu_zero = get_mu_zero()
@@ -203,7 +205,7 @@ def get_snapshot(snapshot_id: str) -> dict[str, Any]:
             drift_from_current = _frobenius_distance(tensor, current)
 
     return {
-        **_snapshot_meta(payload, path),
+        **_snapshot_meta(payload),
         "centroids": payload["mu"],
         "drift_from_bootstrap": drift_from_bootstrap,
         "drift_from_bootstrap_mean_abs": drift_from_bootstrap_mean_abs,
@@ -212,8 +214,8 @@ def get_snapshot(snapshot_id: str) -> dict[str, Any]:
 
 
 def compare_snapshots(id_a: str, id_b: str) -> dict[str, Any]:
-    payload_a, path_a = _load_snapshot(id_a)
-    payload_b, path_b = _load_snapshot(id_b)
+    payload_a = _load_snapshot(id_a)
+    payload_b = _load_snapshot(id_b)
     tensor_a = _coerce_tensor(payload_a, id_a)
     tensor_b = _coerce_tensor(payload_b, id_b)
 
@@ -261,8 +263,8 @@ def compare_snapshots(id_a: str, id_b: str) -> dict[str, Any]:
             movement_direction = "unchanged"
 
     return {
-        "snapshot_a": _snapshot_meta(payload_a, path_a),
-        "snapshot_b": _snapshot_meta(payload_b, path_b),
+        "snapshot_a": _snapshot_meta(payload_a),
+        "snapshot_b": _snapshot_meta(payload_b),
         "overall_frobenius_distance": overall_distance,
         "per_category_distances": per_category_distances,
         "per_category_action_distances": per_category_action_distances,
@@ -292,7 +294,7 @@ def compare_to_bootstrap(snapshot_id: str) -> dict[str, Any]:
     Returns the same shape as compare_snapshots so the frontend can use the
     existing comparison UI without changes.
     """
-    payload, path = _load_snapshot(snapshot_id)
+    payload = _load_snapshot(snapshot_id)
     tensor = _coerce_tensor(payload, snapshot_id)
 
     mu_zero = get_mu_zero()
@@ -340,7 +342,7 @@ def compare_to_bootstrap(snapshot_id: str) -> dict[str, Any]:
     }
 
     return {
-        "snapshot_a": _snapshot_meta(payload, path),
+        "snapshot_a": _snapshot_meta(payload),
         "snapshot_b": bootstrap_meta,
         "overall_frobenius_distance": overall_distance,
         "per_category_distances": per_category_distances,
@@ -363,8 +365,8 @@ async def get_evolution_timeline(graph_client: Any) -> dict[str, Any]:
     mu_zero = get_mu_zero()
     current_ceiling = _compute_current_ceiling_estimate()
 
-    for meta in list_snapshots():
-        payload, _ = _load_snapshot(meta["snapshot_id"])
+    for payload in _age_payloads():
+        meta = _snapshot_meta(payload)
         tensor = _coerce_tensor(payload, meta["snapshot_id"])
         drift = None
         if mu_zero is not None and list(mu_zero.shape) == list(tensor.shape):

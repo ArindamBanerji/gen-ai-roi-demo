@@ -22,7 +22,10 @@ router = APIRouter()
 
 @router.get("/time-machine/snapshots")
 async def list_snapshots_endpoint():
-    return {"snapshots": list_snapshots()}
+    try:
+        return {"snapshots": list_snapshots()}
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.get("/time-machine/snapshots/{snapshot_id}")
@@ -33,6 +36,8 @@ async def get_snapshot_endpoint(snapshot_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except SnapshotCorruptError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.get("/time-machine/compare")
@@ -43,6 +48,8 @@ async def compare_snapshots_endpoint(a: str, b: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except SnapshotCorruptError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.get("/time-machine/compare-bootstrap")
@@ -59,4 +66,7 @@ async def compare_bootstrap_endpoint(snapshot_id: str):
 
 @router.get("/time-machine/timeline")
 async def get_timeline_endpoint():
-    return await get_evolution_timeline(graph_client)
+    try:
+        return await get_evolution_timeline(graph_client)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc

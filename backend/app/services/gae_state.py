@@ -573,152 +573,124 @@ async def reset_learning_state() -> None:
 
 
 # =============================================================================
-# Block 2.1 — Centroid tensor PITR backup helpers
+# Block 2.1 — Graph-backed centroid checkpoint helpers
 # =============================================================================
 
-_BACKUP_DIR = Path(__file__).resolve().parents[2] / "app" / "data" / "centroid_backups"
+def _checkpoint_store() -> tuple[Any, Any]:
+    """Return the live SOC scorer and its GraphStore, failing closed."""
+    scorer = get_profile_scorer()
+    if scorer is None:
+        raise RuntimeError("SOC ProfileScorer is not initialized")
+    store = scorer.graph_store
+    if store is None:
+        raise RuntimeError("SOC GraphStore is unavailable")
+    return scorer, store
 
 
-def _ensure_backup_dir() -> Path:
-    _BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-    return _BACKUP_DIR
-
-
-def serialize_centroid_tensor(scorer) -> dict:
-    """
-    Serialize the ProfileScorer centroid tensor (mu) with a SHA-256 integrity hash.
-
-    Returns a dict ready to be written as JSON.  The sha256 is computed over
-    a canonical JSON encoding of the payload (sort_keys=True, no hash field),
-    so it can be re-verified without the original object.
-    """
+def _checkpoint_payload(checkpoint: dict[str, Any]) -> dict[str, Any]:
+    """Normalize a GraphStore checkpoint to the legacy endpoint shape."""
     import hashlib
     import time
 
-    mu = scorer.centroids.tolist()
-    step = getattr(scorer, "decision_count", 0)
-    payload = {
-        "mu":              mu,
-        "shape":           list(scorer.centroids.shape),
-        "step":            step,
-        "timestamp_epoch": int(time.time() * 1000),
-        "version":         "1.0",
+    centroids = checkpoint.get("centroids")
+    if isinstance(centroids, str):
+        centroids = json.loads(centroids)
+    if centroids is None:
+        raise RuntimeError("AGE checkpoint has no centroid tensor")
+    shape = checkpoint.get("shape") or list(np.asarray(centroids).shape)
+    metadata = checkpoint.get("metadata") or {}
+    if isinstance(metadata, str):
+        metadata = json.loads(metadata)
+    timestamp_epoch = int(float(checkpoint.get("created_at", time.time())) * 1000)
+    step = int(metadata.get("decision_count", checkpoint.get("decisions_count", 0)) or 0)
+    canonical = {
+        "mu": centroids,
+        "shape": shape,
+        "step": step,
+        "timestamp_epoch": timestamp_epoch,
+        "version": "age-checkpoint",
     }
-    canonical = json.dumps(payload, sort_keys=True)
-    payload["sha256"] = hashlib.sha256(canonical.encode()).hexdigest()
-    return payload
+    return {
+        **canonical,
+        "backup_id": checkpoint.get("checkpoint_id"),
+        "sha256": hashlib.sha256(json.dumps(canonical, sort_keys=True).encode()).hexdigest(),
+        "metadata": metadata,
+    }
 
 
-def write_centroid_backup(scorer, metadata: dict | None = None) -> dict:
+def create_centroid_checkpoint() -> dict[str, Any]:
+    """Persist a full SOC centroid tensor in the live GraphStore."""
+    import uuid
+
+    scorer, store = _checkpoint_store()
+    checkpoint_id = f"soc:pitr:{uuid.uuid4().hex}"
+    metadata = {"pitr": True, "decision_count": int(scorer.decision_count)}
+    store.write_centroid_checkpoint(
+        checkpoint_id=checkpoint_id,
+        domain="soc",
+        category="__full_tensor__",
+        action="snapshot",
+        centroids=scorer.centroids,
+        decisions_count=int(scorer.decision_count),
+        verified_count=int(store.count_verified("soc")),
+        iks=0.0,
+        shape=[int(value) for value in scorer.centroids.shape],
+        factor_names_hash="soc",
+        metadata=metadata,
+    )
+    checkpoints = store.get_centroid_checkpoints("soc", include_v2=True, limit=None)
+    checkpoint: dict[str, Any] = next(
+        (item for item in checkpoints if item.get("checkpoint_id") == checkpoint_id),
+        {},
+    )
+    if not checkpoint:
+        raise RuntimeError(f"AGE checkpoint {checkpoint_id} was not readable after write")
+    return _checkpoint_payload(checkpoint)
+
+
+def list_centroid_checkpoints() -> list[dict[str, Any]]:
+    """List SOC centroid checkpoints from AGE, newest first."""
+    _, store = _checkpoint_store()
+    checkpoints = store.get_centroid_checkpoints("soc", include_v2=True, limit=None)
+    return [_checkpoint_payload(checkpoint) for checkpoint in checkpoints]
+
+
+def maybe_write_centroid_snapshot(*_args: Any, **_kwargs: Any) -> bool:
+    """Compatibility hook for callers that used the retired file snapshot trigger.
+
+    Learning checkpoints are written by the scorer through GraphStore.  This hook
+    deliberately performs no persistence and exists only so older integrations
+    can remove their call sites without creating filesystem state.
     """
-    Serialize mu, write timestamped + latest backup files.
-    Returns the payload dict (includes sha256 and backup_id).
-
-    Parameters
-    ----------
-    scorer   : ProfileScorer -- source of centroids.
-    metadata : optional dict merged into the JSON payload (trigger, decision_id, ...).
-    """
-    import uuid as _uuid
-    payload = serialize_centroid_tensor(scorer)
-    ts = payload["timestamp_epoch"]
-    # UUID suffix guarantees uniqueness even when two snapshots occur in the
-    # same millisecond (common in tests and high-throughput simulation runs).
-    backup_id = f"centroid_backup_{ts}_{_uuid.uuid4().hex[:8]}"
-    payload["backup_id"] = backup_id
-    if metadata:
-        payload["metadata"] = metadata
-
-    d = _ensure_backup_dir()
-    timestamped = d / f"{backup_id}.json"
-    latest = d / "centroid_backup_latest.json"
-
-    data = json.dumps(payload)
-    timestamped.write_text(data)
-    latest.write_text(data)
-
-    return payload
+    return False
 
 
-# =============================================================================
-# Block 2.1b — Auto-snapshot trigger (FEATURE-04 Centroid Time Machine)
-# =============================================================================
-
-SNAPSHOT_INTERVAL: int = 10   # snapshot every N verified decisions
-
-_snapshot_decision_count: int = 0
-
-
-def maybe_write_centroid_snapshot(
-    scorer,
-    decision_id: str = "",
-    category: str = "",
-) -> bool:
-    """Auto-snapshot centroids every SNAPSHOT_INTERVAL verified decisions.
-
-    Increments a module-level counter on every call and writes a backup when
-    the counter is a positive multiple of SNAPSHOT_INTERVAL.  Returns True
-    if a backup was written, False otherwise.  Never raises -- all errors are
-    logged as warnings so callers can fire-and-forget.
-    """
-    global _snapshot_decision_count
-    _snapshot_decision_count += 1
-    if _snapshot_decision_count % SNAPSHOT_INTERVAL != 0:
-        return False
-    try:
-        metadata = {
-            "trigger":        "auto",
-            "decision_count": _snapshot_decision_count,
-            "decision_id":    decision_id,
-            "category":       category,
-        }
-        write_centroid_backup(scorer, metadata=metadata)
-        log.info(
-            "[SNAPSHOT] Auto-snapshot #%d written (every %d decisions)",
-            _snapshot_decision_count,
-            SNAPSHOT_INTERVAL,
+async def restore_centroid_checkpoint(checkpoint_id: str | None = None) -> dict[str, Any]:
+    """Restore a full SOC centroid tensor from an AGE checkpoint."""
+    _, store = _checkpoint_store()
+    checkpoints = store.get_centroid_checkpoints("soc", include_v2=True, limit=None)
+    if not checkpoints:
+        raise FileNotFoundError("No SOC centroid checkpoints exist in AGE")
+    if checkpoint_id:
+        checkpoint = next(
+            (item for item in checkpoints if item.get("checkpoint_id") == checkpoint_id),
+            None,
         )
-        return True
-    except Exception as e:
-        log.warning("[SNAPSHOT] Auto-snapshot failed: %s", e)
-        return False
-
-
-def list_centroid_backups() -> list:
-    """
-    List all timestamped backup files in _BACKUP_DIR.
-    Returns list of dicts: [{backup_id, timestamp_epoch, step, sha256}]
-    sorted newest-first.
-    """
-    d = _ensure_backup_dir()
-    results = []
-    for f in sorted(d.glob("centroid_backup_[0-9]*.json"), reverse=True):
-        try:
-            raw = json.loads(f.read_text())
-            results.append({
-                "backup_id":       raw.get("backup_id", f.stem),
-                "timestamp_epoch": raw.get("timestamp_epoch", 0),
-                "step":            raw.get("step", 0),
-                "sha256":          raw.get("sha256", ""),
-            })
-        except Exception:
-            pass
-    return results
-
-
-def load_centroid_backup(backup_id: str | None = None) -> dict:
-    """
-    Load a backup payload by backup_id, or the latest if backup_id is None/empty.
-    Raises FileNotFoundError if the file does not exist.
-    """
-    d = _ensure_backup_dir()
-    if not backup_id:
-        path = d / "centroid_backup_latest.json"
     else:
-        path = d / f"{backup_id}.json"
-    if not path.exists():
-        raise FileNotFoundError(f"Backup not found: {path}")
-    return cast(dict[Any, Any], json.loads(path.read_text()))
+        checkpoint = max(checkpoints, key=lambda item: float(item.get("created_at", 0.0)))
+    if checkpoint is None:
+        raise FileNotFoundError(f"AGE checkpoint not found: {checkpoint_id}")
+    payload = _checkpoint_payload(checkpoint)
+    scorer, _ = _checkpoint_store()
+    tensor = np.asarray(payload["mu"], dtype=np.float64)
+    if list(tensor.shape) != list(scorer.centroids.shape):
+        raise ValueError(
+            f"AGE checkpoint shape {list(tensor.shape)} does not match "
+            f"live scorer shape {list(scorer.centroids.shape)}"
+        )
+    async with acquire_scorer():
+        scorer.centroids = tensor
+    return payload
 
 
 # =============================================================================
@@ -875,55 +847,6 @@ async def build_centroid_export(scorer, graph_client) -> dict:
         "actions":              _EXPORT_ACTIONS,
         "sha256":               sha256,
     }
-
-
-async def restore_centroid_from_backup(backup_id: str | None = None) -> dict:
-    """
-    Load backup, verify SHA-256, and restore mu into the live ProfileScorer.
-    Acquires _scorer_lock to serialize against concurrent centroid updates.
-
-    Returns the payload dict on success.
-    Raises ValueError on checksum mismatch.
-    Raises RuntimeError if ProfileScorer is not attached.
-    """
-    import hashlib
-
-    payload = load_centroid_backup(backup_id)
-
-    # Re-compute canonical hash (same fields as serialize, minus sha256)
-    verify_payload = {k: v for k, v in payload.items()
-                      if k not in ("sha256", "backup_id")}
-    canonical = json.dumps(verify_payload, sort_keys=True)
-    expected = hashlib.sha256(canonical.encode()).hexdigest()
-    if payload.get("sha256") != expected:
-        raise ValueError(
-            f"Checksum mismatch: stored={payload.get('sha256')!r} "
-            f"computed={expected!r}"
-        )
-
-    async with acquire_scorer() as scorer:
-        expected_shape = scorer.centroids.shape
-        if "shape" in payload:
-            backup_shape = tuple(payload["shape"])
-            if backup_shape != expected_shape:
-                raise ValueError(
-                    f"Backup tensor shape {backup_shape} does not match "
-                    f"live scorer shape {expected_shape}. "
-                    f"Backup may be from a different domain configuration."
-                )
-
-        mu_array = np.array(payload["mu"], dtype=np.float64)
-        actual_shape = mu_array.shape
-        if actual_shape != expected_shape:
-            raise ValueError(
-                f"Backup tensor shape {actual_shape} does not match "
-                f"live scorer shape {expected_shape}. "
-                f"Backup may be from a different domain configuration."
-            )
-
-        scorer.centroids = mu_array
-
-    return payload
 
 
 # =============================================================================

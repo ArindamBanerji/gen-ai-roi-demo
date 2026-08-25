@@ -139,32 +139,6 @@ async def test_reset_learning_state_is_awaitable():
 
 
 @pytest.mark.asyncio
-async def test_restore_centroid_from_backup_is_awaitable():
-    """restore_centroid_from_backup() must return a coroutine."""
-    scorer = _make_scorer()
-    scorer.centroids.shape = (4, 8)
-    ls = _make_ls(scorer)
-
-    import numpy as np
-    import json
-    import hashlib
-
-    mu = np.zeros((4, 8)).tolist()
-    payload_base = {
-        "mu": mu,
-        "shape": [4, 8],
-        "step": 0,
-        "timestamp_epoch": 1234567890000,
-        "version": "1.0",
-    }
-    canonical = json.dumps(payload_base, sort_keys=True)
-    sha256 = hashlib.sha256(canonical.encode()).hexdigest()
-    payload_base["sha256"] = sha256
-    payload_base["backup_id"] = "test_backup"
-
-    with patch.object(gae_state, "_learning_state", ls), \
-         patch("app.services.gae_state.load_centroid_backup", return_value=payload_base):
-        coro = gae_state.restore_centroid_from_backup("test_backup")
-        assert asyncio.iscoroutine(coro)
-        result = await coro
-        assert result["backup_id"] == "test_backup"
+async def test_restore_centroid_checkpoint_is_awaitable():
+    """AGE checkpoint restore remains an async, lock-aware operation."""
+    assert asyncio.iscoroutinefunction(gae_state.restore_centroid_checkpoint)

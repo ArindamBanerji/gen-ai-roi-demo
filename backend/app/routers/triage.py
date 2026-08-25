@@ -2641,29 +2641,6 @@ async def report_decision_outcome(request: OutcomeRequest):
                 except Exception as _rl_chain_exc:
                     logger.warning("[RL] Chain credit assignment failed: %s", _rl_chain_exc)
 
-                # ============================================================
-                # FEATURE-04: Auto-snapshot centroids every SNAPSHOT_INTERVAL
-                # verified decisions for the Centroid Time Machine.
-                # Fire-and-forget — never blocks the outcome response.
-                # ============================================================
-                try:
-                    from app.services.gae_state import (
-                        maybe_write_centroid_snapshot as _maybe_snap,
-                        get_profile_scorer as _get_ps_snap2,
-                    )
-                    _ps_snap2 = _get_ps_snap2()
-                    if _ps_snap2 is not None:
-                        _maybe_snap(
-                            _ps_snap2,
-                            decision_id=str(request.decision_id),
-                            category=_resolved_category,
-                        )
-                except Exception as _snap2_exc:
-                    logger.warning(
-                        "[SNAPSHOT] Centroid auto-snapshot failed (non-blocking): %s",
-                        _snap2_exc,
-                    )
-
         if reward_result is not None and _rl_reward_ledger is not None and gae_result:
             try:
                 _record_for_reward = gae_result[0]

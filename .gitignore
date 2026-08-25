@@ -80,8 +80,9 @@ frontend/e2e_results.txt
 
 # PW logs
 frontend/pw_*.txt
-# Centroid backups (keep latest only)
-backend/app/data/centroid_backups/centroid_backup_1*.json
+# Runtime state (owned by GraphStore or local databases; never source fixtures)
+backend/app/data/centroid_backups/
+*.sqlite3-wal
+*.sqlite3-shm
 frontend/pw_*.txt
-backend/app/data/centroid_backups/centroid_backup_1*.json
 graphify-out/cache/
