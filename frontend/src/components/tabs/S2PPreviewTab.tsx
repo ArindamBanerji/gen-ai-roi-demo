@@ -4,6 +4,7 @@ import DisruptionSimPanel from '../DisruptionSimPanel'
 import FinancialImpactPanel from '../FinancialImpactPanel'
 import NoveltyPanel from '../NoveltyPanel'
 import ProcessFusionPanel from '../ProcessFusionPanel'
+import ProcessTimelinePanel from '../ProcessTimelinePanel'
 import TrendCorrelationPanel from '../TrendCorrelationPanel'
 import WorkingCapitalPanel from '../WorkingCapitalPanel'
 import DomainApplicabilityPanel from '../DomainApplicabilityPanel'
@@ -754,6 +755,10 @@ export default function S2PPreviewTab() {
         <CompliancePanel />
         <ProcessFusionPanel />
         <NoveltyPanel />
+      </div>
+
+      <div className="mt-6">
+        <ProcessTimelinePanel />
       </div>
 
       <TrendCorrelationPanel />

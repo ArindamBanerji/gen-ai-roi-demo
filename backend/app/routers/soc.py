@@ -1120,6 +1120,7 @@ async def explain_decision(decision_id: str):
     }
     """
     from app.services.nl_templates import nl_engine
+    from app.services.pii_redaction import redact_payload
     from app.services.similar_cases import similar_cases_svc, SIMILAR_CASES_MIN_PRIOR
     from app.domains.soc.config import SOC_FACTORS
 
@@ -1312,7 +1313,7 @@ async def explain_decision(decision_id: str):
 
     nl_explanation = nl_engine.render_l1(category, context)
 
-    return {
+    return redact_payload({
         "decision_id":           decision_id,
         "nl_explanation":        nl_explanation,
         "similar_cases":         similar_cases,
@@ -1321,7 +1322,7 @@ async def explain_decision(decision_id: str):
         "category":              category,
         "action":                action,
         "confidence":            conf,
-    }
+    }, f"/soc/explain/{decision_id}")
 
 
 # ============================================================================

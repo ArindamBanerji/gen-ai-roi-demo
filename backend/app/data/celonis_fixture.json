@@ -1,0 +1,7 @@
+{
+  "provenance": "sample",
+  "models": [
+    {"id": "purchase-to-pay", "name": "Purchase-to-Pay", "bottleneck": "Invoice exception resolution", "source_system": "Celonis"},
+    {"id": "supplier-onboarding", "name": "Supplier Onboarding", "bottleneck": "Approval handoff", "source_system": "Celonis"}
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "provenance": "sample",
+  "records": [
+    {"BusinessPartner": "1000001", "BusinessPartnerFullName": "Acme Industrial Supply", "BusinessPartnerCategory": "2", "source_system": "SAP S/4HANA"},
+    {"BusinessPartner": "1000002", "BusinessPartnerFullName": "Northwind Components", "BusinessPartnerCategory": "2", "source_system": "SAP S/4HANA"}
+  ]
+}

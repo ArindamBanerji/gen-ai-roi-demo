@@ -5,6 +5,7 @@ Main application entry point with CORS and router registration.
 from contextlib import asynccontextmanager
 import logging
 import os as _cors_os
+from typing import cast
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -90,7 +91,7 @@ def _safe_entity_cache_health() -> dict:
     try:
         from app.routers import triage
 
-        return triage._soc_entity_cache_diagnostics()
+        return cast(dict, triage._soc_entity_cache_diagnostics())
     except Exception as exc:
         return {
             "available": False,
@@ -140,7 +141,7 @@ async def health():
     }
 
 # Router imports
-from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae, admin, simulation, evaluation, judgment, framework_router, eval_router, governance_router, whatif_router, time_machine_router, discoveries_router, platform, shadow, soc_learning, authority, explain, soc_demo_beats
+from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae, admin, simulation, evaluation, judgment, framework_router, eval_router, governance_router, whatif_router, time_machine_router, discoveries_router, platform, shadow, soc_learning, authority, explain, soc_demo_beats, enterprise
 from app.routers.servicenow_router import router as servicenow_router
 from app.routers.rl_router import router as rl_router
 from app.routers.cohort_status_router import router as cohort_status_router
@@ -182,6 +183,7 @@ app.include_router(shadow.router, prefix="/api/soc", tags=["Shadow Promotion"])
 app.include_router(cohort_status_router, prefix="/api", tags=["Campaign Cohorts"])
 app.include_router(rl_router, prefix="/api", tags=["RL Observability"])
 app.include_router(servicenow_router)
+app.include_router(enterprise.router, prefix="/api", tags=["Enterprise Connectors"])
 from app.routers.auth import router as auth_router
 app.include_router(auth_router)
 

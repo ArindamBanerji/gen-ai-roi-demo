@@ -41,7 +41,7 @@ async def compute_factor_vector_with_provenance(alert, computers, graph):
     The scorer input remains the same dense float vector.  The provenance map is
     an audit sidecar persisted on Decision nodes so K3 fallbacks are visible.
     """
-    values = []
+    values: list[float] = []
     names = []
     provenance = {}
     for computer in computers:
@@ -66,6 +66,7 @@ async def compute_factor_vector_with_provenance(alert, computers, graph):
 
 async def _factor_provenance(name: str, alert: Any, graph: Any, value: float) -> dict:
     """Return audit provenance for one extracted SOC factor."""
+    fields: tuple[str, ...]
     if name == "privileged_identity_context":
         fields = (
             "user_risk_score",

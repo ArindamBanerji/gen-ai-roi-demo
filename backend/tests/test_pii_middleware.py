@@ -6,11 +6,13 @@ from fastapi.responses import PlainTextResponse
 from fastapi.testclient import TestClient
 
 import app.middleware.pii_redaction as pii_redaction
+import app.services.pii_redaction as pii_service
 from app.middleware.pii_redaction import (
     PIIRedactionMiddleware,
     _is_enabled,
     _should_skip,
 )
+from app.services.pii_redaction import redact_payload
 from ci_platform.redaction.pii_redactor import PIIRedactor
 
 
@@ -20,11 +22,11 @@ def _client() -> TestClient:
 
     @app.get("/api/test/json")
     async def json_response():
-        return {
+        return redact_payload({
             "alert_id": "ALERT-001",
             "message": "Contact john.doe@customer.com from 10.0.1.54",
             "nested": {"email": "analyst@firm.com"},
-        }
+        }, "/api/test/json")
 
     @app.get("/api/test/plain")
     async def plain_response():
@@ -42,11 +44,11 @@ def _client() -> TestClient:
 
 
 def setup_function():
-    pii_redaction._redactor = None
+    pii_service._redactor = None
 
 
 def teardown_function():
-    pii_redaction._redactor = None
+    pii_service._redactor = None
     os.environ.pop("PII_REDACTION_ENABLED", None)
 
 
@@ -140,7 +142,7 @@ def test_middleware_fail_open_returns_original_response():
             raise RuntimeError("boom")
 
     with patch.dict(os.environ, {"PII_REDACTION_ENABLED": "true"}, clear=False):
-        with patch("app.middleware.pii_redaction._get_redactor", return_value=BrokenRedactor()):
+        with patch("app.services.pii_redaction._get_redactor", return_value=BrokenRedactor()):
             response = _client().get("/api/test/json")
 
     assert response.status_code == 200

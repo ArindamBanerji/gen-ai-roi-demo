@@ -17,7 +17,7 @@ export default function NoPrecedentSidebar({ alertId, confidence }: { alertId: s
   return <aside className="rounded-xl border border-fuchsia-700/50 bg-slate-950/80 p-4" data-testid="no-precedent-sidebar" aria-label="No precedent assessment">
     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-fuchsia-300">SOC-NOPRECEDENT · honest retrieval</p>
     <h3 className="mt-1 text-lg font-semibold text-white">Similar past cases</h3>
-    {error ? <p className="mt-3 text-sm text-slate-400">Precedent search unavailable: {error}</p> : novel ? <p className="mt-3 rounded-lg border border-fuchsia-700/50 bg-fuchsia-950/30 p-3 text-sm font-medium text-fuchsia-100">NONE — unprecedented here.</p> : <p className="mt-3 text-sm text-slate-300">{String(data?.similar_count ?? 'Available')} comparable cases found.</p>}
+    {error ? <p className="mt-3 text-sm text-slate-400">Precedent search unavailable: {error}</p> : novel ? <p className="mt-3 rounded-lg border border-fuchsia-700/50 bg-fuchsia-950/30 p-3 text-sm font-medium text-fuchsia-100">NONE — unprecedented here.</p> : <p className="mt-3 text-sm text-slate-400">Precedent search unavailable: no verified historical precedent records.</p>}
     {typeof confidence === 'number' && Number.isFinite(confidence) && <p className="mt-3 text-xs text-slate-500">Current confidence: {(confidence * 100).toFixed(1)}%</p>}
   </aside>
 }

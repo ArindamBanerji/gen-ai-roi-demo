@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, Sequence, cast
 
 import numpy as np
 
@@ -151,7 +151,7 @@ class NoPrecedentDetector:
         vector = np.asarray(values, dtype=np.float64)
         if vector.shape != (len(self.factor_names),) or not np.all(np.isfinite(vector)):
             raise ValueError(f"factor_vector must contain {len(self.factor_names)} finite values")
-        return vector
+        return cast(np.ndarray[Any, Any], vector)
 
 
 class WhatIfInspector:
@@ -181,15 +181,16 @@ class WhatIfInspector:
         vector = self.detector._vector(factor_vector)
         category_index = self.detector._category_index(category)
         centroids = self.detector.centroids[category_index]
-        try:
-            current_index = self.detector.actions.index(current_action)
-        except ValueError as exc:
-            raise ValueError(f"Unknown SOC scoring action: {current_action}") from exc
+        # Routing actions such as ``auto_remediate`` and ``refer_to_analyst``
+        # are valid triage outcomes but are not centroid actions.  They still
+        # need a read-only what-if explanation, so treat every scorer action
+        # as an alternative when the current outcome has no centroid row.
+        current_index = self.detector.actions.index(current_action) if current_action in self.detector.actions else None
         distances = np.linalg.norm(centroids - vector, axis=1)
         alternatives = [index for index in range(len(self.detector.actions)) if index != current_index]
         alternative_index = min(alternatives, key=lambda index: float(distances[index]))
         alternative_action = self.detector.actions[alternative_index]
-        current_centroid = centroids[current_index]
+        current_centroid = vector if current_index is None else centroids[current_index]
         alternative_centroid = centroids[alternative_index]
         boundaries: list[FactorBoundary] = []
         for name, value, left, right in zip(
@@ -254,4 +255,3 @@ def build_inspector(scorer: Any | None = None) -> WhatIfInspector:
         actions=detector.actions,
         factor_names=detector.factor_names,
     )
-

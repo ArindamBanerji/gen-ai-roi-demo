@@ -30,6 +30,7 @@ from app.services.audit import record_decision
 from app.services.event_bus import event_bus, DecisionMade, OutcomeVerified, GraphMutated
 from app.services.soc_context_split import split_soc_security_context
 from app.services.soc_situation_pattern import build_campaign_context_payload
+from app.services.pii_redaction import redact_payload
 from ci_platform.copilot_core import EntityCache, EntityContextCacheAdapter
 
 
@@ -424,7 +425,7 @@ async def get_alert_queue():
             })
 
         print(f"[TRIAGE] Returning {len(alerts)} alerts from AGE")
-        response = {"alerts": alerts}
+        response = redact_payload({"alerts": alerts}, "/alerts/queue")
         print(f"[TRIAGE] Response structure: {response}")
         return response
 

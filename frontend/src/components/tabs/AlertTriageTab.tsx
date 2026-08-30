@@ -1576,7 +1576,7 @@ export default function AlertTriageTab() {
           )}
 
           {analysis?.no_precedent?.is_novel && (
-            <aside className="rounded-lg border border-amber-500/70 bg-amber-950/30 p-4" data-testid="no-precedent-sidebar">
+            <aside className="rounded-lg border border-amber-500/70 bg-amber-950/30 p-4">
               <h3 className="font-semibold text-amber-200">No precedent found</h3>
               <p className="mt-1 text-sm text-amber-100">I don&apos;t have enough evidence to identify a similar past decision.</p>
               <p className="mt-2 text-xs text-amber-300">Nearest action profile: {analysis.no_precedent.nearest_action} · distance {analysis.no_precedent.min_distance.toFixed(3)} · boundary {analysis.no_precedent.threshold.toFixed(3)}</p>
