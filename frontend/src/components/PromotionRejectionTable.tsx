@@ -21,6 +21,7 @@ const REASON_LABELS: Record<string, string> = {
   correctness_floor: 'Correctness floor',
   conservation: 'Conservation gate',
   variance_stability: 'Variance stability',
+  statistical_significance: 'Statistical significance',
 }
 
 function count(value: unknown): number {

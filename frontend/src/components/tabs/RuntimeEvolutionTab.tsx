@@ -30,6 +30,7 @@ import { domainConfig } from '@/lib/domain'
 import { ensureArray, ensureObject } from '@/lib/guards'
 import CampaignTimelinePanel from '../CampaignTimelinePanel'
 import RejectionMomentPanel from '../RejectionMomentPanel'
+import PromotionRejectionTable from '../PromotionRejectionTable'
 import { LearningControlRoom } from '../LearningControlRoom'
 
 const SOC_API = 'http://127.0.0.1:8001'
@@ -1388,6 +1389,7 @@ export default function RuntimeEvolutionTab() {
       <CampaignTimelinePanel />
       <LearningControlRoom />
       <RejectionMomentPanel />
+      <PromotionRejectionTable />
 
       {/* ── Mobile horizontal tab bar ─────────────────────────────────── */}
       <div className="md:hidden flex gap-1 bg-soc-card rounded-lg border border-gray-800 p-1">

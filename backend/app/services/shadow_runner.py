@@ -209,6 +209,13 @@ async def _flush_shadow_batch(graph_client: Any) -> None:
             total = len(comparisons)
             win_rate = wins / total if total else 0.0
             categories = sorted({comparison.category for comparison in comparisons})
+            paired_outcomes = [
+                {
+                    "baseline": comparison.production_action == comparison.correct_action,
+                    "candidate": comparison.variant_action == comparison.correct_action,
+                }
+                for comparison in comparisons
+            ]
 
             try:
                 await record_evolution_event(
@@ -225,7 +232,12 @@ async def _flush_shadow_batch(graph_client: Any) -> None:
                         "win_rate": round(win_rate, 4),
                         "categories_covered": categories,
                     },
-                    metadata={"wins": wins, "total": total, "win": wins > total // 2},
+                    metadata={
+                        "wins": wins,
+                        "total": total,
+                        "win": wins > total // 2,
+                        "paired_outcomes": paired_outcomes,
+                    },
                     impact="medium" if win_rate > 0.55 else "low",
                     magnitude=round(win_rate, 4),
                 )

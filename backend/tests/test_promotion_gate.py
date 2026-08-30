@@ -152,6 +152,7 @@ async def test_batch_std_above_limit_rejects(monkeypatch):
             "batch_count": gate.MIN_SHADOW_BATCHES,
             "batch_std": 0.11,
             "win_rates": [0.40, 0.60, 0.80],
+            "paired_outcomes": [{"baseline": False, "candidate": True}] * 50,
         }),
     )
 
@@ -206,6 +207,7 @@ async def test_all_gate_conditions_pass_promotes_with_evidence(monkeypatch):
             "batch_count": gate.MIN_SHADOW_BATCHES,
             "batch_std": 0.02,
             "win_rates": [0.58, 0.60, 0.62],
+            "paired_outcomes": [{"baseline": False, "candidate": True}] * 50,
         }),
     )
 

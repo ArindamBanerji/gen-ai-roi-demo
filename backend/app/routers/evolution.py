@@ -759,8 +759,7 @@ async def get_soc_rejection_summary():
     }
     for item in rejected:
         reason = str(item.get("reason") or "")
-        if reason in breakdown:
-            breakdown[reason] += 1
+        breakdown[reason] = breakdown.get(reason, 0) + 1
 
     total_rejected = int(summary.get("variants_rejected") or len(rejected) or 0)
     if total_rejected > sum(breakdown.values()):
@@ -955,6 +954,8 @@ def _soc_rejection_reason(event: dict[str, Any]) -> str:
         return "conservation"
     if "variance" in raw or "stability" in raw:
         return "variance_stability"
+    if "bootstrap" in raw or "statistical" in raw or "significant" in raw:
+        return "statistical_significance"
     return "correctness_floor"
 
 
@@ -966,4 +967,6 @@ def _soc_rejection_detail(event: dict[str, Any], reason: str) -> str:
         return "conservation gate blocked promotion"
     if reason == "variance_stability":
         return "variance stability clause failed"
+    if reason == "statistical_significance":
+        return "paired bootstrap significance clause failed"
     return "correctness floor clause failed"

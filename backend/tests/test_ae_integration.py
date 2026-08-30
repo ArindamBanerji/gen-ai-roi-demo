@@ -387,6 +387,7 @@ async def test_full_promotion_lifecycle_promotes_and_rolls_back(monkeypatch):
             "batch_count": gate.MIN_SHADOW_BATCHES,
             "batch_std": 0.01,
             "win_rates": [0.68, 0.70, 0.69],
+            "paired_outcomes": [{"baseline": False, "candidate": True}] * 50,
         }),
     )
     monkeypatch.setattr(gate, "_get_daily_volume", lambda: 200.0)
