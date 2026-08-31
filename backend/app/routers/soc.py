@@ -1065,7 +1065,16 @@ async def get_learning_state_endpoint():
     verified_decisions = 0
     try:
         from app.state.graph_snapshot import get_snapshot as _get_snap_ls
-        verified_decisions = _get_snap_ls().verified_decisions  # SOURCE: GraphSnapshot (graph-backed, survives restart)
+        snapshot = _get_snap_ls()  # SOURCE: GraphSnapshot (graph-backed, survives restart)
+        verified_decisions = snapshot.verified_decisions
+        if decision_count < verified_decisions:
+            decision_count = verified_decisions
+        if not iks_v2_data.get("iks_v2") and snapshot.iks_score > 0:
+            iks_v2_data = {
+                "iks_v2": snapshot.iks_score,
+                "components": {},
+                "interpretation": "Snapshot-backed institutional knowledge score",
+            }
     except Exception as _exc:
         print(f"[SOC] learning-state verified_decisions query failed: {_exc}")
 
@@ -2918,6 +2927,14 @@ async def _tab2_content() -> dict:
             iks_interpretation = iks_data.get("interpretation", "")
     except Exception as _exc:
         print(f"[SOC] tab2 iks_v2 query failed: {_exc}")
+        try:
+            from app.state.graph_snapshot import get_snapshot as _get_snap_t2_iks
+            snapshot_iks = float(_get_snap_t2_iks().iks_score)
+            if iks_score <= 0.0 and snapshot_iks > 0.0:
+                iks_score = snapshot_iks
+                iks_interpretation = interpret_iks_v2(iks_score)
+        except Exception as _snap_iks_exc:
+            print(f"[SOC] tab2 snapshot IKS fallback unavailable: {_snap_iks_exc}")
 
     try:
         rows = await graph_client.run_query(

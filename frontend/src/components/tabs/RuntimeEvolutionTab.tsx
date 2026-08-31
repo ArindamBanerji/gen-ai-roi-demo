@@ -502,7 +502,12 @@ export default function RuntimeEvolutionTab() {
   const [centroidEvoLoading, setCentroidEvoLoading] = useState(false)
   const [centroidEvoError, setCentroidEvoError] = useState(false)
   const [profileError, setProfileError] = useState(false)
-  const [learningStateData, setLearningStateData] = useState<{ iks_v2: number } | null>(null)
+  const [learningStateData, setLearningStateData] = useState<{
+    iks_v2: number
+    verified_decisions?: number
+    decision_count?: number
+    total_decisions?: number
+  } | null>(null)
   const [activeSection, setActiveSection] = useState<'a' | 'b' | 'c' | 'd'>('a')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [pendingDecisionId, setPendingDecisionId] = useState<string | null>(null)
@@ -642,6 +647,7 @@ export default function RuntimeEvolutionTab() {
   useEffect(() => {
     if (result) {
       loadRewardSummary()
+      loadLearningState()
     }
   }, [result])
 
@@ -1138,7 +1144,13 @@ export default function RuntimeEvolutionTab() {
   // IKS v1 (centroid-drift) is 0 until centroids drift from bootstrap.
   // Prefer IKS v2 (AGE composite) which reflects actual decision volume.
   const iksCurrentDisplay: number | null = learningStateData?.iks_v2 ?? iks?.current ?? null
-  const decisionCount = iks?.decision_count ?? profileState?.decision_count ?? 0
+  const learningCounts = learningStateData
+    ? [learningStateData.verified_decisions, learningStateData.decision_count, learningStateData.total_decisions]
+        .filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+    : []
+  const decisionCount = learningCounts.length > 0
+    ? Math.max(...learningCounts, iks?.decision_count ?? 0, profileState?.decision_count ?? 0)
+    : iks?.decision_count ?? profileState?.decision_count ?? 0
   const conservationLearningStatus = getLearningStatusMeta(healthData?.status)
   const learningStateStatus = getLearningStatusMeta(healthData?.status, true)
 
@@ -1321,15 +1333,15 @@ export default function RuntimeEvolutionTab() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Categories converging</span>
-                <span className="font-bold text-green-400">{categoryStats?.converging ?? 0}</span>
+                <span className="font-bold text-green-400">{categoryStats?.converging ?? '\u2014'}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Categories adapting</span>
-                <span className="font-bold text-amber-400">{categoryStats?.adapting ?? 0}</span>
+                <span className="font-bold text-amber-400">{categoryStats?.adapting ?? '\u2014'}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Categories cold</span>
-                <span className="font-bold text-gray-500">{categoryStats?.cold ?? (profileState?.categories.length ?? 6)}</span>
+                <span className="font-bold text-gray-500">{categoryStats?.cold ?? '\u2014'}</span>
               </div>
               {!categoryStats && decisionCount === 0 && (
                 <p className="text-xs text-gray-500 italic mt-1">(cold-start &mdash; {decisionCount} decisions recorded)</p>
@@ -1389,7 +1401,6 @@ export default function RuntimeEvolutionTab() {
       <CampaignTimelinePanel />
       <LearningControlRoom />
       <RejectionMomentPanel />
-      <PromotionRejectionTable />
 
       {/* ── Mobile horizontal tab bar ─────────────────────────────────── */}
       <div className="md:hidden flex gap-1 bg-soc-card rounded-lg border border-gray-800 p-1">
@@ -3599,6 +3610,7 @@ export default function RuntimeEvolutionTab() {
           </div>
 
         </div>{/* end main sections */}
+        <PromotionRejectionTable />
       </div>{/* end left-rail + sections flex */}
 
     </div>
