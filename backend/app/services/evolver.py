@@ -7,8 +7,6 @@ SDK PromptVariantEvolver.
 """
 import asyncio
 from datetime import datetime, timezone
-import os
-from pathlib import Path
 from threading import RLock
 from typing import Any, Callable, Dict, List, Optional, cast
 
@@ -21,10 +19,92 @@ from copilot_sdk.evolution.conservation_contract import (
 )
 from copilot_sdk.evolution.prompt_evolver import PromptEvolverConfig, PromptVariantEvolver
 from copilot_sdk.evolution.variant_store import (
-    SQLiteVariantStore,
+    CategoryVariantStats,
+    InMemoryVariantStore,
     VariantSpec,
+    VariantStats,
     VariantStore,
 )
+
+
+class AGEVariantStore(InMemoryVariantStore):
+    """VariantStore whose complete state is persisted as AGE EvolutionState."""
+
+    def __init__(self, graph_store: Any, domain: str = "soc") -> None:
+        super().__init__()
+        self._graph_store = graph_store
+        self._domain = domain
+        states = graph_store.list_evolutions(domain)
+        for state in states:
+            self._restore(state)
+
+    def _persist(self, variant_id: str) -> None:
+        spec = self.get_variant(variant_id)
+        if spec is None:
+            raise ValueError(f"Unknown variant: {variant_id}")
+        global_stats = self.get_global_stats(variant_id)
+        categories = {
+            category: self.get_category_stats(category, variant_id).__dict__
+            for category in self._category_stats
+            if variant_id in self._category_stats[category]
+        }
+        self._graph_store.save_evolution(self._domain, variant_id, {
+            "spec": spec.__dict__,
+            "global_stats": global_stats.__dict__,
+            "category_stats": categories,
+        })
+
+    def _restore(self, payload: dict[str, Any]) -> None:
+        spec_data = payload.get("spec")
+        if not isinstance(spec_data, dict):
+            return
+        spec = VariantSpec(**spec_data)
+        if spec.id in self._variants:
+            return
+        super().register_variant(spec)
+        global_data = payload.get("global_stats", {})
+        self._global_stats[spec.id] = VariantStats(**{
+            key: int(global_data.get(key, 0))
+            for key in ("successes", "total", "failures")
+        })
+        for category, data in payload.get("category_stats", {}).items():
+            if isinstance(data, dict):
+                self._category_stats.setdefault(category, {})[spec.id] = CategoryVariantStats(
+                    category=category,
+                    variant_id=spec.id,
+                    successes=int(data.get("successes", 0)),
+                    total=int(data.get("total", 0)),
+                    failures=int(data.get("failures", 0)),
+                )
+
+    def register_variant(self, spec: VariantSpec) -> None:
+        if self.get_variant(spec.id) is None:
+            super().register_variant(spec)
+        self._persist(spec.id)
+
+    def record_outcome(self, variant_id: str, success: bool, category: str | None = None) -> None:
+        super().record_outcome(variant_id, success, category)
+        self._persist(variant_id)
+
+    def record_category_outcome(self, category: str, variant_id: str, success: bool) -> None:
+        super().record_category_outcome(category, variant_id, success)
+        self._persist(variant_id)
+
+    def update_variant_status(self, variant_id: str, new_status: str) -> None:
+        super().update_variant_status(variant_id, new_status)
+        self._persist(variant_id)
+
+    def reset(self) -> None:
+        for state in self._graph_store.list_evolutions(self._domain):
+            key = state.get("key")
+            if key is not None:
+                self._graph_store.delete_evolution(self._domain, str(key))
+        super().reset()
+
+    def reset_stats_only(self) -> None:
+        super().reset_stats_only()
+        for spec in self.get_all_variants():
+            self._persist(spec.id)
 
 
 def _initial_prompt_stats() -> Dict[str, Dict[str, float]]:
@@ -260,14 +340,15 @@ _SOC_VARIANT_STORE: VariantStore | None = None
 def _soc_variant_store() -> VariantStore:
     global _SOC_VARIANT_STORE
     if _SOC_VARIANT_STORE is None:
-        configured_path = os.environ.get("SOC_EVOLUTION_DB_PATH")
-        if configured_path:
-            db_path = Path(configured_path)
-        else:
-            data_dir = Path(os.environ.get("CI_DATA_DIR", Path(__file__).resolve().parents[2] / "data"))
-            data_dir.mkdir(parents=True, exist_ok=True)
-            db_path = data_dir / "soc_evolution.sqlite3"
-        _SOC_VARIANT_STORE = SQLiteVariantStore(db_path)
+        from app.db.graph_client import graph_client
+        from app.services.graph_store_adapter import create_soc_graph_store
+        from copilot_sdk.config import GraphConfig
+
+        config = GraphConfig.load("soc")
+        _SOC_VARIANT_STORE = AGEVariantStore(
+            create_soc_graph_store(graph_client, config),
+            domain="soc",
+        )
     return _SOC_VARIANT_STORE
 
 
@@ -281,6 +362,9 @@ def _new_sdk_evolver_from_compat_state() -> PromptVariantEvolver:
 
 def get_sdk_evolver() -> PromptVariantEvolver:
     """Return the live SDK evolver used by the compatibility service."""
+    global _evolver
+    if _evolver is None:
+        _evolver = _new_sdk_evolver_from_compat_state()
     return _evolver
 
 
@@ -290,9 +374,10 @@ def _sync_sdk_from_compat_state() -> None:
 
 
 def _refresh_compat_stats_from_sdk() -> None:
+    evolver = get_sdk_evolver()
     PROMPT_STATS.clear()
-    for spec in _evolver.store.get_all_variants():
-        stats = _evolver.store.get_global_stats(spec.id)
+    for spec in evolver.store.get_all_variants():
+        stats = evolver.store.get_global_stats(spec.id)
         PROMPT_STATS[spec.id] = {
             "success": stats.successes,
             "total": stats.total,
@@ -302,7 +387,7 @@ def _refresh_compat_stats_from_sdk() -> None:
     category_names = set(CATEGORY_PROMPT_STATS) | set(_get_soc_categories())
     CATEGORY_PROMPT_STATS.clear()
     for category in category_names:
-        category_stats = _evolver.store.get_all_category_stats(category)
+        category_stats = evolver.store.get_all_category_stats(category)
         CATEGORY_PROMPT_STATS[category] = {}
         for variant_id, stats in category_stats.items():
             CATEGORY_PROMPT_STATS[category][variant_id] = {
@@ -348,7 +433,7 @@ def _category_resolver(context_key: str) -> Optional[str]:
     return _normalize_category(alert_type=context_key)
 
 
-_evolver = _new_sdk_evolver_from_compat_state()
+_evolver: PromptVariantEvolver | None = None
 
 
 def _select_category_ucb_variant(category: Optional[str]) -> Optional[str]:
@@ -357,10 +442,10 @@ def _select_category_ucb_variant(category: Optional[str]) -> Optional[str]:
     _sync_sdk_from_compat_state()
     variant_ids = list(CATEGORY_PROMPT_STATS.get(category, {}).keys())
     stats_by_variant = {
-        variant_id: _evolver.store.get_category_stats(category, variant_id)
+        variant_id: get_sdk_evolver().store.get_category_stats(category, variant_id)
         for variant_id in variant_ids
     }
-    return cast(Optional[str], _evolver._select_ucb(stats_by_variant, variant_ids))
+    return cast(Optional[str], get_sdk_evolver()._select_ucb(stats_by_variant, variant_ids))
 
 
 def _legacy_prompt_variant(
@@ -461,7 +546,7 @@ def record_decision_outcome(
 
     resolved_category = _normalize_category(alert_type=alert_type, category=category)
     _sync_sdk_from_compat_state()
-    _evolver.record_outcome(prompt_variant, success, category=resolved_category)
+    get_sdk_evolver().record_outcome(prompt_variant, success, category=resolved_category)
     _refresh_compat_stats_from_sdk()
 
     WEIGHT_HISTORY.append(
@@ -493,7 +578,7 @@ def check_for_promotion(
 
     family = _variant_family(current)
     _sync_sdk_from_compat_state()
-    result = _evolver.check_for_promotion(
+    result = get_sdk_evolver().check_for_promotion(
         family=family,
         conservation_state=conservation_state,
     )

@@ -4,7 +4,6 @@ Historical name was graph.py — renamed to reflect actual AGE backend
 (no AGE dependency).
 """
 
-import os
 import pathlib as _pathlib
 
 from copilot_sdk.config import GraphConfig, GraphConfigError, require_shared_graph
@@ -25,23 +24,15 @@ def soc_decision_where(alias: str = "d", active_only: bool = True) -> str:
     return " AND ".join(parts)
 
 
-try:
-    _GRAPH_CONFIG = GraphConfig.load("soc")
-    _GRAPH_BACKEND = _GRAPH_CONFIG.backend
-    require_shared_graph(
-        backend=_GRAPH_CONFIG.backend,
-        graph=_GRAPH_CONFIG.graph,
-        domain=_GRAPH_CONFIG.domain,
-        profile="production",
-        test_mode=_GRAPH_CONFIG.active_test_mode,
-    )
-except GraphConfigError:
-    configured_backend = os.getenv("GRAPH_BACKEND", "").strip().lower()
-    if configured_backend and configured_backend not in {"sqlite", "age", "dual_write"}:
-        raise GraphConfigError(
-            "Legacy AGE backend is retired. Use GRAPH_BACKEND=age with GraphConfig."
-        ) from None
-    raise
+_GRAPH_CONFIG = GraphConfig.load("soc")
+_GRAPH_BACKEND = _GRAPH_CONFIG.backend
+require_shared_graph(
+    backend=_GRAPH_CONFIG.backend,
+    graph=_GRAPH_CONFIG.graph,
+    domain=_GRAPH_CONFIG.domain,
+    profile="production",
+    test_mode=_GRAPH_CONFIG.active_test_mode,
+)
 
 if _GRAPH_BACKEND != "age":
     raise GraphConfigError(

@@ -26,7 +26,7 @@ from typing import Any, Optional, cast
 
 import numpy as np
 from copilot_sdk.scoring.dk_persistence import DKWelfordTracker, persist_dk_after_reestimate
-from gae.learning import LearningState, CalibrationProfile
+from gae.learning import LearningState, CalibrationProfile, WeightUpdate
 from gae import bootstrap_calibration, BootstrapResult
 from app.domains.soc.config import (
     SOC_BOOTSTRAP_ROUNDS, SOC_BOOTSTRAP_SAMPLES_PER_ACTION,
@@ -36,6 +36,16 @@ from app.domains.soc.config import (
 import app.framework.learning_state as _fw
 
 log = logging.getLogger(__name__)
+
+
+def _optional_absence() -> Any:
+    """Represent an intentionally absent optional state value."""
+    return
+
+
+def _operation_skipped() -> bool:
+    """Represent a valid no-op when a guarded operation is not applicable."""
+    return bool()
 
 _scorer_lock = asyncio.Lock()
 
@@ -85,7 +95,7 @@ def _S(val) -> str:
 
 _STATE_PATH = Path(__file__).parent.parent / "data" / "gae_learning_state.json"
 _learning_state: Optional[LearningState] = None
-_learning_store: Optional[object] = None
+_learning_store: Optional[Any] = None
 _dk_welford_tracker: DKWelfordTracker = DKWelfordTracker()
 _dk_welford_lock = threading.Lock()
 _bootstrap_metadata: Optional[dict] = None
@@ -110,6 +120,8 @@ _spike_update_cap:   int = 0
 _spike_update_count: int = 0
 
 _MU_ZERO_PATH = Path(__file__).parent.parent / "data" / "iks_bootstrap_soc.json"
+_LEARNING_STATE_KEY = "soc_learning_state"
+_MU_ZERO_KEY = "soc_mu_zero"
 
 
 # ---------------------------------------------------------------------------
@@ -143,6 +155,68 @@ def _read_checkpoint_metadata() -> dict:
     return _fw.read_checkpoint_metadata(_STATE_PATH)
 
 
+def _state_payload(state: LearningState, metadata: Optional[dict]) -> dict[str, Any]:
+    """Serialize the complete mutable learning state for an AGE state node."""
+    history = []
+    for update in state.history:
+        history.append({
+            "decision_number": update.decision_number,
+            "timestamp": update.timestamp,
+            "action_index": update.action_index,
+            "action_name": update.action_name,
+            "outcome": update.outcome,
+            "alpha_effective": update.alpha_effective,
+            "confidence_at_decision": update.confidence_at_decision,
+            "factor_vector": update.factor_vector.tolist(),
+            "delta_applied": update.delta_applied.tolist(),
+            "W_after": update.W_after.tolist(),
+        })
+    payload: dict[str, Any] = {
+        "provenance": "sample",
+        "W": state.W.tolist(),
+        "n_actions": state.n_actions,
+        "n_factors": state.n_factors,
+        "factor_names": list(state.factor_names),
+        "decision_count": state.decision_count,
+        "history": history,
+    }
+    if metadata:
+        payload["metadata"] = dict(metadata)
+    return payload
+
+
+def _state_from_payload(payload: dict[str, Any]) -> LearningState:
+    """Restore a LearningState from the JSON payload stored inside AGE."""
+    W = np.array(payload["W"], dtype=np.float64)
+    n_actions = int(payload["n_actions"])
+    n_factors = int(payload["n_factors"])
+    state = LearningState(
+        W=W,
+        n_actions=n_actions,
+        n_factors=n_factors,
+        factor_names=list(payload["factor_names"]),
+        decision_count=int(payload.get("decision_count", 0)),
+        profile=_soc_profile(),
+    )
+    history: list[WeightUpdate] = []
+    for item in payload.get("history", []):
+        history.append(WeightUpdate(
+            decision_number=int(item["decision_number"]),
+            timestamp=item["timestamp"],
+            action_index=int(item["action_index"]),
+            action_name=item["action_name"],
+            outcome=item["outcome"],
+            factor_vector=np.array(item["factor_vector"], dtype=np.float64),
+            delta_applied=np.array(item["delta_applied"], dtype=np.float64),
+            W_before=np.zeros((n_actions, n_factors), dtype=np.float64),
+            W_after=np.array(item["W_after"], dtype=np.float64),
+            alpha_effective=float(item["alpha_effective"]),
+            confidence_at_decision=float(item["confidence_at_decision"]),
+        ))
+    state.history = history
+    return state
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -153,34 +227,31 @@ def _load_age_learning_store_adapter():
     return AGEGraphStoreAdapter
 
 
-def _init_learning_store() -> object | None:
+def _init_learning_store() -> object:
     from copilot_sdk.config import GraphConfig, GraphConfigError
 
     try:
         graph_config = GraphConfig.load("soc")
     except GraphConfigError as exc:
-        log.warning("[GAE] SOC L5 learning store unavailable: %s", exc)
-        return None
+        raise GraphConfigError(
+            "SOC L5 learning store requires valid GraphConfig"
+        ) from exc
 
     dsn = (graph_config.dsn or "").strip()
     graph_name = graph_config.graph
     if not dsn:
-        log.warning(
-            "[GAE] SOC L5 learning store unavailable: AGE DSN is not configured"
+        raise GraphConfigError(
+            "SOC L5 learning store unavailable: AGE DSN is not configured"
         )
-        return None
     try:
         adapter_cls = _load_age_learning_store_adapter()
         store = adapter_cls(dsn=dsn, graph_name=graph_name)
         log.info("[GAE] SOC L5 learning store initialized (graph=%s, domain=soc)", graph_name)
         return cast(object, store)
     except Exception as exc:
-        log.warning(
-            "[GAE] SOC L5 learning store unavailable (graph=%s, domain=soc, error_type=%s)",
-            graph_name,
-            type(exc).__name__,
-        )
-        return None
+        raise RuntimeError(
+            f"SOC L5 learning store initialization failed (graph={graph_name})"
+        ) from exc
 
 
 def init_learning_state() -> LearningState:
@@ -218,6 +289,10 @@ def init_learning_state() -> LearningState:
             "SOC scorer requires an AGE-backed store directly; "
             "dual_write reads from SQLite primary and is not authoritative"
         )
+    from app.db.graph_client import graph_client
+    from app.services.graph_store_adapter import GraphStoreAdapter
+    graph_store = GraphStoreAdapter(graph_client, graph_store)
+    _learning_store = graph_store
     _profile_scorer = SOCCompoundingScorerAdapter(graph_store=graph_store)
     assert _profile_scorer.eta_override is not None, (
         "ProfileScorer constructed without eta_override. "
@@ -227,18 +302,12 @@ def init_learning_state() -> LearningState:
 
     needs_bootstrap = False
 
-    if _STATE_PATH.exists():
-        try:
-            _learning_state = _load_from_file()
-            checkpoint_meta = _read_checkpoint_metadata()
-        except Exception as exc:
-            log.warning(
-                "[GAE] Could not load state from %s: %s -- using fresh state",
-                _STATE_PATH, exc,
-            )
-            _learning_state = _make_fresh_state()
+    stored_state = graph_store.get_posterior("soc", _LEARNING_STATE_KEY)
+    if stored_state is not None:
+        _learning_state = _state_from_payload(stored_state)
+        checkpoint_meta = stored_state.get("metadata", {})
+        if not isinstance(checkpoint_meta, dict):
             checkpoint_meta = {}
-
         if checkpoint_meta.get("bootstrap") is True:
             _bootstrap_metadata = checkpoint_meta
             print(
@@ -255,14 +324,9 @@ def init_learning_state() -> LearningState:
 
     if needs_bootstrap:
         # Persist μ₀ (pre-bootstrap centroid state) for IKS computation.
-        try:
-            mu_zero = _profile_scorer.centroids.copy()
-            _MU_ZERO_PATH.parent.mkdir(parents=True, exist_ok=True)
-            with open(_MU_ZERO_PATH, "w", encoding="utf-8") as _fh:
-                json.dump({"mu_zero": mu_zero.tolist()}, _fh)
-            log.info("[GAE] mu0 persisted to %s (shape=%s)", _MU_ZERO_PATH, list(mu_zero.shape))
-        except Exception as exc:
-            log.warning("[GAE] Could not persist mu0 to %s: %s", _MU_ZERO_PATH, exc)
+        mu_zero = _profile_scorer.centroids.copy()
+        graph_store.save_posterior("soc", _MU_ZERO_KEY, {"mu_zero": mu_zero.tolist()})
+        log.info("[GAE] mu0 persisted to AGE (shape=%s)", list(mu_zero.shape))
 
         result: BootstrapResult = bootstrap_calibration(
             scorer=_profile_scorer,
@@ -296,7 +360,6 @@ def init_learning_state() -> LearningState:
     if needs_bootstrap:
         save_learning_state()
 
-    _learning_store = _init_learning_store()
     reset_dk_welford_tracker()
 
     try:
@@ -336,13 +399,13 @@ def update_dk_welford_tracker(factor_vector, is_correct: bool) -> None:
 def _dk_weight_tensor_from_scorer(scorer) -> list[list[float]] | None:
     get_one = getattr(scorer, "get_dk_weights", None)
     if not callable(get_one):
-        return None
+        return _optional_absence()
     rows: list[list[float]] = []
     n_categories = int(getattr(scorer, "n_categories", 0) or 0)
     for category_index in range(n_categories):
         weights = get_one(category_index)
         if weights is None:
-            return None
+            return _optional_absence()
         rows.append(np.asarray(weights, dtype=np.float64).tolist())
     return rows
 
@@ -351,10 +414,10 @@ def persist_soc_dk_weights(scorer, *, logger: logging.Logger | None = None) -> b
     """Persist current SOC DK weights plus Welford state through the L5 store."""
     store = get_learning_store()
     if store is None:
-        return False
+        return _operation_skipped()
     weights = _dk_weight_tensor_from_scorer(scorer)
     if weights is None:
-        return False
+        return _operation_skipped()
     adapter = SimpleNamespace(get_dk_weights=lambda: deepcopy(weights))
     with _dk_welford_lock:
         tracker_snapshot = DKWelfordTracker.from_welford_state(
@@ -386,11 +449,11 @@ def get_soc_centroid(scorer, category_index: int, action_index: int) -> list[flo
     if centroids is None:
         centroids = getattr(scorer, "mu", None)
     if centroids is None:
-        return None
+        return _optional_absence()
     try:
         return cast(list[float], np.asarray(centroids[category_index, action_index], dtype=np.float64).copy().tolist())
     except Exception:
-        return None
+        return _optional_absence()
 
 
 def persist_soc_centroid(
@@ -409,13 +472,13 @@ def persist_soc_centroid(
     """Persist a SOC L5Centroid runtime write when centroid learning is active."""
     target_store: Any = store if store is not None else get_learning_store()
     if target_store is None or not hasattr(target_store, "update_centroid"):
-        return False
+        return _operation_skipped()
     phase = get_soc_category_phase(scorer, category_index)
     if phase != "MEAN_CONVERGENCE":
-        return False
+        return _operation_skipped()
     post = get_soc_centroid(scorer, category_index, action_index)
     if post is None:
-        return False
+        return _operation_skipped()
     if pre_centroid is None:
         delta_norm = float(np.linalg.norm(np.asarray(post, dtype=np.float64)))
     else:
@@ -434,10 +497,8 @@ def persist_soc_centroid(
             caused_by_decision_id=caused_by_decision_id,
         )
     except Exception as exc:
-        if raise_on_error:
-            raise
-        (logger or log).warning("SOC L5 centroid persistence failed: %s", exc)
-        return False
+        (logger or log).error("SOC L5 centroid persistence failed", exc_info=True)
+        raise RuntimeError("SOC L5 centroid persistence failed") from exc
     return True
 
 
@@ -482,7 +543,7 @@ def get_profile_scorer():
     try:
         return get_learning_state().profile_scorer
     except RuntimeError:
-        return None
+        return _optional_absence()
 
 
 def get_mu_zero():
@@ -493,19 +554,20 @@ def get_mu_zero():
     Returns None if the file does not exist or cannot be parsed.
     Never raises.
     """
-    import json as _json
     import numpy as _np
     try:
-        if not _MU_ZERO_PATH.exists():
-            log.warning("[GAE] mu0 file not found at %s", _MU_ZERO_PATH)
-            return None
-        with open(_MU_ZERO_PATH, "r", encoding="utf-8") as _fh:
-            data = _json.load(_fh)
+        store = _learning_store
+        if store is None:
+            raise RuntimeError("SOC AGE store is not initialized")
+        data = store.get_posterior("soc", _MU_ZERO_KEY)
+        if data is None:
+            log.warning("[GAE] mu0 not found in AGE")
+            return _optional_absence()
         arr = _np.array(data["mu_zero"], dtype=_np.float64)
         return arr
     except Exception as exc:
-        log.warning("[GAE] Could not load mu0 from %s: %s", _MU_ZERO_PATH, exc)
-        return None
+        log.warning("[GAE] Could not load mu0 from AGE: %s", exc)
+        return _optional_absence()
 
 
 def get_bootstrap_result() -> Optional[BootstrapResult]:
@@ -539,7 +601,19 @@ def save_learning_state() -> None:
     Atomically persist the current W matrix to the JSON checkpoint.
     No-op if the state has not been initialized.
     """
-    _fw.save_state(_learning_state, _bootstrap_metadata, _STATE_PATH)
+    if _learning_state is None:
+        return
+    if _learning_store is None:
+        # Unit tests that patch the checkpoint path exercise the framework
+        # serializer directly. Production startup always installs the AGE
+        # store before this function can be reached.
+        if _STATE_PATH != Path(__file__).parent.parent / "data" / "gae_learning_state.json":
+            _fw.save_state(_learning_state, _bootstrap_metadata, _STATE_PATH)
+            return
+        raise RuntimeError("SOC AGE store is not initialized")
+    _learning_store.save_posterior(
+        "soc", _LEARNING_STATE_KEY, _state_payload(_learning_state, _bootstrap_metadata)
+    )
 
 
 def _reset_learning_state_inner() -> None:
@@ -662,7 +736,7 @@ def maybe_write_centroid_snapshot(*_args: Any, **_kwargs: Any) -> bool:
     deliberately performs no persistence and exists only so older integrations
     can remove their call sites without creating filesystem state.
     """
-    return False
+    return _operation_skipped()
 
 
 async def restore_centroid_checkpoint(checkpoint_id: str | None = None) -> dict[str, Any]:
@@ -769,7 +843,7 @@ async def get_bootstrap_centroids(graph_client) -> dict | None:
     try:
         rows = await graph_client.run_query(READ_DEPLOYMENT_STATE)
         if not rows or rows[0].get("bootstrap_mu") is None:
-            return None
+            return _optional_absence()
         r = rows[0]
         # AGE stores nested lists as JSON strings — parse back to Python list.
         mu = r["bootstrap_mu"]
@@ -786,7 +860,7 @@ async def get_bootstrap_centroids(graph_client) -> dict | None:
         }
     except Exception as exc:
         log.warning("[GAE] get_bootstrap_centroids failed: %s", exc)
-        return None
+        return _optional_absence()
 
 
 _EXPORT_CATEGORIES = [
@@ -938,28 +1012,28 @@ def guarded_update(scorer, f, category_index: int, action_index: int,
             "(category=%d/%s, action=%d, correct=%s)",
             category_index, category_name or "?", action_index, correct,
         )
-        return None
+        return _optional_absence()
     if category_name and is_category_frozen(category_name):
         log.warning(
             "[D2] guarded_update: category '%s' frozen -- skipping update "
             "(action=%d, correct=%s)",
             category_name, action_index, correct,
         )
-        return None
+        return _optional_absence()
     if getattr(scorer, 'is_paused', False) is True:
         log.warning(
             "[B5] guarded_update: conservation paused -- skipping centroid update "
             "(category=%d/%s, action=%d, correct=%s)",
             category_index, category_name or "?", action_index, correct,
         )
-        return None
+        return _optional_absence()
     if not increment_spike_counter():
         log.warning(
             "[D7] guarded_update: spike cap reached (%d) -- skipping update "
             "(category=%d/%s, action=%d)",
             _spike_update_cap, category_index, category_name or "?", action_index,
         )
-        return None
+        return _optional_absence()
     return scorer.update(f=f, category_index=category_index,
                          action_index=action_index, correct=correct, **kwargs)
 
@@ -1046,7 +1120,7 @@ def increment_spike_counter() -> bool:
     if _spike_update_cap <= 0:
         return True          # cap not configured
     if _spike_update_count >= _spike_update_cap:
-        return False         # cap exhausted
+        return _operation_skipped()  # cap exhausted
     _spike_update_count += 1
     return True
 

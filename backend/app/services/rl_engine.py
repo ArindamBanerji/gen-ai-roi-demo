@@ -561,13 +561,18 @@ def get_exploration_policy() -> ExplorationPolicy:
 
         try:
             from app.services.posterior_store import PosteriorStore
+            from app.db.graph_client import graph_client
+            from app.services.graph_store_adapter import create_soc_graph_store
             from copilot_sdk.config import GraphConfig
 
             graph_config = GraphConfig.load(
                 "soc",
                 profile="test" if os.environ.get("PYTEST_CURRENT_TEST") else "production",
             )
-            _posterior_store = PosteriorStore(graph_config)
+            _posterior_store = PosteriorStore(
+                graph_config,
+                graph_store=create_soc_graph_store(graph_client, graph_config),
+            )
         except Exception as exc:
             log.error("[RL] graph configuration/posterior initialization failed: %s", exc)
             raise RuntimeError("[RL] graph configuration is required for exploration") from exc

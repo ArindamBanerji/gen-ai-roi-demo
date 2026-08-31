@@ -109,6 +109,7 @@ async def root():
     }
 
 @app.get("/health")
+@app.get("/api/health")
 async def health():
     from app.services import rl_engine
     from app.services.posterior_store import PosteriorStore
@@ -132,9 +133,15 @@ async def health():
             "error": str(exc),
         }
 
+    graph_health = {
+        "healthy": bool(posterior_health.get("healthy")),
+        "status": "healthy" if posterior_health.get("healthy") else "FAILED",
+        "source": "posterior_store",
+    }
     return {
-        "status": "healthy",
+        "status": "healthy" if graph_health["healthy"] else "degraded",
         "components": {
+            "graph": graph_health,
             "posterior_store": posterior_health,
             "entity_cache": _safe_entity_cache_health(),
         },

@@ -32,6 +32,7 @@ from app.services.soc_context_split import split_soc_security_context
 from app.services.soc_situation_pattern import build_campaign_context_payload
 from app.services.pii_redaction import redact_payload
 from ci_platform.copilot_core import EntityCache, EntityContextCacheAdapter
+from copilot_sdk.config import GraphConfig
 
 
 def _node_id(entity: dict, prefix: str = "") -> str:
@@ -282,7 +283,7 @@ def _soc_perf_emit_duration(
         "duration_ms": round(duration_ms, 3),
         "status": status,
         "exception_type": exception_type,
-        "graph_name": os.getenv("AGE_GRAPH_NAME"),
+        "graph_name": GraphConfig.load("soc").graph,
         "alert_id": alert_id,
         "decision_id": decision_id,
         "category": category,

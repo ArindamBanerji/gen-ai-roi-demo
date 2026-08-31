@@ -27,6 +27,7 @@ import warnings
 import hashlib
 import json as _json
 import logging
+from copilot_sdk.config import GraphConfig
 import os
 import time
 import uuid
@@ -34,6 +35,11 @@ import uuid
 log = logging.getLogger(__name__)
 
 _TRACE_FALSE_VALUES = {"", "0", "false", "no", "off"}
+
+
+def _soc_graph_name() -> str:
+    """Return the graph name from the shared SOC graph configuration."""
+    return GraphConfig.load("soc").graph
 _TRACE_MAX_QUERY_EVENTS = 50
 
 
@@ -119,7 +125,7 @@ class CampaignTraceCollector:
                 "duration_ms": round(duration_ms, 3),
                 "status": status,
                 "exception_type": exception_type,
-                "graph_name": os.getenv("AGE_GRAPH_NAME"),
+                "graph_name": _soc_graph_name(),
                 "alert_id": self.alert_id,
                 "decision_id": None,
                 "category": None,
@@ -145,7 +151,7 @@ class CampaignTraceCollector:
                 "duration_ms": round(duration_ms, 3),
                 "status": "ok",
                 "exception_type": None,
-                "graph_name": os.getenv("AGE_GRAPH_NAME"),
+                "graph_name": _soc_graph_name(),
                 "alert_id": self.alert_id,
                 "decision_id": None,
                 "category": None,

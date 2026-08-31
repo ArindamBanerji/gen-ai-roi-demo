@@ -1,8 +1,4 @@
-"""PostgreSQL persistence for RL Phase 2 Beta posteriors.
-
-This store intentionally uses a small relational table in the existing
-PostgreSQL instance. It does not use AGE graph nodes or Cypher.
-"""
+"""AGE persistence for RL Phase 2 Beta posteriors."""
 
 from __future__ import annotations
 
@@ -30,7 +26,7 @@ class PosteriorStore:
 
     _UNSET = object()
 
-    def __init__(self, graph_config: GraphConfig | str | None = _UNSET) -> None:
+    def __init__(self, graph_config: GraphConfig | str | None = _UNSET, *, graph_store: Any = None) -> None:
         """Create a store from the typed SOC graph configuration.
 
         A raw DSN remains accepted only for existing unit-level storage tests;
@@ -48,6 +44,7 @@ class PosteriorStore:
             raise ValueError("PosteriorStore requires GraphConfig")
 
         self._graph_config = graph_config if isinstance(graph_config, GraphConfig) else None
+        self._graph_store = graph_store
         if isinstance(graph_config, str):
             self._dsn = graph_config
         else:
@@ -60,6 +57,16 @@ class PosteriorStore:
             # storage endpoint override, not a replacement for GraphConfig.
             if was_unset and os.environ.get("PYTEST_CURRENT_TEST"):
                 self._dsn = self._resolve_dsn()
+            if self._graph_store is None:
+                from copilot_sdk.graph.factory import create_graph_store
+
+                self._graph_store = create_graph_store(
+                    domain="soc",
+                    backend=graph_config.backend,
+                    dsn=graph_config.dsn,
+                    graph_name=graph_config.graph,
+                    shared_graph_authorization=graph_config.authorized,
+                )
         self._table_ready = False
 
     @staticmethod
@@ -83,6 +90,11 @@ class PosteriorStore:
 
     def save(self, alphas: list[list[float]], betas: list[list[float]]) -> None:
         """Persist all posterior parameters using DELETE + INSERT in one transaction."""
+        if self._graph_store is not None:
+            self._graph_store.save_posterior(
+                "soc", "rl_posteriors", {"alphas": alphas, "betas": betas}
+            )
+            return
         try:
             self._ensure_table()
             rows = []
@@ -120,6 +132,20 @@ class PosteriorStore:
     def load(self, n_categories: int, n_actions: int) -> dict[str, list[list[float]]]:
         """Load posterior parameters; surface storage failures."""
         posteriors = _default_posteriors(n_categories, n_actions)
+        if self._graph_store is not None:
+            stored = self._graph_store.get_posterior("soc", "rl_posteriors")
+            if stored is None:
+                return posteriors
+            for key in ("alphas", "betas"):
+                rows = stored.get(key)
+                if not isinstance(rows, list):
+                    raise RuntimeError(f"[PosteriorStore] invalid AGE payload: {key}")
+                for category_index, row in enumerate(rows[:n_categories]):
+                    if not isinstance(row, list):
+                        raise RuntimeError("[PosteriorStore] invalid AGE posterior row")
+                    for action_index, value in enumerate(row[:n_actions]):
+                        posteriors[key][category_index][action_index] = float(value)
+            return posteriors
         try:
             self._ensure_table()
             import psycopg
@@ -142,6 +168,12 @@ class PosteriorStore:
         log.info("[PosteriorStore] posteriors reset: %s", reason)
 
     def clear(self) -> None:
+        if self._graph_store is not None:
+            delete = getattr(self._graph_store, "delete_posterior", None)
+            if not callable(delete):
+                raise RuntimeError("[PosteriorStore] AGE store cannot delete posterior state")
+            delete("soc", "rl_posteriors")
+            return
         try:
             self._ensure_table()
             import psycopg
@@ -155,6 +187,12 @@ class PosteriorStore:
 
     def health_check(self) -> dict[str, Any]:
         """Return storage health without mutating posterior state."""
+        if self._graph_store is not None:
+            try:
+                self._graph_store.get_posterior("soc", "rl_posteriors")
+            except Exception as exc:
+                return {"healthy": False, "error": str(exc)}
+            return {"healthy": True}
         try:
             self._ping_storage()
         except Exception as exc:
