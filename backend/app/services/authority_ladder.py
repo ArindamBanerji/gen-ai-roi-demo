@@ -17,6 +17,7 @@ from copilot_sdk.promotion import (
     PromotionStore,
     SOCPromotionPolicy,
 )
+from app.services.graph_store_adapter import GraphStoreAdapter
 
 
 logger = logging.getLogger(__name__)
@@ -62,6 +63,57 @@ class AuthorityDecision:
         }
 
 
+class GraphPromotionStore:
+    """PromotionStore-compatible facade backed by the shared GraphStore."""
+
+    _DOMAIN = "soc"
+    _VETO_PREFIX = "veto:"
+
+    def __init__(self, adapter: GraphStoreAdapter) -> None:
+        self._adapter = adapter
+
+    def save(self, record: PromotionRecord) -> None:
+        self._adapter.save_promotion(self._DOMAIN, record.decision_class, record.to_dict())
+
+    def load(self, record_id: str) -> PromotionRecord | None:
+        for record in self.list_all(self._DOMAIN):
+            if record.record_id == record_id:
+                return record
+        return None
+
+    def load_by_class(self, copilot: str, decision_class: str) -> PromotionRecord | None:
+        state = self._adapter.get_promotion(copilot, decision_class)
+        if state is None:
+            return None
+        return PromotionRecord.from_dict(state)
+
+    def list_all(self, copilot: str) -> list[PromotionRecord]:
+        records: list[PromotionRecord] = []
+        for state in self._adapter.list_promotions(copilot):
+            if "record_id" in state:
+                records.append(PromotionRecord.from_dict(state))
+        return records
+
+    def close(self) -> None:
+        """The application owns the shared GraphStore lifecycle."""
+
+    def save_veto(self, payload: dict[str, Any]) -> None:
+        audit_id = str(payload["audit_id"])
+        self._adapter.save_promotion(
+            self._DOMAIN, f"{self._VETO_PREFIX}{audit_id}", {"veto_audit": payload}
+        )
+
+    def list_vetoes(self, category: str) -> list[dict[str, Any]]:
+        entries: list[dict[str, Any]] = []
+        for state in self._adapter.list_promotions(self._DOMAIN):
+            if not isinstance(state.get("veto_audit"), dict):
+                continue
+            audit = dict(state["veto_audit"])
+            if audit.get("category") == category:
+                entries.append(audit)
+        return sorted(entries, key=lambda item: str(item.get("created_at", "")), reverse=True)
+
+
 class AuthorityManager:
     """SOC's per-alert-class authority facade over the shared state machine."""
 
@@ -84,9 +136,11 @@ class AuthorityManager:
             conservation_provider=conservation_provider,
         )
         self._lock = RLock()
-        self._audit = sqlite3.connect(self.db_path, check_same_thread=False)
-        self._audit.execute(
-            """CREATE TABLE IF NOT EXISTS authority_veto_audit (
+        self._audit = None
+        if not isinstance(self.store, GraphPromotionStore):
+            self._audit = sqlite3.connect(self.db_path, check_same_thread=False)
+            self._audit.execute(
+                """CREATE TABLE IF NOT EXISTS authority_veto_audit (
                 audit_id TEXT PRIMARY KEY,
                 category TEXT NOT NULL,
                 authority TEXT NOT NULL,
@@ -96,7 +150,7 @@ class AuthorityManager:
                 created_at TEXT NOT NULL
             )"""
         )
-        self._audit.commit()
+            self._audit.commit()
         self.initialize()
 
     def initialize(self) -> None:
@@ -207,20 +261,26 @@ class AuthorityManager:
         audit_id = f"authority-veto-{uuid.uuid4().hex}"
         from datetime import datetime, timezone
 
+        audit_payload = {
+            "audit_id": audit_id,
+            "category": category,
+            "authority": authority,
+            "conservation": conservation_status,
+            "reason": reason,
+            "would_have_action": proposed_action,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
         with self._lock:
-            self._audit.execute(
-                "INSERT INTO authority_veto_audit VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (
-                    audit_id,
-                    category,
-                    authority,
-                    conservation_status,
-                    reason,
-                    proposed_action,
-                    datetime.now(timezone.utc).isoformat(),
-                ),
-            )
-            self._audit.commit()
+            if isinstance(self.store, GraphPromotionStore):
+                self.store.save_veto(audit_payload)
+            else:
+                if self._audit is None:
+                    raise RuntimeError("Authority audit store is unavailable")
+                self._audit.execute(
+                    "INSERT INTO authority_veto_audit VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    tuple(audit_payload.values()),
+                )
+                self._audit.commit()
         return AuthorityDecision(
             category,
             authority,
@@ -233,6 +293,10 @@ class AuthorityManager:
 
     def list_veto_audit(self, category: str) -> list[dict[str, Any]]:
         self._validate_category(category)
+        if isinstance(self.store, GraphPromotionStore):
+            return self.store.list_vetoes(category)
+        if self._audit is None:
+            raise RuntimeError("Authority audit store is unavailable")
         rows = self._audit.execute(
             "SELECT audit_id, category, authority, conservation, reason, "
             "would_have_action, created_at FROM authority_veto_audit "
@@ -263,8 +327,16 @@ def _status(raw: str | Mapping[str, Any] | None) -> str:
     return value if value in {"GREEN", "AMBER", "RED"} else "UNKNOWN"
 
 
-_AUTHORITY_MANAGER = AuthorityManager()
+_AUTHORITY_MANAGER: AuthorityManager | None = None
+
+
+def configure_authority_graph_store(adapter: GraphStoreAdapter) -> None:
+    global _AUTHORITY_MANAGER
+    _AUTHORITY_MANAGER = AuthorityManager(store=GraphPromotionStore(adapter))
 
 
 def get_authority_manager() -> AuthorityManager:
+    global _AUTHORITY_MANAGER
+    if _AUTHORITY_MANAGER is None:
+        _AUTHORITY_MANAGER = AuthorityManager()
     return _AUTHORITY_MANAGER

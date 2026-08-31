@@ -39,6 +39,15 @@ class GraphStoreAdapter:
     def get_posterior(self, domain: str, key: str) -> dict[str, Any] | None:
         return self._store.get_posterior(domain, key)
 
+    def save_promotion(self, domain: str, key: str, payload: dict[str, Any]) -> None:
+        self._store.save_promotion(domain, key, payload)
+
+    def get_promotion(self, domain: str, key: str) -> dict[str, Any] | None:
+        return self._store.get_promotion(domain, key)
+
+    def list_promotions(self, domain: str) -> list[dict[str, Any]]:
+        return self._store.list_promotions(domain)
+
     def save_evolution_event(self, **kwargs: Any) -> None:
         self._store.write_evolution_event(**kwargs)
 

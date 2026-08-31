@@ -254,6 +254,10 @@ async def startup_event():
     if _backend == "graph":
         await graph_client.connect()
 
+    from app.services.authority_ladder import configure_authority_graph_store
+    from app.services.graph_store_adapter import GraphStoreAdapter
+    configure_authority_graph_store(GraphStoreAdapter(graph_client, app.state.graph_store))
+
     # ── Bootstrap verification — MANDATORY, fail-fast ─────────
     try:
         _verify = await graph_client.run_query(
