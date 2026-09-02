@@ -16,6 +16,12 @@ from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, cast
 
 from app.domains.soc.severity import get_severity_weights
+from copilot_sdk.rl import (
+    CreditAssigner as SDKCreditAssigner,
+    DomainRewardFunction,
+    ExplorationPolicy as SDKExplorationPolicy,
+    RewardComputer as SDKRewardComputer,
+)
 
 DEFAULT_SOC_REFERENCE_REWARD = 0.50
 DEFAULT_S2P_REFERENCE_REWARD = 0.30
@@ -23,6 +29,35 @@ DEFAULT_PENALTY_RATIO = 20.0  # SOC CalibrationProfile penalty_ratio; no exporte
 ROLLING_REFERENCE_WINDOW = 400
 
 log = logging.getLogger(__name__)
+
+
+class SOCBinaryReward:
+    """Binary SOC reward implementing the SDK domain-reward contract."""
+
+    name = "soc_binary"
+
+    def compute(
+        self,
+        recommended_action: str,
+        actual_action: str,
+        outcome: Dict[str, Any],
+    ) -> float:
+        del outcome
+        return 1.0 if actual_action == recommended_action else 0.0
+
+    def compute_reward(
+        self,
+        decision: Dict[str, Any],
+        outcome: Dict[str, Any],
+    ) -> float:
+        recommended_action = str(
+            decision.get("recommended_action", decision.get("action", ""))
+        )
+        actual_action = str(outcome.get("actual_action", outcome.get("action", "")))
+        return self.compute(recommended_action, actual_action, outcome)
+
+    def reward_range(self) -> tuple[float, float]:
+        return (0.0, 1.0)
 
 
 @dataclass(frozen=True)
@@ -529,6 +564,7 @@ class CreditAssigner:
 
 
 _reward_computer: RewardComputer | None = None
+_sdk_reward_computer: SDKRewardComputer | None = None
 _reward_ledger: RewardLedger | None = None
 _posterior_store: Any | None = None
 _exploration_policy: ExplorationPolicy | None = None
@@ -547,6 +583,27 @@ def get_reward_computer() -> RewardComputer:
     return _reward_computer
 
 
+def get_sdk_reward_computer() -> SDKRewardComputer:
+    """Return the SDK normalizer for SOC's canonical binary reward."""
+    global _sdk_reward_computer
+    if _sdk_reward_computer is None:
+        reward_function: DomainRewardFunction = SOCBinaryReward()
+        _sdk_reward_computer = SDKRewardComputer(reward_function, domain="soc")
+    return _sdk_reward_computer
+
+
+def get_sdk_exploration_policy(n_actions: int) -> SDKExplorationPolicy:
+    """Create the SDK policy with SOC's conservation-safe epsilon bound."""
+    if n_actions <= 0:
+        raise ValueError("n_actions must be positive")
+    return SDKExplorationPolicy(n_actions=n_actions, epsilon=0.0)
+
+
+def get_sdk_credit_assigner() -> SDKCreditAssigner:
+    """Create the SDK immediate-outcome credit assigner for SOC."""
+    return SDKCreditAssigner(temporal_discount=1.0)
+
+
 def get_reward_ledger() -> RewardLedger:
     global _reward_ledger
     if _reward_ledger is None:
@@ -560,6 +617,8 @@ def get_exploration_policy() -> ExplorationPolicy:
         from app.domains.soc.config import SCORER_ACTIONS, SOC_CATEGORIES
 
         try:
+            import inspect
+
             from app.services.posterior_store import PosteriorStore
             from app.db.graph_client import graph_client
             from app.services.graph_store_adapter import create_soc_graph_store
@@ -569,10 +628,19 @@ def get_exploration_policy() -> ExplorationPolicy:
                 "soc",
                 profile="test" if os.environ.get("PYTEST_CURRENT_TEST") else "production",
             )
-            _posterior_store = PosteriorStore(
-                graph_config,
-                graph_store=create_soc_graph_store(graph_client, graph_config),
+            graph_store = create_soc_graph_store(graph_client, graph_config)
+            constructor_parameters = inspect.signature(PosteriorStore).parameters
+            accepts_graph_store = "graph_store" in constructor_parameters or any(
+                parameter.kind is inspect.Parameter.VAR_KEYWORD
+                for parameter in constructor_parameters.values()
             )
+            if accepts_graph_store:
+                _posterior_store = PosteriorStore(
+                    graph_config,
+                    graph_store=graph_store,
+                )
+            else:
+                _posterior_store = PosteriorStore(graph_config)
         except Exception as exc:
             log.error("[RL] graph configuration/posterior initialization failed: %s", exc)
             raise RuntimeError("[RL] graph configuration is required for exploration") from exc
@@ -601,12 +669,13 @@ def get_credit_assigner() -> CreditAssigner:
 
 
 def reset_rl_state() -> None:
-    global _reward_computer, _reward_ledger, _posterior_store, _exploration_policy, _credit_assigner
+    global _reward_computer, _sdk_reward_computer, _reward_ledger, _posterior_store, _exploration_policy, _credit_assigner
     if _exploration_policy is not None:
         _exploration_policy.reset_posteriors("demo_reset")
     if _posterior_store is not None:
         _posterior_store.clear()
     _reward_computer = None
+    _sdk_reward_computer = None
     _reward_ledger = None
     _exploration_policy = None
     _posterior_store = None

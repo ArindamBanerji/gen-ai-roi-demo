@@ -7,9 +7,10 @@ import logging
 import os as _cors_os
 from typing import cast
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from copilot_sdk.auth import AuthMiddleware
+from copilot_sdk.backend.auth_router import create_auth_router
 from dotenv import load_dotenv
 from app.middleware.pii_redaction import PIIRedactionMiddleware
 
@@ -64,24 +65,7 @@ app.add_middleware(
 )
 
 
-@app.middleware("http")
-async def auth_middleware(request: Request, call_next):
-    from app.auth.dependencies import require_auth
-    try:
-        claims = await require_auth(request)
-        request.state.user = claims if claims else None
-    except HTTPException as e:
-        return JSONResponse(
-            status_code=e.status_code,
-            content={"detail": e.detail})
-    except Exception:
-        import logging
-        logging.getLogger(__name__).exception(
-            "Auth middleware unexpected error")
-        return JSONResponse(
-            status_code=500,
-            content={"detail": "Internal server error"})
-    return await call_next(request)
+app.add_middleware(AuthMiddleware)
 
 
 app.add_middleware(PIIRedactionMiddleware)
@@ -191,8 +175,7 @@ app.include_router(cohort_status_router, prefix="/api", tags=["Campaign Cohorts"
 app.include_router(rl_router, prefix="/api", tags=["RL Observability"])
 app.include_router(servicenow_router)
 app.include_router(enterprise.router, prefix="/api", tags=["Enterprise Connectors"])
-from app.routers.auth import router as auth_router
-app.include_router(auth_router)
+app.include_router(create_auth_router())
 
 
 def _soc_store_provider():
