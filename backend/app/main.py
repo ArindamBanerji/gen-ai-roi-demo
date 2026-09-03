@@ -246,10 +246,6 @@ async def startup_event():
     if _backend == "graph":
         await graph_client.connect()
 
-    from app.services.authority_ladder import configure_authority_graph_store
-    from app.services.graph_store_adapter import GraphStoreAdapter
-    configure_authority_graph_store(GraphStoreAdapter(graph_client, app.state.graph_store))
-
     # ── Bootstrap verification — MANDATORY, fail-fast ─────────
     try:
         _verify = await graph_client.run_query(
@@ -343,6 +339,13 @@ async def startup_event():
     from app.services.gae_state import init_learning_state, reset_learning_state, get_bootstrap_result, get_profile_scorer
     ls = init_learning_state()
     print(f"[GAE] LearningState ready: W.shape={ls.W.shape}, step={ls.decision_count}")
+
+    # Configure authority only after init_learning_state has created the
+    # scorer's AGE-backed GraphStore.  All migrated services must share this
+    # already-initialized store rather than constructing a partial adapter.
+    from app.services.authority_ladder import configure_authority_graph_store
+    app.state.graph_store = get_profile_scorer().graph_store
+    configure_authority_graph_store(app.state.graph_store)
 
     try:
         from app.services.promotion_gate import register_rollback_handler
