@@ -24,12 +24,26 @@ class ReasoningNarrator:
         """Lazy-import Vertex AI and call vertexai.init() exactly once."""
         if self._initialized:
             return
-        import vertexai                                        # deferred import
-        from vertexai.generative_models import GenerativeModel
-        project_id = os.getenv("PROJECT_ID")
-        region     = os.getenv("VERTEX_AI_LOCATION", "us-central1")
-        vertexai.init(project=project_id, location=region)
-        self.model = GenerativeModel("gemini-1.5-pro-002")
+        # Test and local environments do not provide a Vertex project.  Do not
+        # enter the SDK's project-discovery retry loop in that case; the
+        # existing deterministic narration below is the supported no-LLM path.
+        project_id = os.getenv("PROJECT_ID", "").strip()
+        if not project_id:
+            self._initialized = True
+            self.model = None
+            return
+        try:
+            import vertexai                                        # deferred import
+            from vertexai.generative_models import GenerativeModel
+            region     = os.getenv("VERTEX_AI_LOCATION", "us-central1")
+            vertexai.init(project=project_id, location=region)
+            self.model = GenerativeModel("gemini-1.5-pro-002")
+        except Exception:
+            # Initialization can fail before generation (for example, when
+            # local credentials or certificate trust are unavailable). Mark it
+            # initialized so every narration request remains bounded and uses
+            # the existing deterministic narration path.
+            self.model = None
         self._initialized = True
 
     async def generate_reasoning(
@@ -68,6 +82,9 @@ Write a 2-3 sentence justification for why this action is recommended.
 Be specific about the context factors that led to this decision.
 Sound like an experienced security analyst.
 """
+
+        if self.model is None:
+            return self._fallback_reasoning(action, context)
 
         try:
             response = await self.model.generate_content_async(prompt)

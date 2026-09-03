@@ -7,6 +7,7 @@ contract and is backed by the same configured AGE graph.
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from ci_platform.graph.age_sdk_adapter import AGEGraphStoreAdapter
@@ -27,26 +28,46 @@ class GraphStoreAdapter:
     def graph_client(self) -> Any:
         return self._graph_client
 
+    @staticmethod
+    def _run_state_operation(operation: Any) -> Any:
+        """Retry transient AGE entity locks, then propagate the error."""
+        for attempt in range(3):
+            try:
+                return operation()
+            except Exception as exc:
+                message = str(exc).lower()
+                transient_lock = "could not be locked" in message or "failed to be updated" in message
+                if not transient_lock or attempt == 2:
+                    raise
+                time.sleep(0.1 * (attempt + 1))
+        raise RuntimeError("unreachable state operation retry")
+
     def save_evolution(self, domain: str, key: str, payload: dict[str, Any]) -> None:
-        self._store.save_evolution(domain, key, payload)
+        self._run_state_operation(lambda: self._store.save_evolution(domain, key, payload))
 
     def get_evolution(self, domain: str, key: str) -> dict[str, Any] | None:
-        return self._store.get_evolution(domain, key)
+        return self._run_state_operation(lambda: self._store.get_evolution(domain, key))
+
+    def list_evolutions(self, domain: str) -> list[dict[str, Any]]:
+        return self._run_state_operation(lambda: self._store.list_evolutions(domain))
+
+    def delete_evolution(self, domain: str, key: str) -> None:
+        self._run_state_operation(lambda: self._store.delete_evolution(domain, key))
 
     def save_posterior(self, domain: str, key: str, payload: dict[str, Any]) -> None:
-        self._store.save_posterior(domain, key, payload)
+        self._run_state_operation(lambda: self._store.save_posterior(domain, key, payload))
 
     def get_posterior(self, domain: str, key: str) -> dict[str, Any] | None:
-        return self._store.get_posterior(domain, key)
+        return self._run_state_operation(lambda: self._store.get_posterior(domain, key))
 
     def save_promotion(self, domain: str, key: str, payload: dict[str, Any]) -> None:
-        self._store.save_promotion(domain, key, payload)
+        self._run_state_operation(lambda: self._store.save_promotion(domain, key, payload))
 
     def get_promotion(self, domain: str, key: str) -> dict[str, Any] | None:
-        return self._store.get_promotion(domain, key)
+        return self._run_state_operation(lambda: self._store.get_promotion(domain, key))
 
     def list_promotions(self, domain: str) -> list[dict[str, Any]]:
-        return self._store.list_promotions(domain)
+        return self._run_state_operation(lambda: self._store.list_promotions(domain))
 
     def save_evolution_event(self, **kwargs: Any) -> None:
         self._store.write_evolution_event(**kwargs)

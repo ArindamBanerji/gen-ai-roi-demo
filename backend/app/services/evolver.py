@@ -8,10 +8,11 @@ SDK PromptVariantEvolver.
 import asyncio
 from datetime import datetime, timezone
 from threading import RLock
-from typing import Any, Callable, Dict, List, Optional, cast
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, cast
 
 from pydantic import BaseModel
 
+from copilot_sdk.ae import FitnessEvaluator, PromotionGate, Variant, VariantGenerator
 from copilot_sdk.evolution.conservation_contract import (
     CachedAsyncProvider,
     ConservationState,
@@ -27,6 +28,82 @@ from copilot_sdk.evolution.variant_store import (
 )
 
 
+class DomainEvolutionStrategy:
+    """SOC-owned adapter for the SDK AgentEvolver contracts.
+
+    The established ``PromptVariantEvolver`` remains the runtime authority for
+    prompt selection and promotion.  This strategy exposes the same SOC
+    variants and binary outcome semantics to the portable AE components,
+    without changing that compatibility path.
+    """
+
+    def generate_variants(
+        self, rule: Any, context: Mapping[str, Any]
+    ) -> list[Variant]:
+        requested_family = str(rule) if rule is not None else ""
+        category = context.get("category")
+        variants = _build_variant_specs()
+        if requested_family:
+            variants = [
+                spec for spec in variants
+                if spec.family == requested_family or spec.id == requested_family
+            ]
+        if category:
+            category_name = str(category)
+            category_ids = CATEGORY_PROMPT_STATS.get(category_name, {})
+            if category_ids:
+                variants = [spec for spec in variants if spec.id in category_ids]
+        return [
+            Variant(
+                variant_id=spec.id,
+                rule=spec,
+                metadata={"family": spec.family, "version": spec.version},
+            )
+            for spec in variants
+        ]
+
+    def evaluate_fitness(
+        self, variant: Variant, outcomes: Sequence[Mapping[str, Any]]
+    ) -> float:
+        if not outcomes:
+            return 0.0
+        matching = [
+            outcome for outcome in outcomes
+            if outcome.get("variant_id", variant.variant_id) == variant.variant_id
+        ]
+        if not matching:
+            return 0.0
+        return sum(1.0 for outcome in matching if bool(outcome.get("success"))) / len(matching)
+
+    def domain_constraints(self) -> dict[str, Any]:
+        return {
+            "domain": "soc",
+            "categories": _get_soc_categories(),
+            "outcome_range": (0.0, 1.0),
+        }
+
+
+_AE_COMPONENTS: tuple[VariantGenerator, FitnessEvaluator, PromotionGate] | None = None
+
+
+def get_ae_components() -> tuple[VariantGenerator, FitnessEvaluator, PromotionGate]:
+    """Return SOC's portable AE components without altering prompt evolution."""
+    global _AE_COMPONENTS
+    if _AE_COMPONENTS is None:
+        strategy = DomainEvolutionStrategy()
+        _AE_COMPONENTS = (
+            VariantGenerator(strategy),
+            FitnessEvaluator(strategy),
+            PromotionGate(min_n=10),
+        )
+    return _AE_COMPONENTS
+
+
+# Explicit SOC name retained for callers that want to distinguish this
+# implementation from the SDK protocol it satisfies.
+SOCEvolutionStrategy = DomainEvolutionStrategy
+
+
 class AGEVariantStore(InMemoryVariantStore):
     """VariantStore whose complete state is persisted as AGE EvolutionState."""
 
@@ -34,11 +111,14 @@ class AGEVariantStore(InMemoryVariantStore):
         super().__init__()
         self._graph_store = graph_store
         self._domain = domain
+        self._persistence_suspended = False
         states = graph_store.list_evolutions(domain)
         for state in states:
             self._restore(state)
 
     def _persist(self, variant_id: str) -> None:
+        if self._persistence_suspended:
+            return
         spec = self.get_variant(variant_id)
         if spec is None:
             raise ValueError(f"Unknown variant: {variant_id}")
@@ -307,20 +387,29 @@ def _build_variant_specs() -> List[VariantSpec]:
 
 
 def _seed_store_stats(store: VariantStore) -> None:
-    for variant_id, stats in PROMPT_STATS.items():
-        successes = int(stats.get("success", 0))
-        total = int(stats.get("total", 0))
-        if store.get_global_stats(variant_id).total == 0 and total > 0:
-            for index in range(total):
-                store.record_outcome(variant_id, index < successes)
-
-    for category, category_stats in CATEGORY_PROMPT_STATS.items():
-        for variant_id, stats in category_stats.items():
+    age_store = store if isinstance(store, AGEVariantStore) else None
+    if age_store is not None:
+        age_store._persistence_suspended = True
+    try:
+        for variant_id, stats in PROMPT_STATS.items():
             successes = int(stats.get("success", 0))
             total = int(stats.get("total", 0))
-            if store.get_category_stats(category, variant_id).total == 0 and total > 0:
+            if store.get_global_stats(variant_id).total == 0 and total > 0:
                 for index in range(total):
-                    store.record_category_outcome(category, variant_id, index < successes)
+                    store.record_outcome(variant_id, index < successes)
+
+        for category, category_stats in CATEGORY_PROMPT_STATS.items():
+            for variant_id, stats in category_stats.items():
+                successes = int(stats.get("success", 0))
+                total = int(stats.get("total", 0))
+                if store.get_category_stats(category, variant_id).total == 0 and total > 0:
+                    for index in range(total):
+                        store.record_category_outcome(category, variant_id, index < successes)
+    finally:
+        if age_store is not None:
+            age_store._persistence_suspended = False
+            for spec in age_store.get_all_variants():
+                age_store._persist(spec.id)
 
 
 def _sdk_config() -> PromptEvolverConfig:
@@ -353,6 +442,9 @@ def _soc_variant_store() -> VariantStore:
 
 
 def _new_sdk_evolver_from_compat_state() -> PromptVariantEvolver:
+    # Construct the portable AE components as part of SOC evolver setup.  The
+    # compatibility evolver below remains responsible for existing behavior.
+    get_ae_components()
     store = _soc_variant_store()
     for spec in _build_variant_specs():
         store.register_variant(spec)

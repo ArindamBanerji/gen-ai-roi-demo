@@ -50,18 +50,27 @@ DEFAULT_CORS_ORIGINS = (
 
 
 def _cors_origins() -> list[str]:
+    if _cors_os.environ.get("CORS_DEV_MODE", "").strip().lower() == "true":
+        return ["*"]
+    configured = _cors_os.environ.get("ALLOWED_ORIGINS")
+    if configured is None:
+        configured = _cors_os.environ.get("CORS_ORIGINS", DEFAULT_CORS_ORIGINS)
     return [
         origin.strip()
-        for origin in _cors_os.environ.get("CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",")
+        for origin in configured.split(",")
         if origin.strip()
     ]
+
+def _cors_credentials() -> bool:
+    return "*" not in _cors_origins()
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins(),
-    allow_credentials=True,
+    allow_credentials=_cors_credentials(),
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Content-Type", "Authorization"],
+    max_age=600,
 )
 
 
