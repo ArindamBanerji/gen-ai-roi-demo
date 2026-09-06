@@ -3477,6 +3477,24 @@ async def _tab5_content() -> dict:
     # Pull verified_decisions from narrative (now aligned to learning state count)
     verified_decisions = int(what_changed_raw.get("total_verified", 0))
     iks_score = what_knows_raw.get("iks_current", 0.0)
+    # Use the same live AGE calculation as Tab 2 so the executive tab cannot
+    # report a second, differently sampled IKS value. The snapshot is retained
+    # only as a fallback for callers that have no usable live graph response.
+    try:
+        from app.services.iks import compute_visible_iks
+
+        live_iks = await compute_visible_iks(graph_client)
+        if live_iks > 0.0:
+            iks_score = live_iks
+    except Exception:
+        try:
+            from app.state.graph_snapshot import get_snapshot
+
+            snapshot = get_snapshot()
+            verified_decisions = snapshot.verified_decisions
+            iks_score = snapshot.iks_score
+        except RuntimeError:
+            pass
 
     # FIX 2.8 — W2 flywheel: structured fields for CISO audience
     flywheel_edge_count = 0
@@ -3578,7 +3596,7 @@ async def _tab5_content() -> dict:
             ),
         },
         "what_system_knows": {
-            "iks":                    what_knows_raw.get("iks_current", 0.0),
+            "iks":                    iks_score,
             "categories_calibrated":  what_knows_raw.get("categories_calibrated", 0),
             "health_status":          health_status,
             "operational_knowledge_status": what_knows_raw.get("operational_knowledge_status"),

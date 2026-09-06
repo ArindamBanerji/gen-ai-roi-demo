@@ -15,7 +15,7 @@ def test_legacy_graph_backend_is_retired():
     os.environ["GRAPH_BACKEND"] = "neo4j"
     try:
         import app.db.graph_client as db_mod
-        with pytest.raises(GraphConfigError, match="Legacy AGE backend is retired"):
+        with pytest.raises(GraphConfigError, match="invalid backend 'neo4j'"):
             importlib.reload(db_mod)
     finally:
         if prev is None:

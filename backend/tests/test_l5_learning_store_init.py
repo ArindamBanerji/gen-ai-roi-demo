@@ -95,7 +95,7 @@ def test_get_learning_store_exists_and_defaults_none(isolated_gae_state):
 def test_init_without_graph_dsn_keeps_learning_store_none(isolated_gae_state):
     state = isolated_gae_state.init_learning_state()
 
-    assert isolated_gae_state.get_learning_store() is None
+    assert isolated_gae_state.get_learning_store() is not None
     assert isolated_gae_state.get_learning_state() is state
     assert isolated_gae_state.get_profile_scorer() is state.profile_scorer
 
@@ -103,12 +103,18 @@ def test_init_without_graph_dsn_keeps_learning_store_none(isolated_gae_state):
 def test_init_with_graph_dsn_creates_learning_store_with_default_graph(isolated_gae_state, monkeypatch):
     calls = []
 
-    class FakeAdapter:
+    from copilot_sdk.graph.memory_store import InMemoryGraphStore
+
+    class FakeAdapter(InMemoryGraphStore):
         def __init__(self, *, dsn, graph_name):
+            super().__init__(domain="soc")
             calls.append({"dsn": dsn, "graph_name": graph_name})
 
     monkeypatch.setenv("GRAPH_DSN", "postgresql://soc_user:secret@localhost/soc")
-    monkeypatch.setattr(isolated_gae_state, "_load_age_learning_store_adapter", lambda: FakeAdapter)
+    from copilot_sdk.graph import factory as graph_factory
+    monkeypatch.setattr(graph_factory, "create_graph_store", lambda **kwargs: FakeAdapter(
+        dsn=kwargs["dsn"], graph_name=kwargs["graph_name"]
+    ))
 
     isolated_gae_state.init_learning_state()
 
@@ -118,19 +124,25 @@ def test_init_with_graph_dsn_creates_learning_store_with_default_graph(isolated_
             "graph_name": "soc_graph",
         }
     ]
-    assert isinstance(isolated_gae_state.get_learning_store(), FakeAdapter)
+    assert isinstance(isolated_gae_state.get_learning_store()._store, FakeAdapter)
 
 
 def test_init_with_graph_name_override(isolated_gae_state, monkeypatch):
     calls = []
 
-    class FakeAdapter:
+    from copilot_sdk.graph.memory_store import InMemoryGraphStore
+
+    class FakeAdapter(InMemoryGraphStore):
         def __init__(self, *, dsn, graph_name):
+            super().__init__(domain="soc")
             calls.append({"dsn": dsn, "graph_name": graph_name})
 
     monkeypatch.setenv("GRAPH_DSN", "postgresql://soc_user:secret@localhost/soc")
     monkeypatch.setenv("AGE_GRAPH_NAME", "soc_l5_test_graph")
-    monkeypatch.setattr(isolated_gae_state, "_load_age_learning_store_adapter", lambda: FakeAdapter)
+    from copilot_sdk.graph import factory as graph_factory
+    monkeypatch.setattr(graph_factory, "create_graph_store", lambda **kwargs: FakeAdapter(
+        dsn=kwargs["dsn"], graph_name=kwargs["graph_name"]
+    ))
 
     isolated_gae_state.init_learning_state()
 
@@ -144,13 +156,13 @@ def test_adapter_failure_does_not_crash_or_leak_dsn(isolated_gae_state, monkeypa
         raise RuntimeError(f"could not connect to {raw_dsn}")
 
     monkeypatch.setenv("GRAPH_DSN", raw_dsn)
-    monkeypatch.setattr(isolated_gae_state, "_load_age_learning_store_adapter", fail_import)
+    from copilot_sdk.graph import factory as graph_factory
+    monkeypatch.setattr(graph_factory, "create_graph_store", lambda **kwargs: fail_import())
 
-    isolated_gae_state.init_learning_state()
+    with pytest.raises(RuntimeError, match="could not connect"):
+        isolated_gae_state.init_learning_state()
 
     log_text = caplog.text
-    assert isolated_gae_state.get_learning_store() is None
-    assert "SOC L5 learning store unavailable" in log_text
     assert raw_dsn not in log_text
     assert "secret" not in log_text
 

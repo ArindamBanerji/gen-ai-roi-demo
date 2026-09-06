@@ -9,10 +9,8 @@ Run from backend/ directory:
     pytest tests/test_gae_persistence.py -v
 """
 
-import json
-import tempfile
-from pathlib import Path
 from unittest.mock import patch
+import json
 
 import numpy as np
 import pytest
@@ -57,10 +55,11 @@ def test_history_survives_save_and_reload(tmp_path):
     """
     from app.services import gae_state
 
-    checkpoint = tmp_path / "gae_learning_state.json"
+    from copilot_sdk.graph.memory_store import InMemoryGraphStore
+    store = InMemoryGraphStore(domain="soc")
 
     # Patch the module-level path and singleton
-    with patch.object(gae_state, "_STATE_PATH", checkpoint):
+    with patch.object(gae_state, "_learning_store", store):
         with patch.object(gae_state, "_learning_state", None):
             # Build a fresh state
             gae_state._learning_state = gae_state._make_fresh_state()
@@ -76,7 +75,8 @@ def test_history_survives_save_and_reload(tmp_path):
             gae_state.save_learning_state()
 
     # Verify checkpoint contains history key
-    saved = json.loads(checkpoint.read_text())
+    saved = store.get_posterior("soc", "soc_learning_state")
+    assert saved is not None
     assert "history" in saved, "Checkpoint must contain 'history' key"
     assert len(saved["history"]) == 3, f"Expected 3 entries, got {len(saved['history'])}"
 
@@ -88,8 +88,7 @@ def test_history_survives_save_and_reload(tmp_path):
         assert field in entry, f"Missing field '{field}' in serialized history entry"
 
     # Reload — simulate server restart
-    with patch.object(gae_state, "_STATE_PATH", checkpoint):
-        restored = gae_state._load_from_file()
+    restored = gae_state._state_from_payload(saved)
 
     assert len(restored.history) == 3, (
         f"history should have 3 entries after reload, got {len(restored.history)}"
@@ -147,10 +146,11 @@ def test_chart_endpoints_return_data_after_reload(tmp_path):
     """
     from app.services import gae_state
 
-    checkpoint = tmp_path / "gae_learning_state.json"
+    from copilot_sdk.graph.memory_store import InMemoryGraphStore
+    store = InMemoryGraphStore(domain="soc")
 
     # Build and save state with 5 decisions
-    with patch.object(gae_state, "_STATE_PATH", checkpoint):
+    with patch.object(gae_state, "_learning_store", store):
         with patch.object(gae_state, "_learning_state", None):
             gae_state._learning_state = gae_state._make_fresh_state()
             state = gae_state._learning_state
@@ -159,8 +159,9 @@ def test_chart_endpoints_return_data_after_reload(tmp_path):
             gae_state.save_learning_state()
 
     # Reload
-    with patch.object(gae_state, "_STATE_PATH", checkpoint):
-        restored = gae_state._load_from_file()
+    saved = store.get_posterior("soc", "soc_learning_state")
+    assert saved is not None
+    restored = gae_state._state_from_payload(saved)
 
     assert len(restored.history) == 5
 

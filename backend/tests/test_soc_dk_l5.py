@@ -249,15 +249,16 @@ def test_soc_l5_failures_nonfatal(monkeypatch, caplog):
         centroids=np.zeros((len(SOC_CATEGORIES), len(SCORER_ACTIONS), 6), dtype=np.float64),
     )
 
-    assert not gae_state.persist_soc_centroid(
-        scorer=scorer,
-        category="credential_access",
-        category_index=0,
-        action="investigate",
-        action_index=1,
-        caused_by_decision_id="DEC-SOC-3",
-        pre_centroid=[0.0] * 6,
-    )
+    with pytest.raises(RuntimeError, match="SOC L5 centroid persistence failed"):
+        gae_state.persist_soc_centroid(
+            scorer=scorer,
+            category="credential_access",
+            category_index=0,
+            action="investigate",
+            action_index=1,
+            caused_by_decision_id="DEC-SOC-3",
+            pre_centroid=[0.0] * 6,
+        )
     assert "SOC L5 centroid persistence failed" in caplog.text
 
 
