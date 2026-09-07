@@ -67,17 +67,21 @@ def test_unclassified_alert_is_not_scored(monkeypatch):
     async def fake_context(_alert_id):
         return {"alert_type": "totally_unknown_xyz"}
 
-    async def fail_factor_vector(*_args, **_kwargs):
-        raise AssertionError("compute_factor_vector should not run for unclassified alert")
-
     monkeypatch.setattr("app.services.gae_state.get_profile_scorer", lambda: DummyScorer())
     monkeypatch.setattr(triage.graph_client, "get_alert", fake_get_alert)
     monkeypatch.setattr(triage.graph_client, "get_security_context", fake_context)
-    monkeypatch.setattr(triage, "compute_factor_vector", fail_factor_vector)
+
+    class _FailingFactorProvider:
+        async def compute(self, *_args, **_kwargs):
+            raise AssertionError("factor_vector_provider should not run for unclassified alert")
 
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(triage.analyze_alert(ProcessAlertRequest(alert_id="ALERT-UNKNOWN")))
-
+        asyncio.run(
+            triage.analyze_alert(
+                ProcessAlertRequest(alert_id="ALERT-UNKNOWN"),
+                factor_vector_provider=_FailingFactorProvider(),
+            )
+        )
     assert exc.value.status_code == 422
     assert exc.value.detail["error"] == "unclassified_alert_type"
 

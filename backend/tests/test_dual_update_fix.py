@@ -11,6 +11,8 @@ import pytest
 from app.domains.soc.config import SCORER_ACTIONS
 from app.models.schemas import OutcomeRequest
 from app.routers import triage
+from app.main import app
+from app.services.triage_providers import get_learning_policy
 
 
 _FV = [0.7, 0.8, 0.5, 0.4, 0.6, 0.9]
@@ -89,6 +91,14 @@ class _OutcomeResult:
         return {"graph_updates": [], "consequence": "stable", "narrative": "ok"}
 
 
+class _LearningPolicy:
+    def __init__(self, enabled: bool):
+        self._enabled = enabled
+
+    def enabled(self) -> bool:
+        return self._enabled
+
+
 def _request(action: str | None = "investigate") -> OutcomeRequest:
     return OutcomeRequest(
         alert_id="ALERT-DUAL-UPDATE",
@@ -127,7 +137,6 @@ async def _run_outcome(
     )
     graph = harness.graph_client
     monkeypatch.setattr(triage, "graph_client", graph)
-    monkeypatch.setattr(triage, "LEARNING_ENABLED", True)
     monkeypatch.setattr(triage, "get_feedback_status", lambda _alert_id: {"has_feedback": False})
     monkeypatch.setattr(triage, "get_learning_state", lambda: learning_state)
     monkeypatch.setattr(triage, "save_learning_state", lambda: None)
@@ -146,6 +155,7 @@ async def _run_outcome(
     monkeypatch.setattr("app.services.gae_state.persist_soc_dk_weights", lambda *_args, **_kwargs: True)
     monkeypatch.setattr("app.services.gae_state.update_dk_welford_tracker", lambda *_args, **_kwargs: None)
     monkeypatch.setattr("app.services.gae_state.maybe_write_centroid_snapshot", lambda *_args, **_kwargs: False)
+    monkeypatch.setitem(app.dependency_overrides, get_learning_policy, lambda: _LearningPolicy(True))
 
     response = await triage.report_decision_outcome(_request(action))
     return SimpleNamespace(

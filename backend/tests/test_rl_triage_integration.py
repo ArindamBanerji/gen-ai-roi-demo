@@ -9,7 +9,9 @@ from fastapi import HTTPException
 from app.domains.soc import config as soc_config
 from app.models.schemas import OutcomeRequest, ProcessAlertRequest
 from app.routers import triage
+from app.main import app
 from app.services import rl_engine
+from app.services.triage_providers import get_factor_vector_provider, get_learning_policy
 
 
 class FakeAGE:
@@ -89,6 +91,53 @@ class FakeLearningState:
         return SimpleNamespace(centroid_update=None)
 
 
+class _TestFactorProvider:
+    async def compute(self, *_args, **_kwargs):
+        return (
+            np.array([0.2, 0.3, 0.4, 0.1, 0.5, 0.6], dtype=float),
+            {
+                "privileged_identity_context": {
+                    "value": 0.2,
+                    "source": "fixture_fallback",
+                    "detail": "test fixture",
+                },
+                "asset_criticality": {
+                    "value": 0.3,
+                    "source": "fixture_fallback",
+                    "detail": "test fixture",
+                },
+                "threat_intel_enrichment": {
+                    "value": 0.4,
+                    "source": "fixture_fallback",
+                    "detail": "test fixture",
+                },
+                "pattern_history": {
+                    "value": 0.1,
+                    "source": "fixture_fallback",
+                    "detail": "test fixture",
+                },
+                "time_anomaly": {
+                    "value": 0.5,
+                    "source": "fixture_fallback",
+                    "detail": "test fixture",
+                },
+                "device_trust": {
+                    "value": 0.6,
+                    "source": "fixture_fallback",
+                    "detail": "test fixture",
+                },
+            },
+        )
+
+
+class _LearningPolicy:
+    def __init__(self, enabled: bool):
+        self._enabled = enabled
+
+    def enabled(self) -> bool:
+        return self._enabled
+
+
 def _patch_common_outcome(monkeypatch, harness, record=None, *, fail_triggered_evolution=False):
     rl_engine.reset_rl_state()
     decision = record or _decision_record()
@@ -113,6 +162,7 @@ def _patch_common_outcome(monkeypatch, harness, record=None, *, fail_triggered_e
     learning_state = FakeLearningState()
     monkeypatch.setattr(triage, "get_feedback_status", lambda _alert_id: {"has_feedback": False})
     monkeypatch.setattr(triage, "get_learning_state", lambda: learning_state)
+    monkeypatch.setitem(app.dependency_overrides, get_learning_policy, lambda: _LearningPolicy(True))
     monkeypatch.setattr(triage, "save_learning_state", lambda: None)
     monkeypatch.setattr(triage.event_bus, "emit", AsyncMock())
     monkeypatch.setattr(
@@ -356,7 +406,6 @@ async def test_reward_failure_does_not_crash_outcome(monkeypatch, soc_triage_har
 @pytest.mark.asyncio
 async def test_eta_restored_when_guarded_update_raises(monkeypatch, soc_triage_harness):
     _patch_common_outcome(monkeypatch, soc_triage_harness)
-    monkeypatch.setattr(triage, "LEARNING_ENABLED", True)
     monkeypatch.setattr(soc_config, "RL_REWARD_LEDGER_ENABLED", True)
     monkeypatch.setattr(soc_config, "RL_ETA_MODULATION_ENABLED", True)
     monkeypatch.setattr(
@@ -404,11 +453,6 @@ def _patch_common_analyze(
     if incident_id:
         fake_graph.alert["incident_id"] = incident_id
     monkeypatch.setattr(triage, "graph_client", fake_graph)
-    monkeypatch.setattr(
-        triage,
-        "compute_factor_vector",
-        AsyncMock(return_value=np.array([0.2, 0.3, 0.4, 0.1, 0.5, 0.6])),
-    )
     monkeypatch.setattr(triage.narrator, "generate_reasoning", AsyncMock(return_value="why"))
     monkeypatch.setattr(
         triage,
@@ -437,6 +481,8 @@ def _patch_common_analyze(
     monkeypatch.setattr("app.services.gae_state.get_profile_scorer", lambda: scorer)
     monkeypatch.setattr("app.services.gae_state.init_learning_state", lambda: None)
     monkeypatch.setattr(triage, "get_learning_state", lambda: SimpleNamespace(decision_count=1))
+    monkeypatch.setitem(app.dependency_overrides, get_learning_policy, lambda: _LearningPolicy(True))
+    monkeypatch.setitem(app.dependency_overrides, get_factor_vector_provider, lambda: _TestFactorProvider())
 
     class Referral:
         should_refer = referral_should_refer
@@ -604,7 +650,6 @@ async def test_campaign_context_cold_cache_response(monkeypatch):
 async def test_exploration_proposal_in_analyze_when_enabled(monkeypatch):
     fake_graph = _patch_common_analyze(monkeypatch)
     monkeypatch.setattr(soc_config, "RL_EXPLORATION_ENABLED", True)
-    monkeypatch.setattr(triage, "LEARNING_ENABLED", True)
     policy = rl_engine.ExplorationPolicy(6, 4, epsilon_base=1.0, target_headroom=2.0)
     policy.alphas[0] = [1.0, 5.0, 1.0, 1.0]
     monkeypatch.setattr(rl_engine, "get_exploration_policy", lambda: policy)
@@ -737,7 +782,6 @@ async def test_adjusted_count_referral_veto_blocks_explored_side_effects(monkeyp
         referral_evaluator=referral_evaluator,
     )
     monkeypatch.setattr(soc_config, "RL_EXPLORATION_ENABLED", True)
-    monkeypatch.setattr(triage, "LEARNING_ENABLED", True)
     policy = rl_engine.ExplorationPolicy(6, 4, epsilon_base=1.0, target_headroom=2.0)
     policy.alphas[0] = [1.0, 5.0, 1.0, 1.0]
     monkeypatch.setattr(rl_engine, "get_exploration_policy", lambda: policy)
@@ -778,7 +822,6 @@ async def test_referral_veto_overrides_exploration_and_sets_veto_metadata(monkey
         incident_id="INC-RL",
     )
     monkeypatch.setattr(soc_config, "RL_EXPLORATION_ENABLED", True)
-    monkeypatch.setattr(triage, "LEARNING_ENABLED", True)
     policy = rl_engine.ExplorationPolicy(6, 4, epsilon_base=1.0, target_headroom=2.0)
     policy.alphas[0] = [1.0, 5.0, 1.0, 1.0]
     monkeypatch.setattr(rl_engine, "get_exploration_policy", lambda: policy)
@@ -818,7 +861,6 @@ async def test_referral_veto_overrides_exploration_and_sets_veto_metadata(monkey
 async def test_explored_action_drives_side_effects_when_not_referred(monkeypatch):
     fake_graph = _patch_common_analyze(monkeypatch)
     monkeypatch.setattr(soc_config, "RL_EXPLORATION_ENABLED", True)
-    monkeypatch.setattr(triage, "LEARNING_ENABLED", True)
     policy = rl_engine.ExplorationPolicy(6, 4, epsilon_base=1.0, target_headroom=2.0)
     policy.alphas[0] = [1.0, 5.0, 1.0, 1.0]
     monkeypatch.setattr(rl_engine, "get_exploration_policy", lambda: policy)

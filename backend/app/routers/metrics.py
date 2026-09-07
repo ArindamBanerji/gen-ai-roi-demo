@@ -441,44 +441,6 @@ async def reseed_demo_data():
 
 
 # ============================================================================
-# POST /api/demo/reset - Reset Demo Data (Legacy)
-# ============================================================================
-
-@router.post("/demo/reset")
-async def reset_demo_data():
-    """
-    Reset demo data for repeated demonstrations.
-
-    In production, this would:
-    - Reset AGE to Week 1 state
-    - Clear recent evolution events
-    - Preserve metric contracts
-
-    For this demo, it just returns a success message.
-    """
-    try:
-        print("[DEMO RESET] Resetting to Week 1 state")
-
-        return {
-            "status": "success",
-            "message": "Demo data reset to Week 1 state",
-            "timestamp": datetime.now().isoformat(),
-            "reset_items": {
-                "evolution_events": "cleared",
-                "pattern_counts": "reset to 23",
-                "auto_close_rate": "reset to 68%"
-            }
-        }
-
-    except Exception as e:
-        print(f"[ERROR] Demo reset failed: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to reset demo data: {str(e)}"
-        )
-
-
-# ============================================================================
 # GET /api/metrics/evolution-events - Recent Evolution Events
 # ============================================================================
 

@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.services.triage_providers import get_factor_vector_provider
 
 
 client = TestClient(app)
@@ -141,11 +142,47 @@ def _install_analyze_patches(monkeypatch, action="escalate", confidence=0.9):
     graph.get_sequence_count = AsyncMock(return_value=0)
     graph.get_cross_category_count = AsyncMock(return_value=0)
     monkeypatch.setattr(triage_router, "graph_client", graph)
-    monkeypatch.setattr(
-        triage_router,
-        "compute_factor_vector",
-        AsyncMock(return_value=np.array([0.2, 0.3, 0.4, 0.1, 0.5, 0.6])),
-    )
+    vector = np.array([0.2, 0.3, 0.4, 0.1, 0.5, 0.6], dtype=float)
+
+    class _TestFactorProvider:
+        async def compute(self, *_args, **_kwargs):
+            return (
+                vector,
+                {
+                    "privileged_identity_context": {
+                        "value": 0.2,
+                        "source": "fixture_fallback",
+                        "detail": "test fixture",
+                    },
+                    "asset_criticality": {
+                        "value": 0.3,
+                        "source": "fixture_fallback",
+                        "detail": "test fixture",
+                    },
+                    "threat_intel_enrichment": {
+                        "value": 0.4,
+                        "source": "fixture_fallback",
+                        "detail": "test fixture",
+                    },
+                    "pattern_history": {
+                        "value": 0.1,
+                        "source": "fixture_fallback",
+                        "detail": "test fixture",
+                    },
+                    "time_anomaly": {
+                        "value": 0.5,
+                        "source": "fixture_fallback",
+                        "detail": "test fixture",
+                    },
+                    "device_trust": {
+                        "value": 0.6,
+                        "source": "fixture_fallback",
+                        "detail": "test fixture",
+                    },
+                },
+            )
+
+    monkeypatch.setitem(app.dependency_overrides, get_factor_vector_provider, lambda: _TestFactorProvider())
     monkeypatch.setattr(
         triage_router.narrator,
         "generate_reasoning",

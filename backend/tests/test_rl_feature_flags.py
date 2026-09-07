@@ -31,10 +31,11 @@ def test_exploration_action_space_excludes_refer_to_analyst():
 
 def test_learning_enabled_is_still_centroid_gate():
     source = open(triage.__file__, encoding="utf-8").read()
-    assert "_soc_learning_active = _soc_learning_enabled()" in source
+    assert "_soc_learning_active =" in source
+    assert "learning_policy.enabled()" in source
+    assert "get_learning_policy().enabled()" in source
     assert "if _soc_learning_active and action_name in SCORER_ACTIONS:" in source
     assert "_guarded_update(" in source
-    assert triage.LEARNING_ENABLED is True
 
 
 def test_binary_outcome_not_derived_from_graded_reward():

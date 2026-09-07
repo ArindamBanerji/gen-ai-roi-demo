@@ -14,6 +14,8 @@ from app.models.schemas import OutcomeRequest
 from app.routers import triage
 from app.services import learning_health
 from app.services.learning_health import LearningHealthMonitor
+from app.main import app
+from app.services.triage_providers import get_learning_policy
 
 
 def _load_smoke_script():
@@ -159,6 +161,14 @@ class _LearningState:
         return SimpleNamespace(centroid_update=None)
 
 
+class _LearningPolicy:
+    def __init__(self, enabled: bool):
+        self._enabled = enabled
+
+    def enabled(self) -> bool:
+        return self._enabled
+
+
 @pytest.mark.asyncio
 async def test_soc_c9b_full_flow_writes_all_three_l5_types(monkeypatch, soc_triage_harness):
     store = _C9BStore()
@@ -184,7 +194,7 @@ async def test_soc_c9b_full_flow_writes_all_three_l5_types(monkeypatch, soc_tria
     async def fake_acquire_scorer():
         yield scorer
 
-    monkeypatch.setattr(triage, "LEARNING_ENABLED", True)
+    monkeypatch.setitem(app.dependency_overrides, get_learning_policy, lambda: _LearningPolicy(True))
     monkeypatch.setattr(triage, "get_feedback_status", lambda _alert_id: {"has_feedback": False})
     monkeypatch.setattr(triage, "get_learning_state", lambda: _LearningState())
     monkeypatch.setattr(triage, "save_learning_state", lambda: None)

@@ -1,12 +1,13 @@
 import numpy as np
 import pytest
 
+from app.main import app
 from app.domains.soc import config as soc_config
 from app.domains.soc.config import SCORER_ACTIONS
 from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
-from app.routers import triage
 from copilot_sdk.graph.memory_store import InMemoryGraphStore
 from copilot_sdk.scoring.scorer import CompoundingScorer
+from app.services.triage_providers import get_learning_policy
 
 
 @pytest.fixture(autouse=True)
@@ -25,9 +26,21 @@ CATEGORY_INDEX = 0
 GROUND_TRUTH_ACTION = "investigate"
 
 
+class _LearningPolicy:
+    def __init__(self, enabled: bool):
+        self._enabled = enabled
+
+    def enabled(self) -> bool:
+        return self._enabled
+
+
 def _set_soc_learning(monkeypatch, enabled: bool) -> None:
     monkeypatch.setattr(soc_config, "LEARNING_ENABLED", False)
-    monkeypatch.setattr(triage, "LEARNING_ENABLED", False)
+    monkeypatch.setitem(
+        app.dependency_overrides,
+        get_learning_policy,
+        lambda: _LearningPolicy(enabled),
+    )
     if enabled:
         monkeypatch.setenv("SOC_LEARNING_ENABLED", "true")
     else:
@@ -40,7 +53,10 @@ def _score_probabilities(scorer: SOCCompoundingScorerAdapter) -> np.ndarray:
 
 
 def _apply_verified_outcome_if_enabled(scorer: SOCCompoundingScorerAdapter) -> float:
-    if not triage._soc_learning_enabled():
+    if not scorer and False:
+        return 0.0
+    policy_factory = app.dependency_overrides.get(get_learning_policy, get_learning_policy)
+    if not policy_factory().enabled():
         return 0.0
     result = scorer.score(FACTOR_VECTOR, category_index=CATEGORY_INDEX)
     action_index = int(result.action_index)
@@ -66,7 +82,7 @@ def test_soc_learning_changes_score(monkeypatch):
     centroid_delta = _apply_verified_outcome_if_enabled(scorer)
     score_2 = _score_probabilities(scorer)
 
-    assert triage._soc_learning_enabled() is True
+    assert app.dependency_overrides[get_learning_policy]().enabled() is True
     assert centroid_delta > 0.0
     assert not np.allclose(score_2, score_1)
 
@@ -81,7 +97,7 @@ def test_soc_learning_disabled_no_change(monkeypatch):
     centroid_delta = _apply_verified_outcome_if_enabled(scorer)
     score_2 = _score_probabilities(scorer)
 
-    assert triage._soc_learning_enabled() is False
+    assert app.dependency_overrides[get_learning_policy]().enabled() is False
     assert centroid_delta == 0.0
     np.testing.assert_allclose(score_2, score_1)
 

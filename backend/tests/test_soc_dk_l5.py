@@ -12,6 +12,8 @@ from app.domains.soc.config import SCORER_ACTIONS, SOC_CATEGORIES, SOCDomainConf
 from app.models.schemas import OutcomeRequest
 from app.routers import triage
 from app.services import gae_state
+from app.main import app
+from app.services.triage_providers import get_learning_policy
 from gae.dk_estimator import CoordinateDescentEstimator
 from gae.shrinkage import FixedAlpha
 from gae.two_phase import DecisionCountPolicy
@@ -333,6 +335,14 @@ def _centroid_update(action_index: int):
     )
 
 
+class _LearningPolicy:
+    def __init__(self, enabled: bool):
+        self._enabled = enabled
+
+    def enabled(self) -> bool:
+        return self._enabled
+
+
 async def _run_soc_outcome_with_route_patches(
     monkeypatch,
     harness,
@@ -361,7 +371,7 @@ async def _run_soc_outcome_with_route_patches(
     async def fake_acquire_scorer():
         yield scorer
 
-    monkeypatch.setattr(triage, "LEARNING_ENABLED", True)
+    monkeypatch.setitem(app.dependency_overrides, get_learning_policy, lambda: _LearningPolicy(True))
     monkeypatch.setattr(triage, "get_feedback_status", lambda _alert_id: {"has_feedback": False})
     monkeypatch.setattr(triage, "get_learning_state", lambda: _RouteLearningState())
     monkeypatch.setattr(triage, "save_learning_state", lambda: None)

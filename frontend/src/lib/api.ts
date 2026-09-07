@@ -316,10 +316,6 @@ export async function getEvolutionEvents(limit: number = 10) {
   return fetchJSON(`/metrics/evolution-events?limit=${limit}`)
 }
 
-export async function resetDemoData() {
-  return fetchJSON('/demo/reset', { method: 'POST' })
-}
-
 export async function resetAllDemoData() {
   console.log('[API] Calling POST /api/demo/reset-all')
   const response = await fetchJSON('/demo/reset-all', { method: 'POST' })

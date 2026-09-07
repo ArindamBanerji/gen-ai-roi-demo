@@ -4,16 +4,26 @@ from types import SimpleNamespace
 import pytest
 from unittest.mock import AsyncMock
 
+from app.main import app
 from app.domains.soc import config as soc_config
 from app.models.schemas import ProcessAlertRequest
 from app.routers import triage
 from app.services import rl_engine
+from app.services.triage_providers import get_learning_policy
 from test_rl_triage_integration import (
     _call_outcome,
     _decision_record,
     _patch_common_analyze,
     _patch_common_outcome,
 )
+
+
+class _LearningPolicy:
+    def __init__(self, enabled: bool):
+        self._enabled = enabled
+
+    def enabled(self) -> bool:
+        return self._enabled
 
 
 @pytest.mark.asyncio
@@ -23,7 +33,7 @@ async def test_all_flags_true_pipeline_exercises_rl_paths(monkeypatch, soc_triag
     monkeypatch.setattr(soc_config, "RL_EXPLORATION_ENABLED", True)
     monkeypatch.setattr(soc_config, "RL_ETA_MODULATION_ENABLED", True)
     monkeypatch.setattr(soc_config, "RL_CHAIN_CREDIT_ENABLED", True)
-    monkeypatch.setattr(triage, "LEARNING_ENABLED", True)
+    monkeypatch.setitem(app.dependency_overrides, get_learning_policy, lambda: _LearningPolicy(True))
 
     policy = rl_engine.ExplorationPolicy(6, 4, epsilon_base=1.0, target_headroom=2.0)
     policy.alphas[0] = [1.0, 5.0, 1.0, 1.0]

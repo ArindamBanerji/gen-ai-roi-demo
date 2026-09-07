@@ -63,7 +63,7 @@ async def test_factor_provenance_has_all_six_soc_factors():
 def test_triage_persists_factor_provenance_to_decision_node():
     src = Path("app/routers/triage.py").read_text(encoding="utf-8")
 
-    assert "compute_factor_vector_with_provenance" in src
+    assert "factor_vector_provider.compute(" in src
     assert "factor_provenance:" in src
     assert "json.dumps(factor_provenance" in src
 

@@ -8,6 +8,8 @@ import pytest
 
 from app.models.schemas import OutcomeRequest
 from app.routers.triage import report_decision_outcome
+from app.main import app
+from app.services.triage_providers import get_learning_policy
 
 
 _ALERT_ID = "ALERT-FACTOR-VALIDATION-001"
@@ -26,6 +28,14 @@ class _OutcomeResult:
             "consequence": "stable",
             "narrative": "ok",
         }
+
+
+class _LearningPolicy:
+    def __init__(self, enabled: bool):
+        self._enabled = enabled
+
+    def enabled(self) -> bool:
+        return self._enabled
 
 
 def _make_request() -> OutcomeRequest:
@@ -57,7 +67,6 @@ async def _call_with_factor_vector(factor_vector, harness, action: str = "invest
         stack.enter_context(patch("app.routers.triage.process_outcome", return_value=_OutcomeResult()))
         stack.enter_context(patch("app.routers.triage.event_bus.emit", new_callable=AsyncMock))
         stack.enter_context(patch("app.routers.triage.get_learning_state", return_value=learning_state))
-        stack.enter_context(patch("app.routers.triage.LEARNING_ENABLED", False))
         stack.enter_context(patch("app.routers.triage.save_learning_state"))
         stack.enter_context(patch("app.framework.audit.record_outcome", new_callable=AsyncMock, return_value={"hash": "hash", "chain_index": 1}))
         stack.enter_context(patch("app.state.graph_snapshot.get_snapshot", return_value=MagicMock()))
@@ -66,6 +75,8 @@ async def _call_with_factor_vector(factor_vector, harness, action: str = "invest
         stack.enter_context(patch("app.services.gae_state.maybe_write_centroid_snapshot", return_value=False))
         stack.enter_context(patch("app.services.snapshots.maybe_write_profile_snapshot", new_callable=AsyncMock))
         stack.enter_context(patch("app.services.learning_health.LearningHealthMonitor.evaluate", new_callable=AsyncMock, return_value={"status": "GREEN"}))
+        app.dependency_overrides[get_learning_policy] = lambda: _LearningPolicy(False)
+        stack.callback(app.dependency_overrides.pop, get_learning_policy, None)
 
         result = await report_decision_outcome(_make_request())
 

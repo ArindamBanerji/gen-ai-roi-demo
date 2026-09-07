@@ -7,9 +7,9 @@ import json
 import logging
 import os
 import time
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pathlib import Path
-from typing import List, Dict, Any, Iterator, cast
+from typing import Annotated, Any, Dict, Iterator, List, cast
 from datetime import datetime
 import uuid
 
@@ -33,6 +33,12 @@ from app.services.soc_situation_pattern import build_campaign_context_payload
 from app.services.pii_redaction import redact_payload
 from ci_platform.copilot_core import EntityCache, EntityContextCacheAdapter
 from copilot_sdk.config import GraphConfig
+from app.services.triage_providers import (
+    FactorVectorProvider,
+    LearningPolicy,
+    get_factor_vector_provider,
+    get_learning_policy,
+)
 
 
 def _node_id(entity: dict, prefix: str = "") -> str:
@@ -51,22 +57,13 @@ from app.domains.soc.config import (
     SOC_AUTO_APPROVE_THRESHOLDS,
     SOC_CATEGORY_CONFIDENCE_FLOORS,
     SOC_AGENT_ZONE_ELEVATED,
-    LEARNING_ENABLED,
-    is_learning_enabled,
     N_FACTORS,
     SOC_FACTORS,
-)
-from app.domains.soc.orchestrator import (
-    compute_factor_vector as _compute_factor_vector,
-    compute_factor_vector_with_provenance,
 )
 from gae.scoring import score_alert
 
 logger = logging.getLogger(__name__)
 _shadow_log = logging.getLogger("soc.referral.shadow")
-
-# Backward-compatible monkeypatch hook used by existing tests.
-compute_factor_vector = _compute_factor_vector
 
 
 _SOC_PERF_FALSE_VALUES = {"", "0", "false", "no", "off"}
@@ -335,15 +332,6 @@ def _soc_perf_phase(
         )
 
 
-def _soc_learning_enabled() -> bool:
-    """Runtime SOC learning gate with legacy route-level monkeypatch support."""
-    from app.domains.soc import config as _soc_config
-
-    if LEARNING_ENABLED != _soc_config.LEARNING_ENABLED:
-        return bool(LEARNING_ENABLED)
-    return is_learning_enabled()
-
-
 def _soc_effective_conservation_status(health: Dict[str, Any]) -> tuple[str, str | None]:
     """Return the verified conservation status without manufacturing GREEN."""
     raw_status = str((health or {}).get("status") or "UNKNOWN").upper()
@@ -445,7 +433,13 @@ async def get_alert_queue():
 # ============================================================================
 
 @router.post("/alert/analyze")
-async def analyze_alert(request: ProcessAlertRequest):
+async def analyze_alert(
+    request: ProcessAlertRequest,
+    factor_vector_provider: Annotated[
+        FactorVectorProvider | None,
+        Depends(get_factor_vector_provider),
+    ] = None,
+):
     """
     Analyze an alert by traversing the security graph.
     Returns full context, recommendation, and graph data for visualization.
@@ -536,21 +530,16 @@ async def analyze_alert(request: ProcessAlertRequest):
             category=alert_category,
         ):
             print(f"[GAE] Computing factor vector for {alert_id}...")
+            active_factor_vector_provider = (
+                get_factor_vector_provider()
+                if factor_vector_provider is None
+                else factor_vector_provider
+            )
             computers = SOCDomainConfig.get_factor_computers()
-            if compute_factor_vector is not _compute_factor_vector:
-                f = await compute_factor_vector(alert_data, computers, graph_client)
-                factor_provenance = {
-                    name: {
-                        "value": float(value),
-                        "source": "test_override",
-                        "detail": "factor vector supplied by compatibility hook",
-                    }
-                    for name, value in zip(SOC_FACTORS, f.flatten().tolist())
-                }
-            else:
-                f, factor_provenance = await compute_factor_vector_with_provenance(
-                    alert_data, computers, graph_client
-                )
+            f, factor_provenance = await active_factor_vector_provider.compute(
+                alert_data,
+                graph_client,
+            )
             f_2d = f.reshape(1, -1)  # kept for legacy reference; ProfileScorer uses f.flatten()
 
         # DEPRECATED v5.0: W-matrix scoring replaced by ProfileScorer
@@ -1709,7 +1698,13 @@ async def reset_demo_alerts():
 # ============================================================================
 
 @router.post("/alert/outcome")
-async def report_decision_outcome(request: OutcomeRequest):
+async def report_decision_outcome(
+    request: OutcomeRequest,
+    learning_policy: Annotated[
+        LearningPolicy | None,
+        Depends(get_learning_policy),
+    ] = None,
+):
     """
     Report whether a decision outcome was correct or incorrect.
     Updates graph based on feedback (self-correction).
@@ -2104,7 +2099,11 @@ async def report_decision_outcome(request: OutcomeRequest):
                 # gt_action_index = analyst's actual chosen action when provided;
                 # falls back to predicted action_index only when analyst_action is absent.
                 # is_correct is re-derived from the comparison so it stays consistent.
-                _soc_learning_active = _soc_learning_enabled()
+                _soc_learning_active = (
+                    get_learning_policy().enabled()
+                    if learning_policy is None
+                    else learning_policy.enabled()
+                )
                 _unclassified_alert = False
                 if _soc_learning_active and action_name in SCORER_ACTIONS:
                     from app.domains.soc.config import resolve_alert_category

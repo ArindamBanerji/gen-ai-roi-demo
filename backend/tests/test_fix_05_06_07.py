@@ -1,8 +1,7 @@
 """
 Regression tests for FIX-05, FIX-06, FIX-07 (P1 bugs from adversarial bug hunt v2).
 
-FIX-05: Simulation must not mutate production LearningState (save_learning_state
-        must never be called during SimulationOrchestrator.run()).
+FIX-05: Simulation must not mutate production LearningState.
 
 FIX-06: Empty alert_pool must not crash with ZeroDivisionError; must return
         a valid SimulationResult gracefully.
@@ -20,8 +19,16 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import app.services.simulation as sim_mod
+from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
 from app.services.simulation import SimulationOrchestrator
 from app.services.learning_health import LearningHealthMonitor
+
+
+def _profile_scorer_with_graph_store(graph_store):
+    profile_scorer = object.__new__(SOCCompoundingScorerAdapter)
+    object.__setattr__(profile_scorer, "_compound", SimpleNamespace(graph_store=graph_store))
+    object.__setattr__(profile_scorer, "_scorer", MagicMock())
+    return profile_scorer
 
 
 # ===========================================================================
@@ -45,8 +52,8 @@ def test_simulation_learning_path_does_not_reacquire_or_snapshot_production():
 @pytest.mark.asyncio
 async def test_simulation_does_not_mutate_production_state():
     """
-    save_learning_state must never be called during simulation -- production
-    LearningState is isolated via a local deepcopy (sim_ls).
+    Production LearningState is isolated via a local deepcopy (sim_ls), so
+    simulation updates must leave the original state unchanged.
     """
     mock_ls = MagicMock()
     mock_ls.W = np.zeros((4, 6))
@@ -67,6 +74,14 @@ async def test_simulation_does_not_mutate_production_state():
     mock_ls.dimension_metadata = []
     mock_ls.pending_validations = []
     mock_ls.decision_count = 99
+    before_w = mock_ls.W.copy()
+    before_history = list(mock_ls.history)
+    before_expansion_history = list(mock_ls.expansion_history)
+    before_discount_strength = mock_ls.discount_strength
+    before_epsilon_vector = mock_ls.epsilon_vector.copy()
+    before_dimension_metadata = list(mock_ls.dimension_metadata)
+    before_pending_validations = list(mock_ls.pending_validations)
+    before_decision_count = mock_ls.decision_count
 
     mock_scoring = MagicMock()
     mock_scoring.selected_action = "suppress"
@@ -79,11 +94,13 @@ async def test_simulation_does_not_mutate_production_state():
 
     mock_eb = MagicMock()
     mock_eb.emit = AsyncMock()
+    graph_store = MagicMock()
+    profile_scorer = _profile_scorer_with_graph_store(graph_store)
 
     factor_vec = np.array([0.5, 0.3, 0.7, 0.2, 0.6, 0.4])
 
     with patch.object(sim_mod, "get_learning_state", return_value=mock_ls), \
-         patch.object(sim_mod, "save_learning_state", create=True) as mock_save, \
+         patch("app.services.gae_state.get_profile_scorer", return_value=profile_scorer), \
          patch.object(sim_mod, "event_bus", mock_eb), \
          patch.object(sim_mod, "score_alert", return_value=mock_scoring), \
          patch.object(sim_mod, "compute_factor_vector",
@@ -102,10 +119,14 @@ async def test_simulation_does_not_mutate_production_state():
         }]
         await orch.run(n_decisions=1, alert_pool=alert_pool, speed_ms=0)
 
-    # Core invariant: production state never persisted during simulation
-    mock_save.assert_not_called()
-    # decision_count on the original mock is unchanged
-    assert mock_ls.decision_count == 99
+    np.testing.assert_allclose(mock_ls.W, before_w)
+    assert mock_ls.history == before_history
+    assert mock_ls.expansion_history == before_expansion_history
+    assert mock_ls.discount_strength == before_discount_strength
+    np.testing.assert_allclose(mock_ls.epsilon_vector, before_epsilon_vector)
+    assert mock_ls.dimension_metadata == before_dimension_metadata
+    assert mock_ls.pending_validations == before_pending_validations
+    assert mock_ls.decision_count == before_decision_count
 
 
 # ===========================================================================
@@ -137,9 +158,10 @@ async def test_simulation_empty_pool_returns_gracefully():
     mock_ls.dimension_metadata = []
     mock_ls.pending_validations = []
     mock_ls.decision_count = 0
+    profile_scorer = _profile_scorer_with_graph_store(MagicMock())
 
     with patch.object(sim_mod, "get_learning_state", return_value=mock_ls), \
-         patch.object(sim_mod, "save_learning_state", create=True):
+         patch("app.services.gae_state.get_profile_scorer", return_value=profile_scorer):
 
         orch = SimulationOrchestrator(MagicMock(), MagicMock(), MagicMock())
         result = await orch.run(n_decisions=10, alert_pool=[], speed_ms=0)
