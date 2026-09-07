@@ -68,3 +68,64 @@ Validation:
 
 What to verify next:
 - Decide whether backend/data/soc_authority.sqlite3 should be restored or kept; it was already dirty/modified during the resumed session and is not part of the intentional source-code change.
+
+## SLOT F ENTRY
+
+Halt reason:
+- Mandatory pre-check 5 failed. The prompt expected no frontend consumers for `authority|advance|shadow_promote|analyst.action|shadow_eligible`, but existing frontend authority consumers were found.
+
+Pre-check results:
+- Backend baseline: 2332 passed, 16 skipped, 4751 warnings in 300.36s.
+- Frontend typecheck: passed clean.
+- Authority backend endpoints located:
+  - GET /api/soc/authority
+  - GET /api/soc/authority/{category}
+  - POST /api/soc/authority/{category}/advance
+  - POST /api/soc/authority/{category}/circuit-break
+- Shadow backend endpoints located:
+  - POST /api/soc/shadow/toggle
+  - POST /api/soc/shadow/analyst-action
+  - GET /api/soc/shadow/report
+  - GET /api/soc/shadow/eligibility/{shadow_decision_id}
+  - POST /api/soc/shadow/preview
+  - POST /api/soc/shadow/promote
+- Existing frontend hits causing halt:
+  - frontend/src/lib/api.ts has authority API consumers.
+  - frontend/src/components/AutonomyLadderPanel.tsx displays authority ladder state.
+  - frontend/src/components/LearningControlRoom.tsx displays authority ladder state and circuit-break action.
+
+Files changed:
+- docs/session_state.md (protocol append only)
+
+No SOC implementation changes were made.
+
+---
+## Slot I: SOC B4 CALIBRATING Conservation Gate
+Timestamp: 2026-09-07T19:10:05Z
+
+### Changed files
+- backend/app/services/learning_health.py
+- backend/app/routers/triage.py
+- backend/tests/test_learning_health.py
+- backend/tests/test_soc_dk_l5.py
+- backend/tests/test_rl_triage_integration.py
+- backend/tests/test_soc_c9b_l5_proof.py
+
+### Before / after
+- Before: LearningHealthMonitor.evaluate() returned outer CALIBRATING for fewer than 300 decisions even when nested conservation was RED; triage used only the effective outer status and learning could proceed.
+- After: CALIBRATING remains the warm-up status, but nested RED sets status_reason=calibrating_conservation_red, logs the condition, and triage converts it to effective RED so L5 learning is blocked. Nested or outer COLD_START/BOOTSTRAP/PRESEED is treated as learning-allowed for Slot H compatibility.
+
+### Test baseline / after
+- Pre-check baseline: 2332 passed, 16 skipped, 0 failed.
+- Targeted tests: 103 passed.
+- Sampling gate: 26 passed.
+- Full suite: 2337 passed, 16 skipped, 0 failed.
+
+### Conservation invariant
+- RED always blocks: yes.
+- CALIBRATING never masks nested RED: yes.
+- Nested and effective status agree for enforcement: yes; raw outer status remains visible in raw_conservation_status.
+- COLD_START compatibility: yes; treated as learning-allowed effective GREEN.
+
+0 new regressions introduced.
+---

@@ -185,8 +185,8 @@ async def test_soc_c9b_full_flow_writes_all_three_l5_types(monkeypatch, soc_tria
     soc_triage_harness.graph_client.set_health_rows([{"red_days": 0}])
     soc_triage_harness.graph_client.set_decision_summary_rows(
         [
-            {"category": SOC_CATEGORIES[0], "verified": 1, "correct": 1, "overrides": 0},
-            {"category": SOC_CATEGORIES[1], "verified": 1, "correct": 0, "overrides": 1},
+            {"category": category, "verified": 100, "correct": 100, "overrides": 0}
+            for category in SOC_CATEGORIES
         ]
     )
 
@@ -263,7 +263,7 @@ async def test_soc_c9b_full_flow_writes_all_three_l5_types(monkeypatch, soc_tria
     assert store.dk_weights[0]["welford_state"] is not None
     assert store.conservation and store.conservation[0]["domain"] == "soc"
     assert store.conservation[0]["categories_total"] == 6
-    assert store.conservation[0]["categories_with_data"] == 2
+    assert store.conservation[0]["categories_with_data"] == len(SOC_CATEGORIES)
     assert scorer.reestimate_calls == 1
 
 

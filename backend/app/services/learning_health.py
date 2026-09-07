@@ -295,6 +295,18 @@ class LearningHealthMonitor:
 
         # ── Calibration phase ────────────────────────────────────────────────
         if decision_count < CALIBRATION_DECISIONS:
+            nested_conservation_status = str(cc.status or "UNKNOWN").upper()
+            calibration_conservation_warning = (
+                nested_conservation_status == "RED" and not conservation_passed
+            )
+            if calibration_conservation_warning:
+                log.warning(
+                    "CALIBRATING but conservation RED -- learning gated: "
+                    "decisions=%s signal=%.6f theta_min=%.6f",
+                    decision_count,
+                    signal,
+                    theta_min,
+                )
             return {
                 "status":            "CALIBRATING",
                 "signal":            round(signal, 6),
@@ -316,7 +328,10 @@ class LearningHealthMonitor:
                 "pre_activation":    False,
                 "learning_enabled":  learning_enabled,
                 "health_source":     "learning_health",
-                "status_reason":     None,
+                "status_reason":     "calibrating_conservation_red"
+                if calibration_conservation_warning
+                else None,
+                "calibration_conservation_warning": calibration_conservation_warning,
             }
 
         # ── Baseline from calibration window ─────────────────────────────────

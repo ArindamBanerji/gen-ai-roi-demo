@@ -404,6 +404,42 @@ async def test_reward_failure_does_not_crash_outcome(monkeypatch, soc_triage_har
 
 
 @pytest.mark.asyncio
+async def test_calibrating_nested_red_blocks_l5_learning(monkeypatch, soc_triage_harness):
+    _patch_common_outcome(monkeypatch, soc_triage_harness)
+    monkeypatch.setattr(
+        "app.services.learning_health.LearningHealthMonitor.evaluate",
+        AsyncMock(
+            return_value={
+                "status": "CALIBRATING",
+                "auto_pause_active": False,
+                "conservation": {"status": "RED", "passed": False, "headroom": -1.0},
+            }
+        ),
+    )
+    scorer = SimpleNamespace(set_conservation_status=lambda _status: None)
+    monkeypatch.setattr("app.services.gae_state.get_profile_scorer", lambda: scorer)
+
+    @asynccontextmanager
+    async def fake_acquire():
+        yield scorer
+
+    guarded_calls = []
+    monkeypatch.setattr("app.services.gae_state.acquire_scorer", fake_acquire)
+    monkeypatch.setattr(
+        "app.services.gae_state.guarded_update",
+        lambda *_args, **_kwargs: guarded_calls.append((_args, _kwargs)),
+    )
+
+    result = await _call_outcome(outcome="correct", analyst_action="escalate")
+
+    assert guarded_calls == []
+    assert result["l5_persistence"]["l5_centroid_persisted"] is False
+    assert result["l5_persistence"]["conservation_status"] == "RED"
+    assert result["l5_persistence"]["raw_conservation_status"] == "CALIBRATING"
+    assert result["l5_persistence"]["conservation_status_reason"] == "calibrating_conservation_red"
+
+
+@pytest.mark.asyncio
 async def test_eta_restored_when_guarded_update_raises(monkeypatch, soc_triage_harness):
     _patch_common_outcome(monkeypatch, soc_triage_harness)
     monkeypatch.setattr(soc_config, "RL_REWARD_LEDGER_ENABLED", True)
@@ -906,3 +942,4 @@ def test_exploration_metadata_query_uses_s_serializer_and_no_params():
     assert "_S(decision_id)" in source
     assert "_S(_rl_original_action_name)" in metadata_block
     assert "_S(_rl_explored_action_name or '')" in metadata_block
+

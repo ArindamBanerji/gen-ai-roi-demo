@@ -93,6 +93,10 @@ async def test_evaluate_calibrating():
         result = await LearningHealthMonitor.evaluate(graph_service=None)
 
     assert result["status"] == "CALIBRATING"
+    assert result["conservation"]["status"] == "RED"
+    assert result["conservation"]["passed"] is False
+    assert result["calibration_conservation_warning"] is True
+    assert result["status_reason"] == "calibrating_conservation_red"
     assert result["baseline"]     is None
     assert result["baseline_std"] is None
     assert result["red_days"]          == 0

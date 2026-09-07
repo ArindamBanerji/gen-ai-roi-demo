@@ -76,6 +76,54 @@ def test_soc_calibrating_status_is_not_green():
     assert reason is None
 
 
+def test_soc_calibrating_nested_red_is_effective_red():
+    status, reason = triage._soc_effective_conservation_status(
+        {
+            "status": "CALIBRATING",
+            "auto_pause_active": False,
+            "conservation": {"status": "RED", "passed": False},
+        }
+    )
+
+    assert status == "RED"
+    assert reason == "calibrating_conservation_red"
+
+
+def test_soc_calibrating_nested_green_can_continue_calibrating():
+    status, reason = triage._soc_effective_conservation_status(
+        {
+            "status": "CALIBRATING",
+            "auto_pause_active": False,
+            "conservation": {"status": "GREEN", "passed": True},
+        }
+    )
+
+    assert status == "CALIBRATING"
+    assert reason is None
+
+
+def test_soc_sdk_cold_start_status_is_learning_allowed():
+    status, reason = triage._soc_effective_conservation_status(
+        {
+            "status": "CALIBRATING",
+            "auto_pause_active": False,
+            "conservation": {"status": "COLD_START", "passed": True},
+        }
+    )
+
+    assert status == "GREEN"
+    assert reason == "conservation_cold_start_allowed"
+
+
+def test_soc_outer_sdk_cold_start_status_is_learning_allowed():
+    status, reason = triage._soc_effective_conservation_status(
+        {"status": "COLD_START", "auto_pause_active": False}
+    )
+
+    assert status == "GREEN"
+    assert reason == "conservation_cold_start_allowed"
+
+
 def test_soc_unrecognized_status_is_unknown():
     status, reason = triage._soc_effective_conservation_status({"status": "BROKEN"})
 

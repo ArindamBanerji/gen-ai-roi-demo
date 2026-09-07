@@ -180,7 +180,7 @@ async def _soc_get_security_context_for_analyze(alert_id: str) -> Dict[str, Any]
     flat_context = cast(Dict[str, Any], await graph_client.get_security_context(alert_id))
     split = split_soc_security_context(flat_context)
     if split.cache_key is None:
-        return split.recompose_for_current_route()
+        return cast(Dict[str, Any], split.recompose_for_current_route())
 
     async def _stable_entity_loader() -> Dict[str, Any]:
         return dict(split.stable_entity)
@@ -333,15 +333,33 @@ def _soc_perf_phase(
 
 
 def _soc_effective_conservation_status(health: Dict[str, Any]) -> tuple[str, str | None]:
-    """Return the verified conservation status without manufacturing GREEN."""
-    raw_status = str((health or {}).get("status") or "UNKNOWN").upper()
-    if bool((health or {}).get("auto_pause_active")):
+    """Return the enforced conservation status without hiding nested RED."""
+    payload = health or {}
+    raw_status = str(payload.get("status") or "UNKNOWN").upper()
+    if bool(payload.get("auto_pause_active")):
         return "RED", "auto_pause_active"
 
-    if raw_status not in {"GREEN", "AMBER", "RED", "CALIBRATING", "UNKNOWN"}:
+    learning_allowed_modes = {"COLD_START", "BOOTSTRAP", "PRESEED"}
+    if raw_status in learning_allowed_modes:
+        return "GREEN", f"conservation_{raw_status.lower()}_allowed"
+
+    known_outer_statuses = {"GREEN", "AMBER", "RED", "CALIBRATING", "UNKNOWN"}
+    if raw_status not in known_outer_statuses:
         return "UNKNOWN", "unrecognized_learning_health_status"
 
+    conservation = payload.get("conservation")
+    if isinstance(conservation, dict):
+        nested_status = str(conservation.get("status") or "UNKNOWN").upper()
+        nested_passed = conservation.get("passed")
+        if nested_status in learning_allowed_modes:
+            return "GREEN", f"conservation_{nested_status.lower()}_allowed"
+        if nested_status == "RED" or nested_passed is False:
+            if raw_status == "CALIBRATING":
+                return "RED", "calibrating_conservation_red"
+            return "RED", "nested_conservation_red"
+
     return raw_status, None
+
 
 
 router = APIRouter()
@@ -359,7 +377,7 @@ def _validate_scoring_factor_vector(factor_vector) -> np.ndarray:
         raise ValueError(f"factor_vector must have {N_FACTORS} elements, got {actual}")
     if not np.all(np.isfinite(vector)):
         raise ValueError(f"factor_vector must have {N_FACTORS} finite elements")
-    return vector.reshape(1, -1)
+    return cast(np.ndarray, vector.reshape(1, -1))
 
 
 def _rl_soc_config():
@@ -2091,6 +2109,10 @@ async def report_decision_outcome(
                             _health.get("status", "UNKNOWN")
                         ).upper()
                         l5_persistence_status["conservation_status_reason"] = _eff_reason
+                        if _eff_status == "RED":
+                            _conservation_block = True
+                            if _eff_reason == "calibrating_conservation_red":
+                                logger.warning("CALIBRATING but conservation RED -- learning gated")
                 except Exception as _cse:
                     logger.warning("Conservation status update failed: %s", _cse)
                     _conservation_block = True  # fail-closed: unknown health -> block
@@ -3293,3 +3315,4 @@ async def get_graph_data(alert_id: str) -> Dict[str, Any]:
     except Exception as e:
         print(f"[ERROR] Failed to get graph data: {e}")
         return {"nodes": [], "relationships": []}
+
