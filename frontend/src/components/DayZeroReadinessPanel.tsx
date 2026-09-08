@@ -1,26 +1,94 @@
 import { useEffect, useState } from 'react'
-import { getEnrichmentSummary, fetchGraphSummary, fetchLearningHealth, getProfileState } from '../lib/api'
+import { CheckCircle, XCircle } from 'lucide-react'
+import { fetchDayZeroReadiness } from '../lib/api'
 
-type RecordValue = Record<string, any>
-type Readiness = { source: RecordValue | null; graph: RecordValue | null; learning: RecordValue | null; profile: RecordValue | null }
+type CategoryReadiness = {
+  category?: string
+  decision_count?: number
+  coverage?: string
+  ready?: boolean
+  missing?: string[]
+}
 
-const status = (value: unknown) => value === undefined || value === null ? 'Unavailable' : typeof value === 'boolean' ? (value ? 'Ready' : 'Needs attention') : String(value)
+type DayZeroReadiness = {
+  ready?: boolean
+  categories?: CategoryReadiness[]
+  coverage_gaps?: string[]
+  checklist?: string[]
+  source?: string
+}
+
+const statusText = (ready: boolean | undefined) => ready ? 'Ready' : 'Needs evidence'
+const label = (value: unknown) => String(value ?? '').replace(/_/g, ' ')
 
 export default function DayZeroReadinessPanel() {
-  const [data, setData] = useState<Readiness>({ source: null, graph: null, learning: null, profile: null })
+  const [data, setData] = useState<DayZeroReadiness | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
   useEffect(() => {
-    void Promise.allSettled([getEnrichmentSummary(), fetchGraphSummary(), fetchLearningHealth(), getProfileState()]).then((results) => {
-      const value = (index: number) => results[index]?.status === 'fulfilled' && typeof results[index].value === 'object' && results[index].value !== null ? results[index].value as RecordValue : null
-      setData({ source: value(0), graph: value(1), learning: value(2), profile: value(3) })
-    })
+    let mounted = true
+    fetchDayZeroReadiness()
+      .then((payload) => {
+        if (mounted) setData(payload as DayZeroReadiness)
+      })
+      .catch((err) => {
+        if (mounted) setError(err instanceof Error ? err.message : 'Readiness unavailable')
+      })
+    return () => { mounted = false }
   }, [])
 
-  const connectorHealth = data.source?.connector_health ?? data.source?.connectors ?? data.profile?.connectors
-  const connectors = connectorHealth && typeof connectorHealth === 'object' ? Object.entries(connectorHealth as Record<string, unknown>) : []
+  const categories = Array.isArray(data?.categories) ? data.categories : []
+  const gaps = Array.isArray(data?.coverage_gaps) ? data.coverage_gaps : []
+  const checklist = Array.isArray(data?.checklist) ? data.checklist : []
+
   return <section className="rounded-xl border border-slate-600 bg-slate-950/80 p-5" data-testid="day-zero-readiness-panel" aria-label="Day-zero readiness">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">SOC-DAY0 · fresh tenant readiness</p><h2 className="mt-1 text-xl font-semibold text-white">Day-zero readiness</h2></div><span className="rounded-full border border-slate-600 px-3 py-1 text-xs text-slate-300">no fabricated ROI</span></div>
-    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><div className="rounded-lg border border-slate-800 bg-slate-900 p-3"><p className="text-xs text-slate-500">Source coverage</p><p className="mt-1 text-lg text-slate-200">{status(data.source?.source_coverage ?? data.source?.coverage)}</p></div><div className="rounded-lg border border-slate-800 bg-slate-900 p-3"><p className="text-xs text-slate-500">Completeness</p><p className="mt-1 text-lg text-slate-200">{status(data.graph?.completeness ?? data.source?.completeness)}</p></div><div className="rounded-lg border border-slate-800 bg-slate-900 p-3"><p className="text-xs text-slate-500">Provenance</p><p className="mt-1 text-lg text-slate-200">{status(data.source?.provenance ?? data.graph?.provenance)}</p></div><div className="rounded-lg border border-slate-800 bg-slate-900 p-3"><p className="text-xs text-slate-500">Learning state</p><p className="mt-1 text-lg text-slate-200">{status(data.learning?.status ?? data.learning?.phase)}</p></div></div>
-    <div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Connector health</p>{connectors.length > 0 ? <div className="mt-2 grid gap-2 sm:grid-cols-3">{connectors.map(([name, value]) => <div key={name} className="rounded border border-slate-800 bg-slate-900 p-3 text-sm text-slate-300"><span>{name.replace(/_/g, ' ')}</span><span className="ml-2 text-slate-500">{status(value)}</span></div>)}</div> : <p className="mt-2 text-sm text-slate-500">Connector health is unavailable for this tenant.</p>}</div>
-    <p className="mt-4 text-xs text-slate-500">Readiness is descriptive only; learned factor-trust weights and ROI are intentionally excluded.</p>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">SOC-DAY0 · fresh tenant readiness</p>
+        <h2 className="mt-1 text-xl font-semibold text-white">Day-zero readiness</h2>
+      </div>
+      <span className={`rounded-full border px-3 py-1 text-xs ${data?.ready ? 'border-emerald-500/50 text-emerald-300' : 'border-amber-500/50 text-amber-300'}`}>
+        {data ? statusText(data.ready) : error ? 'Unavailable' : 'Loading'}
+      </span>
+    </div>
+
+    {error ? <p className="mt-4 rounded border border-red-500/30 bg-red-950/30 px-3 py-2 text-sm text-red-200">{error}</p> : null}
+
+    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="rounded-lg border border-slate-800 bg-slate-900 p-3">
+        <p className="text-xs text-slate-500">Categories ready</p>
+        <p className="mt-1 text-lg text-slate-200">{categories.filter((item) => item.ready).length}/{categories.length}</p>
+      </div>
+      <div className="rounded-lg border border-slate-800 bg-slate-900 p-3">
+        <p className="text-xs text-slate-500">Coverage gaps</p>
+        <p className="mt-1 text-lg text-slate-200">{gaps.length}</p>
+      </div>
+      <div className="rounded-lg border border-slate-800 bg-slate-900 p-3">
+        <p className="text-xs text-slate-500">Readiness source</p>
+        <p className="mt-1 text-sm text-slate-200">{data?.source ?? 'live AGE GraphStore'}</p>
+      </div>
+      <div className="rounded-lg border border-slate-800 bg-slate-900 p-3">
+        <p className="text-xs text-slate-500">Checklist</p>
+        <p className="mt-1 text-lg text-slate-200">{checklist.length}</p>
+      </div>
+    </div>
+
+    <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      {categories.map((item) => (
+        <div key={item.category ?? 'unknown'} className="rounded border border-slate-800 bg-slate-900 p-3 text-sm text-slate-300">
+          <div className="flex items-center justify-between gap-3">
+            <span className="font-medium capitalize">{label(item.category)}</span>
+            {item.ready ? <CheckCircle className="h-4 w-4 text-emerald-400" /> : <XCircle className="h-4 w-4 text-amber-400" />}
+          </div>
+          <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+            <span>{label(item.coverage || 'gap')}</span>
+            <span>{Number(item.decision_count ?? 0)} decisions</span>
+          </div>
+          {!item.ready && Array.isArray(item.missing) && item.missing.length > 0 ? (
+            <p className="mt-2 text-xs text-amber-300">{item.missing.map(label).join(', ')}</p>
+          ) : null}
+        </div>
+      ))}
+    </div>
   </section>
 }

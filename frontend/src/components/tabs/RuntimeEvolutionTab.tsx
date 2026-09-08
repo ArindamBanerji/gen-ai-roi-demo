@@ -18,6 +18,10 @@ import {
   Minus,
   ChevronDown,
   ChevronRight,
+  ThumbsUp,
+  ThumbsDown,
+  Eye,
+  Rocket,
 } from 'lucide-react'
 import {
   ComposedChart, Bar, Line,
@@ -549,6 +553,15 @@ export default function RuntimeEvolutionTab() {
   const [shadowEnabled, setShadowEnabled] = useState(false)
   const [shadowReport, setShadowReport] = useState<any>(null)
   const [shadowToggleBusy, setShadowToggleBusy] = useState(false)
+  const [shadowDecisionId, setShadowDecisionId] = useState('')
+  const [shadowSystemAction, setShadowSystemAction] = useState('escalate_tier2')
+  const [shadowAnalystAction, setShadowAnalystAction] = useState('refer_to_analyst')
+  const [shadowActor, setShadowActor] = useState('soc-operator')
+  const [shadowApprovalToken, setShadowApprovalToken] = useState('')
+  const [shadowBusy, setShadowBusy] = useState<string | null>(null)
+  const [shadowMessage, setShadowMessage] = useState<string | null>(null)
+  const [shadowEligibility, setShadowEligibility] = useState<any>(null)
+  const [shadowPreview, setShadowPreview] = useState<any>(null)
 
   // WIRE-06: Checkpoints
   const [checkpoints, setCheckpoints] = useState<any[]>([])
@@ -978,6 +991,97 @@ export default function RuntimeEvolutionTab() {
       // non-critical
     } finally {
       setShadowToggleBusy(false)
+    }
+  }
+
+  const refreshShadowReport = async () => {
+    const report: any = await api.fetchShadowReport()
+    setShadowReport(report)
+    return report
+  }
+
+  const requireShadowDecisionId = () => {
+    const decisionId = shadowDecisionId.trim()
+    if (!decisionId) {
+      setShadowMessage('Enter a shadow decision id.')
+      return null
+    }
+    return decisionId
+  }
+
+  const handleShadowAnalystAction = async (agrees: boolean) => {
+    const decisionId = requireShadowDecisionId()
+    if (!decisionId) return
+    setShadowBusy(agrees ? 'agree' : 'disagree')
+    setShadowMessage(null)
+    try {
+      const analystAction = agrees ? shadowSystemAction.trim() : shadowAnalystAction.trim()
+      if (!analystAction) {
+        setShadowMessage(agrees ? 'Enter the shadow system action.' : 'Enter the analyst action.')
+        return
+      }
+      await api.recordShadowAction({ decision_id: decisionId, analyst_action: analystAction })
+      await refreshShadowReport()
+      setShadowMessage(agrees ? 'Agreement recorded for shadow decision.' : 'Disagreement recorded for shadow decision.')
+    } catch {
+      setShadowMessage('Shadow analyst action failed.')
+    } finally {
+      setShadowBusy(null)
+    }
+  }
+
+  const handleShadowEligibility = async () => {
+    const decisionId = requireShadowDecisionId()
+    if (!decisionId) return
+    setShadowBusy('eligibility')
+    setShadowMessage(null)
+    try {
+      const result: any = await api.fetchShadowEligibility(decisionId)
+      setShadowEligibility(result)
+      setShadowMessage(result.eligible ? 'Shadow decision is eligible for promotion.' : 'Shadow decision is not eligible yet.')
+    } catch {
+      setShadowMessage('Shadow eligibility check failed.')
+    } finally {
+      setShadowBusy(null)
+    }
+  }
+
+  const handleShadowPreview = async () => {
+    const decisionId = requireShadowDecisionId()
+    if (!decisionId) return
+    setShadowBusy('preview')
+    setShadowMessage(null)
+    try {
+      const result: any = await api.previewShadowPromotion(decisionId)
+      setShadowPreview(result)
+      setShadowMessage(`Preview: ${result.status ?? 'unknown'} - ${result.reason ?? 'no reason returned'}`)
+    } catch {
+      setShadowMessage('Shadow promotion preview failed.')
+    } finally {
+      setShadowBusy(null)
+    }
+  }
+
+  const handleShadowPromote = async () => {
+    const decisionId = requireShadowDecisionId()
+    const token = shadowApprovalToken.trim()
+    const actor = shadowActor.trim()
+    if (!decisionId || !token || !actor) {
+      setShadowMessage('Decision id, approval token, and actor are required.')
+      return
+    }
+    if (!window.confirm(`Promote shadow decision ${decisionId}?`)) return
+    setShadowBusy('promote')
+    setShadowMessage(null)
+    try {
+      const result: any = await api.promoteShadowDecision(decisionId, token, actor)
+      setShadowMessage(`Promotion ${result.status ?? 'unknown'}: ${result.reason ?? 'no reason returned'}`)
+      await refreshShadowReport()
+      await handleShadowEligibility()
+    } catch {
+      setShadowMessage('Shadow promotion failed.')
+    } finally {
+      setShadowBusy(null)
     }
   }
 
@@ -2410,6 +2514,136 @@ export default function RuntimeEvolutionTab() {
                       </div>
                     </div>
                   )}
+                  <div className="mt-4 border-t border-gray-800 pt-4">
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <label className="text-xs text-gray-400">
+                        <span className="mb-1 block">Decision ID</span>
+                        <input
+                          value={shadowDecisionId}
+                          onChange={(event) => setShadowDecisionId(event.target.value)}
+                          className="w-full rounded border border-gray-700 bg-soc-bg px-3 py-2 text-sm text-gray-200 outline-none focus:border-amber-500"
+                          placeholder="shadow-decision-id"
+                        />
+                      </label>
+                      <label className="text-xs text-gray-400">
+                        <span className="mb-1 block">Shadow action</span>
+                        <input
+                          value={shadowSystemAction}
+                          onChange={(event) => setShadowSystemAction(event.target.value)}
+                          className="w-full rounded border border-gray-700 bg-soc-bg px-3 py-2 text-sm text-gray-200 outline-none focus:border-amber-500"
+                          placeholder="escalate_tier2"
+                        />
+                      </label>
+                      <label className="text-xs text-gray-400">
+                        <span className="mb-1 block">Analyst action</span>
+                        <input
+                          value={shadowAnalystAction}
+                          onChange={(event) => setShadowAnalystAction(event.target.value)}
+                          className="w-full rounded border border-gray-700 bg-soc-bg px-3 py-2 text-sm text-gray-200 outline-none focus:border-amber-500"
+                          placeholder="refer_to_analyst"
+                        />
+                      </label>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => void handleShadowAnalystAction(true)}
+                        disabled={shadowBusy !== null}
+                        className="inline-flex items-center gap-1.5 rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-50"
+                      >
+                        <ThumbsUp className="h-3.5 w-3.5" />
+                        {shadowBusy === 'agree' ? 'Recording' : 'Agree'}
+                      </button>
+                      <button
+                        onClick={() => void handleShadowAnalystAction(false)}
+                        disabled={shadowBusy !== null}
+                        className="inline-flex items-center gap-1.5 rounded border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/20 disabled:opacity-50"
+                      >
+                        <ThumbsDown className="h-3.5 w-3.5" />
+                        {shadowBusy === 'disagree' ? 'Recording' : 'Disagree'}
+                      </button>
+                      <button
+                        onClick={() => void handleShadowEligibility()}
+                        disabled={shadowBusy !== null}
+                        className="inline-flex items-center gap-1.5 rounded border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 disabled:opacity-50"
+                      >
+                        <Shield className="h-3.5 w-3.5" />
+                        {shadowBusy === 'eligibility' ? 'Checking' : 'Eligibility'}
+                      </button>
+                      <button
+                        onClick={() => void handleShadowPreview()}
+                        disabled={shadowBusy !== null}
+                        className="inline-flex items-center gap-1.5 rounded border border-violet-500/40 bg-violet-500/10 px-3 py-1.5 text-xs font-semibold text-violet-300 hover:bg-violet-500/20 disabled:opacity-50"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        {shadowBusy === 'preview' ? 'Previewing' : 'Preview'}
+                      </button>
+                    </div>
+                    <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <label className="text-xs text-gray-400">
+                          <span className="mb-1 block">Approval token</span>
+                          <input
+                            value={shadowApprovalToken}
+                            onChange={(event) => setShadowApprovalToken(event.target.value)}
+                            className="w-full rounded border border-gray-700 bg-soc-bg px-3 py-2 text-sm text-gray-200 outline-none focus:border-amber-500"
+                            placeholder="approval-token"
+                          />
+                        </label>
+                        <label className="text-xs text-gray-400">
+                          <span className="mb-1 block">Actor</span>
+                          <input
+                            value={shadowActor}
+                            onChange={(event) => setShadowActor(event.target.value)}
+                            className="w-full rounded border border-gray-700 bg-soc-bg px-3 py-2 text-sm text-gray-200 outline-none focus:border-amber-500"
+                            placeholder="soc-operator"
+                          />
+                        </label>
+                      </div>
+                      <button
+                        onClick={() => void handleShadowPromote()}
+                        disabled={shadowBusy !== null || shadowEligibility?.eligible !== true}
+                        className="inline-flex items-center justify-center gap-1.5 rounded border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 disabled:opacity-50"
+                      >
+                        <Rocket className="h-3.5 w-3.5" />
+                        {shadowBusy === 'promote' ? 'Promoting' : 'Promote'}
+                      </button>
+                    </div>
+                    {shadowMessage && (
+                      <p className="mt-3 rounded border border-gray-700 bg-soc-bg px-3 py-2 text-xs text-gray-300">{shadowMessage}</p>
+                    )}
+                    {(shadowEligibility || shadowPreview) && (
+                      <div className="mt-3 grid gap-3 text-xs md:grid-cols-2">
+                        {shadowEligibility && (
+                          <div className="border-t border-gray-800 pt-3">
+                            <div className="mb-2 flex items-center gap-2">
+                              {shadowEligibility.eligible ? <CheckCircle className="h-4 w-4 text-emerald-400" /> : <XCircle className="h-4 w-4 text-amber-400" />}
+                              <span className="font-semibold text-gray-200">Promotion eligibility</span>
+                            </div>
+                            <p className={shadowEligibility.eligible ? 'text-emerald-300' : 'text-amber-300'}>
+                              {shadowEligibility.eligible ? 'Eligible' : 'Held'}
+                            </p>
+                            {ensureArray<string>(shadowEligibility.reasons).length > 0 && (
+                              <p className="mt-1 text-gray-500">{ensureArray<string>(shadowEligibility.reasons).join(', ')}</p>
+                            )}
+                          </div>
+                        )}
+                        {shadowPreview && (
+                          <div className="border-t border-gray-800 pt-3">
+                            <div className="mb-2 flex items-center gap-2">
+                              <Eye className="h-4 w-4 text-violet-300" />
+                              <span className="font-semibold text-gray-200">Promotion preview</span>
+                            </div>
+                            <p className="text-gray-300">{shadowPreview.status ?? 'unknown'} · {shadowPreview.reason ?? 'no reason returned'}</p>
+                            {shadowPreview.evidence && (
+                              <p className="mt-1 text-gray-500">
+                                Samples {shadowPreview.evidence.sample_count ?? 'n/a'} · confidence {shadowPreview.evidence.confidence ?? 'n/a'}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                </div>
                 </div>
 
                 {/* WIRE-06: Checkpoints */}

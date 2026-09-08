@@ -162,29 +162,31 @@ def test_cold_start_503_is_json_with_detail(client):
 # Test 9 — Simulation start handles None scorer gracefully
 # ---------------------------------------------------------------------------
 
-def test_simulation_start_graceful_with_none_scorer(client):
-    """POST /api/simulation/start returns 200 even when ProfileScorer is None.
+@pytest.mark.asyncio
+async def test_simulation_background_reports_error_when_scorer_missing():
+    """The real simulation worker surfaces cold-start scorer absence as error status."""
+    from app.routers import simulation as simulation_router
 
-    The simulation service guards scorer.update() with
-    `if _sim_scorer is not None:` (simulation.py:427), so a missing scorer
-    skips learning updates without crashing.  The /start endpoint itself
-    does not require the scorer.
-    """
-    with patch(
-        "app.services.state_manager.StateManager.soft_reset",
-        new_callable=AsyncMock,
-    ), patch(
-        "app.routers.simulation._run_simulation_bg",
-        new_callable=AsyncMock,
-    ), patch(
-        "app.services.simulation.get_profile_scorer",
-        return_value=None,
-    ):
-        r = client.post(
-            "/api/simulation/start",
-            json={"n_decisions": 1, "speed_ms": 0},
-        )
-    assert r.status_code == 200
-    data = r.json()
-    assert "simulation_id" in data
-    assert data.get("status") == "running"
+    sim_id = "cold-start-sim-test"
+    simulation_router._simulations[sim_id] = {
+        "sim_id": sim_id,
+        "total": 1,
+        "step": 0,
+        "status": "running",
+        "current_accuracy": 0.0,
+        "category_accuracy": {},
+        "latest_weight_snapshot": [],
+        "result": None,
+    }
+    try:
+        with patch(
+            "app.routers.simulation._load_alert_pool",
+            new_callable=AsyncMock,
+            return_value=[],
+        ), patch("app.services.gae_state.get_profile_scorer", return_value=None):
+            await simulation_router._run_simulation_bg(sim_id, n_decisions=1, speed_ms=0)
+
+        assert simulation_router._simulations[sim_id]["status"] == "error"
+        assert "GraphStore is unavailable" in simulation_router._simulations[sim_id]["error"]
+    finally:
+        simulation_router._simulations.pop(sim_id, None)

@@ -10,6 +10,7 @@ Run from backend/ directory:
 """
 
 from unittest.mock import patch
+import asyncio
 import json
 
 import numpy as np
@@ -139,17 +140,14 @@ def test_empty_history_checkpoint_backward_compatible(tmp_path):
 
 def test_chart_endpoints_return_data_after_reload(tmp_path):
     """
-    GAE chart endpoints return data (not empty-state placeholders) when
-    history is present after reload.
-
-    Uses the trust-curve logic directly (no HTTP) to validate the data path.
+    GAE chart endpoints return data from the production endpoint functions after reload.
     """
+    from app.routers import gae as gae_router
     from app.services import gae_state
 
     from copilot_sdk.graph.memory_store import InMemoryGraphStore
     store = InMemoryGraphStore(domain="soc")
 
-    # Build and save state with 5 decisions
     with patch.object(gae_state, "_learning_store", store):
         with patch.object(gae_state, "_learning_state", None):
             gae_state._learning_state = gae_state._make_fresh_state()
@@ -158,36 +156,24 @@ def test_chart_endpoints_return_data_after_reload(tmp_path):
             state.decision_count = 5
             gae_state.save_learning_state()
 
-    # Reload
     saved = store.get_posterior("soc", "soc_learning_state")
     assert saved is not None
     restored = gae_state._state_from_payload(saved)
 
-    assert len(restored.history) == 5
+    with patch.object(gae_router, "get_learning_state", return_value=restored):
+        trust_payload = asyncio.run(gae_router.gae_trust_curve())
+        before_after_payload = asyncio.run(gae_router.gae_before_after())
 
-    # Simulate what gae/trust-curve endpoint does
-    trust = {}
-    curves = {}
-    for wu in restored.history:
-        action = wu.action_name
-        if action not in trust:
-            trust[action] = 0.50
-            curves[action] = []
-        trust[action] = min(1.0, trust[action] + 0.03) if wu.outcome == 1 else max(0.0, trust[action] - 0.60)
-        curves[action].append({"trust_level": round(trust[action], 4)})
-
+    curves = trust_payload["curves"]
     assert "escalate" in curves, "escalate action should appear in trust curves"
     assert len(curves["escalate"]) == 5
-    assert curves["escalate"][-1]["trust_level"] > 0.50, "5 correct decisions -> trust should be above initial 0.50"
+    assert curves["escalate"][-1]["trust_level"] > 0.50
 
-    # Simulate what gae/before-after endpoint does
-    assert len(restored.history) >= 2
-    first = restored.history[0]
-    latest = restored.history[-1]
-    improvement_pp = round((latest.confidence_at_decision - first.confidence_at_decision) * 100, 2)
-    assert improvement_pp >= 0, "confidence should not decrease with all-correct outcomes"
-
-    print(f"PASS: chart endpoints return real data after reload (improvement_pp={improvement_pp}pp)")
+    assert before_after_payload["ready"] is True
+    assert before_after_payload["total_decisions"] == 5
+    assert before_after_payload["improvement_pp"] >= 0
+    assert before_after_payload["first_decision"]["action"] == "escalate"
+    assert before_after_payload["latest_decision"]["action"] == "escalate"
 
 
 if __name__ == "__main__":

@@ -148,6 +148,10 @@ export async function getProfileState() {
   return fetchJSON('/soc/profile')
 }
 
+export async function fetchDayZeroReadiness() {
+  return fetchJSON<Record<string, unknown>>('/diagnostics/day-zero')
+}
+
 // VIS-2: Centroid evolution per decision (may return 404 if endpoint not built yet)
 export async function getCentroidEvolution(n: number = 200) {
   return fetchJSON(`/soc/centroid-evolution?n=${n}`)
@@ -594,6 +598,25 @@ export const recordShadowAction = (body: Record<string, unknown>) =>
 
 export const fetchShadowReport = () =>
   fetchJSON('/soc/shadow/report')
+
+export const fetchShadowEligibility = (shadowDecisionId: string) =>
+  fetchJSON(`/soc/shadow/eligibility/${encodeURIComponent(shadowDecisionId)}`)
+
+export const previewShadowPromotion = (shadowDecisionId: string) =>
+  fetchJSON('/soc/shadow/preview', {
+    method: 'POST',
+    body: JSON.stringify({ shadow_decision_id: shadowDecisionId }),
+  })
+
+export const promoteShadowDecision = (shadowDecisionId: string, approvalToken: string, actor: string) =>
+  fetchJSON('/soc/shadow/promote', {
+    method: 'POST',
+    body: JSON.stringify({
+      shadow_decision_id: shadowDecisionId,
+      approval_token: approvalToken,
+      actor,
+    }),
+  })
 
 // ============================================================================
 // WIRE-06: Checkpoint Controls

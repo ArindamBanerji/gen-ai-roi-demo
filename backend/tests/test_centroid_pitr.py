@@ -50,7 +50,13 @@ def test_manual_checkpoint_writes_full_tensor_to_age():
     with patch.object(gae_state, "get_profile_scorer", return_value=scorer):
         payload = gae_state.create_centroid_checkpoint()
 
-    assert store.writes
+    assert len(store.writes) == 1
+    write = store.writes[0]
+    assert write["domain"] == "soc"
+    assert write["checkpoint_id"] == payload["backup_id"]
+    np.testing.assert_array_equal(write["centroids"], scorer.centroids)
+    assert write["shape"] == [6, 4, 6]
+    assert write["decisions_count"] == 12
     assert payload["backup_id"].startswith("soc:pitr:")
     assert payload["shape"] == [6, 4, 6]
     assert payload["step"] == 12
