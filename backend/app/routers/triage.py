@@ -447,6 +447,96 @@ async def get_alert_queue():
 
 
 # ============================================================================
+# POST /api/soc/investigate - Read-only VLD investigation shadow path
+# ============================================================================
+
+@router.post("/soc/investigate")
+async def investigate_alert(
+    request: ProcessAlertRequest,
+    factor_vector_provider: Annotated[
+        FactorVectorProvider | None,
+        Depends(get_factor_vector_provider),
+    ] = None,
+):
+    """Run a read-only VLD investigation loop beside the existing analyze path."""
+    from app.domains.soc.config import SOC_CATEGORIES, resolve_alert_category
+    from app.services.gae_state import get_profile_scorer as _get_scorer, init_learning_state as _init_ls
+    from app.services.investigation_loop import InvestigationLoop
+    from app.services.investigation_patterns import build_default_investigation_patterns
+    from app.services.investigation_router import InvestigationRouter
+
+    scorer = _get_scorer()
+    if scorer is None:
+        try:
+            _init_ls()
+            scorer = _get_scorer()
+        except Exception:
+            scorer = None
+    if scorer is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Scorer not ready -- backend restarting or reset in progress",
+        )
+
+    alert_id = request.alert_id
+    alert_data = await graph_client.get_alert(alert_id)
+    if not alert_data:
+        raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
+
+    context = await _soc_get_security_context_for_analyze(alert_id)
+    if not context:
+        raise HTTPException(status_code=404, detail=f"Context for {alert_id} not found")
+
+    alert_type = context.get("alert_type") or alert_data.get("alert_type") or "unknown"
+    alert_category = resolve_alert_category(str(alert_type))
+    if alert_category not in SOC_CATEGORIES:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "unclassified_alert_type",
+                "alert_type": alert_type,
+                "message": "Alert type is not mapped to a scorable SOC category.",
+            },
+        )
+
+    active_factor_vector_provider = (
+        get_factor_vector_provider()
+        if factor_vector_provider is None
+        else factor_vector_provider
+    )
+    alert_context = {
+        **dict(alert_data),
+        **dict(context),
+        "alert_id": alert_id,
+        "alert_type": alert_type,
+        "category": alert_category,
+    }
+    router_policy = InvestigationRouter(build_default_investigation_patterns(), L_max=3)
+    loop = InvestigationLoop(
+        scorer,
+        router_policy,
+        active_factor_vector_provider,
+        L_max=3,
+        eps=0.3,
+    )
+    result = await loop.investigate(alert_context, graph_client)
+    payload = result.to_dict()
+    return {
+        "status": "ok",
+        "mode": "vld_read_only_shadow",
+        "alert_id": alert_id,
+        "single_pass": {
+            "action": payload["single_pass_action"],
+            "confidence": payload["single_pass_confidence"],
+            "category": alert_category,
+        },
+        "vld": payload,
+        "investigation_trace": payload["trace"],
+        "conservation_emit_gate": payload["conservation_emit_gate"],
+    }
+
+
+# ============================================================================
 # POST /api/alert/analyze - Analyze Alert with Graph Traversal
 # ============================================================================
 
