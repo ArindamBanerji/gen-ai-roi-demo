@@ -1,0 +1,34 @@
+{
+  "centroid_mode": "bootstrapped",
+  "classification": "ARCH: this option does not recover positive action value",
+  "design_justification": "Use the centroid set that routed well for investigation selection and the centroid set that scored actions better for terminal decisions.",
+  "experiment": "B1 dual centroids",
+  "results": [
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.3775322283609576,
+      "classification": "ARCH: this option does not recover positive action value",
+      "committed": 543,
+      "delta_vs_sp": -0.14180478821362802,
+      "n": 543,
+      "name": "B1 dual-centroid: default route, bootstrapped score",
+      "rho": 0.6850828729281768,
+      "sp_accuracy": 0.5193370165745856
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.5193370165745856,
+      "classification": "ARCH: this option does not recover positive action value",
+      "committed": 543,
+      "delta_vs_sp": 0.0,
+      "n": 543,
+      "name": "B1a default route, bootstrapped score, no evidence",
+      "rho": 0.6850828729281768,
+      "sp_accuracy": 0.5193370165745856
+    }
+  ],
+  "routing_centroid_hash": "e055e9f4733cfac1",
+  "scoring_centroid_hash": "98a3bbb04013d28a"
+}

@@ -1,0 +1,94 @@
+{
+  "conclusion": "H2 not confirmed on fixture data; current VLD action already matches score-best. Negative delta is driven by evidence/re-extraction and routing-interaction effects.",
+  "current_vld_action_accuracy": 0.31307550644567217,
+  "factor_dimension_analysis": [
+    {
+      "closer_count": 242,
+      "dimension": 0,
+      "further_count": 300,
+      "mean_after_minus_before_abs_error": 0.01390484960098219,
+      "unchanged_count": 1
+    },
+    {
+      "closer_count": 117,
+      "dimension": 1,
+      "further_count": 424,
+      "mean_after_minus_before_abs_error": 0.14707734806629835,
+      "unchanged_count": 2
+    },
+    {
+      "closer_count": 71,
+      "dimension": 2,
+      "further_count": 472,
+      "mean_after_minus_before_abs_error": 0.12833241252302025,
+      "unchanged_count": 0
+    },
+    {
+      "closer_count": 253,
+      "dimension": 3,
+      "further_count": 288,
+      "mean_after_minus_before_abs_error": 0.011617096378146103,
+      "unchanged_count": 2
+    },
+    {
+      "closer_count": 164,
+      "dimension": 4,
+      "further_count": 374,
+      "mean_after_minus_before_abs_error": 0.07193354818907305,
+      "unchanged_count": 5
+    },
+    {
+      "closer_count": 20,
+      "dimension": 5,
+      "further_count": 523,
+      "mean_after_minus_before_abs_error": 0.2320375997544506,
+      "unchanged_count": 0
+    }
+  ],
+  "fixture": "support\\setup\\zero_day_decisions_v5.json",
+  "hypotheses": {
+    "H1_single_pass_sufficient": {
+      "confirmed": false,
+      "sp_accuracy": 0.5377532228360957
+    },
+    "H2_scoring_locked_to_routed_category": {
+      "confirmed": false,
+      "current_vld_matches_score_best": 1.0,
+      "hypothetical_lift_best_minus_last_investigated": 0.03683241252302022,
+      "interpretation": "current implementation already emits score-best; routed-category lock is not the live cause",
+      "score_best_accuracy": 0.31307550644567217,
+      "score_in_initial_routed_accuracy": 0.29097605893186,
+      "score_in_last_investigated_accuracy": 0.27624309392265195
+    },
+    "H3_reextraction_dilutes": {
+      "confirmed": true,
+      "content_rule_enriched_accuracy": 0.3683241252302026,
+      "single_pass_accuracy": 0.5377532228360957
+    },
+    "H4_wrong_routing_damage": {
+      "confirmed": true,
+      "sp_accuracy_same_correct_split": 0.532258064516129,
+      "sp_accuracy_same_wrong_split": 0.5497076023391813,
+      "vld_accuracy_when_routing_correct": 0.31451612903225806,
+      "vld_accuracy_when_routing_wrong": 0.30994152046783624
+    },
+    "H5_wrong_category_action_space": {
+      "confirmed": false,
+      "lift_true_minus_wrong_slice": 0.0,
+      "wrong_route_score_in_true_slice_accuracy": 0.2807017543859649,
+      "wrong_route_score_in_wrong_slice_accuracy": 0.2807017543859649
+    }
+  },
+  "sample": {
+    "action_truth_alerts": 543,
+    "alerts": 543,
+    "eval_alerts": 543,
+    "routing_correct": 372,
+    "routing_wrong": 171
+  },
+  "score_best_matches_current_vld_actions": 1.0,
+  "synthetic_comparison": {
+    "real_data_result": "H2 not confirmed",
+    "synthetic_claim": "H2 scoring locked to routed category was likely cause."
+  }
+}

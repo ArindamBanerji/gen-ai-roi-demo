@@ -1,0 +1,151 @@
+{
+  "best_option": {
+    "abstain_rate": 0.0,
+    "abstained": 0,
+    "accuracy": 0.5193370165745856,
+    "classification": "ARCH: this option does not recover positive action value",
+    "committed": 543,
+    "delta_vs_sp": 0.0,
+    "n": 543,
+    "name": "B1a default route, bootstrapped score, no evidence",
+    "option": "b1_dual_centroids",
+    "rho": 0.6850828729281768,
+    "sp_accuracy": 0.5193370165745856
+  },
+  "centroid_mode": "bootstrapped",
+  "comparison_table": [
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.3775322283609576,
+      "classification": "ARCH: this option does not recover positive action value",
+      "committed": 543,
+      "delta_vs_sp": -0.14180478821362802,
+      "n": 543,
+      "name": "B1 dual-centroid: default route, bootstrapped score",
+      "option": "b1_dual_centroids",
+      "rho": 0.6850828729281768,
+      "sp_accuracy": 0.5193370165745856
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.5193370165745856,
+      "classification": "ARCH: this option does not recover positive action value",
+      "committed": 543,
+      "delta_vs_sp": 0.0,
+      "n": 543,
+      "name": "B1a default route, bootstrapped score, no evidence",
+      "option": "b1_dual_centroids",
+      "rho": 0.6850828729281768,
+      "sp_accuracy": 0.5193370165745856
+    },
+    {
+      "option": "b2_dimension_gating",
+      "skip_reason": "output missing",
+      "skipped": true
+    },
+    {
+      "option": "b3_joint_training",
+      "skip_reason": "output missing",
+      "skipped": true
+    },
+    {
+      "option": "b4_breadth_enrichment",
+      "skip_reason": "output missing",
+      "skipped": true
+    },
+    {
+      "option": "b5_ensemble",
+      "skip_reason": "output missing",
+      "skipped": true
+    },
+    {
+      "option": "b6_routing_feature",
+      "skip_reason": "output missing",
+      "skipped": true
+    },
+    {
+      "option": "b7_abstain_disagreement",
+      "skip_reason": "output missing",
+      "skipped": true
+    }
+  ],
+  "experiment": "Phase C validation",
+  "production_data_needed": "Real verified SOC outcomes with production-trained routing and action centroids; validate whether fixture/synthetic centroid behavior persists out of sample.",
+  "recommendation": "No tested option achieved rho>0.5 and delta>0 simultaneously; scope VLD to category identification unless production data changes this geometry.",
+  "sensitivity": {
+    "all_finite": true,
+    "delta_mean": -0.15027624309392262,
+    "delta_std": 0.022361855228965808,
+    "stability_runs": 5
+  },
+  "stability": [
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.35359116022099446,
+      "classification": "ARCH: this option does not recover positive action value",
+      "committed": 543,
+      "delta_vs_sp": -0.15837937384898715,
+      "n": 543,
+      "name": "stability_seed_0",
+      "rho": 0.39594843462246776,
+      "seed": 0,
+      "sp_accuracy": 0.5119705340699816
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.3812154696132597,
+      "classification": "ARCH: this option does not recover positive action value",
+      "committed": 543,
+      "delta_vs_sp": -0.147329650092081,
+      "n": 543,
+      "name": "stability_seed_1",
+      "rho": 0.39226519337016574,
+      "seed": 1,
+      "sp_accuracy": 0.5285451197053407
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.3462246777163904,
+      "classification": "ARCH: this option does not recover positive action value",
+      "committed": 543,
+      "delta_vs_sp": -0.17863720073664824,
+      "n": 543,
+      "name": "stability_seed_2",
+      "rho": 0.3996316758747698,
+      "seed": 2,
+      "sp_accuracy": 0.5248618784530387
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.36464088397790057,
+      "classification": "ARCH: this option does not recover positive action value",
+      "committed": 543,
+      "delta_vs_sp": -0.15653775322283608,
+      "n": 543,
+      "name": "stability_seed_3",
+      "rho": 0.3756906077348066,
+      "seed": 3,
+      "sp_accuracy": 0.5211786372007366
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.40699815837937386,
+      "classification": "ARCH: this option does not recover positive action value",
+      "committed": 543,
+      "delta_vs_sp": -0.11049723756906077,
+      "n": 543,
+      "name": "stability_seed_4",
+      "rho": 0.39410681399631675,
+      "seed": 4,
+      "sp_accuracy": 0.5174953959484346
+    }
+  ],
+  "verdict": "TENSION IS INHERENT"
+}

@@ -1,0 +1,213 @@
+{
+  "best_option": {
+    "abstain_rate": 0.0,
+    "abstained": 0,
+    "accuracy": 0.22283609576427257,
+    "classification": "HYPO: resolves routing/action tension for this fixture geometry",
+    "committed": 543,
+    "delta_vs_sp": 0.07182320441988951,
+    "n": 543,
+    "name": "B1 dual-centroid: default route, trained score",
+    "option": "b1_dual_centroids",
+    "rho": 0.6850828729281768,
+    "sp_accuracy": 0.15101289134438306
+  },
+  "comparison_table": [
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.22283609576427257,
+      "classification": "HYPO: resolves routing/action tension for this fixture geometry",
+      "committed": 543,
+      "delta_vs_sp": 0.07182320441988951,
+      "n": 543,
+      "name": "B1 dual-centroid: default route, trained score",
+      "option": "b1_dual_centroids",
+      "rho": 0.6850828729281768,
+      "sp_accuracy": 0.15101289134438306
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.15101289134438306,
+      "classification": "ARCH: this option does not recover positive action value",
+      "committed": 543,
+      "delta_vs_sp": 0.0,
+      "n": 543,
+      "name": "B1a default route, trained score, no evidence",
+      "option": "b1_dual_centroids",
+      "rho": 0.6850828729281768,
+      "sp_accuracy": 0.15101289134438306
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.4438305709023941,
+      "classification": "ARCH: this option does not recover positive action value",
+      "committed": 543,
+      "delta_vs_sp": -0.09392265193370164,
+      "n": 543,
+      "name": "B2 default centroid dimension gating",
+      "option": "b2_dimension_gating",
+      "rho": 0.6850828729281768,
+      "sp_accuracy": 0.5377532228360957
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.16390423572744015,
+      "classification": "HYPO: resolves routing/action tension for this fixture geometry",
+      "committed": 543,
+      "delta_vs_sp": 0.012891344383057085,
+      "n": 543,
+      "name": "B2a trained centroid dimension gating",
+      "option": "b2_dimension_gating",
+      "rho": 0.6850828729281768,
+      "sp_accuracy": 0.15101289134438306
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.36095764272559855,
+      "alpha": 1.0,
+      "classification": "ARCH: no single interpolated tensor achieved rho>0.5 and delta>0",
+      "committed": 543,
+      "delta_vs_sp": -0.17679558011049717,
+      "n": 543,
+      "name": "B3 joint alpha=1.0",
+      "option": "b3_joint_training",
+      "rho": 0.6850828729281768,
+      "sp_accuracy": 0.5377532228360957
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.2596685082872928,
+      "classification": "ARCH: this option does not recover positive action value",
+      "committed": 543,
+      "delta_vs_sp": -0.2780847145488029,
+      "n": 543,
+      "name": "B4 breadth all patterns, default score",
+      "option": "b4_breadth_enrichment",
+      "rho": 0.6850828729281768,
+      "sp_accuracy": 0.5377532228360957
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.2523020257826888,
+      "classification": "HYPO: improves action scoring but routing remains weak",
+      "committed": 543,
+      "delta_vs_sp": 0.10128913443830573,
+      "n": 543,
+      "name": "B4a breadth all patterns, trained score",
+      "option": "b4_breadth_enrichment",
+      "rho": 0.15469613259668508,
+      "sp_accuracy": 0.15101289134438306
+    },
+    {
+      "accuracy": 0.5377532228360957,
+      "beta": 0.9,
+      "classification": "ARCH: distance ensemble does not beat the endpoints",
+      "default_endpoint_accuracy": 0.5377532228360957,
+      "option": "b5_ensemble",
+      "trained_endpoint_accuracy": 0.15101289134438306
+    },
+    {
+      "classification": "EXP: intentionally deferred contingent architecture",
+      "option": "b6_routing_feature",
+      "skip_reason": "Requires augmented centroid dimensionality and retraining; B1-B5/B7 are cheaper and directly answer the one-tensor tension first.",
+      "skipped": true
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "classification": "ARCH: this option does not recover positive action value",
+      "committed": 74,
+      "delta_vs_sp": -0.04054054054054054,
+      "n": 74,
+      "name": "B7 abstain on default/trained route disagreement",
+      "option": "b7_abstain_disagreement",
+      "rho": 0.7432432432432432,
+      "sp_accuracy": 0.21621621621621623
+    }
+  ],
+  "experiment": "Phase C validation",
+  "production_data_needed": "Real verified SOC outcomes with production-trained routing and action centroids; validate whether fixture/synthetic centroid behavior persists out of sample.",
+  "recommendation": "Phase 2 should separate routing \u03bc from action-scoring \u03bc and keep investigation direction decoupled from terminal action scoring.",
+  "sensitivity": {
+    "all_finite": true,
+    "delta_mean": 0.14475138121546963,
+    "delta_std": 0.012896605082881474,
+    "stability_runs": 5
+  },
+  "stability": [
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.30755064456721914,
+      "classification": "HYPO: improves action scoring but routing remains weak",
+      "committed": 543,
+      "delta_vs_sp": 0.15101289134438306,
+      "n": 543,
+      "name": "stability_seed_0",
+      "rho": 0.16758747697974216,
+      "seed": 0,
+      "sp_accuracy": 0.15653775322283608
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.2983425414364641,
+      "classification": "HYPO: improves action scoring but routing remains weak",
+      "committed": 543,
+      "delta_vs_sp": 0.14732965009208104,
+      "n": 543,
+      "name": "stability_seed_1",
+      "rho": 0.16022099447513813,
+      "seed": 1,
+      "sp_accuracy": 0.15101289134438306
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.3020257826887661,
+      "classification": "HYPO: improves action scoring but routing remains weak",
+      "committed": 543,
+      "delta_vs_sp": 0.14917127071823205,
+      "n": 543,
+      "name": "stability_seed_2",
+      "rho": 0.16390423572744015,
+      "seed": 2,
+      "sp_accuracy": 0.15285451197053407
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.2596685082872928,
+      "classification": "HYPO: improves action scoring but routing remains weak",
+      "committed": 543,
+      "delta_vs_sp": 0.11970534069981584,
+      "n": 543,
+      "name": "stability_seed_3",
+      "rho": 0.15285451197053407,
+      "seed": 3,
+      "sp_accuracy": 0.13996316758747698
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.3020257826887661,
+      "classification": "HYPO: improves action scoring but routing remains weak",
+      "committed": 543,
+      "delta_vs_sp": 0.1565377532228361,
+      "n": 543,
+      "name": "stability_seed_4",
+      "rho": 0.16206261510128914,
+      "seed": 4,
+      "sp_accuracy": 0.14548802946593
+    }
+  ],
+  "verdict": "DUAL-CENTROID RESOLVES"
+}

@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 
-from app.domains.soc.config import SOC_CATEGORIES
+from app.domains.soc.config import SCORER_ACTIONS, SOC_CATEGORIES
 from app.services.investigation_patterns import InvestigationPattern
 
 POLICY_VERSION = "soc_vld_investigation_router.v2"
@@ -21,6 +21,16 @@ class RouteDecision:
     selected_category: str | None
     propensity: float
     policy_version: str = POLICY_VERSION
+
+
+@dataclass(frozen=True)
+class BestCentroidScore:
+    category: str
+    action: str
+    category_index: int
+    action_index: int
+    distance: float
+    confidence: float
 
 
 class InvestigationRouter:
@@ -45,6 +55,36 @@ class InvestigationRouter:
         for cat_index, category in enumerate(categories[: mu.shape[0]]):
             distances[str(category)] = float(np.min(np.linalg.norm(mu[cat_index] - v, axis=1)))
         return distances
+
+    def score_best_from_centroids(self, v_t: np.ndarray, scorer: Any) -> BestCentroidScore:
+        centroids = getattr(scorer, "centroids", None)
+        if centroids is None:
+            centroids = getattr(scorer, "mu", None)
+        if centroids is None:
+            raise ValueError("scorer does not expose centroids/mu for VLD scoring")
+        mu = np.asarray(centroids, dtype=np.float64)
+        v = np.asarray(v_t, dtype=np.float64).reshape(-1)
+        if mu.ndim != 3:
+            raise ValueError(f"centroid tensor must be 3-D, got shape {mu.shape}")
+        if mu.shape[2] != v.shape[0]:
+            raise ValueError(f"factor vector length {v.shape[0]} does not match centroids {mu.shape}")
+        categories = list(getattr(scorer, "categories", None) or SOC_CATEGORIES)
+        actions = list(getattr(scorer, "actions", None) or SCORER_ACTIONS)
+        distances = np.linalg.norm(mu - v.reshape(1, 1, -1), axis=2)
+        flat_index = int(np.argmin(distances))
+        category_index, action_index = np.unravel_index(flat_index, distances.shape)
+        logits = -distances.reshape(-1) / max(float(getattr(scorer, "tau", 0.1)), 1.0e-8)
+        logits = logits - float(np.max(logits))
+        exp = np.exp(logits)
+        probabilities = exp / float(np.sum(exp))
+        return BestCentroidScore(
+            category=str(categories[category_index]),
+            action=str(actions[action_index]),
+            category_index=int(category_index),
+            action_index=int(action_index),
+            distance=float(distances[category_index, action_index]),
+            confidence=float(probabilities[flat_index]),
+        )
 
     def route_decision(
         self,

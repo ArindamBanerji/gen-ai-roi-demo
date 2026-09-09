@@ -1,0 +1,112 @@
+{
+  "action_distribution_per_category": {
+    "cloud_infrastructure": {
+      "escalate": 16,
+      "investigate": 12,
+      "monitor": 13,
+      "suppress": 13
+    },
+    "credential_access": {
+      "escalate": 33,
+      "investigate": 47,
+      "monitor": 42,
+      "suppress": 41
+    },
+    "data_exfiltration": {
+      "escalate": 25,
+      "investigate": 20,
+      "monitor": 19,
+      "suppress": 18
+    },
+    "insider_threat": {
+      "escalate": 17,
+      "investigate": 20,
+      "monitor": 23,
+      "suppress": 21
+    },
+    "lateral_movement": {
+      "escalate": 30,
+      "investigate": 29,
+      "monitor": 28,
+      "suppress": 23
+    },
+    "malware_execution": {
+      "escalate": 20,
+      "investigate": 9,
+      "monitor": 16,
+      "suppress": 8
+    }
+  },
+  "category_distribution": {
+    "cloud_infrastructure": 54,
+    "credential_access": 163,
+    "data_exfiltration": 82,
+    "insider_threat": 81,
+    "lateral_movement": 110,
+    "malware_execution": 53
+  },
+  "category_imbalance_fraction": 0.3001841620626151,
+  "centroid_cell_coverage": {
+    "cloud_infrastructure:escalate": 128,
+    "cloud_infrastructure:investigate": 115,
+    "cloud_infrastructure:monitor": 123,
+    "cloud_infrastructure:suppress": 118,
+    "credential_access:escalate": 350,
+    "credential_access:investigate": 376,
+    "credential_access:monitor": 352,
+    "credential_access:suppress": 379,
+    "data_exfiltration:escalate": 201,
+    "data_exfiltration:investigate": 178,
+    "data_exfiltration:monitor": 175,
+    "data_exfiltration:suppress": 183,
+    "insider_threat:escalate": 191,
+    "insider_threat:investigate": 176,
+    "insider_threat:monitor": 188,
+    "insider_threat:suppress": 171,
+    "lateral_movement:escalate": 248,
+    "lateral_movement:investigate": 264,
+    "lateral_movement:monitor": 245,
+    "lateral_movement:suppress": 226,
+    "malware_execution:escalate": 135,
+    "malware_execution:investigate": 107,
+    "malware_execution:monitor": 116,
+    "malware_execution:suppress": 117
+  },
+  "centroid_mode": "trained",
+  "evidence_cosine_similarity_by_pattern_pair": {
+    "credential_access__cloud_infrastructure": 0.0,
+    "credential_access__data_exfiltration": 0.4095055397374108,
+    "credential_access__insider_threat": 0.4316944120183698,
+    "credential_access__lateral_movement": 0.7478245842496647,
+    "credential_access__malware_execution": 0.0,
+    "data_exfiltration__cloud_infrastructure": 0.71632249500587,
+    "data_exfiltration__insider_threat": 0.4408618906843426,
+    "insider_threat__cloud_infrastructure": 0.0,
+    "lateral_movement__cloud_infrastructure": 0.08852812802893938,
+    "lateral_movement__data_exfiltration": 0.0,
+    "lateral_movement__insider_threat": 0.0,
+    "malware_execution__cloud_infrastructure": 0.0,
+    "malware_execution__data_exfiltration": 0.0,
+    "malware_execution__insider_threat": 0.44916383990660386,
+    "malware_execution__lateral_movement": 0.0
+  },
+  "experiment": "E-DATA",
+  "factor_std_per_dimension": {
+    "0": 0.22694676483177167,
+    "1": 0.21989523176288617,
+    "2": 0.24531919241584776,
+    "3": 0.22297597878797665,
+    "4": 0.19666196634766311,
+    "5": 0.26717355025893735
+  },
+  "fixture": "support\\setup\\zero_day_decisions_v5.json",
+  "max_abs_evidence_overlap": 0.7478245842496647,
+  "provenance": "deterministic synthetic SOC seed fixture",
+  "quality": {
+    "all_checks_pass": true,
+    "critical_count": 0,
+    "flags": [],
+    "warning_count": 0
+  },
+  "zero_coverage_cells": []
+}

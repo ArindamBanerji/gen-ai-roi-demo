@@ -1,0 +1,40 @@
+{
+  "centroid_mode": "trained",
+  "experiment": "E-SPLIT",
+  "selected_dimensions_for_selective": [
+    0,
+    1,
+    3,
+    4
+  ],
+  "single_pass_accuracy": 0.15101289134438306,
+  "strategies": {
+    "A_current_vld": {
+      "accuracy": 0.20441988950276244,
+      "delta_vs_sp": 0.053406998158379376,
+      "n": 543
+    },
+    "B_route_surface": {
+      "accuracy": 0.15101289134438306,
+      "delta_vs_sp": 0.0,
+      "n": 543
+    },
+    "C_selective": {
+      "accuracy": 0.21915285451197053,
+      "delta_vs_sp": 0.06813996316758747,
+      "n": 543
+    },
+    "D_route_selective": {
+      "accuracy": 0.22467771639042358,
+      "delta_vs_sp": 0.07366482504604052,
+      "n": 543
+    },
+    "E_oracle": {
+      "accuracy": 0.23388581952117865,
+      "delta_vs_sp": 0.08287292817679559,
+      "n": 543
+    }
+  },
+  "strategy_a_matches_phase1b": true,
+  "verdict": "VLD VALUE = SELECTIVE ENRICHMENT: selective strategy beats SP."
+}

@@ -1,0 +1,33 @@
+{
+  "classification": "HYPO: resolves routing/action tension for this fixture geometry",
+  "design_justification": "Use the centroid set that routed well for investigation selection and the centroid set that scored actions better for terminal decisions.",
+  "experiment": "B1 dual centroids",
+  "results": [
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.22283609576427257,
+      "classification": "HYPO: resolves routing/action tension for this fixture geometry",
+      "committed": 543,
+      "delta_vs_sp": 0.07182320441988951,
+      "n": 543,
+      "name": "B1 dual-centroid: default route, trained score",
+      "rho": 0.6850828729281768,
+      "sp_accuracy": 0.15101289134438306
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.15101289134438306,
+      "classification": "ARCH: this option does not recover positive action value",
+      "committed": 543,
+      "delta_vs_sp": 0.0,
+      "n": 543,
+      "name": "B1a default route, trained score, no evidence",
+      "rho": 0.6850828729281768,
+      "sp_accuracy": 0.15101289134438306
+    }
+  ],
+  "routing_centroid_hash": "e055e9f4733cfac1",
+  "scoring_centroid_hash": "0aed34997f28666b"
+}

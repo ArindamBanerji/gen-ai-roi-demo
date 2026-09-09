@@ -178,6 +178,13 @@ export async function analyzeAlert(alertId: string) {
   })
 }
 
+export async function investigateAlert(alertId: string) {
+  return fetchJSON('/soc/investigate', {
+    method: 'POST',
+    body: JSON.stringify({ alert_id: alertId }),
+  })
+}
+
 export async function executeAction(alertId: string) {
   return fetchJSON('/action/execute', {
     method: 'POST',

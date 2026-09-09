@@ -1,0 +1,71 @@
+{
+  "centroid_mode": "default",
+  "dimensions": [
+    {
+      "correlation_abs_delta_with_action_correct": -0.13387659765075358,
+      "dimension": 0,
+      "factor": "privileged_identity_context",
+      "fraction_improved": 0.43830570902394106,
+      "fraction_improved_correct_route": 0.4274193548387097,
+      "fraction_improved_wrong_route": 0.4619883040935672,
+      "mean_abs_delta": 0.1221682013505218
+    },
+    {
+      "correlation_abs_delta_with_action_correct": -0.10038011630465495,
+      "dimension": 1,
+      "factor": "asset_criticality",
+      "fraction_improved": 0.2283609576427256,
+      "fraction_improved_correct_route": 0.24731182795698925,
+      "fraction_improved_wrong_route": 0.1871345029239766,
+      "mean_abs_delta": 0.30710926949048495
+    },
+    {
+      "correlation_abs_delta_with_action_correct": -0.13898028241115767,
+      "dimension": 2,
+      "factor": "threat_intel_enrichment",
+      "fraction_improved": 0.19337016574585636,
+      "fraction_improved_correct_route": 0.22311827956989247,
+      "fraction_improved_wrong_route": 0.1286549707602339,
+      "mean_abs_delta": 0.3035552486187845
+    },
+    {
+      "correlation_abs_delta_with_action_correct": -0.1516379616888101,
+      "dimension": 3,
+      "factor": "pattern_history",
+      "fraction_improved": 0.39226519337016574,
+      "fraction_improved_correct_route": 0.4112903225806452,
+      "fraction_improved_wrong_route": 0.3508771929824561,
+      "mean_abs_delta": 0.1767315837937385
+    },
+    {
+      "correlation_abs_delta_with_action_correct": -0.15976919656824423,
+      "dimension": 4,
+      "factor": "time_anomaly",
+      "fraction_improved": 0.3756906077348066,
+      "fraction_improved_correct_route": 0.3602150537634409,
+      "fraction_improved_wrong_route": 0.4093567251461988,
+      "mean_abs_delta": 0.2185486494782075
+    },
+    {
+      "correlation_abs_delta_with_action_correct": 0.13692044404550943,
+      "dimension": 5,
+      "factor": "device_trust",
+      "fraction_improved": 0.23388581952117865,
+      "fraction_improved_correct_route": 0.20967741935483872,
+      "fraction_improved_wrong_route": 0.28654970760233917,
+      "mean_abs_delta": 0.3310827194597913
+    }
+  ],
+  "experiment": "E-DIM",
+  "full_vector": {
+    "fraction_improved": 0.22099447513812154,
+    "mean_after_distance": 0.7747338618802032,
+    "mean_before_distance": 0.4412798816854213
+  },
+  "sample": {
+    "alerts": 543
+  },
+  "self_diagnostic": "HYPOTHESIS ISSUE: evidence is mostly noise against action centroids",
+  "sp_accuracy": 0.5377532228360957,
+  "vld_accuracy": 0.31307550644567217
+}

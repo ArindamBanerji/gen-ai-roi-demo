@@ -239,6 +239,8 @@ async def run_measurement(fixture_path: str | Path = DEFAULT_FIXTURE) -> dict[st
         gate_verdict = "FAIL"
         gate_reason = "rho_VLD_scorekey does not beat majority baseline."
 
+    vld_action_accuracy = action_accuracy.get("vld")
+    single_pass_accuracy = action_accuracy.get("single_pass")
     return {
         "fixture": str(fixture_path),
         "data_notes": [
@@ -265,7 +267,9 @@ async def run_measurement(fixture_path: str | Path = DEFAULT_FIXTURE) -> dict[st
         "rho_random_expected": rho_random_expected,
         "content_keyed_fraction": content_agree / float(len(labels)) if labels else None,
         "action_accuracy": action_accuracy,
-        "delta_depth_vs_single": _delta(action_accuracy.get("vld"), action_accuracy.get("single_pass")),
+        "vld_action_accuracy": vld_action_accuracy,
+        "single_pass_accuracy": single_pass_accuracy,
+        "delta_depth_vs_single": _delta(vld_action_accuracy, single_pass_accuracy),
         "margin_distribution": {"percentiles": _percentiles(margins), "rho_by_quartile": quartiles},
         "mu_skew": {
             "mean": statistics.fmean(skew_values) if skew_values else None,

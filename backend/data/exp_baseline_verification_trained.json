@@ -1,0 +1,488 @@
+{
+  "action_distribution_per_category": {
+    "cloud_infrastructure": {
+      "escalate": 16,
+      "investigate": 12,
+      "monitor": 13,
+      "suppress": 13
+    },
+    "credential_access": {
+      "escalate": 33,
+      "investigate": 47,
+      "monitor": 42,
+      "suppress": 41
+    },
+    "data_exfiltration": {
+      "escalate": 25,
+      "investigate": 20,
+      "monitor": 19,
+      "suppress": 18
+    },
+    "insider_threat": {
+      "escalate": 17,
+      "investigate": 20,
+      "monitor": 23,
+      "suppress": 21
+    },
+    "lateral_movement": {
+      "escalate": 30,
+      "investigate": 29,
+      "monitor": 28,
+      "suppress": 23
+    },
+    "malware_execution": {
+      "escalate": 20,
+      "investigate": 9,
+      "monitor": 16,
+      "suppress": 8
+    }
+  },
+  "all_checks_pass": true,
+  "centroid_cell_counts": {
+    "cloud_infrastructure:escalate": 128,
+    "cloud_infrastructure:investigate": 115,
+    "cloud_infrastructure:monitor": 123,
+    "cloud_infrastructure:suppress": 118,
+    "credential_access:escalate": 350,
+    "credential_access:investigate": 376,
+    "credential_access:monitor": 352,
+    "credential_access:suppress": 379,
+    "data_exfiltration:escalate": 201,
+    "data_exfiltration:investigate": 178,
+    "data_exfiltration:monitor": 175,
+    "data_exfiltration:suppress": 183,
+    "insider_threat:escalate": 191,
+    "insider_threat:investigate": 176,
+    "insider_threat:monitor": 188,
+    "insider_threat:suppress": 171,
+    "lateral_movement:escalate": 248,
+    "lateral_movement:investigate": 264,
+    "lateral_movement:monitor": 245,
+    "lateral_movement:suppress": 226,
+    "malware_execution:escalate": 135,
+    "malware_execution:investigate": 107,
+    "malware_execution:monitor": 116,
+    "malware_execution:suppress": 117
+  },
+  "centroid_mode": "trained",
+  "centroid_separation": {
+    "inter_intra_ratio": 1.2612984872449386,
+    "mean_inter": 0.6872640298508812,
+    "mean_intra": 0.5448861128439755,
+    "training_inter_intra_ratio": 10.12842882479225
+  },
+  "checks": [
+    {
+      "actual": 0.15101289134438306,
+      "check": "sp_accuracy_recompute",
+      "expected": "trained_mode_no_phase1b_match_required",
+      "passed": true
+    },
+    {
+      "actual": 0.20441988950276244,
+      "check": "vld_accuracy_recompute",
+      "expected": "trained_mode_no_phase1b_match_required",
+      "passed": true
+    },
+    {
+      "bad_vectors": 0,
+      "check": "factor_vector_sanity",
+      "passed": true
+    },
+    {
+      "check": "scorer_centroid_sanity",
+      "failures": [],
+      "passed": true
+    },
+    {
+      "actual": 543,
+      "check": "verified_outcome_count",
+      "passed": true
+    },
+    {
+      "actual": 10.12842882479225,
+      "check": "centroid_quality_inter_intra",
+      "issue_category": null,
+      "passed": true,
+      "threshold": 1.5
+    },
+    {
+      "check": "action_distribution_per_category",
+      "degenerate_categories": [],
+      "issue_category": null,
+      "passed": true
+    }
+  ],
+  "experiment": "E-BASELINE",
+  "factor_vector_samples": [
+    {
+      "alert_id": "ALT-JDOE-001",
+      "l2_delta": 0.7940996080467488,
+      "nearest_v0": {
+        "action": "suppress",
+        "action_index": 2,
+        "category": "insider_threat",
+        "category_index": 4,
+        "confidence": 0.16692952984227774,
+        "distance": 0.5884918358379904
+      },
+      "nearest_v_l": {
+        "action": "investigate",
+        "action_index": 1,
+        "category": "credential_access",
+        "category_index": 0,
+        "confidence": 0.21245372568778925,
+        "distance": 0.5449140262769183
+      },
+      "v0": [
+        0.693,
+        0.783,
+        0.785,
+        0.542,
+        0.59,
+        0.084
+      ],
+      "v_l": [
+        0.36075,
+        0.19575,
+        0.42125,
+        0.3405,
+        0.5425,
+        0.07100000000000001
+      ]
+    },
+    {
+      "alert_id": "ALT-JDOE-002",
+      "l2_delta": 0.6883326069406982,
+      "nearest_v0": {
+        "action": "escalate",
+        "action_index": 0,
+        "category": "lateral_movement",
+        "category_index": 2,
+        "confidence": 0.18342337295311864,
+        "distance": 0.42538896389807884
+      },
+      "nearest_v_l": {
+        "action": "suppress",
+        "action_index": 2,
+        "category": "credential_access",
+        "category_index": 0,
+        "confidence": 0.21582808303534445,
+        "distance": 0.7077478931133108
+      },
+      "v0": [
+        0.165,
+        0.399,
+        0.282,
+        0.412,
+        0.37,
+        0.615
+      ],
+      "v_l": [
+        0.5983333333333333,
+        0.133,
+        0.09399999999999999,
+        0.3773333333333333,
+        0.12333333333333334,
+        0.27166666666666667
+      ]
+    },
+    {
+      "alert_id": "ALT-JDOE-003",
+      "l2_delta": 0.6517409164861617,
+      "nearest_v0": {
+        "action": "investigate",
+        "action_index": 1,
+        "category": "credential_access",
+        "category_index": 0,
+        "confidence": 0.18191521129310187,
+        "distance": 0.7218854524319495
+      },
+      "nearest_v_l": {
+        "action": "investigate",
+        "action_index": 1,
+        "category": "credential_access",
+        "category_index": 0,
+        "confidence": 0.33261810021041055,
+        "distance": 0.4541383343022905
+      },
+      "v0": [
+        0.288,
+        0.185,
+        0.167,
+        0.171,
+        0.201,
+        0.872
+      ],
+      "v_l": [
+        0.3893333333333333,
+        0.06166666666666667,
+        0.35566666666666663,
+        0.297,
+        0.30033333333333334,
+        0.2906666666666667
+      ]
+    },
+    {
+      "alert_id": "SYN-ME-D004-001",
+      "l2_delta": 0.7406360864149141,
+      "nearest_v0": {
+        "action": "suppress",
+        "action_index": 2,
+        "category": "data_exfiltration",
+        "category_index": 3,
+        "confidence": 0.21230938818403644,
+        "distance": 0.3694427786606096
+      },
+      "nearest_v_l": {
+        "action": "investigate",
+        "action_index": 1,
+        "category": "malware_execution",
+        "category_index": 1,
+        "confidence": 0.17173941779341562,
+        "distance": 0.6213924293678078
+      },
+      "v0": [
+        0.602,
+        0.622,
+        0.794,
+        0.512,
+        0.477,
+        0.362
+      ],
+      "v_l": [
+        0.33799999999999997,
+        0.3855,
+        0.1985,
+        0.528,
+        0.33925,
+        0.1405
+      ]
+    },
+    {
+      "alert_id": "SYN-DE-D005-001",
+      "l2_delta": 0.6081434863582771,
+      "nearest_v0": {
+        "action": "escalate",
+        "action_index": 0,
+        "category": "malware_execution",
+        "category_index": 1,
+        "confidence": 0.16259490370081264,
+        "distance": 0.5884082063830974
+      },
+      "nearest_v_l": {
+        "action": "investigate",
+        "action_index": 1,
+        "category": "credential_access",
+        "category_index": 0,
+        "confidence": 0.2628084231907606,
+        "distance": 0.5976803755967312
+      },
+      "v0": [
+        0.141,
+        0.401,
+        0.182,
+        0.237,
+        0.34,
+        0.623
+      ],
+      "v_l": [
+        0.44275,
+        0.10025,
+        0.2705,
+        0.23925,
+        0.26,
+        0.20575
+      ]
+    },
+    {
+      "alert_id": "SYN-DE-D006-001",
+      "l2_delta": 0.6918502818529454,
+      "nearest_v0": {
+        "action": "suppress",
+        "action_index": 2,
+        "category": "data_exfiltration",
+        "category_index": 3,
+        "confidence": 0.2577920664908386,
+        "distance": 0.27062256562575265
+      },
+      "nearest_v_l": {
+        "action": "investigate",
+        "action_index": 1,
+        "category": "malware_execution",
+        "category_index": 1,
+        "confidence": 0.16074840411531452,
+        "distance": 0.6523854765755022
+      },
+      "v0": [
+        0.662,
+        0.727,
+        0.467,
+        0.615,
+        0.665,
+        0.443
+      ],
+      "v_l": [
+        0.353,
+        0.41175,
+        0.11675,
+        0.55375,
+        0.38625,
+        0.16075
+      ]
+    },
+    {
+      "alert_id": "SYN-LM-D007-001",
+      "l2_delta": 0.8979713595098676,
+      "nearest_v0": {
+        "action": "suppress",
+        "action_index": 2,
+        "category": "insider_threat",
+        "category_index": 4,
+        "confidence": 0.1829039580342299,
+        "distance": 0.4503883230779214
+      },
+      "nearest_v_l": {
+        "action": "investigate",
+        "action_index": 1,
+        "category": "malware_execution",
+        "category_index": 1,
+        "confidence": 0.20684469849569279,
+        "distance": 0.5075651217176654
+      },
+      "v0": [
+        0.828,
+        0.825,
+        0.649,
+        0.775,
+        0.643,
+        0.245
+      ],
+      "v_l": [
+        0.39449999999999996,
+        0.20625,
+        0.38725,
+        0.39875,
+        0.55575,
+        0.11125
+      ]
+    },
+    {
+      "alert_id": "SYN-DE-D008-001",
+      "l2_delta": 0.6963865465545857,
+      "nearest_v0": {
+        "action": "investigate",
+        "action_index": 1,
+        "category": "malware_execution",
+        "category_index": 1,
+        "confidence": 0.14114195412194774,
+        "distance": 0.8472709624746555
+      },
+      "nearest_v_l": {
+        "action": "investigate",
+        "action_index": 1,
+        "category": "credential_access",
+        "category_index": 0,
+        "confidence": 0.28476424019807783,
+        "distance": 0.5002896442749954
+      },
+      "v0": [
+        0.368,
+        0.334,
+        0.032,
+        0.113,
+        0.193,
+        0.845
+      ],
+      "v_l": [
+        0.416,
+        0.11133333333333334,
+        0.3106666666666667,
+        0.2776666666666667,
+        0.2976666666666667,
+        0.2816666666666667
+      ]
+    },
+    {
+      "alert_id": "SYN-CA-D009-001",
+      "l2_delta": 0.8773995669021042,
+      "nearest_v0": {
+        "action": "suppress",
+        "action_index": 2,
+        "category": "insider_threat",
+        "category_index": 4,
+        "confidence": 0.20906142354096577,
+        "distance": 0.49376661769104363
+      },
+      "nearest_v_l": {
+        "action": "investigate",
+        "action_index": 1,
+        "category": "malware_execution",
+        "category_index": 1,
+        "confidence": 0.20424835729592297,
+        "distance": 0.5268284554980219
+      },
+      "v0": [
+        0.709,
+        0.895,
+        0.789,
+        0.548,
+        0.685,
+        0.198
+      ],
+      "v_l": [
+        0.36475,
+        0.22375,
+        0.42225,
+        0.34199999999999997,
+        0.5662499999999999,
+        0.0995
+      ]
+    },
+    {
+      "alert_id": "SYN-CA-D010-001",
+      "l2_delta": 0.5786330335368004,
+      "nearest_v0": {
+        "action": "suppress",
+        "action_index": 2,
+        "category": "data_exfiltration",
+        "category_index": 3,
+        "confidence": 0.22150345437954802,
+        "distance": 0.31223357995688733
+      },
+      "nearest_v_l": {
+        "action": "investigate",
+        "action_index": 1,
+        "category": "malware_execution",
+        "category_index": 1,
+        "confidence": 0.17025758379125924,
+        "distance": 0.6578811450502957
+      },
+      "v0": [
+        0.622,
+        0.566,
+        0.49,
+        0.523,
+        0.521,
+        0.379
+      ],
+      "v_l": [
+        0.34299999999999997,
+        0.3715,
+        0.1225,
+        0.5307499999999999,
+        0.35025,
+        0.14475
+      ]
+    }
+  ],
+  "fixture": "support\\setup\\zero_day_decisions_v5.json",
+  "rho_scorekey": 0.15469613259668508,
+  "sample": {
+    "alerts": 543,
+    "eval_alerts": 543,
+    "verified_outcomes": 543
+  },
+  "sp_accuracy": 0.15101289134438306,
+  "vld_accuracy": 0.20441988950276244
+}

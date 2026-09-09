@@ -1,0 +1,1104 @@
+{
+  "classification": "HYPO: partial overlap; tension is real but may be reduced by separate tensors or gated dimensions",
+  "default": {
+    "action_dimensions": [
+      "device_trust",
+      "threat_intel_enrichment",
+      "privileged_identity_context"
+    ],
+    "dimension_variance": [
+      {
+        "action_variance": 0.04921875,
+        "category_to_action_variance_ratio": 6.260800835087395e-32,
+        "category_variance": 3.0814879110195774e-33,
+        "factor": "privileged_identity_context"
+      },
+      {
+        "action_variance": 0.04760416666666667,
+        "category_to_action_variance_ratio": 0.023705324580598108,
+        "category_variance": 0.0011284722222222225,
+        "factor": "asset_criticality"
+      },
+      {
+        "action_variance": 0.058046875,
+        "category_to_action_variance_ratio": 0.06348138178555403,
+        "category_variance": 0.0036848958333333317,
+        "factor": "threat_intel_enrichment"
+      },
+      {
+        "action_variance": 0.04153645833333333,
+        "category_to_action_variance_ratio": 0.10585161964472306,
+        "category_variance": 0.0043967013888888875,
+        "factor": "pattern_history"
+      },
+      {
+        "action_variance": 0.03755208333333333,
+        "category_to_action_variance_ratio": 0.01895515487748495,
+        "category_variance": 0.0007118055555555546,
+        "factor": "time_anomaly"
+      },
+      {
+        "action_variance": 0.06864583333333334,
+        "category_to_action_variance_ratio": 0.006575619625695508,
+        "category_variance": 0.0004513888888888896,
+        "factor": "device_trust"
+      }
+    ],
+    "hash": "e055e9f4733cfac1",
+    "inter_action_by_category_mean": {
+      "cloud_infrastructure": 0.8371322851714288,
+      "credential_access": 0.79521908658431,
+      "data_exfiltration": 0.8803552083916233,
+      "insider_threat": 0.8287705233319409,
+      "lateral_movement": 0.7908120103737996,
+      "malware_execution": 0.8115923778607467
+    },
+    "inter_category_to_action_ratio": 0.44785915132455034,
+    "mean_inter_action_distance": 0.8239802486189748,
+    "mean_inter_category_distance": 0.36902709485468604,
+    "nearest_neighbor_same_category_fraction": 0.0,
+    "nearest_neighbors": [
+      {
+        "cell": {
+          "action": "escalate",
+          "category": "credential_access"
+        },
+        "neighbors": [
+          {
+            "action": "escalate",
+            "category": "cloud_infrastructure",
+            "distance": 0.11180339887498947,
+            "same_category": false
+          },
+          {
+            "action": "escalate",
+            "category": "malware_execution",
+            "distance": 0.14142135623730948,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "investigate",
+          "category": "credential_access"
+        },
+        "neighbors": [
+          {
+            "action": "investigate",
+            "category": "cloud_infrastructure",
+            "distance": 0.10000000000000005,
+            "same_category": false
+          },
+          {
+            "action": "investigate",
+            "category": "lateral_movement",
+            "distance": 0.12247448713915891,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "suppress",
+          "category": "credential_access"
+        },
+        "neighbors": [
+          {
+            "action": "suppress",
+            "category": "lateral_movement",
+            "distance": 0.04999999999999993,
+            "same_category": false
+          },
+          {
+            "action": "suppress",
+            "category": "insider_threat",
+            "distance": 0.04999999999999999,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "monitor",
+          "category": "credential_access"
+        },
+        "neighbors": [
+          {
+            "action": "monitor",
+            "category": "data_exfiltration",
+            "distance": 0.08660254037844381,
+            "same_category": false
+          },
+          {
+            "action": "monitor",
+            "category": "cloud_infrastructure",
+            "distance": 0.08660254037844381,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "escalate",
+          "category": "malware_execution"
+        },
+        "neighbors": [
+          {
+            "action": "escalate",
+            "category": "credential_access",
+            "distance": 0.14142135623730948,
+            "same_category": false
+          },
+          {
+            "action": "escalate",
+            "category": "cloud_infrastructure",
+            "distance": 0.19364916731037082,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "investigate",
+          "category": "malware_execution"
+        },
+        "neighbors": [
+          {
+            "action": "investigate",
+            "category": "credential_access",
+            "distance": 0.2121320343559642,
+            "same_category": false
+          },
+          {
+            "action": "investigate",
+            "category": "cloud_infrastructure",
+            "distance": 0.23452078799117143,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "suppress",
+          "category": "malware_execution"
+        },
+        "neighbors": [
+          {
+            "action": "suppress",
+            "category": "insider_threat",
+            "distance": 0.10000000000000003,
+            "same_category": false
+          },
+          {
+            "action": "suppress",
+            "category": "cloud_infrastructure",
+            "distance": 0.11180339887498948,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "monitor",
+          "category": "malware_execution"
+        },
+        "neighbors": [
+          {
+            "action": "monitor",
+            "category": "cloud_infrastructure",
+            "distance": 0.15811388300841897,
+            "same_category": false
+          },
+          {
+            "action": "monitor",
+            "category": "lateral_movement",
+            "distance": 0.18708286933869708,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "escalate",
+          "category": "lateral_movement"
+        },
+        "neighbors": [
+          {
+            "action": "escalate",
+            "category": "insider_threat",
+            "distance": 0.1322875655532296,
+            "same_category": false
+          },
+          {
+            "action": "escalate",
+            "category": "data_exfiltration",
+            "distance": 0.21794494717703375,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "investigate",
+          "category": "lateral_movement"
+        },
+        "neighbors": [
+          {
+            "action": "investigate",
+            "category": "insider_threat",
+            "distance": 0.07071067811865465,
+            "same_category": false
+          },
+          {
+            "action": "investigate",
+            "category": "credential_access",
+            "distance": 0.12247448713915891,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "suppress",
+          "category": "lateral_movement"
+        },
+        "neighbors": [
+          {
+            "action": "suppress",
+            "category": "credential_access",
+            "distance": 0.04999999999999993,
+            "same_category": false
+          },
+          {
+            "action": "suppress",
+            "category": "insider_threat",
+            "distance": 0.0707106781186547,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "monitor",
+          "category": "lateral_movement"
+        },
+        "neighbors": [
+          {
+            "action": "monitor",
+            "category": "insider_threat",
+            "distance": 0.04999999999999999,
+            "same_category": false
+          },
+          {
+            "action": "monitor",
+            "category": "credential_access",
+            "distance": 0.08660254037844388,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "escalate",
+          "category": "data_exfiltration"
+        },
+        "neighbors": [
+          {
+            "action": "escalate",
+            "category": "cloud_infrastructure",
+            "distance": 0.14142135623730953,
+            "same_category": false
+          },
+          {
+            "action": "escalate",
+            "category": "credential_access",
+            "distance": 0.19364916731037088,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "investigate",
+          "category": "data_exfiltration"
+        },
+        "neighbors": [
+          {
+            "action": "investigate",
+            "category": "cloud_infrastructure",
+            "distance": 0.1322875655532295,
+            "same_category": false
+          },
+          {
+            "action": "investigate",
+            "category": "credential_access",
+            "distance": 0.19364916731037085,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "suppress",
+          "category": "data_exfiltration"
+        },
+        "neighbors": [
+          {
+            "action": "suppress",
+            "category": "cloud_infrastructure",
+            "distance": 0.04999999999999999,
+            "same_category": false
+          },
+          {
+            "action": "suppress",
+            "category": "insider_threat",
+            "distance": 0.10000000000000002,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "monitor",
+          "category": "data_exfiltration"
+        },
+        "neighbors": [
+          {
+            "action": "monitor",
+            "category": "cloud_infrastructure",
+            "distance": 0.07071067811865474,
+            "same_category": false
+          },
+          {
+            "action": "monitor",
+            "category": "credential_access",
+            "distance": 0.08660254037844381,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "escalate",
+          "category": "insider_threat"
+        },
+        "neighbors": [
+          {
+            "action": "escalate",
+            "category": "lateral_movement",
+            "distance": 0.1322875655532296,
+            "same_category": false
+          },
+          {
+            "action": "escalate",
+            "category": "data_exfiltration",
+            "distance": 0.2345207879911715,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "investigate",
+          "category": "insider_threat"
+        },
+        "neighbors": [
+          {
+            "action": "investigate",
+            "category": "lateral_movement",
+            "distance": 0.07071067811865465,
+            "same_category": false
+          },
+          {
+            "action": "investigate",
+            "category": "credential_access",
+            "distance": 0.187082869338697,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "suppress",
+          "category": "insider_threat"
+        },
+        "neighbors": [
+          {
+            "action": "suppress",
+            "category": "credential_access",
+            "distance": 0.04999999999999999,
+            "same_category": false
+          },
+          {
+            "action": "suppress",
+            "category": "lateral_movement",
+            "distance": 0.0707106781186547,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "monitor",
+          "category": "insider_threat"
+        },
+        "neighbors": [
+          {
+            "action": "monitor",
+            "category": "lateral_movement",
+            "distance": 0.04999999999999999,
+            "same_category": false
+          },
+          {
+            "action": "monitor",
+            "category": "credential_access",
+            "distance": 0.12247448713915893,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "escalate",
+          "category": "cloud_infrastructure"
+        },
+        "neighbors": [
+          {
+            "action": "escalate",
+            "category": "credential_access",
+            "distance": 0.11180339887498947,
+            "same_category": false
+          },
+          {
+            "action": "escalate",
+            "category": "data_exfiltration",
+            "distance": 0.14142135623730953,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "investigate",
+          "category": "cloud_infrastructure"
+        },
+        "neighbors": [
+          {
+            "action": "investigate",
+            "category": "credential_access",
+            "distance": 0.10000000000000005,
+            "same_category": false
+          },
+          {
+            "action": "investigate",
+            "category": "data_exfiltration",
+            "distance": 0.1322875655532295,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "suppress",
+          "category": "cloud_infrastructure"
+        },
+        "neighbors": [
+          {
+            "action": "suppress",
+            "category": "data_exfiltration",
+            "distance": 0.04999999999999999,
+            "same_category": false
+          },
+          {
+            "action": "suppress",
+            "category": "insider_threat",
+            "distance": 0.08660254037844389,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "monitor",
+          "category": "cloud_infrastructure"
+        },
+        "neighbors": [
+          {
+            "action": "monitor",
+            "category": "data_exfiltration",
+            "distance": 0.07071067811865474,
+            "same_category": false
+          },
+          {
+            "action": "monitor",
+            "category": "credential_access",
+            "distance": 0.08660254037844381,
+            "same_category": false
+          }
+        ]
+      }
+    ],
+    "routing_dimensions": [
+      "pattern_history",
+      "threat_intel_enrichment",
+      "asset_criticality"
+    ],
+    "shape": [
+      6,
+      4,
+      6
+    ]
+  },
+  "experiment": "A1 centroid geometry",
+  "trained": {
+    "action_dimensions": [
+      "privileged_identity_context",
+      "time_anomaly",
+      "pattern_history"
+    ],
+    "dimension_variance": [
+      {
+        "action_variance": 0.13301568920547013,
+        "category_to_action_variance_ratio": 6.929801925461579e-06,
+        "category_variance": 9.21772379172666e-07,
+        "factor": "privileged_identity_context"
+      },
+      {
+        "action_variance": 4.9861447164034905e-06,
+        "category_to_action_variance_ratio": 22568.578328304913,
+        "category_variance": 0.11253019758841587,
+        "factor": "asset_criticality"
+      },
+      {
+        "action_variance": 0.00012817114016018015,
+        "category_to_action_variance_ratio": 14.15117879261041,
+        "category_variance": 0.0018137727204594377,
+        "factor": "threat_intel_enrichment"
+      },
+      {
+        "action_variance": 0.00014697104068707952,
+        "category_to_action_variance_ratio": 12.965071546621072,
+        "category_variance": 0.0019054900577893427,
+        "factor": "pattern_history"
+      },
+      {
+        "action_variance": 0.0001722478192404059,
+        "category_to_action_variance_ratio": 10.572901316126218,
+        "category_variance": 0.0018211591947467586,
+        "factor": "time_anomaly"
+      },
+      {
+        "action_variance": 0.00011574243982021443,
+        "category_to_action_variance_ratio": 15.395074271570603,
+        "category_variance": 0.0017818634574049922,
+        "factor": "device_trust"
+      }
+    ],
+    "hash": "0aed34997f28666b",
+    "inter_action_by_category_mean": {
+      "cloud_infrastructure": 0.5469034354911076,
+      "credential_access": 0.5457292261358928,
+      "data_exfiltration": 0.5425537883817493,
+      "insider_threat": 0.5436964199234299,
+      "lateral_movement": 0.5440709610061444,
+      "malware_execution": 0.5463628461255288
+    },
+    "inter_category_to_action_ratio": 1.7368383189271697,
+    "mean_inter_action_distance": 0.5448861128439755,
+    "mean_inter_category_distance": 0.9463790802386904,
+    "nearest_neighbor_same_category_fraction": 0.16666666666666666,
+    "nearest_neighbors": [
+      {
+        "cell": {
+          "action": "escalate",
+          "category": "credential_access"
+        },
+        "neighbors": [
+          {
+            "action": "escalate",
+            "category": "malware_execution",
+            "distance": 0.19639116481007649,
+            "same_category": false
+          },
+          {
+            "action": "investigate",
+            "category": "credential_access",
+            "distance": 0.32368730656194356,
+            "same_category": true
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "investigate",
+          "category": "credential_access"
+        },
+        "neighbors": [
+          {
+            "action": "investigate",
+            "category": "malware_execution",
+            "distance": 0.19402464261790192,
+            "same_category": false
+          },
+          {
+            "action": "escalate",
+            "category": "credential_access",
+            "distance": 0.32368730656194356,
+            "same_category": true
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "suppress",
+          "category": "credential_access"
+        },
+        "neighbors": [
+          {
+            "action": "suppress",
+            "category": "malware_execution",
+            "distance": 0.19233389860810607,
+            "same_category": false
+          },
+          {
+            "action": "monitor",
+            "category": "credential_access",
+            "distance": 0.3204496434358725,
+            "same_category": true
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "monitor",
+          "category": "credential_access"
+        },
+        "neighbors": [
+          {
+            "action": "monitor",
+            "category": "malware_execution",
+            "distance": 0.1899832001935971,
+            "same_category": false
+          },
+          {
+            "action": "suppress",
+            "category": "credential_access",
+            "distance": 0.3204496434358725,
+            "same_category": true
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "escalate",
+          "category": "malware_execution"
+        },
+        "neighbors": [
+          {
+            "action": "escalate",
+            "category": "credential_access",
+            "distance": 0.19639116481007649,
+            "same_category": false
+          },
+          {
+            "action": "escalate",
+            "category": "lateral_movement",
+            "distance": 0.2049928478670169,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "investigate",
+          "category": "malware_execution"
+        },
+        "neighbors": [
+          {
+            "action": "investigate",
+            "category": "credential_access",
+            "distance": 0.19402464261790192,
+            "same_category": false
+          },
+          {
+            "action": "investigate",
+            "category": "lateral_movement",
+            "distance": 0.2072342068359894,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "suppress",
+          "category": "malware_execution"
+        },
+        "neighbors": [
+          {
+            "action": "suppress",
+            "category": "credential_access",
+            "distance": 0.19233389860810607,
+            "same_category": false
+          },
+          {
+            "action": "suppress",
+            "category": "lateral_movement",
+            "distance": 0.20505957778853606,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "monitor",
+          "category": "malware_execution"
+        },
+        "neighbors": [
+          {
+            "action": "monitor",
+            "category": "credential_access",
+            "distance": 0.1899832001935971,
+            "same_category": false
+          },
+          {
+            "action": "monitor",
+            "category": "lateral_movement",
+            "distance": 0.21301947916441435,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "escalate",
+          "category": "lateral_movement"
+        },
+        "neighbors": [
+          {
+            "action": "escalate",
+            "category": "malware_execution",
+            "distance": 0.2049928478670169,
+            "same_category": false
+          },
+          {
+            "action": "escalate",
+            "category": "data_exfiltration",
+            "distance": 0.21108058033002178,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "investigate",
+          "category": "lateral_movement"
+        },
+        "neighbors": [
+          {
+            "action": "investigate",
+            "category": "data_exfiltration",
+            "distance": 0.2057913220780599,
+            "same_category": false
+          },
+          {
+            "action": "investigate",
+            "category": "malware_execution",
+            "distance": 0.2072342068359894,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "suppress",
+          "category": "lateral_movement"
+        },
+        "neighbors": [
+          {
+            "action": "suppress",
+            "category": "malware_execution",
+            "distance": 0.20505957778853606,
+            "same_category": false
+          },
+          {
+            "action": "suppress",
+            "category": "data_exfiltration",
+            "distance": 0.20915174390012128,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "monitor",
+          "category": "lateral_movement"
+        },
+        "neighbors": [
+          {
+            "action": "monitor",
+            "category": "data_exfiltration",
+            "distance": 0.20077190342984233,
+            "same_category": false
+          },
+          {
+            "action": "monitor",
+            "category": "malware_execution",
+            "distance": 0.21301947916441435,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "escalate",
+          "category": "data_exfiltration"
+        },
+        "neighbors": [
+          {
+            "action": "escalate",
+            "category": "insider_threat",
+            "distance": 0.2074684618471252,
+            "same_category": false
+          },
+          {
+            "action": "escalate",
+            "category": "lateral_movement",
+            "distance": 0.21108058033002178,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "investigate",
+          "category": "data_exfiltration"
+        },
+        "neighbors": [
+          {
+            "action": "investigate",
+            "category": "insider_threat",
+            "distance": 0.20405524552005488,
+            "same_category": false
+          },
+          {
+            "action": "investigate",
+            "category": "lateral_movement",
+            "distance": 0.2057913220780599,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "suppress",
+          "category": "data_exfiltration"
+        },
+        "neighbors": [
+          {
+            "action": "suppress",
+            "category": "insider_threat",
+            "distance": 0.1966670890884316,
+            "same_category": false
+          },
+          {
+            "action": "suppress",
+            "category": "lateral_movement",
+            "distance": 0.20915174390012128,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "monitor",
+          "category": "data_exfiltration"
+        },
+        "neighbors": [
+          {
+            "action": "monitor",
+            "category": "lateral_movement",
+            "distance": 0.20077190342984233,
+            "same_category": false
+          },
+          {
+            "action": "monitor",
+            "category": "insider_threat",
+            "distance": 0.20884941383790775,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "escalate",
+          "category": "insider_threat"
+        },
+        "neighbors": [
+          {
+            "action": "escalate",
+            "category": "cloud_infrastructure",
+            "distance": 0.18847050647085098,
+            "same_category": false
+          },
+          {
+            "action": "escalate",
+            "category": "data_exfiltration",
+            "distance": 0.2074684618471252,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "investigate",
+          "category": "insider_threat"
+        },
+        "neighbors": [
+          {
+            "action": "investigate",
+            "category": "cloud_infrastructure",
+            "distance": 0.19771464222789015,
+            "same_category": false
+          },
+          {
+            "action": "investigate",
+            "category": "data_exfiltration",
+            "distance": 0.20405524552005488,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "suppress",
+          "category": "insider_threat"
+        },
+        "neighbors": [
+          {
+            "action": "suppress",
+            "category": "data_exfiltration",
+            "distance": 0.1966670890884316,
+            "same_category": false
+          },
+          {
+            "action": "suppress",
+            "category": "cloud_infrastructure",
+            "distance": 0.20595358343478362,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "monitor",
+          "category": "insider_threat"
+        },
+        "neighbors": [
+          {
+            "action": "monitor",
+            "category": "cloud_infrastructure",
+            "distance": 0.1969095492152862,
+            "same_category": false
+          },
+          {
+            "action": "monitor",
+            "category": "data_exfiltration",
+            "distance": 0.20884941383790775,
+            "same_category": false
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "escalate",
+          "category": "cloud_infrastructure"
+        },
+        "neighbors": [
+          {
+            "action": "escalate",
+            "category": "insider_threat",
+            "distance": 0.18847050647085098,
+            "same_category": false
+          },
+          {
+            "action": "investigate",
+            "category": "cloud_infrastructure",
+            "distance": 0.3219230493389178,
+            "same_category": true
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "investigate",
+          "category": "cloud_infrastructure"
+        },
+        "neighbors": [
+          {
+            "action": "investigate",
+            "category": "insider_threat",
+            "distance": 0.19771464222789015,
+            "same_category": false
+          },
+          {
+            "action": "escalate",
+            "category": "cloud_infrastructure",
+            "distance": 0.3219230493389178,
+            "same_category": true
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "suppress",
+          "category": "cloud_infrastructure"
+        },
+        "neighbors": [
+          {
+            "action": "suppress",
+            "category": "insider_threat",
+            "distance": 0.20595358343478362,
+            "same_category": false
+          },
+          {
+            "action": "monitor",
+            "category": "cloud_infrastructure",
+            "distance": 0.3266417145221541,
+            "same_category": true
+          }
+        ]
+      },
+      {
+        "cell": {
+          "action": "monitor",
+          "category": "cloud_infrastructure"
+        },
+        "neighbors": [
+          {
+            "action": "monitor",
+            "category": "insider_threat",
+            "distance": 0.1969095492152862,
+            "same_category": false
+          },
+          {
+            "action": "suppress",
+            "category": "cloud_infrastructure",
+            "distance": 0.3266417145221541,
+            "same_category": true
+          }
+        ]
+      }
+    ],
+    "routing_dimensions": [
+      "asset_criticality",
+      "pattern_history",
+      "time_anomaly"
+    ],
+    "shape": [
+      6,
+      4,
+      6
+    ]
+  }
+}

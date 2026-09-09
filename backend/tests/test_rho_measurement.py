@@ -31,6 +31,7 @@ from scripts.measure_rho import (
     vector_skew,
     vectors_by_alert,
 )
+from scripts.diagnose_value_chain import run_diagnostic
 
 
 class _Policy(Protocol):
@@ -175,6 +176,19 @@ async def test_json_report_output_contains_required_keys(tmp_path: Path) -> None
     loaded = json.loads(path.read_text(encoding="utf-8"))
     for key in ["rho_vld", "rho_vld_scorekey", "rho_majority", "gate_verdict", "margin_distribution", "mu_skew"]:
         assert key in loaded
+
+
+@pytest.mark.asyncio
+async def test_value_chain_diagnostic_report_contains_h2_gate_fields(tmp_path: Path) -> None:
+    report = await run_diagnostic()
+    path = tmp_path / "value_chain.json"
+    path.write_text(json.dumps(report), encoding="utf-8")
+    loaded = json.loads(path.read_text(encoding="utf-8"))
+    h2 = loaded["hypotheses"]["H2_scoring_locked_to_routed_category"]
+    assert "score_best_accuracy" in h2
+    assert "score_in_last_investigated_accuracy" in h2
+    assert "current_vld_matches_score_best" in h2
+    assert "conclusion" in loaded
 
 
 @pytest.mark.asyncio

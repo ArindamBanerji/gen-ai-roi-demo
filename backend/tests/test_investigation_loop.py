@@ -164,15 +164,61 @@ async def test_multi_step_investigation_uses_updated_centroid_geometry() -> None
 
 
 @pytest.mark.asyncio
-async def test_final_score_is_only_scorer_score_call() -> None:
+async def test_final_score_uses_no_category_locked_scorer_calls() -> None:
     scorer = _CountingScorer(_scorer())
     provider = _FactorProvider(_centroid(scorer, "credential_access"))
 
     result = await _loop(scorer, provider, L_max=2, residual_threshold=0.0).investigate(_alert(), _GraphStore())
 
-    assert scorer.score_calls == 1
+    assert scorer.score_calls == 0
     assert result.category in SOC_CATEGORIES
     assert result.action in scorer.actions
+
+
+@pytest.mark.asyncio
+async def test_final_action_uses_best_across_all_categories() -> None:
+    scorer = _scorer()
+    surface = _centroid(scorer, "credential_access", 0)
+    provider = _FactorProvider(surface)
+    router = InvestigationRouter(PATTERN_REGISTRY)
+
+    result = await InvestigationLoop(scorer, router, provider, L_max=1, residual_threshold=0.0).investigate(
+        _alert("malware_execution"),
+        _GraphStore(),
+    )
+    expected = router.score_best_from_centroids(np.asarray(result.v_final, dtype=np.float64), scorer)
+
+    assert result.action == expected.action
+    assert result.category == expected.category
+
+
+@pytest.mark.asyncio
+async def test_investigated_category_is_logged_separately_from_final_category() -> None:
+    scorer = _scorer()
+    provider = _FactorProvider(_centroid(scorer, "credential_access", 0))
+
+    result = await _loop(scorer, provider, L_max=1, residual_threshold=0.0).investigate(
+        _alert("malware_execution"),
+        _GraphStore(),
+    )
+
+    assert result.investigated_category == result.trace[-1].pattern
+    assert result.routing_agreed == (result.investigated_category == result.category)
+    assert result.trace[-1].alert_category == "malware_execution"
+
+
+@pytest.mark.asyncio
+async def test_routing_decision_is_independent_of_final_score_contract() -> None:
+    scorer = _scorer()
+    provider = _FactorProvider(_centroid(scorer, "credential_access", 0))
+
+    result = await _loop(scorer, provider, L_max=1, residual_threshold=0.0).investigate(
+        _alert("malware_execution"),
+        _GraphStore(),
+    )
+
+    assert result.trace[0].pattern == "credential_access"
+    assert result.trace[0].pattern == result.investigated_category
 
 
 @pytest.mark.asyncio

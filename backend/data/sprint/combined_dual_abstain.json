@@ -1,0 +1,1364 @@
+{
+  "baseline": {
+    "dual_centroid_always_accuracy": 0.22283609576427257,
+    "dual_centroid_always_utility": {
+      "S2P": -3.6629834254143647,
+      "SOC": -15.320441988950277,
+      "Trading": -2.10865561694291
+    },
+    "dual_centroid_matches_sprint": true,
+    "single_pass_always_utility": {
+      "S2P": -1.7734806629834254,
+      "SOC": -8.707182320441989,
+      "Trading": -0.848987108655617
+    },
+    "single_pass_phase1b_accuracy": 0.5377532228360957,
+    "trained_single_pass_accuracy": 0.15101289134438306
+  },
+  "best_soc": {
+    "abstain_rate": 1.0,
+    "abstained": 543,
+    "accuracy": 0.0,
+    "committed": 0,
+    "correct": 0,
+    "delta_vs_dual_always": -0.22283609576427257,
+    "delta_vs_sp_committed": 0.0,
+    "sp_accuracy_committed": 0.0,
+    "sp_correct_committed": 0,
+    "strategy": "margin",
+    "threshold": 0.1,
+    "utility": {
+      "S2P": -0.5,
+      "SOC": -1.0,
+      "Trading": -0.3
+    },
+    "wrong": 0
+  },
+  "classification": "ABSTENTION IMPROVES",
+  "disagreement_characterization": {
+    "agreement_count": 74,
+    "confusion_matrix_default_route_to_trained_route": {
+      "cloud_infrastructure": {
+        "cloud_infrastructure": 0,
+        "credential_access": 11,
+        "data_exfiltration": 12,
+        "insider_threat": 19,
+        "lateral_movement": 18,
+        "malware_execution": 5
+      },
+      "credential_access": {
+        "cloud_infrastructure": 0,
+        "credential_access": 0,
+        "data_exfiltration": 26,
+        "insider_threat": 26,
+        "lateral_movement": 39,
+        "malware_execution": 21
+      },
+      "data_exfiltration": {
+        "cloud_infrastructure": 13,
+        "credential_access": 0,
+        "data_exfiltration": 0,
+        "insider_threat": 17,
+        "lateral_movement": 14,
+        "malware_execution": 35
+      },
+      "insider_threat": {
+        "cloud_infrastructure": 0,
+        "credential_access": 10,
+        "data_exfiltration": 22,
+        "insider_threat": 0,
+        "lateral_movement": 14,
+        "malware_execution": 22
+      },
+      "lateral_movement": {
+        "cloud_infrastructure": 0,
+        "credential_access": 11,
+        "data_exfiltration": 28,
+        "insider_threat": 31,
+        "lateral_movement": 0,
+        "malware_execution": 27
+      },
+      "malware_execution": {
+        "cloud_infrastructure": 0,
+        "credential_access": 13,
+        "data_exfiltration": 9,
+        "insider_threat": 16,
+        "lateral_movement": 10,
+        "malware_execution": 0
+      }
+    },
+    "disagreement_count": 469,
+    "disagreement_rate": 0.8637200736648251,
+    "dominant_pairs": [
+      {
+        "count": 39,
+        "pair": "credential_access->lateral_movement"
+      },
+      {
+        "count": 35,
+        "pair": "data_exfiltration->malware_execution"
+      },
+      {
+        "count": 31,
+        "pair": "lateral_movement->insider_threat"
+      },
+      {
+        "count": 28,
+        "pair": "lateral_movement->data_exfiltration"
+      },
+      {
+        "count": 27,
+        "pair": "lateral_movement->malware_execution"
+      }
+    ],
+    "signal_interpretation": "weak_or_noisy",
+    "sp_accuracy_on_agreement": 0.4189189189189189,
+    "sp_accuracy_on_disagreement": 0.5565031982942431,
+    "total": 543,
+    "vld_accuracy_on_agreement": 0.17567567567567569,
+    "vld_accuracy_on_disagreement": 0.2302771855010661
+  },
+  "experiment": "Dual-Centroid + Abstention",
+  "penalty_profiles": {
+    "S2P": {
+      "abstain_cost": 0.5,
+      "wrong_penalty": 5.0
+    },
+    "SOC": {
+      "abstain_cost": 1.0,
+      "wrong_penalty": 20.0
+    },
+    "Trading": {
+      "abstain_cost": 0.3,
+      "wrong_penalty": 3.0
+    }
+  },
+  "self_diagnostics": {
+    "arch_best_soc_utility_positive": false,
+    "exp_strategies_differentiate": true,
+    "hypo_disagreement_predicts_lower_vld_accuracy": false,
+    "impl_dual_accuracy_matches_sprint": true
+  },
+  "strategies": [
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.22283609576427257,
+      "committed": 543,
+      "correct": 121,
+      "delta_vs_dual_always": 0.0,
+      "delta_vs_sp_committed": -0.3149171270718232,
+      "sp_accuracy_committed": 0.5377532228360957,
+      "sp_correct_committed": 292,
+      "strategy": "margin",
+      "threshold": 0.0,
+      "utility": {
+        "S2P": -3.6629834254143647,
+        "SOC": -15.320441988950277,
+        "Trading": -2.10865561694291
+      },
+      "wrong": 422
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.0,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "combined",
+      "threshold": 0.0,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 0.5911602209944752,
+      "abstained": 321,
+      "accuracy": 0.22522522522522523,
+      "committed": 222,
+      "correct": 50,
+      "delta_vs_dual_always": 0.0023891294609526548,
+      "delta_vs_sp_committed": -0.32432432432432434,
+      "sp_accuracy_committed": 0.5495495495495496,
+      "sp_correct_committed": 122,
+      "strategy": "margin",
+      "threshold": 0.05,
+      "utility": {
+        "S2P": -1.787292817679558,
+        "SOC": -6.834254143646409,
+        "Trading": -1.0355432780847145
+      },
+      "wrong": 172
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.05,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 0.9355432780847146,
+      "abstained": 508,
+      "accuracy": 0.17142857142857143,
+      "committed": 35,
+      "correct": 6,
+      "delta_vs_dual_always": -0.051407524335701144,
+      "delta_vs_sp_committed": -0.3142857142857143,
+      "sp_accuracy_committed": 0.4857142857142857,
+      "sp_correct_committed": 17,
+      "strategy": "combined",
+      "threshold": 0.05,
+      "utility": {
+        "S2P": -0.7237569060773481,
+        "SOC": -1.992633517495396,
+        "Trading": -0.4298342541436464
+      },
+      "wrong": 29
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.1,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.1,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.1,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.15,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.15,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.15,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.2,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.2,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.2,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.25,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.25,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.25,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.3,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.3,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.3,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.35,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.35,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.35,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.4,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.4,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.4,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.45,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.45,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.45,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.5,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.5,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.5,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.55,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.55,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.55,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.6,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.6,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.6,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.65,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.65,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.65,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.7,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.7,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.7,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.75,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.75,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.75,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.8,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.8,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.8,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.85,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.85,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.85,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.9,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.9,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.9,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 0.95,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 0.95,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 0.95,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "margin",
+      "threshold": 1.0,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    },
+    {
+      "abstain_rate": 0.8637200736648251,
+      "abstained": 469,
+      "accuracy": 0.17567567567567569,
+      "committed": 74,
+      "correct": 13,
+      "delta_vs_dual_always": -0.04716042008859689,
+      "delta_vs_sp_committed": -0.24324324324324323,
+      "sp_accuracy_committed": 0.4189189189189189,
+      "sp_correct_committed": 31,
+      "strategy": "disagreement",
+      "threshold": 1.0,
+      "utility": {
+        "S2P": -0.9696132596685083,
+        "SOC": -3.0865561694290977,
+        "Trading": -0.5721915285451197
+      },
+      "wrong": 61
+    },
+    {
+      "abstain_rate": 1.0,
+      "abstained": 543,
+      "accuracy": 0.0,
+      "committed": 0,
+      "correct": 0,
+      "delta_vs_dual_always": -0.22283609576427257,
+      "delta_vs_sp_committed": 0.0,
+      "sp_accuracy_committed": 0.0,
+      "sp_correct_committed": 0,
+      "strategy": "combined",
+      "threshold": 1.0,
+      "utility": {
+        "S2P": -0.5,
+        "SOC": -1.0,
+        "Trading": -0.3
+      },
+      "wrong": 0
+    }
+  ],
+  "thresholds": [
+    0.0,
+    0.05,
+    0.1,
+    0.15,
+    0.2,
+    0.25,
+    0.3,
+    0.35,
+    0.4,
+    0.45,
+    0.5,
+    0.55,
+    0.6,
+    0.65,
+    0.7,
+    0.75,
+    0.8,
+    0.85,
+    0.9,
+    0.95,
+    1.0
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "centroid_mode": "trained",
+  "dimensions": [
+    {
+      "correlation_abs_delta_with_action_correct": 0.009019136744929341,
+      "dimension": 0,
+      "factor": "privileged_identity_context",
+      "fraction_improved": 0.7255985267034991,
+      "fraction_improved_correct_route": 0.6309523809523809,
+      "fraction_improved_wrong_route": 0.7429193899782135,
+      "mean_abs_delta": 0.25724815837937387
+    },
+    {
+      "correlation_abs_delta_with_action_correct": -0.08079399889219001,
+      "dimension": 1,
+      "factor": "asset_criticality",
+      "fraction_improved": 0.5046040515653776,
+      "fraction_improved_correct_route": 0.30952380952380953,
+      "fraction_improved_wrong_route": 0.5403050108932462,
+      "mean_abs_delta": 0.32888520564763657
+    },
+    {
+      "correlation_abs_delta_with_action_correct": 0.09042300325169027,
+      "dimension": 2,
+      "factor": "threat_intel_enrichment",
+      "fraction_improved": 0.4677716390423573,
+      "fraction_improved_correct_route": 0.3333333333333333,
+      "fraction_improved_wrong_route": 0.4923747276688453,
+      "mean_abs_delta": 0.25251457949662365
+    },
+    {
+      "correlation_abs_delta_with_action_correct": -0.10695737712334674,
+      "dimension": 3,
+      "factor": "pattern_history",
+      "fraction_improved": 0.5046040515653776,
+      "fraction_improved_correct_route": 0.4880952380952381,
+      "fraction_improved_wrong_route": 0.5076252723311547,
+      "mean_abs_delta": 0.15868569674647023
+    },
+    {
+      "correlation_abs_delta_with_action_correct": 0.05484420141020226,
+      "dimension": 4,
+      "factor": "time_anomaly",
+      "fraction_improved": 0.5046040515653776,
+      "fraction_improved_correct_route": 0.5833333333333334,
+      "fraction_improved_wrong_route": 0.49019607843137253,
+      "mean_abs_delta": 0.13028913443830567
+    },
+    {
+      "correlation_abs_delta_with_action_correct": -0.03815033609753006,
+      "dimension": 5,
+      "factor": "device_trust",
+      "fraction_improved": 0.11970534069981584,
+      "fraction_improved_correct_route": 0.20238095238095238,
+      "fraction_improved_wrong_route": 0.10457516339869281,
+      "mean_abs_delta": 0.3334901780233272
+    }
+  ],
+  "experiment": "E-DIM",
+  "full_vector": {
+    "fraction_improved": 0.5064456721915286,
+    "mean_after_distance": 0.8194905665431341,
+    "mean_before_distance": 0.802348076477897
+  },
+  "sample": {
+    "alerts": 543
+  },
+  "self_diagnostic": "mixed dimension effects",
+  "sp_accuracy": 0.15101289134438306,
+  "vld_accuracy": 0.20441988950276244
+}

@@ -1,0 +1,3657 @@
+{
+  "acceptance_rows": [
+    {
+      "delta_vld_content_rule": -1.0,
+      "n": 4,
+      "rho_planted": 0.3
+    },
+    {
+      "delta_vld_content_rule": -0.6,
+      "n": 5,
+      "rho_planted": 0.5
+    },
+    {
+      "delta_vld_content_rule": 0.0,
+      "n": 8,
+      "rho_planted": 0.7
+    },
+    {
+      "delta_vld_content_rule": 0.0,
+      "n": 4,
+      "rho_planted": 0.9
+    },
+    {
+      "delta_vld_content_rule": 0.0,
+      "n": 4,
+      "rho_planted": 1.0
+    }
+  ],
+  "acceptance_test": {
+    "failures": [
+      "rho=0.50: expected delta near 0, got -0.600",
+      "rho=0.7: expected positive delta, got 0.000",
+      "rho=0.9: expected positive delta, got 0.000",
+      "rho=1.0: expected positive delta, got 0.000"
+    ],
+    "verdict": "FAIL"
+  },
+  "arms": [
+    "single_pass",
+    "breadth",
+    "content_rule",
+    "vld"
+  ],
+  "controls": {
+    "flat": {
+      "single_pass": 0.6,
+      "vld": 0.6
+    },
+    "flat_n": 5,
+    "rho_0_50": {
+      "breadth": 0.6,
+      "content_rule": 1.0,
+      "single_pass": 0.6,
+      "vld": 0.4
+    },
+    "rho_0_50_n": 5
+  },
+  "diagnostics": {
+    "all_arms_agree": [
+      "SOC-MH-001-v2",
+      "SOC-MH-002-v3",
+      "SOC-MH-013-v3",
+      "SOC-MH-005-v2",
+      "SOC-MH-003-v2",
+      "SOC-CTRL-FLAT-001",
+      "SOC-CTRL-FLAT-002",
+      "SOC-CTRL-FLAT-003",
+      "SOC-CTRL-FLAT-004",
+      "SOC-CTRL-FLAT-005"
+    ],
+    "breadth_beats_vld": [
+      "SOC-MH-001-v5",
+      "SOC-MH-002-v5",
+      "SOC-MH-008-v5",
+      "SOC-MH-004-v1",
+      "SOC-MH-004-v3",
+      "SOC-MH-009-v1",
+      "SOC-MH-009-v3",
+      "SOC-MH-009-v4",
+      "SOC-CTRL-RHO50-004",
+      "SOC-CTRL-RHO50-005"
+    ],
+    "classification": "EXP: acceptance uses content_rule as a correct-branch upper bound, so positive VLD-content deltas may be impossible under this arm definition."
+  },
+  "header": "PLANTED SYNTHETIC \u2014 POSITIVE CONTROL \u2014 NOT A MEASUREMENT OF VLD VALUE ON REAL DECISIONS.",
+  "headline_vld_minus_content_rule_score_keyed": -0.28,
+  "n_scenarios": 50,
+  "per_kind_accuracy": [
+    {
+      "accuracy": 0.7333333333333333,
+      "arm": "breadth",
+      "branching_kind": "content_keyed",
+      "n": 15
+    },
+    {
+      "accuracy": 0.8666666666666667,
+      "arm": "content_rule",
+      "branching_kind": "content_keyed",
+      "n": 15
+    },
+    {
+      "accuracy": 0.4,
+      "arm": "single_pass",
+      "branching_kind": "content_keyed",
+      "n": 15
+    },
+    {
+      "accuracy": 0.4,
+      "arm": "vld",
+      "branching_kind": "content_keyed",
+      "n": 15
+    },
+    {
+      "accuracy": 0.8,
+      "arm": "breadth",
+      "branching_kind": "prerequisite",
+      "n": 10
+    },
+    {
+      "accuracy": 1.0,
+      "arm": "content_rule",
+      "branching_kind": "prerequisite",
+      "n": 10
+    },
+    {
+      "accuracy": 0.2,
+      "arm": "single_pass",
+      "branching_kind": "prerequisite",
+      "n": 10
+    },
+    {
+      "accuracy": 1.0,
+      "arm": "vld",
+      "branching_kind": "prerequisite",
+      "n": 10
+    },
+    {
+      "accuracy": 0.6,
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "n": 25
+    },
+    {
+      "accuracy": 1.0,
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "n": 25
+    },
+    {
+      "accuracy": 0.36,
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "n": 25
+    },
+    {
+      "accuracy": 0.72,
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "n": 25
+    }
+  ],
+  "per_rho_accuracy": [
+    {
+      "accuracy": 0.75,
+      "arm": "breadth",
+      "n": 4,
+      "rho_planted": 0.3
+    },
+    {
+      "accuracy": 1.0,
+      "arm": "content_rule",
+      "n": 4,
+      "rho_planted": 0.3
+    },
+    {
+      "accuracy": 0.0,
+      "arm": "single_pass",
+      "n": 4,
+      "rho_planted": 0.3
+    },
+    {
+      "accuracy": 0.0,
+      "arm": "vld",
+      "n": 4,
+      "rho_planted": 0.3
+    },
+    {
+      "accuracy": 0.6,
+      "arm": "breadth",
+      "n": 5,
+      "rho_planted": 0.5
+    },
+    {
+      "accuracy": 1.0,
+      "arm": "content_rule",
+      "n": 5,
+      "rho_planted": 0.5
+    },
+    {
+      "accuracy": 0.6,
+      "arm": "single_pass",
+      "n": 5,
+      "rho_planted": 0.5
+    },
+    {
+      "accuracy": 0.4,
+      "arm": "vld",
+      "n": 5,
+      "rho_planted": 0.5
+    },
+    {
+      "accuracy": 0.625,
+      "arm": "breadth",
+      "n": 8,
+      "rho_planted": 0.7
+    },
+    {
+      "accuracy": 1.0,
+      "arm": "content_rule",
+      "n": 8,
+      "rho_planted": 0.7
+    },
+    {
+      "accuracy": 0.5,
+      "arm": "single_pass",
+      "n": 8,
+      "rho_planted": 0.7
+    },
+    {
+      "accuracy": 1.0,
+      "arm": "vld",
+      "n": 8,
+      "rho_planted": 0.7
+    },
+    {
+      "accuracy": 1.0,
+      "arm": "breadth",
+      "n": 4,
+      "rho_planted": 0.9
+    },
+    {
+      "accuracy": 1.0,
+      "arm": "content_rule",
+      "n": 4,
+      "rho_planted": 0.9
+    },
+    {
+      "accuracy": 0.25,
+      "arm": "single_pass",
+      "n": 4,
+      "rho_planted": 0.9
+    },
+    {
+      "accuracy": 1.0,
+      "arm": "vld",
+      "n": 4,
+      "rho_planted": 0.9
+    },
+    {
+      "accuracy": 0.0,
+      "arm": "breadth",
+      "n": 4,
+      "rho_planted": 1.0
+    },
+    {
+      "accuracy": 1.0,
+      "arm": "content_rule",
+      "n": 4,
+      "rho_planted": 1.0
+    },
+    {
+      "accuracy": 0.25,
+      "arm": "single_pass",
+      "n": 4,
+      "rho_planted": 1.0
+    },
+    {
+      "accuracy": 1.0,
+      "arm": "vld",
+      "n": 4,
+      "rho_planted": 1.0
+    }
+  ],
+  "results": [
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 0.7,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-001-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "host_pivot_path",
+        "egress_volume_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "egress_volume_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-001-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "auth_trail_path",
+        "host_pivot_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "host_pivot_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-001-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "auth_trail_path",
+        "host_pivot_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "host_pivot_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-001-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "investigate",
+      "read_branches": [],
+      "rho_planted": 0.9,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-001-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "process_tree_path",
+        "auth_trail_path"
+      ],
+      "rho_planted": 0.9,
+      "route": "auth_trail_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-001-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "process_tree_path",
+        "host_pivot_path"
+      ],
+      "rho_planted": 0.9,
+      "route": "host_pivot_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-001-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "process_tree_path",
+        "host_pivot_path"
+      ],
+      "rho_planted": 0.9,
+      "route": "host_pivot_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-001-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "monitor",
+      "read_branches": [],
+      "rho_planted": 0.7,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-001-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": false,
+      "cost_used": 4,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "token_provenance_path",
+        "network_flow_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "network_flow_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-001-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "auth_trail_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "auth_trail_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-001-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "auth_trail_path",
+        "egress_volume_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "egress_volume_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-001-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "suppress",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-001-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": false,
+      "cost_used": 3,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "network_flow_path",
+        "host_pivot_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "host_pivot_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-001-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "process_tree_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "process_tree_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-001-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "process_tree_path",
+        "egress_volume_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "egress_volume_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-001-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 0.3,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-001-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "host_pivot_path",
+        "process_tree_path"
+      ],
+      "rho_planted": 0.3,
+      "route": "process_tree_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-001-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "auth_trail_path",
+        "host_pivot_path"
+      ],
+      "rho_planted": 0.3,
+      "route": "host_pivot_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-001-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": false,
+      "cost_used": 4,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "process_tree_path",
+        "egress_volume_path"
+      ],
+      "rho_planted": 0.3,
+      "route": "egress_volume_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-001-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 0.7,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-002-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": false,
+      "cost_used": 4,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "egress_volume_path",
+        "device_session_path",
+        "asset_scope_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "asset_scope_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-002-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "hr_context_path",
+        "peer_baseline_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "hr_led",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-002-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "hr_context_path",
+        "peer_baseline_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "hr_led",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-002-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "suppress",
+      "read_branches": [],
+      "rho_planted": 0.9,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-002-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "peer_baseline_path",
+        "hr_context_path"
+      ],
+      "rho_planted": 0.9,
+      "route": "hr_context_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-002-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "hr_context_path",
+        "peer_baseline_path"
+      ],
+      "rho_planted": 0.9,
+      "route": "peer_baseline_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-002-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "hr_context_path",
+        "peer_baseline_path"
+      ],
+      "rho_planted": 0.9,
+      "route": "peer_baseline_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-002-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "monitor",
+      "read_branches": [],
+      "rho_planted": 0.7,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-002-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "device_session_path",
+        "hr_context_path",
+        "asset_scope_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "asset_scope_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-002-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "hr_context_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "hr_context_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-002-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "hr_context_path",
+        "egress_volume_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "egress_volume_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-002-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "investigate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-002-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": false,
+      "cost_used": 4,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "asset_scope_path",
+        "token_provenance_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "token_provenance_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-002-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "hr_context_path",
+        "egress_volume_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "egress_volume_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-002-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "hr_context_path",
+        "egress_volume_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "egress_volume_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-002-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 0.3,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-002-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "hr_context_path",
+        "asset_scope_path",
+        "device_session_path"
+      ],
+      "rho_planted": 0.3,
+      "route": "security_led",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-002-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "device_session_path",
+        "token_provenance_path"
+      ],
+      "rho_planted": 0.3,
+      "route": "security_led",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-002-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 4,
+      "correct": false,
+      "cost_used": 4,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "hr_context_path",
+        "egress_volume_path"
+      ],
+      "rho_planted": 0.3,
+      "route": "egress_volume_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-002-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 0.7,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-008-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "change_mgmt_path",
+        "identity_origin_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "identity_origin_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-008-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "identity_origin_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "identity_origin_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-008-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "identity_origin_path",
+        "blast_radius_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "blast_radius_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-008-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "suppress",
+      "read_branches": [],
+      "rho_planted": 0.9,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-008-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "api_sequence_path",
+        "blast_radius_path"
+      ],
+      "rho_planted": 0.9,
+      "route": "blast_radius_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-008-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "api_sequence_path"
+      ],
+      "rho_planted": 0.9,
+      "route": "api_sequence_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-008-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "api_sequence_path",
+        "blast_radius_path"
+      ],
+      "rho_planted": 0.9,
+      "route": "blast_radius_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-008-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "investigate",
+      "read_branches": [],
+      "rho_planted": 0.7,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-008-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 3,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "credential_source_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "credential_source_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-008-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "identity_origin_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "identity_origin_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-008-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "identity_origin_path",
+        "blast_radius_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "blast_radius_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-008-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-008-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 3,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "identity_origin_path",
+        "blast_radius_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "blast_radius_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-008-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "api_sequence_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "api_sequence_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-008-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "api_sequence_path",
+        "blast_radius_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "blast_radius_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-008-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "monitor",
+      "read_branches": [],
+      "rho_planted": 0.3,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-008-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "change_mgmt_path",
+        "identity_origin_path"
+      ],
+      "rho_planted": 0.3,
+      "route": "identity_origin_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-008-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "identity_origin_path"
+      ],
+      "rho_planted": 0.3,
+      "route": "identity_origin_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-008-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 3,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "api_sequence_path",
+        "blast_radius_path"
+      ],
+      "rho_planted": 0.3,
+      "route": "blast_radius_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-008-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 0.7,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-013-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "behavior_baseline_path",
+        "command_profile_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "command_profile_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-013-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "scheduler_path",
+        "command_profile_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "command_profile_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-013-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "scheduler_path",
+        "command_profile_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "command_profile_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-013-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "suppress",
+      "read_branches": [],
+      "rho_planted": 0.9,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-013-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "credential_age_path",
+        "behavior_baseline_path"
+      ],
+      "rho_planted": 0.9,
+      "route": "behavior_baseline_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-013-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "scheduler_path"
+      ],
+      "rho_planted": 0.9,
+      "route": "scheduler_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-013-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "scheduler_path",
+        "credential_age_path"
+      ],
+      "rho_planted": 0.9,
+      "route": "credential_age_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-013-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "investigate",
+      "read_branches": [],
+      "rho_planted": 0.7,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-013-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "credential_age_path",
+        "scheduler_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "scheduler_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-013-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "scheduler_path",
+        "command_profile_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "command_profile_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-013-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "scheduler_path",
+        "command_profile_path"
+      ],
+      "rho_planted": 0.7,
+      "route": "command_profile_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-013-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-013-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 3,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "command_profile_path",
+        "behavior_baseline_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "behavior_baseline_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-013-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "source_host_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "source_host_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-013-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "source_host_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "source_host_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-013-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "monitor",
+      "read_branches": [],
+      "rho_planted": 0.3,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-013-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 3,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "source_host_path",
+        "behavior_baseline_path"
+      ],
+      "rho_planted": 0.3,
+      "route": "behavior_baseline_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-013-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "scheduler_path"
+      ],
+      "rho_planted": 0.3,
+      "route": "scheduler_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-013-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 2,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "source_host_path"
+      ],
+      "rho_planted": 0.3,
+      "route": "source_host_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-013-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "suppress",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-004-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "breadth",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "change_mgmt_path",
+        "identity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "identity_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-004-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "content_rule",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "change_mgmt_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "change_mgmt_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-004-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "vld",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": false,
+      "cost_used": 1,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "identity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "identity_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-004-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-004-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "breadth",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "change_mgmt_path",
+        "identity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "identity_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-004-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "content_rule",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "change_mgmt_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "change_mgmt_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-004-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "vld",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "identity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "identity_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-004-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "investigate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-004-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "breadth",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "change_mgmt_path",
+        "identity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "identity_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-004-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "content_rule",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "change_mgmt_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "change_mgmt_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-004-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "vld",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": false,
+      "cost_used": 1,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "identity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "identity_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-004-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "monitor",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-004-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "breadth",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": false,
+      "cost_used": 2,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "config_diff_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "config_diff_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-004-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "content_rule",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "change_mgmt_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "change_mgmt_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-004-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "vld",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": false,
+      "cost_used": 1,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "identity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "identity_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-004-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-004-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "breadth",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "identity_path",
+        "change_mgmt_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "change_mgmt_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-004-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "content_rule",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "change_mgmt_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "change_mgmt_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-004-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "vld",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "identity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "identity_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-004-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-009-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "breadth",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "patch_status_path",
+        "asset_exposure_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "asset_exposure_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-009-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "content_rule",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "patch_status_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "patch_status_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-009-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": false,
+      "cost_used": 2,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "exploit_activity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "exploit_activity_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-009-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "suppress",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-009-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "breadth",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "asset_exposure_path",
+        "patch_status_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "patch_status_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-009-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "content_rule",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "patch_status_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "patch_status_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-009-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "exploit_activity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "exploit_activity_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-009-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "single_pass",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "monitor",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-009-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "breadth",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "patch_status_path",
+        "asset_exposure_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "asset_exposure_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-009-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "content_rule",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "patch_status_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "patch_status_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-009-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": false,
+      "cost_used": 2,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "exploit_activity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "exploit_activity_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-009-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "investigate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-009-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "breadth",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "patch_status_path",
+        "asset_exposure_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "asset_exposure_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-009-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "content_rule",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "patch_status_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "patch_status_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-009-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": false,
+      "cost_used": 2,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "exploit_activity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "exploit_activity_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-009-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-009-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "breadth",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": false,
+      "cost_used": 2,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "exploit_activity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "exploit_activity_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-009-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "content_rule",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "patch_status_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "patch_status_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-009-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "content_keyed",
+      "budget": 2,
+      "correct": false,
+      "cost_used": 2,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "exploit_activity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "exploit_activity_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-009-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "single_pass",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-005-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "breadth",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "nested_group_path",
+        "role_binding_path",
+        "group_membership_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "group_membership_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-005-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "content_rule",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "group_membership_path",
+        "nested_group_path",
+        "role_binding_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "role_binding_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-005-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "vld",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "group_membership_path",
+        "nested_group_path",
+        "role_binding_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "role_binding_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-005-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "single_pass",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "monitor",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-005-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "breadth",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "nested_group_path",
+        "peer_group_path",
+        "role_binding_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "role_binding_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-005-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "content_rule",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "group_membership_path",
+        "nested_group_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "nested_group_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-005-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "vld",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "group_membership_path",
+        "nested_group_path",
+        "role_binding_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "role_binding_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-005-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "single_pass",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "investigate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-005-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "breadth",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "role_binding_path",
+        "group_membership_path",
+        "peer_group_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "peer_group_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-005-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "content_rule",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "group_membership_path",
+        "nested_group_path",
+        "role_binding_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "role_binding_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-005-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "vld",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "group_membership_path",
+        "nested_group_path",
+        "role_binding_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "role_binding_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-005-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "single_pass",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "suppress",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-005-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "breadth",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "role_binding_path",
+        "nested_group_path",
+        "peer_group_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "peer_group_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-005-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "content_rule",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "group_membership_path",
+        "nested_group_path",
+        "role_binding_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "role_binding_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-005-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "group_membership_path",
+        "nested_group_path",
+        "role_binding_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "role_binding_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-005-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "single_pass",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-005-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "breadth",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": false,
+      "cost_used": 3,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "peer_group_path",
+        "role_binding_path",
+        "nested_group_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "nested_group_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-005-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "content_rule",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "group_membership_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "group_membership_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-005-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "vld",
+      "branching_kind": "prerequisite",
+      "budget": 3,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "group_membership_path",
+        "nested_group_path",
+        "role_binding_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "role_binding_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-005-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-003-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "breadth",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "unrelated_asset_path",
+        "temporal_window_path",
+        "shared_entity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "shared_entity_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-003-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "content_rule",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "temporal_window_path",
+        "shared_entity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "shared_entity_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-003-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "vld",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "escalate",
+      "read_branches": [
+        "temporal_window_path",
+        "shared_entity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "shared_entity_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-003-v1",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "investigate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-003-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "breadth",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "unrelated_asset_path",
+        "temporal_window_path",
+        "shared_entity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "shared_entity_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-003-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "content_rule",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "temporal_window_path",
+        "shared_entity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "shared_entity_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-003-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "vld",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "temporal_window_path",
+        "shared_entity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "shared_entity_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-003-v2",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "monitor",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-003-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "breadth",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": false,
+      "cost_used": 4,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "campaign_db_path",
+        "unrelated_asset_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "unrelated_asset_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-003-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "content_rule",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "temporal_window_path",
+        "shared_entity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "shared_entity_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-003-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "vld",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "temporal_window_path",
+        "unrelated_asset_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "unrelated_asset_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-003-v3",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "suppress",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-003-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "breadth",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "unrelated_asset_path",
+        "temporal_window_path",
+        "shared_entity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "shared_entity_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-003-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "content_rule",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "temporal_window_path",
+        "shared_entity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "shared_entity_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-003-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 3,
+      "ground_truth_action": "suppress",
+      "read_branches": [
+        "temporal_window_path",
+        "shared_entity_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "shared_entity_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-003-v4",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "single_pass",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "investigate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-MH-003-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "breadth",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 4,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "unrelated_asset_path",
+        "campaign_db_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "campaign_db_path",
+      "route_correct": false,
+      "scenario_id": "SOC-MH-003-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "content_rule",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "temporal_window_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "temporal_window_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-003-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "vld",
+      "branching_kind": "prerequisite",
+      "budget": 4,
+      "correct": true,
+      "cost_used": 2,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "temporal_window_path",
+        "unrelated_asset_path"
+      ],
+      "rho_planted": 1.0,
+      "route": "unrelated_asset_path",
+      "route_correct": true,
+      "scenario_id": "SOC-MH-003-v5",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "escalate",
+      "arm": "single_pass",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-001",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "escalate",
+      "arm": "breadth",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-001",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "escalate",
+      "arm": "content_rule",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-001",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "escalate",
+      "arm": "vld",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-001",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "monitor",
+      "arm": "single_pass",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "suppress",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-002",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "monitor",
+      "arm": "breadth",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "suppress",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-002",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "monitor",
+      "arm": "content_rule",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "suppress",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-002",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "monitor",
+      "arm": "vld",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "suppress",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-002",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "escalate",
+      "arm": "single_pass",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-003",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "escalate",
+      "arm": "breadth",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-003",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "escalate",
+      "arm": "content_rule",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-003",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "escalate",
+      "arm": "vld",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "escalate",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-003",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "suppress",
+      "arm": "single_pass",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "monitor",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-004",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "suppress",
+      "arm": "breadth",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "monitor",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-004",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "suppress",
+      "arm": "content_rule",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "monitor",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-004",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "monitor",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-004",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "suppress",
+      "arm": "single_pass",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "suppress",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-005",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "suppress",
+      "arm": "breadth",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "suppress",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-005",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "suppress",
+      "arm": "content_rule",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "suppress",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-005",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "content_keyed",
+      "budget": 0,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "suppress",
+      "read_branches": [],
+      "rho_planted": 1.0,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-FLAT-005",
+      "surface_only_resolvable": true
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "investigate",
+      "read_branches": [],
+      "rho_planted": 0.5,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-RHO50-001",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": false,
+      "cost_used": 1,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "scanner_inventory_path"
+      ],
+      "rho_planted": 0.5,
+      "route": "scanner_inventory_path",
+      "route_correct": false,
+      "scenario_id": "SOC-CTRL-RHO50-001",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "session_origin_path"
+      ],
+      "rho_planted": 0.5,
+      "route": "session_origin_path",
+      "route_correct": true,
+      "scenario_id": "SOC-CTRL-RHO50-001",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "session_origin_path"
+      ],
+      "rho_planted": 0.5,
+      "route": "session_origin_path",
+      "route_correct": true,
+      "scenario_id": "SOC-CTRL-RHO50-001",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "investigate",
+      "read_branches": [],
+      "rho_planted": 0.5,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-RHO50-002",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": false,
+      "cost_used": 1,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "device_fingerprint_path"
+      ],
+      "rho_planted": 0.5,
+      "route": "device_fingerprint_path",
+      "route_correct": false,
+      "scenario_id": "SOC-CTRL-RHO50-002",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "travel_record_path"
+      ],
+      "rho_planted": 0.5,
+      "route": "travel_record_path",
+      "route_correct": true,
+      "scenario_id": "SOC-CTRL-RHO50-002",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": false,
+      "cost_used": 1,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "device_fingerprint_path"
+      ],
+      "rho_planted": 0.5,
+      "route": "device_fingerprint_path",
+      "route_correct": false,
+      "scenario_id": "SOC-CTRL-RHO50-002",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "monitor",
+      "read_branches": [],
+      "rho_planted": 0.5,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-RHO50-003",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "peer_baseline_path"
+      ],
+      "rho_planted": 0.5,
+      "route": "peer_baseline_path",
+      "route_correct": true,
+      "scenario_id": "SOC-CTRL-RHO50-003",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "peer_baseline_path"
+      ],
+      "rho_planted": 0.5,
+      "route": "peer_baseline_path",
+      "route_correct": true,
+      "scenario_id": "SOC-CTRL-RHO50-003",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "peer_baseline_path"
+      ],
+      "rho_planted": 0.5,
+      "route": "peer_baseline_path",
+      "route_correct": true,
+      "scenario_id": "SOC-CTRL-RHO50-003",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": true,
+      "cost_used": 0,
+      "ground_truth_action": "investigate",
+      "read_branches": [],
+      "rho_planted": 0.5,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-RHO50-004",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "deploy_record_path"
+      ],
+      "rho_planted": 0.5,
+      "route": "deploy_record_path",
+      "route_correct": true,
+      "scenario_id": "SOC-CTRL-RHO50-004",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "deploy_record_path"
+      ],
+      "rho_planted": 0.5,
+      "route": "deploy_record_path",
+      "route_correct": true,
+      "scenario_id": "SOC-CTRL-RHO50-004",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": false,
+      "cost_used": 1,
+      "ground_truth_action": "investigate",
+      "read_branches": [
+        "identity_origin_path"
+      ],
+      "rho_planted": 0.5,
+      "route": "identity_origin_path",
+      "route_correct": false,
+      "scenario_id": "SOC-CTRL-RHO50-004",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "investigate",
+      "arm": "single_pass",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": false,
+      "cost_used": 0,
+      "ground_truth_action": "monitor",
+      "read_branches": [],
+      "rho_planted": 0.5,
+      "route": null,
+      "route_correct": null,
+      "scenario_id": "SOC-CTRL-RHO50-005",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "breadth",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "volume_history_path"
+      ],
+      "rho_planted": 0.5,
+      "route": "volume_history_path",
+      "route_correct": true,
+      "scenario_id": "SOC-CTRL-RHO50-005",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "monitor",
+      "arm": "content_rule",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": true,
+      "cost_used": 1,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "volume_history_path"
+      ],
+      "rho_planted": 0.5,
+      "route": "volume_history_path",
+      "route_correct": true,
+      "scenario_id": "SOC-CTRL-RHO50-005",
+      "surface_only_resolvable": false
+    },
+    {
+      "action": "suppress",
+      "arm": "vld",
+      "branching_kind": "score_keyed",
+      "budget": 1,
+      "correct": false,
+      "cost_used": 1,
+      "ground_truth_action": "monitor",
+      "read_branches": [
+        "destination_reputation_path"
+      ],
+      "rho_planted": 0.5,
+      "route": "destination_reputation_path",
+      "route_correct": false,
+      "scenario_id": "SOC-CTRL-RHO50-005",
+      "surface_only_resolvable": false
+    }
+  ]
+}

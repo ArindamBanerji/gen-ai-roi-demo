@@ -27,6 +27,7 @@ import FactorContributionPanel from '../FactorContributionPanel'
 import ProvenanceBadge from '../ProvenanceBadge'
 import NoPrecedentSidebar from '../NoPrecedentSidebar'
 import WhatIfInspectorPanel from '../WhatIfInspectorPanel'
+import InvestigationPanel from '../InvestigationPanel'
 
 interface Alert {
   id: string
@@ -903,6 +904,10 @@ export default function AlertTriageTab() {
               <NoPrecedentSidebar alertId={selectedAlert.id} confidence={analysis?.situation_analysis?.situation_confidence} />
               <WhatIfInspectorPanel alertId={selectedAlert.id} currentAction={analysis?.situation_analysis?.selected_option} />
             </div>
+          )}
+
+          {selectedAlert && analysis && (
+            <InvestigationPanel alertId={selectedAlert.id} />
           )}
 
           {/* Graph Visualization */}

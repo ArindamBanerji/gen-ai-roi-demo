@@ -90,5 +90,7 @@
       "truth": "data\\score_keyed_truth.json",
       "truth_labels": 543
     }
-  }
+  },
+  "single_pass_accuracy": 0.5377532228360957,
+  "vld_action_accuracy": 0.31307550644567217
 }

@@ -1,0 +1,79 @@
+{
+  "best": {
+    "accuracy": 0.5377532228360957,
+    "beta": 0.9,
+    "default_endpoint_accuracy": 0.5377532228360957,
+    "trained_endpoint_accuracy": 0.15101289134438306
+  },
+  "classification": "ARCH: distance ensemble does not beat the endpoints",
+  "design_justification": "Distance-level interpolation tests whether the two centroid geometries can be combined without retraining a single tensor.",
+  "experiment": "B5 ensemble scoring",
+  "rows": [
+    {
+      "accuracy": 0.15101289134438306,
+      "beta": 0.0,
+      "default_endpoint_accuracy": 0.5377532228360957,
+      "trained_endpoint_accuracy": 0.15101289134438306
+    },
+    {
+      "accuracy": 0.2578268876611418,
+      "beta": 0.1,
+      "default_endpoint_accuracy": 0.5377532228360957,
+      "trained_endpoint_accuracy": 0.15101289134438306
+    },
+    {
+      "accuracy": 0.3443830570902394,
+      "beta": 0.2,
+      "default_endpoint_accuracy": 0.5377532228360957,
+      "trained_endpoint_accuracy": 0.15101289134438306
+    },
+    {
+      "accuracy": 0.3443830570902394,
+      "beta": 0.3,
+      "default_endpoint_accuracy": 0.5377532228360957,
+      "trained_endpoint_accuracy": 0.15101289134438306
+    },
+    {
+      "accuracy": 0.3664825046040516,
+      "beta": 0.4,
+      "default_endpoint_accuracy": 0.5377532228360957,
+      "trained_endpoint_accuracy": 0.15101289134438306
+    },
+    {
+      "accuracy": 0.45119705340699817,
+      "beta": 0.5,
+      "default_endpoint_accuracy": 0.5377532228360957,
+      "trained_endpoint_accuracy": 0.15101289134438306
+    },
+    {
+      "accuracy": 0.5119705340699816,
+      "beta": 0.6,
+      "default_endpoint_accuracy": 0.5377532228360957,
+      "trained_endpoint_accuracy": 0.15101289134438306
+    },
+    {
+      "accuracy": 0.5340699815837937,
+      "beta": 0.7,
+      "default_endpoint_accuracy": 0.5377532228360957,
+      "trained_endpoint_accuracy": 0.15101289134438306
+    },
+    {
+      "accuracy": 0.5359116022099447,
+      "beta": 0.8,
+      "default_endpoint_accuracy": 0.5377532228360957,
+      "trained_endpoint_accuracy": 0.15101289134438306
+    },
+    {
+      "accuracy": 0.5377532228360957,
+      "beta": 0.9,
+      "default_endpoint_accuracy": 0.5377532228360957,
+      "trained_endpoint_accuracy": 0.15101289134438306
+    },
+    {
+      "accuracy": 0.5377532228360957,
+      "beta": 1.0,
+      "default_endpoint_accuracy": 0.5377532228360957,
+      "trained_endpoint_accuracy": 0.15101289134438306
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "classification": "ARCH: this option does not recover positive action value",
+  "design_justification": "Treat centroid-set disagreement as uncertainty and measure committed accuracy plus abstention rate.",
+  "experiment": "B7 abstain on geometry disagreement",
+  "result": {
+    "abstain_rate": 0.8637200736648251,
+    "abstained": 469,
+    "accuracy": 0.17567567567567569,
+    "classification": "ARCH: this option does not recover positive action value",
+    "committed": 74,
+    "delta_vs_sp": -0.04054054054054054,
+    "n": 74,
+    "name": "B7 abstain on default/trained route disagreement",
+    "rho": 0.7432432432432432,
+    "sp_accuracy": 0.21621621621621623
+  }
+}

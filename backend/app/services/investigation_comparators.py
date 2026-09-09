@@ -22,16 +22,15 @@ class SinglePassPolicy:
         v_raw, _ = await factor_provider.compute(alert_context, graph_store)
         v = np.asarray(v_raw, dtype=np.float64).reshape(-1)
         router = InvestigationRouter({})
-        distances = router.category_distances(v, scorer)
-        category = _closest_category(distances)
-        score = scorer.score(v.copy(), category_index=SOC_CATEGORIES.index(category))
+        score = router.score_best_from_centroids(v, scorer)
         return _result(
             policy=self.policy,
-            action=str(score.action_name),
+            action=score.action,
             confidence=float(score.confidence),
-            category=category,
+            category=score.category,
+            investigated_category=None,
             v=v,
-            single_pass_action=str(score.action_name),
+            single_pass_action=score.action,
             single_pass_confidence=float(score.confidence),
             trace=[],
             halt_reason="single_pass",
@@ -170,14 +169,14 @@ async def _one_or_many_pattern_result(
                 halt_reason="budget_exhausted" if idx == len(patterns) - 1 else None,
             )
         )
-    final_distances = router.category_distances(v, scorer)
-    final_category = _closest_category(final_distances)
-    score = scorer.score(v.copy(), category_index=SOC_CATEGORIES.index(final_category))
+    score = router.score_best_from_centroids(v, scorer)
+    investigated_category = trace[-1].pattern if trace else None
     return _result(
         policy=policy,
-        action=str(score.action_name),
+        action=score.action,
         confidence=float(score.confidence),
-        category=final_category,
+        category=score.category,
+        investigated_category=investigated_category,
         v=v,
         single_pass_action=single_action,
         single_pass_confidence=single_confidence,
@@ -192,6 +191,7 @@ def _result(
     action: str,
     confidence: float,
     category: str,
+    investigated_category: str | None,
     v: np.ndarray,
     single_pass_action: str,
     single_pass_confidence: float,
@@ -202,6 +202,8 @@ def _result(
         action=action,
         confidence=confidence,
         category=category,
+        investigated_category=investigated_category,
+        routing_agreed=investigated_category == category if investigated_category is not None else True,
         trace=trace,
         v_final=[float(x) for x in v.tolist()],
         steps=len(trace),

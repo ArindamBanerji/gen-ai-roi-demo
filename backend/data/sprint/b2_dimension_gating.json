@@ -1,0 +1,42 @@
+{
+  "classification": "HYPO: resolves routing/action tension for this fixture geometry",
+  "design_justification": "Use evidence only on action-correlated dimensions from A3 while preserving routing dimensions from surface factors.",
+  "experiment": "B2 dimension gating",
+  "results": [
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.4438305709023941,
+      "classification": "ARCH: this option does not recover positive action value",
+      "committed": 543,
+      "delta_vs_sp": -0.09392265193370164,
+      "n": 543,
+      "name": "B2 default centroid dimension gating",
+      "rho": 0.6850828729281768,
+      "sp_accuracy": 0.5377532228360957
+    },
+    {
+      "abstain_rate": 0.0,
+      "abstained": 0,
+      "accuracy": 0.16390423572744015,
+      "classification": "HYPO: resolves routing/action tension for this fixture geometry",
+      "committed": 543,
+      "delta_vs_sp": 0.012891344383057085,
+      "n": 543,
+      "name": "B2a trained centroid dimension gating",
+      "rho": 0.6850828729281768,
+      "sp_accuracy": 0.15101289134438306
+    }
+  ],
+  "selected_dimension_indices": [
+    2,
+    4,
+    5
+  ],
+  "selected_dimensions": [
+    "threat_intel_enrichment",
+    "time_anomaly",
+    "device_trust"
+  ],
+  "skipped": false
+}

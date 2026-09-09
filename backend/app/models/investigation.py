@@ -34,6 +34,8 @@ class InvestigationResult:
     action: str
     confidence: float
     category: str
+    investigated_category: Optional[str]
+    routing_agreed: bool
     trace: list[InvestigationStep]
     v_final: list[float]
     steps: int

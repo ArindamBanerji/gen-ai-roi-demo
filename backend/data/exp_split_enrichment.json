@@ -1,0 +1,35 @@
+{
+  "centroid_mode": "default",
+  "experiment": "E-SPLIT",
+  "selected_dimensions_for_selective": [],
+  "single_pass_accuracy": 0.5377532228360957,
+  "strategies": {
+    "A_current_vld": {
+      "accuracy": 0.31307550644567217,
+      "delta_vs_sp": -0.22467771639042355,
+      "n": 543
+    },
+    "B_route_surface": {
+      "accuracy": 0.5377532228360957,
+      "delta_vs_sp": 0.0,
+      "n": 543
+    },
+    "C_selective": {
+      "accuracy": 0.5377532228360957,
+      "delta_vs_sp": 0.0,
+      "n": 543
+    },
+    "D_route_selective": {
+      "accuracy": 0.5377532228360957,
+      "delta_vs_sp": 0.0,
+      "n": 543
+    },
+    "E_oracle": {
+      "accuracy": 0.36095764272559855,
+      "delta_vs_sp": -0.17679558011049717,
+      "n": 543
+    }
+  },
+  "strategy_a_matches_phase1b": true,
+  "verdict": "ARCHITECTURE ISSUE: oracle <= SP. Investigation cannot improve actions on this data. VLD value limited to structured triage."
+}

@@ -56,6 +56,7 @@ class InvestigationLoop:
         flip_count = 0
         trace: list[InvestigationStep] = []
         investigated: set[str] = set()
+        investigated_category: str | None = None
         admitted_evidence: list[dict[str, Any]] = []
         halt_reason = "budget_exhausted"
 
@@ -72,6 +73,7 @@ class InvestigationLoop:
 
             evidence = await route.pattern.execute(alert_context, graph_store)
             investigated.add(route.pattern.category_name)
+            investigated_category = route.pattern.category_name
             admitted_evidence.append(evidence)
             evidence_graph = build_evidence_scoped_graph(graph_store, admitted_evidence, surface_features)
             v_candidate_raw, _candidate_provenance = await self.factor_provider.compute(alert_context, evidence_graph)
@@ -126,21 +128,21 @@ class InvestigationLoop:
             if halt_for_step is not None:
                 break
 
-        final_distances = self.router.category_distances(v, self.scorer)
-        final_category = _closest_category(final_distances)
-        final_score = self.scorer.score(v.copy(), category_index=SOC_CATEGORIES.index(final_category))
+        final_score = self.router.score_best_from_centroids(v, self.scorer)
         if trace and trace[-1].halt_reason is None:
             trace[-1].halt_reason = halt_reason
         return InvestigationResult(
-            action=str(final_score.action_name),
+            action=final_score.action,
             confidence=float(final_score.confidence),
-            category=final_category,
+            category=final_score.category,
+            investigated_category=investigated_category,
+            routing_agreed=investigated_category == final_score.category if investigated_category is not None else True,
             trace=trace,
             v_final=[float(x) for x in v.tolist()],
             steps=len(trace),
             single_pass_action=single_pass_action,
             single_pass_confidence=single_pass_confidence,
-            agreement=str(final_score.action_name) == single_pass_action,
+            agreement=final_score.action == single_pass_action,
             fixture_source=_fixture_source(alert_context),
             halt_reason=halt_reason,
         )

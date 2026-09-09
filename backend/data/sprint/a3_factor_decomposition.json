@@ -1,0 +1,63 @@
+{
+  "action_dimension_indices": [
+    2,
+    4,
+    5
+  ],
+  "action_dimensions": [
+    "threat_intel_enrichment",
+    "time_anomaly",
+    "device_trust"
+  ],
+  "action_direction_norm": 0.9999999999999996,
+  "category_direction_norm": 1.0000000000000002,
+  "classification": "EXP: fixture labels are weakly separable in the six-factor space",
+  "dimension_scores": [
+    {
+      "action_eta_squared": 0.12230111791910904,
+      "category_eta_squared": 0.022261408569548245,
+      "factor": "privileged_identity_context"
+    },
+    {
+      "action_eta_squared": 0.12296301798254054,
+      "category_eta_squared": 0.017785151752520423,
+      "factor": "asset_criticality"
+    },
+    {
+      "action_eta_squared": 0.15331291797734195,
+      "category_eta_squared": 0.05690992989546464,
+      "factor": "threat_intel_enrichment"
+    },
+    {
+      "action_eta_squared": 0.09686511067799297,
+      "category_eta_squared": 0.17224116413714022,
+      "factor": "pattern_history"
+    },
+    {
+      "action_eta_squared": 0.1289638357922832,
+      "category_eta_squared": 0.066976122944713,
+      "factor": "time_anomaly"
+    },
+    {
+      "action_eta_squared": 0.14304295809166553,
+      "category_eta_squared": 0.03889983034572541,
+      "factor": "device_trust"
+    }
+  ],
+  "experiment": "A3 factor decomposition",
+  "lda_angle_degrees": 39.05850862315736,
+  "max_action_eta_squared": 0.15331291797734195,
+  "max_category_eta_squared": 0.17224116413714022,
+  "n_alerts": 543,
+  "overlap": 0.5,
+  "routing_dimension_indices": [
+    2,
+    3,
+    4
+  ],
+  "routing_dimensions": [
+    "threat_intel_enrichment",
+    "pattern_history",
+    "time_anomaly"
+  ]
+}

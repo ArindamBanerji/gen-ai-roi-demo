@@ -1,0 +1,488 @@
+{
+  "action_distribution_per_category": {
+    "cloud_infrastructure": {
+      "escalate": 16,
+      "investigate": 12,
+      "monitor": 13,
+      "suppress": 13
+    },
+    "credential_access": {
+      "escalate": 33,
+      "investigate": 47,
+      "monitor": 42,
+      "suppress": 41
+    },
+    "data_exfiltration": {
+      "escalate": 25,
+      "investigate": 20,
+      "monitor": 19,
+      "suppress": 18
+    },
+    "insider_threat": {
+      "escalate": 17,
+      "investigate": 20,
+      "monitor": 23,
+      "suppress": 21
+    },
+    "lateral_movement": {
+      "escalate": 30,
+      "investigate": 29,
+      "monitor": 28,
+      "suppress": 23
+    },
+    "malware_execution": {
+      "escalate": 20,
+      "investigate": 9,
+      "monitor": 16,
+      "suppress": 8
+    }
+  },
+  "all_checks_pass": false,
+  "centroid_cell_counts": {
+    "cloud_infrastructure:escalate": 128,
+    "cloud_infrastructure:investigate": 115,
+    "cloud_infrastructure:monitor": 123,
+    "cloud_infrastructure:suppress": 118,
+    "credential_access:escalate": 350,
+    "credential_access:investigate": 376,
+    "credential_access:monitor": 352,
+    "credential_access:suppress": 379,
+    "data_exfiltration:escalate": 201,
+    "data_exfiltration:investigate": 178,
+    "data_exfiltration:monitor": 175,
+    "data_exfiltration:suppress": 183,
+    "insider_threat:escalate": 191,
+    "insider_threat:investigate": 176,
+    "insider_threat:monitor": 188,
+    "insider_threat:suppress": 171,
+    "lateral_movement:escalate": 248,
+    "lateral_movement:investigate": 264,
+    "lateral_movement:monitor": 245,
+    "lateral_movement:suppress": 226,
+    "malware_execution:escalate": 135,
+    "malware_execution:investigate": 107,
+    "malware_execution:monitor": 116,
+    "malware_execution:suppress": 117
+  },
+  "centroid_mode": "bootstrapped",
+  "centroid_separation": {
+    "inter_intra_ratio": 0.9079316887414235,
+    "mean_inter": 0.4768536057017256,
+    "mean_intra": 0.5252086821231462,
+    "training_inter_intra_ratio": 1.4542936596388998
+  },
+  "checks": [
+    {
+      "actual": 0.5193370165745856,
+      "check": "sp_accuracy_recompute",
+      "expected": "bootstrapped_mode_no_phase1b_match_required",
+      "passed": true
+    },
+    {
+      "actual": 0.19521178637200737,
+      "check": "vld_accuracy_recompute",
+      "expected": "bootstrapped_mode_no_phase1b_match_required",
+      "passed": true
+    },
+    {
+      "bad_vectors": 0,
+      "check": "factor_vector_sanity",
+      "passed": true
+    },
+    {
+      "check": "scorer_centroid_sanity",
+      "failures": [],
+      "passed": true
+    },
+    {
+      "actual": 543,
+      "check": "verified_outcome_count",
+      "passed": true
+    },
+    {
+      "actual": 1.4542936596388998,
+      "check": "centroid_quality_inter_intra",
+      "issue_category": "EXPERIMENT DESIGN ISSUE",
+      "passed": false,
+      "threshold": 1.5
+    },
+    {
+      "check": "action_distribution_per_category",
+      "degenerate_categories": [],
+      "issue_category": null,
+      "passed": true
+    }
+  ],
+  "experiment": "E-BASELINE",
+  "factor_vector_samples": [
+    {
+      "alert_id": "ALT-JDOE-001",
+      "l2_delta": 0.8696517622013998,
+      "nearest_v0": {
+        "action": "escalate",
+        "action_index": 0,
+        "category": "cloud_infrastructure",
+        "category_index": 5,
+        "confidence": 0.26299652667154727,
+        "distance": 0.26554337634786185
+      },
+      "nearest_v_l": {
+        "action": "suppress",
+        "action_index": 2,
+        "category": "insider_threat",
+        "category_index": 4,
+        "confidence": 0.09319880673474905,
+        "distance": 0.5924600955707903
+      },
+      "v0": [
+        0.693,
+        0.783,
+        0.785,
+        0.542,
+        0.59,
+        0.084
+      ],
+      "v_l": [
+        0.58075,
+        0.40075,
+        0.19625,
+        0.3155,
+        0.1475,
+        0.14600000000000002
+      ]
+    },
+    {
+      "alert_id": "ALT-JDOE-002",
+      "l2_delta": 0.6054095204900564,
+      "nearest_v0": {
+        "action": "monitor",
+        "action_index": 3,
+        "category": "lateral_movement",
+        "category_index": 2,
+        "confidence": 0.3088961147415515,
+        "distance": 0.08800270660900379
+      },
+      "nearest_v_l": {
+        "action": "suppress",
+        "action_index": 2,
+        "category": "lateral_movement",
+        "category_index": 2,
+        "confidence": 0.11609686082695786,
+        "distance": 0.5550688043681111
+      },
+      "v0": [
+        0.165,
+        0.399,
+        0.282,
+        0.412,
+        0.37,
+        0.615
+      ],
+      "v_l": [
+        0.44875,
+        0.09975,
+        0.2955,
+        0.283,
+        0.26749999999999996,
+        0.20375
+      ]
+    },
+    {
+      "alert_id": "ALT-JDOE-003",
+      "l2_delta": 0.7227169224530444,
+      "nearest_v0": {
+        "action": "suppress",
+        "action_index": 2,
+        "category": "cloud_infrastructure",
+        "category_index": 5,
+        "confidence": 0.3395043936591523,
+        "distance": 0.17631678316227123
+      },
+      "nearest_v_l": {
+        "action": "monitor",
+        "action_index": 3,
+        "category": "credential_access",
+        "category_index": 0,
+        "confidence": 0.12581236422329617,
+        "distance": 0.5392949749837466
+      },
+      "v0": [
+        0.288,
+        0.185,
+        0.167,
+        0.171,
+        0.201,
+        0.872
+      ],
+      "v_l": [
+        0.292,
+        0.48124999999999996,
+        0.04175,
+        0.41775,
+        0.05025,
+        0.293
+      ]
+    },
+    {
+      "alert_id": "SYN-ME-D004-001",
+      "l2_delta": 0.6934726472615917,
+      "nearest_v0": {
+        "action": "escalate",
+        "action_index": 0,
+        "category": "malware_execution",
+        "category_index": 1,
+        "confidence": 0.39074011713151263,
+        "distance": 0.09826850970682312
+      },
+      "nearest_v_l": {
+        "action": "suppress",
+        "action_index": 2,
+        "category": "insider_threat",
+        "category_index": 4,
+        "confidence": 0.092140774715554,
+        "distance": 0.5898146656736759
+      },
+      "v0": [
+        0.602,
+        0.622,
+        0.794,
+        0.512,
+        0.477,
+        0.362
+      ],
+      "v_l": [
+        0.558,
+        0.1555,
+        0.4235,
+        0.308,
+        0.29425,
+        0.1405
+      ]
+    },
+    {
+      "alert_id": "SYN-DE-D005-001",
+      "l2_delta": 0.5486515287502624,
+      "nearest_v0": {
+        "action": "monitor",
+        "action_index": 3,
+        "category": "cloud_infrastructure",
+        "category_index": 5,
+        "confidence": 0.23919936698523483,
+        "distance": 0.1681123689531539
+      },
+      "nearest_v_l": {
+        "action": "suppress",
+        "action_index": 2,
+        "category": "lateral_movement",
+        "category_index": 2,
+        "confidence": 0.16044431901037906,
+        "distance": 0.5206751160236879
+      },
+      "v0": [
+        0.141,
+        0.401,
+        0.182,
+        0.237,
+        0.34,
+        0.623
+      ],
+      "v_l": [
+        0.44275,
+        0.30525,
+        0.0455,
+        0.23925,
+        0.085,
+        0.28075
+      ]
+    },
+    {
+      "alert_id": "SYN-DE-D006-001",
+      "l2_delta": 0.6918502818529454,
+      "nearest_v0": {
+        "action": "investigate",
+        "action_index": 1,
+        "category": "data_exfiltration",
+        "category_index": 3,
+        "confidence": 0.2398022983625437,
+        "distance": 0.14215182904204934
+      },
+      "nearest_v_l": {
+        "action": "monitor",
+        "action_index": 3,
+        "category": "insider_threat",
+        "category_index": 4,
+        "confidence": 0.13217581376064194,
+        "distance": 0.48896834344879797
+      },
+      "v0": [
+        0.662,
+        0.727,
+        0.467,
+        0.615,
+        0.665,
+        0.443
+      ],
+      "v_l": [
+        0.353,
+        0.41175,
+        0.11675,
+        0.55375,
+        0.38625,
+        0.16075
+      ]
+    },
+    {
+      "alert_id": "SYN-LM-D007-001",
+      "l2_delta": 0.889121792838304,
+      "nearest_v0": {
+        "action": "escalate",
+        "action_index": 0,
+        "category": "insider_threat",
+        "category_index": 4,
+        "confidence": 0.29861481424895603,
+        "distance": 0.2107212697255292
+      },
+      "nearest_v_l": {
+        "action": "investigate",
+        "action_index": 1,
+        "category": "lateral_movement",
+        "category_index": 2,
+        "confidence": 0.13982123313710837,
+        "distance": 0.5785947724567564
+      },
+      "v0": [
+        0.828,
+        0.825,
+        0.649,
+        0.775,
+        0.643,
+        0.245
+      ],
+      "v_l": [
+        0.6144999999999999,
+        0.20625,
+        0.16225,
+        0.57875,
+        0.38075000000000003,
+        0.11125
+      ]
+    },
+    {
+      "alert_id": "SYN-DE-D008-001",
+      "l2_delta": 0.6813590738369895,
+      "nearest_v0": {
+        "action": "suppress",
+        "action_index": 2,
+        "category": "data_exfiltration",
+        "category_index": 3,
+        "confidence": 0.39432606480796767,
+        "distance": 0.17718508684423753
+      },
+      "nearest_v_l": {
+        "action": "suppress",
+        "action_index": 2,
+        "category": "lateral_movement",
+        "category_index": 2,
+        "confidence": 0.13487988991328373,
+        "distance": 0.5879515018194403
+      },
+      "v0": [
+        0.368,
+        0.334,
+        0.032,
+        0.113,
+        0.193,
+        0.845
+      ],
+      "v_l": [
+        0.4995,
+        0.3135,
+        0.008,
+        0.40325,
+        0.04825,
+        0.26125
+      ]
+    },
+    {
+      "alert_id": "SYN-CA-D009-001",
+      "l2_delta": 0.9139173923282126,
+      "nearest_v0": {
+        "action": "escalate",
+        "action_index": 0,
+        "category": "data_exfiltration",
+        "category_index": 3,
+        "confidence": 0.3064658260911688,
+        "distance": 0.22466989018732952
+      },
+      "nearest_v_l": {
+        "action": "investigate",
+        "action_index": 1,
+        "category": "lateral_movement",
+        "category_index": 2,
+        "confidence": 0.1293252512575336,
+        "distance": 0.5578383742498486
+      },
+      "v0": [
+        0.709,
+        0.895,
+        0.789,
+        0.548,
+        0.685,
+        0.198
+      ],
+      "v_l": [
+        0.58475,
+        0.45375,
+        0.19725,
+        0.512,
+        0.17125,
+        0.0995
+      ]
+    },
+    {
+      "alert_id": "SYN-CA-D010-001",
+      "l2_delta": 0.6346799882618012,
+      "nearest_v0": {
+        "action": "investigate",
+        "action_index": 1,
+        "category": "credential_access",
+        "category_index": 0,
+        "confidence": 0.2109283413696672,
+        "distance": 0.09716615496125178
+      },
+      "nearest_v_l": {
+        "action": "suppress",
+        "action_index": 2,
+        "category": "insider_threat",
+        "category_index": 4,
+        "confidence": 0.14537649414408074,
+        "distance": 0.5903970029511922
+      },
+      "v0": [
+        0.622,
+        0.566,
+        0.49,
+        0.523,
+        0.521,
+        0.379
+      ],
+      "v_l": [
+        0.563,
+        0.1415,
+        0.1225,
+        0.5157499999999999,
+        0.35025,
+        0.14475
+      ]
+    }
+  ],
+  "fixture": "support\\setup\\zero_day_decisions_v5.json",
+  "rho_scorekey": 0.3848987108655617,
+  "sample": {
+    "alerts": 543,
+    "eval_alerts": 543,
+    "verified_outcomes": 543
+  },
+  "sp_accuracy": 0.5193370165745856,
+  "vld_accuracy": 0.19521178637200737
+}

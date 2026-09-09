@@ -1,0 +1,99 @@
+{
+  "centroid_mode": "default",
+  "condition_accuracy": {
+    "SP": {
+      "all": 0.5377532228360957,
+      "route_correct": 0.532258064516129,
+      "route_wrong": 0.5497076023391813
+    },
+    "VLD_actual": {
+      "all": 0.31307550644567217,
+      "route_correct": 0.31451612903225806,
+      "route_wrong": 0.30994152046783624
+    },
+    "VLD_all_evidence": {
+      "all": 0.2596685082872928,
+      "route_correct": 0.25806451612903225,
+      "route_wrong": 0.2631578947368421
+    },
+    "VLD_correct_route": {
+      "all": 0.3683241252302026,
+      "route_correct": 0.3682795698924731,
+      "route_wrong": 0.3684210526315789
+    },
+    "VLD_no_evidence": {
+      "all": 0.5377532228360957,
+      "route_correct": 0.532258064516129,
+      "route_wrong": 0.5497076023391813
+    }
+  },
+  "confusion_matrix": {
+    "cloud_infrastructure": {
+      "cloud_infrastructure": 29,
+      "credential_access": 19,
+      "data_exfiltration": 10,
+      "insider_threat": 0,
+      "lateral_movement": 2,
+      "malware_execution": 5
+    },
+    "credential_access": {
+      "cloud_infrastructure": 9,
+      "credential_access": 96,
+      "data_exfiltration": 4,
+      "insider_threat": 4,
+      "lateral_movement": 6,
+      "malware_execution": 1
+    },
+    "data_exfiltration": {
+      "cloud_infrastructure": 10,
+      "credential_access": 10,
+      "data_exfiltration": 64,
+      "insider_threat": 0,
+      "lateral_movement": 4,
+      "malware_execution": 1
+    },
+    "insider_threat": {
+      "cloud_infrastructure": 2,
+      "credential_access": 11,
+      "data_exfiltration": 2,
+      "insider_threat": 59,
+      "lateral_movement": 20,
+      "malware_execution": 0
+    },
+    "lateral_movement": {
+      "cloud_infrastructure": 1,
+      "credential_access": 20,
+      "data_exfiltration": 1,
+      "insider_threat": 17,
+      "lateral_movement": 78,
+      "malware_execution": 0
+    },
+    "malware_execution": {
+      "cloud_infrastructure": 3,
+      "credential_access": 7,
+      "data_exfiltration": 1,
+      "insider_threat": 1,
+      "lateral_movement": 0,
+      "malware_execution": 46
+    }
+  },
+  "damage_decomposition": {
+    "missing_correct_evidence_count": 26,
+    "wrong_action_slice_diff_count": 16,
+    "wrong_evidence_actively_misleading_count": 52,
+    "wrong_route_total": 171
+  },
+  "dominant_wrong_route_pair": {
+    "count": 20,
+    "pair": "lateral_movement->credential_access"
+  },
+  "experiment": "E-WRONG",
+  "sample": {
+    "route_correct": 372,
+    "route_wrong": 171
+  },
+  "self_diagnostics": [
+    "VLD-no-evidence equals SP: route slice does not alter action or routing is not used",
+    "VLD-correct-route < SP: correct evidence still hurts"
+  ]
+}

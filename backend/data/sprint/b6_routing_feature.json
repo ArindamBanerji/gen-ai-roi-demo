@@ -1,0 +1,6 @@
+{
+  "classification": "EXP: intentionally deferred contingent architecture",
+  "experiment": "B6 routing confidence as feature",
+  "skip_reason": "Requires augmented centroid dimensionality and retraining; B1-B5/B7 are cheaper and directly answer the one-tensor tension first.",
+  "skipped": true
+}
