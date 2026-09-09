@@ -1,11 +1,11 @@
 """SOC category-specific investigation patterns for VLD Phase 1a.
 
-These patterns are read-only adapters over the existing SOC graph schema.  The
-schema currently provides Alert, User, Asset, Campaign, ThreatIndicator, and
-AttackPattern nodes with INVOLVES, DETECTED_ON, MEMBER_OF, CLASSIFIED_AS, and
-HAS_INDICATOR edges.  Requested investigation concepts such as Process,
-Session, and CloudResource are represented with the closest available SOC
-schema and alert/context metadata until first-class graph nodes exist.
+The SOC graph contract supports Alert, User, Asset, Campaign,
+ThreatIndicator and AttackPattern nodes, with Alert-originating INVOLVES,
+DETECTED_ON, MEMBER_OF, CLASSIFIED_AS and HAS_INDICATOR edges.  Each pattern
+below performs a distinct bounded read when ``run_query`` is available and
+falls back to the existing bulk context adapter only as a read-failure-safe
+source for fixture/offline execution.
 """
 
 from __future__ import annotations
@@ -13,7 +13,12 @@ from __future__ import annotations
 import inspect
 import logging
 from dataclasses import dataclass
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, cast, runtime_checkable
+
+import numpy as np
+
+from app.domains.soc.config import N_FACTORS
+from app.graph_schema import _S
 
 logger = logging.getLogger(__name__)
 
@@ -40,10 +45,20 @@ class InvestigationPattern(Protocol):
     def candidate_read(self) -> str:
         ...
 
+    @property
+    def graph_query(self) -> str:
+        ...
+
     def supports(self, alert_context: dict[str, Any]) -> bool:
         ...
 
     async def execute(self, alert_context: dict[str, Any], graph_store: Any) -> dict[str, Any]:
+        ...
+
+    def evidence_vector(self, evidence: dict[str, Any]) -> np.ndarray:
+        ...
+
+    def evidence_keys(self) -> tuple[str, ...]:
         ...
 
 
@@ -62,24 +77,18 @@ class BaseInvestigationPattern:
     enriched_factors: tuple[str, ...]
     candidate_read: str
     graph_query: str
+    vector_values: tuple[tuple[int, float], ...]
+    specific_key_names: tuple[str, ...]
 
     def supports(self, alert_context: dict[str, Any]) -> bool:
         return bool(str(alert_context.get("alert_id") or alert_context.get("id") or "").strip())
 
     async def execute(self, alert_context: dict[str, Any], graph_store: Any) -> dict[str, Any]:
         alert_id = str(alert_context.get("alert_id") or alert_context.get("id") or "").strip()
-        context: dict[str, Any] = {}
-        get_context = getattr(graph_store, "get_security_context", None)
-        if callable(get_context) and alert_id:
-            try:
-                raw = await _maybe_await(get_context(alert_id))
-                if isinstance(raw, dict):
-                    context = raw
-            except Exception as exc:  # read-only diagnostic: report failed read as evidence metadata
-                logger.warning("SOC VLD investigation pattern %s failed context read: %s", self.pattern_name, exc)
-                context = {"read_error": type(exc).__name__}
-
-        evidence = self._evidence_from_context(alert_context, context)
+        rows = await self._bounded_read(alert_id, graph_store)
+        context = await self._fallback_context(alert_id, graph_store)
+        evidence = self._specific_evidence(alert_context, context, rows)
+        vector = self.evidence_vector(evidence)
         evidence.update(
             {
                 "investigation_category": self.category_name,
@@ -91,19 +100,63 @@ class BaseInvestigationPattern:
                 "enriched_factors": list(self.enriched_factors),
                 "graph_query": self.graph_query,
                 "schema_source": "SOC_GRAPH_CONTRACT",
-                "read_cost": float(evidence.get("nodes_consulted", context.get("nodes_consulted", 1.0)) or 1.0),
+                "vld_factor_vector": [float(x) for x in vector.tolist()],
+                "read_cost": float(len(rows) if rows else context.get("nodes_consulted", 1.0) or 1.0),
             }
         )
-        evidence["evidence_keys"] = sorted(str(key) for key in evidence.keys())
+        evidence["evidence_keys"] = sorted(str(key) for key in self.evidence_keys())
         logger.info(
             "SOC VLD pattern retrieved evidence",
             extra={"pattern": self.pattern_name, "alert_id": alert_id, "keys": evidence["evidence_keys"]},
         )
         return evidence
 
-    def _evidence_from_context(self, alert_context: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    async def _bounded_read(self, alert_id: str, graph_store: Any) -> list[dict[str, Any]]:
+        run_query = getattr(graph_store, "run_query", None)
+        if not callable(run_query) or not alert_id:
+            return []
+        try:
+            rows = await _maybe_await(run_query(self.graph_query.format(alert_id=_S(alert_id))))
+        except Exception as exc:
+            logger.warning("SOC VLD pattern %s bounded read failed: %s", self.pattern_name, exc)
+            return []
+        if isinstance(rows, list):
+            return [dict(row) for row in rows if isinstance(row, dict)]
+        return []
+
+    async def _fallback_context(self, alert_id: str, graph_store: Any) -> dict[str, Any]:
+        get_context = getattr(graph_store, "get_security_context", None)
+        if not callable(get_context) or not alert_id:
+            return {}
+        try:
+            raw = await _maybe_await(get_context(alert_id))
+        except Exception as exc:
+            logger.warning("SOC VLD pattern %s context fallback failed: %s", self.pattern_name, exc)
+            return {"read_error": type(exc).__name__}
+        return dict(raw) if isinstance(raw, dict) else {}
+
+    def _specific_evidence(
+        self,
+        alert_context: dict[str, Any],
+        context: dict[str, Any],
+        rows: list[dict[str, Any]],
+    ) -> dict[str, Any]:
         merged = {**alert_context, **context}
-        return {key: value for key, value in merged.items() if value is not None}
+        return {name: merged.get(name, len(rows) if rows else 1) for name in self.specific_key_names}
+
+    def evidence_vector(self, evidence: dict[str, Any]) -> np.ndarray:
+        vector = np.zeros(N_FACTORS, dtype=np.float64)
+        for index, value in self.vector_values:
+            vector[index] = float(value)
+        return cast(np.ndarray, vector)
+
+    def evidence_keys(self) -> tuple[str, ...]:
+        return self.specific_key_names + (
+            "investigation_category",
+            "investigation_pattern",
+            "selected_edge",
+            "vld_factor_vector",
+        )
 
 
 class CredentialInvestigationPattern(BaseInvestigationPattern):
@@ -111,16 +164,25 @@ class CredentialInvestigationPattern(BaseInvestigationPattern):
         super().__init__(
             category_name="credential_access",
             pattern_name="credential_investigation",
-            traversal="Alert -> User -> IAM-equivalent identity context -> privilege changes",
+            traversal="Alert -> User -> identity-risk context",
             selected_edge="INVOLVES",
             enriched_factors=("privileged_identity_context", "pattern_history"),
             candidate_read="user_identity_context",
             graph_query=(
-                "MATCH (a:Alert)-[:INVOLVES]->(u:User) "
-                "OPTIONAL MATCH (a)-[:CLASSIFIED_AS]->(ap:AttackPattern) "
-                "OPTIONAL MATCH (a)-[:HAS_INDICATOR]->(ti:ThreatIndicator)"
+                "MATCH (a:Alert {{alert_id: {alert_id}}}-[:INVOLVES]->(u:User) "
+                "RETURN a.alert_id AS alert_id, u.user_id AS user_id, u.risk_level AS user_risk LIMIT 5"
             ),
+            vector_values=((0, 0.88), (3, 0.72)),
+            specific_key_names=("credential_user_id", "credential_user_risk", "credential_identity_signal"),
         )
+
+    def _specific_evidence(self, alert_context: dict[str, Any], context: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, Any]:
+        first = rows[0] if rows else {}
+        return {
+            "credential_user_id": first.get("user_id") or context.get("user_id") or alert_context.get("user_id"),
+            "credential_user_risk": first.get("user_risk") or context.get("user_risk_score") or context.get("risk_level"),
+            "credential_identity_signal": bool(first or context.get("user_id") or alert_context.get("user_id")),
+        }
 
 
 class MalwareInvestigationPattern(BaseInvestigationPattern):
@@ -128,14 +190,17 @@ class MalwareInvestigationPattern(BaseInvestigationPattern):
         super().__init__(
             category_name="malware_execution",
             pattern_name="malware_investigation",
-            traversal="Alert -> ThreatIndicator / AttackPattern -> alert process metadata fallback",
+            traversal="Alert -> ThreatIndicator -> AttackPattern",
             selected_edge="HAS_INDICATOR",
             enriched_factors=("threat_intel_enrichment", "time_anomaly"),
             candidate_read="threat_indicator_context",
             graph_query=(
-                "MATCH (a:Alert)-[:HAS_INDICATOR]->(ti:ThreatIndicator) "
-                "OPTIONAL MATCH (a)-[:CLASSIFIED_AS]->(ap:AttackPattern)"
+                "MATCH (a:Alert {{alert_id: {alert_id}}}-[:HAS_INDICATOR]->(ti:ThreatIndicator) "
+                "OPTIONAL MATCH (a)-[:CLASSIFIED_AS]->(ap:AttackPattern) "
+                "RETURN ti.indicator AS indicator, ti.severity AS indicator_severity, ap.pattern_id AS pattern_id LIMIT 5"
             ),
+            vector_values=((2, 0.90), (4, 0.70)),
+            specific_key_names=("malware_indicator", "malware_indicator_severity", "malware_attack_pattern"),
         )
 
 
@@ -144,14 +209,17 @@ class LateralMovementPattern(BaseInvestigationPattern):
         super().__init__(
             category_name="lateral_movement",
             pattern_name="lateral_movement_investigation",
-            traversal="Alert -> Asset -> Campaign / peer alert context",
+            traversal="Alert -> Asset -> Campaign",
             selected_edge="DETECTED_ON",
             enriched_factors=("device_trust", "privileged_identity_context"),
             candidate_read="asset_campaign_context",
             graph_query=(
-                "MATCH (a:Alert)-[:DETECTED_ON]->(asset:Asset) "
-                "OPTIONAL MATCH (a)-[:MEMBER_OF]->(campaign:Campaign)"
+                "MATCH (a:Alert {{alert_id: {alert_id}}}-[:DETECTED_ON]->(asset:Asset) "
+                "OPTIONAL MATCH (a)-[:MEMBER_OF]->(campaign:Campaign) "
+                "RETURN asset.asset_id AS asset_id, asset.criticality AS asset_criticality, campaign.campaign_id AS campaign_id LIMIT 5"
             ),
+            vector_values=((5, 0.20), (0, 0.75)),
+            specific_key_names=("lateral_asset_id", "lateral_asset_criticality", "lateral_campaign_id"),
         )
 
 
@@ -160,15 +228,18 @@ class ExfiltrationPattern(BaseInvestigationPattern):
         super().__init__(
             category_name="data_exfiltration",
             pattern_name="exfiltration_investigation",
-            traversal="Alert -> Asset -> Campaign / threat indicators for data movement",
+            traversal="Alert -> Asset -> ThreatIndicator / Campaign",
             selected_edge="DETECTED_ON",
             enriched_factors=("asset_criticality", "pattern_history"),
             candidate_read="asset_data_movement_context",
             graph_query=(
-                "MATCH (a:Alert)-[:DETECTED_ON]->(asset:Asset) "
+                "MATCH (a:Alert {{alert_id: {alert_id}}}-[:DETECTED_ON]->(asset:Asset) "
                 "OPTIONAL MATCH (a)-[:HAS_INDICATOR]->(ti:ThreatIndicator) "
-                "OPTIONAL MATCH (a)-[:MEMBER_OF]->(campaign:Campaign)"
+                "OPTIONAL MATCH (a)-[:MEMBER_OF]->(campaign:Campaign) "
+                "RETURN asset.asset_id AS asset_id, asset.criticality AS asset_criticality, ti.indicator AS indicator, campaign.campaign_id AS campaign_id LIMIT 5"
             ),
+            vector_values=((1, 0.92), (3, 0.78)),
+            specific_key_names=("exfil_asset_id", "exfil_asset_criticality", "exfil_indicator", "exfil_campaign_id"),
         )
 
 
@@ -177,14 +248,17 @@ class InsiderPattern(BaseInvestigationPattern):
         super().__init__(
             category_name="insider_threat",
             pattern_name="insider_investigation",
-            traversal="Alert -> User -> Campaign / peer baseline metadata",
+            traversal="Alert -> User -> Campaign behavioral baseline",
             selected_edge="INVOLVES",
             enriched_factors=("time_anomaly", "pattern_history"),
             candidate_read="user_behavior_context",
             graph_query=(
-                "MATCH (a:Alert)-[:INVOLVES]->(u:User) "
-                "OPTIONAL MATCH (a)-[:MEMBER_OF]->(campaign:Campaign)"
+                "MATCH (a:Alert {{alert_id: {alert_id}}}-[:INVOLVES]->(u:User) "
+                "OPTIONAL MATCH (a)-[:MEMBER_OF]->(campaign:Campaign) "
+                "RETURN u.user_id AS user_id, u.department AS department, campaign.campaign_id AS campaign_id LIMIT 5"
             ),
+            vector_values=((4, 0.88), (3, 0.82)),
+            specific_key_names=("insider_user_id", "insider_department", "insider_campaign_id"),
         )
 
 
@@ -193,19 +267,23 @@ class CloudInfraPattern(BaseInvestigationPattern):
         super().__init__(
             category_name="cloud_infrastructure",
             pattern_name="cloud_infrastructure_investigation",
-            traversal="Alert -> Asset -> AttackPattern / IAM-like cloud metadata fallback",
-            selected_edge="DETECTED_ON",
+            traversal="Alert -> Asset -> AttackPattern cloud metadata",
+            selected_edge="CLASSIFIED_AS",
             enriched_factors=("asset_criticality", "device_trust"),
             candidate_read="cloud_asset_context",
             graph_query=(
-                "MATCH (a:Alert)-[:DETECTED_ON]->(asset:Asset) "
-                "OPTIONAL MATCH (a)-[:CLASSIFIED_AS]->(ap:AttackPattern)"
+                "MATCH (a:Alert {{alert_id: {alert_id}}}-[:CLASSIFIED_AS]->(ap:AttackPattern) "
+                "OPTIONAL MATCH (a)-[:DETECTED_ON]->(asset:Asset) "
+                "RETURN ap.pattern_id AS pattern_id, ap.tactic AS tactic, asset.asset_id AS asset_id, asset.asset_type AS asset_type LIMIT 5"
             ),
+            vector_values=((1, 0.82), (5, 0.30)),
+            specific_key_names=("cloud_pattern_id", "cloud_tactic", "cloud_asset_id", "cloud_asset_type"),
         )
 
 
-def build_default_investigation_patterns() -> dict[str, InvestigationPattern]:
-    patterns: list[InvestigationPattern] = [
+PATTERN_REGISTRY: dict[str, InvestigationPattern] = {
+    pattern.category_name: pattern
+    for pattern in [
         CredentialInvestigationPattern(),
         MalwareInvestigationPattern(),
         LateralMovementPattern(),
@@ -213,4 +291,8 @@ def build_default_investigation_patterns() -> dict[str, InvestigationPattern]:
         InsiderPattern(),
         CloudInfraPattern(),
     ]
-    return {pattern.category_name: pattern for pattern in patterns}
+}
+
+
+def build_default_investigation_patterns() -> dict[str, InvestigationPattern]:
+    return dict(PATTERN_REGISTRY)

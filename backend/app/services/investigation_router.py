@@ -10,7 +10,7 @@ import numpy as np
 from app.domains.soc.config import SOC_CATEGORIES
 from app.services.investigation_patterns import InvestigationPattern
 
-POLICY_VERSION = "soc_vld_investigation_router.v1"
+POLICY_VERSION = "soc_vld_investigation_router.v2"
 
 
 @dataclass(frozen=True)
@@ -53,37 +53,33 @@ class InvestigationRouter:
         investigated: set[str],
         *,
         alert_context: dict[str, Any] | None = None,
-        preferred_category: str | None = None,
     ) -> RouteDecision:
-        if len(investigated) >= self.L_max:
-            return RouteDecision(None, self.category_distances(v_t, scorer), [], None, 0.0)
-
         distances = self.category_distances(v_t, scorer)
-        sorted_categories = sorted(distances, key=lambda category: distances[category])
-        if preferred_category and preferred_category in self.patterns:
-            sorted_categories = [preferred_category] + [cat for cat in sorted_categories if cat != preferred_category]
-
-        candidates: list[str] = []
-        for category in sorted_categories:
-            pattern = self.patterns.get(category)
-            if pattern is None or category in investigated:
-                continue
-            if alert_context is not None and not pattern.supports(alert_context):
-                continue
-            candidates.append(pattern.candidate_read)
-
-        if not candidates:
+        if len(investigated) >= self.L_max:
             return RouteDecision(None, distances, [], None, 0.0)
 
+        sorted_categories = sorted(distances, key=lambda category: distances[category])
+        eligible: list[tuple[str, InvestigationPattern]] = []
         for category in sorted_categories:
             pattern = self.patterns.get(category)
             if pattern is None or category in investigated:
                 continue
             if alert_context is not None and not pattern.supports(alert_context):
                 continue
-            return RouteDecision(pattern, distances, candidates, category, 1.0 / float(len(candidates)))
+            eligible.append((category, pattern))
 
-        return RouteDecision(None, distances, candidates, None, 0.0)
+        if not eligible:
+            return RouteDecision(None, distances, [], None, 0.0)
+
+        selected_category, selected_pattern = eligible[0]
+        candidate_reads = [pattern.candidate_read for _category, pattern in eligible]
+        return RouteDecision(
+            selected_pattern,
+            distances,
+            candidate_reads,
+            selected_category,
+            1.0,
+        )
 
     def route(self, v_t: np.ndarray, scorer: Any, investigated: set[str]) -> InvestigationPattern | None:
         return self.route_decision(v_t, scorer, investigated).pattern

@@ -10,6 +10,7 @@ from typing import Optional
 class InvestigationStep:
     step: int
     pattern: str
+    alert_category: Optional[str]
     v_before: list[float]
     v_after: list[float]
     cat_distances_before: dict[str, float]
@@ -41,6 +42,8 @@ class InvestigationResult:
     agreement: bool
     fixture_source: Optional[str] = None
     conservation_emit_gate: str = "not_evaluated_read_only"
+    halt_reason: str = "unknown"
+    policy: str = "vld"
 
     def to_dict(self) -> dict:
         payload = asdict(self)

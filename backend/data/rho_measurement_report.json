@@ -1,0 +1,94 @@
+{
+  "action_accuracy": {
+    "breadth_all": 0.2596685082872928,
+    "content_rule": 0.3683241252302026,
+    "majority_branch": 0.425414364640884,
+    "random_branch": 0.3406998158379374,
+    "single_pass": 0.5377532228360957,
+    "vld": 0.31307550644567217
+  },
+  "content_keyed_fraction": 0.6850828729281768,
+  "data_notes": [
+    "Fixture is deterministic synthetic SOC seed data, not live production outcomes.",
+    "Factor vectors are read from verified decision fixture rows keyed by alert_id to keep label-stripped alerts computable without AGE.",
+    "Content-rule rho is diagnostic only because it uses the label under test.",
+    "Action truth is inferred by majority vote among correct fixture decisions per alert; treat E-Delta as fixture sensitivity, not a production value claim."
+  ],
+  "delta_depth_vs_single": -0.22467771639042355,
+  "fixture": "support\\setup\\zero_day_decisions_v5.json",
+  "gate_reason": "rho_VLD_scorekey beats majority baseline.",
+  "gate_verdict": "PASS",
+  "margin_distribution": {
+    "percentiles": {
+      "p25": 0.010305618819515017,
+      "p50": 0.02381770702931979,
+      "p75": 0.04725782867710383,
+      "p90": 0.08942702285044817
+    },
+    "rho_by_quartile": {
+      "q1": {
+        "margin_max": 0.01025877517218153,
+        "margin_min": 0.0,
+        "n": 136,
+        "rho": 0.47058823529411764
+      },
+      "q2": {
+        "margin_max": 0.02381770702931979,
+        "margin_min": 0.010352462466848504,
+        "n": 136,
+        "rho": 0.5147058823529411
+      },
+      "q3": {
+        "margin_max": 0.04735482890002973,
+        "margin_min": 0.024070876707336347,
+        "n": 136,
+        "rho": 0.7794117647058824
+      },
+      "q4": {
+        "margin_max": 0.18871045587307136,
+        "margin_min": 0.047695692280028734,
+        "n": 135,
+        "rho": 0.9777777777777777
+      }
+    }
+  },
+  "mu_skew": {
+    "mean": 0.7268472279507798,
+    "median": 0.6942943810085173,
+    "p90": 0.9247103334476986
+  },
+  "rho_content": 1.0,
+  "rho_majority": 0.3001841620626151,
+  "rho_majority_scorekey": 0.3001841620626151,
+  "rho_random_expected": 0.16666666666666666,
+  "rho_vld": 0.6850828729281768,
+  "rho_vld_scorekey": 0.6850828729281768,
+  "sample": {
+    "action_truth_alerts": 543,
+    "alerts_total": 543,
+    "category_counts": {
+      "cloud_infrastructure": 54,
+      "credential_access": 163,
+      "data_exfiltration": 82,
+      "insider_threat": 81,
+      "lateral_movement": 110,
+      "malware_execution": 53
+    },
+    "decisions_total": 4862,
+    "eval_alerts_with_labels_and_vectors": 543,
+    "majority_category": "credential_access",
+    "score_keyed_alerts": 543,
+    "stripped_generation": {
+      "alerts": 543,
+      "fixture": "support\\setup\\zero_day_decisions_v5.json",
+      "leak_fields": [
+        "alert_type",
+        "category",
+        "category_index"
+      ],
+      "output": "data\\score_keyed_alerts.json",
+      "truth": "data\\score_keyed_truth.json",
+      "truth_labels": 543
+    }
+  }
+}
