@@ -1,0 +1,2323 @@
+{
+  "edge_types": [
+    "AFFECTS",
+    "BINDS_ROLE",
+    "COMPARED_AGAINST",
+    "COVERED_BY_CHANGE",
+    "COVERED_BY_DEPLOY",
+    "HAS_AUTH_TRAIL",
+    "HAS_COMMAND_PROFILE",
+    "HAS_EMPLOYMENT_CONTEXT",
+    "HAS_SESSION",
+    "HAS_TRAVEL_RECORD",
+    "MATCHES_CVE",
+    "MEMBER_OF",
+    "MEMBER_OF_COHORT",
+    "NESTED_IN",
+    "OBSERVED_IN_WINDOW",
+    "OBSERVED_PROCESS",
+    "OBSERVED_SEQUENCE",
+    "ORIGINATED_FROM",
+    "RUNS_JOB",
+    "RUNS_PACKAGE",
+    "TARGETS",
+    "USES_CREDENTIAL",
+    "USES_KEY"
+  ],
+  "edges": [
+    {
+      "from": "ALERT-CTRL-FLAT-005",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-FLAT-005"
+      },
+      "to": "USR-7788",
+      "type": "AFFECTS"
+    },
+    {
+      "from": "ALERT-CTRL-RHO50-002",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-RHO50-002"
+      },
+      "to": "USR-4410",
+      "type": "AFFECTS"
+    },
+    {
+      "from": "ALERT-MH-001",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-001-v5"
+      },
+      "to": "USR-1042",
+      "type": "AFFECTS"
+    },
+    {
+      "from": "ALERT-MH-002",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-002-v5"
+      },
+      "to": "USR-3318",
+      "type": "AFFECTS"
+    },
+    {
+      "from": "ALERT-MH-004",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-004-v5"
+      },
+      "to": "USR-2210",
+      "type": "AFFECTS"
+    },
+    {
+      "from": "ALERT-MH-005",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-005-v5"
+      },
+      "to": "USR-5501",
+      "type": "AFFECTS"
+    },
+    {
+      "from": "ALERT-MH-008",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-008-v5"
+      },
+      "to": "IDN-CLOUD-77",
+      "type": "AFFECTS"
+    },
+    {
+      "from": "ALERT-MH-013",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-013-v5"
+      },
+      "to": "SVC-ETL-04",
+      "type": "AFFECTS"
+    },
+    {
+      "from": "GRP-INFRA-OPS",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-005-v4"
+      },
+      "to": "ROLE-DOM-ADMIN-DEL",
+      "type": "BINDS_ROLE"
+    },
+    {
+      "from": "USR-5501",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-005-v5"
+      },
+      "to": "ROLE-DIRECT-ADMIN",
+      "type": "BINDS_ROLE"
+    },
+    {
+      "from": "ALERT-CTRL-RHO50-003",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-RHO50-003"
+      },
+      "to": "COHORT-OPS",
+      "type": "COMPARED_AGAINST"
+    },
+    {
+      "from": "ALERT-CTRL-RHO50-005",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-RHO50-005"
+      },
+      "to": "XFER-HIST-661",
+      "type": "COMPARED_AGAINST"
+    },
+    {
+      "from": "RES-VPC-PROD-02",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-004-v5"
+      },
+      "to": "CR-2026-0912",
+      "type": "COVERED_BY_CHANGE"
+    },
+    {
+      "from": "RES-APP-14",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-RHO50-004"
+      },
+      "to": "DEP-3390",
+      "type": "COVERED_BY_DEPLOY"
+    },
+    {
+      "from": "USR-1042",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-001-v5"
+      },
+      "to": "AUTH-1042-0908",
+      "type": "HAS_AUTH_TRAIL"
+    },
+    {
+      "from": "SVC-ETL-04",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-013-v5"
+      },
+      "to": "CMDP-04",
+      "type": "HAS_COMMAND_PROFILE"
+    },
+    {
+      "from": "USR-3318",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-002-v5"
+      },
+      "to": "EMP-3318",
+      "type": "HAS_EMPLOYMENT_CONTEXT"
+    },
+    {
+      "from": "USR-3318",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-002-v5"
+      },
+      "to": "SESS-3318",
+      "type": "HAS_SESSION"
+    },
+    {
+      "from": "USR-4410",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-RHO50-002"
+      },
+      "to": "TRV-NONE",
+      "type": "HAS_TRAVEL_RECORD"
+    },
+    {
+      "from": "ALERT-MH-009",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-009-v5"
+      },
+      "to": "CVE-2026-31887",
+      "type": "MATCHES_CVE"
+    },
+    {
+      "from": "ALERT-MH-003",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-003-v1"
+      },
+      "to": "CAMP-2026-Q3-A",
+      "type": "MEMBER_OF"
+    },
+    {
+      "from": "ALERT-MH-003",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-003-v4"
+      },
+      "to": "CAMP-PENTEST-PT-2026-14",
+      "type": "MEMBER_OF"
+    },
+    {
+      "from": "USR-5501",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-005-v5"
+      },
+      "to": "GRP-APP-SUPPORT",
+      "type": "MEMBER_OF"
+    },
+    {
+      "from": "USR-3318",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-002-v5"
+      },
+      "to": "COHORT-FIN",
+      "type": "MEMBER_OF_COHORT"
+    },
+    {
+      "from": "GRP-APP-SUPPORT",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-005-v4"
+      },
+      "to": "GRP-INFRA-OPS",
+      "type": "NESTED_IN"
+    },
+    {
+      "from": "ALERT-MH-003",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-003-v5"
+      },
+      "to": "TW-003",
+      "type": "OBSERVED_IN_WINDOW"
+    },
+    {
+      "from": "ALERT-MH-001",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-001-v5"
+      },
+      "to": "PROC-8841",
+      "type": "OBSERVED_PROCESS"
+    },
+    {
+      "from": "ALERT-MH-008",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-008-v5"
+      },
+      "to": "APISEQ-4410",
+      "type": "OBSERVED_SEQUENCE"
+    },
+    {
+      "from": "ALERT-CTRL-RHO50-001",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-RHO50-001"
+      },
+      "to": "SESS-8823",
+      "type": "ORIGINATED_FROM"
+    },
+    {
+      "from": "ALERT-MH-013",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-013-v5"
+      },
+      "to": "HOST-ETL-02",
+      "type": "ORIGINATED_FROM"
+    },
+    {
+      "from": "ALERT-MH-013",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-013-v4"
+      },
+      "to": "HOST-UNKNOWN-88",
+      "type": "ORIGINATED_FROM"
+    },
+    {
+      "from": "SVC-ETL-04",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-013-v5"
+      },
+      "to": "JOB-NIGHTLY-ETL",
+      "type": "RUNS_JOB"
+    },
+    {
+      "from": "ASSET-WEB-11",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-009-v5"
+      },
+      "to": "PKG-NGINX",
+      "type": "RUNS_PACKAGE"
+    },
+    {
+      "from": "ALERT-CTRL-FLAT-001",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-FLAT-001"
+      },
+      "to": "ASSET-PROD-DB-03",
+      "type": "TARGETS"
+    },
+    {
+      "from": "ALERT-CTRL-FLAT-002",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-FLAT-002"
+      },
+      "to": "MBX-2201",
+      "type": "TARGETS"
+    },
+    {
+      "from": "ALERT-CTRL-FLAT-003",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-FLAT-003"
+      },
+      "to": "ASSET-DWH-01",
+      "type": "TARGETS"
+    },
+    {
+      "from": "ALERT-CTRL-FLAT-004",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-FLAT-004"
+      },
+      "to": "RES-SANDBOX-09",
+      "type": "TARGETS"
+    },
+    {
+      "from": "ALERT-CTRL-RHO50-004",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-RHO50-004"
+      },
+      "to": "RES-APP-14",
+      "type": "TARGETS"
+    },
+    {
+      "from": "ALERT-MH-001",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-001-v5"
+      },
+      "to": "ASSET-DC-01",
+      "type": "TARGETS"
+    },
+    {
+      "from": "ALERT-MH-002",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-002-v5"
+      },
+      "to": "ASSET-FS-07",
+      "type": "TARGETS"
+    },
+    {
+      "from": "ALERT-MH-003",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-003-v4"
+      },
+      "to": "HOST-SHARED-31",
+      "type": "TARGETS"
+    },
+    {
+      "from": "ALERT-MH-004",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-004-v5"
+      },
+      "to": "RES-VPC-PROD-02",
+      "type": "TARGETS"
+    },
+    {
+      "from": "ALERT-MH-008",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-008-v5"
+      },
+      "to": "RES-IAM-PROD",
+      "type": "TARGETS"
+    },
+    {
+      "from": "ALERT-MH-009",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-009-v5"
+      },
+      "to": "ASSET-WEB-11",
+      "type": "TARGETS"
+    },
+    {
+      "from": "SVC-ETL-04",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-013-v5"
+      },
+      "to": "CRED-SVC-04",
+      "type": "USES_CREDENTIAL"
+    },
+    {
+      "from": "IDN-CLOUD-77",
+      "properties": {
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-008-v5"
+      },
+      "to": "KEY-77-A",
+      "type": "USES_KEY"
+    }
+  ],
+  "node_types": [
+    "AccessKey",
+    "Alert",
+    "ApiSequence",
+    "Asset",
+    "AuthTrail",
+    "CVE",
+    "Campaign",
+    "ChangeRequest",
+    "CloudResource",
+    "CommandProfile",
+    "Credential",
+    "DeployRecord",
+    "DeviceSession",
+    "EmploymentContext",
+    "Group",
+    "Host",
+    "Identity",
+    "Mailbox",
+    "PeerCohort",
+    "Process",
+    "Role",
+    "ScheduledJob",
+    "ServiceAccount",
+    "Session",
+    "SoftwarePackage",
+    "TimeWindow",
+    "TransferHistory",
+    "TravelRecord",
+    "User"
+  ],
+  "nodes": [
+    {
+      "id": "KEY-77-A",
+      "properties": {
+        "age_days": 220,
+        "id": "KEY-77-A",
+        "last_rotated": "2025-08-02",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-008-v5"
+      },
+      "type": "AccessKey"
+    },
+    {
+      "id": "ALERT-CTRL-FLAT-001",
+      "properties": {
+        "alert_id": "ALERT-CTRL-FLAT-001",
+        "alert_type": "threat_intel_match",
+        "category": "malware_execution",
+        "id": "ALERT-CTRL-FLAT-001",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-FLAT-001",
+        "severity": "critical",
+        "source_system": "EDR",
+        "surface_factors": {
+          "asset_criticality": 0.95,
+          "device_trust": 0.15,
+          "pattern_history": 0.6,
+          "privileged_identity_context": 0.88,
+          "threat_intel_enrichment": 0.97,
+          "time_anomaly": 0.3
+        },
+        "timestamp": "2026-09-01T09:10:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-CTRL-FLAT-002",
+      "properties": {
+        "alert_id": "ALERT-CTRL-FLAT-002",
+        "alert_type": "phishing",
+        "category": "malware_execution",
+        "id": "ALERT-CTRL-FLAT-002",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-FLAT-002",
+        "severity": "low",
+        "source_system": "EDR",
+        "surface_factors": {
+          "asset_criticality": 0.15,
+          "device_trust": 0.85,
+          "pattern_history": 0.9,
+          "privileged_identity_context": 0.2,
+          "threat_intel_enrichment": 0.08,
+          "time_anomaly": 0.1
+        },
+        "timestamp": "2026-09-02T09:11:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-CTRL-FLAT-003",
+      "properties": {
+        "alert_id": "ALERT-CTRL-FLAT-003",
+        "alert_type": "data_exfiltration",
+        "category": "data_exfiltration",
+        "id": "ALERT-CTRL-FLAT-003",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-FLAT-003",
+        "severity": "critical",
+        "source_system": "EDR",
+        "surface_factors": {
+          "asset_criticality": 0.96,
+          "device_trust": 0.1,
+          "pattern_history": 0.25,
+          "privileged_identity_context": 0.85,
+          "threat_intel_enrichment": 0.8,
+          "time_anomaly": 0.75
+        },
+        "timestamp": "2026-09-03T09:12:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-CTRL-FLAT-004",
+      "properties": {
+        "alert_id": "ALERT-CTRL-FLAT-004",
+        "alert_type": "cloud_config",
+        "category": "cloud_infrastructure",
+        "id": "ALERT-CTRL-FLAT-004",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-FLAT-004",
+        "severity": "low",
+        "source_system": "EDR",
+        "surface_factors": {
+          "asset_criticality": 0.25,
+          "device_trust": 0.75,
+          "pattern_history": 0.7,
+          "privileged_identity_context": 0.35,
+          "threat_intel_enrichment": 0.04,
+          "time_anomaly": 0.22
+        },
+        "timestamp": "2026-09-04T09:13:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-CTRL-FLAT-005",
+      "properties": {
+        "alert_id": "ALERT-CTRL-FLAT-005",
+        "alert_type": "anomalous_login",
+        "category": "credential_access",
+        "id": "ALERT-CTRL-FLAT-005",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-FLAT-005",
+        "severity": "low",
+        "source_system": "EDR",
+        "surface_factors": {
+          "asset_criticality": 0.2,
+          "device_trust": 0.92,
+          "pattern_history": 0.88,
+          "privileged_identity_context": 0.18,
+          "threat_intel_enrichment": 0.03,
+          "time_anomaly": 0.12
+        },
+        "timestamp": "2026-09-05T09:14:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-CTRL-RHO50-001",
+      "properties": {
+        "alert_id": "ALERT-CTRL-RHO50-001",
+        "alert_type": "internal_scan_ambiguous",
+        "category": "lateral_movement",
+        "id": "ALERT-CTRL-RHO50-001",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-RHO50-001",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.5,
+          "device_trust": 0.5,
+          "pattern_history": 0.5,
+          "privileged_identity_context": 0.5,
+          "threat_intel_enrichment": 0.5,
+          "time_anomaly": 0.5
+        },
+        "timestamp": "2026-09-01T15:20:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-CTRL-RHO50-002",
+      "properties": {
+        "alert_id": "ALERT-CTRL-RHO50-002",
+        "alert_type": "ambiguous_login_location",
+        "category": "credential_access",
+        "id": "ALERT-CTRL-RHO50-002",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-RHO50-002",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.5,
+          "device_trust": 0.5,
+          "pattern_history": 0.5,
+          "privileged_identity_context": 0.5,
+          "threat_intel_enrichment": 0.5,
+          "time_anomaly": 0.5
+        },
+        "timestamp": "2026-09-02T15:21:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-CTRL-RHO50-003",
+      "properties": {
+        "alert_id": "ALERT-CTRL-RHO50-003",
+        "alert_type": "anomalous_behavior",
+        "category": "insider_threat",
+        "id": "ALERT-CTRL-RHO50-003",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-RHO50-003",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.5,
+          "device_trust": 0.5,
+          "pattern_history": 0.5,
+          "privileged_identity_context": 0.5,
+          "threat_intel_enrichment": 0.5,
+          "time_anomaly": 0.5
+        },
+        "timestamp": "2026-09-03T15:22:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-CTRL-RHO50-004",
+      "properties": {
+        "alert_id": "ALERT-CTRL-RHO50-004",
+        "alert_type": "cloud_config_drift",
+        "category": "cloud_infrastructure",
+        "id": "ALERT-CTRL-RHO50-004",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-RHO50-004",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.5,
+          "device_trust": 0.5,
+          "pattern_history": 0.5,
+          "privileged_identity_context": 0.5,
+          "threat_intel_enrichment": 0.5,
+          "time_anomaly": 0.5
+        },
+        "timestamp": "2026-09-04T15:23:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-CTRL-RHO50-005",
+      "properties": {
+        "alert_id": "ALERT-CTRL-RHO50-005",
+        "alert_type": "data_exfil",
+        "category": "data_exfiltration",
+        "id": "ALERT-CTRL-RHO50-005",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-RHO50-005",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.5,
+          "device_trust": 0.5,
+          "pattern_history": 0.5,
+          "privileged_identity_context": 0.5,
+          "threat_intel_enrichment": 0.5,
+          "time_anomaly": 0.5
+        },
+        "timestamp": "2026-09-05T15:24:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-001",
+      "properties": {
+        "alert_id": "ALERT-MH-001-v5",
+        "alert_type": "credential_stuffing",
+        "category": "credential_access",
+        "id": "ALERT-MH-001",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-001-v5",
+        "severity": "high",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.86,
+          "device_trust": 0.4,
+          "pattern_history": 0.47,
+          "privileged_identity_context": 0.49,
+          "threat_intel_enrichment": 0.61,
+          "time_anomaly": 0.44
+        },
+        "timestamp": "2026-09-05T21:14:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-001-v1",
+      "properties": {
+        "alert_id": "ALERT-MH-001-v1",
+        "alert_type": "credential_stuffing",
+        "category": "credential_access",
+        "id": "ALERT-MH-001-v1",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-001-v1",
+        "severity": "high",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.9,
+          "device_trust": 0.48,
+          "pattern_history": 0.52,
+          "privileged_identity_context": 0.78,
+          "threat_intel_enrichment": 0.22,
+          "time_anomaly": 0.55
+        },
+        "timestamp": "2026-09-01T21:10:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-001-v2",
+      "properties": {
+        "alert_id": "ALERT-MH-001-v2",
+        "alert_type": "credential_stuffing",
+        "category": "credential_access",
+        "id": "ALERT-MH-001-v2",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-001-v2",
+        "severity": "high",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.72,
+          "device_trust": 0.55,
+          "pattern_history": 0.81,
+          "privileged_identity_context": 0.41,
+          "threat_intel_enrichment": 0.18,
+          "time_anomaly": 0.38
+        },
+        "timestamp": "2026-09-02T21:11:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-001-v3",
+      "properties": {
+        "alert_id": "ALERT-MH-001-v3",
+        "alert_type": "credential_stuffing",
+        "category": "credential_access",
+        "id": "ALERT-MH-001-v3",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-001-v3",
+        "severity": "high",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.58,
+          "device_trust": 0.71,
+          "pattern_history": 0.44,
+          "privileged_identity_context": 0.62,
+          "threat_intel_enrichment": 0.09,
+          "time_anomaly": 0.31
+        },
+        "timestamp": "2026-09-03T21:12:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-001-v4",
+      "properties": {
+        "alert_id": "ALERT-MH-001-v4",
+        "alert_type": "credential_stuffing",
+        "category": "credential_access",
+        "id": "ALERT-MH-001-v4",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-001-v4",
+        "severity": "high",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.55,
+          "device_trust": 0.83,
+          "pattern_history": 0.88,
+          "privileged_identity_context": 0.35,
+          "threat_intel_enrichment": 0.06,
+          "time_anomaly": 0.24
+        },
+        "timestamp": "2026-09-04T21:13:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-001-v5",
+      "properties": {
+        "alert_id": "ALERT-MH-001-v5",
+        "alert_type": "credential_stuffing",
+        "category": "credential_access",
+        "id": "ALERT-MH-001-v5",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-001-v5",
+        "severity": "high",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.86,
+          "device_trust": 0.4,
+          "pattern_history": 0.47,
+          "privileged_identity_context": 0.49,
+          "threat_intel_enrichment": 0.61,
+          "time_anomaly": 0.44
+        },
+        "timestamp": "2026-09-05T21:14:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-002",
+      "properties": {
+        "alert_id": "ALERT-MH-002-v5",
+        "alert_type": "anomalous_behavior",
+        "category": "insider_threat",
+        "id": "ALERT-MH-002",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-002-v5",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.64,
+          "device_trust": 0.22,
+          "pattern_history": 0.35,
+          "privileged_identity_context": 0.7,
+          "threat_intel_enrichment": 0.14,
+          "time_anomaly": 0.58
+        },
+        "timestamp": "2026-09-05T19:14:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-002-v1",
+      "properties": {
+        "alert_id": "ALERT-MH-002-v1",
+        "alert_type": "anomalous_behavior",
+        "category": "insider_threat",
+        "id": "ALERT-MH-002-v1",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-002-v1",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.66,
+          "device_trust": 0.61,
+          "pattern_history": 0.48,
+          "privileged_identity_context": 0.72,
+          "threat_intel_enrichment": 0.1,
+          "time_anomaly": 0.55
+        },
+        "timestamp": "2026-09-01T19:10:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-002-v2",
+      "properties": {
+        "alert_id": "ALERT-MH-002-v2",
+        "alert_type": "anomalous_behavior",
+        "category": "insider_threat",
+        "id": "ALERT-MH-002-v2",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-002-v2",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.6,
+          "device_trust": 0.66,
+          "pattern_history": 0.55,
+          "privileged_identity_context": 0.68,
+          "threat_intel_enrichment": 0.08,
+          "time_anomaly": 0.5
+        },
+        "timestamp": "2026-09-02T19:11:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-002-v3",
+      "properties": {
+        "alert_id": "ALERT-MH-002-v3",
+        "alert_type": "anomalous_behavior",
+        "category": "insider_threat",
+        "id": "ALERT-MH-002-v3",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-002-v3",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.55,
+          "device_trust": 0.72,
+          "pattern_history": 0.5,
+          "privileged_identity_context": 0.65,
+          "threat_intel_enrichment": 0.05,
+          "time_anomaly": 0.42
+        },
+        "timestamp": "2026-09-03T19:12:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-002-v4",
+      "properties": {
+        "alert_id": "ALERT-MH-002-v4",
+        "alert_type": "anomalous_behavior",
+        "category": "insider_threat",
+        "id": "ALERT-MH-002-v4",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-002-v4",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.71,
+          "device_trust": 0.53,
+          "pattern_history": 0.46,
+          "privileged_identity_context": 0.58,
+          "threat_intel_enrichment": 0.33,
+          "time_anomaly": 0.47
+        },
+        "timestamp": "2026-09-04T19:13:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-002-v5",
+      "properties": {
+        "alert_id": "ALERT-MH-002-v5",
+        "alert_type": "anomalous_behavior",
+        "category": "insider_threat",
+        "id": "ALERT-MH-002-v5",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-002-v5",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.64,
+          "device_trust": 0.22,
+          "pattern_history": 0.35,
+          "privileged_identity_context": 0.7,
+          "threat_intel_enrichment": 0.14,
+          "time_anomaly": 0.58
+        },
+        "timestamp": "2026-09-05T19:14:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-003",
+      "properties": {
+        "alert_id": "ALERT-MH-003-v5",
+        "alert_type": "internal_scan_ambiguous",
+        "category": "lateral_movement",
+        "id": "ALERT-MH-003",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-003-v5",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.66,
+          "device_trust": 0.63,
+          "pattern_history": 0.45,
+          "privileged_identity_context": 0.46,
+          "threat_intel_enrichment": 0.15,
+          "time_anomaly": 0.38
+        },
+        "timestamp": "2026-09-05T15:24:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-003-v1",
+      "properties": {
+        "alert_id": "ALERT-MH-003-v1",
+        "alert_type": "internal_scan_ambiguous",
+        "category": "lateral_movement",
+        "id": "ALERT-MH-003-v1",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-003-v1",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.74,
+          "device_trust": 0.58,
+          "pattern_history": 0.55,
+          "privileged_identity_context": 0.5,
+          "threat_intel_enrichment": 0.3,
+          "time_anomaly": 0.46
+        },
+        "timestamp": "2026-09-01T15:20:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-003-v2",
+      "properties": {
+        "alert_id": "ALERT-MH-003-v2",
+        "alert_type": "internal_scan_ambiguous",
+        "category": "lateral_movement",
+        "id": "ALERT-MH-003-v2",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-003-v2",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.7,
+          "device_trust": 0.6,
+          "pattern_history": 0.5,
+          "privileged_identity_context": 0.48,
+          "threat_intel_enrichment": 0.2,
+          "time_anomaly": 0.44
+        },
+        "timestamp": "2026-09-02T15:21:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-003-v3",
+      "properties": {
+        "alert_id": "ALERT-MH-003-v3",
+        "alert_type": "internal_scan_ambiguous",
+        "category": "lateral_movement",
+        "id": "ALERT-MH-003-v3",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-003-v3",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.72,
+          "device_trust": 0.59,
+          "pattern_history": 0.52,
+          "privileged_identity_context": 0.49,
+          "threat_intel_enrichment": 0.24,
+          "time_anomaly": 0.42
+        },
+        "timestamp": "2026-09-03T15:22:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-003-v4",
+      "properties": {
+        "alert_id": "ALERT-MH-003-v4",
+        "alert_type": "internal_scan_ambiguous",
+        "category": "lateral_movement",
+        "id": "ALERT-MH-003-v4",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-003-v4",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.68,
+          "device_trust": 0.62,
+          "pattern_history": 0.58,
+          "privileged_identity_context": 0.47,
+          "threat_intel_enrichment": 0.18,
+          "time_anomaly": 0.4
+        },
+        "timestamp": "2026-09-04T15:23:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-003-v5",
+      "properties": {
+        "alert_id": "ALERT-MH-003-v5",
+        "alert_type": "internal_scan_ambiguous",
+        "category": "lateral_movement",
+        "id": "ALERT-MH-003-v5",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-003-v5",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.66,
+          "device_trust": 0.63,
+          "pattern_history": 0.45,
+          "privileged_identity_context": 0.46,
+          "threat_intel_enrichment": 0.15,
+          "time_anomaly": 0.38
+        },
+        "timestamp": "2026-09-05T15:24:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-004",
+      "properties": {
+        "alert_id": "ALERT-MH-004-v5",
+        "alert_type": "cloud_config_drift",
+        "category": "cloud_infrastructure",
+        "id": "ALERT-MH-004",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-004-v5",
+        "severity": "high",
+        "source_system": "CloudTrail",
+        "surface_factors": {
+          "asset_criticality": 0.78,
+          "device_trust": 0.64,
+          "pattern_history": 0.28,
+          "privileged_identity_context": 0.84,
+          "threat_intel_enrichment": 0.11,
+          "time_anomaly": 0.87
+        },
+        "timestamp": "2026-09-06T02:44:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-004-v1",
+      "properties": {
+        "alert_id": "ALERT-MH-004-v1",
+        "alert_type": "cloud_config_drift",
+        "category": "cloud_infrastructure",
+        "id": "ALERT-MH-004-v1",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-004-v1",
+        "severity": "high",
+        "source_system": "CloudTrail",
+        "surface_factors": {
+          "asset_criticality": 0.77,
+          "device_trust": 0.7,
+          "pattern_history": 0.3,
+          "privileged_identity_context": 0.81,
+          "threat_intel_enrichment": 0.05,
+          "time_anomaly": 0.88
+        },
+        "timestamp": "2026-09-06T02:40:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-004-v2",
+      "properties": {
+        "alert_id": "ALERT-MH-004-v2",
+        "alert_type": "cloud_config_drift",
+        "category": "cloud_infrastructure",
+        "id": "ALERT-MH-004-v2",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-004-v2",
+        "severity": "high",
+        "source_system": "CloudTrail",
+        "surface_factors": {
+          "asset_criticality": 0.79,
+          "device_trust": 0.66,
+          "pattern_history": 0.22,
+          "privileged_identity_context": 0.83,
+          "threat_intel_enrichment": 0.09,
+          "time_anomaly": 0.9
+        },
+        "timestamp": "2026-09-06T02:41:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-004-v3",
+      "properties": {
+        "alert_id": "ALERT-MH-004-v3",
+        "alert_type": "cloud_config_drift",
+        "category": "cloud_infrastructure",
+        "id": "ALERT-MH-004-v3",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-004-v3",
+        "severity": "high",
+        "source_system": "CloudTrail",
+        "surface_factors": {
+          "asset_criticality": 0.78,
+          "device_trust": 0.68,
+          "pattern_history": 0.26,
+          "privileged_identity_context": 0.82,
+          "threat_intel_enrichment": 0.06,
+          "time_anomaly": 0.89
+        },
+        "timestamp": "2026-09-06T02:42:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-004-v4",
+      "properties": {
+        "alert_id": "ALERT-MH-004-v4",
+        "alert_type": "cloud_config_drift",
+        "category": "cloud_infrastructure",
+        "id": "ALERT-MH-004-v4",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-004-v4",
+        "severity": "high",
+        "source_system": "CloudTrail",
+        "surface_factors": {
+          "asset_criticality": 0.76,
+          "device_trust": 0.72,
+          "pattern_history": 0.34,
+          "privileged_identity_context": 0.8,
+          "threat_intel_enrichment": 0.04,
+          "time_anomaly": 0.85
+        },
+        "timestamp": "2026-09-06T02:43:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-004-v5",
+      "properties": {
+        "alert_id": "ALERT-MH-004-v5",
+        "alert_type": "cloud_config_drift",
+        "category": "cloud_infrastructure",
+        "id": "ALERT-MH-004-v5",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-004-v5",
+        "severity": "high",
+        "source_system": "CloudTrail",
+        "surface_factors": {
+          "asset_criticality": 0.78,
+          "device_trust": 0.64,
+          "pattern_history": 0.28,
+          "privileged_identity_context": 0.84,
+          "threat_intel_enrichment": 0.11,
+          "time_anomaly": 0.87
+        },
+        "timestamp": "2026-09-06T02:44:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-005",
+      "properties": {
+        "alert_id": "ALERT-MH-005-v5",
+        "alert_type": "privilege_escalation",
+        "category": "lateral_movement",
+        "id": "ALERT-MH-005",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-005-v5",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.6,
+          "device_trust": 0.64,
+          "pattern_history": 0.33,
+          "privileged_identity_context": 0.46,
+          "threat_intel_enrichment": 0.14,
+          "time_anomaly": 0.22
+        },
+        "timestamp": "2026-09-05T11:04:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-005-v1",
+      "properties": {
+        "alert_id": "ALERT-MH-005-v1",
+        "alert_type": "privilege_escalation",
+        "category": "lateral_movement",
+        "id": "ALERT-MH-005-v1",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-005-v1",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.58,
+          "device_trust": 0.66,
+          "pattern_history": 0.35,
+          "privileged_identity_context": 0.44,
+          "threat_intel_enrichment": 0.12,
+          "time_anomaly": 0.2
+        },
+        "timestamp": "2026-09-01T11:00:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-005-v2",
+      "properties": {
+        "alert_id": "ALERT-MH-005-v2",
+        "alert_type": "privilege_escalation",
+        "category": "lateral_movement",
+        "id": "ALERT-MH-005-v2",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-005-v2",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.55,
+          "device_trust": 0.68,
+          "pattern_history": 0.38,
+          "privileged_identity_context": 0.42,
+          "threat_intel_enrichment": 0.1,
+          "time_anomaly": 0.18
+        },
+        "timestamp": "2026-09-02T11:01:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-005-v3",
+      "properties": {
+        "alert_id": "ALERT-MH-005-v3",
+        "alert_type": "privilege_escalation",
+        "category": "lateral_movement",
+        "id": "ALERT-MH-005-v3",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-005-v3",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.57,
+          "device_trust": 0.67,
+          "pattern_history": 0.36,
+          "privileged_identity_context": 0.43,
+          "threat_intel_enrichment": 0.11,
+          "time_anomaly": 0.19
+        },
+        "timestamp": "2026-09-03T11:02:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-005-v4",
+      "properties": {
+        "alert_id": "ALERT-MH-005-v4",
+        "alert_type": "privilege_escalation",
+        "category": "lateral_movement",
+        "id": "ALERT-MH-005-v4",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-005-v4",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.52,
+          "device_trust": 0.7,
+          "pattern_history": 0.4,
+          "privileged_identity_context": 0.41,
+          "threat_intel_enrichment": 0.08,
+          "time_anomaly": 0.17
+        },
+        "timestamp": "2026-09-04T11:03:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-005-v5",
+      "properties": {
+        "alert_id": "ALERT-MH-005-v5",
+        "alert_type": "privilege_escalation",
+        "category": "lateral_movement",
+        "id": "ALERT-MH-005-v5",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-005-v5",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.6,
+          "device_trust": 0.64,
+          "pattern_history": 0.33,
+          "privileged_identity_context": 0.46,
+          "threat_intel_enrichment": 0.14,
+          "time_anomaly": 0.22
+        },
+        "timestamp": "2026-09-05T11:04:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-008",
+      "properties": {
+        "alert_id": "ALERT-MH-008-v5",
+        "alert_type": "cloud_config_drift",
+        "category": "cloud_infrastructure",
+        "id": "ALERT-MH-008",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-008-v5",
+        "severity": "high",
+        "source_system": "CloudTrail",
+        "surface_factors": {
+          "asset_criticality": 0.89,
+          "device_trust": 0.61,
+          "pattern_history": 0.44,
+          "privileged_identity_context": 0.76,
+          "threat_intel_enrichment": 0.12,
+          "time_anomaly": 0.58
+        },
+        "timestamp": "2026-09-05T02:44:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-008-v1",
+      "properties": {
+        "alert_id": "ALERT-MH-008-v1",
+        "alert_type": "cloud_config_drift",
+        "category": "cloud_infrastructure",
+        "id": "ALERT-MH-008-v1",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-008-v1",
+        "severity": "high",
+        "source_system": "CloudTrail",
+        "surface_factors": {
+          "asset_criticality": 0.93,
+          "device_trust": 0.2,
+          "pattern_history": 0.3,
+          "privileged_identity_context": 0.84,
+          "threat_intel_enrichment": 0.21,
+          "time_anomaly": 0.79
+        },
+        "timestamp": "2026-09-01T02:40:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-008-v2",
+      "properties": {
+        "alert_id": "ALERT-MH-008-v2",
+        "alert_type": "cloud_config_drift",
+        "category": "cloud_infrastructure",
+        "id": "ALERT-MH-008-v2",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-008-v2",
+        "severity": "high",
+        "source_system": "CloudTrail",
+        "surface_factors": {
+          "asset_criticality": 0.9,
+          "device_trust": 0.78,
+          "pattern_history": 0.86,
+          "privileged_identity_context": 0.8,
+          "threat_intel_enrichment": 0.04,
+          "time_anomaly": 0.62
+        },
+        "timestamp": "2026-09-02T02:41:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-008-v3",
+      "properties": {
+        "alert_id": "ALERT-MH-008-v3",
+        "alert_type": "cloud_config_drift",
+        "category": "cloud_infrastructure",
+        "id": "ALERT-MH-008-v3",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-008-v3",
+        "severity": "high",
+        "source_system": "CloudTrail",
+        "surface_factors": {
+          "asset_criticality": 0.91,
+          "device_trust": 0.7,
+          "pattern_history": 0.55,
+          "privileged_identity_context": 0.82,
+          "threat_intel_enrichment": 0.07,
+          "time_anomaly": 0.66
+        },
+        "timestamp": "2026-09-03T02:42:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-008-v4",
+      "properties": {
+        "alert_id": "ALERT-MH-008-v4",
+        "alert_type": "cloud_config_drift",
+        "category": "cloud_infrastructure",
+        "id": "ALERT-MH-008-v4",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-008-v4",
+        "severity": "high",
+        "source_system": "CloudTrail",
+        "surface_factors": {
+          "asset_criticality": 0.94,
+          "device_trust": 0.31,
+          "pattern_history": 0.28,
+          "privileged_identity_context": 0.88,
+          "threat_intel_enrichment": 0.35,
+          "time_anomaly": 0.71
+        },
+        "timestamp": "2026-09-04T02:43:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-008-v5",
+      "properties": {
+        "alert_id": "ALERT-MH-008-v5",
+        "alert_type": "cloud_config_drift",
+        "category": "cloud_infrastructure",
+        "id": "ALERT-MH-008-v5",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-008-v5",
+        "severity": "high",
+        "source_system": "CloudTrail",
+        "surface_factors": {
+          "asset_criticality": 0.89,
+          "device_trust": 0.61,
+          "pattern_history": 0.44,
+          "privileged_identity_context": 0.76,
+          "threat_intel_enrichment": 0.12,
+          "time_anomaly": 0.58
+        },
+        "timestamp": "2026-09-05T02:44:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-009",
+      "properties": {
+        "alert_id": "ALERT-MH-009-v5",
+        "alert_type": "threat_intel_match",
+        "category": "malware_execution",
+        "id": "ALERT-MH-009",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-009-v5",
+        "severity": "high",
+        "source_system": "EDR",
+        "surface_factors": {
+          "asset_criticality": 0.86,
+          "device_trust": 0.58,
+          "pattern_history": 0.3,
+          "privileged_identity_context": 0.4,
+          "threat_intel_enrichment": 0.88,
+          "time_anomaly": 0.2
+        },
+        "timestamp": "2026-09-06T13:24:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-009-v1",
+      "properties": {
+        "alert_id": "ALERT-MH-009-v1",
+        "alert_type": "threat_intel_match",
+        "category": "malware_execution",
+        "id": "ALERT-MH-009-v1",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-009-v1",
+        "severity": "high",
+        "source_system": "EDR",
+        "surface_factors": {
+          "asset_criticality": 0.86,
+          "device_trust": 0.6,
+          "pattern_history": 0.35,
+          "privileged_identity_context": 0.4,
+          "threat_intel_enrichment": 0.93,
+          "time_anomaly": 0.2
+        },
+        "timestamp": "2026-09-02T13:20:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-009-v2",
+      "properties": {
+        "alert_id": "ALERT-MH-009-v2",
+        "alert_type": "threat_intel_match",
+        "category": "malware_execution",
+        "id": "ALERT-MH-009-v2",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-009-v2",
+        "severity": "high",
+        "source_system": "EDR",
+        "surface_factors": {
+          "asset_criticality": 0.84,
+          "device_trust": 0.62,
+          "pattern_history": 0.33,
+          "privileged_identity_context": 0.38,
+          "threat_intel_enrichment": 0.9,
+          "time_anomaly": 0.18
+        },
+        "timestamp": "2026-09-03T13:21:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-009-v3",
+      "properties": {
+        "alert_id": "ALERT-MH-009-v3",
+        "alert_type": "threat_intel_match",
+        "category": "malware_execution",
+        "id": "ALERT-MH-009-v3",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-009-v3",
+        "severity": "high",
+        "source_system": "EDR",
+        "surface_factors": {
+          "asset_criticality": 0.7,
+          "device_trust": 0.61,
+          "pattern_history": 0.36,
+          "privileged_identity_context": 0.39,
+          "threat_intel_enrichment": 0.55,
+          "time_anomaly": 0.19
+        },
+        "timestamp": "2026-09-04T13:22:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-009-v4",
+      "properties": {
+        "alert_id": "ALERT-MH-009-v4",
+        "alert_type": "threat_intel_match",
+        "category": "malware_execution",
+        "id": "ALERT-MH-009-v4",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-009-v4",
+        "severity": "high",
+        "source_system": "EDR",
+        "surface_factors": {
+          "asset_criticality": 0.85,
+          "device_trust": 0.59,
+          "pattern_history": 0.34,
+          "privileged_identity_context": 0.41,
+          "threat_intel_enrichment": 0.72,
+          "time_anomaly": 0.21
+        },
+        "timestamp": "2026-09-05T13:23:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-009-v5",
+      "properties": {
+        "alert_id": "ALERT-MH-009-v5",
+        "alert_type": "threat_intel_match",
+        "category": "malware_execution",
+        "id": "ALERT-MH-009-v5",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-009-v5",
+        "severity": "high",
+        "source_system": "EDR",
+        "surface_factors": {
+          "asset_criticality": 0.86,
+          "device_trust": 0.58,
+          "pattern_history": 0.3,
+          "privileged_identity_context": 0.4,
+          "threat_intel_enrichment": 0.88,
+          "time_anomaly": 0.2
+        },
+        "timestamp": "2026-09-06T13:24:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-013",
+      "properties": {
+        "alert_id": "ALERT-MH-013-v5",
+        "alert_type": "anomalous_login",
+        "category": "credential_access",
+        "id": "ALERT-MH-013",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-013-v5",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.67,
+          "device_trust": 0.59,
+          "pattern_history": 0.52,
+          "privileged_identity_context": 0.87,
+          "threat_intel_enrichment": 0.09,
+          "time_anomaly": 0.49
+        },
+        "timestamp": "2026-09-05T03:04:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-013-v1",
+      "properties": {
+        "alert_id": "ALERT-MH-013-v1",
+        "alert_type": "anomalous_login",
+        "category": "credential_access",
+        "id": "ALERT-MH-013-v1",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-013-v1",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.7,
+          "device_trust": 0.44,
+          "pattern_history": 0.4,
+          "privileged_identity_context": 0.9,
+          "threat_intel_enrichment": 0.15,
+          "time_anomaly": 0.66
+        },
+        "timestamp": "2026-09-01T03:00:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-013-v2",
+      "properties": {
+        "alert_id": "ALERT-MH-013-v2",
+        "alert_type": "anomalous_login",
+        "category": "credential_access",
+        "id": "ALERT-MH-013-v2",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-013-v2",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.68,
+          "device_trust": 0.8,
+          "pattern_history": 0.85,
+          "privileged_identity_context": 0.88,
+          "threat_intel_enrichment": 0.03,
+          "time_anomaly": 0.3
+        },
+        "timestamp": "2026-09-02T03:01:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-013-v3",
+      "properties": {
+        "alert_id": "ALERT-MH-013-v3",
+        "alert_type": "anomalous_login",
+        "category": "credential_access",
+        "id": "ALERT-MH-013-v3",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-013-v3",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.69,
+          "device_trust": 0.66,
+          "pattern_history": 0.6,
+          "privileged_identity_context": 0.89,
+          "threat_intel_enrichment": 0.06,
+          "time_anomaly": 0.58
+        },
+        "timestamp": "2026-09-03T03:02:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-013-v4",
+      "properties": {
+        "alert_id": "ALERT-MH-013-v4",
+        "alert_type": "anomalous_login",
+        "category": "credential_access",
+        "id": "ALERT-MH-013-v4",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-013-v4",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.72,
+          "device_trust": 0.18,
+          "pattern_history": 0.35,
+          "privileged_identity_context": 0.91,
+          "threat_intel_enrichment": 0.28,
+          "time_anomaly": 0.71
+        },
+        "timestamp": "2026-09-04T03:03:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "ALERT-MH-013-v5",
+      "properties": {
+        "alert_id": "ALERT-MH-013-v5",
+        "alert_type": "anomalous_login",
+        "category": "credential_access",
+        "id": "ALERT-MH-013-v5",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-013-v5",
+        "severity": "medium",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "asset_criticality": 0.67,
+          "device_trust": 0.59,
+          "pattern_history": 0.52,
+          "privileged_identity_context": 0.87,
+          "threat_intel_enrichment": 0.09,
+          "time_anomaly": 0.49
+        },
+        "timestamp": "2026-09-05T03:04:00Z"
+      },
+      "type": "Alert"
+    },
+    {
+      "id": "APISEQ-4410",
+      "properties": {
+        "call_count": 34,
+        "id": "APISEQ-4410",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-008-v5",
+        "signature": "manual_console"
+      },
+      "type": "ApiSequence"
+    },
+    {
+      "id": "ASSET-DC-01",
+      "properties": {
+        "criticality": "critical",
+        "id": "ASSET-DC-01",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-001-v5",
+        "type": "domain_controller"
+      },
+      "type": "Asset"
+    },
+    {
+      "id": "ASSET-DWH-01",
+      "properties": {
+        "criticality": "critical",
+        "id": "ASSET-DWH-01",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-FLAT-003",
+        "type": "warehouse"
+      },
+      "type": "Asset"
+    },
+    {
+      "id": "ASSET-FS-07",
+      "properties": {
+        "criticality": "medium",
+        "id": "ASSET-FS-07",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-002-v5",
+        "type": "file_share"
+      },
+      "type": "Asset"
+    },
+    {
+      "id": "ASSET-PROD-DB-03",
+      "properties": {
+        "criticality": "critical",
+        "id": "ASSET-PROD-DB-03",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-FLAT-001",
+        "type": "database"
+      },
+      "type": "Asset"
+    },
+    {
+      "id": "ASSET-WEB-11",
+      "properties": {
+        "criticality": "high",
+        "id": "ASSET-WEB-11",
+        "internet_exposed": true,
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-009-v5"
+      },
+      "type": "Asset"
+    },
+    {
+      "id": "AUTH-1042-0908",
+      "properties": {
+        "distinct_hosts": 4,
+        "failed_then_success": true,
+        "id": "AUTH-1042-0908",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-001-v5"
+      },
+      "type": "AuthTrail"
+    },
+    {
+      "id": "CVE-2026-31887",
+      "properties": {
+        "cvss": 9.1,
+        "exploit_in_wild": true,
+        "fixed_version": "1.26.2",
+        "id": "CVE-2026-31887",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-009-v5"
+      },
+      "type": "CVE"
+    },
+    {
+      "id": "CAMP-2026-Q3-A",
+      "properties": {
+        "confidence": 0.84,
+        "id": "CAMP-2026-Q3-A",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-003-v1",
+        "ttp": "T1046"
+      },
+      "type": "Campaign"
+    },
+    {
+      "id": "CAMP-PENTEST-PT-2026-14",
+      "properties": {
+        "confidence": 0.84,
+        "id": "CAMP-PENTEST-PT-2026-14",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-003-v4",
+        "ttp": "T1046"
+      },
+      "type": "Campaign"
+    },
+    {
+      "id": "CR-2026-0912",
+      "properties": {
+        "approver": "USR-0091",
+        "id": "CR-2026-0912",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-004-v5",
+        "status": "approved",
+        "window_end": "2026-09-06T04:00:00Z",
+        "window_start": "2026-09-06T02:00:00Z"
+      },
+      "type": "ChangeRequest"
+    },
+    {
+      "id": "RES-APP-14",
+      "properties": {
+        "criticality": "medium",
+        "environment": "staging",
+        "id": "RES-APP-14",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-RHO50-004"
+      },
+      "type": "CloudResource"
+    },
+    {
+      "id": "RES-IAM-PROD",
+      "properties": {
+        "criticality": "critical",
+        "environment": "production",
+        "id": "RES-IAM-PROD",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-008-v5"
+      },
+      "type": "CloudResource"
+    },
+    {
+      "id": "RES-SANDBOX-09",
+      "properties": {
+        "criticality": "low",
+        "environment": "sandbox",
+        "id": "RES-SANDBOX-09",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-FLAT-004"
+      },
+      "type": "CloudResource"
+    },
+    {
+      "id": "RES-VPC-PROD-02",
+      "properties": {
+        "criticality": "critical",
+        "environment": "production",
+        "id": "RES-VPC-PROD-02",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-004-v5"
+      },
+      "type": "CloudResource"
+    },
+    {
+      "id": "CMDP-04",
+      "properties": {
+        "id": "CMDP-04",
+        "interactive": false,
+        "origin": "soc_multihop_stage1",
+        "profile": "batch_etl",
+        "scenario_id": "SOC-MH-013-v5"
+      },
+      "type": "CommandProfile"
+    },
+    {
+      "id": "CRED-SVC-04",
+      "properties": {
+        "age_days": 120,
+        "id": "CRED-SVC-04",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-013-v5"
+      },
+      "type": "Credential"
+    },
+    {
+      "id": "DEP-3390",
+      "properties": {
+        "id": "DEP-3390",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-RHO50-004",
+        "scope_recorded": false,
+        "status": "completed"
+      },
+      "type": "DeployRecord"
+    },
+    {
+      "id": "SESS-3318",
+      "properties": {
+        "device_registered": false,
+        "id": "SESS-3318",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-002-v5",
+        "token_replay": true
+      },
+      "type": "DeviceSession"
+    },
+    {
+      "id": "EMP-3318",
+      "properties": {
+        "id": "EMP-3318",
+        "notice_submitted": null,
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-002-v5",
+        "status": "active"
+      },
+      "type": "EmploymentContext"
+    },
+    {
+      "id": "GRP-APP-SUPPORT",
+      "properties": {
+        "id": "GRP-APP-SUPPORT",
+        "member_count": 34,
+        "name": "grp-app-support",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-005-v5"
+      },
+      "type": "Group"
+    },
+    {
+      "id": "GRP-INFRA-OPS",
+      "properties": {
+        "id": "GRP-INFRA-OPS",
+        "member_count": 12,
+        "name": "grp-infra-operators",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-005-v4"
+      },
+      "type": "Group"
+    },
+    {
+      "id": "HOST-ETL-02",
+      "properties": {
+        "id": "HOST-ETL-02",
+        "managed": true,
+        "origin": "soc_multihop_stage1",
+        "role": "etl_worker",
+        "scenario_id": "SOC-MH-013-v5"
+      },
+      "type": "Host"
+    },
+    {
+      "id": "HOST-SHARED-31",
+      "properties": {
+        "id": "HOST-SHARED-31",
+        "origin": "soc_multihop_stage1",
+        "role": "jump_host",
+        "scenario_id": "SOC-MH-003-v4",
+        "shared_by_alerts": 3
+      },
+      "type": "Host"
+    },
+    {
+      "id": "HOST-UNKNOWN-88",
+      "properties": {
+        "id": "HOST-UNKNOWN-88",
+        "managed": false,
+        "origin": "soc_multihop_stage1",
+        "role": "etl_worker",
+        "scenario_id": "SOC-MH-013-v4"
+      },
+      "type": "Host"
+    },
+    {
+      "id": "IDN-CLOUD-77",
+      "properties": {
+        "id": "IDN-CLOUD-77",
+        "origin": "soc_multihop_stage1",
+        "origin_asn": "AS-corp-1201",
+        "scenario_id": "SOC-MH-008-v5",
+        "type": "iam_user"
+      },
+      "type": "Identity"
+    },
+    {
+      "id": "MBX-2201",
+      "properties": {
+        "clicked": false,
+        "id": "MBX-2201",
+        "origin": "soc_multihop_stage1",
+        "quarantined": true,
+        "scenario_id": "SOC-CTRL-FLAT-002"
+      },
+      "type": "Mailbox"
+    },
+    {
+      "id": "COHORT-FIN",
+      "properties": {
+        "id": "COHORT-FIN",
+        "origin": "soc_multihop_stage1",
+        "role": "financial_analyst",
+        "scenario_id": "SOC-MH-002-v5",
+        "subject_percentile": 88
+      },
+      "type": "PeerCohort"
+    },
+    {
+      "id": "COHORT-OPS",
+      "properties": {
+        "id": "COHORT-OPS",
+        "origin": "soc_multihop_stage1",
+        "role": "ops_analyst",
+        "scenario_id": "SOC-CTRL-RHO50-003",
+        "subject_percentile": 71
+      },
+      "type": "PeerCohort"
+    },
+    {
+      "id": "PROC-8841",
+      "properties": {
+        "id": "PROC-8841",
+        "image": "sccm-agent.exe",
+        "origin": "soc_multihop_stage1",
+        "parent": "svchost.exe",
+        "scenario_id": "SOC-MH-001-v5",
+        "signed": true
+      },
+      "type": "Process"
+    },
+    {
+      "id": "ROLE-DIRECT-ADMIN",
+      "properties": {
+        "delegated": false,
+        "id": "ROLE-DIRECT-ADMIN",
+        "name": "role-domain-admin",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-005-v5",
+        "scope": "domain"
+      },
+      "type": "Role"
+    },
+    {
+      "id": "ROLE-DOM-ADMIN-DEL",
+      "properties": {
+        "delegated": true,
+        "id": "ROLE-DOM-ADMIN-DEL",
+        "name": "role-nonprod-operator",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-005-v4",
+        "scope": "domain"
+      },
+      "type": "Role"
+    },
+    {
+      "id": "JOB-NIGHTLY-ETL",
+      "properties": {
+        "cron": "0 2 * * *",
+        "id": "JOB-NIGHTLY-ETL",
+        "matches_activity": true,
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-013-v5"
+      },
+      "type": "ScheduledJob"
+    },
+    {
+      "id": "SVC-ETL-04",
+      "properties": {
+        "human_owner": null,
+        "id": "SVC-ETL-04",
+        "origin": "soc_multihop_stage1",
+        "privilege_level": "elevated",
+        "scenario_id": "SOC-MH-013-v5"
+      },
+      "type": "ServiceAccount"
+    },
+    {
+      "id": "SESS-8823",
+      "properties": {
+        "id": "SESS-8823",
+        "is_sanctioned_scanner": false,
+        "origin": "soc_multihop_stage1",
+        "origin_host": "HOST-UNMANAGED-14",
+        "scenario_id": "SOC-CTRL-RHO50-001"
+      },
+      "type": "Session"
+    },
+    {
+      "id": "PKG-NGINX",
+      "properties": {
+        "id": "PKG-NGINX",
+        "installed_version": "1.26.1",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-009-v5"
+      },
+      "type": "SoftwarePackage"
+    },
+    {
+      "id": "TW-003",
+      "properties": {
+        "alert_count": 1,
+        "id": "TW-003",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-MH-003-v5",
+        "span_minutes": 60
+      },
+      "type": "TimeWindow"
+    },
+    {
+      "id": "XFER-HIST-661",
+      "properties": {
+        "current_bytes": 86000000,
+        "id": "XFER-HIST-661",
+        "median_bytes": 41000000,
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-RHO50-005"
+      },
+      "type": "TransferHistory"
+    },
+    {
+      "id": "TRV-NONE",
+      "properties": {
+        "exists": false,
+        "id": "TRV-NONE",
+        "origin": "soc_multihop_stage1",
+        "scenario_id": "SOC-CTRL-RHO50-002"
+      },
+      "type": "TravelRecord"
+    },
+    {
+      "id": "USR-1042",
+      "properties": {
+        "department": "IT",
+        "id": "USR-1042",
+        "origin": "soc_multihop_stage1",
+        "privilege_level": "admin",
+        "risk_score": 0.34,
+        "scenario_id": "SOC-MH-001-v5"
+      },
+      "type": "User"
+    },
+    {
+      "id": "USR-2210",
+      "properties": {
+        "department": "Platform",
+        "id": "USR-2210",
+        "origin": "soc_multihop_stage1",
+        "privilege_level": "cloud_admin",
+        "scenario_id": "SOC-MH-004-v5"
+      },
+      "type": "User"
+    },
+    {
+      "id": "USR-3318",
+      "properties": {
+        "department": "Finance",
+        "id": "USR-3318",
+        "origin": "soc_multihop_stage1",
+        "privilege_level": "standard",
+        "risk_score": 0.41,
+        "scenario_id": "SOC-MH-002-v5"
+      },
+      "type": "User"
+    },
+    {
+      "id": "USR-4410",
+      "properties": {
+        "department": "Sales",
+        "id": "USR-4410",
+        "origin": "soc_multihop_stage1",
+        "privilege_level": "standard",
+        "scenario_id": "SOC-CTRL-RHO50-002"
+      },
+      "type": "User"
+    },
+    {
+      "id": "USR-5501",
+      "properties": {
+        "department": "AppSupport",
+        "id": "USR-5501",
+        "origin": "soc_multihop_stage1",
+        "privilege_level": "standard",
+        "scenario_id": "SOC-MH-005-v5"
+      },
+      "type": "User"
+    },
+    {
+      "id": "USR-7788",
+      "properties": {
+        "department": "Sales",
+        "id": "USR-7788",
+        "origin": "soc_multihop_stage1",
+        "privilege_level": "standard",
+        "scenario_id": "SOC-CTRL-FLAT-005"
+      },
+      "type": "User"
+    }
+  ],
+  "origin": "soc_multihop_stage1",
+  "scenario_count": 50
+}

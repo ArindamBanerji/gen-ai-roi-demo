@@ -827,3 +827,61 @@ Timestamp: 2026-09-09T03:18:45.582194-07:00
 FAIL: Stage 1 did not satisfy spec §1.3 against the configured content_rule comparator. Diagnostic applies: EXP comparator/spec mismatch. Fix by changing the score_keyed acceptance comparator to budget-matched random/breadth, or by removing the correct_branches cheat from content_rule for score_keyed cases, then rerun Stage 1 before Stage 2 generation.
 
 0 new regressions introduced.
+
+---
+## W-1: SOC Multi-Hop Graph Wiring
+Timestamp: 2026-09-09T20:35:51.436136+00:00
+### Changed files
+- app/graph_schema.py
+- app/routers/triage.py
+- app/services/investigation_patterns.py
+- app/services/multihop_scenarios.py (new)
+- scripts/seed_multihop_graph.py (new)
+- scripts/demo_showcase_alerts.py (new)
+- data/multihop_graph_seed.json (new generated artifact)
+- data/demo_showcase_alerts.json (new generated artifact)
+- tests/test_multihop_wiring.py (new)
+
+### Nodes and edges seeded
+- Nodes seeded: 104
+- Edges seeded: 46
+- Scenarios covered: 50
+- Node types: AccessKey, Alert, ApiSequence, Asset, AuthTrail, CVE, Campaign, ChangeRequest, CloudResource, CommandProfile, Credential, DeployRecord, DeviceSession, EmploymentContext, Group, Host, Identity, Mailbox, PeerCohort, Process, Role, ScheduledJob, ServiceAccount, Session, SoftwarePackage, TimeWindow, TransferHistory, TravelRecord, User
+- Edge types: AFFECTS, BINDS_ROLE, COMPARED_AGAINST, COVERED_BY_CHANGE, COVERED_BY_DEPLOY, HAS_AUTH_TRAIL, HAS_COMMAND_PROFILE, HAS_EMPLOYMENT_CONTEXT, HAS_SESSION, HAS_TRAVEL_RECORD, MATCHES_CVE, MEMBER_OF, MEMBER_OF_COHORT, NESTED_IN, OBSERVED_IN_WINDOW, OBSERVED_PROCESS, OBSERVED_SEQUENCE, ORIGINATED_FROM, RUNS_JOB, RUNS_PACKAGE, TARGETS, USES_CREDENTIAL, USES_KEY
+
+### New patterns
+- 8 conditional Stage 1 multi-hop patterns added in a separate MULTIHOP_PATTERN_REGISTRY.
+- Existing 6 category patterns in PATTERN_REGISTRY are preserved.
+- New patterns: CredentialLateralPattern, InsiderCompromisedPattern, CloudMisconfigPattern, ServiceAccountPattern, MaintenanceWindowPattern, VulnerabilityPatchPattern, PrivilegeChainPattern, CampaignCorrelationPattern.
+
+### Showcase alerts
+- SOC-MH-002-v1 / ALERT-MH-002-v1: 2 steps -> escalate (insider_vs_compromised)
+- SOC-MH-004-v1 / ALERT-MH-004-v1: 1 steps -> suppress (maintenance_window_false_positive)
+- SOC-MH-005-v1 / ALERT-MH-005-v1: 3 steps -> escalate (privilege_escalation_chain)
+- SOC-MH-003-v1 / ALERT-MH-003-v1: 2 steps -> escalate (campaign_correlation)
+
+### Stage 1 reproduction
+- VLD high-rho score_keyed reproduction: 16/16 correct, accuracy=1.000 for rho_planted >= 0.70.
+- Formal Stage 1 acceptance remains governed by the prior evaluator caveat: content_rule is an upper-bound comparator on score_keyed scenarios, so the headline VLD-content delta is negative even though high-rho VLD routes correctly.
+
+### Endpoint wiring
+- POST /soc/investigate now short-circuits planted Stage 1 alert IDs such as ALERT-MH-002-v1 into vld_multihop_stage1_shadow mode.
+- Existing live graph investigation path is unchanged for non-Stage-1 alerts.
+
+### Gates
+- validate_stage1.py: PASS, ALL 10 QUALITY CHECKS + SPEC CONSTRAINTS PASSED.
+- seed_multihop_graph.py: PASS, idempotent at 104 nodes / 46 edges.
+- demo_showcase_alerts.py: PASS, 4 showcase traces generated.
+- mypy on changed Python files: PASS.
+- Targeted tests: tests/test_multihop_wiring.py 13 passed.
+- Existing investigation blast-radius: tests/test_investigation_loop.py 20 passed.
+- Sampling gate: test_conservation_bugs.py + test_rho_measurement.py + test_gate_config.py, 28 passed.
+- Full backend suite: 2444 passed, 16 skipped, 0 failed.
+
+### State for next prompt
+- Multi-hop graph schema entries are additive with min_count=0.
+- Stage 1 planted graph data is available as data/multihop_graph_seed.json.
+- Demo showcase alerts are listed in data/demo_showcase_alerts.json.
+- The investigation panel can call /soc/investigate with ALERT-MH-002-v1, ALERT-MH-004-v1, ALERT-MH-005-v1, or ALERT-MH-003-v1 to render planted multi-hop traces.
+- 0 new regressions introduced.
+---

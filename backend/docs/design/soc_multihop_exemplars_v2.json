@@ -1,0 +1,649 @@
+{
+  "_header": "PLANTED SYNTHETIC \u2014 POSITIVE CONTROL \u2014 NOT A MEASUREMENT OF VLD VALUE ON REAL DECISIONS.",
+  "_file": "soc_multihop_exemplars_v2.json",
+  "_file_version": "v2",
+  "_spec": "multihop_scenario_spec_v2.md",
+  "_note": "Five exemplars showing the corrected schema: one per branching_kind, plus a rho=0.50 instrument check and a flat control. Single-pass fields are absent by design \u2014 they are filled by the scoring pass (spec \u00a71.1). These are hand-written illustrations of the FORM, not a sample of a generated set.",
+  "scenarios": [
+    {
+      "scenario_id": "SOC-MH-002-v1",
+      "scenario_type": "insider_vs_compromised",
+      "copilot": "soc",
+      "branching_kind": "score_keyed",
+      "rho_planted": 0.7,
+      "description": "Credential anomaly with identical surface indicators under both hypotheses; the branch is not legible in the evidence.",
+      "alert": {
+        "alert_id": "ALERT-MH-002-v1",
+        "alert_type": "anomalous_behavior",
+        "category": "insider_threat",
+        "severity": "medium",
+        "timestamp": "2026-09-08T19:14:00Z",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "privileged_identity_context": 0.72,
+          "asset_criticality": 0.66,
+          "threat_intel_enrichment": 0.1,
+          "time_anomaly": 0.55,
+          "pattern_history": 0.48,
+          "device_trust": 0.61
+        }
+      },
+      "why_score_keyed": "Bulk document access by a credentialed user reads identically whether the user is exfiltrating (insider) or the session is hijacked (compromised). No field in the alert names the branch. The routing signal is the relative weight of pattern_history (prior behaviour consistency) against device_trust in v_0 \u2014 a judgment-geometry quantity, not an evidence field.",
+      "available_branches": {
+        "1": [
+          "hr_context_path",
+          "device_session_path",
+          "asset_scope_path"
+        ],
+        "2": [
+          "peer_baseline_path",
+          "token_provenance_path",
+          "egress_volume_path"
+        ]
+      },
+      "correct_branches": {
+        "1": [
+          "hr_context_path"
+        ],
+        "2": [
+          "peer_baseline_path"
+        ]
+      },
+      "misleading_branches": [
+        "asset_scope_path"
+      ],
+      "read_costs": {
+        "hr_context_path": 2,
+        "device_session_path": 1,
+        "asset_scope_path": 1,
+        "peer_baseline_path": 2,
+        "token_provenance_path": 3,
+        "egress_volume_path": 2
+      },
+      "budget": 4,
+      "surface_only_resolvable": false,
+      "decision_tree": {
+        "hops": [
+          {
+            "step": 1,
+            "question": "Is there a behavioural context that makes this user's access pattern expected?",
+            "evidence_source": "User node -> EmploymentContext node -> status, notice_period fields",
+            "evidence_found": "resignation_submitted_14d_ago",
+            "factor_enriched": "pattern_history",
+            "factor_new_value": 0.84,
+            "narration": "Checked employment context: the user submitted resignation two weeks ago."
+          },
+          {
+            "step": 2,
+            "question": "Does this access deviate from the user's own prior baseline and from peers in the same role?",
+            "evidence_source": "Decision history -> peer cohort baseline, access_volume_percentile",
+            "evidence_found": "p97_vs_role_cohort",
+            "factor_enriched": "pattern_history",
+            "factor_new_value": 0.93,
+            "narration": "Checked peer baseline: access volume is at the 97th percentile for this role."
+          }
+        ],
+        "ground_truth_action": "escalate",
+        "ground_truth_confidence": 0.88,
+        "ground_truth_route": "hr_led",
+        "reasoning": "Departing employee with anomalous bulk access against peer baseline \u2014 insider risk, routed to HR-led escalation rather than security-incident escalation."
+      },
+      "alternative_branches": [
+        {
+          "branch_name": "compromised_session_path",
+          "diverges_at_step": 1,
+          "evidence_found": "no employment change; device_session shows token replay from unregistered device",
+          "ground_truth_action": "escalate",
+          "ground_truth_route": "security_led",
+          "reasoning": "Same surface indicators, opposite root cause. Terminal action name matches but the route differs \u2014 the analysis must score route, not just action."
+        },
+        {
+          "branch_name": "sanctioned_migration_path",
+          "diverges_at_step": 2,
+          "evidence_found": "peer cohort shows same percentile \u2014 team-wide archive migration in progress",
+          "ground_truth_action": "suppress",
+          "reasoning": "Peer baseline reveals the volume is normal for the cohort this week."
+        },
+        {
+          "branch_name": "misleading_asset_scope",
+          "diverges_at_step": 1,
+          "evidence_found": "asset_scope_path returns 'non-critical file share'",
+          "ground_truth_action": "escalate",
+          "reasoning": "MISLEADING BRANCH: the low asset criticality pulls v toward suppress, but the correct action is unchanged. Reading this branch costs budget and moves the vector the wrong way."
+        }
+      ],
+      "graph_nodes": [
+        {
+          "type": "Alert",
+          "id": "ALERT-MH-002-v1",
+          "properties": {
+            "severity": "medium",
+            "alert_type": "anomalous_behavior"
+          }
+        },
+        {
+          "type": "User",
+          "id": "USR-3318",
+          "properties": {
+            "privilege_level": "standard",
+            "department": "Finance",
+            "risk_score": 0.41
+          }
+        },
+        {
+          "type": "EmploymentContext",
+          "id": "EMP-3318",
+          "properties": {
+            "status": "resigned",
+            "notice_submitted": "2026-08-25",
+            "last_day": "2026-09-22"
+          }
+        },
+        {
+          "type": "Asset",
+          "id": "ASSET-FS-07",
+          "properties": {
+            "criticality": "medium",
+            "type": "file_share",
+            "data_classification": "internal"
+          }
+        },
+        {
+          "type": "PeerCohort",
+          "id": "COHORT-FIN-ANALYST",
+          "properties": {
+            "role": "financial_analyst",
+            "median_access_volume": 42,
+            "p95_access_volume": 118
+          }
+        }
+      ],
+      "graph_edges": [
+        {
+          "from": "ALERT-MH-002-v1",
+          "to": "USR-3318",
+          "type": "AFFECTS"
+        },
+        {
+          "from": "ALERT-MH-002-v1",
+          "to": "ASSET-FS-07",
+          "type": "TARGETS"
+        },
+        {
+          "from": "USR-3318",
+          "to": "EMP-3318",
+          "type": "HAS_EMPLOYMENT_CONTEXT"
+        },
+        {
+          "from": "USR-3318",
+          "to": "COHORT-FIN-ANALYST",
+          "type": "MEMBER_OF_COHORT"
+        }
+      ]
+    },
+    {
+      "scenario_id": "SOC-MH-004-v1",
+      "scenario_type": "maintenance_window_false_positive",
+      "copilot": "soc",
+      "branching_kind": "content_keyed",
+      "rho_planted": 1.0,
+      "description": "COMPARATOR ARM. The evidence names the branch; a frozen rule resolves it with rho = 1. Included so VLD's advantage can be measured against the rule, not against single-pass.",
+      "alert": {
+        "alert_id": "ALERT-MH-004-v1",
+        "alert_type": "cloud_config_drift",
+        "category": "cloud_infrastructure",
+        "severity": "high",
+        "timestamp": "2026-09-06T02:41:00Z",
+        "source_system": "CloudTrail",
+        "surface_factors": {
+          "privileged_identity_context": 0.81,
+          "asset_criticality": 0.77,
+          "threat_intel_enrichment": 0.05,
+          "time_anomaly": 0.88,
+          "pattern_history": 0.3,
+          "device_trust": 0.7
+        }
+      },
+      "why_content_keyed": "The ChangeRequest node's window field literally states whether the change is sanctioned. Any rule that reads change-management before escalating gets this right every time. VLD adds nothing here \u2014 this instance exists to give the content_rule arm something to win.",
+      "available_branches": {
+        "1": [
+          "change_mgmt_path",
+          "identity_path",
+          "config_diff_path"
+        ]
+      },
+      "correct_branches": {
+        "1": [
+          "change_mgmt_path"
+        ]
+      },
+      "misleading_branches": [],
+      "read_costs": {
+        "change_mgmt_path": 1,
+        "identity_path": 1,
+        "config_diff_path": 2
+      },
+      "budget": 2,
+      "surface_only_resolvable": false,
+      "decision_tree": {
+        "hops": [
+          {
+            "step": 1,
+            "question": "Is there an approved change request covering this configuration change?",
+            "evidence_source": "ChangeRequest node -> window_start, window_end, approver fields",
+            "evidence_found": "CR-2026-0912 active 02:00-04:00",
+            "factor_enriched": "time_anomaly",
+            "factor_new_value": 0.12,
+            "narration": "Checked change management: an approved maintenance window covers this change."
+          }
+        ],
+        "ground_truth_action": "suppress",
+        "ground_truth_confidence": 0.94,
+        "reasoning": "Off-hours config change inside an approved maintenance window with a named approver."
+      },
+      "alternative_branches": [
+        {
+          "branch_name": "no_change_request",
+          "diverges_at_step": 1,
+          "evidence_found": "no active CR covering this resource",
+          "ground_truth_action": "escalate",
+          "reasoning": "Same alert, no sanctioning record \u2014 off-hours privileged config change on a critical resource."
+        },
+        {
+          "branch_name": "expired_window",
+          "diverges_at_step": 1,
+          "evidence_found": "CR-2026-0912 window ended 01:00",
+          "ground_truth_action": "investigate",
+          "reasoning": "A CR exists but the change fell outside its window \u2014 process failure or misuse of the CR."
+        }
+      ],
+      "graph_nodes": [
+        {
+          "type": "Alert",
+          "id": "ALERT-MH-004-v1",
+          "properties": {
+            "severity": "high",
+            "alert_type": "cloud_config_drift"
+          }
+        },
+        {
+          "type": "CloudResource",
+          "id": "RES-VPC-PROD-02",
+          "properties": {
+            "criticality": "critical",
+            "environment": "production"
+          }
+        },
+        {
+          "type": "ChangeRequest",
+          "id": "CR-2026-0912",
+          "properties": {
+            "window_start": "2026-09-06T02:00:00Z",
+            "window_end": "2026-09-06T04:00:00Z",
+            "approver": "USR-0091",
+            "status": "approved"
+          }
+        },
+        {
+          "type": "User",
+          "id": "USR-2210",
+          "properties": {
+            "privilege_level": "cloud_admin",
+            "department": "Platform"
+          }
+        }
+      ],
+      "graph_edges": [
+        {
+          "from": "ALERT-MH-004-v1",
+          "to": "RES-VPC-PROD-02",
+          "type": "TARGETS"
+        },
+        {
+          "from": "ALERT-MH-004-v1",
+          "to": "USR-2210",
+          "type": "AFFECTS"
+        },
+        {
+          "from": "RES-VPC-PROD-02",
+          "to": "CR-2026-0912",
+          "type": "COVERED_BY_CHANGE"
+        }
+      ]
+    },
+    {
+      "scenario_id": "SOC-MH-005-v1",
+      "scenario_type": "privilege_escalation_chain",
+      "copilot": "soc",
+      "branching_kind": "prerequisite",
+      "rho_planted": 1.0,
+      "description": "COMPARATOR ARM. Reads must follow a fixed order because each read reveals the address of the next. Multi-step traversal without scorer feedback resolves it \u2014 GraphRAG territory, not VLD's claim.",
+      "alert": {
+        "alert_id": "ALERT-MH-005-v1",
+        "alert_type": "privilege_escalation",
+        "category": "lateral_movement",
+        "severity": "medium",
+        "timestamp": "2026-09-07T11:02:00Z",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "privileged_identity_context": 0.44,
+          "asset_criticality": 0.58,
+          "threat_intel_enrichment": 0.12,
+          "time_anomaly": 0.2,
+          "pattern_history": 0.35,
+          "device_trust": 0.66
+        }
+      },
+      "why_prerequisite": "The user's effective privilege is only discoverable by walking user -> group -> nested group -> role binding. Each hop's target is named by the previous hop's result. No scorer state is needed to know where to go next; the pointer is in the data. Iteration helps; score-conditioning does not.",
+      "available_branches": {
+        "1": [
+          "group_membership_path"
+        ],
+        "2": [
+          "nested_group_path"
+        ],
+        "3": [
+          "role_binding_path"
+        ]
+      },
+      "correct_branches": {
+        "1": [
+          "group_membership_path"
+        ],
+        "2": [
+          "nested_group_path"
+        ],
+        "3": [
+          "role_binding_path"
+        ]
+      },
+      "misleading_branches": [],
+      "read_costs": {
+        "group_membership_path": 1,
+        "nested_group_path": 1,
+        "role_binding_path": 1
+      },
+      "budget": 3,
+      "surface_only_resolvable": false,
+      "decision_tree": {
+        "hops": [
+          {
+            "step": 1,
+            "question": "What groups does this user belong to?",
+            "evidence_source": "User node -> MEMBER_OF -> Group nodes",
+            "evidence_found": "grp-app-support",
+            "factor_enriched": "privileged_identity_context",
+            "factor_new_value": 0.52,
+            "narration": "Checked group membership: user is in application support."
+          },
+          {
+            "step": 2,
+            "question": "Does that group nest inside a higher-privilege group?",
+            "evidence_source": "Group node -> NESTED_IN -> Group nodes",
+            "evidence_found": "grp-infra-operators",
+            "factor_enriched": "privileged_identity_context",
+            "factor_new_value": 0.74,
+            "narration": "Checked nesting: application support nests inside infrastructure operators."
+          },
+          {
+            "step": 3,
+            "question": "What role bindings does the parent group carry?",
+            "evidence_source": "Group node -> BINDS_ROLE -> Role node",
+            "evidence_found": "role-domain-admin-delegated",
+            "factor_enriched": "privileged_identity_context",
+            "factor_new_value": 0.96,
+            "narration": "Checked role bindings: the parent group carries delegated domain-admin rights."
+          }
+        ],
+        "ground_truth_action": "escalate",
+        "ground_truth_confidence": 0.91,
+        "reasoning": "The user holds effective domain-admin through two levels of group nesting \u2014 an escalation path invisible at the surface."
+      },
+      "alternative_branches": [
+        {
+          "branch_name": "no_nesting",
+          "diverges_at_step": 2,
+          "evidence_found": "grp-app-support has no parent group",
+          "ground_truth_action": "monitor",
+          "reasoning": "Effective privilege stops at application support \u2014 routine access, worth watching only."
+        },
+        {
+          "branch_name": "nesting_without_binding",
+          "diverges_at_step": 3,
+          "evidence_found": "parent group carries no elevated role binding",
+          "ground_truth_action": "investigate",
+          "reasoning": "Nesting exists but confers nothing \u2014 worth a look for misconfiguration, not an escalation."
+        }
+      ],
+      "graph_nodes": [
+        {
+          "type": "Alert",
+          "id": "ALERT-MH-005-v1",
+          "properties": {
+            "severity": "medium",
+            "alert_type": "privilege_escalation"
+          }
+        },
+        {
+          "type": "User",
+          "id": "USR-5501",
+          "properties": {
+            "privilege_level": "standard",
+            "department": "AppSupport"
+          }
+        },
+        {
+          "type": "Group",
+          "id": "GRP-APP-SUPPORT",
+          "properties": {
+            "name": "grp-app-support",
+            "member_count": 34
+          }
+        },
+        {
+          "type": "Group",
+          "id": "GRP-INFRA-OPS",
+          "properties": {
+            "name": "grp-infra-operators",
+            "member_count": 12
+          }
+        },
+        {
+          "type": "Role",
+          "id": "ROLE-DOM-ADMIN-DEL",
+          "properties": {
+            "name": "role-domain-admin-delegated",
+            "scope": "domain",
+            "delegated": true
+          }
+        }
+      ],
+      "graph_edges": [
+        {
+          "from": "ALERT-MH-005-v1",
+          "to": "USR-5501",
+          "type": "AFFECTS"
+        },
+        {
+          "from": "USR-5501",
+          "to": "GRP-APP-SUPPORT",
+          "type": "MEMBER_OF"
+        },
+        {
+          "from": "GRP-APP-SUPPORT",
+          "to": "GRP-INFRA-OPS",
+          "type": "NESTED_IN"
+        },
+        {
+          "from": "GRP-INFRA-OPS",
+          "to": "ROLE-DOM-ADMIN-DEL",
+          "type": "BINDS_ROLE"
+        }
+      ]
+    },
+    {
+      "scenario_id": "SOC-CTRL-RHO50-001",
+      "scenario_type": "instrument_check_uninformative_signal",
+      "copilot": "soc",
+      "branching_kind": "score_keyed",
+      "rho_planted": 0.5,
+      "description": "INSTRUMENT CONTROL. The routing signal is uninformative by construction. VLD must NOT beat a coin flip here. If it does, the instrument is leaking ground truth into the routing policy and no other result from this dataset counts.",
+      "alert": {
+        "alert_id": "ALERT-CTRL-RHO50-001",
+        "alert_type": "internal_scan_ambiguous",
+        "category": "lateral_movement",
+        "severity": "medium",
+        "timestamp": "2026-09-05T15:20:00Z",
+        "source_system": "SIEM",
+        "surface_factors": {
+          "privileged_identity_context": 0.5,
+          "asset_criticality": 0.5,
+          "threat_intel_enrichment": 0.5,
+          "time_anomaly": 0.5,
+          "pattern_history": 0.5,
+          "device_trust": 0.5
+        }
+      },
+      "why_rho_50": "v_0 is equidistant from the competing centroids; the dominant-factor signal that the branch policy reads carries no information about which branch is productive. Correct branch is assigned at random per instance.",
+      "available_branches": {
+        "1": [
+          "scanner_inventory_path",
+          "session_origin_path"
+        ]
+      },
+      "correct_branches": {
+        "1": [
+          "session_origin_path"
+        ]
+      },
+      "misleading_branches": [],
+      "read_costs": {
+        "scanner_inventory_path": 1,
+        "session_origin_path": 1
+      },
+      "budget": 1,
+      "surface_only_resolvable": false,
+      "decision_tree": {
+        "hops": [
+          {
+            "step": 1,
+            "question": "Where did the scanning session originate?",
+            "evidence_source": "Session node -> origin_host, is_sanctioned_scanner fields",
+            "evidence_found": "unmanaged_host",
+            "factor_enriched": "device_trust",
+            "factor_new_value": 0.18,
+            "narration": "Checked session origin: the scan came from an unmanaged host."
+          }
+        ],
+        "ground_truth_action": "investigate",
+        "ground_truth_confidence": 0.7,
+        "reasoning": "Unmanaged origin makes this worth investigating; but nothing in v_0 indicated that session origin was the productive read rather than scanner inventory."
+      },
+      "alternative_branches": [
+        {
+          "branch_name": "sanctioned_scanner",
+          "diverges_at_step": 1,
+          "evidence_found": "origin is a registered vulnerability scanner",
+          "ground_truth_action": "suppress",
+          "reasoning": "Sanctioned scanning activity."
+        }
+      ],
+      "graph_nodes": [
+        {
+          "type": "Alert",
+          "id": "ALERT-CTRL-RHO50-001",
+          "properties": {
+            "severity": "medium",
+            "alert_type": "internal_scan_ambiguous"
+          }
+        },
+        {
+          "type": "Session",
+          "id": "SESS-8823",
+          "properties": {
+            "origin_host": "HOST-UNMANAGED-14",
+            "is_sanctioned_scanner": false
+          }
+        },
+        {
+          "type": "ScannerInventory",
+          "id": "SCAN-INV-01",
+          "properties": {
+            "registered_hosts": 6
+          }
+        }
+      ],
+      "graph_edges": [
+        {
+          "from": "ALERT-CTRL-RHO50-001",
+          "to": "SESS-8823",
+          "type": "ORIGINATED_FROM"
+        }
+      ]
+    },
+    {
+      "scenario_id": "SOC-CTRL-FLAT-001",
+      "scenario_type": "flat_control",
+      "copilot": "soc",
+      "branching_kind": "content_keyed",
+      "rho_planted": 1.0,
+      "description": "FLAT CONTROL. All decision-relevant information is in the surface factors. VLD must NOT beat single-pass here. If it does, evidence is leaking into the routing policy.",
+      "alert": {
+        "alert_id": "ALERT-CTRL-FLAT-001",
+        "alert_type": "threat_intel_match",
+        "category": "malware_execution",
+        "severity": "critical",
+        "timestamp": "2026-09-04T09:11:00Z",
+        "source_system": "EDR",
+        "surface_factors": {
+          "privileged_identity_context": 0.88,
+          "asset_criticality": 0.95,
+          "threat_intel_enrichment": 0.97,
+          "time_anomaly": 0.3,
+          "pattern_history": 0.6,
+          "device_trust": 0.15
+        }
+      },
+      "why_flat": "Known-bad hash on a critical production asset with high-confidence threat-intel enrichment already present in the surface vector. No further read changes the action.",
+      "available_branches": {},
+      "correct_branches": {},
+      "misleading_branches": [],
+      "read_costs": {},
+      "budget": 0,
+      "surface_only_resolvable": true,
+      "decision_tree": {
+        "hops": [],
+        "ground_truth_action": "escalate",
+        "ground_truth_confidence": 0.97,
+        "reasoning": "Surface features are decisive; investigation cannot change the action."
+      },
+      "alternative_branches": [],
+      "graph_nodes": [
+        {
+          "type": "Alert",
+          "id": "ALERT-CTRL-FLAT-001",
+          "properties": {
+            "severity": "critical",
+            "alert_type": "threat_intel_match"
+          }
+        },
+        {
+          "type": "Asset",
+          "id": "ASSET-PROD-DB-03",
+          "properties": {
+            "criticality": "critical",
+            "type": "database",
+            "environment": "production"
+          }
+        }
+      ],
+      "graph_edges": [
+        {
+          "from": "ALERT-CTRL-FLAT-001",
+          "to": "ASSET-PROD-DB-03",
+          "type": "TARGETS"
+        }
+      ]
+    }
+  ]
+}

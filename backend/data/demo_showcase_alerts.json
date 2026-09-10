@@ -1,0 +1,144 @@
+{
+  "showcases": [
+    {
+      "alert_id": "ALERT-MH-002-v1",
+      "expected_action": "escalate",
+      "expected_category": "insider_threat",
+      "expected_steps": 2,
+      "scenario_id": "SOC-MH-002-v1",
+      "scenario_type": "insider_vs_compromised",
+      "story": "Insider vs compromised: employment context plus peer baseline explains escalation.",
+      "trace": [
+        {
+          "evidence_keys": [
+            "hr_context_path",
+            "pattern_history",
+            "evidence_found",
+            "narration"
+          ],
+          "halt_reason": null,
+          "pattern": "insider_threat",
+          "selected_edge": "HAS_EMPLOYMENT_CONTEXT",
+          "step": 0
+        },
+        {
+          "evidence_keys": [
+            "peer_baseline_path",
+            "pattern_history",
+            "evidence_found",
+            "narration"
+          ],
+          "halt_reason": "ground_truth_route_complete",
+          "pattern": "insider_threat",
+          "selected_edge": "MEMBER_OF_COHORT",
+          "step": 1
+        }
+      ]
+    },
+    {
+      "alert_id": "ALERT-MH-004-v1",
+      "expected_action": "suppress",
+      "expected_category": "cloud_infrastructure",
+      "expected_steps": 1,
+      "scenario_id": "SOC-MH-004-v1",
+      "scenario_type": "maintenance_window_false_positive",
+      "story": "Maintenance window: approved change context suppresses a noisy drift alert.",
+      "trace": [
+        {
+          "evidence_keys": [
+            "change_mgmt_path",
+            "time_anomaly",
+            "evidence_found",
+            "narration"
+          ],
+          "halt_reason": "ground_truth_route_complete",
+          "pattern": "cloud_infrastructure",
+          "selected_edge": "COVERED_BY_CHANGE",
+          "step": 0
+        }
+      ]
+    },
+    {
+      "alert_id": "ALERT-MH-005-v1",
+      "expected_action": "escalate",
+      "expected_category": "lateral_movement",
+      "expected_steps": 3,
+      "scenario_id": "SOC-MH-005-v1",
+      "scenario_type": "privilege_escalation_chain",
+      "story": "Privilege chain: nested group traversal exposes delegated admin rights.",
+      "trace": [
+        {
+          "evidence_keys": [
+            "group_membership_path",
+            "privileged_identity_context",
+            "evidence_found",
+            "narration"
+          ],
+          "halt_reason": null,
+          "pattern": "lateral_movement",
+          "selected_edge": "MEMBER_OF",
+          "step": 0
+        },
+        {
+          "evidence_keys": [
+            "nested_group_path",
+            "privileged_identity_context",
+            "evidence_found",
+            "narration"
+          ],
+          "halt_reason": null,
+          "pattern": "lateral_movement",
+          "selected_edge": "MEMBER_OF",
+          "step": 1
+        },
+        {
+          "evidence_keys": [
+            "role_binding_path",
+            "privileged_identity_context",
+            "evidence_found",
+            "narration"
+          ],
+          "halt_reason": "ground_truth_route_complete",
+          "pattern": "cloud_infrastructure",
+          "selected_edge": "BINDS_ROLE",
+          "step": 2
+        }
+      ]
+    },
+    {
+      "alert_id": "ALERT-MH-003-v1",
+      "expected_action": "escalate",
+      "expected_category": "lateral_movement",
+      "expected_steps": 2,
+      "scenario_id": "SOC-MH-003-v1",
+      "scenario_type": "campaign_correlation",
+      "story": "Campaign correlation: moderate alerts become a campaign-level escalation.",
+      "trace": [
+        {
+          "evidence_keys": [
+            "temporal_window_path",
+            "pattern_history",
+            "evidence_found",
+            "narration"
+          ],
+          "halt_reason": null,
+          "pattern": "credential_access",
+          "selected_edge": "READS",
+          "step": 0
+        },
+        {
+          "evidence_keys": [
+            "shared_entity_path",
+            "asset_criticality",
+            "evidence_found",
+            "narration"
+          ],
+          "halt_reason": "budget_exhausted",
+          "pattern": "credential_access",
+          "selected_edge": "READS",
+          "step": 1
+        }
+      ]
+    }
+  ]
+}

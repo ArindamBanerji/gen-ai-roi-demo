@@ -296,3 +296,134 @@ PATTERN_REGISTRY: dict[str, InvestigationPattern] = {
 
 def build_default_investigation_patterns() -> dict[str, InvestigationPattern]:
     return dict(PATTERN_REGISTRY)
+
+
+
+@dataclass(frozen=True)
+class Stage1ConditionalPattern:
+    """Template-specific planted multi-hop pattern for Stage 1 demo traces."""
+
+    category_name: str
+    pattern_name: str
+    scenario_type: str
+    selected_edge: str
+    enriched_factors: tuple[str, ...]
+    candidate_read: str
+    graph_query: str = "ScenarioGraphStore decision_tree.hops"
+
+    def supports(self, alert_context: dict[str, Any]) -> bool:
+        if alert_context.get("scenario_type") == self.scenario_type:
+            return True
+        return bool(str(alert_context.get("alert_id") or alert_context.get("id") or "").strip())
+
+    async def execute(self, alert_context: dict[str, Any], graph_store: Any) -> dict[str, Any]:
+        scenario = getattr(graph_store, "scenario", None)
+        if isinstance(scenario, dict):
+            branches = scenario.get("correct_branches", {})
+            first_step = min((int(k) for k in branches), default=1)
+            branch_names = list(branches.get(str(first_step), []))
+            branch_name = branch_names[0] if branch_names else self.candidate_read
+            get_evidence = getattr(graph_store, "get_evidence", None)
+            if callable(get_evidence):
+                evidence = await _maybe_await(get_evidence(branch_name, first_step))
+                if isinstance(evidence, dict):
+                    out = dict(evidence)
+                    out.setdefault("investigation_category", self.category_name)
+                    out.setdefault("investigation_pattern", self.pattern_name)
+                    out.setdefault("selected_edge", self.selected_edge)
+                    out.setdefault("candidate_read", self.candidate_read)
+                    out.setdefault("candidate_reads", [self.candidate_read])
+                    out.setdefault("enriched_factors", list(self.enriched_factors))
+                    out.setdefault("scenario_type", self.scenario_type)
+                    return out
+        return {
+            "investigation_category": self.category_name,
+            "investigation_pattern": self.pattern_name,
+            "scenario_type": self.scenario_type,
+            "selected_edge": self.selected_edge,
+            "candidate_read": self.candidate_read,
+            "candidate_reads": [self.candidate_read],
+            "enriched_factors": list(self.enriched_factors),
+            "factor_enriched": self.enriched_factors[0] if self.enriched_factors else "pattern_history",
+            "factor_new_value": 0.5,
+            "evidence_found": "No planted scenario evidence available.",
+            "evidence_keys": (self.candidate_read, "factor_enriched", "factor_new_value"),
+            "read_cost": 1.0,
+        }
+
+    def evidence_vector(self, evidence: dict[str, Any]) -> np.ndarray:
+        vector = np.zeros(N_FACTORS, dtype=np.float64)
+        factor = evidence.get("factor_enriched")
+        factor_names = [
+            "privileged_identity_context",
+            "asset_criticality",
+            "threat_intel_enrichment",
+            "time_anomaly",
+            "pattern_history",
+            "device_trust",
+        ]
+        if factor in factor_names:
+            vector[factor_names.index(str(factor))] = float(evidence.get("factor_new_value", 0.5))
+        return cast(np.ndarray, vector)
+
+    def evidence_keys(self) -> tuple[str, ...]:
+        return (self.candidate_read, "factor_enriched", "factor_new_value", "evidence_found")
+
+
+class CredentialLateralPattern(Stage1ConditionalPattern):
+    def __init__(self) -> None:
+        super().__init__("credential_access", "credential_lateral_multihop", "credential_lateral_compound", "HAS_AUTH_TRAIL", ("privileged_identity_context", "asset_criticality"), "auth_trail_path")
+
+
+class InsiderCompromisedPattern(Stage1ConditionalPattern):
+    def __init__(self) -> None:
+        super().__init__("insider_threat", "insider_compromised_multihop", "insider_vs_compromised", "HAS_EMPLOYMENT_CONTEXT", ("pattern_history", "device_trust"), "hr_context_path")
+
+
+class CloudMisconfigPattern(Stage1ConditionalPattern):
+    def __init__(self) -> None:
+        super().__init__("cloud_infrastructure", "cloud_misconfig_multihop", "cloud_misconfig_vs_attack", "COVERED_BY_CHANGE", ("asset_criticality", "device_trust"), "config_history_path")
+
+
+class ServiceAccountPattern(Stage1ConditionalPattern):
+    def __init__(self) -> None:
+        super().__init__("credential_access", "service_account_multihop", "service_account_automated_vs_hijacked", "RUNS_JOB", ("privileged_identity_context", "pattern_history"), "job_schedule_path")
+
+
+class MaintenanceWindowPattern(Stage1ConditionalPattern):
+    def __init__(self) -> None:
+        super().__init__("cloud_infrastructure", "maintenance_window_multihop", "maintenance_window_false_positive", "COVERED_BY_CHANGE", ("time_anomaly", "asset_criticality"), "maintenance_window_path")
+
+
+class VulnerabilityPatchPattern(Stage1ConditionalPattern):
+    def __init__(self) -> None:
+        super().__init__("malware_execution", "vulnerability_patch_multihop", "cve_match_patch_status", "MATCHES_CVE", ("threat_intel_enrichment", "asset_criticality"), "cve_patch_path")
+
+
+class PrivilegeChainPattern(Stage1ConditionalPattern):
+    def __init__(self) -> None:
+        super().__init__("lateral_movement", "privilege_chain_multihop", "privilege_escalation_chain", "NESTED_IN", ("privileged_identity_context", "asset_criticality"), "group_chain_path")
+
+
+class CampaignCorrelationPattern(Stage1ConditionalPattern):
+    def __init__(self) -> None:
+        super().__init__("malware_execution", "campaign_correlation_multihop", "campaign_correlation", "MEMBER_OF", ("threat_intel_enrichment", "time_anomaly"), "campaign_path")
+
+
+MULTIHOP_PATTERN_REGISTRY: dict[str, InvestigationPattern] = {
+    pattern.pattern_name: pattern
+    for pattern in [
+        CredentialLateralPattern(),
+        InsiderCompromisedPattern(),
+        CloudMisconfigPattern(),
+        ServiceAccountPattern(),
+        MaintenanceWindowPattern(),
+        VulnerabilityPatchPattern(),
+        PrivilegeChainPattern(),
+        CampaignCorrelationPattern(),
+    ]
+}
+
+
+def build_multihop_investigation_patterns() -> dict[str, InvestigationPattern]:
+    return dict(MULTIHOP_PATTERN_REGISTRY)

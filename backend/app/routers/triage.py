@@ -464,6 +464,7 @@ async def investigate_alert(
     from app.services.investigation_loop import InvestigationLoop
     from app.services.investigation_patterns import build_default_investigation_patterns
     from app.services.investigation_router import InvestigationRouter
+    from app.services.multihop_scenarios import scenario_by_alert_id, run_stage1_investigation
 
     scorer = _get_scorer()
     if scorer is None:
@@ -479,6 +480,25 @@ async def investigate_alert(
         )
 
     alert_id = request.alert_id
+    planted_scenario = scenario_by_alert_id(alert_id)
+    if planted_scenario is not None:
+        result = await run_stage1_investigation(planted_scenario, scorer)
+        payload = result.to_dict()
+        alert_category = str(planted_scenario.get("alert", {}).get("category") or payload["category"])
+        return {
+            "status": "ok",
+            "mode": "vld_multihop_stage1_shadow",
+            "alert_id": alert_id,
+            "single_pass": {
+                "action": payload["single_pass_action"],
+                "confidence": payload["single_pass_confidence"],
+                "category": alert_category,
+            },
+            "vld": payload,
+            "investigation_trace": payload["trace"],
+            "conservation_emit_gate": payload["conservation_emit_gate"],
+        }
+
     alert_data = await graph_client.get_alert(alert_id)
     if not alert_data:
         raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
