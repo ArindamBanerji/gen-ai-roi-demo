@@ -36,7 +36,7 @@
 
 *Point to the factor bars and kernel weights.*
 
-> "This is not a black box. Every number has a source. Every weight is calibrated to this environment's specific noise profile — device_trust is weighted 1.56 because your MDM coverage is good. travel_match is weighted 0.31 because your travel data has gaps."
+> "This is not a black box. Every number has a source. Every weight is calibrated to this environment's specific noise profile — device_trust is weighted 1.56 because your MDM coverage is good. privileged_identity_context is weighted 0.31 because your identity telemetry has gaps."
 
 > "The recommendation: Escalate at 87% confidence. Here's why, in plain English."
 

@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock
 import numpy as np
 import pytest
 
-from app.domains.soc.config import SCORER_ACTIONS, SOC_CATEGORIES
+from app.domains.soc.config import SCORER_ACTIONS, SOC_CATEGORIES, SOCDomainConfig
 from app.models.schemas import OutcomeRequest
 from app.routers import triage
 from app.services import learning_health
@@ -46,96 +46,6 @@ def _load_seed_script():
     return module
 
 
-class _C9BStore:
-    def __init__(self) -> None:
-        self.centroids: list[dict] = []
-        self.dk_weights: list[dict] = []
-        self.conservation: list[dict] = []
-
-    def get_conservation_state(self, domain: str) -> None:
-        assert domain == "soc"
-        return None
-
-    def update_centroid(self, **kwargs) -> None:
-        self.centroids.append(kwargs)
-
-    def update_dk_weights(self, **kwargs) -> None:
-        self.dk_weights.append(kwargs)
-
-    def update_conservation_state(self, **kwargs) -> None:
-        self.conservation.append(kwargs)
-
-
-class _C9BAGE:
-    def __init__(self) -> None:
-        self.rows = [
-            {
-                "domain": None,
-                "category": SOC_CATEGORIES[0],
-                "verified_at_epoch": 1,
-                "outcome": "correct",
-                "status": None,
-                "verified": 1,
-                "correct": 1,
-                "overrides": 0,
-            },
-            {
-                "domain": None,
-                "category": SOC_CATEGORIES[1],
-                "verified_at_epoch": 2,
-                "outcome": "incorrect",
-                "status": None,
-                "verified": 1,
-                "correct": 0,
-                "overrides": 1,
-            },
-        ]
-
-    async def run_query(self, query: str) -> list[dict]:
-        if "RETURN d.factor_vector AS factor_vector" in query:
-            return [
-                {
-                    "factor_vector": "[0.2, 0.3, 0.4, 0.5, 0.6, 0.7]",
-                    "action": "escalate",
-                    "confidence": 0.9,
-                    "category": SOC_CATEGORIES[0],
-                    "alert_type": "anomalous_login",
-                    "campaign_id": None,
-                    "explored": False,
-                    "explored_but_referred": False,
-                    "exploration_executed": False,
-                    "explored_action": None,
-                }
-            ]
-        if "MATCH (h:HealthLog)" in query:
-            return [{"red_days": 0}]
-        if "MATCH (d:Decision)" in query and "RETURN d.category AS category" in query:
-            grouped: dict[str, dict] = {}
-            for row in self.rows:
-                domain = row.get("domain")
-                if domain is not None and domain != "soc":
-                    continue
-                category = row.get("category")
-                if category not in SOC_CATEGORIES:
-                    continue
-                if row.get("verified_at_epoch") is None:
-                    continue
-                if row.get("status") is None and row.get("outcome") is None:
-                    continue
-                category = row.get("category")
-                if not isinstance(category, str):
-                    continue
-                bucket = grouped.setdefault(
-                    category,
-                    {"category": category, "verified": 0, "correct": 0, "overrides": 0},
-                )
-                bucket["verified"] += int(row.get("verified", 1) or 0)
-                bucket["correct"] += int(row.get("correct", 0) or 0)
-                bucket["overrides"] += int(row.get("overrides", 0) or 0)
-            return list(grouped.values())
-        return []
-
-
 class _C9BScorer:
     n_categories = len(SOC_CATEGORIES)
 
@@ -170,8 +80,10 @@ class _LearningPolicy:
 
 
 @pytest.mark.asyncio
-async def test_soc_c9b_full_flow_writes_all_three_l5_types(monkeypatch, soc_triage_harness):
-    store = _C9BStore()
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
+async def test_soc_c9b_full_flow_writes_all_three_l5_types(monkeypatch, soc_triage_harness, age_graph):
+    store = age_graph.store
     scorer = _C9BScorer()
     soc_triage_harness.add_decision(
         decision_id="DEC-C9B",
@@ -182,13 +94,9 @@ async def test_soc_c9b_full_flow_writes_all_three_l5_types(monkeypatch, soc_tria
         factor_vector="[0.2, 0.3, 0.4, 0.5, 0.6, 0.7]",
         alert_type="anomalous_login",
     )
-    soc_triage_harness.graph_client.set_health_rows([{"red_days": 0}])
-    soc_triage_harness.graph_client.set_decision_summary_rows(
-        [
-            {"category": category, "verified": 100, "correct": 100, "overrides": 0}
-            for category in SOC_CATEGORIES
-        ]
-    )
+    for category in SOC_CATEGORIES:
+        for _ in range(10):
+            age_graph.decision(category=category, correct=True)
 
     @asynccontextmanager
     async def fake_acquire_scorer():
@@ -216,11 +124,8 @@ async def test_soc_c9b_full_flow_writes_all_three_l5_types(monkeypatch, soc_tria
     monkeypatch.setattr("app.services.gae_state.get_soc_centroid", lambda *_args: [0.0] * 6)
     monkeypatch.setattr(
         "app.services.gae_state.guarded_update",
-        lambda *_args, **_kwargs: SimpleNamespace(
-            category_name=SOC_CATEGORIES[0],
-            category_index=0,
-            action_name="escalate",
-            action_index=0,
+        lambda *_args, **_kwargs: SOCDomainConfig().build_profile_scorer().update(
+            np.array([0.2, 0.3, 0.4, 0.1, 0.5, 0.6]), 0, 0, True,
         ),
     )
 
@@ -257,19 +162,25 @@ async def test_soc_c9b_full_flow_writes_all_three_l5_types(monkeypatch, soc_tria
     # The outcome route persists the centroid through the scorer's
     # authoritative GraphStore; the learning store captures DK/conservation
     # artifacts separately.
-    centroid_records = list(soc_triage_harness.store._l5_centroids.values())
-    assert centroid_records
-    assert store.dk_weights and store.dk_weights[0]["domain"] == "soc"
-    assert store.dk_weights[0]["welford_state"] is not None
-    assert store.conservation and store.conservation[0]["domain"] == "soc"
-    assert store.conservation[0]["categories_total"] == 6
-    assert store.conservation[0]["categories_with_data"] == len(SOC_CATEGORIES)
+    persisted = age_graph.reopen_store()
+    assert persisted.get_centroids("soc")
+    dk = persisted.get_dk_weights("soc")
+    assert dk is not None and dk["welford_state"] is not None
+    conservation = persisted.get_conservation_state("soc")
+    assert conservation is not None
+    assert conservation["categories_total"] == 6
+    assert conservation["categories_with_data"] == len(SOC_CATEGORIES)
     assert scorer.reestimate_calls == 1
 
 
 @pytest.mark.asyncio
-async def test_soc_c9b_conservation_uses_no_domain_route_rows(monkeypatch):
-    graph = _C9BAGE()
+@pytest.mark.age
+async def test_soc_c9b_conservation_excludes_no_domain_route_rows(monkeypatch, age_graph):
+    age_graph.decision(category=SOC_CATEGORIES[0], correct=True)
+    age_graph.decision(category=SOC_CATEGORIES[1], correct=False, was_override=True)
+    age_graph.node("Decision", decision_id="legacy", category=SOC_CATEGORIES[2], correct=True, outcome="correct", verified_at_epoch=1)
+    age_graph.decision(domain="s2p", category=SOC_CATEGORIES[3], correct=True)
+    graph = age_graph.client
     monkeypatch.setattr(learning_health, "get_learning_state", lambda: _LearningState())
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: None)
 
@@ -483,16 +394,6 @@ def test_soc_c9b_smoke_skips_routing_actions_until_valid_outcomes(monkeypatch):
     assert posted[-1][1]["analyst_action"] == "monitor"
 
 
-class _SeedFakeClient:
-    def __init__(self) -> None:
-        self.queries: list[str] = []
-
-    async def run_query(self, query: str):
-        self.queries.append(query)
-        if "RETURN count" in query:
-            return [{"cnt": 0}]
-        return []
-
 
 def test_soc_c9b_seed_script_argument_parsing_redaction_and_ids():
     seed = _load_seed_script()
@@ -511,7 +412,7 @@ def test_soc_c9b_seed_script_argument_parsing_redaction_and_ids():
 @pytest.mark.asyncio
 async def test_soc_c9b_seed_script_dry_run_writes_nothing():
     seed = _load_seed_script()
-    client = _SeedFakeClient()
+    client = AsyncMock()
 
     summary = await seed.seed_alerts(
         client,
@@ -526,13 +427,15 @@ async def test_soc_c9b_seed_script_dry_run_writes_nothing():
     assert summary.planned == 2
     assert summary.created == 0
     assert summary.existing == 0
-    assert client.queries == []
+    client.run_query.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_soc_c9b_seed_script_creates_only_input_nodes_and_edges():
+@pytest.mark.age
+async def test_soc_c9b_seed_script_creates_only_input_nodes_and_edges(age_graph):
     seed = _load_seed_script()
-    client = _SeedFakeClient()
+    client = age_graph.client
+    client.run_query = AsyncMock(wraps=client.run_query)
 
     summary = await seed.seed_alerts(
         client,
@@ -543,9 +446,12 @@ async def test_soc_c9b_seed_script_creates_only_input_nodes_and_edges():
         dsn_source="DATABASE_URL",
         dry_run=False,
     )
-    joined = "\n".join(client.queries)
+    joined = "\n".join(c.args[0] for c in client.run_query.call_args_list)
 
     assert summary.created == 1
+    assert age_graph.query("MATCH (a:Alert) RETURN count(a) AS n") == [{"n": 1}]
+    assert age_graph.query("MATCH (:Alert)-[r]->() RETURN count(r) AS n")[0]["n"] >= 2
+    assert age_graph.query("MATCH (d:Decision) RETURN count(d) AS n") == [{"n": 0}]
     assert "CREATE (a:Alert" in joined
     assert "CREATE (n:User" in joined
     assert "CREATE (n:Asset" in joined

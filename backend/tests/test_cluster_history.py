@@ -1,5 +1,6 @@
 import logging
 import re
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -10,17 +11,15 @@ NOW_MS = 1_700_000_000_000
 DAY_MS = 86_400_000
 
 
-class FakeGraph:
-    def __init__(self, rows=None, exc=None):
-        self.rows = rows or []
-        self.exc = exc
-        self.queries = []
-
-    async def run_query(self, query):
-        self.queries.append(query)
-        if self.exc:
-            raise self.exc
-        return list(self.rows)
+def _history_graph(age_graph, rows, user="user-1"):
+    for record in rows:
+        data = dict(record)
+        timestamp = data.pop("timestamp_epoch")
+        age_graph.decision(created_at=timestamp / 1000, **data)
+        alert = age_graph.alert(user_id=user)
+        serialize = age_graph.client.serialize_for_age
+        age_graph.query(f"MATCH (d:Decision {{decision_id: {serialize(record['decision_id'])}}}), (a:Alert {{id: {serialize(alert)}}}) CREATE (d)-[:DECIDED_ON]->(a) RETURN d")
+    return age_graph.client
 
 
 def row(index, *, correct=True, category="credential_access", action="escalate", ts=None):
@@ -36,8 +35,9 @@ def row(index, *, correct=True, category="credential_access", action="escalate",
 
 
 @pytest.mark.asyncio
-async def test_returns_prior_verified_decisions():
-    graph = FakeGraph([row(i) for i in range(5)])
+@pytest.mark.age
+async def test_returns_prior_verified_decisions(age_graph):
+    graph = _history_graph(age_graph, [row(i) for i in range(5)])
 
     result = await get_cluster_history("user-1", "CURRENT", graph)
 
@@ -48,8 +48,9 @@ async def test_returns_prior_verified_decisions():
 
 
 @pytest.mark.asyncio
-async def test_excludes_current_decision_defensively():
-    graph = FakeGraph([row(1), {**row(2), "decision_id": "CURRENT"}])
+@pytest.mark.age
+async def test_excludes_current_decision_defensively(age_graph):
+    graph = _history_graph(age_graph, [row(1), {**row(2), "decision_id": "CURRENT"}])
 
     result = await get_cluster_history("user-1", "CURRENT", graph)
 
@@ -59,25 +60,25 @@ async def test_excludes_current_decision_defensively():
 
 
 @pytest.mark.asyncio
-async def test_query_filters_verified_decisions():
-    graph = FakeGraph([])
+@pytest.mark.age
+async def test_query_filters_verified_decisions(age_graph):
+    graph = _history_graph(age_graph, [row(1), {**row(2), "correct": None, "outcome": None}])
+    result = await get_cluster_history("user-1", "CURRENT", graph)
+    assert result is not None
+    assert [entry.decision_id for entry in result.recent] == ["DEC-1"]
 
-    await get_cluster_history("user-1", "CURRENT", graph)
-
-    query = graph.queries[0]
-    assert "d.outcome IS NOT NULL" in query
-    assert "d.verified_at_epoch IS NOT NULL" in query
 
 
 @pytest.mark.asyncio
-async def test_per_category_and_action_sum_to_total():
+@pytest.mark.age
+async def test_per_category_and_action_sum_to_total(age_graph):
     rows = [
         row(1, category="credential_access", action="escalate"),
         row(2, category="credential_access", action="investigate"),
         row(3, category="lateral_movement", action="investigate"),
     ]
 
-    result = await get_cluster_history("user-1", "CURRENT", FakeGraph(rows))
+    result = await get_cluster_history("user-1", "CURRENT", _history_graph(age_graph, rows))
 
     assert result is not None
     assert sum(result.per_category.values()) == result.total_prior
@@ -87,11 +88,12 @@ async def test_per_category_and_action_sum_to_total():
 
 
 @pytest.mark.asyncio
-async def test_precision_computation():
+@pytest.mark.age
+async def test_precision_computation(age_graph):
     rows = [row(i, correct=True) for i in range(14)]
     rows.extend(row(100 + i, correct=False) for i in range(4))
 
-    result = await get_cluster_history("user-1", "CURRENT", FakeGraph(rows))
+    result = await get_cluster_history("user-1", "CURRENT", _history_graph(age_graph, rows))
 
     assert result is not None
     assert result.total_prior == 18
@@ -121,8 +123,9 @@ def test_trend_stable():
 
 
 @pytest.mark.asyncio
-async def test_empty_history():
-    result = await get_cluster_history("user-1", "CURRENT", FakeGraph([]))
+@pytest.mark.age
+async def test_empty_history(age_graph):
+    result = await get_cluster_history("user-1", "CURRENT", _history_graph(age_graph, []))
 
     assert result is not None
     assert result.total_prior == 0
@@ -146,7 +149,8 @@ def test_timestamp_unit_conversion_ms():
 
 @pytest.mark.asyncio
 async def test_query_failure_returns_none_and_logs(caplog):
-    graph = FakeGraph(exc=RuntimeError("graph unavailable"))
+    graph = AsyncMock()
+    graph.run_query.side_effect = RuntimeError("graph unavailable")
 
     with caplog.at_level(logging.WARNING):
         result = await get_cluster_history("user-1", "CURRENT", graph)
@@ -156,12 +160,15 @@ async def test_query_failure_returns_none_and_logs(caplog):
 
 
 @pytest.mark.asyncio
-async def test_age_query_safety_and_string_serialization():
-    graph = FakeGraph([])
+@pytest.mark.age
+async def test_age_query_safety_and_string_serialization(age_graph):
+    graph = _history_graph(age_graph, [row(1)], user="o'hara")
+    graph.run_query = AsyncMock(wraps=graph.run_query)
 
-    await get_cluster_history("o'hara", "CURRENT-1", graph)
+    result = await get_cluster_history("o'hara", "CURRENT-1", graph)
+    assert result.total_prior == 1
 
-    query = graph.queries[0]
+    query = graph.run_query.call_args.args[0]
     assert "$" not in query
     for token in ("MERGE", "SET", "CREATE", "DELETE"):
         assert re.search(rf"\b{token}\b", query) is None

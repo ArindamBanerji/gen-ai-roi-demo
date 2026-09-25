@@ -1,6 +1,6 @@
 """
 Block 9.1 -- D5 Per-analyst eta weighting tests.
-All AGE calls use AsyncMock -- no live AGE required.
+Precision queries use real AGE; weighting and response contracts remain unit tests.
 """
 import asyncio
 import os
@@ -29,33 +29,28 @@ def _run(coro):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _mock_graph(rows):
-    """Return an AsyncMock graph_client whose run_query yields `rows`."""
-    mock = AsyncMock()
-    mock.run_query.return_value = rows
-    return mock
+def _seed_analyst(age_graph, name, total, correct):
+    for index in range(total):
+        age_graph.decision(correct=index < correct, source_id=name, verified_by=name)
 
 
 # ---------------------------------------------------------------------------
 # Test 1 — compute_precision_returns_dict with ≥2 qualifying analysts
 # ---------------------------------------------------------------------------
 
-def test_compute_precision_returns_dict():
+@pytest.mark.age
+def test_compute_precision_returns_dict(age_graph):
     """When >=2 analysts each have >=10 decisions, returns precision dict."""
-    rows = [
-        {"analyst": "alice", "precision": 0.82},
-        {"analyst": "bob",   "precision": 0.71},
-        {"analyst": "carol", "precision": 0.65},
-    ]
-    mock = _mock_graph(rows)
-    result = _run(compute_analyst_precision(mock))
+    for name, correct in [("alice", 8), ("bob", 7), ("carol", 6)]:
+        _seed_analyst(age_graph, name, 10, correct)
+    result = _run(compute_analyst_precision(age_graph.client))
 
     assert isinstance(result, dict), "Should return a dict"
     assert "alice" in result
     assert "bob"   in result
     assert "carol" in result
-    assert result["alice"] == pytest.approx(0.82, abs=1e-6)
-    assert result["bob"]   == pytest.approx(0.71, abs=1e-6)
+    assert result["alice"] == pytest.approx(0.8, abs=1e-6)
+    assert result["bob"]   == pytest.approx(0.7, abs=1e-6)
 
 
 # ---------------------------------------------------------------------------
@@ -63,19 +58,20 @@ def test_compute_precision_returns_dict():
 #          if only 1 analyst qualifies, returns {}
 # ---------------------------------------------------------------------------
 
-def test_precision_excludes_analysts_below_10_decisions():
+@pytest.mark.age
+def test_precision_excludes_analysts_below_10_decisions(age_graph):
     """
     The Cypher WHERE total >= 10 is enforced in the query. If only one analyst
     comes back (meaning only one has >=10 decisions), returns {} because
     _MIN_ANALYSTS_REQUIRED = 2.
     """
-    rows = [{"analyst": "alice", "precision": 0.80}]   # only 1 row returned
-    mock = _mock_graph(rows)
-    result = _run(compute_analyst_precision(mock))
+    _seed_analyst(age_graph, "alice", 10, 8)
+    _seed_analyst(age_graph, "bob", 9, 9)
+    assert _run(compute_analyst_precision(age_graph.client)) == {}
+    age_graph.decision(correct=False, source_id="bob", verified_by="bob")
+    result = _run(compute_analyst_precision(age_graph.reopen_client()))
+    assert result == pytest.approx({"alice": 0.8, "bob": 0.9})
 
-    assert result == {}, (
-        f"Expected empty dict when fewer than 2 analysts qualify, got {result}"
-    )
 
 
 # ---------------------------------------------------------------------------

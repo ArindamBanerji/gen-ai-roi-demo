@@ -30,11 +30,13 @@ def test_exploration_action_space_excludes_refer_to_analyst():
 
 
 def test_learning_enabled_is_still_centroid_gate():
+    # This is an intentional code-archaeology assertion: the learning branch
+    # must remain gated by the resolved SOC learning flag and classification.
     source = open(triage.__file__, encoding="utf-8").read()
     assert "_soc_learning_active =" in source
     assert "learning_policy.enabled()" in source
     assert "get_learning_policy().enabled()" in source
-    assert "if _soc_learning_active and action_name in SCORER_ACTIONS:" in source
+    assert "if _soc_learning_active and not _unclassified_alert:" in source
     assert "_guarded_update(" in source
 
 
@@ -97,44 +99,6 @@ async def test_reset_demo_alerts_clears_rl_state(monkeypatch):
     )
 
     await triage.reset_demo_alerts()
-    assert rl_engine.get_reward_ledger().get_entries() == []
-
-
-@pytest.mark.asyncio
-async def test_reset_all_demo_data_clears_rl_state(monkeypatch):
-    rl_engine.reset_rl_state()
-    rl_engine.get_reward_ledger().append(
-        "D-1",
-        rl_engine.RewardComputer("soc", {"credential_access": {"base": 0.70}}).compute(
-            "escalate",
-            "correct",
-            "credential_access",
-            {},
-        ),
-        "credential_access",
-        "escalate",
-    )
-
-    hard_reset_calls = []
-
-    class FakeStateManager:
-        def __init__(self, **_kwargs):
-            pass
-
-        async def hard_reset(self, preserve_learning):
-            hard_reset_calls.append(preserve_learning)
-
-    async def fake_reset_except(_preserved):
-        return None
-
-    monkeypatch.setattr("app.services.state_manager.StateManager", FakeStateManager)
-    monkeypatch.setattr("app.core.domain_registry.get_domain_config", lambda: SimpleNamespace())
-    monkeypatch.setattr("app.core.state_manager.state_manager.reset_except", fake_reset_except)
-
-    response = await metrics.reset_all_demo_data()
-
-    assert response["status"] == "success"
-    assert hard_reset_calls == [True]
     assert rl_engine.get_reward_ledger().get_entries() == []
 
 

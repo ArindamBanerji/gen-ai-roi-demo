@@ -10,9 +10,23 @@ Run from backend/ directory:
 import asyncio
 import sys
 import os
-from unittest.mock import patch, AsyncMock
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+
+@pytest.fixture
+def metrics_graph(age_graph, monkeypatch):
+    """Use an isolated production AGE client, never canned aggregate rows."""
+    from app.routers import metrics
+    monkeypatch.setattr(metrics, "graph_client", age_graph.client)
+    return age_graph
+
+
+def _decision(graph, identifier, *, correct=True, outcome=None, **props):
+    graph.decision(decision_id=identifier, correct=correct, **props)
+    if outcome is not None:
+        graph.set_properties("Decision", "decision_id", identifier, _domain="soc", outcome=outcome)
 
 
 # ============================================================================
@@ -45,21 +59,13 @@ def test_board_export_endpoint_registered():
 # TEST 3 — MTTD estimated when no timestamps
 # ============================================================================
 
-def test_mttd_estimated_when_no_timestamps():
+@pytest.mark.age
+def test_mttd_estimated_when_no_timestamps(metrics_graph):
     """Mock AGE returning sample_size=0 for MTTD.
     Assert mttd['estimated']=True and mttd['value_minutes']=None."""
     from app.routers.metrics import get_operational_metrics
 
-    async def _run():
-        with patch("app.routers.metrics.graph_client") as mock_neo:
-            mock_neo.run_query = AsyncMock(side_effect=[
-                [{"avg_mttd_seconds": None, "sample_size": 0}],   # MTTD
-                [{"avg_mttr_seconds": None, "sample_size": 0}],   # MTTR
-                [{"total": 0, "fp_count": 0}],                     # FP rate
-            ])
-            return await get_operational_metrics()
-
-    result = asyncio.run(_run())
+    result = asyncio.run(get_operational_metrics())
     assert result["mttd"]["estimated"] is True, (
         f"mttd.estimated should be True, got {result['mttd']['estimated']}"
     )
@@ -72,21 +78,13 @@ def test_mttd_estimated_when_no_timestamps():
 # TEST 4 — MTTR estimated when no verified outcomes
 # ============================================================================
 
-def test_mttr_estimated_when_no_verified_outcomes():
+@pytest.mark.age
+def test_mttr_estimated_when_no_verified_outcomes(metrics_graph):
     """Mock AGE returning sample_size=0 for MTTR query.
     Assert mttr['estimated']=True and mttr['value_minutes']=None."""
     from app.routers.metrics import get_operational_metrics
 
-    async def _run():
-        with patch("app.routers.metrics.graph_client") as mock_neo:
-            mock_neo.run_query = AsyncMock(side_effect=[
-                [{"avg_mttd_seconds": None, "sample_size": 0}],   # MTTD
-                [{"avg_mttr_seconds": None, "sample_size": 0}],   # MTTR
-                [{"total": 0, "fp_count": 0}],                     # FP rate
-            ])
-            return await get_operational_metrics()
-
-    result = asyncio.run(_run())
+    result = asyncio.run(get_operational_metrics())
     assert result["mttr"]["estimated"] is True, (
         f"mttr.estimated should be True, got {result['mttr']['estimated']}"
     )
@@ -99,21 +97,15 @@ def test_mttr_estimated_when_no_verified_outcomes():
 # TEST 5 — FP rate computed correctly
 # ============================================================================
 
-def test_fp_rate_computed_correctly():
+@pytest.mark.age
+def test_fp_rate_computed_correctly(metrics_graph):
     """Mock AGE: total=20, fp_count=4.
     Assert fp_rate['rate']=0.2, fp_rate['estimated']=False."""
     from app.routers.metrics import get_operational_metrics
 
-    async def _run():
-        with patch("app.routers.metrics.graph_client") as mock_neo:
-            mock_neo.run_query = AsyncMock(side_effect=[
-                [{"avg_mttd_seconds": None, "sample_size": 0}],   # MTTD
-                [{"avg_mttr_seconds": None, "sample_size": 0}],   # MTTR
-                [{"total": 20, "fp_count": 4}],                    # FP rate
-            ])
-            return await get_operational_metrics()
-
-    result = asyncio.run(_run())
+    for index in range(20):
+        _decision(metrics_graph, f"FP-{index}", correct=index >= 4, outcome="incorrect" if index < 4 else "correct")
+    result = asyncio.run(get_operational_metrics())
     assert result["fp_rate"]["rate"] == 0.2, (
         f"fp_rate.rate expected 0.2, got {result['fp_rate']['rate']}"
     )
@@ -126,20 +118,12 @@ def test_fp_rate_computed_correctly():
 # TEST 6 — FP rate zero decisions safe (no ZeroDivisionError)
 # ============================================================================
 
-def test_fp_rate_zero_decisions_safe():
+@pytest.mark.age
+def test_fp_rate_zero_decisions_safe(metrics_graph):
     """Mock AGE: total=0. Assert fp_rate['rate']=None. No ZeroDivisionError."""
     from app.routers.metrics import get_operational_metrics
 
-    async def _run():
-        with patch("app.routers.metrics.graph_client") as mock_neo:
-            mock_neo.run_query = AsyncMock(side_effect=[
-                [{"avg_mttd_seconds": None, "sample_size": 0}],   # MTTD
-                [{"avg_mttr_seconds": None, "sample_size": 0}],   # MTTR
-                [{"total": 0, "fp_count": 0}],                     # FP rate
-            ])
-            return await get_operational_metrics()
-
-    result = asyncio.run(_run())
+    result = asyncio.run(get_operational_metrics())
     assert result["fp_rate"]["rate"] is None, (
         f"fp_rate.rate should be None when total=0, got {result['fp_rate']['rate']}"
     )
@@ -149,20 +133,14 @@ def test_fp_rate_zero_decisions_safe():
 # TEST 7 — Board export shape
 # ============================================================================
 
-def test_board_export_shape():
+@pytest.mark.age
+def test_board_export_shape(metrics_graph):
     """Mock AGE calls. Assert response contains all required fields."""
     from app.routers.metrics import get_board_export
 
-    async def _run():
-        with patch("app.routers.metrics.graph_client") as mock_neo:
-            mock_neo.run_query = AsyncMock(side_effect=[
-                [{"total": 5}],                        # decision count
-                [{"correct": 4}],                      # correct count
-                [{"total": 5, "fp_count": 1}],         # FP count
-            ])
-            return await get_board_export()
-
-    result = asyncio.run(_run())
+    for index in range(5):
+        _decision(metrics_graph, f"BOARD-{index}", correct=index > 0, outcome="incorrect" if index == 0 else "correct")
+    result = asyncio.run(get_board_export())
 
     assert "generated_at" in result, "Missing 'generated_at'"
     assert "product" in result, "Missing 'product'"

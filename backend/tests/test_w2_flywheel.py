@@ -1,13 +1,16 @@
 """
 Permanent W2 Pattern History flywheel contract tests.
 
-These tests prove the read side using mocked graph rows shaped like the
+These tests prove the read side using persisted AGE decisions with the
 Decision.factor_snapshot contract written by the outcome path:
 
     {"factor_snapshot": "[... six SOC factors ...]", "decision_num": N}
 
-They intentionally do not mutate or query a live graph.
+Graph cases use disposable AGE graphs; extraction cases remain unit tests.
 """
+
+import pytest
+from support.campaign_graph import pattern_history
 
 import asyncio
 import json
@@ -41,17 +44,6 @@ def _factor_snapshot(pattern_history_value):
     return json.dumps([0.11, 0.22, 0.33, pattern_history_value, 0.55, 0.66])
 
 
-def _make_graph_mock(results):
-    queries = []
-
-    async def _run_query(query):
-        queries.append(query)
-        return results
-
-    mock = AsyncMock()
-    mock.run_query.side_effect = _run_query
-    mock.queries = queries
-    return mock
 
 
 def test_extract_pattern_history_parses_factor_snapshot_json_string():
@@ -86,21 +78,23 @@ def test_extract_pattern_history_accepts_numeric_compatibility_value():
     assert result == 0.62
 
 
-def test_pattern_history_compute_returns_safe_default_with_zero_prior_decisions():
+@pytest.mark.age
+def test_pattern_history_compute_returns_safe_default_with_zero_prior_decisions(age_graph):
     computer = PatternHistoryFactorComputer()
-    graph = _make_graph_mock([])
+    graph = pattern_history(age_graph, [])
 
     result = _run(computer.compute(_make_alert(), graph))
 
     assert result == 0.40
 
 
-def test_pattern_history_compute_uses_factor_snapshot_json_rows():
+@pytest.mark.age
+def test_pattern_history_compute_uses_factor_snapshot_json_rows(age_graph):
     computer = PatternHistoryFactorComputer()
     rows = [
         {"factor_snapshot": _factor_snapshot(0.76), "decision_num": 100},
     ]
-    graph = _make_graph_mock(rows)
+    graph = pattern_history(age_graph, rows)
 
     result = _run(computer.compute(_make_alert(), graph))
 
@@ -115,7 +109,8 @@ def test_pattern_history_compute_uses_factor_snapshot_json_rows():
     assert "d.verified_correct = true" in query
 
 
-def test_pattern_history_compute_changes_when_decision_history_changes():
+@pytest.mark.age
+def test_pattern_history_compute_changes_when_decision_history_changes(age_graph):
     computer = PatternHistoryFactorComputer()
     alert = _make_alert()
 
@@ -127,8 +122,8 @@ def test_pattern_history_compute_changes_when_decision_history_changes():
         {"factor_snapshot": _factor_snapshot(0.20), "decision_num": 70},
     ]
 
-    one_decision = _run(computer.compute(alert, _make_graph_mock(one_decision_rows)))
-    mixed_history = _run(computer.compute(alert, _make_graph_mock(mixed_history_rows)))
+    one_decision = _run(computer.compute(alert, pattern_history(age_graph, one_decision_rows)))
+    mixed_history = _run(computer.compute(alert, pattern_history(age_graph, mixed_history_rows[1:])))
 
     expected_mixed = (0.76 * 1.0 + 0.20 * 0.5) / 1.5
     assert one_decision == 0.76

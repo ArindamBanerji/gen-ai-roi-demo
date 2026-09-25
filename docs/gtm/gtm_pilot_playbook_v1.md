@@ -54,7 +54,7 @@ python manage.py p28_compute --domain soc
 **Expected output in deployment report:**
 ```
 Factor noise profile:
-  travel_match:           σ = 0.18  (high noise — travel data gaps)
+  privileged_identity_context: σ = 0.18  (high noise — identity telemetry gaps)
   asset_criticality:      σ = 0.06  (low noise — CMDB well-maintained)
   threat_intel_enrichment:σ = 0.09  (moderate)
   time_anomaly:           σ = 0.07  (low)
@@ -67,7 +67,7 @@ Kernel recommendation: DiagonalKernel (ratio > 1.5 threshold)
 Deployment zone: GREEN (σ_mean ≤ 0.157)
 
 Remediation suggestions:
-  travel_match: Connect HR travel system → σ drops to ~0.09 (est.)
+  privileged_identity_context: Connect IdP and privileged-access telemetry → σ drops to ~0.09 (est.)
   pattern_history: More historical data → improves over 90 days automatically
 ```
 
@@ -125,7 +125,7 @@ By Day 21 (with V≥100 decisions), the system has enough data to show centroid 
 
 `GET /api/soc/centroid-evolution` → factor weight shifts over time
 
-Expected: travel_match and pattern_history (high-noise factors) show lower absolute drift (DiagonalKernel attenuating them). threat_intel_enrichment and time_anomaly (low-noise) drift faster and more consistently.
+Expected: privileged_identity_context and pattern_history (high-noise factors) show lower absolute drift (DiagonalKernel attenuating them). threat_intel_enrichment and time_anomaly (low-noise) drift faster and more consistently.
 
 If agreement rate < 72% at Day 21: schedule a 1-hour alignment session. Review the top 10 disagreements. Typical causes: category mapping gaps (alert_type → category), stale threat intel source, missing entity data.
 
@@ -153,7 +153,7 @@ python manage.py enable_live_mode --domain soc --confirm
 Tab 1 now shows recommendations with:
 - Action (escalate/investigate/suppress/monitor) + confidence %
 - Factor breakdown: 6 bars showing which factors drove the decision + kernel weight
-- NL explanation: "Anomalous access from Singapore. travel_match=0.89 (high risk, weight=1.0). device_trust=0.71 (MDM enrolled, weight=0.8). Recommend: escalate at 87%."
+- NL explanation: "Privileged access lacking strong session safeguards. privileged_identity_context=0.89 (high risk, weight=1.0). device_trust=0.71 (MDM enrolled, weight=0.8). Recommend: escalate at 87%."
 - Referral flag (if any R1-R7 rule fires): "REFER TO ANALYST — Executive account."
 
 ### Week 5–6 Goals

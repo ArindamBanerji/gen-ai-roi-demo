@@ -1,0 +1,444 @@
+{
+  "checks": [
+    {
+      "actual_values": {
+        "/api/alert/policy-check": "{'alert_id': 'ALERT-LM-101', 'has_conflict': False, 'policies_applied': [], 'conflicting_policies': [], 'resolution': None}",
+        "/api/alert/policy-history": "{'conflicts': [], 'total_count': 0}"
+      },
+      "api_status": "PASS",
+      "code_fix_needed": false,
+      "empty_state_behavior": "Policy history is non-empty; policy-check needs a valid alert/request input for a rendered decision.",
+      "endpoint_corrections": "None; both paths exist and policy-check was called with a queued alert identifier.",
+      "endpoint_results": {
+        "/api/alert/policy-check": {
+          "body_preview": "{'alert_id': 'ALERT-LM-101', 'has_conflict': False, 'policies_applied': [], 'conflicting_policies': [], 'resolution': None}",
+          "content_type": "application/json",
+          "keys": [
+            "alert_id",
+            "conflicting_policies",
+            "has_conflict",
+            "policies_applied",
+            "resolution"
+          ],
+          "non_empty": true,
+          "status": 200
+        },
+        "/api/alert/policy-history": {
+          "body_preview": "{'conflicts': [], 'total_count': 0}",
+          "content_type": "application/json",
+          "keys": [
+            "conflicts",
+            "total_count"
+          ],
+          "non_empty": true,
+          "status": 200
+        }
+      },
+      "endpoints_tested": [
+        "/api/alert/policy-check",
+        "/api/alert/policy-history"
+      ],
+      "id": 1,
+      "name": "Policy-conflict override",
+      "notes": "Endpoint exists; queued alert `ALERT-LM-101` returned no conflict, so a conflict fixture is still needed.",
+      "planting_needed": true,
+      "priority": 1,
+      "ui_status": "NOT TESTED"
+    },
+    {
+      "actual_values": {
+        "/api/audit/decisions": "{'decisions': [{'id': 'SYN-DEC-fb9ead4c', 'alert_id': 'SYN-CI-D518-001', 'timestamp': '2025-06-01T23:59:55.870000+00:00', 'situation_type': 'cloud_infrastructure', 'action_taken': 'monitor', 'factors': [], 'confidence': 0.855, 'outcome': 'correct', 'analyst_confirmed': False, 'hash': 'e61617f39692e000f0d9911f90f2fb003a14ec44ae03bf5d11734e09e3b5c759', 'chain_index': 4861, 'kernel_type': None, 'noise_zone': None, 'conservation_status': None}, {'id': 'SYN-DEC-0b17dc99', 'alert_id': 'SYN-CA-D517-001', 'timestamp': '2025-06-01T23:33:16.200000+00:00', 'situation_type': 'credential_access', 'action_taken': 'escalate', 'factors': [], 'confidence': 0.855, 'outcome': 'incorrect', 'analyst_confirmed': ",
+        "/api/audit/decisions?format=csv": "id,alert_id,timestamp,situation_type,action_taken,factors,confidence,outcome,hash\r\nSYN-DEC-fb9ead4c,SYN-CI-D518-001,2025-06-01T23:59:55.870000+00:00,cloud_infrastructure,monitor,,0.855,correct,e61617f39692e000f0d9911f90f2fb003a14ec44ae03bf5d11734e09e3b5c759\r\nSYN-DEC-0b17dc99,SYN-CA-D517-001,2025-06-01T23:33:16.200000+00:00,credential_access,escalate,,0.855,incorrect,ebacbe643d0908158ccbc3d1226cece0a5eb3af92fd21867e196dd4e064d3339\r\nSYN-DEC-1a452245,SYN-LM-D516-001,2025-06-01T23:06:36.530000+00:00",
+        "/api/audit/verify": "{'chain_length': 4862, 'verified': True, 'first_record': '2025-03-04T00:00:00+00:00', 'last_record': '2025-06-01T23:59:55.870000+00:00', 'epoch': 1, 'archived_epochs': 0}",
+        "/api/soc/evidence-room": "{'generated_at': '2026-09-17T22:22:21Z', 'audit_trail': {'entries': [{'decision_id': 'SYN-DEC-fb9e', 'decision_id_full': 'SYN-DEC-fb9ead4c', 'action': 'monitor', 'category': 'cloud_infrastructure', 'confidence': 0.855, 'outcome': 'correct', 'timestamp': '2025-06-01T23:59:55.870000+00:00', 'hash': 'e61617f39692'}, {'decision_id': 'SYN-DEC-0b17', 'decision_id_full': 'SYN-DEC-0b17dc99', 'action': 'escalate', 'category': 'credential_access', 'confidence': 0.855, 'outcome': 'incorrect', 'timestamp': '2025-06-01T23:33:16.200000+00:00', 'hash': 'ebacbe643d09'}, {'decision_id': 'SYN-DEC-1a45', 'decision_id_full': 'SYN-DEC-1a452245', 'action': 'investigate', 'category': 'lateral_movement', 'confidenc"
+      },
+      "api_status": "PASS",
+      "code_fix_needed": false,
+      "empty_state_behavior": "Audit decisions, verification, evidence room, and CSV export all return non-empty responses.",
+      "endpoint_corrections": "None.",
+      "endpoint_results": {
+        "/api/audit/decisions": {
+          "body_preview": "{'decisions': [{'id': 'SYN-DEC-fb9ead4c', 'alert_id': 'SYN-CI-D518-001', 'timestamp': '2025-06-01T23:59:55.870000+00:00', 'situation_type': 'cloud_infrastructure', 'action_taken': 'monitor', 'factors': [], 'confidence': 0.855, 'outcome': 'correct', 'analyst_confirmed': False, 'hash': 'e61617f39692e000f0d9911f90f2fb003a14ec44ae03bf5d11734e09e3b5c759', 'chain_index': 4861, 'kernel_type': None, 'noise_zone': None, 'conservation_status': None}, {'id': 'SYN-DEC-0b17dc99', 'alert_id': 'SYN-CA-D517-001', 'timestamp': '2025-06-01T23:33:16.200000+00:00', 'situation_type': 'credential_access', 'action_taken': 'escalate', 'factors': [], 'confidence': 0.855, 'outcome': 'incorrect', 'analyst_confirmed': ",
+          "content_type": "application/json",
+          "keys": [
+            "decisions",
+            "total"
+          ],
+          "non_empty": true,
+          "status": 200
+        },
+        "/api/audit/decisions?format=csv": {
+          "body_preview": "id,alert_id,timestamp,situation_type,action_taken,factors,confidence,outcome,hash\r\nSYN-DEC-fb9ead4c,SYN-CI-D518-001,2025-06-01T23:59:55.870000+00:00,cloud_infrastructure,monitor,,0.855,correct,e61617f39692e000f0d9911f90f2fb003a14ec44ae03bf5d11734e09e3b5c759\r\nSYN-DEC-0b17dc99,SYN-CA-D517-001,2025-06-01T23:33:16.200000+00:00,credential_access,escalate,,0.855,incorrect,ebacbe643d0908158ccbc3d1226cece0a5eb3af92fd21867e196dd4e064d3339\r\nSYN-DEC-1a452245,SYN-LM-D516-001,2025-06-01T23:06:36.530000+00:00",
+          "content_type": "text/csv; charset=utf-8",
+          "keys": "str",
+          "non_empty": true,
+          "status": 200
+        },
+        "/api/audit/verify": {
+          "body_preview": "{'chain_length': 4862, 'verified': True, 'first_record': '2025-03-04T00:00:00+00:00', 'last_record': '2025-06-01T23:59:55.870000+00:00', 'epoch': 1, 'archived_epochs': 0}",
+          "content_type": "application/json",
+          "keys": [
+            "archived_epochs",
+            "chain_length",
+            "epoch",
+            "first_record",
+            "last_record",
+            "verified"
+          ],
+          "non_empty": true,
+          "status": 200
+        },
+        "/api/soc/evidence-room": {
+          "body_preview": "{'generated_at': '2026-09-17T22:22:21Z', 'audit_trail': {'entries': [{'decision_id': 'SYN-DEC-fb9e', 'decision_id_full': 'SYN-DEC-fb9ead4c', 'action': 'monitor', 'category': 'cloud_infrastructure', 'confidence': 0.855, 'outcome': 'correct', 'timestamp': '2025-06-01T23:59:55.870000+00:00', 'hash': 'e61617f39692'}, {'decision_id': 'SYN-DEC-0b17', 'decision_id_full': 'SYN-DEC-0b17dc99', 'action': 'escalate', 'category': 'credential_access', 'confidence': 0.855, 'outcome': 'incorrect', 'timestamp': '2025-06-01T23:33:16.200000+00:00', 'hash': 'ebacbe643d09'}, {'decision_id': 'SYN-DEC-1a45', 'decision_id_full': 'SYN-DEC-1a452245', 'action': 'investigate', 'category': 'lateral_movement', 'confidenc",
+          "content_type": "application/json",
+          "keys": [
+            "audit_trail",
+            "conservation",
+            "generated_at",
+            "hash_chain",
+            "override_analysis"
+          ],
+          "non_empty": true,
+          "status": 200
+        }
+      },
+      "endpoints_tested": [
+        "/api/audit/decisions",
+        "/api/audit/verify",
+        "/api/soc/evidence-room",
+        "/api/audit/decisions?format=csv"
+      ],
+      "id": 2,
+      "name": "Tamper-evident evidence ledger",
+      "notes": "Ledger data is live and suitable for recording.",
+      "planting_needed": false,
+      "priority": 1,
+      "ui_status": "NOT TESTED"
+    },
+    {
+      "actual_values": {
+        "/api/discoveries": "{'domain': 'soc', 'source_domains': ['soc'], 'generated_at': '2026-09-17T22:22:21.361232Z', 'as_of_epoch_ms': 1781870400000, 'cache': {'hit': False, 'stale': False, 'ttl_seconds': 60}, 'discoveries': [], 'total': 0, 'errors': []}",
+        "/api/soc/graph/prebuilt-queries": "{'queries': [{'key': 'top_risk_users', 'name': 'Top Risk Users', 'description': 'Users with highest risk scores'}, {'key': 'critical_assets', 'name': 'Critical Assets', 'description': 'Assets marked as critical or high criticality'}, {'key': 'threat_intel_matches', 'name': 'Threat Intel Matches', 'description': 'Alerts with linked threat intelligence indicators'}, {'key': 'recent_decisions', 'name': 'Recent Decisions', 'description': 'Latest triage decisions with outcomes'}, {'key': 'attack_patterns', 'name': 'Attack Pattern Library', 'description': 'Known attack patterns with false positive rates'}], 'count': 5}"
+      },
+      "api_status": "PASS",
+      "code_fix_needed": false,
+      "empty_state_behavior": "The prebuilt-query catalog is non-empty, but the discoveries list is empty.",
+      "endpoint_corrections": "Requested /api/soc/graph/prebuilt corrected to /api/soc/graph/prebuilt-queries (GET catalog; execution is POST /api/soc/graph/prebuilt/{query_name}).",
+      "endpoint_results": {
+        "/api/discoveries": {
+          "body_preview": "{'domain': 'soc', 'source_domains': ['soc'], 'generated_at': '2026-09-17T22:22:21.361232Z', 'as_of_epoch_ms': 1781870400000, 'cache': {'hit': False, 'stale': False, 'ttl_seconds': 60}, 'discoveries': [], 'total': 0, 'errors': []}",
+          "content_type": "application/json",
+          "keys": [
+            "as_of_epoch_ms",
+            "cache",
+            "discoveries",
+            "domain",
+            "errors",
+            "generated_at",
+            "source_domains",
+            "total"
+          ],
+          "non_empty": true,
+          "status": 200
+        },
+        "/api/soc/graph/prebuilt-queries": {
+          "body_preview": "{'queries': [{'key': 'top_risk_users', 'name': 'Top Risk Users', 'description': 'Users with highest risk scores'}, {'key': 'critical_assets', 'name': 'Critical Assets', 'description': 'Assets marked as critical or high criticality'}, {'key': 'threat_intel_matches', 'name': 'Threat Intel Matches', 'description': 'Alerts with linked threat intelligence indicators'}, {'key': 'recent_decisions', 'name': 'Recent Decisions', 'description': 'Latest triage decisions with outcomes'}, {'key': 'attack_patterns', 'name': 'Attack Pattern Library', 'description': 'Known attack patterns with false positive rates'}], 'count': 5}",
+          "content_type": "application/json",
+          "keys": [
+            "count",
+            "queries"
+          ],
+          "non_empty": true,
+          "status": 200
+        }
+      },
+      "endpoints_tested": [
+        "/api/discoveries",
+        "/api/soc/graph/prebuilt-queries"
+      ],
+      "id": 3,
+      "name": "Cross-graph / multi-source query",
+      "notes": "The requested singular /prebuilt path is not a live GET route; OpenAPI confirms the corrected catalog path. Discovery data needs planting.",
+      "planting_needed": true,
+      "priority": 1,
+      "ui_status": "NOT TESTED"
+    },
+    {
+      "actual_values": {
+        "/api/soc/learning-health": "{'status': 'RED', 'signal': 0.0, 'theta_min': 1000000000.0, 'conservation': {'passed': False, 'status': 'RED', 'headroom': 0.0}, 'components': {'alpha': 0.0, 'q': 0.0, 'V': 0.0, 'n': 0, 'alpha_source': 'soc_verified_category_coverage', 'categories_total': 6, 'categories_with_data': 0, 'verified_decisions': 0, 'correct_verified_decisions': 0, 'override_rate': 0.0, 'complacency_advisory': False}, 'baseline': 0.0, 'baseline_std': 0.0, 'red_days': 0, 'auto_pause_active': False, 'interpretation': 'Conservation violation (signal=0.0000 < theta_min=1000000000.0000) -- 0 RED day(s) accumulated', 'pre_activation': False, 'learning_enabled': True, 'health_source': 'learning_health', 'status_reason': N"
+      },
+      "api_status": "PASS",
+      "code_fix_needed": false,
+      "empty_state_behavior": "Learning-health response is non-empty and contains the current gate/health values.",
+      "endpoint_corrections": "None.",
+      "endpoint_results": {
+        "/api/soc/learning-health": {
+          "body_preview": "{'status': 'RED', 'signal': 0.0, 'theta_min': 1000000000.0, 'conservation': {'passed': False, 'status': 'RED', 'headroom': 0.0}, 'components': {'alpha': 0.0, 'q': 0.0, 'V': 0.0, 'n': 0, 'alpha_source': 'soc_verified_category_coverage', 'categories_total': 6, 'categories_with_data': 0, 'verified_decisions': 0, 'correct_verified_decisions': 0, 'override_rate': 0.0, 'complacency_advisory': False}, 'baseline': 0.0, 'baseline_std': 0.0, 'red_days': 0, 'auto_pause_active': False, 'interpretation': 'Conservation violation (signal=0.0000 < theta_min=1000000000.0000) -- 0 RED day(s) accumulated', 'pre_activation': False, 'learning_enabled': True, 'health_source': 'learning_health', 'status_reason': N",
+          "content_type": "application/json",
+          "keys": [
+            "auto_pause_active",
+            "baseline",
+            "baseline_std",
+            "complacency_advisory",
+            "components",
+            "conservation",
+            "health_source",
+            "interpretation",
+            "learning_enabled",
+            "overallSafe",
+            "pre_activation",
+            "provider_observed_at",
+            "provider_source",
+            "red_days",
+            "signal",
+            "status",
+            "status_reason",
+            "theta_min"
+          ],
+          "non_empty": true,
+          "status": 200
+        }
+      },
+      "endpoints_tested": [
+        "/api/soc/learning-health"
+      ],
+      "id": 4,
+      "name": "Gate health band",
+      "notes": "Live gate-health story.",
+      "planting_needed": true,
+      "priority": 1,
+      "ui_status": "NOT TESTED"
+    },
+    {
+      "actual_values": {
+        "/api/soc/checkpoint/list": "{'checkpoints': []}"
+      },
+      "api_status": "PASS",
+      "code_fix_needed": false,
+      "empty_state_behavior": "Checkpoint list response is non-empty; rollback itself is a POST mutation and was not executed.",
+      "endpoint_corrections": "Requested /api/soc/checkpoints corrected to /api/soc/checkpoint/list.",
+      "endpoint_results": {
+        "/api/soc/checkpoint/list": {
+          "body_preview": "{'checkpoints': []}",
+          "content_type": "application/json",
+          "keys": [
+            "checkpoints"
+          ],
+          "non_empty": true,
+          "status": 200
+        }
+      },
+      "endpoints_tested": [
+        "/api/soc/checkpoint/list"
+      ],
+      "id": 5,
+      "name": "Centroid rollback",
+      "notes": "Rollback inventory is live; no destructive/mutating endpoint was called.",
+      "planting_needed": true,
+      "priority": 1,
+      "ui_status": "NOT TESTED"
+    },
+    {
+      "actual_values": {
+        "/api/metrics/switching-cost": "{'detail': 'Not Found'}"
+      },
+      "api_status": "404 (endpoint missing)",
+      "code_fix_needed": true,
+      "empty_state_behavior": "The requested panel cannot receive data from this route.",
+      "endpoint_corrections": "No correction found in OpenAPI; no live switching-cost route is registered.",
+      "endpoint_results": {
+        "/api/metrics/switching-cost": {
+          "body_preview": "{'detail': 'Not Found'}",
+          "content_type": "application/json",
+          "keys": [
+            "detail"
+          ],
+          "non_empty": true,
+          "status": 404
+        }
+      },
+      "endpoints_tested": [
+        "/api/metrics/switching-cost"
+      ],
+      "id": 6,
+      "name": "Switching cost / moat",
+      "notes": "Needs a route/data source before recording this beat.",
+      "planting_needed": true,
+      "priority": 1,
+      "ui_status": "NOT TESTED"
+    },
+    {
+      "actual_values": {
+        "/api/metrics/compounding": "{'period': {'start': '2026-08-20T15:22:21.502419', 'end': '2026-09-17T15:22:21.502419'}, 'headline': {'nodes_start': 23, 'nodes_end': 127, 'auto_close_start': 68.0, 'auto_close_end': 89.0, 'mttr_start': 12.4, 'mttr_end': 3.1, 'fp_investigations_start': 4200, 'fp_investigations_end': 980}, 'weekly_trend': [{'week': 1, 'auto_close_rate': 0.0, 'mttr_minutes': 0.0, 'fp_rate': 0.0, 'pattern_count': 0}, {'week': 2, 'auto_close_rate': 0.0, 'mttr_minutes': 0.0, 'fp_rate': 0.0, 'pattern_count': 0}, {'week': 3, 'auto_close_rate': 0.0, 'mttr_minutes': 0.0, 'fp_rate': 0.0, 'pattern_count': 0}, {'week': 4, 'auto_close_rate': 76.3, 'mttr_minutes': 0.0, 'fp_rate': 0.0, 'pattern_count': 4862}], 'evolution_e",
+        "/api/soc/iks-trend": "{'trend': [{'decisions': 4862, 'iks_v2': 94.2, 'timestamp': '2026-09-17T22:22:21.707230Z'}], 'current': {'iks_v2': 94.2, 'components': {'graph_richness': 100.0, 'decision_maturity': 100.0, 'trust_coverage': 100.0, 'factor_quality': 76.6}, 'interpretation': 'Expert -- comprehensive institutional judgment established'}}",
+        "/api/soc/learning-state": "{'frozen': False, 'decision_count': 4862, 'verified_decisions': 4862, 'last_verified_at': None, 'checkpoint_id': None, 'iks_v2': 94.2, 'iks_components': {'graph_richness': 100.0, 'decision_maturity': 100.0, 'trust_coverage': 100.0, 'factor_quality': 76.6}, 'iks_interpretation': 'Expert -- comprehensive institutional judgment established', 'total_decisions': 4862, 'categories_active': 6, 'bootstrap_category_weights': {'credential_access': 0.3, 'lateral_movement': 0.2, 'data_exfiltration': 0.15, 'insider_threat': 0.15, 'cloud_infrastructure': 0.1, 'malware_execution': 0.1}}"
+      },
+      "api_status": "PASS",
+      "code_fix_needed": false,
+      "empty_state_behavior": "All three compounding/learning responses are non-empty.",
+      "endpoint_corrections": "Requested /api/soc/learning-state is live; no correction required.",
+      "endpoint_results": {
+        "/api/metrics/compounding": {
+          "body_preview": "{'period': {'start': '2026-08-20T15:22:21.502419', 'end': '2026-09-17T15:22:21.502419'}, 'headline': {'nodes_start': 23, 'nodes_end': 127, 'auto_close_start': 68.0, 'auto_close_end': 89.0, 'mttr_start': 12.4, 'mttr_end': 3.1, 'fp_investigations_start': 4200, 'fp_investigations_end': 980}, 'weekly_trend': [{'week': 1, 'auto_close_rate': 0.0, 'mttr_minutes': 0.0, 'fp_rate': 0.0, 'pattern_count': 0}, {'week': 2, 'auto_close_rate': 0.0, 'mttr_minutes': 0.0, 'fp_rate': 0.0, 'pattern_count': 0}, {'week': 3, 'auto_close_rate': 0.0, 'mttr_minutes': 0.0, 'fp_rate': 0.0, 'pattern_count': 0}, {'week': 4, 'auto_close_rate': 76.3, 'mttr_minutes': 0.0, 'fp_rate': 0.0, 'pattern_count': 4862}], 'evolution_e",
+          "content_type": "application/json",
+          "keys": [
+            "business_impact",
+            "evolution_events",
+            "headline",
+            "historical_fallback",
+            "period",
+            "weekly_trend"
+          ],
+          "non_empty": true,
+          "status": 200
+        },
+        "/api/soc/iks-trend": {
+          "body_preview": "{'trend': [{'decisions': 4862, 'iks_v2': 94.2, 'timestamp': '2026-09-17T22:22:21.707230Z'}], 'current': {'iks_v2': 94.2, 'components': {'graph_richness': 100.0, 'decision_maturity': 100.0, 'trust_coverage': 100.0, 'factor_quality': 76.6}, 'interpretation': 'Expert -- comprehensive institutional judgment established'}}",
+          "content_type": "application/json",
+          "keys": [
+            "current",
+            "trend"
+          ],
+          "non_empty": true,
+          "status": 200
+        },
+        "/api/soc/learning-state": {
+          "body_preview": "{'frozen': False, 'decision_count': 4862, 'verified_decisions': 4862, 'last_verified_at': None, 'checkpoint_id': None, 'iks_v2': 94.2, 'iks_components': {'graph_richness': 100.0, 'decision_maturity': 100.0, 'trust_coverage': 100.0, 'factor_quality': 76.6}, 'iks_interpretation': 'Expert -- comprehensive institutional judgment established', 'total_decisions': 4862, 'categories_active': 6, 'bootstrap_category_weights': {'credential_access': 0.3, 'lateral_movement': 0.2, 'data_exfiltration': 0.15, 'insider_threat': 0.15, 'cloud_infrastructure': 0.1, 'malware_execution': 0.1}}",
+          "content_type": "application/json",
+          "keys": [
+            "bootstrap_category_weights",
+            "categories_active",
+            "checkpoint_id",
+            "decision_count",
+            "frozen",
+            "iks_components",
+            "iks_interpretation",
+            "iks_v2",
+            "last_verified_at",
+            "total_decisions",
+            "verified_decisions"
+          ],
+          "non_empty": true,
+          "status": 200
+        }
+      },
+      "endpoints_tested": [
+        "/api/metrics/compounding",
+        "/api/soc/learning-state",
+        "/api/soc/iks-trend"
+      ],
+      "id": 7,
+      "name": "Compounding curve",
+      "notes": "Live values are available for v4 narration.",
+      "planting_needed": false,
+      "priority": 1,
+      "ui_status": "NOT TESTED"
+    },
+    {
+      "actual_values": {
+        "/api/learning/frozen-twin": "{'detail': 'SOC Frozen Twin has not been initialized'}"
+      },
+      "api_status": "PARTIAL",
+      "code_fix_needed": false,
+      "empty_state_behavior": "Corrected frozen-twin endpoint returns a non-empty response.",
+      "endpoint_corrections": "Requested /api/metrics/frozen-twin corrected to /api/learning/frozen-twin.",
+      "endpoint_results": {
+        "/api/learning/frozen-twin": {
+          "body_preview": "{'detail': 'SOC Frozen Twin has not been initialized'}",
+          "content_type": "application/json",
+          "keys": [
+            "detail"
+          ],
+          "non_empty": true,
+          "status": 404
+        }
+      },
+      "endpoints_tested": [
+        "/api/learning/frozen-twin"
+      ],
+      "id": 8,
+      "name": "Frozen-twin",
+      "notes": "The route exists, but the live service reports that Frozen Twin has not been initialized; this is setup/data missing, not a missing route.",
+      "planting_needed": true,
+      "priority": 1,
+      "ui_status": "NOT TESTED"
+    },
+    {
+      "actual_values": {
+        "/api/evolution/recent-events": "{'events': [{'id': None, 'event_type': 'shadow_started', 'variant_id': 'dataops-off-peak-scheduling-v1', 'artifact_type': None, 'triggered_by': None, 'description': '', 'before_state': {}, 'after_state': {}, 'graph_context': {}, 'metadata': {'artifact_type': 'scheduling_rule', 'description': 'Schedule resource-intensive quality checks during off-peak windows.', 'expected_impact': 'Reduce resource contention while preserving data quality checks.', 'id': 'V-DO-SCHED-001', 'impact': 'quality_scheduling', 'magnitude': 0.17, 'match': {'categories': ['quality_anomaly', 'transform_drift'], 'min_downstream_urgency': 0.4}, 'recommendation': 'Move data quality checks to off-peak scheduling windows whe"
+      },
+      "api_status": "PASS",
+      "code_fix_needed": false,
+      "empty_state_behavior": "Recent evolution events return non-empty data.",
+      "endpoint_corrections": "None.",
+      "endpoint_results": {
+        "/api/evolution/recent-events": {
+          "body_preview": "{'events': [{'id': None, 'event_type': 'shadow_started', 'variant_id': 'dataops-off-peak-scheduling-v1', 'artifact_type': None, 'triggered_by': None, 'description': '', 'before_state': {}, 'after_state': {}, 'graph_context': {}, 'metadata': {'artifact_type': 'scheduling_rule', 'description': 'Schedule resource-intensive quality checks during off-peak windows.', 'expected_impact': 'Reduce resource contention while preserving data quality checks.', 'id': 'V-DO-SCHED-001', 'impact': 'quality_scheduling', 'magnitude': 0.17, 'match': {'categories': ['quality_anomaly', 'transform_drift'], 'min_downstream_urgency': 0.4}, 'recommendation': 'Move data quality checks to off-peak scheduling windows whe",
+          "content_type": "application/json",
+          "keys": [
+            "count",
+            "events",
+            "limit"
+          ],
+          "non_empty": true,
+          "status": 200
+        }
+      },
+      "endpoints_tested": [
+        "/api/evolution/recent-events"
+      ],
+      "id": 9,
+      "name": "RSI rejection moment",
+      "notes": "Live evolution event stream.",
+      "planting_needed": false,
+      "priority": 1,
+      "ui_status": "NOT TESTED"
+    }
+  ],
+  "environment": {
+    "backend_port": 8001,
+    "frontend_port": 5173,
+    "health": {
+      "body_preview": "{'status': 'healthy', 'components': {'graph': {'healthy': True, 'status': 'healthy', 'source': 'posterior_store'}, 'posterior_store': {'healthy': True}, 'entity_cache': {'enabled': False, 'adapter_enabled': True, 'hits': 0, 'misses': 0, 'loads': 0, 'invalidations': 0, 'evictions': 0, 'size': 0, 'max_size': 4096}}}",
+      "content_type": "application/json",
+      "keys": [
+        "components",
+        "status"
+      ],
+      "non_empty": true,
+      "status": 200
+    },
+    "openapi_accessible": true,
+    "playwright_available": false,
+    "preseed_confirmed": true,
+    "requested_backend_port": 8000,
+    "requested_base": "http://127.0.0.1:8000",
+    "selected_base": "http://127.0.0.1:8001"
+  },
+  "summary": {
+    "api_fail": 1,
+    "api_missing": 1,
+    "api_pass": 7,
+    "stories_live": [
+      "Tamper-evident evidence ledger",
+      "Compounding curve",
+      "RSI rejection moment"
+    ],
+    "stories_near": [],
+    "stories_need_code_fix": [
+      "Switching cost / moat"
+    ],
+    "stories_need_planting": [
+      "Policy-conflict override",
+      "Cross-graph / multi-source query",
+      "Gate health band",
+      "Centroid rollback",
+      "Switching cost / moat",
+      "Frozen-twin"
+    ],
+    "total": 9,
+    "ui_fail": 0,
+    "ui_not_tested": 9,
+    "ui_pass": 0
+  }
+}

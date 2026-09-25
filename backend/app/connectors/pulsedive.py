@@ -274,6 +274,32 @@ class PulsediveConnector(UCLConnector):
         live_succeeded = 0
         source = "hardcoded_fallback"
 
+        async def existing_observation(value: str) -> Dict[str, Any] | None:
+            """Return an existing graph indicator without replacing it."""
+            try:
+                rows = await graph_client.run_query(
+                    f"MATCH (ti:ThreatIntel {{value: {_S(value)}}}) RETURN ti"
+                )
+                if rows:
+                    observed = rows[0].get("ti", rows[0])
+                    if isinstance(observed, dict):
+                        return dict(observed)
+            except Exception as exc:
+                logger.warning("[PULSEDIVE] Existing observation lookup failed for %s: %s", value, exc)
+            return None
+
+        async def fallback_entry(ioc: Dict[str, Any]) -> Dict[str, Any] | None:
+            value = str(ioc["value"])
+            existing = await existing_observation(value)
+            if existing is not None:
+                existing.setdefault("value", value)
+                existing["stale_since"] = datetime.now(timezone.utc).isoformat()
+                existing["stale"] = True
+                existing["_preserve_existing"] = True
+                return existing
+            fallback = HARDCODED_FALLBACK.get(value)
+            return dict(fallback) if fallback else None
+
         # ---------------------------------------------------------------
         # Step 1 — Live API or hardcoded fallback
         # ---------------------------------------------------------------
@@ -290,9 +316,9 @@ class PulsediveConnector(UCLConnector):
                         print(f"[PULSEDIVE] Live data fetched for {ioc['value']}")
                     else:
                         # Per-IOC fallback when Pulsedive errors or times out
-                        fallback = HARDCODED_FALLBACK.get(ioc["value"])
+                        fallback = await fallback_entry(ioc)
                         if fallback:
-                            enriched.append(dict(fallback))
+                            enriched.append(fallback)
                             print(f"[PULSEDIVE] Fallback used for {ioc['value']}")
                     # Rate limit: 0.5 s between requests
                     await asyncio.sleep(0.5)
@@ -302,7 +328,10 @@ class PulsediveConnector(UCLConnector):
         # Full fallback when no key or every call failed
         if not enriched:
             print("[PULSEDIVE] No live data -- using full hardcoded fallback set")
-            enriched = [dict(v) for v in HARDCODED_FALLBACK.values()]
+            for ioc in DEMO_IOCS:
+                fallback = await fallback_entry(ioc)
+                if fallback:
+                    enriched.append(fallback)
             source = "hardcoded_fallback"
 
         print(
@@ -335,6 +364,13 @@ class PulsediveConnector(UCLConnector):
                 "now_epoch":    _now_epoch,
             }
             try:
+                if ioc.get("_preserve_existing"):
+                    await graph_client.run_query(
+                        f"MATCH (ti:ThreatIntel {{value: {_S(_params['value'])}}})"
+                        f" SET ti.stale = true, ti.stale_since = {_S(ioc['stale_since'])}"
+                    )
+                    indicators_ingested += 1
+                    continue
                 # Step A — update existing node
                 _match_result = await graph_client.run_query(
                     f"MATCH (ti:ThreatIntel {{value: {_S(_params['value'])}}}) "
@@ -400,6 +436,8 @@ class PulsediveConnector(UCLConnector):
                 "type":     ioc.get("type"),
                 "severity": ioc.get("severity"),
                 "source":   ioc.get("source", source),
+                "stale":    bool(ioc.get("stale", False)),
+                "stale_since": ioc.get("stale_since"),
                 "context":  ioc.get("context", ""),
             }
             for ioc in enriched

@@ -1,0 +1,27 @@
+{
+  "fixture_id": "PL-SOC-5-CHECKPOINT-ROLLBACK-001",
+  "scenario": "SOC-10",
+  "sequence": [
+    {
+      "step": 1,
+      "operation": "create_checkpoint",
+      "endpoint": "/api/soc/checkpoint/create",
+      "body": {"reason": "SOC-10 planted rollback proof"}
+    },
+    {
+      "step": 2,
+      "operation": "change_state",
+      "endpoint": "/api/eval/simulate-failure",
+      "body": {}
+    },
+    {
+      "step": 3,
+      "operation": "rollback",
+      "endpoint": "/api/soc/checkpoint/rollback",
+      "body_from_step_1": "checkpoint_id",
+      "verify": "state_restored"
+    }
+  ],
+  "planted": true,
+  "sample": true
+}

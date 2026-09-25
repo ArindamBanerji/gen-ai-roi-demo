@@ -19,7 +19,9 @@ def _triage_source() -> str:
 
 def _centroid_query_source() -> str:
     source = _triage_source()
-    start = source.index("if wu and wu.centroid_update is not None:")
+    marker = 'if _cu is not None and l5_persistence_status["l5_centroid_persisted"]:'
+    first = source.index(marker)
+    start = source.index(marker, first + len(marker))
     end = source.index("centroid_update_payload = {", start)
     return source[start:end]
 

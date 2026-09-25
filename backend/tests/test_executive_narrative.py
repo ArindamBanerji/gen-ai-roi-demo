@@ -1,3 +1,4 @@
+import pytest
 import sys
 import os
 
@@ -238,6 +239,16 @@ from app.services.executive_narrative import (
 )
 
 
+def _seed_narrative_graph(age_graph, verified, correct, campaigns, alerts):
+    for index in range(verified):
+        age_graph.decision(correct=index < correct)
+    for index in range(campaigns):
+        age_graph.node("Campaign", domain="soc", campaign_id=f"CAMP-{index}", confidence=0.8, alert_count=2)
+    for index in range(alerts):
+        age_graph.alert(alert_id=f"narrative-{index}")
+    return age_graph.client
+
+
 def _make_narrative_graph(verified: int, correct: int, campaigns: int, alerts: int):
     """Return a fake async graph service for build_executive_narrative_async."""
 
@@ -306,43 +317,15 @@ def test_low_raw_iks_uses_zero_to_one_hundred_scale():
     assert "Substantial institutional knowledge" not in learning["content"]
 
 
-def test_category_accuracy_uses_verified_outcomes_not_pending_denominator():
+@pytest.mark.age
+def test_category_accuracy_uses_verified_outcomes_not_pending_denominator(age_graph):
     from unittest.mock import AsyncMock, patch
 
-    class FakeAGE:
-        async def run_query(self, query, params=None):
-            q = query.strip()
-            if "MATCH (d:Decision)" in q and "RETURN count(d) AS cnt" in q:
-                return [{"cnt": 100}]
-            if "d.correct = true" in q and "category" not in q:
-                return [{"cnt": 90}]
-            if "MATCH (c:Campaign) RETURN count(c) AS cnt" in q:
-                return [{"cnt": 0}]
-            if "MATCH (a:Alert)" in q:
-                return [{"cnt": 0}]
-            if "RETURN count(d) AS total" in q:
-                return [{"total": 100}]
-            if "d.category IS NOT NULL" in q and "d.outcome IS NOT NULL" in q:
-                return [
-                    {"category": "credential_access", "total": 30, "correct": 29},
-                    {"category": "lateral_movement", "total": 25, "correct": 22},
-                    {"category": "data_exfiltration", "total": 25, "correct": 18},
-                ]
-            if "WHERE d.category IS NOT NULL" in q:
-                return [
-                    {"category": "credential_access", "total": 100, "correct": 10},
-                ]
-            if "RETURN d.category AS category, count(d) AS n" in q:
-                return []
-            if "d.confidence >= 0.70" in q:
-                return [{"high_conf": 0}]
-            if "d.outcome IS NOT NULL" in q and "avg(" in q:
-                return []
-            if "d.correct = true" in q and "category" in q:
-                return []
-            if "c.campaign_id AS id" in q:
-                return []
-            return []
+    for category, total, correct in [("credential_access", 30, 29), ("lateral_movement", 25, 22), ("data_exfiltration", 25, 18)]:
+        for index in range(total):
+            age_graph.decision(category=category, correct=index < correct)
+    for index in range(70):
+        age_graph.decision(category="credential_access")
 
     health = {
         "status": "GREEN",
@@ -355,7 +338,7 @@ def test_category_accuracy_uses_verified_outcomes_not_pending_denominator():
                 "app.services.learning_health.LearningHealthMonitor.evaluate",
                 new=AsyncMock(return_value=health),
             ):
-                result = asyncio.run(build_executive_narrative_async(FakeAGE()))
+                result = asyncio.run(build_executive_narrative_async(age_graph.client))
 
     recommendations = result["sections"][2]["items"]
     credential_items = [
@@ -367,18 +350,20 @@ def test_category_accuracy_uses_verified_outcomes_not_pending_denominator():
     assert all(item["type"] != "declining" for item in credential_items)
 
 
-def test_narrative_reads_verified_decisions():
+@pytest.mark.age
+def test_narrative_reads_verified_decisions(age_graph):
     """mock AGE returning 50 verified decisions -> metrics.decisions_verified == 50."""
-    fake = _make_narrative_graph(verified=50, correct=40, campaigns=0, alerts=100)
+    fake = _seed_narrative_graph(age_graph, verified=50, correct=40, campaigns=0, alerts=100)
     result = asyncio.run(build_executive_narrative_async(fake))
     assert result["metrics"]["decisions_verified"] == 50, (
         f"Expected decisions_verified=50, got {result['metrics']['decisions_verified']}"
     )
 
 
-def test_narrative_campaigns():
+@pytest.mark.age
+def test_narrative_campaigns(age_graph):
     """mock 3 campaigns -> metrics.campaigns_detected == 3."""
-    fake = _make_narrative_graph(verified=10, correct=8, campaigns=3, alerts=50)
+    fake = _seed_narrative_graph(age_graph, verified=10, correct=8, campaigns=3, alerts=50)
     result = asyncio.run(build_executive_narrative_async(fake))
     assert result["metrics"]["campaigns_detected"] == 3, (
         f"Expected campaigns_detected=3, got {result['metrics']['campaigns_detected']}"

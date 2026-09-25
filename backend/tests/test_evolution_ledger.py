@@ -18,10 +18,15 @@ def _run(coro):
     return asyncio.run(coro)
 
 
-def _client(rows=None):
-    mock = AsyncMock()
-    mock.run_query = AsyncMock(return_value=rows or [])
-    return mock
+def _client(age_graph=None, rows=None):
+    if age_graph is None:
+        # Validation-only tests must reject the input before any graph call.
+        return AsyncMock()
+    for index, row in enumerate(rows or []):
+        age_graph.node("EvolutionEvent", **{"id": f"event-{index}", "timestamp_epoch": index + 1, **row})
+    client = age_graph.reopen_client()
+    client.run_query = AsyncMock(wraps=client.run_query)
+    return client
 
 
 def _last_query(mock):
@@ -46,8 +51,9 @@ def setup_function():
     ledger.reset_evolution_ledger()
 
 
-def test_record_evolution_event_writes_standalone_create_query():
-    mock = _client()
+@pytest.mark.age
+def test_record_evolution_event_writes_standalone_create_query(age_graph):
+    mock = _client(age_graph)
     event = _run(ledger.record_evolution_event(
         mock,
         ledger.VARIANT_CREATED,
@@ -65,10 +71,15 @@ def test_record_evolution_event_writes_standalone_create_query():
     assert "variant_id" in query
     assert "artifact_type" in query
     assert event["graph_context"] == {"campaign_id": "camp-1"}
+    restored = _run(ledger.get_variant_history(age_graph.reopen_client(), "variant_a"))
+    assert len(restored) == 1
+    assert restored[0]["after_state"] == {"threshold": 0.8}
+    assert restored[0]["graph_context"] == event["graph_context"]
 
 
-def test_query_pattern_has_no_forbidden_legacy_constructs():
-    mock = _client()
+@pytest.mark.age
+def test_query_pattern_has_no_forbidden_legacy_constructs(age_graph):
+    mock = _client(age_graph)
     _run(ledger.record_evolution_event(
         mock,
         ledger.VARIANT_CREATED,
@@ -85,8 +96,9 @@ def test_query_pattern_has_no_forbidden_legacy_constructs():
 
 
 @pytest.mark.parametrize("event_type", sorted(ledger.VALID_EVENT_TYPES))
-def test_all_event_types_accepted(event_type):
-    mock = _client()
+@pytest.mark.age
+def test_all_event_types_accepted(event_type, age_graph):
+    mock = _client(age_graph)
     event = _run(ledger.record_evolution_event(
         mock,
         event_type,
@@ -110,8 +122,9 @@ def test_invalid_event_type_rejected():
 
 
 @pytest.mark.parametrize("artifact_type", sorted(ledger.VALID_ARTIFACT_TYPES))
-def test_all_artifact_types_accepted(artifact_type):
-    mock = _client()
+@pytest.mark.age
+def test_all_artifact_types_accepted(artifact_type, age_graph):
+    mock = _client(age_graph)
     event = _run(ledger.record_evolution_event(
         mock,
         ledger.VARIANT_CREATED,
@@ -133,9 +146,10 @@ def test_invalid_artifact_type_rejected():
         ))
 
 
-def test_variant_created_works_without_triggered_by():
+@pytest.mark.age
+def test_variant_created_works_without_triggered_by(age_graph):
     event = _run(ledger.record_evolution_event(
-        _client(),
+        _client(age_graph),
         ledger.VARIANT_CREATED,
         "variant_a",
         ledger.ARTIFACT_PROMPT_MODULE,
@@ -144,9 +158,10 @@ def test_variant_created_works_without_triggered_by():
     assert event["triggered_by"] is None
 
 
-def test_artifact_type_written_for_routing_rule_and_prompt_module():
+@pytest.mark.age
+def test_artifact_type_written_for_routing_rule_and_prompt_module(age_graph):
     for artifact_type in (ledger.ARTIFACT_ROUTING_RULE, ledger.ARTIFACT_PROMPT_MODULE):
-        mock = _client()
+        mock = _client(age_graph)
         _run(ledger.record_evolution_event(
             mock,
             ledger.VARIANT_CREATED,
@@ -157,8 +172,9 @@ def test_artifact_type_written_for_routing_rule_and_prompt_module():
         assert artifact_type in _last_query(mock)
 
 
-def test_graph_context_campaign_evidence_stored_as_json_and_returned_as_dict():
-    mock = _client()
+@pytest.mark.age
+def test_graph_context_campaign_evidence_stored_as_json_and_returned_as_dict(age_graph):
+    mock = _client(age_graph)
     context = {"campaign_id": "camp-7", "alerts": ["A1", "A2"]}
     event = _run(ledger.record_evolution_event(
         mock,
@@ -173,10 +189,11 @@ def test_graph_context_campaign_evidence_stored_as_json_and_returned_as_dict():
     assert event["graph_context"] == context
 
 
-def test_graph_context_factor_drift_evidence_round_trips():
+@pytest.mark.age
+def test_graph_context_factor_drift_evidence_round_trips(age_graph):
     context = {"factor_drift": {"F1": 0.21}, "correlation_change": 0.13}
     event = _run(ledger.record_evolution_event(
-        _client(),
+        _client(age_graph),
         ledger.PROMOTION_APPROVED,
         "variant_drift",
         ledger.ARTIFACT_SCORING_THRESHOLD,
@@ -186,8 +203,9 @@ def test_graph_context_factor_drift_evidence_round_trips():
     assert event["graph_context"] == context
 
 
-def test_state_fields_are_json_strings_not_python_repr():
-    mock = _client()
+@pytest.mark.age
+def test_state_fields_are_json_strings_not_python_repr(age_graph):
+    mock = _client(age_graph)
     _run(ledger.record_evolution_event(
         mock,
         ledger.VARIANT_CREATED,
@@ -233,8 +251,9 @@ def test_record_evolution_event_rejects_non_numeric_magnitude_before_query():
     mock.run_query.assert_not_called()
 
 
-def test_record_evolution_event_writes_finite_numeric_magnitude():
-    mock = _client()
+@pytest.mark.age
+def test_record_evolution_event_writes_finite_numeric_magnitude(age_graph):
+    mock = _client(age_graph)
     event = _run(ledger.record_evolution_event(
         mock,
         ledger.VARIANT_CREATED,
@@ -250,9 +269,10 @@ def test_record_evolution_event_writes_finite_numeric_magnitude():
     assert event["magnitude"] == 1.25
 
 
-def test_shadow_started_sets_shadow_active_true():
+@pytest.mark.age
+def test_shadow_started_sets_shadow_active_true(age_graph):
     _run(ledger.record_evolution_event(
-        _client(),
+        _client(age_graph),
         ledger.SHADOW_STARTED,
         "variant_shadow",
         ledger.ARTIFACT_ROUTING_RULE,
@@ -261,9 +281,10 @@ def test_shadow_started_sets_shadow_active_true():
     assert ledger.get_shadow_summary("variant_shadow")["shadow_active"] is True
 
 
-def test_shadow_result_sets_tested_clears_active_and_updates_rate():
+@pytest.mark.age
+def test_shadow_result_sets_tested_clears_active_and_updates_rate(age_graph):
     _run(ledger.record_evolution_event(
-        _client(),
+        _client(age_graph),
         ledger.SHADOW_RESULT,
         "variant_shadow",
         ledger.ARTIFACT_ROUTING_RULE,
@@ -278,16 +299,17 @@ def test_shadow_result_sets_tested_clears_active_and_updates_rate():
     assert summary["win_rate"] == 0.5
 
 
-def test_shadow_result_after_shadow_started_clears_active():
+@pytest.mark.age
+def test_shadow_result_after_shadow_started_clears_active(age_graph):
     _run(ledger.record_evolution_event(
-        _client(),
+        _client(age_graph),
         ledger.SHADOW_STARTED,
         "variant_shadow",
         ledger.ARTIFACT_ROUTING_RULE,
         "shadow started",
     ))
     _run(ledger.record_evolution_event(
-        _client(),
+        _client(age_graph),
         ledger.SHADOW_RESULT,
         "variant_shadow",
         ledger.ARTIFACT_ROUTING_RULE,
@@ -299,10 +321,11 @@ def test_shadow_result_after_shadow_started_clears_active():
     assert summary["shadow_tested"] is True
 
 
-def test_multiple_shadow_results_aggregate_wins_total_win_rate():
+@pytest.mark.age
+def test_multiple_shadow_results_aggregate_wins_total_win_rate(age_graph):
     for metadata in ({"wins": 1, "total": 2}, {"wins": 2, "total": 3}):
         _run(ledger.record_evolution_event(
-            _client(),
+            _client(age_graph),
             ledger.SHADOW_RESULT,
             "variant_multi",
             ledger.ARTIFACT_ROUTING_RULE,
@@ -315,7 +338,8 @@ def test_multiple_shadow_results_aggregate_wins_total_win_rate():
     assert summary["win_rate"] == 0.6
 
 
-def test_rebuild_shadow_index_handles_started_and_result_rows():
+@pytest.mark.age
+def test_rebuild_shadow_index_handles_started_and_result_rows(age_graph):
     rows = [
         {
             "event_type": ledger.SHADOW_STARTED,
@@ -332,25 +356,27 @@ def test_rebuild_shadow_index_handles_started_and_result_rows():
             "graph_context": "{}",
         },
     ]
-    index = _run(ledger.rebuild_shadow_index(_client(rows)))
+    index = _run(ledger.rebuild_shadow_index(_client(age_graph, rows)))
     assert index["variant_rebuild"]["shadow_active"] is False
     assert index["variant_rebuild"]["shadow_tested"] is True
     assert index["variant_rebuild"]["wins"] == 2
     assert index["variant_rebuild"]["total"] == 3
 
 
-def test_rebuild_shadow_index_skips_legacy_nodes_without_variant_id():
+@pytest.mark.age
+def test_rebuild_shadow_index_skips_legacy_nodes_without_variant_id(age_graph):
     rows = [
         {"event_type": ledger.SHADOW_STARTED, "variant_id": None},
         {"event_type": "pattern_learned", "variant_id": "legacy"},
     ]
-    index = _run(ledger.rebuild_shadow_index(_client(rows)))
+    index = _run(ledger.rebuild_shadow_index(_client(age_graph, rows)))
     assert index == {}
 
 
-def test_get_shadow_summary_returns_copy_and_unknown_none():
+@pytest.mark.age
+def test_get_shadow_summary_returns_copy_and_unknown_none(age_graph):
     _run(ledger.record_evolution_event(
-        _client(),
+        _client(age_graph),
         ledger.SHADOW_STARTED,
         "variant_copy",
         ledger.ARTIFACT_CONTEXT_POLICY,
@@ -362,8 +388,9 @@ def test_get_shadow_summary_returns_copy_and_unknown_none():
     assert ledger.get_shadow_summary("unknown") is None
 
 
-def test_reset_evolution_ledger_clears_index_and_issues_no_delete():
-    mock = _client()
+@pytest.mark.age
+def test_reset_evolution_ledger_clears_index_and_issues_no_delete(age_graph):
+    mock = _client(age_graph)
     _run(ledger.record_evolution_event(
         mock,
         ledger.SHADOW_STARTED,
@@ -377,7 +404,8 @@ def test_reset_evolution_ledger_clears_index_and_issues_no_delete():
     assert "DELETE" not in queries
 
 
-def test_get_variant_history_returns_ordered_events_with_graph_context():
+@pytest.mark.age
+def test_get_variant_history_returns_ordered_events_with_graph_context(age_graph):
     rows = [
         {
             "id": "e1",
@@ -392,42 +420,54 @@ def test_get_variant_history_returns_ordered_events_with_graph_context():
             "timestamp_epoch": 1,
         }
     ]
-    mock = _client(rows)
+    rows = [{**rows[0], "id": "e2", "timestamp_epoch": 2}, rows[0], {**rows[0], "id": "foreign", "variant_id": "another_variant"}]
+    mock = _client(age_graph, rows)
     events = _run(ledger.get_variant_history(mock, "variant_history"))
+    assert [event["id"] for event in events] == ["e1", "e2"]
     query = _last_query(mock)
     assert "ORDER BY e.timestamp_epoch ASC" in query
     assert events[0]["graph_context"] == {"campaign_id": "camp"}
     assert events[0]["timestamp_epoch"] == 1
 
 
-def test_get_recent_events_respects_limit_and_excludes_legacy_event_types_in_query():
-    mock = _client([])
-    _run(ledger.get_recent_events(mock, limit=250))
+@pytest.mark.age
+def test_get_recent_events_respects_limit_and_excludes_legacy_event_types_in_query(age_graph):
+    rows = [{"id": f"e-{i}", "event_type": ledger.VARIANT_CREATED, "timestamp_epoch": i} for i in range(101)]
+    rows.append({"id": "legacy", "event_type": "pattern_learned", "timestamp_epoch": 200})
+    mock = _client(age_graph, rows)
+    events = _run(ledger.get_recent_events(mock, limit=250))
+    assert len(events) == 100
+    assert events[0]["id"] == "e-100"
+    assert events[-1]["id"] == "e-1"
+    assert all(event["event_type"] == ledger.VARIANT_CREATED for event in events)
     query = _last_query(mock)
     assert "LIMIT 100" in query
     assert "pattern_learned" not in query
     assert ledger.VARIANT_CREATED in query
 
 
-def test_get_evolution_summary_empty_ledger_returns_zero_summary():
-    summary = _run(ledger.get_evolution_summary(_client([])))
+@pytest.mark.age
+def test_get_evolution_summary_empty_ledger_returns_zero_summary(age_graph):
+    summary = _run(ledger.get_evolution_summary(_client(age_graph, [])))
 
     assert summary == _empty_summary()
 
 
-def test_get_evolution_summary_counts_variant_created_events():
+@pytest.mark.age
+def test_get_evolution_summary_counts_variant_created_events(age_graph):
     rows = [
         {"event_type": ledger.VARIANT_CREATED, "artifact_type": ledger.ARTIFACT_ROUTING_RULE},
         {"event_type": ledger.VARIANT_CREATED, "artifact_type": ledger.ARTIFACT_SCORING_THRESHOLD},
         {"event_type": ledger.VARIANT_CREATED, "artifact_type": ledger.ARTIFACT_PROMPT_MODULE},
     ]
 
-    summary = _run(ledger.get_evolution_summary(_client(rows)))
+    summary = _run(ledger.get_evolution_summary(_client(age_graph, rows)))
 
     assert summary["variants_generated"] == 3
 
 
-def test_get_evolution_summary_counts_mixed_lifecycle_events():
+@pytest.mark.age
+def test_get_evolution_summary_counts_mixed_lifecycle_events(age_graph):
     rows = [
         {"event_type": ledger.VARIANT_CREATED, "artifact_type": ledger.ARTIFACT_ROUTING_RULE},
         {"event_type": ledger.VARIANT_CREATED, "artifact_type": ledger.ARTIFACT_SCORING_THRESHOLD},
@@ -436,7 +476,7 @@ def test_get_evolution_summary_counts_mixed_lifecycle_events():
         {"event_type": ledger.ROLLBACK, "artifact_type": ledger.ARTIFACT_ROUTING_RULE},
     ]
 
-    summary = _run(ledger.get_evolution_summary(_client(rows)))
+    summary = _run(ledger.get_evolution_summary(_client(age_graph, rows)))
 
     assert summary["variants_generated"] == 2
     assert summary["variants_promoted"] == 1
@@ -444,42 +484,46 @@ def test_get_evolution_summary_counts_mixed_lifecycle_events():
     assert summary["variants_rolled_back"] == 1
 
 
-def test_get_evolution_summary_groups_by_artifact_type():
+@pytest.mark.age
+def test_get_evolution_summary_groups_by_artifact_type(age_graph):
     rows = [
         {"event_type": ledger.VARIANT_CREATED, "artifact_type": ledger.ARTIFACT_ROUTING_RULE},
         {"event_type": ledger.PROMOTION_APPROVED, "artifact_type": ledger.ARTIFACT_ROUTING_RULE},
         {"event_type": ledger.PROMOTION_REJECTED, "artifact_type": ledger.ARTIFACT_SCORING_THRESHOLD},
     ]
 
-    summary = _run(ledger.get_evolution_summary(_client(rows)))
+    summary = _run(ledger.get_evolution_summary(_client(age_graph, rows)))
 
     assert summary["by_artifact_type"][ledger.ARTIFACT_ROUTING_RULE]["generated"] == 1
     assert summary["by_artifact_type"][ledger.ARTIFACT_ROUTING_RULE]["promoted"] == 1
     assert summary["by_artifact_type"][ledger.ARTIFACT_SCORING_THRESHOLD]["rejected"] == 1
 
 
-def test_get_evolution_summary_promotion_rate_uses_terminal_denominator():
+@pytest.mark.age
+def test_get_evolution_summary_promotion_rate_uses_terminal_denominator(age_graph):
     rows = [
         {"event_type": ledger.PROMOTION_APPROVED, "artifact_type": ledger.ARTIFACT_ROUTING_RULE},
         {"event_type": ledger.PROMOTION_REJECTED, "artifact_type": ledger.ARTIFACT_ROUTING_RULE},
     ]
 
-    summary = _run(ledger.get_evolution_summary(_client(rows)))
+    summary = _run(ledger.get_evolution_summary(_client(age_graph, rows)))
 
     assert summary["by_artifact_type"][ledger.ARTIFACT_ROUTING_RULE]["promotion_rate"] == 0.5
 
 
-def test_get_evolution_summary_promotion_rate_zero_denominator():
+@pytest.mark.age
+def test_get_evolution_summary_promotion_rate_zero_denominator(age_graph):
     rows = [
         {"event_type": ledger.VARIANT_CREATED, "artifact_type": ledger.ARTIFACT_ROUTING_RULE},
     ]
 
-    summary = _run(ledger.get_evolution_summary(_client(rows)))
+    summary = _run(ledger.get_evolution_summary(_client(age_graph, rows)))
 
     assert summary["by_artifact_type"][ledger.ARTIFACT_ROUTING_RULE]["promotion_rate"] == 0.0
 
 
-def test_get_evolution_summary_averages_shadow_win_rate():
+@pytest.mark.age
+def test_get_evolution_summary_averages_shadow_win_rate(age_graph):
     rows = [
         {
             "event_type": ledger.SHADOW_RESULT,
@@ -493,12 +537,13 @@ def test_get_evolution_summary_averages_shadow_win_rate():
         },
     ]
 
-    summary = _run(ledger.get_evolution_summary(_client(rows)))
+    summary = _run(ledger.get_evolution_summary(_client(age_graph, rows)))
 
     assert summary["avg_shadow_win_rate"] == 0.7
 
 
-def test_get_evolution_summary_sums_total_shadow_decisions():
+@pytest.mark.age
+def test_get_evolution_summary_sums_total_shadow_decisions(age_graph):
     rows = [
         {
             "event_type": ledger.SHADOW_RESULT,
@@ -512,12 +557,13 @@ def test_get_evolution_summary_sums_total_shadow_decisions():
         },
     ]
 
-    summary = _run(ledger.get_evolution_summary(_client(rows)))
+    summary = _run(ledger.get_evolution_summary(_client(age_graph, rows)))
 
     assert summary["total_shadow_decisions"] == 75
 
 
-def test_get_evolution_summary_missing_shadow_context_does_not_crash():
+@pytest.mark.age
+def test_get_evolution_summary_missing_shadow_context_does_not_crash(age_graph):
     rows = [
         {"event_type": ledger.SHADOW_RESULT, "artifact_type": ledger.ARTIFACT_ROUTING_RULE},
         {
@@ -527,20 +573,21 @@ def test_get_evolution_summary_missing_shadow_context_does_not_crash():
         },
     ]
 
-    summary = _run(ledger.get_evolution_summary(_client(rows)))
+    summary = _run(ledger.get_evolution_summary(_client(age_graph, rows)))
 
     assert summary["shadow_batches"] == 2
     assert summary["avg_shadow_win_rate"] == 0.0
     assert summary["total_shadow_decisions"] == 0
 
 
-def test_get_evolution_summary_counts_shadow_started():
+@pytest.mark.age
+def test_get_evolution_summary_counts_shadow_started(age_graph):
     rows = [
         {"event_type": ledger.SHADOW_STARTED, "artifact_type": ledger.ARTIFACT_ROUTING_RULE},
         {"event_type": ledger.SHADOW_STARTED, "artifact_type": ledger.ARTIFACT_SCORING_THRESHOLD},
     ]
 
-    summary = _run(ledger.get_evolution_summary(_client(rows)))
+    summary = _run(ledger.get_evolution_summary(_client(age_graph, rows)))
 
     assert summary["shadow_started"] == 2
 
@@ -554,8 +601,9 @@ def test_get_evolution_summary_query_failure_returns_zero_summary():
     assert summary == _empty_summary()
 
 
-def test_get_evolution_summary_query_pattern_is_age_safe_and_filters_events():
-    mock = _client([])
+@pytest.mark.age
+def test_get_evolution_summary_query_pattern_is_age_safe_and_filters_events(age_graph):
+    mock = _client(age_graph, [])
 
     _run(ledger.get_evolution_summary(mock))
 
@@ -569,9 +617,10 @@ def test_get_evolution_summary_query_pattern_is_age_safe_and_filters_events():
     assert ledger.ROLLBACK in query
 
 
-def test_routing_rule_threshold_state_round_trips():
+@pytest.mark.age
+def test_routing_rule_threshold_state_round_trips(age_graph):
     event = _run(ledger.record_evolution_event(
-        _client(),
+        _client(age_graph),
         ledger.PROMOTION_APPROVED,
         "variant_threshold",
         ledger.ARTIFACT_ROUTING_RULE,
@@ -583,9 +632,10 @@ def test_routing_rule_threshold_state_round_trips():
     assert event["after_state"]["threshold"] == 0.81
 
 
-def test_context_policy_traversal_order_state_round_trips():
+@pytest.mark.age
+def test_context_policy_traversal_order_state_round_trips(age_graph):
     event = _run(ledger.record_evolution_event(
-        _client(),
+        _client(age_graph),
         ledger.PROMOTION_REJECTED,
         "variant_policy",
         ledger.ARTIFACT_CONTEXT_POLICY,

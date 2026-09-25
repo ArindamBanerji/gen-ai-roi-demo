@@ -36,11 +36,7 @@ from app.domains.soc.config import (
 import app.framework.learning_state as _fw
 
 log = logging.getLogger(__name__)
-
-
-def _optional_absence() -> Any:
-    """Represent an intentionally absent optional state value."""
-    return
+_ABSENT: None = None
 
 
 def _operation_skipped() -> bool:
@@ -399,13 +395,13 @@ def update_dk_welford_tracker(factor_vector, is_correct: bool) -> None:
 def _dk_weight_tensor_from_scorer(scorer) -> list[list[float]] | None:
     get_one = getattr(scorer, "get_dk_weights", None)
     if not callable(get_one):
-        return _optional_absence()
+        return _ABSENT
     rows: list[list[float]] = []
     n_categories = int(getattr(scorer, "n_categories", 0) or 0)
     for category_index in range(n_categories):
         weights = get_one(category_index)
         if weights is None:
-            return _optional_absence()
+            return _ABSENT
         rows.append(np.asarray(weights, dtype=np.float64).tolist())
     return rows
 
@@ -449,11 +445,11 @@ def get_soc_centroid(scorer, category_index: int, action_index: int) -> list[flo
     if centroids is None:
         centroids = getattr(scorer, "mu", None)
     if centroids is None:
-        return _optional_absence()
+        return _ABSENT
     try:
         return cast(list[float], np.asarray(centroids[category_index, action_index], dtype=np.float64).copy().tolist())
-    except Exception:
-        return _optional_absence()
+    except (IndexError, KeyError):
+        return _ABSENT
 
 
 def persist_soc_centroid(
@@ -543,31 +539,26 @@ def get_profile_scorer():
     try:
         return get_learning_state().profile_scorer
     except RuntimeError:
-        return _optional_absence()
+        return _ABSENT
 
 
 def get_mu_zero():
     """
     Return mu_0 (bootstrap baseline centroid tensor) as a numpy ndarray.
 
-    Reads from the persisted JSON file written at bootstrap time.
-    Returns None if the file does not exist or cannot be parsed.
-    Never raises.
+    Reads from AGE bootstrap state.
+    Returns None if mu_0 has not been written. AGE read/parse errors propagate.
     """
     import numpy as _np
-    try:
-        store = _learning_store
-        if store is None:
-            raise RuntimeError("SOC AGE store is not initialized")
-        data = store.get_posterior("soc", _MU_ZERO_KEY)
-        if data is None:
-            log.warning("[GAE] mu0 not found in AGE")
-            return _optional_absence()
-        arr = _np.array(data["mu_zero"], dtype=_np.float64)
-        return arr
-    except Exception as exc:
-        log.warning("[GAE] Could not load mu0 from AGE: %s", exc)
-        return _optional_absence()
+    store = _learning_store
+    if store is None:
+        raise RuntimeError("SOC AGE store is not initialized")
+    data = store.get_posterior("soc", _MU_ZERO_KEY)
+    if data is None:
+        log.warning("[GAE] mu0 not found in AGE")
+        return _ABSENT
+    arr = _np.array(data["mu_zero"], dtype=_np.float64)
+    return arr
 
 
 def get_bootstrap_result() -> Optional[BootstrapResult]:
@@ -827,6 +818,7 @@ async def write_bootstrap_state(graph_client, scorer) -> dict:
         log.info("[GAE] DeploymentState written -- shape=%s gae_version=%s", shape, _GAE_VERSION)
     except Exception as e:
         log.warning("DeploymentState persist failed: %s", e)
+        raise
     return {
         "bootstrap_mu":        mu_list,
         "bootstrap_shape":     shape,
@@ -840,27 +832,23 @@ async def get_bootstrap_centroids(graph_client) -> dict | None:
     Read bootstrap_centroids from the DeploymentState node.
     Returns {mu, shape, stored_at, gae_version} or None if not set.
     """
-    try:
-        rows = await graph_client.run_query(READ_DEPLOYMENT_STATE)
-        if not rows or rows[0].get("bootstrap_mu") is None:
-            return _optional_absence()
-        r = rows[0]
-        # AGE stores nested lists as JSON strings — parse back to Python list.
-        mu = r["bootstrap_mu"]
-        if isinstance(mu, str):
-            mu = json.loads(mu)
-        shape = r["bootstrap_shape"]
-        if isinstance(shape, str):
-            shape = json.loads(shape)
-        return {
-            "mu":         mu,
-            "shape":      shape,
-            "stored_at":  r["stored_at"],
-            "gae_version": r.get("gae_version", "unknown"),
-        }
-    except Exception as exc:
-        log.warning("[GAE] get_bootstrap_centroids failed: %s", exc)
-        return _optional_absence()
+    rows = await graph_client.run_query(READ_DEPLOYMENT_STATE)
+    if not rows or rows[0].get("bootstrap_mu") is None:
+        return _ABSENT
+    r = rows[0]
+    # AGE stores nested lists as JSON strings — parse back to Python list.
+    mu = r["bootstrap_mu"]
+    if isinstance(mu, str):
+        mu = json.loads(mu)
+    shape = r["bootstrap_shape"]
+    if isinstance(shape, str):
+        shape = json.loads(shape)
+    return {
+        "mu":         mu,
+        "shape":      shape,
+        "stored_at":  r["stored_at"],
+        "gae_version": r.get("gae_version", "unknown"),
+    }
 
 
 _EXPORT_CATEGORIES = [
@@ -1012,28 +1000,28 @@ def guarded_update(scorer, f, category_index: int, action_index: int,
             "(category=%d/%s, action=%d, correct=%s)",
             category_index, category_name or "?", action_index, correct,
         )
-        return _optional_absence()
+        return _ABSENT
     if category_name and is_category_frozen(category_name):
         log.warning(
             "[D2] guarded_update: category '%s' frozen -- skipping update "
             "(action=%d, correct=%s)",
             category_name, action_index, correct,
         )
-        return _optional_absence()
+        return _ABSENT
     if getattr(scorer, 'is_paused', False) is True:
         log.warning(
             "[B5] guarded_update: conservation paused -- skipping centroid update "
             "(category=%d/%s, action=%d, correct=%s)",
             category_index, category_name or "?", action_index, correct,
         )
-        return _optional_absence()
+        return _ABSENT
     if not increment_spike_counter():
         log.warning(
             "[D7] guarded_update: spike cap reached (%d) -- skipping update "
             "(category=%d/%s, action=%d)",
             _spike_update_cap, category_index, category_name or "?", action_index,
         )
-        return _optional_absence()
+        return _ABSENT
     return scorer.update(f=f, category_index=category_index,
                          action_index=action_index, correct=correct, **kwargs)
 

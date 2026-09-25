@@ -1,0 +1,40 @@
+[playwright] BACKEND_PORT not found in .env ΓÇö using default 8001
+
+Running 26 tests using 1 worker
+
+[playwright] BACKEND_PORT not found in .env ΓÇö using default 8001
+  ok  1 [chromium] ΓÇ║ tests\e2e\decision_flow.spec.ts:57:1 ΓÇ║ correct_decision_increments_verified_count (7.2s)
+  ok  2 [chromium] ΓÇ║ tests\e2e\decision_flow.spec.ts:83:1 ΓÇ║ incorrect_decision_does_not_increment_correct_count (5.2s)
+  ok  3 [chromium] ΓÇ║ tests\e2e\decision_flow.spec.ts:109:1 ΓÇ║ tab4_weight_norm_present_after_decisions (2.2s)
+  ok  4 [chromium] ΓÇ║ tests\e2e\decision_flow.spec.ts:128:1 ΓÇ║ tab5_narrative_has_content_after_decisions (14.2s)
+=== LEARNING LOOP VALIDATION ===
+Decisions: +40
+Verified: +40
+Correct: +15
+Weight norm: 2.486463351831271 ΓåÆ 2.486463351831271
+Centroid updates: +15
+IKS: 23.6
+  ok  5 [chromium] ΓÇ║ tests\e2e\decision_flow.spec.ts:189:1 ΓÇ║ learning_loop_validates_20_decisions (1.2m)
+  ok  6 [chromium] ΓÇ║ tests\e2e\deep_flows.spec.ts:117:1 ΓÇ║ decision_appears_on_tab4_with_valid_id (6.6s)
+  ok  7 [chromium] ΓÇ║ tests\e2e\deep_flows.spec.ts:163:1 ΓÇ║ outcome_updates_tab2_metrics (8.3s)
+  ok  8 [chromium] ΓÇ║ tests\e2e\deep_flows.spec.ts:225:1 ΓÇ║ cross_tab_decision_count_consistent (1.5s)
+  ok  9 [chromium] ΓÇ║ tests\e2e\deep_flows.spec.ts:294:1 ΓÇ║ simulation_does_not_produce_dec_none (15.7s)
+  ok 10 [chromium] ΓÇ║ tests\e2e\deep_flows.spec.ts:369:1 ΓÇ║ five_tab_round_trip_no_crashes (6.4s)
+  ok 11 [chromium] ΓÇ║ tests\e2e\deep_flows.spec.ts:459:1 ΓÇ║ reset_returns_alerts_to_pending (10.0s)
+  ok 12 [chromium] ΓÇ║ tests\e2e\sweep.spec.ts:6:3 ΓÇ║ SOC sweep ΓÇö point tests ΓÇ║ diagnostics has full measurement spine (1.0s)
+  ok 13 [chromium] ΓÇ║ tests\e2e\sweep.spec.ts:16:3 ΓÇ║ SOC sweep ΓÇö point tests ΓÇ║ conservation payload is complete (179ms)
+  ok 14 [chromium] ΓÇ║ tests\e2e\sweep.spec.ts:26:3 ΓÇ║ SOC sweep ΓÇö point tests ΓÇ║ evolution summary has rejection data (161ms)
+  ok 15 [chromium] ΓÇ║ tests\e2e\sweep.spec.ts:34:3 ΓÇ║ SOC sweep ΓÇö point tests ΓÇ║ SOC evolution has rejection reason codes (273ms)
+  ok 16 [chromium] ΓÇ║ tests\e2e\sweep.spec.ts:39:3 ΓÇ║ SOC sweep ΓÇö point tests ΓÇ║ G1: exploration never overrides ΓÇö health check (214ms)
+  ok 17 [chromium] ΓÇ║ tests\e2e\sweep.spec.ts:44:3 ΓÇ║ SOC sweep ΓÇö point tests ΓÇ║ learning health returns state (465ms)
+  ok 18 [chromium] ΓÇ║ tests\e2e\sweep.spec.ts:52:3 ΓÇ║ SOC sweep ΓÇö point tests ΓÇ║ evidence room returns audit trail (324ms)
+  ok 19 [chromium] ΓÇ║ tests\e2e\sweep.spec.ts:59:3 ΓÇ║ SOC sweep ΓÇö point tests ΓÇ║ governance summary available (751ms)
+  ok 20 [chromium] ΓÇ║ tests\e2e\sweep.spec.ts:66:3 ΓÇ║ SOC sweep ΓÇö demo flows ΓÇ║ V5 red-team flow: simulate-failure endpoint exists (206ms)
+  ok 21 [chromium] ΓÇ║ tests\e2e\sweep.spec.ts:71:3 ΓÇ║ SOC sweep ΓÇö demo flows ΓÇ║ E2 situation analysis: explain exists (316ms)
+  ok 22 [chromium] ΓÇ║ tests\e2e\sweep.spec.ts:76:3 ΓÇ║ SOC sweep ΓÇö demo flows ΓÇ║ E7 ServiceNow: incident endpoint exists (175ms)
+  ok 23 [chromium] ΓÇ║ tests\e2e\sweep.spec.ts:81:3 ΓÇ║ SOC sweep ΓÇö demo flows ΓÇ║ E8 evidence: ledger endpoint exists (175ms)
+  ok 24 [chromium] ΓÇ║ tests\e2e\sweep.spec.ts:86:3 ΓÇ║ SOC sweep ΓÇö demo flows ΓÇ║ VC cut V1-V7 measurement spine: all endpoints consistent (664ms)
+  ok 25 [chromium] ΓÇ║ tests\e2e\sweep.spec.ts:96:3 ΓÇ║ SOC sweep ΓÇö demo flows ΓÇ║ SOC tabs 1-5 content endpoints return data (1.5s)
+  ok 26 [chromium] ΓÇ║ tests\e2e\sweep.spec.ts:105:3 ΓÇ║ SOC sweep ΓÇö demo flows ΓÇ║ frontend loads and first tab renders (675ms)
+
+  26 passed (2.8m)

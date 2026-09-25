@@ -14,6 +14,7 @@ Run from backend/:
 import sys
 import os
 import json
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -250,7 +251,23 @@ def test_detection_engineering_endpoint_no_shape_error():
 # GROUP 4 — Response type contracts
 # ============================================================================
 
-def test_analytics_correct_decisions_is_integer():
+@pytest.fixture
+def analytics_graph(soc_stress_test_graph, monkeypatch):
+    """Give analytics type-contract tests their own real, nonempty AGE input."""
+    from ci_platform.graph.age_graph_store import AGEGraphStore
+    from app.routers import soc
+
+    dsn, graph = soc_stress_test_graph
+    store = AGEGraphStore(dsn, graph)
+    store._run_query("CREATE (:Decision {decision_id: 'analytics-contract', domain: 'soc', correct: true, status: 'confirmed'})")
+    monkeypatch.setattr(soc, "graph_client", store._client)
+    try:
+        yield
+    finally:
+        store.close()
+
+
+def test_analytics_correct_decisions_is_integer(analytics_graph):
     """
     GET /api/soc/analytics -> correct_decisions must be a Python int, not a
     string or None.  The Cypher query returns an AGE integer; the backend
@@ -270,7 +287,7 @@ def test_analytics_correct_decisions_is_integer():
     )
 
 
-def test_analytics_total_alerts_is_integer():
+def test_analytics_total_alerts_is_integer(analytics_graph):
     """
     GET /api/soc/analytics -> total_alerts must be int.
     """

@@ -1,6 +1,6 @@
 """
 Step 11.1 -- Tab content export endpoint tests.
-All tests mock graph_client and service functions -- no live AGE required.
+Presentation uses controlled service inputs; restart persistence uses isolated AGE.
 """
 import asyncio
 import os
@@ -1248,21 +1248,17 @@ def test_snapshot_initialized_on_startup():
 
 
 @pytest.mark.asyncio
-async def test_restart_does_not_lose_decision_count():
+@pytest.mark.age
+async def test_restart_does_not_lose_decision_count(age_graph):
     """
     Simulates restart: two sequential GraphSnapshot.from_graph() calls
     return identical verified_decisions -- restart is idempotent.
     """
     from app.state.graph_snapshot import GraphSnapshot
-    from unittest.mock import AsyncMock
-    mock_client = AsyncMock()
-    mock_client.count_verified_decisions = AsyncMock(return_value=42)
-    mock_client.count_decisions_by_category = AsyncMock(return_value={"credential_access": 42})
-    mock_client.compute_outcome_stats = AsyncMock(return_value={"override_rate": 0.1, "override_quality": 0.8})
-    mock_client.compute_iks = AsyncMock(return_value=76.0)
-
-    snap1 = await GraphSnapshot.from_graph(mock_client)
-    snap2 = await GraphSnapshot.from_graph(mock_client)
+    for index in range(42):
+        age_graph.decision(decision_id=f"restart-{index}", correct=True)
+    snap1 = await GraphSnapshot.from_graph(age_graph.client)
+    snap2 = await GraphSnapshot.from_graph(age_graph.reopen_client())
     assert snap1.verified_decisions == snap2.verified_decisions == 42
 
 

@@ -67,8 +67,16 @@ function hasPageRequest(target: ResetTarget): target is Page {
  */
 export async function resetDemoAlerts(target: ResetTarget): Promise<void> {
   const requestContext = hasPageRequest(target) ? target.request : target;
-  const response = await requestContext.post(`${BACKEND}/api/alerts/reset`);
-  expect(response.status()).toBe(200);
+  let lastStatus = 0;
+  let lastBody = '';
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const response = await requestContext.post(`${BACKEND}/api/alerts/reset`);
+    lastStatus = response.status();
+    lastBody = await response.text().catch(() => '');
+    if (response.status() === 200) return;
+    await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+  }
+  expect(lastStatus, `POST /api/alerts/reset failed after retries: ${lastBody}`).toBe(200);
 }
 
 /**

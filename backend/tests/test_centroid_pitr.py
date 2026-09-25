@@ -9,49 +9,28 @@ import pytest
 from app.services import gae_state
 
 
-class FakeCheckpointStore:
-    def __init__(self, rows):
-        self.rows = rows
-        self.writes = []
-
-    def count_verified(self, domain):
-        assert domain == "soc"
-        return 12
-
-    def write_centroid_checkpoint(self, **kwargs):
-        self.writes.append(kwargs)
-        self.rows.append({
-            "checkpoint_id": kwargs["checkpoint_id"],
-            "centroids": kwargs["centroids"].tolist(),
-            "shape": kwargs["shape"],
-            "created_at": 2000.0,
-            "decisions_count": kwargs["decisions_count"],
-            "metadata": kwargs["metadata"],
-        })
-
-    def get_centroid_checkpoints(self, domain, include_v2=False, limit=None):
-        assert domain == "soc"
-        assert include_v2 is True
-        return list(self.rows)
+def _scorer_and_store(age_graph):
+    scorer = SimpleNamespace(centroids=np.zeros((6, 4, 6), dtype=np.float64), decision_count=12, graph_store=age_graph.store)
+    for _ in range(12):
+        age_graph.decision(correct=True)
+    return scorer, age_graph.store
 
 
-def _scorer_and_store():
-    scorer = SimpleNamespace(
-        centroids=np.zeros((6, 4, 6), dtype=np.float64),
-        decision_count=12,
-    )
-    store = FakeCheckpointStore([])
-    scorer.graph_store = store
-    return scorer, store
+def _checkpoint(store, identifier, tensor, count):
+    store.write_centroid_checkpoint(domain="soc", checkpoint_id=identifier, centroids=tensor,
+                                    category="all", action="all", verified_count=count, iks=0.0, factor_names_hash="test",
+                                    shape=[6, 4, 6], decisions_count=count, metadata={"decision_count": count})
 
 
-def test_manual_checkpoint_writes_full_tensor_to_age():
-    scorer, store = _scorer_and_store()
+@pytest.mark.age
+def test_manual_checkpoint_writes_full_tensor_to_age(age_graph):
+    scorer, store = _scorer_and_store(age_graph)
     with patch.object(gae_state, "get_profile_scorer", return_value=scorer):
         payload = gae_state.create_centroid_checkpoint()
 
-    assert len(store.writes) == 1
-    write = store.writes[0]
+    rows = age_graph.reopen_store().get_centroid_checkpoints("soc", include_v2=True)
+    assert len(rows) == 1
+    write = rows[0]
     assert write["domain"] == "soc"
     assert write["checkpoint_id"] == payload["backup_id"]
     np.testing.assert_array_equal(write["centroids"], scorer.centroids)
@@ -62,16 +41,11 @@ def test_manual_checkpoint_writes_full_tensor_to_age():
     assert payload["step"] == 12
 
 
-def test_checkpoint_listing_reads_age_not_filesystem():
-    scorer, store = _scorer_and_store()
-    store.rows.append({
-        "checkpoint_id": "soc:pitr:one",
-        "centroids": np.ones((6, 4, 6)).tolist(),
-        "shape": [6, 4, 6],
-        "created_at": 1000.0,
-        "decisions_count": 4,
-        "metadata": {"decision_count": 4},
-    })
+@pytest.mark.age
+def test_checkpoint_listing_reads_age_not_filesystem(age_graph):
+    scorer, store = _scorer_and_store(age_graph)
+    _checkpoint(store, "soc:pitr:one", np.ones((6, 4, 6)), 4)
+    scorer.graph_store = age_graph.reopen_store()
     with patch.object(gae_state, "get_profile_scorer", return_value=scorer):
         rows = gae_state.list_centroid_checkpoints()
 
@@ -80,16 +54,12 @@ def test_checkpoint_listing_reads_age_not_filesystem():
 
 
 @pytest.mark.asyncio
-async def test_restore_checkpoint_loads_age_tensor():
-    scorer, store = _scorer_and_store()
-    store.rows.append({
-        "checkpoint_id": "soc:pitr:restore",
-        "centroids": np.full((6, 4, 6), 3.0).tolist(),
-        "shape": [6, 4, 6],
-        "created_at": 1000.0,
-        "decisions_count": 8,
-        "metadata": {"decision_count": 8},
-    })
+@pytest.mark.age
+async def test_restore_checkpoint_loads_age_tensor(age_graph):
+    scorer, store = _scorer_and_store(age_graph)
+    _checkpoint(store, "soc:pitr:restore", np.full((6, 4, 6), 3.0), 8)
+    _checkpoint(store, "soc:pitr:newer", np.full((6, 4, 6), 9.0), 10)
+    scorer.graph_store = age_graph.reopen_store()
     with patch.object(gae_state, "get_profile_scorer", return_value=scorer), \
          patch.object(gae_state, "_learning_state", SimpleNamespace(profile_scorer=scorer)):
         payload = await gae_state.restore_centroid_checkpoint("soc:pitr:restore")

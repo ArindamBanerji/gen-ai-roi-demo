@@ -14,6 +14,11 @@ log = logging.getLogger(__name__)
 POSTERIOR_HEALTH_CONNECT_TIMEOUT_SECONDS = 2
 
 
+def _soc_profile() -> str:
+    profile = os.environ.get("SOC_PROFILE", "production").strip().lower()
+    return profile if profile in {"test", "production", "demo"} else "production"
+
+
 def _default_posteriors(n_categories: int, n_actions: int) -> dict[str, list[list[float]]]:
     return {
         "alphas": [[1.0 for _ in range(n_actions)] for _ in range(n_categories)],
@@ -38,7 +43,7 @@ class PosteriorStore:
         if was_unset:
             graph_config = GraphConfig.load(
                 "soc",
-                profile="test" if os.environ.get("PYTEST_CURRENT_TEST") else "production",
+                profile=_soc_profile(),
             )
         if graph_config is None:
             raise ValueError("PosteriorStore requires GraphConfig")
@@ -55,7 +60,7 @@ class PosteriorStore:
             self._dsn = graph_config.dsn
             # POSTERIOR_DSN is deliberately limited to test runs.  It is a
             # storage endpoint override, not a replacement for GraphConfig.
-            if was_unset and os.environ.get("PYTEST_CURRENT_TEST"):
+            if was_unset and _soc_profile() == "test":
                 self._dsn = self._resolve_dsn()
             if self._graph_store is None:
                 from copilot_sdk.graph.factory import create_graph_store
@@ -73,7 +78,7 @@ class PosteriorStore:
     def _resolve_dsn() -> str:
         # POSTERIOR_DSN is an explicit test-only override. Production graph
         # connection settings remain owned by the typed GraphConfig.
-        if os.environ.get("PYTEST_CURRENT_TEST"):
+        if _soc_profile() == "test":
             override = os.environ.get("POSTERIOR_DSN", "").strip()
             if override:
                 if "sslmode" not in override:
@@ -82,11 +87,11 @@ class PosteriorStore:
                 return override
         config = GraphConfig.load(
             "soc",
-            profile="test" if os.environ.get("PYTEST_CURRENT_TEST") else "production",
+            profile=_soc_profile(),
         )
         if not config.dsn:
             raise RuntimeError("SOC GraphConfig does not provide a posterior DSN")
-        return config.dsn
+        return str(config.dsn)
 
     def save(self, alphas: list[list[float]], betas: list[list[float]]) -> None:
         """Persist all posterior parameters using DELETE + INSERT in one transaction."""

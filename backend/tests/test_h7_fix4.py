@@ -7,6 +7,7 @@ Run from backend/ directory:
 """
 
 import asyncio
+import pytest
 import pathlib
 import sys
 import os
@@ -51,20 +52,18 @@ def test_evolution_events_endpoint_registered():
 # TEST 3 — Decision economics endpoint shape (10 decisions, 8 correct)
 # ============================================================================
 
-def test_economics_endpoint_shape():
-    """Mock AGE returning 10 decisions / 8 correct.  Assert the response
+@pytest.mark.age
+def test_economics_endpoint_shape(age_graph):
+    """Seed AGE with 10 decisions / 8 correct.  Assert the response
     contains the expected computed fields."""
     from app.routers.metrics import get_decision_economics
 
     async def _run():
-        with patch("app.routers.metrics.graph_client") as mock_client:
-            mock_client.run_query = AsyncMock(side_effect=[
-                [{"total_decisions": 10}],
-                [{"correct_decisions": 8}],
-                [],
-            ])
+        with patch("app.routers.metrics.graph_client", age_graph.client):
             return await get_decision_economics()
 
+    for index in range(10):
+        age_graph.decision(correct=index < 8)
     result = asyncio.run(_run())
     assert result["decisions_made"] == 10, f"Expected 10, got {result['decisions_made']}"
     assert abs(result["correct_rate"] - 0.8) < 1e-6, f"Expected 0.8, got {result['correct_rate']}"
@@ -80,18 +79,14 @@ def test_economics_endpoint_shape():
 # TEST 4 — Division-by-zero safe when 0 decisions
 # ============================================================================
 
-def test_economics_zero_decisions_safe():
-    """Mock AGE returning 0 decisions.  Endpoint must not raise and must
+@pytest.mark.age
+def test_economics_zero_decisions_safe(age_graph):
+    """Read an empty AGE graph.  Endpoint must not raise and must
     return correct_rate=0.0, time_saved_hours=0.0."""
     from app.routers.metrics import get_decision_economics
 
     async def _run():
-        with patch("app.routers.metrics.graph_client") as mock_client:
-            mock_client.run_query = AsyncMock(side_effect=[
-                [{"total_decisions": 0}],
-                [{"correct_decisions": 0}],
-                [],
-            ])
+        with patch("app.routers.metrics.graph_client", age_graph.client):
             return await get_decision_economics()
 
     result = asyncio.run(_run())
@@ -106,14 +101,14 @@ def test_economics_zero_decisions_safe():
 # TEST 5 — Weekly trends returns estimated=True with note when no data
 # ============================================================================
 
-def test_weekly_trends_empty_with_note_when_no_data():
-    """Mock AGE returning empty list.  Response must have estimated=True
+@pytest.mark.age
+def test_weekly_trends_empty_with_note_when_no_data(age_graph):
+    """Read an empty AGE graph.  Response must have estimated=True
     and a non-empty note string."""
     from app.routers.metrics import get_weekly_trends
 
     async def _run():
-        with patch("app.routers.metrics.graph_client") as mock_client:
-            mock_client.run_query = AsyncMock(return_value=[])
+        with patch("app.routers.metrics.graph_client", age_graph.client):
             return await get_weekly_trends()
 
     result = asyncio.run(_run())

@@ -1,11 +1,15 @@
 """
 tests/test_campaign_matcher.py -- F6 CampaignRepository + CampaignMatcher tests.
 
-4 tests using AsyncMock AGE -- no live database required.
+AGE persistence tests plus isolated matching and error-policy tests.
 
 Run from backend/:
     pytest tests/test_campaign_matcher.py -v
 """
+
+import pytest
+from types import SimpleNamespace
+from support.campaign_graph import CampaignGraphProbe
 
 import sys
 import os
@@ -13,7 +17,6 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import asyncio
-import re
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock
 
@@ -91,87 +94,6 @@ def _correlate(events):
     return CampaignCorrelationEngine(DEFAULT_CONFIG).correlate(events)
 
 
-class FakeCampaignGraph:
-    def __init__(self, alerts=None, campaigns=None, edges=None, fail_on=None):
-        self.alerts = set(alerts or [])
-        self.campaigns = set(campaigns or [])
-        self.edges = set(edges or [])
-        self.fail_on = fail_on
-        self.queries = []
-
-    async def run_query(self, query, params=None):
-        self.queries.append(query)
-        if self.fail_on and self.fail_on in query:
-            raise RuntimeError("injected graph failure")
-
-        campaign_id = self._campaign_id(query)
-        if "MATCH (c:Campaign" in query and "RETURN c" in query:
-            return [{"c": {"campaign_id": campaign_id}}] if campaign_id in self.campaigns else []
-
-        if "CREATE (c:Campaign" in query:
-            self.campaigns.add(campaign_id)
-            return []
-
-        if "SET c.first_seen" in query or "SET c.last_seen" in query:
-            return []
-
-        if "-[:MEMBER_OF]->" in query and "RETURN a.alert_id AS alert_id" in query:
-            requested = set(self._predicate_alert_ids(query))
-            return [
-                {"alert_id": alert_id}
-                for alert_id, cid in sorted(self.edges)
-                if cid == campaign_id and alert_id in requested
-            ]
-
-        if "MATCH (a:Alert)" in query and "RETURN a.alert_id AS alert_id" in query:
-            requested = set(self._predicate_alert_ids(query))
-            return [{"alert_id": alert_id} for alert_id in sorted(requested & self.alerts)]
-
-        if "CREATE (a" in query and "[:MEMBER_OF]->(c)" in query:
-            created_count = 0
-            for alert_id in self._create_alert_ids(query):
-                if alert_id in self.alerts and campaign_id in self.campaigns:
-                    self.edges.add((alert_id, campaign_id))
-                    created_count += 1
-            return [{"created_count": created_count}]
-
-        return []
-
-    @staticmethod
-    def _campaign_id(query):
-        match = re.search(r"campaign_id: '([^']+)'", query)
-        return match.group(1) if match else None
-
-    @staticmethod
-    def _predicate_alert_ids(query):
-        return re.findall(r"a\.alert_id = '([^']+)'", query)
-
-    @staticmethod
-    def _create_alert_ids(query):
-        return re.findall(r"MATCH \(a\d+:Alert \{alert_id: '([^']+)'\}\)", query)
-
-    def count_queries_containing(self, text):
-        return sum(1 for query in self.queries if text in query)
-
-
-class FakeReadGraph:
-    def __init__(self, rows):
-        self.rows = rows
-        self.queries = []
-        self.params = []
-
-    async def run_query(self, query, params=None):
-        self.queries.append(query)
-        self.params.append(params or {})
-        return list(self.rows)
-
-
-class FakeNoopMemberCreateGraph(FakeCampaignGraph):
-    async def run_query(self, query, params=None):
-        if "CREATE (a0)-[:MEMBER_OF]->(c)" in query:
-            self.queries.append(query)
-            return []
-        return await super().run_query(query, params)
 
 
 # ============================================================================
@@ -239,14 +161,13 @@ def test_check_alert_reuses_stable_campaign_identity_after_correlation():
 # Test 3 — check_alert returns None when no campaign and insufficient events
 # ============================================================================
 
-def test_check_alert_returns_none_when_no_campaign():
+@pytest.mark.age
+def test_check_alert_returns_none_when_no_campaign(age_graph):
     """
     When no existing campaign and AGE returns no recent events,
     check_alert must return None (not create a spurious campaign).
     """
-    mock_graph = AsyncMock()
-    # All reads return empty — no existing campaign, no recent events
-    mock_graph.run_query.return_value = []
+    mock_graph = age_graph.client
 
     engine = CampaignCorrelationEngine(DEFAULT_CONFIG)
     repo = CampaignRepository(mock_graph)
@@ -263,13 +184,13 @@ def test_check_alert_returns_none_when_no_campaign():
 # Test 4 — write_campaign is idempotent (MATCH-then-CREATE safe to call twice)
 # ============================================================================
 
-def test_repository_write_campaign_is_idempotent():
+@pytest.mark.age
+def test_repository_write_campaign_is_idempotent(age_graph):
     """
     Phase 1 write_campaign uses AGE-safe MATCH-then-CREATE semantics. Calling
     it twice with the same campaign_id must succeed without duplicate edges.
     """
-    mock_graph = AsyncMock()
-    mock_graph.run_query.return_value = None
+    mock_graph = CampaignGraphProbe(age_graph, alerts=["a1", "a2"])
 
     repo = CampaignRepository(mock_graph)
 
@@ -295,10 +216,13 @@ def test_repository_write_campaign_is_idempotent():
 
     assert result1 is True, f"First write_campaign must return True. Got: {result1!r}"
     assert result2 is True, f"Second write_campaign must return True. Got: {result2!r}"
+    assert mock_graph.campaign_create_count == 1
+    assert mock_graph.member_edge_create_count == 2
 
 
-def test_write_campaign_batches_new_member_edges():
-    graph = FakeCampaignGraph(alerts=["a1", "a2", "a3"])
+@pytest.mark.age
+def test_write_campaign_batches_new_member_edges(age_graph):
+    graph = CampaignGraphProbe(age_graph, alerts=["a1", "a2", "a3"])
     repo = CampaignRepository(graph)
 
     result = run(repo.write_campaign(_campaign(["a1", "a2", "a3"])))
@@ -309,8 +233,9 @@ def test_write_campaign_batches_new_member_edges():
     assert graph.count_queries_containing("CREATE (a0)-[:MEMBER_OF]->(c)") == 1
 
 
-def test_write_campaign_repeated_call_does_not_duplicate_member_edges():
-    graph = FakeCampaignGraph(alerts=["a1", "a2"])
+@pytest.mark.age
+def test_write_campaign_repeated_call_does_not_duplicate_member_edges(age_graph):
+    graph = CampaignGraphProbe(age_graph, alerts=["a1", "a2"])
     repo = CampaignRepository(graph)
     campaign = _campaign(["a1", "a2"])
 
@@ -321,8 +246,9 @@ def test_write_campaign_repeated_call_does_not_duplicate_member_edges():
     assert graph.count_queries_containing("CREATE (a0)-[:MEMBER_OF]->(c)") == 1
 
 
-def test_write_campaign_skips_missing_alert_without_blocking_valid_edges():
-    graph = FakeCampaignGraph(alerts=["a1", "a3"])
+@pytest.mark.age
+def test_write_campaign_skips_missing_alert_without_blocking_valid_edges(age_graph):
+    graph = CampaignGraphProbe(age_graph, alerts=["a1", "a3"])
     repo = CampaignRepository(graph)
 
     result = run(repo.write_campaign(_campaign(["a1", "missing", "a3"])))
@@ -332,8 +258,9 @@ def test_write_campaign_skips_missing_alert_without_blocking_valid_edges():
     assert ("missing", "c-001") not in graph.edges
 
 
-def test_write_campaign_handles_zero_member_ids():
-    graph = FakeCampaignGraph(alerts=["a1"])
+@pytest.mark.age
+def test_write_campaign_handles_zero_member_ids(age_graph):
+    graph = CampaignGraphProbe(age_graph, alerts=["a1"])
     repo = CampaignRepository(graph)
 
     result = run(repo.write_campaign(_campaign([])))
@@ -344,8 +271,9 @@ def test_write_campaign_handles_zero_member_ids():
     assert graph.count_queries_containing("[:MEMBER_OF]->(c)") == 0
 
 
-def test_write_campaign_dedupes_duplicate_member_ids():
-    graph = FakeCampaignGraph(alerts=["a1", "a2"])
+@pytest.mark.age
+def test_write_campaign_dedupes_duplicate_member_ids(age_graph):
+    graph = CampaignGraphProbe(age_graph, alerts=["a1", "a2"])
     repo = CampaignRepository(graph)
 
     result = run(repo.write_campaign(_campaign(["a1", "a1", "a2", "a2"])))
@@ -355,9 +283,10 @@ def test_write_campaign_dedupes_duplicate_member_ids():
     assert graph.count_queries_containing("CREATE (a0)-[:MEMBER_OF]->(c)") == 1
 
 
-def test_write_campaign_chunks_member_edge_creates_at_25():
+@pytest.mark.age
+def test_write_campaign_chunks_member_edge_creates_at_25(age_graph):
     alert_ids = [f"a{i}" for i in range(26)]
-    graph = FakeCampaignGraph(alerts=alert_ids)
+    graph = CampaignGraphProbe(age_graph, alerts=alert_ids)
     repo = CampaignRepository(graph)
 
     result = run(repo.write_campaign(_campaign(alert_ids)))
@@ -367,8 +296,9 @@ def test_write_campaign_chunks_member_edge_creates_at_25():
     assert graph.count_queries_containing("CREATE (a0)-[:MEMBER_OF]->(c)") == 2
 
 
-def test_write_campaign_only_creates_missing_subset():
-    graph = FakeCampaignGraph(
+@pytest.mark.age
+def test_write_campaign_only_creates_missing_subset(age_graph):
+    graph = CampaignGraphProbe(age_graph, 
         alerts=["a1", "a2", "a3"],
         campaigns=["c-001"],
         edges={("a1", "c-001"), ("a2", "c-001")},
@@ -382,8 +312,9 @@ def test_write_campaign_only_creates_missing_subset():
     assert graph.count_queries_containing("CREATE (a0)-[:MEMBER_OF]->(c)") == 1
 
 
-def test_write_campaign_all_edges_already_exist_creates_no_edges():
-    graph = FakeCampaignGraph(
+@pytest.mark.age
+def test_write_campaign_all_edges_already_exist_creates_no_edges(age_graph):
+    graph = CampaignGraphProbe(age_graph, 
         alerts=["a1", "a2"],
         campaigns=["c-001"],
         edges={("a1", "c-001"), ("a2", "c-001")},
@@ -397,8 +328,9 @@ def test_write_campaign_all_edges_already_exist_creates_no_edges():
     assert graph.count_queries_containing("CREATE (a0)-[:MEMBER_OF]->(c)") == 0
 
 
-def test_write_campaign_returns_false_on_batched_query_failure():
-    graph = FakeCampaignGraph(alerts=["a1"], fail_on="MATCH (a:Alert)")
+@pytest.mark.age
+def test_write_campaign_returns_false_on_batched_query_failure(age_graph):
+    graph = CampaignGraphProbe(age_graph, alerts=["a1"], fail_on="MATCH (a:Alert)")
     repo = CampaignRepository(graph)
 
     result = run(repo.write_campaign(_campaign(["a1"])))
@@ -406,11 +338,13 @@ def test_write_campaign_returns_false_on_batched_query_failure():
     assert result is False
 
 
-def test_write_campaign_diagnostics_use_batched_labels(monkeypatch, tmp_path):
+@pytest.mark.age
+def test_write_campaign_diagnostics_use_batched_labels(monkeypatch, tmp_path, age_graph):
     monkeypatch.setenv("SOC_PERF_TRACE_ENABLED", "true")
     monkeypatch.setenv("SOC_PERF_TRACE_OUTPUT", str(tmp_path / "campaign_trace.jsonl"))
-    graph = FakeCampaignGraph(alerts=["a1", "a2"], edges={("a1", "c-001")})
-    repo = CampaignRepository(graph)
+    graph = CampaignGraphProbe(age_graph, alerts=["a1", "a2"], edges={("a1", "c-001")})
+    # Exercise the query-only tracing interface with real AGE operations.
+    repo = CampaignRepository(SimpleNamespace(run_query=graph.run_query))
     trace = CampaignTraceCollector("a2")
 
     result = run(repo.write_campaign(_campaign(["a1", "a2"], campaign_id="c-001"), trace=trace))
@@ -430,8 +364,9 @@ def test_write_campaign_diagnostics_use_batched_labels(monkeypatch, tmp_path):
     assert "member_edge_create" not in labels
 
 
-def test_write_campaign_batch_create_query_uses_single_create_with_returned_count():
-    graph = FakeCampaignGraph(alerts=["a1", "a2", "a3"])
+@pytest.mark.age
+def test_write_campaign_batch_create_query_uses_single_create_with_returned_count(age_graph):
+    graph = CampaignGraphProbe(age_graph, alerts=["a1", "a2", "a3"])
     repo = CampaignRepository(graph)
 
     result = run(repo.write_campaign(_campaign(["a1", "a2", "a3"])))
@@ -443,19 +378,21 @@ def test_write_campaign_batch_create_query_uses_single_create_with_returned_coun
     ]
     assert len(batch_queries) == 1
     batch_query = batch_queries[0]
-    assert "MATCH (c:Campaign {campaign_id: 'c-001'})" in batch_query
-    assert "MATCH (a0:Alert {alert_id: 'a1'})" in batch_query
-    assert "MATCH (a1:Alert {alert_id: 'a2'})" in batch_query
-    assert "MATCH (a2:Alert {alert_id: 'a3'})" in batch_query
+    assert "MATCH (c:Campaign {domain: 'soc', campaign_id: 'c-001'})" in batch_query
+    assert "MATCH (a0:Alert {domain: 'soc', alert_id: 'a1'})" in batch_query
+    assert "MATCH (a1:Alert {domain: 'soc', alert_id: 'a2'})" in batch_query
+    assert "MATCH (a2:Alert {domain: 'soc', alert_id: 'a3'})" in batch_query
     assert "CREATE (a0)-[:MEMBER_OF]->(c), (a1)-[:MEMBER_OF]->(c), (a2)-[:MEMBER_OF]->(c)" in batch_query
     assert "RETURN 3 AS created_count" in batch_query
 
 
-def test_write_campaign_diagnostics_do_not_claim_edges_without_create_ack(monkeypatch, tmp_path):
+@pytest.mark.age
+def test_write_campaign_diagnostics_do_not_claim_edges_without_create_ack(monkeypatch, tmp_path, age_graph):
     monkeypatch.setenv("SOC_PERF_TRACE_ENABLED", "true")
     monkeypatch.setenv("SOC_PERF_TRACE_OUTPUT", str(tmp_path / "campaign_trace.jsonl"))
-    graph = FakeNoopMemberCreateGraph(alerts=["a1", "a2"])
-    repo = CampaignRepository(graph)
+    graph = CampaignGraphProbe(age_graph, suppress_member_create=True, alerts=["a1", "a2"])
+    # Exercise the query-only tracing interface with real AGE operations.
+    repo = CampaignRepository(SimpleNamespace(run_query=graph.run_query))
     trace = CampaignTraceCollector("a1")
 
     result = run(repo.write_campaign(_campaign(["a1", "a2"], campaign_id="c-001"), trace=trace))
@@ -467,7 +404,8 @@ def test_write_campaign_diagnostics_do_not_claim_edges_without_create_ack(monkey
     assert trace.member_edges_created_count == 0
 
 
-def test_phase1_same_stream_same_user_same_category_reuses_one_campaign_with_25_edges():
+@pytest.mark.age
+def test_phase1_same_stream_same_user_same_category_reuses_one_campaign_with_25_edges(age_graph):
     events = [
         _event(f"a{i:02d}", user_id="user-1", category="credential_access", minutes=i)
         for i in range(25)
@@ -480,7 +418,7 @@ def test_phase1_same_stream_same_user_same_category_reuses_one_campaign_with_25_
     assert campaign.derived_entity_key == "user:user-1"
     assert campaign.category == "credential_access"
 
-    graph = FakeCampaignGraph(alerts=[event["alert_id"] for event in events])
+    graph = CampaignGraphProbe(age_graph, alerts=[event["alert_id"] for event in events])
     assert run(CampaignRepository(graph).write_campaign(campaign)) is True
     assert graph.campaigns == {campaign.campaign_id}
     assert graph.edges == {
@@ -630,7 +568,8 @@ def test_phase1_bucket_boundary_splits_campaign_identity():
     assert len({campaign.campaign_id for campaign in campaigns}) == 2
 
 
-def test_phase1_diagnostic_like_rows_group_by_decision_source_id_after_normalization():
+@pytest.mark.age
+def test_phase1_diagnostic_like_rows_group_by_decision_source_id_after_normalization(age_graph):
     events = [
         _event(
             f"diag-{idx:04d}",
@@ -650,34 +589,22 @@ def test_phase1_diagnostic_like_rows_group_by_decision_source_id_after_normaliza
     assert campaigns[0].derived_entity_key == "entity:diag-zone-1"
     assert campaigns[0].alert_count == 25
 
-    graph = FakeCampaignGraph(alerts=[event["alert_id"] for event in events])
+    graph = CampaignGraphProbe(age_graph, alerts=[event["alert_id"] for event in events])
     assert run(CampaignRepository(graph).write_campaign(campaigns[0])) is True
     assert graph.campaigns == {campaigns[0].campaign_id}
     assert len(graph.edges) == 25
 
 
-def test_fetch_recent_events_preserves_phase1_identity_fields_from_decision_source():
-    graph = FakeReadGraph([
-        {
-            "alert_id": "diag-0001",
-            "category": "credential_access",
-            "source_entity_id": "diag-zone-1",
-            "user_id": "diag-user-0001",
-            "asset_id": "diag-asset-0001",
-            "source_location": "diag-zone-1",
-            "technique_id": None,
-            "ts": 1725000000001,
-            "severity": "critical",
-            "decision_id": "decision-diag-0001",
-        },
-    ])
-
+@pytest.mark.age
+def test_fetch_recent_events_preserves_phase1_identity_fields_from_decision_source(age_graph):
+    age_graph.alert(alert_id="diag-0001", user_id="diag-user-0001", asset_id="diag-asset-0001", severity="critical")
+    age_graph.decision(decision_id="decision-diag-0001", source_id="diag-zone-1")
+    age_graph.query("MATCH (d:Decision), (a:Alert) CREATE (d)-[:DECIDED_ON]->(a) RETURN d")
+    graph = CampaignGraphProbe(age_graph)
     events = run(CampaignRepository(graph).fetch_recent_events())
-
+    assert len(events) == 1
     assert events[0]["source_entity_id"] == "diag-zone-1"
     assert events[0]["user_id"] == "diag-user-0001"
     assert events[0]["asset_id"] == "diag-asset-0001"
     assert events[0]["source_location"] == "diag-zone-1"
     assert events[0]["category"] == "credential_access"
-    assert "COALESCE(a.source_entity_id, d.source_id) AS source_entity_id" in graph.queries[0]
-    assert "COALESCE(a.category, d.category) AS category" in graph.queries[0]

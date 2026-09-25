@@ -13,6 +13,7 @@ No app.domains.soc.* imports allowed.
 """
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import JSONResponse
 from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel
@@ -642,7 +643,9 @@ async def graph_explorer_query(request: _GraphQueryRequest):
     if spec is None:
         raise HTTPException(status_code=400, detail="Unknown graph query name")
     try:
-        rows = await _get_age_client().run_query(spec["cypher"], dict(spec["params"]))
+        rows = await _get_age_client().run_query(
+            spec["cypher"], dict(spec["params"])  # type: ignore[arg-type]
+        )
     except Exception as exc:
         raise HTTPException(status_code=503, detail="AGE query failed") from exc
     return {"rows": rows, "count": len(rows), "query": spec["cypher"]}
@@ -747,7 +750,17 @@ async def learning_health():
     }
     """
     from app.services.learning_health import LearningHealthMonitor
-    health = await LearningHealthMonitor.evaluate(_get_age_client())
+    try:
+        health = await LearningHealthMonitor.evaluate(_get_age_client())
+    except RuntimeError as exc:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "UNAVAILABLE",
+                "reason": "Conservation dependency unavailable",
+                "detail": str(exc),
+            },
+        )
     from app.services.evolver import get_soc_conservation_provider
 
     get_soc_conservation_provider().update_from_health(health)

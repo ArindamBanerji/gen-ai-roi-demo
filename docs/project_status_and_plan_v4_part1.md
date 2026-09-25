@@ -138,11 +138,11 @@ Actions (A = 4):
   Accessed via referral rules R1-R7 (not confidence gate) — never in centroid tensor.
 
 Factors (d = 6):
-  0: travel_match
+  0: privileged_identity_context
   1: asset_criticality
   2: threat_intel_enrichment
-  3: time_anomaly              (NOTE: was index 3 in v5.0 — factor order may vary)
-  4: pattern_history
+  3: pattern_history
+  4: time_anomaly
   5: device_trust
 
 Bootstrap: 1,200 synthetic decisions, σ=0.08, seed=42.

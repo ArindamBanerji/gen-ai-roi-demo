@@ -94,11 +94,11 @@ class SOCCompoundingScorerAdapter:
 
     def reestimate_dk(self) -> None:
         """Legacy DK re-estimation API."""
-        return self._scorer.reestimate_dk()
+        self._scorer.reestimate_dk()
 
     def get_phase(self, category_index: int) -> str:
         """Legacy per-category phase API."""
-        return self._scorer.get_phase(category_index)
+        return cast(str, self._scorer.get_phase(category_index))
 
     def get_dk_weights(self, category_index: int | None = None) -> Any:
         """Return raw ProfileScorer DK weights."""
@@ -113,11 +113,11 @@ class SOCCompoundingScorerAdapter:
     def get_centroid(self, category: str, action: str) -> list[float] | None:
         category_index = self._scorer.categories.index(category)
         action_index = self._scorer.actions.index(action)
-        return self._scorer.mu[category_index][action_index].tolist()
+        return cast(list[float], self._scorer.mu[category_index][action_index].tolist())
 
     def get_category_phase(self, category: str) -> str:
         category_index = self._scorer.categories.index(category)
-        return self._scorer.get_phase(category_index)
+        return cast(str, self._scorer.get_phase(category_index))
 
     def _persist_conservation_snapshot(self, *args: Any, **kwargs: Any) -> None:
         """Delegate J6 conservation persistence to the compound scorer."""

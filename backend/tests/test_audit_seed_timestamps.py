@@ -9,14 +9,16 @@ from app.seed.config import SeedConfig
 from app.seed.runner import generate_seed
 
 
-class FakeClient:
-    def __init__(self, rows):
-        self.rows = rows
-        self.queries: list[str] = []
-
-    async def run_query(self, query: str):
-        self.queries.append(query)
-        return list(self.rows)
+def _history_client(age_graph, rows):
+    for row in reversed(rows):
+        age_graph.alert(alert_id=row["alert_id"])
+        age_graph.decision(decision_id=row["decision_id"], correct=row["correct"],
+                           category=row["category"], action=row["action"], confidence=row["confidence"],
+                           origin="zero_day_synthetic", timestamp_epoch=row["ts"])
+        did = age_graph.client.serialize_for_age(row["decision_id"])
+        aid = age_graph.client.serialize_for_age(row["alert_id"])
+        age_graph.query(f"MATCH (d:Decision {{decision_id: {did}}}), (a:Alert {{alert_id: {aid}}}) CREATE (d)-[:DECIDED_ON]->(a) RETURN d")
+    return age_graph.client
 
 
 @pytest.fixture(autouse=True)
@@ -45,27 +47,29 @@ def test_timestamp_span_covers_window():
     assert span >= configured * 0.8
 
 
+@pytest.mark.age
 @pytest.mark.asyncio
-async def test_audit_reconstruct_uses_decision_timestamps():
+async def test_audit_reconstruct_uses_decision_timestamps(age_graph):
     ts = 1741046400000
     rows = [_row("DEC-1", "ALERT-1", ts)]
 
-    added = await audit_mod.rebuild_chain_from_graph(FakeClient(rows))
+    added = await audit_mod.rebuild_chain_from_graph(_history_client(age_graph, rows))
 
     assert added == 1
     entry = audit_mod._LEDGER.entries()[0]
     assert entry.timestamp == _iso(ts)
 
 
+@pytest.mark.age
 @pytest.mark.asyncio
-async def test_rebuild_chain_preserves_timestamp_order():
+async def test_rebuild_chain_preserves_timestamp_order(age_graph):
     rows = [
         _row("DEC-1", "ALERT-1", 1741046400000),
         _row("DEC-2", "ALERT-2", 1741132800000),
         _row("DEC-3", "ALERT-3", 1741219200000),
     ]
 
-    added = await audit_mod.rebuild_chain_from_graph(FakeClient(rows))
+    added = await audit_mod.rebuild_chain_from_graph(_history_client(age_graph, rows))
 
     assert added == 3
     assert [entry.decision_id for entry in audit_mod._LEDGER.entries()] == [
@@ -78,11 +82,12 @@ async def test_rebuild_chain_preserves_timestamp_order():
     ]
 
 
+@pytest.mark.age
 @pytest.mark.asyncio
-async def test_rebuild_chain_missing_timestamp_uses_utc_iso_fallback():
+async def test_rebuild_chain_missing_timestamp_uses_utc_iso_fallback(age_graph):
     rows = [_row("DEC-1", "ALERT-1", None)]
 
-    await audit_mod.rebuild_chain_from_graph(FakeClient(rows))
+    await audit_mod.rebuild_chain_from_graph(_history_client(age_graph, rows))
 
     entry = audit_mod._LEDGER.entries()[0]
     parsed = datetime.fromisoformat(entry.timestamp)

@@ -39,7 +39,8 @@ def test_unknown_conservation_is_not_green():
 
     assert result["conservation_status"] == "UNKNOWN"
     assert result["conservation_healthy"] is False
-    assert result["status"] == "AMBER"
+    assert result["status"] == "degraded"
+    assert "conservation" in result["failed_components"]
 
 
 def test_frozen_categories_clear_on_spike_clear():

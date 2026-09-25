@@ -1,8 +1,10 @@
 """
 Block 7.6 -- tests for compute_verification_health().
-All tests use AsyncMock for graph_client -- no live AGE required.
+Verification coverage and windows are read from a disposable AGE graph.
 """
 import asyncio
+import math
+import time
 import os
 import sys
 from unittest.mock import AsyncMock, patch
@@ -18,28 +20,21 @@ from app.services.learning_health import compute_verification_health
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _graph_mock(total=1000, verified=300,
-                last_total=100, last_verified=30,
-                prior_total=100, prior_verified=30,
-                conservation_status="GREEN"):
-    """
-    Build an AsyncMock graph_client whose run_query returns realistic data.
-
-    Query dispatch is positional -- the order in compute_verification_health:
-      call 0 : total decisions
-      call 1 : verified decisions
-      call 2 : last-7d window
-      call 3 : prior-7d window
-      call 4+ : LearningHealthMonitor.evaluate() queries (patched separately)
-    """
-    mock = AsyncMock()
-    mock.run_query.side_effect = [
-        [{"total": total}],                                          # call 0
-        [{"verified": verified}],                                    # call 1
-        [{"total": last_total,  "verified": last_verified}],        # call 2
-        [{"total": prior_total, "verified": prior_verified}],       # call 3
-    ]
-    return mock, conservation_status
+def _verification_graph(age_graph, total=1000, verified=300,
+                        last_total=100, last_verified=30,
+                        prior_total=100, prior_verified=30,
+                        conservation_status="GREEN"):
+    scale = math.gcd(total, verified, last_total, last_verified, prior_total, prior_verified)
+    now = time.time()
+    for count, verified_count, age_days in [
+        (last_total, last_verified, 3),
+        (prior_total, prior_verified, 10),
+        (total-last_total-prior_total, verified-last_verified-prior_verified, 20),
+    ]:
+        for index in range(count // scale):
+            age_graph.decision(correct=True if index < verified_count // scale else None,
+                               created_at=now-age_days*86400)
+    return age_graph.client, conservation_status
 
 
 def _run(coro):
@@ -58,8 +53,9 @@ def _patch_conservation(status: str):
 # Test 1 — GREEN when all conditions met
 # ---------------------------------------------------------------------------
 
-def test_green_when_all_conditions_met():
-    mock, _ = _graph_mock(
+@pytest.mark.age
+def test_green_when_all_conditions_met(age_graph):
+    mock, _ = _verification_graph(age_graph, 
         total=1000, verified=300,       # coverage = 0.30 >= 0.20 [OK]
         last_total=100, last_verified=30,   # last rate = 0.30
         prior_total=100, prior_verified=30, # prior rate = 0.30 -> no drift [OK]
@@ -78,8 +74,9 @@ def test_green_when_all_conditions_met():
 # Test 2 — AMBER when coverage is low (< 20%)
 # ---------------------------------------------------------------------------
 
-def test_amber_when_coverage_low():
-    mock, _ = _graph_mock(
+@pytest.mark.age
+def test_amber_when_coverage_low(age_graph):
+    mock, _ = _verification_graph(age_graph, 
         total=1000, verified=100,       # coverage = 0.10 < 0.20 [FAIL]
         last_total=100, last_verified=10,
         prior_total=100, prior_verified=10,
@@ -96,8 +93,9 @@ def test_amber_when_coverage_low():
 # Test 3 — AMBER when drift detected (last_7d rate drops > 20%)
 # ---------------------------------------------------------------------------
 
-def test_amber_when_drift_detected():
-    mock, _ = _graph_mock(
+@pytest.mark.age
+def test_amber_when_drift_detected(age_graph):
+    mock, _ = _verification_graph(age_graph, 
         total=1000, verified=250,       # coverage 25% [OK]
         last_total=100, last_verified=10,   # last rate = 0.10
         prior_total=100, prior_verified=30, # prior rate = 0.30 -> drop = 67% [FAIL]
@@ -115,8 +113,9 @@ def test_amber_when_drift_detected():
 # Test 4 — RED when no verifications at all (coverage_rate == 0)
 # ---------------------------------------------------------------------------
 
-def test_red_when_no_verifications():
-    mock, _ = _graph_mock(
+@pytest.mark.age
+def test_red_when_no_verifications(age_graph):
+    mock, _ = _verification_graph(age_graph, 
         total=500, verified=0,          # coverage = 0.0
         last_total=50, last_verified=0,
         prior_total=50, prior_verified=0,
@@ -133,8 +132,9 @@ def test_red_when_no_verifications():
 # Test 5 — RED when all 3 conditions unhealthy simultaneously
 # ---------------------------------------------------------------------------
 
-def test_status_logic_all_unhealthy_is_red():
-    mock, _ = _graph_mock(
+@pytest.mark.age
+def test_status_logic_all_unhealthy_is_red(age_graph):
+    mock, _ = _verification_graph(age_graph, 
         total=1000, verified=50,        # coverage = 0.05 < 0.20 [FAIL]
         last_total=100, last_verified=2,    # last rate = 0.02
         prior_total=100, prior_verified=20, # prior rate = 0.20 -> drop = 90% [FAIL]
@@ -148,8 +148,9 @@ def test_status_logic_all_unhealthy_is_red():
     assert result["conservation_healthy"] is False
 
 
-def test_calibrating_conservation_is_healthy():
-    mock, _ = _graph_mock(
+@pytest.mark.age
+def test_calibrating_conservation_is_healthy(age_graph):
+    mock, _ = _verification_graph(age_graph, 
         total=1000, verified=300,
         last_total=100, last_verified=30,
         prior_total=100, prior_verified=30,

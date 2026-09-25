@@ -48,23 +48,35 @@ def sm(isolated_client):
 
 
 @pytest.fixture
-def client():
-    """Get raw graph client."""
-    from ci_platform.graph import get_graph_client
-    from copilot_sdk.config import GraphConfig
-
-    config = GraphConfig.load("soc")
-    return get_graph_client(dsn=config.dsn, graph_name=config.graph)
+def client(sm, isolated_client):
+    """Check the seeded test graph after both destructive operations."""
+    _run(sm.clear_session_decisions())
+    _run(sm.delete_session_decisions())
+    return isolated_client
 
 
 @pytest.fixture
 def isolated_client(soc_stress_test_graph):
     """Get a raw graph client bound to the disposable stress-test graph."""
-    from ci_platform.graph import get_graph_client
+    from ci_platform.graph import AGEClient
 
     dsn, graph_name = soc_stress_test_graph
-    client = get_graph_client(dsn=dsn, graph_name=graph_name)
+    # The application factory caches a singleton and ignores a mismatched
+    # graph request. Never use it for a destructive test namespace.
+    assert graph_name.startswith("soc_stress_test_") and graph_name != "soc_graph"
+    client = AGEClient(dsn=dsn, graph_name=graph_name)
+    assert client._graph == graph_name
     try:
+        _run(client.run_query(
+            "CREATE (d:Decision {decision_id: 'stress-protected', domain: 'soc', "
+            "origin: 'zero_day_synthetic', category: 'credential_access', "
+            "action: 'investigate', confidence: 0.8, correct: true, outcome: 'correct', "
+            "timestamp_epoch: 1, factor_vector: '[0.1,0.2,0.3,0.4,0.5,0.6]'}), "
+            "(a:Alert {alert_id: 'stress-alert'}), (u:User {user_id: 'stress-user'}), "
+            "(s:Asset {asset_id: 'stress-asset'}), (c:Campaign {campaign_id: 'stress-campaign'}), "
+            "(d)-[:DECIDED_ON]->(a), (a)-[:INVOLVES]->(u), "
+            "(a)-[:DETECTED_ON]->(s), (a)-[:MEMBER_OF]->(c)"
+        ))
         yield client
     finally:
         close = getattr(client, "close", None)
@@ -236,12 +248,11 @@ class TestVerifyGraphDetectsProblems:
             ))
 
     def test_healthy_after_cleanup(self, client):
-        """After removing the orphan, graph should be healthy."""
+        """The miniature fixture has no orphans after the destructive paths."""
         from app.graph_schema import verify_graph
         report = _run(verify_graph(client))
-        if not report["healthy"]:
-            for issue in report["issues"]:
-                print("  [INFO] " + issue)
+        # Production census minima do not apply to this one-record fixture.
+        assert not any("orphan" in issue.lower() for issue in report["issues"])
 
 
 # ================================================================
@@ -256,7 +267,7 @@ class TestContractSurvivesStress:
             "MATCH (d:Decision {origin: 'zero_day_synthetic'}) RETURN count(d) AS n"
         ))
         n = int(r[0]["n"])
-        assert n >= 4800, (
+        assert n == 1, (
             "Persistent decision count too low after stress: " + str(n)
         )
 
@@ -264,7 +275,7 @@ class TestContractSurvivesStress:
         """Alerts untouched by all destructive operations."""
         r = _run(client.run_query("MATCH (a:Alert) RETURN count(a) AS n"))
         n = int(r[0]["n"])
-        assert n >= 540, "Alert count too low after stress: " + str(n)
+        assert n == 1, "Seeded Alert count changed after stress: " + str(n)
 
     def test_decided_on_edges_intact(self, client):
         """DECIDED_ON edges survive all destructive operations."""
@@ -273,7 +284,7 @@ class TestContractSurvivesStress:
             "-[r:DECIDED_ON]->() RETURN count(r) AS n"
         ))
         n = int(r[0]["n"])
-        assert n >= 4800, "DECIDED_ON edge count too low: " + str(n)
+        assert n == 1, "Seeded DECIDED_ON edge count changed: " + str(n)
 
     def test_no_orphan_decisions(self, client):
         """Zero orphan Decisions after all stress tests."""

@@ -4,6 +4,8 @@ Main application entry point with CORS and router registration.
 """
 from contextlib import asynccontextmanager
 import logging
+import sqlite3
+from pathlib import Path
 import os as _cors_os
 from typing import cast
 
@@ -11,6 +13,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from copilot_sdk.auth import AuthMiddleware
 from copilot_sdk.backend.auth_router import create_auth_router
+from copilot_sdk.backend.health_builder import build_graph_health, health_status_code
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from app.middleware.pii_redaction import PIIRedactionMiddleware
 
@@ -108,13 +112,13 @@ async def health():
     from app.services.posterior_store import PosteriorStore
     from copilot_sdk.config import GraphConfig
 
+    soc_profile = _cors_os.getenv("SOC_PROFILE", "production").strip().lower()
+    if soc_profile not in {"test", "production", "demo"}:
+        soc_profile = "production"
+    graph_config = GraphConfig.load("soc", profile=soc_profile if soc_profile != "demo" else "offline")
     store = getattr(rl_engine, "_posterior_store", None)
     try:
         if store is None:
-            graph_config = GraphConfig.load(
-                "soc",
-                profile="test" if _cors_os.getenv("PYTEST_CURRENT_TEST") else "production",
-            )
             store = PosteriorStore(graph_config)
         posterior_health = store.health_check()
     except Exception as exc:
@@ -126,28 +130,37 @@ async def health():
             "error": str(exc),
         }
 
-    graph_health = {
-        "healthy": bool(posterior_health.get("healthy")),
-        "status": "healthy" if posterior_health.get("healthy") else "FAILED",
-        "source": "posterior_store",
-    }
-    return {
-        "status": "healthy" if graph_health["healthy"] else "degraded",
-        "components": {
-            "graph": graph_health,
+    payload = build_graph_health(store, graph_config, "soc")
+    payload.update(
+        service="SOC Copilot Demo",
+        version=app.version,
+        learning_counts_stale=bool(getattr(app.state, "learning_counts_stale", False)),
+        components={
             "posterior_store": posterior_health,
             "entity_cache": _safe_entity_cache_health(),
+            "startup_hydration": {
+                "learning_counts_stale": bool(
+                    getattr(app.state, "learning_counts_stale", False)
+                ),
+                "error": getattr(app.state, "learning_counts_stale_reason", None),
+            },
         },
-    }
+    )
+    return JSONResponse(payload, status_code=health_status_code(payload))
 
 # Router imports
-from app.routers import evolution, triage, soc, metrics, roi, graph, audit, gae, admin, simulation, evaluation, judgment, framework_router, eval_router, governance_router, whatif_router, time_machine_router, discoveries_router, platform, shadow, soc_learning, authority, explain, soc_demo_beats, enterprise
+from app.routers import compat_router, evolution, triage, soc, metrics, roi, graph, audit, gae, admin, simulation, evaluation, judgment, framework_router, eval_router, governance_router, whatif_router, time_machine_router, discoveries_router, platform, shadow, soc_learning, authority, explain, soc_demo_beats, enterprise
 from app.routers.servicenow_router import router as servicenow_router
 from app.routers.rl_router import router as rl_router
 from app.routers.cohort_status_router import router as cohort_status_router
 from app.services.evolver import get_sdk_evolver
 from copilot_sdk.backend.self_computation_router import mount_self_computation_router
 from copilot_sdk.backend.evolution_router import create_evolution_router
+from copilot_sdk.backend.investigation_router import create_investigation_router
+from copilot_sdk.scoring.investigation import KUtilityStore
+from copilot_sdk.scoring.situation_classifier import SituationClassifier
+from app.evidence_provider import SOCEvidenceProvider
+from app.vld_preseed import seed_vld_showcase
 
 # Register routers
 app.include_router(evaluation.router, prefix="/api/soc", tags=["evaluation"])
@@ -185,6 +198,24 @@ app.include_router(rl_router, prefix="/api", tags=["RL Observability"])
 app.include_router(servicenow_router)
 app.include_router(enterprise.router, prefix="/api", tags=["Enterprise Connectors"])
 app.include_router(create_auth_router())
+app.include_router(compat_router.router, prefix="/api", tags=["SDK Compatibility"])
+
+
+class _VLDKDecisionConnection:
+    def __init__(self, path):
+        self.conn = sqlite3.connect(path, check_same_thread=False)
+
+
+def _create_vld_k_store(path, dimensions: int) -> KUtilityStore:
+    return KUtilityStore(_VLDKDecisionConnection(path), dimensions)
+
+
+def _vld_k_router_kwargs(path, dimensions: int):
+    return {"k_store": _create_vld_k_store(path, dimensions)}
+
+
+def _vld_classifier_router_kwargs():
+    return {"classifier": SituationClassifier()}
 
 
 def _soc_store_provider():
@@ -200,6 +231,41 @@ def _soc_scorer_provider():
     return getattr(scorer, "_compound", scorer)
 
 
+def _soc_vld_scorer_provider():
+    from app.services.gae_state import get_profile_scorer
+
+    scorer = get_profile_scorer()
+    if scorer is None:
+        from app.services.gae_state import init_learning_state
+
+        init_learning_state()
+        scorer = get_profile_scorer()
+    return scorer
+
+
+def _soc_vld_evidence_provider_factory(decision_id: str):
+    from app.db.graph_client import graph_client
+
+    return SOCEvidenceProvider(graph_client, decision_id)
+
+
+app.include_router(create_investigation_router(
+    scorer_provider=_soc_vld_scorer_provider,
+    evidence_provider_factory=_soc_vld_evidence_provider_factory,
+    **_vld_k_router_kwargs(Path(__file__).resolve().parents[1] / "data" / "k_utility.db", 6),
+    **_vld_classifier_router_kwargs(),
+    factor_names=[
+        "privileged_identity_context",
+        "asset_criticality",
+        "threat_intel_enrichment",
+        "pattern_history",
+        "time_anomaly",
+        "device_trust",
+    ],
+    default_budget=2,
+    gated_sources={"identity_graph", "threat_intel"},
+))
+
 # Shared centroid-history route (canonical checkpoint history).
 mount_self_computation_router(
     app,
@@ -211,6 +277,8 @@ mount_self_computation_router(
 
 async def startup_event():
     """Initialize connections on startup"""
+    app.state.learning_counts_stale = False
+    app.state.learning_counts_stale_reason = None
     from app.auth.config import load_auth_config as _load_auth_config
     _auth_cfg = _load_auth_config()
     if _auth_cfg.saml_enabled:
@@ -300,7 +368,9 @@ async def startup_event():
                 "support/setup/bootstrap_learning_loop.py --live to backfill."
             )
     except Exception as _cd_exc:
-        print(f"[STARTUP] correct_decisions bootstrap failed (non-blocking): {_cd_exc}")
+        app.state.learning_counts_stale = True
+        app.state.learning_counts_stale_reason = f"correct_decisions bootstrap failed: {_cd_exc}"
+        logger.warning("[STARTUP] correct_decisions bootstrap failed: %s", _cd_exc)
 
     try:
         from gae.evolution import rebuild_shadow_index
@@ -318,6 +388,15 @@ async def startup_event():
             print(f"[STARTUP] Variant registry rebuilt: {_variant_count} variants")
     except Exception as _registry_exc:
         print(f"[STARTUP] Variant registry rebuild failed (non-blocking): {_registry_exc}")
+
+    try:
+        _vld_seed = seed_vld_showcase(graph_client)
+        print(
+            f"[VLD] Showcase alerts registered: {_vld_seed['alert_count']} "
+            f"alerts, {_vld_seed['nodes']} nodes, {_vld_seed['edges']} edges"
+        )
+    except Exception as _vld_seed_exc:
+        print(f"[VLD] Showcase preseed failed (non-blocking): {_vld_seed_exc}")
 
     # Load analyst correct-override examples into OverrideDetector.
     # Activates automatically when >= 50 examples are found in AGE.
@@ -389,7 +468,9 @@ async def startup_event():
         else:
             print(f"[STARTUP] decision_count already current ({_ls.decision_count}), skipping AGE sync")
     except Exception as _sync_exc:
-        print(f"[STARTUP] decision_count sync failed (non-blocking): {_sync_exc}")
+        app.state.learning_counts_stale = True
+        app.state.learning_counts_stale_reason = f"decision_count sync failed: {_sync_exc}"
+        logger.warning("[STARTUP] decision_count sync failed: %s", _sync_exc)
 
     # BACKLOG-020 Phase 1: prefer verified count over total count.
     # count_verified_decisions() counts only decisions with outcome feedback.
@@ -402,7 +483,9 @@ async def startup_event():
             _get_ls_v().decision_count = _verified_count
             print(f"[STARTUP] Verified decision_count from graph: {_verified_count}")
     except Exception as _vd_exc:
-        print(f"[STARTUP] count_verified_decisions failed (non-blocking): {_vd_exc}")
+        app.state.learning_counts_stale = True
+        app.state.learning_counts_stale_reason = f"count_verified_decisions failed: {_vd_exc}"
+        logger.warning("[STARTUP] count_verified_decisions failed: %s", _vd_exc)
 
     # BACKLOG-020 Phase 7: Initialize GraphSnapshot — single source of truth for
     # all display-layer statistics that have a graph equivalent.
@@ -420,7 +503,9 @@ async def startup_event():
             f"override_rate={_snap.override_rate:.3f}"
         )
     except Exception as _snap_exc:
-        print(f"[SNAPSHOT] GraphSnapshot init failed (non-blocking): {_snap_exc}")
+        app.state.learning_counts_stale = True
+        app.state.learning_counts_stale_reason = f"GraphSnapshot init failed: {_snap_exc}"
+        logger.warning("[SNAPSHOT] GraphSnapshot init failed: %s", _snap_exc)
 
     # Rebuild audit chain from AGE Decision nodes so verify_chain is non-empty
     # after restart (BACKLOG-045). Skipped on hot reload if ledger already has entries.

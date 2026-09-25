@@ -41,8 +41,8 @@ def build_seed_payload(scenarios: list[dict[str, Any]] | None = None) -> dict[st
         if alert_id and alert_id not in graph_alert_ids:
             nodes[("Alert", alert_id)] = {"type": "Alert", "id": alert_id, "properties": {**alert, "id": alert_id, "origin": ORIGIN, "scenario_id": scenario_id}}
         for edge in scenario.get("graph_edges", []):
-            src = str(edge.get("from"))
-            dst = str(edge.get("to"))
+            src = str(edge.get("from") or edge.get("source"))
+            dst = str(edge.get("to") or edge.get("target"))
             typ = str(edge.get("type"))
             edges[(src, typ, dst)] = {"from": src, "to": dst, "type": typ, "properties": {"origin": ORIGIN, "scenario_id": scenario_id}}
     return {

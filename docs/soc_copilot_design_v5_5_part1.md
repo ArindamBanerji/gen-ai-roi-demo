@@ -3,6 +3,8 @@
 **Date:** March 21, 2026
 **Version:** 5.5.2 (v5.5.1 + ReferralRules R1-R7 + triage VETO wiring)
 **Status:** v5.5 ALPHA COMPLETE. v6.0 kernel + referral architecture SETTLED. DiagonalKernel validated. ReferralRules validated (72.7% DR, 12% FPR). 478 GAE tests, 280 SOC tests, 73 ci-platform tests. ~104 experiments complete.
+
+> **Current factor-0 contract (Sep 2026):** This is a historical v5.5 design snapshot. Its `travel_match` examples refer to the legacy `TravelMatchFactor`; live SOC scoring uses `privileged_identity_context` at factor 0. Do not treat the travel examples as current scorer semantics.
 **Repository:** soc-copilot (proprietary)
 **Theme:** "Your tools, our decisions. Your environment, your intelligence."
 **Companion repos:**

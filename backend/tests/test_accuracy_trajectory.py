@@ -27,29 +27,23 @@ client = TestClient(app)
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _get_trajectory(graph_rows=None):
-    """Call GET /api/soc/accuracy-trajectory with optional AGE mock rows."""
-    if graph_rows is None:
-        graph_rows = []
-    with patch(
-        "app.routers.soc.graph_client.run_query",
-        new_callable=AsyncMock,
-        return_value=graph_rows,
-    ):
-        response = client.get("/api/soc/accuracy-trajectory")
-    return response
+def _get_trajectory(age_graph):
+    """Read the disposable graph through the production endpoint."""
+    with patch("app.routers.soc.graph_client", age_graph.client), patch.object(app.state, "graph_store", age_graph.store, create=True):
+        return client.get("/api/soc/accuracy-trajectory")
 
 
 # ============================================================================
 # Test 1 — cold-start (no decisions) returns valid structure
 # ============================================================================
 
-def test_accuracy_trajectory_cold_start_structure():
+@pytest.mark.age
+def test_accuracy_trajectory_cold_start_structure(age_graph):
     """
     With no decisions in AGE the endpoint must still return a valid response
     with all required top-level keys and at least one category entry.
     """
-    response = _get_trajectory(graph_rows=[])
+    response = _get_trajectory(age_graph)
 
     assert response.status_code == 200, (
         f"Expected 200, got {response.status_code}: {response.text[:300]}"
@@ -70,13 +64,16 @@ def test_accuracy_trajectory_cold_start_structure():
 # Test 2 — live decision count flows through to category entry
 # ============================================================================
 
-def test_accuracy_trajectory_live_data_reflected():
+@pytest.mark.age
+def test_accuracy_trajectory_live_data_reflected(age_graph):
     """
     When AGE returns a category with N decisions, the response must reflect
     that count in the matching category entry.
     """
-    rows = [{"category": "phishing", "cnt": 500}]
-    response = _get_trajectory(graph_rows=rows)
+    for _ in range(5):
+        age_graph.decision(category="phishing")
+    age_graph.decision(category="phishing", domain="s2p")
+    response = _get_trajectory(age_graph)
 
     assert response.status_code == 200
     body = response.json()
@@ -91,8 +88,8 @@ def test_accuracy_trajectory_live_data_reflected():
     assert phishing is not None, (
         f"Category 'phishing' not found in response: {[c['category'] for c in body['categories']]}"
     )
-    assert phishing["decision_count"] == 500, (
-        f"Expected decision_count=500, got {phishing['decision_count']}"
+    assert phishing["decision_count"] == 5, (
+        f"Expected decision_count=5, got {phishing['decision_count']}"
     )
 
 
@@ -120,13 +117,15 @@ def test_accuracy_trajectory_accuracy_in_valid_range():
 # Test 4 — trajectory_points are present and monotonically increasing
 # ============================================================================
 
-def test_accuracy_trajectory_points_monotone():
+@pytest.mark.age
+def test_accuracy_trajectory_points_monotone(age_graph):
     """
     trajectory_points in each category entry must be a non-empty list of
     {decisions, accuracy} dicts, with accuracy strictly increasing.
     """
-    rows = [{"category": "malware", "cnt": 200}]
-    response = _get_trajectory(graph_rows=rows)
+    for _ in range(2):
+        age_graph.decision(category="malware")
+    response = _get_trajectory(age_graph)
 
     assert response.status_code == 200
     body = response.json()

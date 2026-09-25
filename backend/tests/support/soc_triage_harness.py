@@ -1,8 +1,8 @@
 """Stateful test infrastructure for post-unification SOC triage tests.
 
-The InMemoryGraphStore is the only authority for Decision records and
-outcomes.  ``SOCNonDecisionClient`` supplies the legacy client surface only
-for non-Decision reads and side effects that the router still needs.
+The selected production store is the Decision authority: InMemoryGraphStore
+for routing-policy tests, or an isolated AGE graph for persistence tests.
+SOCNonDecisionClient is retained only for controlled policy inputs.
 """
 
 from __future__ import annotations
@@ -116,8 +116,9 @@ class SOCNonDecisionClient:
 class SOCTriageHarness:
     """Shared harness with a real stateful Decision authority."""
 
-    def __init__(self) -> None:
-        self.store = InMemoryGraphStore(domain="soc")
+    def __init__(self, graph: Any | None = None) -> None:
+        self.graph = graph
+        self.store = graph.store if graph is not None else InMemoryGraphStore(domain="soc")
         compound = CompoundingScorer.from_preset(
             "soc",
             graph_store=self.store,
@@ -127,7 +128,7 @@ class SOCTriageHarness:
         self.scorer = object.__new__(SOCCompoundingScorerAdapter)
         object.__setattr__(self.scorer, "_compound", compound)
         object.__setattr__(self.scorer, "_scorer", compound._scorer)
-        self.graph_client = SOCNonDecisionClient()
+        self.graph_client = graph.client if graph is not None else SOCNonDecisionClient()
 
     def add_decision(
         self,
@@ -166,27 +167,35 @@ class SOCTriageHarness:
             metadata=metadata,
         )
         flags = dict(exploration_flags or {})
-        self.graph_client.add_decision_projection(
-            actual_id,
-            {
-                "factor_vector": deepcopy(
-                    None if factor_vector is _UNSET else factor_vector
-                ),
-                "action": action,
-                "confidence": confidence,
-                "category": category,
-                "alert_type": extra.get("alert_type", category),
-                "campaign_id": campaign_id,
-                "explored": bool(flags.get("explored", extra.get("explored", False))),
-                "explored_but_referred": bool(
-                    flags.get("explored_but_referred", extra.get("explored_but_referred", False))
-                ),
-                "exploration_executed": bool(
-                    flags.get("exploration_executed", extra.get("exploration_executed", False))
-                ),
-                "explored_action": flags.get("explored_action", extra.get("explored_action")),
-            },
-        )
+        projection = {
+            "factor_vector": deepcopy(
+                None if factor_vector is _UNSET else factor_vector
+            ),
+            "action": action,
+            "confidence": confidence,
+            "category": category,
+            "alert_type": extra.get("alert_type", category),
+            "campaign_id": campaign_id,
+            "explored": bool(flags.get("explored", extra.get("explored", False))),
+            "explored_but_referred": bool(
+                flags.get("explored_but_referred", extra.get("explored_but_referred", False))
+            ),
+            "exploration_executed": bool(
+                flags.get("exploration_executed", extra.get("exploration_executed", False))
+            ),
+            "explored_action": flags.get("explored_action", extra.get("explored_action")),
+        }
+        if self.graph is None:
+            self.graph_client.add_decision_projection(actual_id, projection)
+        else:
+            self.graph.set_properties("Decision", "decision_id", actual_id, _domain="soc", **projection)
+            alert_id = self.graph.alert(category=category, alert_type=extra.get("alert_type", category))
+            serialize = self.graph_client.serialize_for_age
+            self.graph.query(
+                f"MATCH (d:Decision {{decision_id: {serialize(actual_id)}}}), "
+                f"(a:Alert {{id: {serialize(alert_id)}}}) "
+                "CREATE (d)-[:DECIDED_ON]->(a) RETURN d"
+            )
         if status != "pending":
             raise ValueError("SOCTriageHarness.add_decision only creates pending Decisions")
         return actual_id

@@ -17,6 +17,7 @@ from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -96,44 +97,56 @@ def _run(coro):
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
-def test_correct_outcome_creates_triggered_evolution_edge(soc_triage_harness):
+def _evolution_rows(age_graph):
+    return age_graph.query("MATCH (d:Decision)-[:TRIGGERED_EVOLUTION]->(e:EvolutionEvent) RETURN properties(e) AS properties, properties(d) AS decision")
+
+
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
+def test_correct_outcome_creates_triggered_evolution_edge(soc_triage_harness, age_graph, monkeypatch):
     """
     Verified correct outcome on a SCORER_ACTION must create exactly one
     (Decision)-[:TRIGGERED_EVOLUTION]->(EvolutionEvent) write in the graph.
     """
     _run(_call(soc_triage_harness, outcome="correct"))
-    events = soc_triage_harness.graph_client._evolution_events
+    events = _evolution_rows(age_graph)
     assert len(events) == 1, (
         f"Expected 1 TRIGGERED_EVOLUTION write, got {len(events)}"
     )
     assert events[0]["properties"]
 
 
-def test_incorrect_outcome_does_not_create_evolution_edge(soc_triage_harness):
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
+def test_incorrect_outcome_does_not_create_evolution_edge(soc_triage_harness, age_graph, monkeypatch):
     """
     Verified incorrect outcome must NOT create a TRIGGERED_EVOLUTION edge.
     Incorrect outcomes do not encode positive patterns for the flywheel.
     """
     _run(_call(soc_triage_harness, outcome="incorrect"))
-    assert len(soc_triage_harness.graph_client._evolution_events) == 0, (
+    assert len(_evolution_rows(age_graph)) == 0, (
         f"Expected 0 TRIGGERED_EVOLUTION writes for incorrect outcome, "
-        f"got {len(soc_triage_harness.graph_client._evolution_events)}"
+        f"got {len(_evolution_rows(age_graph))}"
     )
 
 
-def test_routing_action_does_not_create_evolution_edge(soc_triage_harness):
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
+def test_routing_action_does_not_create_evolution_edge(soc_triage_harness, age_graph, monkeypatch):
     """
     refer_to_analyst is a routing decision, not a SCORER_ACTION.
     TRIGGERED_EVOLUTION edges must NOT be created for it.
     """
     _run(_call(soc_triage_harness, action=_ROUTING_ACTION, outcome="correct"))
-    assert len(soc_triage_harness.graph_client._evolution_events) == 0, (
+    assert len(_evolution_rows(age_graph)) == 0, (
         f"Expected 0 TRIGGERED_EVOLUTION writes for routing action "
-        f"'{_ROUTING_ACTION}', got {len(soc_triage_harness.graph_client._evolution_events)}"
+        f"'{_ROUTING_ACTION}', got {len(_evolution_rows(age_graph))}"
     )
 
 
-def test_evolution_edge_has_required_properties(soc_triage_harness):
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
+def test_evolution_edge_has_required_properties(soc_triage_harness, age_graph, monkeypatch):
     """
     The TRIGGERED_EVOLUTION Cypher write must include all required properties:
     timestamp_epoch, decision_id, category, correct=true, action.
@@ -141,9 +154,9 @@ def test_evolution_edge_has_required_properties(soc_triage_harness):
     d.factor_snapshot, d.decision_number, and d.action_index.
     """
     _run(_call(soc_triage_harness, outcome="correct"))
-    events = soc_triage_harness.graph_client._evolution_events
+    events = _evolution_rows(age_graph)
     assert len(events) == 1, "Expected exactly one TRIGGERED_EVOLUTION write"
-    properties = events[0]["properties"]
+    properties = {**events[0]["properties"], **events[0]["decision"]}
     for prop in ("timestamp_epoch", "decision_id", "category", "correct", "action"):
         assert prop in properties, (
             f"Required property '{prop}' missing from TRIGGERED_EVOLUTION query"
@@ -157,12 +170,20 @@ def test_evolution_edge_has_required_properties(soc_triage_harness):
     assert decision["recommended_action"] == _SCORER_ACTION
 
 
-def test_evolution_edge_failure_does_not_block_outcome(soc_triage_harness):
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
+def test_evolution_edge_failure_does_not_block_outcome(soc_triage_harness, age_graph, monkeypatch):
     """
     When the TRIGGERED_EVOLUTION graph write raises, the outcome response
     must still succeed. Edge creation is fire-and-forget -- non-blocking.
     """
-    soc_triage_harness.graph_client.fail_triggered_evolution = True
+    original = age_graph.client.run_query
+    async def fail_evolution(query, parameters=None):
+        if "CREATE" in query and "TRIGGERED_EVOLUTION" in query:
+            raise RuntimeError("evolution write failed")
+        return await original(query, parameters)
+    spy = AsyncMock(side_effect=fail_evolution)
+    monkeypatch.setattr(age_graph.client, "run_query", spy)
     result = _run(_call(soc_triage_harness, outcome="correct"))
     assert isinstance(result, dict), (
         f"Expected dict response even after edge write failure, got {type(result)}"
@@ -170,4 +191,4 @@ def test_evolution_edge_failure_does_not_block_outcome(soc_triage_harness):
     assert "graph_updates" in result or "centroid_update" in result, (
         "Response must contain expected outcome fields after edge write failure"
     )
-    assert any("TRIGGERED_EVOLUTION" in query for query, _ in soc_triage_harness.graph_client._queries)
+    assert any("TRIGGERED_EVOLUTION" in call.args[0] for call in spy.call_args_list)

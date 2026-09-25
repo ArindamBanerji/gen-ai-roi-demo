@@ -1,0 +1,239 @@
+{
+  "d=6 A=4": {
+    "q_top5": [
+      [
+        "exhaustive",
+        0.87
+      ],
+      [
+        "P2_inv_s2+D0_none+U4_margin",
+        0.824
+      ],
+      [
+        "P2_inv_s2+D2_spread+U4_margin",
+        0.824
+      ],
+      [
+        "P2_inv_s2+D1_top2+U4_margin",
+        0.822
+      ],
+      [
+        "P1_inv_s+D2_spread+U4_margin",
+        0.818
+      ]
+    ],
+    "q_baselines": {
+      "single_pass": 0.646,
+      "random": 0.734,
+      "exhaustive": 0.87
+    },
+    "routing": {
+      "01_single_pass": 0.646,
+      "02_random": 0.71,
+      "03_exhaustive": 0.87,
+      "04_Q_greedy_fixed": 0.744,
+      "05_Q_RNN": 0.748,
+      "06_Q_RNN_boundary": 0.744,
+      "07_Q_RNN_margin": 0.822,
+      "08_Q_RNN_raw_V": 0.742,
+      "09_Q_RNN_consist_V": 0.74,
+      "10_Q_CI_utility": 0.748
+    },
+    "per_situation": {
+      "S5": {
+        "sp": 0.62,
+        "random": 0.66,
+        "vld": 0.68,
+        "exh": 0.94
+      },
+      "S1": {
+        "sp": 1.0,
+        "random": 1.0,
+        "vld": 1.0,
+        "exh": 1.0
+      },
+      "S2": {
+        "sp": 0.34,
+        "random": 0.32,
+        "vld": 0.28,
+        "exh": 0.3
+      },
+      "S4": {
+        "sp": 0.64,
+        "random": 0.768,
+        "vld": 0.816,
+        "exh": 1.0
+      },
+      "S3": {
+        "sp": 0.752,
+        "random": 0.832,
+        "vld": 0.864,
+        "exh": 1.0
+      },
+      "S6": {
+        "sp": 0.02,
+        "random": 0.06,
+        "vld": 0.32,
+        "exh": 0.46
+      }
+    }
+  },
+  "d=6 A=6": {
+    "q_top5": [
+      [
+        "exhaustive",
+        0.85
+      ],
+      [
+        "P2_inv_s2+D1_top2+U0_none",
+        0.806
+      ],
+      [
+        "P0_none+D2_spread+U0_none",
+        0.802
+      ],
+      [
+        "P1_inv_s+D2_spread+U0_none",
+        0.802
+      ],
+      [
+        "P2_inv_s2+D0_none+U4_margin",
+        0.802
+      ]
+    ],
+    "q_baselines": {
+      "single_pass": 0.662,
+      "random": 0.73,
+      "exhaustive": 0.85
+    },
+    "routing": {
+      "01_single_pass": 0.662,
+      "02_random": 0.738,
+      "03_exhaustive": 0.85,
+      "04_Q_greedy_fixed": 0.776,
+      "05_Q_RNN": 0.776,
+      "06_Q_RNN_boundary": 0.758,
+      "07_Q_RNN_margin": 0.8,
+      "08_Q_RNN_raw_V": 0.768,
+      "09_Q_RNN_consist_V": 0.766,
+      "10_Q_CI_utility": 0.78
+    },
+    "per_situation": {
+      "S5": {
+        "sp": 0.72,
+        "random": 0.7,
+        "vld": 0.76,
+        "exh": 0.82
+      },
+      "S4": {
+        "sp": 0.728,
+        "random": 0.824,
+        "vld": 0.92,
+        "exh": 1.0
+      },
+      "S3": {
+        "sp": 0.736,
+        "random": 0.848,
+        "vld": 0.848,
+        "exh": 1.0
+      },
+      "S1": {
+        "sp": 1.0,
+        "random": 1.0,
+        "vld": 1.0,
+        "exh": 1.0
+      },
+      "S2": {
+        "sp": 0.24,
+        "random": 0.24,
+        "vld": 0.26,
+        "exh": 0.24
+      },
+      "S6": {
+        "sp": 0.0,
+        "random": 0.16,
+        "vld": 0.32,
+        "exh": 0.44
+      }
+    }
+  },
+  "d=8 A=5": {
+    "q_top5": [
+      [
+        "exhaustive",
+        0.866
+      ],
+      [
+        "P0_none+D3_max+U0_none",
+        0.828
+      ],
+      [
+        "P1_inv_s+D3_max+U0_none",
+        0.828
+      ],
+      [
+        "P2_inv_s2+D3_max+U0_none",
+        0.824
+      ],
+      [
+        "P1_inv_s+D0_none+U0_none",
+        0.822
+      ]
+    ],
+    "q_baselines": {
+      "single_pass": 0.73,
+      "random": 0.758,
+      "exhaustive": 0.866
+    },
+    "routing": {
+      "01_single_pass": 0.73,
+      "02_random": 0.762,
+      "03_exhaustive": 0.866,
+      "04_Q_greedy_fixed": 0.798,
+      "05_Q_RNN": 0.796,
+      "06_Q_RNN_boundary": 0.792,
+      "07_Q_RNN_margin": 0.81,
+      "08_Q_RNN_raw_V": 0.808,
+      "09_Q_RNN_consist_V": 0.796,
+      "10_Q_CI_utility": 0.798
+    },
+    "per_situation": {
+      "S3": {
+        "sp": 0.896,
+        "random": 0.928,
+        "vld": 0.928,
+        "exh": 1.0
+      },
+      "S4": {
+        "sp": 0.872,
+        "random": 0.88,
+        "vld": 0.96,
+        "exh": 1.0
+      },
+      "S5": {
+        "sp": 0.64,
+        "random": 0.68,
+        "vld": 0.68,
+        "exh": 0.98
+      },
+      "S2": {
+        "sp": 0.24,
+        "random": 0.24,
+        "vld": 0.24,
+        "exh": 0.3
+      },
+      "S1": {
+        "sp": 1.0,
+        "random": 1.0,
+        "vld": 1.0,
+        "exh": 1.0
+      },
+      "S6": {
+        "sp": 0.0,
+        "random": 0.1,
+        "vld": 0.32,
+        "exh": 0.38
+      }
+    }
+  }
+}

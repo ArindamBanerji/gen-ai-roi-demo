@@ -174,16 +174,13 @@ def test_bootstrap_decision_has_required_fields():
 
 
 @pytest.mark.asyncio
-async def test_bootstrap_writer_uses_shared_age_batch_and_is_idempotent():
+@pytest.mark.age
+async def test_bootstrap_writer_uses_shared_age_batch_and_is_idempotent(age_graph):
     from app.domains.soc.config import SOC_CATEGORIES
     from app.services.bootstrap_graph import write_bootstrap_decisions
 
-    client = AsyncMock()
-    client.run_query = AsyncMock(side_effect=[
-        [],
-        [],
-        [{"cnt": 1}],
-    ])
+    client = age_graph.client
+    client.run_query = AsyncMock(wraps=client.run_query)
 
     written = await write_bootstrap_decisions(
         client,
@@ -200,8 +197,13 @@ async def test_bootstrap_writer_uses_shared_age_batch_and_is_idempotent():
 
     assert written == len(SOC_CATEGORIES)
     assert skipped == 0
+    assert await age_graph.reopen_client().run_query("MATCH (d:Decision {domain: 'soc', source: 'bootstrap'}) RETURN count(d) AS n") == [{"n": len(SOC_CATEGORIES)}]
+    vectors = await age_graph.reopen_client().run_query("MATCH (d:Decision {source: 'bootstrap'}) RETURN d.factor_vector[0] AS value")
+    assert len(vectors) == len(SOC_CATEGORIES)
+    assert all(isinstance(row["value"], (int, float)) for row in vectors)
     write_query = client.run_query.call_args_list[1].args[0]
-    assert "UNWIND $decisions AS dec" in write_query
+    assert "UNWIND [{" in write_query
+    assert " AS dec" in write_query
     assert "domain:           dec.domain" in write_query
 
 

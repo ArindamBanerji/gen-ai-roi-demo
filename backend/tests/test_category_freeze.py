@@ -1,7 +1,7 @@
 """
 Block 9.3 -- D2 Category freeze tests.
 Coupled to D3 spike detector -- freeze only activates during volume spikes.
-No live AGE required.
+Category baseline queries use live AGE.
 """
 import asyncio
 import os
@@ -31,10 +31,11 @@ def _run(coro):
     return asyncio.run(coro)
 
 
-def _graph_with_baseline(category_rows):
-    mock = AsyncMock()
-    mock.run_query.return_value = category_rows
-    return mock
+def _graph_with_baseline(age_graph, category_rows):
+    for row in category_rows:
+        for _ in range(row["cnt"]):
+            age_graph.alert(category=row["category"])
+    return age_graph.client
 
 
 # ---------------------------------------------------------------------------
@@ -48,7 +49,7 @@ def test_no_freeze_when_no_spike():
     """
     assert not is_volume_spike_active(), "Precondition: spike should be inactive"
 
-    mock = _graph_with_baseline([])    # baseline irrelevant -- guard fires first
+    mock = AsyncMock()    # baseline irrelevant -- guard fires first
     today = {"lateral_movement": 100, "malware": 10}
 
     result = _run(detect_frozen_categories(mock, today))
@@ -61,7 +62,8 @@ def test_no_freeze_when_no_spike():
 # Test 2 — over-represented category is frozen during spike
 # ---------------------------------------------------------------------------
 
-def test_overrepresented_category_frozen():
+@pytest.mark.age
+def test_overrepresented_category_frozen(age_graph):
     """
     Baseline: lateral_movement = 15% of alerts.
     Spike day: lateral_movement = 90 / 100 = 90% -> 90% > 2 x 15% -> freeze.
@@ -72,7 +74,7 @@ def test_overrepresented_category_frozen():
         {"category": "malware",          "cnt": 50},
         {"category": "phishing",         "cnt": 35},
     ]
-    mock = _graph_with_baseline(baseline_rows)
+    mock = _graph_with_baseline(age_graph, baseline_rows)
     today = {"lateral_movement": 90, "malware": 10}   # total = 100
 
     try:
@@ -93,7 +95,8 @@ def test_overrepresented_category_frozen():
 # Test 3 — normal category NOT frozen even during spike
 # ---------------------------------------------------------------------------
 
-def test_normal_category_not_frozen():
+@pytest.mark.age
+def test_normal_category_not_frozen(age_graph):
     """
     All categories within 2x baseline share -> no freezes.
     Baseline: lateral_movement=20%, malware=30%, phishing=50%.
@@ -104,7 +107,7 @@ def test_normal_category_not_frozen():
         {"category": "malware",          "cnt": 30},
         {"category": "phishing",         "cnt": 50},
     ]
-    mock = _graph_with_baseline(baseline_rows)
+    mock = _graph_with_baseline(age_graph, baseline_rows)
     today = {"lateral_movement": 22, "malware": 28, "phishing": 50}   # total=100
 
     try:

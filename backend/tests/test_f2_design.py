@@ -11,6 +11,7 @@ import sys
 import os
 from unittest.mock import patch, AsyncMock, MagicMock
 
+import pytest
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -151,7 +152,8 @@ def test_overall_quality_is_mean_of_categories():
 # TEST 6 — Noise map null when no decisions
 # ============================================================================
 
-def test_noise_map_null_when_no_decisions():
+@pytest.mark.age
+def test_noise_map_null_when_no_decisions(age_graph):
     """Mock AGE returning total=0 for all categories.
     All fp_rate must be None and estimated=True."""
     from app.routers.soc import get_detection_engineering
@@ -162,10 +164,7 @@ def test_noise_map_null_when_no_decisions():
 
     async def _run():
         with patch("app.services.gae_state.get_profile_scorer", return_value=mock_scorer):
-            with patch("app.routers.soc.graph_client") as mock_neo:
-                mock_neo.run_query = AsyncMock(
-                    side_effect=[[] for _ in SOC_CATEGORIES]
-                )
+            with patch("app.routers.soc.graph_client", age_graph.client):
                 return await get_detection_engineering()
 
     result = asyncio.run(_run())
@@ -182,7 +181,8 @@ def test_noise_map_null_when_no_decisions():
 # TEST 7 — Noise map FP rate computed correctly
 # ============================================================================
 
-def test_noise_map_fp_rate_computed_correctly():
+@pytest.mark.age
+def test_noise_map_fp_rate_computed_correctly(age_graph):
     """Mock AGE: total=10, fp_count=3 for credential_access.
     fp_rate must equal 0.3 for that category."""
     from app.routers.soc import get_detection_engineering
@@ -191,16 +191,14 @@ def test_noise_map_fp_rate_computed_correctly():
     mock_scorer = MagicMock()
     mock_scorer.centroids = SOC_PROFILE_CENTROIDS.copy()
 
-    # credential_access is index 0 in SOC_CATEGORIES
-    side_effects = (
-        [[{"total": 10, "fp_count": 3}]]
-        + [[] for _ in range(len(SOC_CATEGORIES) - 1)]
-    )
+    for index in range(10):
+        age_graph.alert(alert_id=f"noise-{index}", category="credential_access")
+        age_graph.decision(decision_id=f"noise-{index}", correct=index >= 3)
+        age_graph.query(f"MATCH (d:Decision {{decision_id: 'noise-{index}'}}), (a:Alert {{alert_id: 'noise-{index}'}}) CREATE (d)-[:DECIDED_ON]->(a) RETURN d")
 
     async def _run():
         with patch("app.services.gae_state.get_profile_scorer", return_value=mock_scorer):
-            with patch("app.routers.soc.graph_client") as mock_neo:
-                mock_neo.run_query = AsyncMock(side_effect=side_effects)
+            with patch("app.routers.soc.graph_client", age_graph.client):
                 return await get_detection_engineering()
 
     result = asyncio.run(_run())

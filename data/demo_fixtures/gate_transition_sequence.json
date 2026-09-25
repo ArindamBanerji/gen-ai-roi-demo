@@ -1,0 +1,27 @@
+{
+  "fixture_id": "PL-SOC-2-GATE-TRANSITION-001",
+  "scenario": "SOC-04",
+  "endpoint": "/api/eval/simulate-failure",
+  "method": "POST",
+  "initial_status": "GREEN",
+  "expected_final_status": "AMBER",
+  "outcomes": [
+    {"decision": 1, "outcome": "correct", "planted": true},
+    {"decision": 2, "outcome": "correct", "planted": true},
+    {"decision": 3, "outcome": "correct", "planted": true},
+    {"decision": 4, "outcome": "correct", "planted": true},
+    {"decision": 5, "outcome": "correct", "planted": true},
+    {"decision": 6, "outcome": "correct", "planted": true},
+    {"decision": 7, "outcome": "correct", "planted": true},
+    {"decision": 8, "outcome": "correct", "planted": true},
+    {"decision": 9, "outcome": "correct", "planted": true},
+    {"decision": 10, "outcome": "correct", "planted": true},
+    {"decision": 11, "outcome": "incorrect", "planted": true},
+    {"decision": 12, "outcome": "incorrect", "planted": true},
+    {"decision": 13, "outcome": "incorrect", "planted": true},
+    {"decision": 14, "outcome": "incorrect", "planted": true},
+    {"decision": 15, "outcome": "incorrect", "planted": true}
+  ],
+  "planted": true,
+  "sample": true
+}

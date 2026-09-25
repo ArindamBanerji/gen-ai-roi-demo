@@ -2,6 +2,7 @@ import asyncio
 import os
 import sys
 import time
+import json
 from unittest.mock import AsyncMock
 
 import numpy as np
@@ -25,6 +26,58 @@ from app.services.cross_graph_discovery import (
 AS_OF = 1743638400000
 BASELINE = AS_OF - 30 * DAY_MS
 RECENT = AS_OF - 7 * DAY_MS
+
+
+def _query_spy(age_graph):
+    client = age_graph.reopen_client()
+    client.run_query = AsyncMock(wraps=client.run_query)
+    return client
+
+
+def _seed_entity(age_graph, label, identifier, alerts, name="entity"):
+    key = "user_id" if label == "User" else "asset_id"
+    relation = "INVOLVES" if label == "User" else "DETECTED_ON"
+    age_graph.node(label, **{key: identifier, "name" if label == "User" else "hostname": name})
+    serialize = age_graph.client.serialize_for_age
+    for alert_id, category, timestamp in alerts:
+        stored_id = identifier + ":" + alert_id
+        age_graph.alert(alert_id=stored_id, category=category, timestamp_epoch=timestamp)
+        age_graph.query(f"MATCH (a:Alert {{id: {serialize(stored_id)}}}), (e:{label} {{{key}: {serialize(identifier)}}}) CREATE (a)-[:{relation}]->(e) RETURN a")
+
+
+def _shared_graph(age_graph, datasets):
+    for label, rows in zip(("User", "Asset"), datasets[:2]):
+        for row in rows:
+            alerts = zip(_parse_collected(row["alert_ids_json"]), _parse_collected(row["categories_json"]), _parse_collected(row["timestamps_json"]))
+            _seed_entity(age_graph, label, row["entity_id"], alerts, row.get("entity_name", "entity"))
+    for rows in datasets[2:]:
+        for row in rows:
+            identifier = row["entity_id"] + ":" + row["alert_id"]
+            serialize = age_graph.client.serialize_for_age
+            age_graph.query(f"MATCH (a:Alert {{id: {serialize(identifier)}}}) CREATE (a)-[:HAS_INDICATOR]->(t:ThreatIndicator {{indicator: {serialize(row['indicator'])}, severity: {serialize(row['indicator_severity'])}}}) RETURN t")
+    return _query_spy(age_graph)
+
+
+def _convergence_graph(age_graph, rows):
+    serialize = age_graph.client.serialize_for_age
+    for row in rows:
+        properties = dict(row)
+        alert_id = properties.pop("alert_id")
+        timestamp = properties.pop("timestamp_epoch", AS_OF)
+        identifier = age_graph.decision(created_at=timestamp / 1000, **properties)
+        age_graph.alert(alert_id=alert_id, timestamp_epoch=timestamp)
+        age_graph.query(f"MATCH (d:Decision {{decision_id: {serialize(identifier)}}}), (a:Alert {{id: {serialize(alert_id)}}}) CREATE (d)-[:DECIDED_ON]->(a) RETURN d")
+    return _query_spy(age_graph)
+
+
+def _velocity_graph(age_graph, datasets):
+    for label, recent, baseline in [("User", datasets[0], datasets[1]), ("Asset", datasets[2], datasets[3])]:
+        counts = {row["entity_id"]: row["cnt"] for row in baseline}
+        for row in recent:
+            alerts = [(f"recent-{i}", "credential_access", AS_OF) for i in range(row["cnt"])]
+            alerts += [(f"baseline-{i}", "credential_access", BASELINE + 1) for i in range(counts.get(row["entity_id"], 0))]
+            _seed_entity(age_graph, label, row["entity_id"], alerts)
+    return _query_spy(age_graph)
 
 
 def run_query_strings(mock):
@@ -89,21 +142,20 @@ def test_score_clamp_and_severity_boundaries():
 
 
 @pytest.mark.asyncio
-async def test_get_as_of_epoch_returns_max_alert_timestamp():
+@pytest.mark.age
+async def test_get_as_of_epoch_returns_max_alert_timestamp(age_graph):
     service = DiscoveryService()
-    mock = AsyncMock()
-    mock.run_query.side_effect = [
-        [{"max_alert_epoch": "1741305600000"}],
-    ]
+    age_graph.alert(timestamp_epoch=1741305600000)
+    mock = _query_spy(age_graph)
 
     assert await service._get_as_of_epoch_ms(mock) == 1741305600000
 
 
 @pytest.mark.asyncio
-async def test_empty_timestamp_graph_returns_empty_without_wall_clock(monkeypatch):
+@pytest.mark.age
+async def test_empty_timestamp_graph_returns_empty_without_wall_clock(monkeypatch, age_graph):
     service = DiscoveryService(time_fn=lambda: 9999999999.0)
-    mock = AsyncMock()
-    mock.run_query.side_effect = [[{"max_alert_epoch": None}]]
+    mock = _query_spy(age_graph)
 
     envelope = await service.refresh("soc", mock)
 
@@ -139,7 +191,8 @@ async def test_stale_cache_returned_when_graph_clock_lookup_raises():
 
 
 @pytest.mark.asyncio
-async def test_stale_cache_returned_when_graph_clock_has_no_timestamps():
+@pytest.mark.age
+async def test_stale_cache_returned_when_graph_clock_has_no_timestamps(age_graph):
     service = DiscoveryService(ttl_seconds=10, time_fn=lambda: 100.0)
     service._cache["soc"] = {
         "domain": "soc",
@@ -152,8 +205,7 @@ async def test_stale_cache_returned_when_graph_clock_has_no_timestamps():
         "errors": [],
     }
     service._cache_time["soc"] = 0.0
-    mock = AsyncMock()
-    mock.run_query.side_effect = [[{"max_alert_epoch": None}]]
+    mock = _query_spy(age_graph)
 
     envelope = await service.refresh("soc", mock)
 
@@ -164,19 +216,11 @@ async def test_stale_cache_returned_when_graph_clock_has_no_timestamps():
 
 
 @pytest.mark.asyncio
-async def test_refresh_uses_graph_clock_cutoffs_not_host_wall_clock(monkeypatch):
+@pytest.mark.age
+async def test_refresh_uses_graph_clock_cutoffs_not_host_wall_clock(monkeypatch, age_graph):
     service = DiscoveryService(time_fn=lambda: 123456.0)
-    mock = AsyncMock()
-    mock.run_query.side_effect = [
-        [{"max_alert_epoch": AS_OF}],
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-    ]
+    age_graph.alert(timestamp_epoch=AS_OF)
+    mock = _query_spy(age_graph)
 
     await service.refresh("soc", mock)
     queries = "\n".join(run_query_strings(mock))
@@ -187,12 +231,12 @@ async def test_refresh_uses_graph_clock_cutoffs_not_host_wall_clock(monkeypatch)
 
 
 @pytest.mark.asyncio
-async def test_generated_queries_are_age_safe_and_use_verified_relationships():
+@pytest.mark.age
+async def test_generated_queries_are_age_safe_and_use_verified_relationships(age_graph):
     service = DiscoveryService()
-    mock = AsyncMock()
     # Algorithm 1 new order: user_agg(qualifies), asset_agg=[], user_batch_TI=[{entity_id, indicator}]
     # No asset batch TI because no qualifying assets.
-    mock.run_query.side_effect = [
+    datasets = [
         [{"max_alert_epoch": AS_OF}],
         [
             {
@@ -212,6 +256,7 @@ async def test_generated_queries_are_age_safe_and_use_verified_relationships():
         [],  # velocity asset recent
         [],  # velocity asset baseline
     ]
+    mock = _shared_graph(age_graph, datasets[1:4])
 
     await service.refresh("soc", mock)
     queries = run_query_strings(mock)
@@ -226,11 +271,11 @@ async def test_generated_queries_are_age_safe_and_use_verified_relationships():
 
 
 @pytest.mark.asyncio
-async def test_shared_entity_user_qualifies_without_threat_intel():
+@pytest.mark.age
+async def test_shared_entity_user_qualifies_without_threat_intel(age_graph):
     service = DiscoveryService()
-    mock = AsyncMock()
     # New order: user_agg, asset_agg, user_batch_TI (no asset TI — no qualifying assets)
-    mock.run_query.side_effect = [
+    datasets = [
         [
             {
                 "entity_id": "USR-1",
@@ -244,6 +289,7 @@ async def test_shared_entity_user_qualifies_without_threat_intel():
         [],   # asset aggregate
         [],   # user batch TI (no indicators)
     ]
+    mock = _shared_graph(age_graph, datasets)
 
     discoveries = await service._shared_entity_discovery(mock, BASELINE, AS_OF)
 
@@ -253,11 +299,11 @@ async def test_shared_entity_user_qualifies_without_threat_intel():
 
 
 @pytest.mark.asyncio
-async def test_shared_entity_asset_qualifies_and_threat_intel_boosts():
+@pytest.mark.age
+async def test_shared_entity_asset_qualifies_and_threat_intel_boosts(age_graph):
     service = DiscoveryService()
-    mock = AsyncMock()
     # New order: user_agg=[], asset_agg(qualifies), asset_batch_TI (no user TI — no qualifying users)
-    mock.run_query.side_effect = [
+    datasets = [
         [],   # user aggregate
         [
             {
@@ -272,6 +318,7 @@ async def test_shared_entity_asset_qualifies_and_threat_intel_boosts():
         # asset batch TI — new format includes entity_id
         [{"entity_id": "AST-1", "indicator": "1.2.3.4", "indicator_severity": "high", "alert_id": "A1"}],
     ]
+    mock = _shared_graph(age_graph, datasets)
 
     discoveries = await service._shared_entity_discovery(mock, BASELINE, AS_OF)
 
@@ -282,10 +329,10 @@ async def test_shared_entity_asset_qualifies_and_threat_intel_boosts():
 
 
 @pytest.mark.asyncio
-async def test_shared_entity_single_category_or_below_min_alerts_skipped():
+@pytest.mark.age
+async def test_shared_entity_single_category_or_below_min_alerts_skipped(age_graph):
     service = DiscoveryService()
-    mock = AsyncMock()
-    mock.run_query.side_effect = [
+    datasets = [
         [
             {
                 "entity_id": "USR-1",
@@ -307,15 +354,16 @@ async def test_shared_entity_single_category_or_below_min_alerts_skipped():
             }
         ],
     ]
+    mock = _shared_graph(age_graph, datasets)
 
     assert await service._shared_entity_discovery(mock, BASELINE, AS_OF) == []
 
 
 @pytest.mark.asyncio
-async def test_shared_entity_exact_window_excludes_outside_alert():
+@pytest.mark.age
+async def test_shared_entity_exact_window_excludes_outside_alert(age_graph):
     service = DiscoveryService()
-    mock = AsyncMock()
-    mock.run_query.side_effect = [
+    datasets = [
         [
             {
                 "entity_id": "USR-1",
@@ -328,16 +376,17 @@ async def test_shared_entity_exact_window_excludes_outside_alert():
         ],
         [],
     ]
+    mock = _shared_graph(age_graph, datasets)
 
     assert await service._shared_entity_discovery(mock, BASELINE, AS_OF) == []
 
 
 @pytest.mark.asyncio
-async def test_shared_entity_exact_window_three_inside_qualifies():
+@pytest.mark.age
+async def test_shared_entity_exact_window_three_inside_qualifies(age_graph):
     service = DiscoveryService()
-    mock = AsyncMock()
     # New order: user_agg(qualifies), asset_agg=[], user_batch_TI=[]
-    mock.run_query.side_effect = [
+    datasets = [
         [
             {
                 "entity_id": "USR-1",
@@ -351,6 +400,7 @@ async def test_shared_entity_exact_window_three_inside_qualifies():
         [],   # asset aggregate
         [],   # user batch TI
     ]
+    mock = _shared_graph(age_graph, datasets)
 
     discoveries = await service._shared_entity_discovery(mock, BASELINE, AS_OF)
 
@@ -358,10 +408,10 @@ async def test_shared_entity_exact_window_three_inside_qualifies():
 
 
 @pytest.mark.asyncio
-async def test_pattern_convergence_cross_category_same_action_discovers():
+@pytest.mark.age
+async def test_pattern_convergence_cross_category_same_action_discovers(age_graph):
     service = DiscoveryService()
-    mock = AsyncMock()
-    mock.run_query.return_value = [
+    datasets = [
         {
             "decision_id": "D1",
             "alert_id": "A1",
@@ -381,6 +431,7 @@ async def test_pattern_convergence_cross_category_same_action_discovers():
             "timestamp_epoch": AS_OF,
         },
     ]
+    mock = _convergence_graph(age_graph, datasets)
 
     discoveries, parsed = await service._pattern_convergence_discovery(mock, BASELINE)
 
@@ -391,10 +442,10 @@ async def test_pattern_convergence_cross_category_same_action_discovers():
 
 
 @pytest.mark.asyncio
-async def test_pattern_convergence_skips_same_category_and_malformed_vectors():
+@pytest.mark.age
+async def test_pattern_convergence_skips_same_category_and_malformed_vectors(age_graph):
     service = DiscoveryService()
-    mock = AsyncMock()
-    mock.run_query.return_value = [
+    datasets = [
         {
             "decision_id": "D1",
             "alert_id": "A1",
@@ -420,6 +471,7 @@ async def test_pattern_convergence_skips_same_category_and_malformed_vectors():
             "factor_vector": [0.1, 0, 0, 0, 0, 0],
         },
     ]
+    mock = _convergence_graph(age_graph, datasets)
 
     discoveries, parsed = await service._pattern_convergence_discovery(mock, BASELINE)
 
@@ -428,15 +480,16 @@ async def test_pattern_convergence_skips_same_category_and_malformed_vectors():
 
 
 @pytest.mark.asyncio
-async def test_temporal_velocity_user_and_asset_spikes_detected():
+@pytest.mark.age
+async def test_temporal_velocity_user_and_asset_spikes_detected(age_graph):
     service = DiscoveryService()
-    mock = AsyncMock()
-    mock.run_query.side_effect = [
+    datasets = [
         [{"entity_id": "USR-1", "entity_name": "User", "alert_ids_json": ["A1", "A2", "A3"], "cnt": 3}],
         [{"entity_id": "USR-1", "entity_name": "User", "cnt": 1}],
         [{"entity_id": "AST-1", "entity_name": "host", "alert_ids_json": ["A4", "A5", "A6"], "cnt": 3}],
         [{"entity_id": "AST-1", "entity_name": "host", "cnt": 1}],
     ]
+    mock = _velocity_graph(age_graph, datasets)
 
     discoveries = await service._temporal_velocity_discovery(mock, RECENT, BASELINE)
 
@@ -444,10 +497,10 @@ async def test_temporal_velocity_user_and_asset_spikes_detected():
 
 
 @pytest.mark.asyncio
-async def test_temporal_velocity_boundaries_and_zero_baseline():
+@pytest.mark.age
+async def test_temporal_velocity_boundaries_and_zero_baseline(age_graph):
     service = DiscoveryService()
-    mock = AsyncMock()
-    mock.run_query.side_effect = [
+    datasets = [
         [
             {"entity_id": "ZERO", "cnt": 100},
             {"entity_id": "LOWRECENT", "cnt": 1},
@@ -463,6 +516,7 @@ async def test_temporal_velocity_boundaries_and_zero_baseline():
         [],
         [],
     ]
+    mock = _velocity_graph(age_graph, datasets)
 
     discoveries = await service._temporal_velocity_discovery(mock, RECENT, BASELINE)
 
@@ -653,9 +707,9 @@ async def test_summary_counts_severities():
 
 
 @pytest.mark.asyncio
-async def test_shared_entity_batches_threat_intel_query():
+@pytest.mark.age
+async def test_shared_entity_batches_threat_intel_query(age_graph):
     """Algorithm 1 uses at most 4 graph queries (2 aggregates + 2 batch TI), not 100+."""
-    mock = AsyncMock()
     # Provide 3 qualifying users and 3 qualifying assets.
     user_row = {
         "entity_id": "USR-1",
@@ -673,12 +727,13 @@ async def test_shared_entity_batches_threat_intel_query():
         "timestamps_json": [AS_OF, AS_OF - 1, AS_OF - 2],
         "cnt": 3,
     }
-    mock.run_query.side_effect = [
-        [user_row, user_row, user_row],  # user aggregate -- 3 qualifying
-        [asset_row, asset_row, asset_row],  # asset aggregate -- 3 qualifying
+    datasets = [
+        [{**user_row, "entity_id": f"USR-{i}"} for i in range(3)],  # user aggregate -- 3 qualifying
+        [{**asset_row, "entity_id": f"AST-{i}"} for i in range(3)],  # asset aggregate -- 3 qualifying
         [],  # user batch TI
         [],  # asset batch TI
     ]
+    mock = _shared_graph(age_graph, datasets)
     service = DiscoveryService()
     await service._shared_entity_discovery(mock, BASELINE, AS_OF)
     assert mock.run_query.call_count <= 4

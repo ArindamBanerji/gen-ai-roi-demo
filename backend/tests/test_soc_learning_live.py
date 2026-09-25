@@ -1,3 +1,9 @@
+import asyncio
+import json
+from uuid import uuid4
+from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock
+
 import numpy as np
 import pytest
 
@@ -8,6 +14,9 @@ from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
 from copilot_sdk.graph.memory_store import InMemoryGraphStore
 from copilot_sdk.scoring.scorer import CompoundingScorer
 from app.services.triage_providers import get_learning_policy
+from app.models.schemas import OutcomeRequest
+from app.routers import triage
+from test_rl_triage_integration import _patch_common_outcome, _decision_record
 
 
 @pytest.fixture(autouse=True)
@@ -52,34 +61,38 @@ def _score_probabilities(scorer: SOCCompoundingScorerAdapter) -> np.ndarray:
     return np.asarray(result.probabilities, dtype=float)
 
 
-def _apply_verified_outcome_if_enabled(scorer: SOCCompoundingScorerAdapter) -> float:
-    if not scorer and False:
-        return 0.0
-    policy_factory = app.dependency_overrides.get(get_learning_policy, get_learning_policy)
-    if not policy_factory().enabled():
-        return 0.0
+def _apply_verified_outcome(monkeypatch, harness) -> float:
+    scorer = harness.scorer
+    decision_id = "LEARN-" + uuid4().hex
+    policy = app.dependency_overrides[get_learning_policy]
     result = scorer.score(FACTOR_VECTOR, category_index=CATEGORY_INDEX)
-    action_index = int(result.action_index)
-    gt_action_index = SCORER_ACTIONS.index(GROUND_TRUTH_ACTION)
+    _patch_common_outcome(monkeypatch, harness, _decision_record(
+        factor_vector=json.dumps(FACTOR_VECTOR.tolist()),
+        action=result.action_name, alert_type="anomalous_login"), decision_id=decision_id)
+    monkeypatch.setitem(app.dependency_overrides, get_learning_policy, policy)
+    monkeypatch.setattr("app.services.learning_health.LearningHealthMonitor.evaluate",
+                        AsyncMock(return_value={"status": "GREEN", "auto_pause_active": False}))
+    @asynccontextmanager
+    async def acquire():
+        yield scorer
+    monkeypatch.setattr("app.services.gae_state.acquire_scorer", acquire)
+    monkeypatch.setattr("app.services.gae_state.get_profile_scorer", lambda: scorer)
+    monkeypatch.setattr("app.services.gae_state.get_learning_store", lambda: harness.store)
     before = np.asarray(scorer.mu, dtype=float).copy()
-    scorer.update(
-        f=FACTOR_VECTOR,
-        category_index=CATEGORY_INDEX,
-        action_index=action_index,
-        correct=(action_index == gt_action_index),
-        gt_action_index=gt_action_index,
-    )
+    asyncio.run(triage.report_decision_outcome(OutcomeRequest(
+        alert_id="ALERT-RL", decision_id=decision_id,
+        outcome="correct" if result.action_name == GROUND_TRUTH_ACTION else "incorrect",
+        analyst_action=GROUND_TRUTH_ACTION)))
+    assert harness.get_decision(decision_id)["status"] in {"confirmed", "overridden"}
     return float(np.linalg.norm(np.asarray(scorer.mu, dtype=float) - before))
 
 
-def test_soc_learning_changes_score(monkeypatch):
+def test_soc_learning_changes_score(monkeypatch, soc_triage_harness):
     _set_soc_learning(monkeypatch, True)
-    scorer = SOCCompoundingScorerAdapter(
-        graph_store=InMemoryGraphStore(domain="soc")
-    )
+    scorer = soc_triage_harness.scorer
 
     score_1 = _score_probabilities(scorer)
-    centroid_delta = _apply_verified_outcome_if_enabled(scorer)
+    centroid_delta = _apply_verified_outcome(monkeypatch, soc_triage_harness)
     score_2 = _score_probabilities(scorer)
 
     assert app.dependency_overrides[get_learning_policy]().enabled() is True
@@ -87,14 +100,12 @@ def test_soc_learning_changes_score(monkeypatch):
     assert not np.allclose(score_2, score_1)
 
 
-def test_soc_learning_disabled_no_change(monkeypatch):
+def test_soc_learning_disabled_no_change(monkeypatch, soc_triage_harness):
     _set_soc_learning(monkeypatch, False)
-    scorer = SOCCompoundingScorerAdapter(
-        graph_store=InMemoryGraphStore(domain="soc")
-    )
+    scorer = soc_triage_harness.scorer
 
     score_1 = _score_probabilities(scorer)
-    centroid_delta = _apply_verified_outcome_if_enabled(scorer)
+    centroid_delta = _apply_verified_outcome(monkeypatch, soc_triage_harness)
     score_2 = _score_probabilities(scorer)
 
     assert app.dependency_overrides[get_learning_policy]().enabled() is False
@@ -102,18 +113,16 @@ def test_soc_learning_disabled_no_change(monkeypatch):
     np.testing.assert_allclose(score_2, score_1)
 
 
-def test_soc_learning_toggle(monkeypatch):
-    scorer = SOCCompoundingScorerAdapter(
-        graph_store=InMemoryGraphStore(domain="soc")
-    )
+def test_soc_learning_toggle(monkeypatch, soc_triage_harness):
+    scorer = soc_triage_harness.scorer
 
     _set_soc_learning(monkeypatch, False)
     score_1 = _score_probabilities(scorer)
-    disabled_delta = _apply_verified_outcome_if_enabled(scorer)
+    disabled_delta = _apply_verified_outcome(monkeypatch, soc_triage_harness)
     score_2 = _score_probabilities(scorer)
 
     _set_soc_learning(monkeypatch, True)
-    enabled_delta = _apply_verified_outcome_if_enabled(scorer)
+    enabled_delta = _apply_verified_outcome(monkeypatch, soc_triage_harness)
     score_3 = _score_probabilities(scorer)
 
     assert disabled_delta == 0.0

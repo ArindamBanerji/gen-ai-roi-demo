@@ -23,6 +23,7 @@ class MockIncident:
     status: str = "New"
     created_at: str = ""
     external_url: str = ""
+    simulation: bool = True
 
 
 class ServiceNowMock:

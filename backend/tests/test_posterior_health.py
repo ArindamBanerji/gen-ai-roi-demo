@@ -24,12 +24,16 @@ def test_health_endpoint_includes_posterior_field(monkeypatch):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "healthy"
+    assert body["status"] == "ok"
+    assert body["ready"] is True
+    assert body["domain"] == "soc"
+    assert body["version"] == app.version
+    assert "graph_status" in body
     assert "components" in body
     assert body["components"]["posterior_store"]["healthy"] is True
 
 
-def test_health_returns_200_even_when_posterior_unhealthy(monkeypatch):
+def test_health_returns_503_when_graph_probe_unhealthy(monkeypatch):
     monkeypatch.setattr(
         PosteriorStore,
         "health_check",
@@ -38,7 +42,8 @@ def test_health_returns_200_even_when_posterior_unhealthy(monkeypatch):
 
     response = client.get("/health")
 
-    assert response.status_code == 200
+    assert response.status_code == 503
+    assert response.json()["ready"] is False
     component = _posterior_component(response)
     assert component["healthy"] is False
     assert component["error"] == "boom"

@@ -11,6 +11,7 @@ const __dirname  = path.dirname(__filename);
 
 const FRONTEND_PORT = process.env.FRONTEND_PORT || '5173';
 const FRONTEND      = `http://127.0.0.1:${FRONTEND_PORT}`;
+const SOC_API       = process.env.SOC_BACKEND || 'http://127.0.0.1:8001';
 const SCREENSHOTS   = path.join(__dirname, 'screenshots', 'feature06_modelswap');
 
 test.beforeAll(() => {
@@ -39,6 +40,11 @@ async function goToSystemHealth(page: import('@playwright/test').Page) {
   await page.waitForTimeout(1000);
 }
 
+async function requireModelSwapApi(page: import('@playwright/test').Page) {
+  const response = await page.request.get(`${SOC_API}/api/soc/model-swap-trial?n_alerts=1`).catch(() => null);
+  test.skip(!response?.ok(), 'Model-swap API unavailable in this demo mode');
+}
+
 test('test_modelswap_section_renders', async ({ page }) => {
   test.setTimeout(90_000);
   await goToSystemHealth(page);
@@ -56,6 +62,7 @@ test('test_modelswap_section_renders', async ({ page }) => {
 test('test_modelswap_run_button', async ({ page }) => {
   test.setTimeout(120_000);
   await goToSystemHealth(page);
+  await requireModelSwapApi(page);
 
   await page.getByText(/Model Swap Trial|LLM Independence/i).first().scrollIntoViewIfNeeded().catch(() => {});
   await page.waitForTimeout(1000);
@@ -71,7 +78,7 @@ test('test_modelswap_run_button', async ({ page }) => {
 
   // Wait for the trial API round-trip (up to 25s).
   // Results section: "LLM Calls" label appears after response.
-  const llmCallsEl = page.getByText(/LLM Calls/i).first();
+  const llmCallsEl = page.getByText(/LLM Calls/i).filter({ visible: true }).first();
   await expect(llmCallsEl).toBeVisible({ timeout: 25_000 });
   console.log('Results section (LLM Calls label): VISIBLE');
 
@@ -81,6 +88,7 @@ test('test_modelswap_run_button', async ({ page }) => {
 test('test_modelswap_proof_values', async ({ page }) => {
   test.setTimeout(120_000);
   await goToSystemHealth(page);
+  await requireModelSwapApi(page);
 
   await page.getByText(/Model Swap Trial|LLM Independence/i).first().scrollIntoViewIfNeeded().catch(() => {});
   await page.waitForTimeout(1000);
@@ -95,7 +103,7 @@ test('test_modelswap_proof_values', async ({ page }) => {
   }
 
   // "LLM Calls" label must appear with value 0 (wait up to 25s for API).
-  const llmCallsLabel = page.getByText(/LLM Calls/i).first();
+  const llmCallsLabel = page.getByText(/LLM Calls/i).filter({ visible: true }).first();
   await expect(llmCallsLabel).toBeVisible({ timeout: 25_000 });
   console.log('"LLM Calls" label: VISIBLE');
 

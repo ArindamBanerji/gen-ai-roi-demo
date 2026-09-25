@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import List, Literal
+import os
+from typing import Any, List, Literal
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.services.servicenow_mock import MockIncident, get_servicenow_mock
@@ -36,6 +38,22 @@ class IncidentResponse(BaseModel):
     status: str
     created_at: str
     external_url: str
+    simulation: bool
+
+
+def _demo_mode() -> bool:
+    return os.environ.get("SOC_DEMO_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _unavailable() -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={
+            "status": "unavailable",
+            "reason": "ServiceNow integration not configured",
+            "mode": "production",
+        },
+    )
 
 
 def _to_response(incident: MockIncident) -> IncidentResponse:
@@ -49,11 +67,14 @@ def _to_response(incident: MockIncident) -> IncidentResponse:
         status=incident.status,
         created_at=incident.created_at,
         external_url=incident.external_url,
+        simulation=incident.simulation,
     )
 
 
 @router.post("/create-incident", response_model=IncidentResponse)
 async def create_incident(request: CreateIncidentRequest):
+    if not _demo_mode():
+        return _unavailable()
     incident = get_servicenow_mock().create_incident(
         decision_id=request.decision_id,
         alert_id=request.alert_id,
@@ -68,11 +89,15 @@ async def create_incident(request: CreateIncidentRequest):
 
 @router.get("/incidents", response_model=List[IncidentResponse])
 async def list_incidents():
+    if not _demo_mode():
+        return _unavailable()
     return [_to_response(incident) for incident in get_servicenow_mock().get_all_incidents()]
 
 
 @router.get("/incident/{decision_id}", response_model=IncidentResponse)
 async def get_incident(decision_id: str):
+    if not _demo_mode():
+        return _unavailable()
     incident = get_servicenow_mock().get_incident(decision_id)
     if incident is None:
         raise HTTPException(status_code=404, detail=f"Incident for decision {decision_id} not found")
@@ -81,6 +106,8 @@ async def get_incident(decision_id: str):
 
 @router.post("/update-status", response_model=IncidentResponse)
 async def update_status(request: UpdateStatusRequest):
+    if not _demo_mode():
+        return _unavailable()
     incident = get_servicenow_mock().update_status(
         decision_id=request.decision_id,
         status=request.status,

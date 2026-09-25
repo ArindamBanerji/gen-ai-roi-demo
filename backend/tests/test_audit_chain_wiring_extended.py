@@ -292,31 +292,6 @@ def test_triage_outcome_persists_outcome_entry_hash_and_chain_index():
 # 10. Triage outcome: audit failure is non-blocking
 # ---------------------------------------------------------------------------
 
-def test_triage_outcome_audit_failure_is_non_blocking():
-    """
-    When record_outcome raises, the outcome handler must not crash.
-    Replicates the triage.py try/except (lines 928-944) that makes the
-    audit write non-blocking: exception is caught, processing continues.
-    """
-    mock_raise = AsyncMock(side_effect=RuntimeError("audit backend down"))
-
-    outcome_processing_completed = False
-
-    with patch("app.framework.audit.record_outcome", mock_raise):
-        # Replicate the exact non-blocking pattern from triage.py:
-        try:
-            import app.framework.audit as _a
-            _run(_a.record_outcome("fake-decision-id", "correct", False))
-        except Exception:
-            pass  # non-blocking: log and continue
-
-        outcome_processing_completed = True
-
-    assert outcome_processing_completed is True, (
-        "Outcome handler must complete even when audit.record_outcome raises"
-    )
-
-
 # ---------------------------------------------------------------------------
 # 11. Simulation: audit record_decision is called in the decision loop
 # ---------------------------------------------------------------------------

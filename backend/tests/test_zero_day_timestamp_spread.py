@@ -110,26 +110,20 @@ def test_apply_query_has_origin_guard_and_only_timestamp_sets():
 
 
 @pytest.mark.asyncio
-async def test_dry_run_executes_no_set_write_query():
-    class FakeClient:
-        def __init__(self):
-            self.queries = []
-
-        async def run_query(self, query):
-            self.queries.append(query)
-            if "RETURN count(d) AS cnt" in query:
-                return [{"cnt": 120, "unique_ts": 1, "min_ts": repair_mod.SEED_END_DAY_START_MS, "max_ts": repair_mod.SEED_END_DAY_START_MS, "missing_verified": 120}]
-            if "orphan_count" in query:
-                return [{"orphan_count": 0}]
-            if "RETURN d.decision_id AS decision_id" in query:
-                return _rows()
-            raise AssertionError(f"Unexpected query: {query}")
-
-    client = FakeClient()
+@pytest.mark.age
+async def test_dry_run_executes_no_set_write_query(age_graph):
+    from unittest.mock import AsyncMock
+    for row in _rows():
+        age_graph.decision(decision_id=row["decision_id"], category=row["category"],
+                           origin="zero_day_synthetic", timestamp_epoch=row["decision_ts"])
+    client = age_graph.client
+    client.run_query = AsyncMock(wraps=client.run_query)
+    before = age_graph.query("MATCH (d:Decision) RETURN d.decision_id AS id, d.timestamp_epoch AS ts ORDER BY id")
     result = await repair_mod.repair_zero_day_timestamps(client, apply=False)
     assert result["applied"] is False
     assert result["updated"] == 0
-    assert not any(" SET " in query.upper() for query in client.queries)
+    assert not any(" SET " in call.args[0].upper() for call in client.run_query.call_args_list)
+    assert age_graph.query("MATCH (d:Decision) RETURN d.decision_id AS id, d.timestamp_epoch AS ts ORDER BY id") == before
 
 
 @pytest.mark.asyncio

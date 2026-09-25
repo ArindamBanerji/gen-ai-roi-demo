@@ -42,6 +42,10 @@ AUTO_PAUSE_RED_DAYS:   int = 14
 # counter keeps resetting on intermittent GREEN days.
 AUTO_PAUSE_LOOKBACK_DAYS: int = 30  # ~2x threshold; covers 3-4x q_window at V=200
 WINDOW_DECISIONS:      int = 50    # rolling window for alpha/q estimation
+G_RATE_SHORT_WINDOW:   int = 20
+G_RATE_MULTIPLIER:     float = 0.85
+G_REL_MULTIPLIER:      float = 0.70
+G_RATE_LONG_WINDOW:    int = 400
 CONSERVATIVE_THETA_MIN: float = 1_000_000_000.0
 _L5_CONSERVATION_STORE_LOCK = asyncio.Lock()
 
@@ -67,6 +71,75 @@ class LearningHealthMonitor:
     AUTO_PAUSE_RED_DAYS = AUTO_PAUSE_RED_DAYS
     AMBER_SIGMA         = 2.0
     RED_SIGMA           = 3.0
+    W_SHORT             = G_RATE_SHORT_WINDOW
+    M_RATE              = G_RATE_MULTIPLIER
+    M_REL               = G_REL_MULTIPLIER
+    W_LONG              = G_RATE_LONG_WINDOW
+
+    @staticmethod
+    def _gate_layers(
+        history: list,
+        conservation_passed: bool,
+        signal: float,
+        theta_min: float,
+    ) -> dict:
+        """Return the production three-layer conservation gate details.
+
+        Outcomes are read from verified WeightUpdate records only. The long
+        baseline is the first 400 verified outcomes once enough history exists;
+        before then, the available verified stream is used as its own baseline.
+        The short G-RATE window remains independent of the long window.
+        """
+        outcomes = [
+            1 if getattr(item, "outcome", None) == 1 else 0
+            for item in history
+            if getattr(item, "outcome", None) in (1, -1)
+        ]
+        long_window = outcomes[-LearningHealthMonitor.W_LONG:]
+        baseline_window = outcomes[:LearningHealthMonitor.W_LONG] or long_window
+        long_baseline = (
+            float(sum(baseline_window) / len(baseline_window))
+            if baseline_window else 0.5
+        )
+        rolling_accuracy = (
+            float(sum(long_window) / len(long_window))
+            if long_window else 0.0
+        )
+        short_window = outcomes[-LearningHealthMonitor.W_SHORT:]
+        short_accuracy = (
+            float(sum(short_window) / len(short_window))
+            if short_window else 0.0
+        )
+        g_abs_active = not conservation_passed
+        g_rel_threshold = LearningHealthMonitor.M_REL * long_baseline
+        g_rel_active = bool(long_window) and rolling_accuracy < g_rel_threshold
+        g_rate_threshold = LearningHealthMonitor.M_RATE * long_baseline
+        g_rate_active = (
+            len(short_window) >= LearningHealthMonitor.W_SHORT
+            and short_accuracy < g_rate_threshold
+        )
+        return {
+            "g_abs": {
+                "active": g_abs_active,
+                "alpha_q_v": round(float(signal), 6),
+                "theta_min": round(float(theta_min), 6),
+            },
+            "g_rel": {
+                "active": g_rel_active,
+                "rolling_accuracy": round(rolling_accuracy, 6),
+                "baseline": round(long_baseline, 6),
+                "threshold": round(g_rel_threshold, 6),
+            },
+            "g_rate": {
+                "active": g_rate_active,
+                "short_accuracy": round(short_accuracy, 6),
+                "long_baseline": round(long_baseline, 6),
+                "threshold": round(g_rate_threshold, 6),
+                "w_short": LearningHealthMonitor.W_SHORT,
+                "m_rate": LearningHealthMonitor.M_RATE,
+                "short_window_count": len(short_window),
+            },
+        }
 
     # -------------------------------------------------------------------------
     # Component extraction
@@ -258,6 +331,9 @@ class LearningHealthMonitor:
         cc             = check_conservation(alpha, q, V, theta_min)
         conservation_passed = bool(cc.passed and alpha > 0 and V > 0)
         signal         = LearningHealthMonitor._compute_signal(alpha, q, V)
+        gate_layers    = LearningHealthMonitor._gate_layers(
+            history, conservation_passed, signal, theta_min
+        )
 
         learning_enabled = _is_learning_enabled()
 
@@ -277,6 +353,7 @@ class LearningHealthMonitor:
                     "status":   "CALIBRATING",
                     "headroom": 0.0,
                 },
+                **gate_layers,
                 "components":        _round_comps(comps),
                 "baseline":          None,
                 "baseline_std":      None,
@@ -316,6 +393,7 @@ class LearningHealthMonitor:
                     "status":   cc.status,
                     "headroom": round(cc.headroom, 4),
                 },
+                **gate_layers,
                 "components":        _round_comps(comps),
                 "baseline":          None,
                 "baseline_std":      None,
@@ -348,6 +426,11 @@ class LearningHealthMonitor:
         else:
             status = "GREEN"
 
+        if conservation_passed and (
+            gate_layers["g_rel"]["active"] or gate_layers["g_rate"]["active"]
+        ):
+            status = "AMBER"
+
         # ── RED-day count (HealthLog nodes or approximation) ─────────────────
         red_days          = await LearningHealthMonitor._count_red_days(graph_service)
         auto_pause_active = red_days >= AUTO_PAUSE_RED_DAYS
@@ -361,13 +444,14 @@ class LearningHealthMonitor:
                 "status":   cc.status,
                 "headroom": round(cc.headroom, 4),
             },
+            **gate_layers,
             "components":        _round_comps(comps),
             "baseline":          round(baseline, 6),
             "baseline_std":      round(baseline_std, 6),
             "red_days":          red_days,
             "auto_pause_active": auto_pause_active,
             "interpretation":    LearningHealthMonitor._interpret(
-                status, signal, theta_min, red_days
+                status, signal, theta_min, red_days, gate_layers
             ),
             "pre_activation":    False,
             "learning_enabled":  learning_enabled,
@@ -381,7 +465,7 @@ class LearningHealthMonitor:
                 float(comps.get("override_rate") or 0.0),
                 int(comps.get("verified_decisions") or 0),
             )
-        await _persist_l5_conservation_state(result)
+        result["l5_persist"] = await _persist_l5_conservation_state(result)
         return result
 
     # -------------------------------------------------------------------------
@@ -422,10 +506,21 @@ class LearningHealthMonitor:
     # -------------------------------------------------------------------------
 
     @staticmethod
-    def _interpret(status: str, signal: float, theta_min: float, red_days: int) -> str:
+    def _interpret(
+        status: str,
+        signal: float,
+        theta_min: float,
+        red_days: int,
+        gate_layers: dict | None = None,
+    ) -> str:
         if status == "GREEN":
             return "Conservation law satisfied -- learning system is healthy"
         if status == "AMBER":
+            layers = gate_layers or {}
+            if (layers.get("g_rate") or {}).get("active"):
+                return "Short-window accuracy dropped below threshold"
+            if (layers.get("g_rel") or {}).get("active"):
+                return "Accuracy below 70% of baseline"
             return (
                 f"Signal degraded below baseline-{LearningHealthMonitor.AMBER_SIGMA}sigma "
                 f"(signal={signal:.4f}) -- monitor closely"
@@ -483,15 +578,31 @@ def _coerce_int(value: Any) -> int:
         return 0
 
 
+SOC_VERIFIED_POPULATION_RULE = (
+    "verified_at_epoch IS NOT NULL; status or outcome is present; "
+    "category is one of the canonical SOC categories"
+)
+
+
+def _soc_verified_predicate(alias: str = "d") -> str:
+    """Return the canonical predicate shared by all verified-count queries."""
+    categories = _soc_category_names()
+    literals = ", ".join(
+        "'" + category.replace("\\", "\\\\").replace("'", "\\'") + "'"
+        for category in sorted(categories)
+    )
+    return (
+        f"{alias}.verified_at_epoch IS NOT NULL "
+        f"AND ({alias}.status IS NOT NULL OR {alias}.outcome IS NOT NULL) "
+        f"AND {alias}.category IN [{literals}]"
+    )
+
+
 async def _query_soc_verified_conservation_stats(graph_service: Any = None) -> dict | None:
     if graph_service is None or not hasattr(graph_service, "run_query"):
         return None
 
     valid_categories = _soc_category_names()
-    category_literals = ", ".join(
-        "'" + category.replace("\\", "\\\\").replace("'", "\\'") + "'"
-        for category in sorted(valid_categories)
-    )
 
     try:
         _soc_where = soc_decision_where()
@@ -499,9 +610,7 @@ async def _query_soc_verified_conservation_stats(graph_service: Any = None) -> d
             f"""
             MATCH (d:Decision)
             WHERE {_soc_where}
-              AND d.verified_at_epoch IS NOT NULL
-              AND (d.status IS NOT NULL OR d.outcome IS NOT NULL)
-              AND d.category IN [{category_literals}]
+              AND {_soc_verified_predicate("d")}
             RETURN d.category AS category,
                    count(d) AS verified,
                    sum(CASE WHEN d.correct = true OR d.outcome = 'correct' THEN 1 ELSE 0 END) AS correct,
@@ -553,11 +662,11 @@ def _resolve_categories_with_data(health: dict, categories_total: int) -> int | 
     return categories_with_data
 
 
-async def _persist_l5_conservation_state(health: dict) -> None:
+async def _persist_l5_conservation_state(health: dict) -> str:
     """Persist SOC conservation state when an optional L5 store is available."""
     status = str(health.get("status") or "").upper()
     if status not in {"GREEN", "AMBER", "RED"}:
-        return
+        return "skipped"
 
     categories_total = _soc_categories_total()
     categories_with_data = _resolve_categories_with_data(health, categories_total)
@@ -566,11 +675,11 @@ async def _persist_l5_conservation_state(health: dict) -> None:
             "[HEALTH][L5] Conservation state skipped for soc: "
             "categories_with_data unavailable"
         )
-        return
+        return "skipped"
 
     store = get_learning_store()
     if store is None:
-        return
+        return "skipped"
 
     async with _L5_CONSERVATION_STORE_LOCK:
         try:
@@ -582,7 +691,7 @@ async def _persist_l5_conservation_state(health: dict) -> None:
                 status,
                 type(exc).__name__,
             )
-            return
+            return "failed"
 
         old_status = None
         if isinstance(old_state, dict):
@@ -620,6 +729,8 @@ async def _persist_l5_conservation_state(health: dict) -> None:
                 status,
                 type(exc).__name__,
             )
+            return "failed"
+    return "ok"
 
 
 # ---------------------------------------------------------------------------
@@ -906,6 +1017,7 @@ async def compute_verification_health(graph_client: Any) -> dict:
     prior_7d_start = now_ms - 14 * day_ms
 
     # ── Condition 1: overall coverage ────────────────────────────────────────
+    failed_components: list[str] = []
     total_decisions    = 0
     verified_decisions = 0
     try:
@@ -916,16 +1028,18 @@ async def compute_verification_health(graph_client: Any) -> dict:
         total_decisions = int((rows[0].get("total") or 0) if rows else 0)
     except Exception as exc:
         log.debug("[VERIF-HEALTH] total_decisions query failed: %s", exc)
+        failed_components.append("total_decisions")
 
     try:
         rows = await graph_client.run_query(
             f"MATCH (d:Decision) WHERE {soc_decision_where()} "
-            "AND d.outcome IS NOT NULL AND d.verified_at_epoch IS NOT NULL "
+            f"AND {_soc_verified_predicate('d')} "
             "RETURN count(d) AS verified"
         )
         verified_decisions = int((rows[0].get("verified") or 0) if rows else 0)
     except Exception as exc:
         log.debug("[VERIF-HEALTH] verified_decisions query failed: %s", exc)
+        failed_components.append("verified_decisions")
 
     coverage_rate    = (verified_decisions / total_decisions) if total_decisions > 0 else 0.0
     coverage_healthy = coverage_rate >= 0.20
@@ -945,7 +1059,7 @@ async def compute_verification_health(graph_client: Any) -> dict:
               AND d.timestamp_epoch >= {last_7d_start} AND d.timestamp_epoch < {now_ms}
             RETURN
               count(d) AS total,
-              count(CASE WHEN d.verified_at_epoch IS NOT NULL THEN 1 END) AS verified
+              count(CASE WHEN {_soc_verified_predicate('d')} THEN 1 END) AS verified
             """
         )
         if rows:
@@ -953,6 +1067,7 @@ async def compute_verification_health(graph_client: Any) -> dict:
             last_7d_verified = int(rows[0].get("verified") or 0)
     except Exception as exc:
         log.debug("[VERIF-HEALTH] last_7d query failed: %s", exc)
+        failed_components.append("last_7d_window")
 
     try:
         _soc_where = soc_decision_where()
@@ -963,7 +1078,7 @@ async def compute_verification_health(graph_client: Any) -> dict:
               AND d.timestamp_epoch >= {prior_7d_start} AND d.timestamp_epoch < {last_7d_start}
             RETURN
               count(d) AS total,
-              count(CASE WHEN d.verified_at_epoch IS NOT NULL THEN 1 END) AS verified
+              count(CASE WHEN {_soc_verified_predicate('d')} THEN 1 END) AS verified
             """
         )
         if rows:
@@ -971,6 +1086,7 @@ async def compute_verification_health(graph_client: Any) -> dict:
             prior_7d_verified = int(rows[0].get("verified") or 0)
     except Exception as exc:
         log.debug("[VERIF-HEALTH] prior_7d query failed: %s", exc)
+        failed_components.append("prior_7d_window")
 
     rate_last_7d  = _rate(last_7d_verified,  last_7d_total)
     rate_prior_7d = _rate(prior_7d_verified, prior_7d_total)
@@ -989,6 +1105,7 @@ async def compute_verification_health(graph_client: Any) -> dict:
         conservation_status = health.get("status", "UNKNOWN")
     except Exception as exc:
         log.debug("[VERIF-HEALTH] conservation check failed: %s", exc)
+        failed_components.append("conservation")
 
     conservation_healthy = conservation_status in ("GREEN", "CALIBRATING")
 
@@ -999,7 +1116,9 @@ async def compute_verification_health(graph_client: Any) -> dict:
         not conservation_healthy,
     ])
 
-    if coverage_rate == 0 or unhealthy_count == 3:
+    if failed_components:
+        status = "degraded"
+    elif coverage_rate == 0 or unhealthy_count == 3:
         status = "RED"
     elif unhealthy_count >= 1:
         status = "AMBER"
@@ -1018,4 +1137,5 @@ async def compute_verification_health(graph_client: Any) -> dict:
         "total_decisions":     total_decisions,
         "verified_decisions":  verified_decisions,
         "timestamp_epoch":     now_ms,
+        "failed_components":   failed_components,
     }

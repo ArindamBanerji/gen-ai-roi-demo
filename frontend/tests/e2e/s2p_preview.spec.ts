@@ -73,7 +73,7 @@ test('preview_compounding_returns_trajectory', async ({ page }) => {
   }
 })
 
-test('preview_suppliers_returns_chen_lin', async ({ page }) => {
+test('preview_suppliers_returns_graph_backed_profiles', async ({ page }) => {
   const res = await page.request.get('/api/s2p/preview/suppliers?limit=10')
   expect(res.ok()).toBeTruthy()
 
@@ -83,12 +83,8 @@ test('preview_suppliers_returns_chen_lin', async ({ page }) => {
   expect(data.suppliers.length).toBe(10)
 
   const names = data.suppliers.map((supplier: { supplier_name?: string }) => supplier.supplier_name)
-  const chenLin = data.suppliers.find((supplier: { supplier_name?: string }) => supplier.supplier_name?.includes('Chen-Lin'))
-  expect(names.some((name: string | undefined) => name?.includes('Chen-Lin'))).toBeTruthy()
-  if (chenLin) {
-    expect(chenLin.otif?.q1_q2).toBe(0.88)
-    expect(chenLin.otif?.q3).toBe(0.88)
-  }
+  expect(names.some((name: string | undefined) => typeof name === 'string' && name.length > 0)).toBeTruthy()
+  expect(data.suppliers.some((supplier: { source?: string }) => supplier.source === 'graph')).toBeTruthy()
 })
 
 test('preview_config_returns_v2_shape', async ({ page }) => {

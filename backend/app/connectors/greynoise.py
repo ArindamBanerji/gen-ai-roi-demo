@@ -205,6 +205,31 @@ class GreyNoiseConnector(UCLConnector):
         live_succeeded = 0
         source = "hardcoded_fallback"
 
+        async def existing_observation(ip: str) -> Dict[str, Any] | None:
+            """Return an existing graph observation without replacing it."""
+            try:
+                rows = await graph_client.run_query(
+                    f"MATCH (gn:GreyNoiseEnrichment {{ip: {_S(ip)}}}) RETURN gn"
+                )
+                if rows:
+                    value = rows[0].get("gn", rows[0])
+                    if isinstance(value, dict):
+                        return dict(value)
+            except Exception as exc:
+                logger.warning("[GREYNOISE] Existing observation lookup failed for %s: %s", ip, exc)
+            return None
+
+        async def fallback_entry(ip: str) -> Dict[str, Any] | None:
+            existing = await existing_observation(ip)
+            if existing is not None:
+                existing.setdefault("ip", ip)
+                existing["stale_since"] = datetime.now(timezone.utc).isoformat()
+                existing["stale"] = True
+                existing["_preserve_existing"] = True
+                return existing
+            fallback = HARDCODED_FALLBACK.get(ip)
+            return dict(fallback) if fallback else None
+
         # -------------------------------------------------------------------
         # Step 1 — Live API or hardcoded fallback
         # -------------------------------------------------------------------
@@ -219,9 +244,9 @@ class GreyNoiseConnector(UCLConnector):
                         live_succeeded += 1
                         print(f"[GREYNOISE] Live data fetched for {ip}")
                     else:
-                        fallback = HARDCODED_FALLBACK.get(ip)
+                        fallback = await fallback_entry(ip)
                         if fallback:
-                            enriched.append(dict(fallback))
+                            enriched.append(fallback)
                             print(f"[GREYNOISE] Fallback used for {ip}")
                     # Rate limit: 50 req/day — space requests to be safe
                     await asyncio.sleep(0.5)
@@ -231,7 +256,10 @@ class GreyNoiseConnector(UCLConnector):
         # Full fallback when no key or every call failed
         if not enriched:
             print("[GREYNOISE] No live data -- using full hardcoded fallback set")
-            enriched = [dict(v) for v in HARDCODED_FALLBACK.values()]
+            for ip in DEMO_IPS:
+                fallback = await fallback_entry(ip)
+                if fallback:
+                    enriched.append(fallback)
             source = "hardcoded_fallback"
 
         print(
@@ -249,6 +277,13 @@ class GreyNoiseConnector(UCLConnector):
         for entry in enriched:
             try:
                 _ip = _S(entry["ip"])
+                if entry.get("_preserve_existing"):
+                    await graph_client.run_query(
+                        f"MATCH (gn:GreyNoiseEnrichment {{ip: {_ip}}})"
+                        f" SET gn.stale = true, gn.stale_since = {_S(entry['stale_since'])}"
+                    )
+                    indicators_ingested += 1
+                    continue
                 existing = await graph_client.run_query(
                     f"MATCH (gn:GreyNoiseEnrichment {{ip: {_ip}}}) RETURN gn"
                 )
@@ -316,6 +351,8 @@ class GreyNoiseConnector(UCLConnector):
                 "riot":           entry.get("riot"),
                 "name":           entry.get("name"),
                 "source":         entry.get("source", source),
+                "stale":          bool(entry.get("stale", False)),
+                "stale_since":    entry.get("stale_since"),
             }
             for entry in enriched
         ]

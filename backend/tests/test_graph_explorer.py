@@ -21,54 +21,11 @@ from app.services.graph_explorer import GraphExplorerService, PREBUILT_QUERIES
 # Shared mock helpers
 # ---------------------------------------------------------------------------
 
-def _fake_graph_for_summary():
-    """Returns two different result sets depending on which summary query is called."""
-    call_count = [0]
-
-    async def run_query(query, params=None):
-        call_count[0] += 1
-        if "labels(n)" in query:
-            # node-count query
-            return [
-                {"label": "Alert",   "cnt": 6},
-                {"label": "User",    "cnt": 4},
-                {"label": "Asset",   "cnt": 5},
-            ]
-        if "type(r)" in query:
-            # relationship-count query
-            return [
-                {"type": "INVOLVES",    "cnt": 6},
-                {"type": "DECIDED_ON",  "cnt": 3},
-            ]
-        return []
-
-    class _FakeAGE:
-        pass
-    _FakeAGE.run_query = staticmethod(run_query)
-    return _FakeAGE()
-
-
-def _fake_graph_rows(rows: list):
-    async def run_query(query, params=None):
-        return rows
-    class _FakeAGE:
-        pass
-    _FakeAGE.run_query = staticmethod(run_query)
-    return _FakeAGE()
-
-
-# ---------------------------------------------------------------------------
-# Test 1: validate_query accepts MATCH
-# ---------------------------------------------------------------------------
-
 def test_validate_safe_query():
-    """MATCH queries pass validation; RETURN / WITH / OPTIONAL MATCH also pass."""
-    assert GraphExplorerService.validate_query("MATCH (n:User) RETURN n.name") is True
-    assert GraphExplorerService.validate_query("  match (n) return n  ") is True   # case-insensitive
-    assert GraphExplorerService.validate_query("RETURN 1 AS one") is True
-    assert GraphExplorerService.validate_query(
-        "OPTIONAL MATCH (n:Alert) RETURN n.id"
-    ) is True
+    """Only exact reviewed queries pass; surrounding whitespace is harmless."""
+    for meta in PREBUILT_QUERIES.values():
+        assert GraphExplorerService.validate_query(meta["cypher"]) is True
+        assert GraphExplorerService.validate_query("  " + meta["cypher"] + "\n") is True
 
 
 # ---------------------------------------------------------------------------
@@ -96,69 +53,46 @@ def test_validate_rejects_call_procedures():
     assert GraphExplorerService.validate_query("CALL db.labels()") is False
 
 
-def test_validate_allows_read_only_match():
-    assert GraphExplorerService.validate_query("MATCH (n) RETURN n LIMIT 10") is True
+def test_validate_rejects_uncatalogued_read_only_match():
+    assert GraphExplorerService.validate_query("MATCH (n) RETURN n LIMIT 10") is False
 
 
 # ---------------------------------------------------------------------------
 # Test 3: GET /api/soc/graph/top-nodes returns nodes list
 # ---------------------------------------------------------------------------
 
-def test_top_nodes_endpoint():
-    """GET /api/soc/graph/top-nodes returns {"nodes": [...], "count": N}."""
+@pytest.mark.age
+def test_top_nodes_endpoint(age_graph, monkeypatch):
     from app.main import app
-
-    sample_rows = [
-        {"id": "jsmith@company.com", "type": "User",  "display_name": "John Smith", "connections": 5},
-        {"id": "ALERT-7823",          "type": "Alert", "display_name": "ALERT-7823", "connections": 3},
-    ]
-
-    async def fake_run_query(query, params=None):
-        return sample_rows
-
-    with patch("app.routers.framework_router.graph_client") as mock_graph:
-        mock_graph.run_query = fake_run_query
-        client = TestClient(app)
-        resp = client.get("/api/soc/graph/top-nodes")
-
-    assert resp.status_code == 200, f"Status {resp.status_code}: {resp.text[:300]}"
-    data = resp.json()
-    assert "nodes" in data, f"Missing 'nodes': {data}"
-    assert "count" in data, f"Missing 'count': {data}"
-    assert isinstance(data["nodes"], list)
-    assert data["count"] == len(data["nodes"])
+    age_graph.node("User", id="alice", domain="soc", name="Alice")
+    age_graph.alert(alert_id="A1")
+    age_graph.query("MATCH (u:User {id: 'alice'}), (a:Alert {alert_id: 'A1'}) CREATE (a)-[:INVOLVES]->(u) RETURN u")
+    monkeypatch.setattr("app.routers.framework_router.graph_client", age_graph.client)
+    monkeypatch.setattr(app.state, "graph_store", age_graph.store, raising=False)
+    data = TestClient(app).get("/api/soc/graph/top-nodes").json()
+    assert data["count"] == 2
+    assert {row["id"] for row in data["nodes"]} == {"alice", "A1"}
+    assert all(row["connections"] == 1 for row in data["nodes"])
 
 
 # ---------------------------------------------------------------------------
 # Test 4: GET /api/soc/graph/summary returns total_nodes > 0
 # ---------------------------------------------------------------------------
 
-def test_graph_summary():
-    """GET /api/soc/graph/summary returns total_nodes, total_relationships, dicts."""
+@pytest.mark.age
+def test_graph_summary(age_graph, monkeypatch):
     from app.main import app
-
-    call_index = [0]
-
-    async def fake_run_query(query, params=None):
-        call_index[0] += 1
-        if "labels(n)" in query:
-            return [{"label": "Alert", "cnt": 6}, {"label": "User", "cnt": 4}]
-        if "type(r)" in query:
-            return [{"type": "INVOLVES", "cnt": 6}]
-        return []
-
-    with patch("app.routers.framework_router.graph_client") as mock_graph:
-        mock_graph.run_query = fake_run_query
-        client = TestClient(app)
-        resp = client.get("/api/soc/graph/summary")
-
-    assert resp.status_code == 200, f"Status {resp.status_code}: {resp.text[:300]}"
-    data = resp.json()
-    assert "total_nodes"         in data, data
-    assert "total_relationships" in data, data
-    assert "node_types"          in data, data
-    assert "relationship_types"  in data, data
-    assert data["total_nodes"] > 0, f"total_nodes should be > 0: {data}"
+    age_graph.alert(alert_id="A1")
+    age_graph.alert(alert_id="A2")
+    age_graph.node("User", id="alice", domain="soc", name="Alice")
+    age_graph.node("User", id="foreign", domain="s2p", name="Foreign")
+    age_graph.query("MATCH (u:User {id: 'alice'}), (a:Alert {alert_id: 'A1'}) CREATE (a)-[:INVOLVES]->(u) RETURN u")
+    monkeypatch.setattr("app.routers.framework_router.graph_client", age_graph.client)
+    data = TestClient(app).get("/api/soc/graph/summary").json()
+    assert data["total_nodes"] == 3
+    assert data["total_relationships"] == 1
+    age_graph.alert(alert_id="A3")
+    assert TestClient(app).get("/api/soc/graph/summary").json()["total_nodes"] == 4
 
 
 # ---------------------------------------------------------------------------
@@ -191,26 +125,14 @@ def test_prebuilt_queries_list():
 # Test 6: POST /api/soc/graph/prebuilt/top_risk_users returns rows
 # ---------------------------------------------------------------------------
 
-def test_prebuilt_query_run():
-    """POST /api/soc/graph/prebuilt/top_risk_users returns rows list."""
+@pytest.mark.age
+def test_prebuilt_query_run(age_graph, monkeypatch):
     from app.main import app
-
-    sample_user_rows = [
-        {"name": "John Smith",  "dept": "Finance",    "risk": 0.92},
-        {"name": "Alice Lee",   "dept": "Engineering", "risk": 0.78},
-    ]
-
-    async def fake_run_query(query, params=None):
-        return sample_user_rows
-
-    with patch("app.routers.framework_router.graph_client") as mock_graph:
-        mock_graph.run_query = fake_run_query
-        client = TestClient(app)
-        resp = client.post("/api/soc/graph/prebuilt/top_risk_users")
-
-    assert resp.status_code == 200, f"Status {resp.status_code}: {resp.text[:300]}"
-    data = resp.json()
-    assert "rows"  in data, f"Missing 'rows': {data}"
-    assert "count" in data, f"Missing 'count': {data}"
+    for name, risk, domain in [("John Smith", .92, "soc"), ("Alice Lee", .78, "soc"), ("Foreign", 1.0, "s2p")]:
+        age_graph.node("User", name=name, department="Finance", risk_level=risk, domain=domain)
+    monkeypatch.setattr("app.routers.framework_router.graph_client", age_graph.client)
+    response = TestClient(app).post("/api/soc/graph/prebuilt/top_risk_users")
+    assert response.status_code == 200
+    data = response.json()
     assert data["count"] == 2
-    assert data["rows"][0]["name"] == "John Smith"
+    assert [row["name"] for row in data["rows"]] == ["John Smith", "Alice Lee"]

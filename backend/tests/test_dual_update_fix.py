@@ -69,6 +69,8 @@ class _Scorer:
             action_index=actual_action,
             category_name=f"cat-{category_index}",
             action_name=SCORER_ACTIONS[actual_action],
+            centroid_delta_norm=0.0,
+            decision_count=self.decision_count,
         )
 
     def category_count(self, category_index: int) -> int:

@@ -1,0 +1,42 @@
+{
+  "fixture_id": "PL-SOC-5-KILLCHAIN-PAIR-001",
+  "scenario": "SOC-05",
+  "planted": true,
+  "sample": true,
+  "alerts": [
+    {
+      "alert_id": "PL-SOC-5-KILLCHAIN-A",
+      "id": "PL-SOC-5-KILLCHAIN-A",
+      "alert_type": "anomalous_login",
+      "category": "credential_access",
+      "severity": "low",
+      "user_id": "user-admin-003",
+      "asset_id": "asset-dc-west-01",
+      "source_ip": "203.0.113.45",
+      "timestamp_epoch": 1789660800,
+      "description": "Low-severity unusual administrator login requiring additional context.",
+      "status": "pending",
+      "asset_criticality": "high",
+      "scenario": "SOC-05",
+      "planted": true,
+      "sample": true
+    },
+    {
+      "alert_id": "PL-SOC-5-KILLCHAIN-B",
+      "id": "PL-SOC-5-KILLCHAIN-B",
+      "alert_type": "lateral_movement",
+      "category": "lateral_movement",
+      "severity": "low",
+      "user_id": "user-admin-003",
+      "asset_id": "asset-dc-west-01",
+      "source_ip": "203.0.113.45",
+      "timestamp_epoch": 1789661400,
+      "description": "Low-severity internal movement on the same administrator and asset.",
+      "status": "pending",
+      "asset_criticality": "high",
+      "scenario": "SOC-05",
+      "planted": true,
+      "sample": true
+    }
+  ]
+}

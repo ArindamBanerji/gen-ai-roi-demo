@@ -160,7 +160,7 @@ def get_confidence_trajectory() -> Dict[str, List[Dict[str, Any]]]:
 # Helpers (private)
 # ============================================================================
 
-async def _build_threat_intel_factor(alert_id: str) -> Dict[str, Any]:
+async def _build_threat_intel_factor(alert_id: str) -> Optional[Dict[str, Any]]:
     """
     Query AGE for ThreatIntel nodes linked to alert_id via ASSOCIATED_WITH.
     Returns a factor dict for threat_intel_enrichment.
@@ -177,7 +177,7 @@ async def _build_threat_intel_factor(alert_id: str) -> Dict[str, Any]:
         results = await graph_client.run_query(query, {"alert_id": alert_id})
     except Exception as exc:
         print(f"[TRIAGE] AGE threat-intel query failed for {alert_id}: {exc}")
-        results = []
+        return None
 
     if not results:
         return {
@@ -225,7 +225,8 @@ async def _build_threat_intel_factor(alert_id: str) -> Dict[str, Any]:
 async def _get_alert_type(alert_id: str) -> str:
     """
     Query AGE for the alert_type property of the given alert_id.
-    Returns "" on miss or error (compute_soc_factors falls back to _default).
+    Returns "" on miss (compute_soc_factors falls back to _default).
+    Raises when the AGE lookup fails.
     """
     query = "MATCH (a:Alert {alert_id: $alert_id}) RETURN a.alert_type AS alert_type LIMIT 1"
     try:
@@ -234,6 +235,7 @@ async def _get_alert_type(alert_id: str) -> str:
             return results[0].get("alert_type") or ""
     except Exception as exc:
         print(f"[TRIAGE] alert_type lookup failed for {alert_id}: {exc}")
+        raise
     return ""
 
 
@@ -259,6 +261,8 @@ async def get_decision_factors(alert_id: str) -> Optional[Dict[str, Any]]:
         _get_alert_type(alert_id),
         _build_threat_intel_factor(alert_id),
     )
+    if ti_factor is None:
+        return None
     result = compute_soc_factors(alert_id, ti_factor, alert_type)
     print(
         f"[TRIAGE] get_decision_factors({alert_id}): "

@@ -26,10 +26,33 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line("markers", "age: requires live AGE")
     config.addinivalue_line(
         "markers",
         "live_backend: requires the SOC backend running on 127.0.0.1:8001",
     )
+
+
+@pytest.fixture
+def memory_store():
+    from copilot_sdk.graph.memory_store import InMemoryGraphStore
+    return InMemoryGraphStore(domain="soc")
+
+
+@pytest.fixture
+def age_graph(soc_stress_test_graph):
+    from support.real_graph import SOCGraphFixture
+    graph = SOCGraphFixture(*soc_stress_test_graph)
+    try:
+        yield graph
+    finally:
+        graph.close()
+
+
+@pytest.fixture(autouse=True)
+def soc_test_profile(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Make the test profile explicit instead of relying on pytest detection."""
+    monkeypatch.setenv("SOC_PROFILE", "test")
 
 
 def _live_backend_reachable(timeout: float = 0.25) -> bool:
@@ -43,7 +66,9 @@ def _live_backend_reachable(timeout: float = 0.25) -> bool:
 @pytest.fixture
 def soc_stress_test_graph():
     """Create a disposable AGE graph namespace for one test."""
-    graph_dsn = os.environ.get("GRAPH_DSN", "").strip()
+    # Generic application DSNs may be changed by configuration-contract tests.
+    # An explicit test destination must remain authoritative for live fixtures.
+    graph_dsn = os.environ.get("AGE_TEST_DSN", "").strip() or os.environ.get("GRAPH_DSN", "").strip()
     if not graph_dsn:
         pytest.skip("GRAPH_DSN not set")
     if not age_available():
@@ -51,7 +76,9 @@ def soc_stress_test_graph():
 
     import psycopg
 
-    graph_name = f"soc_stress_test_{uuid.uuid4().hex[:12]}"
+    # Include the process id and full UUID so interrupted or concurrently
+    # collected suites cannot reuse a disposable AGE namespace.
+    graph_name = f"soc_stress_test_{os.getpid()}_{uuid.uuid4().hex}"
     try:
         conn = psycopg.connect(graph_dsn, connect_timeout=3, autocommit=True)
     except psycopg.OperationalError as exc:
@@ -72,13 +99,14 @@ def soc_stress_test_graph():
 
 
 @pytest.fixture
-def soc_triage_harness(tmp_path) -> Iterator[SOCTriageHarness]:
+def soc_triage_harness(tmp_path, request) -> Iterator[SOCTriageHarness]:
     """Inject one stateful Decision authority into the triage route."""
     previous_scorer = triage.get_profile_scorer
     previous_client = triage.graph_client
     previous_outbox = os.environ.get("CI_PERSISTENCE_OUTBOX_PATH")
     os.environ["CI_PERSISTENCE_OUTBOX_PATH"] = str(tmp_path / "soc-outbox")
-    harness = SOCTriageHarness()
+    graph = request.getfixturevalue("age_graph") if getattr(request, "param", None) == "age" else None
+    harness = SOCTriageHarness(graph=graph)
     triage.get_profile_scorer = harness.get_scorer
     triage.graph_client = harness.graph_client
     try:

@@ -16,7 +16,6 @@ Reference: docs/project_status_and_plan_v3_part2.md Phase 8
 from __future__ import annotations
 
 import logging
-import re
 from typing import Any, Optional
 
 from app.db.graph_client import soc_decision_where
@@ -34,6 +33,7 @@ PREBUILT_QUERIES = {
         "description": "Users with highest risk scores",
         "cypher": (
             "MATCH (u:User) "
+            "WHERE u.domain = 'soc' "
             "RETURN u.name AS name, u.department AS dept, u.risk_level AS risk "
             "ORDER BY risk DESC LIMIT 10"
         ),
@@ -43,7 +43,7 @@ PREBUILT_QUERIES = {
         "description": "Assets marked as critical or high criticality",
         "cypher": (
             "MATCH (a:Asset) "
-            "WHERE a.criticality IN ['critical', 'high'] "
+            "WHERE a.domain = 'soc' AND a.criticality IN ['critical', 'high'] "
             "RETURN a.hostname AS hostname, a.asset_type AS type, "
             "a.criticality AS criticality, a.business_unit AS unit"
         ),
@@ -53,6 +53,7 @@ PREBUILT_QUERIES = {
         "description": "Alerts with linked threat intelligence indicators",
         "cypher": (
             "MATCH (a:Alert)-[:HAS_INDICATOR]->(ti:ThreatIndicator) "
+            "WHERE a.domain = 'soc' AND ti.domain = 'soc' "
             "RETURN a.alert_id AS alert_id, ti.indicator AS indicator, "
             "ti.severity AS severity, ti.indicator_type AS type "
             "ORDER BY ti.severity"
@@ -73,6 +74,7 @@ PREBUILT_QUERIES = {
         "description": "Known attack patterns with false positive rates",
         "cypher": (
             "MATCH (p:AttackPattern) "
+            "WHERE p.domain = 'soc' "
             "RETURN p.name AS pattern, p.fp_rate AS fp_rate, "
             "p.occurrence_count AS occurrences, p.confidence AS confidence "
             "ORDER BY p.occurrence_count DESC"
@@ -88,36 +90,22 @@ PREBUILT_QUERIES = {
 class GraphExplorerService:
     """Safe graph exploration for the CISO demo."""
 
-    # Whitelist of safe read-only Cypher prefixes
-    SAFE_PREFIXES = ["MATCH", "RETURN", "WITH", "OPTIONAL MATCH", "UNWIND"]
-
-    # Mutation keywords that are never allowed
-    BLOCKED_KEYWORDS = ["DELETE", "CREATE", "SET", "REMOVE", "MERGE", "DROP", "DETACH", "CALL"]
-
     @staticmethod
     def validate_query(cypher: str) -> bool:
-        """Only allow read-only queries.
+        """Accept only an exact reviewed catalogue query, never arbitrary Cypher.
 
-        Returns True if the query starts with a safe prefix AND contains no
-        blocked mutation keywords.
+        Only surrounding whitespace is ignored. Normalizing case or internal
+        whitespace could change literals, so execution uses the stored text.
         """
-        upper = cypher.strip().upper()
-
-        if not any(upper.startswith(p) for p in GraphExplorerService.SAFE_PREFIXES):
-            return False
-
-        for kw in GraphExplorerService.BLOCKED_KEYWORDS:
-            # Word-boundary match: "SET" matches " SET " but not "ASSET" or "RESET"
-            if re.search(r'\b' + kw + r'\b', upper):
-                return False
-
-        return True
+        return any(cypher.strip() == meta["cypher"] for meta in PREBUILT_QUERIES.values())
 
     @staticmethod
     async def run_safe_query(
         cypher: str,
         graph_service: Any,
         limit: int = 50,
+        *,
+        domain: str,
     ) -> dict:
         """Run a validated read-only Cypher query.
 
@@ -127,19 +115,23 @@ class GraphExplorerService:
         or
         {"error": str, "query": str}
         """
+        if domain != "soc":
+            return {"error": "Explorer requires the SOC domain.", "query": cypher}
         if not GraphExplorerService.validate_query(cypher):
             return {
-                "error": "Query contains blocked keywords. Read-only queries only.",
+                "error": "Query is not in the reviewed read-only catalogue.",
                 "query": cypher,
             }
 
-        # Add LIMIT if not already present
-        if "LIMIT" not in cypher.upper():
-            cypher = cypher.rstrip().rstrip(";") + f" LIMIT {limit}"
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+            return {"error": "Limit must be an integer from 1 to 100.", "query": cypher}
+        cypher = next(meta["cypher"] for meta in PREBUILT_QUERIES.values() if cypher.strip() == meta["cypher"])
+        if "LIMIT" not in cypher:
+            cypher += f" LIMIT {limit}"
 
         try:
             result = await graph_service.run_query(cypher)
-            rows = [dict(r) for r in result]
+            rows = [dict(r) for r in result][:limit]
             return {"rows": rows, "count": len(rows), "query": cypher}
         except Exception as exc:
             log.warning("[GRAPH-EXPLORER] run_safe_query failed: %s", exc)
@@ -167,8 +159,8 @@ class GraphExplorerService:
             if node_type:
                 if node_type == "Decision":
                     query = (
-                        f"MATCH (n:Decision)-[r]-() "
-                        f"WHERE {soc_decision_where(alias='n')} "
+                        f"MATCH (n:Decision)-[r]-(m) "
+                        f"WHERE {soc_decision_where(alias='n')} AND m.domain = 'soc' "
                         "RETURN n.decision_id AS id, head(labels(n)) AS type,"
                         "coalesce(n.category, n.decision_id) AS display_name, "
                         "count(r) AS connections "
@@ -176,7 +168,8 @@ class GraphExplorerService:
                     )
                 else:
                     query = (
-                        f"MATCH (n:{node_type})-[r]-() "
+                        f"MATCH (n:{node_type})-[r]-(m) "
+                        "WHERE n.domain = 'soc' AND m.domain = 'soc' "
                         "RETURN n.id AS id, head(labels(n)) AS type,"
                         "coalesce(n.name, n.hostname, n.id) AS display_name, "
                         "count(r) AS connections "
@@ -184,8 +177,9 @@ class GraphExplorerService:
                     )
             else:
                 query = (
-                    "MATCH (n)-[r]-() "
-                    "WHERE NOT n:Decision AND NOT n:Checkpoint "
+                    "MATCH (n)-[r]-(m) "
+                    "WHERE n.domain = 'soc' AND m.domain = 'soc' "
+                    "AND NOT 'Decision' IN labels(n) AND NOT 'Checkpoint' IN labels(n) "
                     "RETURN n.id AS id, head(labels(n)) AS type,"
                     "coalesce(n.name, n.hostname, n.id) AS display_name, "
                     "count(r) AS connections "
@@ -209,6 +203,7 @@ class GraphExplorerService:
             result = await graph_service.run_query(
                 """
                 MATCH (n {id: $id})-[r]-(m)
+                WHERE n.domain = 'soc' AND m.domain = 'soc'
                 RETURN type(r)                                  AS relationship,
                        labels(m)[0]                             AS neighbor_type,
                        coalesce(m.name, m.hostname, m.id)       AS neighbor_name,
@@ -247,6 +242,7 @@ class GraphExplorerService:
             counts = await graph_service.run_query(
                 """
                 MATCH (n)
+                WHERE n.domain = 'soc'
                 RETURN head(labels(n)) AS label, count(n) AS cnt
                 ORDER BY cnt DESC
                 """
@@ -258,7 +254,8 @@ class GraphExplorerService:
         try:
             rel_counts = await graph_service.run_query(
                 """
-                MATCH ()-[r]->()
+                MATCH (n)-[r]->(m)
+                WHERE n.domain = 'soc' AND m.domain = 'soc'
                 RETURN type(r) AS type, count(r) AS cnt
                 ORDER BY cnt DESC
                 """
@@ -300,13 +297,4 @@ class GraphExplorerService:
             known = list(PREBUILT_QUERIES.keys())
             return {"error": f"Unknown query name: {query_name!r}. Known: {known}"}
 
-        cypher = meta["cypher"]
-        try:
-            result = await graph_service.run_query(cypher)
-            rows = [dict(r) for r in result]
-            return {"rows": rows, "count": len(rows), "query": cypher}
-        except Exception as exc:
-            log.warning(
-                "[GRAPH-EXPLORER] prebuilt query %r failed: %s", query_name, exc
-            )
-            return {"error": str(exc), "query": cypher}
+        return await GraphExplorerService.run_safe_query(meta["cypher"], graph_service, domain="soc")

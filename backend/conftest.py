@@ -57,6 +57,27 @@ def _all_selected_tests_skip_persistent_data_guard(request) -> bool:
     return bool(items) and all("no_data_guard" in item.keywords for item in items)
 
 
+def _owned_disposable_age_database() -> bool:
+    """Allow an empty test database only after checking its server-owned marker.
+
+    The legacy 3,000-row guard protects a demo database. It must not require
+    copying live decisions into an explicitly provisioned disposable database.
+    A requested but invalid isolation marker fails closed before test writes.
+    """
+    run_id = os.getenv("AGE_JM_TEST_RUN_ID")
+    if not run_id:
+        return False
+    import psycopg
+    from copilot_sdk.config import GraphConfig
+
+    with psycopg.connect(GraphConfig.load("soc").dsn, connect_timeout=3) as conn:
+        database = conn.execute("SELECT current_database()").fetchone()[0]
+        marker = conn.execute("SELECT run_id, disposable FROM public.age_jm_test_owner").fetchall()
+    if database != "age_jm_01b_" + run_id[:12] or marker != [(run_id, True)]:
+        raise RuntimeError("AGE test database ownership marker does not match this test run")
+    return True
+
+
 @pytest.fixture(scope="session", autouse=True)
 def verify_persistent_data(request):
     """
@@ -73,6 +94,10 @@ def verify_persistent_data(request):
     """
     import asyncio
     import os as _os
+
+    if _owned_disposable_age_database():
+        yield
+        return
 
     if _all_selected_tests_skip_persistent_data_guard(request):
         yield

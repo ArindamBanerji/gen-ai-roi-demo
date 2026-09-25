@@ -138,13 +138,21 @@ class _LearningPolicy:
         return self._enabled
 
 
-def _patch_common_outcome(monkeypatch, harness, record=None, *, fail_triggered_evolution=False):
+def _patch_common_outcome(monkeypatch, harness, record=None, *, fail_triggered_evolution=False, decision_id="D-RL"):
     rl_engine.reset_rl_state()
     decision = record or _decision_record()
-    harness.graph_client.fail_triggered_evolution = fail_triggered_evolution
+    if harness.graph is None:
+        harness.graph_client.fail_triggered_evolution = fail_triggered_evolution
+    else:
+        original_query = harness.graph_client.run_query
+        async def query_with_fault(query, parameters=None):
+            if fail_triggered_evolution and "CREATE" in query and "TRIGGERED_EVOLUTION" in query:
+                raise RuntimeError("evolution write failed")
+            return await original_query(query, parameters)
+        monkeypatch.setattr(harness.graph_client, "run_query", AsyncMock(side_effect=query_with_fault))
     monkeypatch.setattr(triage, "graph_client", harness.graph_client)
     harness.add_decision(
-        decision_id="D-RL",
+        decision_id=decision_id,
         category=decision["category"],
         action=decision["action"],
         confidence=decision["confidence"],
@@ -199,6 +207,8 @@ def _outcome_decision_update_query(fake_graph):
 
 
 @pytest.mark.asyncio
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
 async def test_reward_computation_fires_on_outcome_when_flag_enabled(monkeypatch, soc_triage_harness):
     _patch_common_outcome(monkeypatch, soc_triage_harness)
     monkeypatch.setattr(soc_config, "RL_REWARD_LEDGER_ENABLED", True)
@@ -212,6 +222,8 @@ async def test_reward_computation_fires_on_outcome_when_flag_enabled(monkeypatch
 
 
 @pytest.mark.asyncio
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
 async def test_outcome_persists_analyst_action_override_measurement_fields(monkeypatch, soc_triage_harness):
     _client, _learning_state = _patch_common_outcome(monkeypatch, soc_triage_harness)
 
@@ -229,6 +241,8 @@ async def test_outcome_persists_analyst_action_override_measurement_fields(monke
 
 
 @pytest.mark.asyncio
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
 async def test_outcome_persists_non_override_measurement_fields(monkeypatch, soc_triage_harness):
     _client, _learning_state = _patch_common_outcome(monkeypatch, soc_triage_harness)
 
@@ -243,6 +257,8 @@ async def test_outcome_persists_non_override_measurement_fields(monkeypatch, soc
 
 
 @pytest.mark.asyncio
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
 async def test_outcome_without_analyst_action_does_not_fabricate_action(monkeypatch, soc_triage_harness):
     _client, _learning_state = _patch_common_outcome(monkeypatch, soc_triage_harness)
 
@@ -259,6 +275,8 @@ async def test_outcome_without_analyst_action_does_not_fabricate_action(monkeypa
 
 
 @pytest.mark.asyncio
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
 async def test_campaign_measurement_fields_share_decision_node_with_cohort_flags(monkeypatch, soc_triage_harness):
     client, _learning_state = _patch_common_outcome(
         monkeypatch,
@@ -274,10 +292,12 @@ async def test_campaign_measurement_fields_share_decision_node_with_cohort_flags
     assert decision["analyst_action"] == "escalate"
     assert decision["was_override"] is False
     assert decision["quality_signal"] == 1.0
-    assert any("RETURN d.factor_vector AS factor_vector" in q for q, _ in client._queries)
+    assert any("RETURN d.factor_vector AS factor_vector" in c.args[0] for c in client.run_query.call_args_list)
 
 
 @pytest.mark.asyncio
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
 async def test_reward_skipped_when_flag_false(monkeypatch, soc_triage_harness):
     _patch_common_outcome(monkeypatch, soc_triage_harness)
     monkeypatch.setattr(soc_config, "RL_REWARD_LEDGER_ENABLED", False)
@@ -288,6 +308,8 @@ async def test_reward_skipped_when_flag_false(monkeypatch, soc_triage_harness):
 
 
 @pytest.mark.asyncio
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
 async def test_posterior_update_fires_when_explored_and_not_vetoed(monkeypatch, soc_triage_harness):
     _patch_common_outcome(
         monkeypatch,
@@ -309,6 +331,8 @@ async def test_posterior_update_fires_when_explored_and_not_vetoed(monkeypatch, 
 
 
 @pytest.mark.asyncio
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
 async def test_posterior_update_skipped_when_referral_vetoed(monkeypatch, soc_triage_harness):
     _patch_common_outcome(
         monkeypatch,
@@ -330,6 +354,8 @@ async def test_posterior_update_skipped_when_referral_vetoed(monkeypatch, soc_tr
 
 
 @pytest.mark.asyncio
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
 async def test_chain_credit_fires_on_correct_outcome_when_enabled(monkeypatch, soc_triage_harness):
     _patch_common_outcome(monkeypatch, soc_triage_harness)
     monkeypatch.setattr(soc_config, "RL_CHAIN_CREDIT_ENABLED", True)
@@ -349,6 +375,8 @@ async def test_chain_credit_fires_on_correct_outcome_when_enabled(monkeypatch, s
 
 
 @pytest.mark.asyncio
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
 async def test_chain_credit_skipped_when_triggered_evolution_write_fails(monkeypatch, soc_triage_harness):
     _client, _learning_state = _patch_common_outcome(
         monkeypatch,
@@ -372,6 +400,8 @@ async def test_chain_credit_skipped_when_triggered_evolution_write_fails(monkeyp
 
 
 @pytest.mark.asyncio
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
 async def test_chain_credit_skipped_when_flag_false(monkeypatch, soc_triage_harness):
     _patch_common_outcome(monkeypatch, soc_triage_harness)
     monkeypatch.setattr(soc_config, "RL_CHAIN_CREDIT_ENABLED", False)
@@ -388,6 +418,8 @@ async def test_chain_credit_skipped_when_flag_false(monkeypatch, soc_triage_harn
 
 
 @pytest.mark.asyncio
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
 async def test_reward_failure_does_not_crash_outcome(monkeypatch, soc_triage_harness):
     _patch_common_outcome(monkeypatch, soc_triage_harness)
     monkeypatch.setattr(soc_config, "RL_REWARD_LEDGER_ENABLED", True)
@@ -404,6 +436,8 @@ async def test_reward_failure_does_not_crash_outcome(monkeypatch, soc_triage_har
 
 
 @pytest.mark.asyncio
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
 async def test_calibrating_nested_red_blocks_l5_learning(monkeypatch, soc_triage_harness):
     _patch_common_outcome(monkeypatch, soc_triage_harness)
     monkeypatch.setattr(
@@ -440,6 +474,8 @@ async def test_calibrating_nested_red_blocks_l5_learning(monkeypatch, soc_triage
 
 
 @pytest.mark.asyncio
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
 async def test_eta_restored_when_guarded_update_raises(monkeypatch, soc_triage_harness):
     _patch_common_outcome(monkeypatch, soc_triage_harness)
     monkeypatch.setattr(soc_config, "RL_REWARD_LEDGER_ENABLED", True)

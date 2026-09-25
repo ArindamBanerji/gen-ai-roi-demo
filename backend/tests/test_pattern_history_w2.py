@@ -14,6 +14,7 @@ Run from backend/ directory:
 import sys
 import os
 import asyncio
+import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import pytest
@@ -24,10 +25,14 @@ def _make_alert(alert_type="credential_access"):
     return {"id": "ALERT-TEST-001", "alert_type": alert_type}
 
 
-def _make_graph_mock(results):
-    mock = AsyncMock()
-    mock.run_query = AsyncMock(return_value=results)
-    return mock
+def _pattern_graph(age_graph, results, action_index=0):
+    for index, row in enumerate(results):
+        identifier = age_graph.decision(correct=True, action_index=action_index,
+            verified_correct=True, decision_number=row["decision_num"],
+            factor_snapshot=json.dumps([0.5, 0.5, 0.5, row["pattern_value"], 0.5, 0.5]))
+        literal = age_graph.client.serialize_for_age(identifier)
+        age_graph.query(f"MATCH (d:Decision {{decision_id: {literal}}}) CREATE (d)-[:TRIGGERED_EVOLUTION]->(e:EvolutionEvent {{id: {literal}}}) RETURN e")
+    return age_graph.client
 
 
 # ---------------------------------------------------------------------------
@@ -42,20 +47,22 @@ def run(coro):
 # Tests
 # ---------------------------------------------------------------------------
 
-def test_pattern_history_fallback_when_no_edges():
+@pytest.mark.age
+def test_pattern_history_fallback_when_no_edges(age_graph):
     """Empty AGE results -> fallback value 0.40."""
     from app.domains.soc.factors import PatternHistoryFactorComputer
 
     computer = PatternHistoryFactorComputer()
     alert = _make_alert()
-    graph = _make_graph_mock([])
+    graph = _pattern_graph(age_graph, [])
 
     result = run(computer.compute(alert, graph, action_index=0))
 
     assert result == 0.40
 
 
-def test_pattern_history_uses_triggered_evolution_edges():
+@pytest.mark.age
+def test_pattern_history_uses_triggered_evolution_edges(age_graph):
     """5 decisions with pattern_value=0.80 (same decision_num) -> result ~= 0.80."""
     from app.domains.soc.factors import PatternHistoryFactorComputer
 
@@ -70,14 +77,15 @@ def test_pattern_history_uses_triggered_evolution_edges():
         {"pattern_value": 0.80, "decision_num": 42},
         {"pattern_value": 0.80, "decision_num": 42},
     ]
-    graph = _make_graph_mock(results)
+    graph = _pattern_graph(age_graph, results, action_index=1)
 
     result = run(computer.compute(alert, graph, action_index=1))
 
     assert abs(result - 0.80) < 0.01
 
 
-def test_pattern_history_recency_weighting():
+@pytest.mark.age
+def test_pattern_history_recency_weighting(age_graph):
     """
     2 decisions:
       decision_num=100, pattern_value=0.90  (recent, weight=1.0)
@@ -93,7 +101,7 @@ def test_pattern_history_recency_weighting():
         {"pattern_value": 0.90, "decision_num": 100},
         {"pattern_value": 0.40, "decision_num": 70},
     ]
-    graph = _make_graph_mock(results)
+    graph = _pattern_graph(age_graph, results)
 
     result = run(computer.compute(alert, graph, action_index=0))
 
@@ -101,7 +109,8 @@ def test_pattern_history_recency_weighting():
     assert abs(result - expected) < 0.01
 
 
-def test_pattern_history_clips_to_unit_interval():
+@pytest.mark.age
+def test_pattern_history_clips_to_unit_interval(age_graph):
     """pattern_value=1.20 (out of bounds) -> result clamped to <= 1.0."""
     from app.domains.soc.factors import PatternHistoryFactorComputer
 
@@ -109,7 +118,7 @@ def test_pattern_history_clips_to_unit_interval():
     alert = _make_alert()
 
     results = [{"pattern_value": 1.20, "decision_num": 10}]
-    graph = _make_graph_mock(results)
+    graph = _pattern_graph(age_graph, results, action_index=2)
 
     result = run(computer.compute(alert, graph, action_index=2))
 

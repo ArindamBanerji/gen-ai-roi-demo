@@ -77,6 +77,84 @@ _SOC_PERF_ALWAYS_SUMMARY_PHASES = {
 }
 
 
+def _referral_response(referral: Any, authority: Any) -> Dict[str, Any]:
+    """Describe both independent referral gates without changing either gate."""
+    payload = {
+        "should_refer": referral.should_refer,
+        "reasons": list(referral.reason_codes),
+        "audit_summary": referral.audit_summary,
+    }
+    if authority is not None and not authority.allowed:
+        reason = authority.reason or "authority_veto"
+        payload["should_refer"] = True
+        payload["reasons"].append(reason)
+        payload["authority_veto"] = authority.to_dict()
+        payload["audit_summary"] = f"{referral.audit_summary}; authority veto: {reason}"
+    return payload
+
+
+def _verified_learning_action(record: Dict[str, Any], analyst_action: str | None) -> str | None:
+    """Resolve learning input without changing the routed decision or its audit.
+
+    Legacy referrals lacking a stored scorer proposal remain non-scorable.
+    A referral requires an explicit analyst classification; neither the routing
+    action nor a fresh score can stand in for the original model prediction.
+    """
+    from app.domains.soc.config import SCORER_ACTIONS
+
+    action = record.get("action")
+    if action in SCORER_ACTIONS:
+        return str(action)
+    original = record.get("original_action")
+    if (action == "refer_to_analyst" and original in SCORER_ACTIONS
+            and analyst_action in SCORER_ACTIONS):
+        return str(original)
+    return None
+
+
+def _append_verified_outcome_history(
+    learning_state: Any,
+    *,
+    correct: bool,
+    confidence: float,
+) -> None:
+    """Append a correctness-only record for profile-mode conservation tracking."""
+    from gae.learning import WeightUpdate
+
+    n_actions = int(getattr(learning_state, "n_actions", 1) or 1)
+    n_factors = int(getattr(learning_state, "n_factors", 1) or 1)
+    weights = np.asarray(
+        getattr(learning_state, "W", np.zeros((n_actions, n_factors))),
+        dtype=np.float64,
+    )
+    if weights.shape != (n_actions, n_factors):
+        weights = np.zeros((n_actions, n_factors), dtype=np.float64)
+    decision_number = int(getattr(learning_state, "decision_count", 0))
+    alpha = float(
+        getattr(getattr(learning_state, "profile", None), "learning_rate", 0.0)
+        or 0.0
+    )
+    history = getattr(learning_state, "history", None)
+    if history is None:
+        history = []
+        setattr(learning_state, "history", history)
+    history.append(
+        WeightUpdate(
+            decision_number=decision_number,
+            timestamp=time.time(),
+            action_index=0,
+            action_name="verified_outcome",
+            outcome=1 if correct else -1,
+            factor_vector=np.zeros(n_factors, dtype=np.float64),
+            delta_applied=np.zeros(n_factors, dtype=np.float64),
+            W_before=weights.copy(),
+            W_after=weights.copy(),
+            alpha_effective=alpha,
+            confidence_at_decision=float(confidence),
+        )
+    )
+
+
 def _soc_perf_repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
@@ -482,7 +560,7 @@ async def investigate_alert(
     alert_id = request.alert_id
     planted_scenario = scenario_by_alert_id(alert_id)
     if planted_scenario is not None:
-        result = await run_stage1_investigation(planted_scenario, scorer)
+        result = await run_stage1_investigation(planted_scenario, scorer, force_correct=False)
         payload = result.to_dict()
         alert_category = str(planted_scenario.get("alert", {}).get("category") or payload["category"])
         return {
@@ -545,6 +623,61 @@ async def investigate_alert(
         "status": "ok",
         "mode": "vld_read_only_shadow",
         "alert_id": alert_id,
+        "single_pass": {
+            "action": payload["single_pass_action"],
+            "confidence": payload["single_pass_confidence"],
+            "category": alert_category,
+        },
+        "vld": payload,
+        "investigation_trace": payload["trace"],
+        "conservation_emit_gate": payload["conservation_emit_gate"],
+    }
+
+
+@router.post("/soc/investigate/oracle")
+async def investigate_alert_oracle(request: ProcessAlertRequest):
+    """POSITIVE CONTROL -- uses oracle branch selection.
+
+    Results are READ_ONLY and cannot be used for production decisions or K updates.
+    """
+    from app.services.gae_state import get_profile_scorer as _get_scorer, init_learning_state as _init_ls
+    from app.services.multihop_scenarios import scenario_by_alert_id, run_stage1_investigation
+
+    scorer = _get_scorer()
+    if scorer is None:
+        try:
+            _init_ls()
+            scorer = _get_scorer()
+        except Exception:
+            scorer = None
+    if scorer is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Scorer not ready -- backend restarting or reset in progress",
+        )
+
+    alert_id = request.alert_id
+    planted_scenario = scenario_by_alert_id(alert_id)
+    if planted_scenario is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Oracle positive control is only available for planted scenario alert {alert_id}",
+        )
+
+    oracle_mode = True
+    result = await run_stage1_investigation(planted_scenario, scorer, force_correct=oracle_mode)
+    payload = result.to_dict()
+    alert_category = str(planted_scenario.get("alert", {}).get("category") or payload["category"])
+    return {
+        "status": "ok",
+        "mode": "vld_multihop_stage1_oracle_positive_control",
+        "alert_id": alert_id,
+        "eligibility": {
+            "status": "READ_ONLY",
+            "decision_use": "forbidden",
+            "k_updates": "forbidden",
+            "reason": "positive_control_oracle_branch_selection",
+        },
         "single_pass": {
             "action": payload["single_pass_action"],
             "confidence": payload["single_pass_confidence"],
@@ -736,6 +869,9 @@ async def analyze_alert(
         _rl_explored_but_referred = False
         _rl_exploration_executed = False
         _rl_exploration_status = "available"
+        _rl_exploration_health_error = None
+        _rl_metadata_persisted = None
+        _rl_metadata_error = None
         _rl_decision_method = "gae_scoring"
         try:
             with _soc_perf_phase(
@@ -763,15 +899,20 @@ async def analyze_alert(
                         )
                     except Exception as _rl_health_exc:
                         logger.warning("[RL] Exploration health check failed: %s", _rl_health_exc)
+                        _rl_exploration_status = "degraded_health"
+                        _rl_exploration_health_error = str(_rl_health_exc)
                     from app.services.rl_engine import get_exploration_policy
 
-                    _scorer_probs = _scoring_result.probabilities.tolist()[:len(scorer_actions)]
-                    _rl_exploration_decision = get_exploration_policy().propose(
-                        _scorer_probs,
-                        _cat_idx,
-                        _headroom_ratio,
-                    )
+                    if _rl_exploration_status != "degraded_health":
+                        _scorer_probs = _scoring_result.probabilities.tolist()[:len(scorer_actions)]
+                        _rl_exploration_decision = get_exploration_policy().propose(
+                            _scorer_probs,
+                            _cat_idx,
+                            _headroom_ratio,
+                        )
                     if (
+                        _rl_exploration_decision is not None
+                        and
                         _rl_exploration_decision.explored
                         and _rl_exploration_decision.explored_action is not None
                         and 0 <= _rl_exploration_decision.explored_action < len(scorer_actions)
@@ -791,6 +932,7 @@ async def analyze_alert(
             _rl_explored_action_name = None
             _rl_exploration_executed = False
             _rl_exploration_status = "unavailable"
+            _rl_exploration_health_error = str(_rl_explore_exc)
 
         with _soc_perf_phase(
             "routing_zone_resolution",
@@ -942,17 +1084,7 @@ async def analyze_alert(
                     _referral.audit_summary,
                 )
 
-            _referral_payload = {
-                'should_refer':  _referral.should_refer,
-                'reasons':       _referral.reason_codes,
-                'audit_summary': _referral.audit_summary,
-            }
-            if _authority_decision is not None and not _authority_decision.allowed:
-                _referral_payload["should_refer"] = True
-                _referral_payload["reasons"] = list(_referral_payload["reasons"]) + [
-                    _authority_decision.reason or "authority_veto"
-                ]
-                _referral_payload["authority_veto"] = _authority_veto_payload
+            _referral_payload = _referral_response(_referral, _authority_decision)
 
         logger.info(
             "[TRIAGE-v5] action=%s conf=%.3f zone=%s",
@@ -997,6 +1129,7 @@ async def analyze_alert(
                     decision_id:           {_S(decision_id)},
                     domain:                'soc',
                     action:                {_S(selected_action)},
+                    original_action:       {_S(_scoring_result.action_name)},
                     confidence:            {confidence},
                     factor_vector:         {_S(json.dumps(fv_list))},
                     factor_provenance:     {_S(json.dumps(factor_provenance, sort_keys=True))},
@@ -1346,8 +1479,12 @@ async def analyze_alert(
                             d.exploration_updated_at  = {_meta_ts}
                         """
                     )
+                    _rl_metadata_persisted = True
             except Exception as _rl_meta_exc:
                 logger.warning("[RL] Exploration metadata write failed: %s", _rl_meta_exc)
+                _rl_metadata_persisted = False
+                _rl_metadata_error = str(_rl_meta_exc)
+                _rl_exploration_status = "metadata_write_failed"
 
         with _soc_perf_phase(
             "referral_debug_build",
@@ -1484,6 +1621,12 @@ async def analyze_alert(
             "referral":        _referral_payload,
             "referral_debug":  _referral_debug,
             "exploration_status": _rl_exploration_status,
+            "rl_exploration": {
+                "status": _rl_exploration_status,
+                "health_error": _rl_exploration_health_error,
+                "metadata_persisted": _rl_metadata_persisted,
+                "metadata_error": _rl_metadata_error,
+            },
             "decision_method": "referral_override" if _referral.should_refer else _rl_decision_method,
             "authority": _authority_veto_payload,
             "no_precedent": _no_precedent_payload,
@@ -1903,7 +2046,17 @@ async def report_decision_outcome(
         correct_bool  = outcome_int == +1
         outcome_label = request.outcome   # "correct" | "incorrect"
 
-        centroid_update_payload = None  # populated below if wu.centroid_update is present
+        centroid_update_payload = None  # populated from the persisted ProfileScorer update
+        _cu = None
+        persistence_status: dict[str, bool | None] = {
+            "posterior": None,
+            "dk": None,
+            "outcome": None,
+            "centroid": None,
+            "evolution": None,
+            "chain_credit": None,
+            "reward_ledger": None,
+        }
         l5_persistence_status = {
             "l5_centroid_persisted": False,
             "l5_shaped_by_attempted": False,
@@ -1912,6 +2065,8 @@ async def report_decision_outcome(
             "conservation_status": None,
             "raw_conservation_status": None,
             "conservation_status_reason": None,
+            "eta_source": "default",
+            "persistence": persistence_status,
         }
         _resolved_category = ""  # BACKLOG-047: category for process_outcome()
 
@@ -1921,6 +2076,7 @@ async def report_decision_outcome(
         except AttributeError:
             analyst_id = "anonymous"
         _analyst_eta = None  # populated below after quality lookup
+        _eta_source = "default"
 
         _ts_outcome = int(datetime.utcnow().timestamp() * 1000)
         reward_result = None
@@ -1980,6 +2136,7 @@ async def report_decision_outcome(
                 OPTIONAL MATCH (d)-[:DECIDED_ON]->(a:Alert)
                 RETURN d.factor_vector AS factor_vector,
                        d.action        AS action,
+                       d.original_action AS original_action,
                        d.confidence    AS confidence,
                        d.campaign_id    AS campaign_id,
                        d.explored       AS explored,
@@ -2046,10 +2203,14 @@ async def report_decision_outcome(
                     _analyst_eta = compute_eta_override(
                         worst_case_quality=_correct_cnt / _total
                     )
+                    _eta_source = "analyst_history"
                     logger.debug("[ETA] analyst=%s quality=%.2f eta=%.4f",
                                  analyst_id, _correct_cnt / _total, _analyst_eta)
             except Exception as _qe:
-                logger.debug("[ETA] Analyst quality query: %s", _qe)
+                logger.warning("[ETA] Analyst quality query failed; using fallback eta: %s", _qe)
+                _analyst_eta = 0.0
+                _eta_source = "fallback"
+        l5_persistence_status["eta_source"] = _eta_source
 
         print(f"[GAE] Outcome lookup: decision_id={request.decision_id!r} -> {len(gae_result) if gae_result else 0} result(s)")
         if gae_result:
@@ -2064,6 +2225,7 @@ async def report_decision_outcome(
             if isinstance(fv, list):
                 print(f"[GAE] factor_vector parsed: len={len(fv)}")
             action_name = record.get("action", "")
+            learning_action = _verified_learning_action(record, request.analyst_action)
             alert_type_for_cat = record.get("alert_type", "unknown")
             confidence_at_decision = float(record.get("confidence") or 0.0)
             from app.domains.soc.config import resolve_alert_category as _resolve_cat_po
@@ -2097,9 +2259,10 @@ async def report_decision_outcome(
 
             from app.domains.soc.config import SCORER_ACTIONS
 
-            # refer_to_analyst is a routing decision, not a classification
-            # action.  ProfileScorer has A=4 (SCORER_ACTIONS); skip learning.
-            if action_name not in SCORER_ACTIONS:
+            # Verified referrals use their stored scorer proposal only for
+            # supervised learning. Routing, audit and action side effects retain
+            # action_name; the same conservation/freeze/spike guards apply below.
+            if learning_action is None:
                 l5_persistence_status["l5_persistence_skipped_reason"] = "routing_action_not_scorable"
                 # Capture state even though routing actions do not update
                 # centroids or enter the shared learn path.
@@ -2131,7 +2294,7 @@ async def report_decision_outcome(
                 # analytics never observes d.correct for the learning-loop
                 # flow even though the decision was confirmed.
                 _soc_store.write_outcome(**_outcome_write_kwargs)
-                wu = None
+                persistence_status["outcome"] = True
                 # Still count this verified outcome so decision_count reflects
                 # all verified decisions, not only scorable actions.
                 with _soc_perf_phase(
@@ -2145,6 +2308,11 @@ async def report_decision_outcome(
                     _ref_ls = get_learning_state()
                     if _ref_ls:
                         _ref_ls.decision_count += 1
+                        _append_verified_outcome_history(
+                            _ref_ls,
+                            correct=correct_bool,
+                            confidence=confidence_at_decision,
+                        )
                         save_learning_state()
             else:
                 with _soc_perf_phase(
@@ -2156,8 +2324,7 @@ async def report_decision_outcome(
                     action=action_name,
                 ):
                     f = _validate_scoring_factor_vector(fv)
-                    action_index = list(SCORER_ACTIONS).index(action_name)
-                    wu = None
+                    action_index = list(SCORER_ACTIONS).index(learning_action)
 
                 try:
                     _soc_cfg_rl = _rl_soc_config()
@@ -2182,8 +2349,10 @@ async def report_decision_outcome(
                                 correct_bool,
                             )
                             _rl_posterior_updated = True
+                            persistence_status["posterior"] = True
                 except Exception as _rl_posterior_exc:
                     logger.warning("[RL] Posterior update failed: %s", _rl_posterior_exc)
+                    persistence_status["posterior"] = False
 
                 # SOC-Q3 / DRIFT-01: Wire conservation status → scorer auto-pause.
                 # auto_pause_active (14+ RED days) overrides current status to RED
@@ -2237,7 +2406,7 @@ async def report_decision_outcome(
                     else learning_policy.enabled()
                 )
                 _unclassified_alert = False
-                if _soc_learning_active and action_name in SCORER_ACTIONS:
+                if _soc_learning_active:
                     from app.domains.soc.config import resolve_alert_category
 
                     _unclassified_alert = (
@@ -2251,9 +2420,9 @@ async def report_decision_outcome(
                         l5_persistence_status["l5_persistence_skipped_reason"] = (
                             "unclassified_alert_type"
                         )
-                if not _soc_learning_active and action_name in SCORER_ACTIONS:
+                if not _soc_learning_active:
                     l5_persistence_status["l5_persistence_skipped_reason"] = "soc_learning_disabled"
-                if _soc_learning_active and action_name in SCORER_ACTIONS and not _unclassified_alert:
+                if _soc_learning_active and not _unclassified_alert:
                     from app.domains.soc.config import resolve_alert_category, SOCDomainConfig as _SDC_out
                     _cat_name_out = resolve_alert_category(alert_type_for_cat)
                     _cat_idx_out  = _SDC_out().get_category_index(_cat_name_out)
@@ -2299,6 +2468,7 @@ async def report_decision_outcome(
                                 "conservation_check_failed"
                             )
                         _soc_store.write_outcome(**_outcome_write_kwargs)
+                        persistence_status["outcome"] = True
                         try:
                             async with _acquire_scorer() as _ps_blocked:
                                 if isinstance(_ps_blocked, SOCCompoundingScorerAdapter):
@@ -2416,6 +2586,7 @@ async def report_decision_outcome(
                                             "[GAE][LEARN] SOC DK Welford update failed: %s",
                                             _welford_exc,
                                         )
+                                        persistence_status["dk"] = False
                                     _reestimate_ok = False
                                     try:
                                         _reestimate_dk = getattr(_ps_out, "reestimate_dk", None)
@@ -2427,6 +2598,7 @@ async def report_decision_outcome(
                                             "[GAE][LEARN] SOC DK reestimate failed: %s",
                                             _dk_exc,
                                         )
+                                        persistence_status["dk"] = False
                                     _checkpoint_writer = None
                                     if isinstance(_ps_out, SOCCompoundingScorerAdapter):
                                         def _checkpoint_writer(transaction):
@@ -2481,6 +2653,10 @@ async def report_decision_outcome(
                                         l5_persistence_status["l5_centroid_persisted"] = bool(
                                             _centroid_persisted
                                         )
+                                        persistence_status["centroid"] = bool(
+                                            _centroid_persisted
+                                        )
+                                        persistence_status["outcome"] = True
                                         l5_persistence_status["l5_shaped_by_attempted"] = bool(
                                             _centroid_persisted and request.decision_id
                                         )
@@ -2510,6 +2686,9 @@ async def report_decision_outcome(
                                                 "[GAE][LEARN] SOC L5 DK persistence failed: %s",
                                                 _dk_persist_exc,
                                             )
+                                            persistence_status["dk"] = False
+                                        else:
+                                            persistence_status["dk"] = True
                             finally:
                                 if _orig_eta_out is not None and hasattr(_ps_out, "eta"):
                                     _ps_out.eta = _orig_eta_out
@@ -2519,6 +2698,7 @@ async def report_decision_outcome(
                                     _ps_out.eta_override = _orig_eta_override_out
                         if _cu is None:
                             _soc_store.write_outcome(**_outcome_write_kwargs)
+                            persistence_status["outcome"] = True
                             if "_ps_out" in locals() and getattr(_ps_out, "is_paused", False):
                                 _guard_block_reason = "conservation_paused"
                             if not _guard_block_reason:
@@ -2531,6 +2711,7 @@ async def report_decision_outcome(
                     # verified outcome still belongs on the Decision node;
                     # only scorer learning is skipped.
                     _soc_store.write_outcome(**_outcome_write_kwargs)
+                    persistence_status["outcome"] = True
                     if l5_persistence_status["l5_persistence_skipped_reason"] == "not_attempted":
                         l5_persistence_status["l5_persistence_skipped_reason"] = (
                             "soc_learning_disabled"
@@ -2553,10 +2734,15 @@ async def report_decision_outcome(
                     _ref_ls = get_learning_state()
                     if _ref_ls:
                         _ref_ls.decision_count += 1
+                        _append_verified_outcome_history(
+                            _ref_ls,
+                            correct=correct_bool,
+                            confidence=confidence_at_decision,
+                        )
                         save_learning_state()
 
                 # Change 5: ProfileSnapshot every 50 decisions
-                if wu is not None:
+                if _cu is not None and l5_persistence_status["l5_centroid_persisted"]:
                     with _soc_perf_phase(
                         "snapshot_evolution_logging",
                         route=_perf_route,
@@ -2568,8 +2754,8 @@ async def report_decision_outcome(
                             from app.services.snapshots import maybe_write_profile_snapshot
                             await maybe_write_profile_snapshot(get_learning_state().decision_count)
 
-                if wu and wu.centroid_update is not None:
-                    cu = wu.centroid_update
+                if _cu is not None and l5_persistence_status["l5_centroid_persisted"]:
+                    cu = _cu
                     # Write centroid_delta_norm back to the Decision node
                     await graph_client.run_query(
                         f"""
@@ -2592,7 +2778,7 @@ async def report_decision_outcome(
                         "action_name":         cu.action_name,
                         "category_index":      cu.category_index,
                         "action_index":        cu.action_index,
-                        "correct":             correct_bool,
+                        "correct":             _correct,
                     }
 
                 # ============================================================
@@ -2628,7 +2814,7 @@ async def report_decision_outcome(
                             _snap_exc,
                         )
                     # Recompute IKS after centroid update (if centroid changed).
-                    if wu and wu.centroid_update is not None:
+                    if _cu is not None and l5_persistence_status["l5_centroid_persisted"]:
                         try:
                             from app.services.gae_state import get_profile_scorer as _get_ps_snap
                             from app.services.iks import compute_visible_iks as _compute_visible_iks
@@ -2734,6 +2920,7 @@ async def report_decision_outcome(
                                 """
                             )
                         _triggered_evolution_written = True
+                        persistence_status["evolution"] = True
                         await event_bus.emit(GraphMutated(
                             mutation_type="evolution",
                             affected_entities=(request.decision_id, request.alert_id),
@@ -2748,6 +2935,7 @@ async def report_decision_outcome(
                             "[FLYWHEEL] TRIGGERED_EVOLUTION creation failed (non-blocking): %s",
                             _evo_exc,
                         )
+                        persistence_status["evolution"] = False
 
                 try:
                     _soc_cfg_rl = _rl_soc_config()
@@ -2771,8 +2959,10 @@ async def report_decision_outcome(
                             ),
                             reward_ledger=_rl_reward_ledger or get_reward_ledger(),
                         )
+                        persistence_status["chain_credit"] = True
                 except Exception as _rl_chain_exc:
                     logger.warning("[RL] Chain credit assignment failed: %s", _rl_chain_exc)
+                    persistence_status["chain_credit"] = False
 
         if reward_result is not None and _rl_reward_ledger is not None and gae_result:
             try:
@@ -2789,8 +2979,10 @@ async def report_decision_outcome(
                     ),
                     posterior_updated=_rl_posterior_updated,
                 )
+                persistence_status["reward_ledger"] = True
             except Exception as _rl_ledger_exc:
                 logger.warning("[RL] Reward ledger append failed: %s", _rl_ledger_exc)
+                persistence_status["reward_ledger"] = False
 
         _shadow_verified_action = None
         if request.analyst_action:
@@ -2864,6 +3056,8 @@ async def report_decision_outcome(
             response_body["l5_persistence_skipped_reason"] = l5_persistence_status[
                 "l5_persistence_skipped_reason"
             ]
+            response_body["eta_source"] = l5_persistence_status["eta_source"]
+            response_body["persistence"] = persistence_status
             response_body["l5_persistence"] = l5_persistence_status
         return response_body
 
@@ -3425,4 +3619,5 @@ async def get_graph_data(alert_id: str) -> Dict[str, Any]:
     except Exception as e:
         print(f"[ERROR] Failed to get graph data: {e}")
         return {"nodes": [], "relationships": []}
+
 

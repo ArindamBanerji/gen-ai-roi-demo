@@ -1,0 +1,211 @@
+{
+  "metadata": {
+    "c6_cross_reference": "Trading action_accuracy abstention lift +0.16pp and S2P +0.25pp at 75% selection target; C6 is risk-coverage abstention, not an action-scorer ceiling test",
+    "c7_cross_reference": "SOC C7 A0 action_accuracy=.8867 and A3 depth3=.9267 (+4pp); routing_quality .7567 vs .7600 (+.33pp), a separate geometry/simulator and non-comparable cohort",
+    "existing_result_files": [
+      "data/exp_split_enrichment.json",
+      "data/exp_split_enrichment_trained.json",
+      "data/exp_split_enrichment_bootstrapped.json"
+    ],
+    "existing_runs_seed_variance": "not measured; existing A-E artifacts are single-run",
+    "fixture": "support/setup/zero_day_decisions_v5.json; same 543-alert fixture and SHA-256 as C1 historical external-baseline comparison",
+    "k_training": "supervised pairwise hinge updates from training-only fixture action votes and categories; evaluation labels excluded from fitting",
+    "metrics": {
+      "action_accuracy": "predicted final action equals synthetic fixture action vote",
+      "category_accuracy": "not measured in the new K action-scoring sweep",
+      "routing_quality": "not measured for C8 action rescoring; no claim inferred from action_accuracy"
+    },
+    "new_run_split": "per-seed shuffled 400 train / 143 held-out alerts from the same 543-alert fixture",
+    "pre_registered_rule": ">3pp action_accuracy over matched current-VLD B=2 baseline at trained geometry for >=2/3 seeds",
+    "read_cap": "current-VLD baseline and K action scorers use the same investigation vector with at most two evidence steps",
+    "rho_measurement_report": "missing; existing E-SPLIT artifacts retain their stored strategy-A match flags/verdicts",
+    "scope": "SOC only",
+    "scope_limitation": "Only SOC has a compatible category/action centroid scorer, patterns, and 543-alert fixture in this repo. supply_chain/S2P is a config stub without build_profile_scorer or compatible fixture; Trading, Purchasing, DataOps configs are absent.",
+    "seeds": [
+      42,
+      123,
+      7
+    ],
+    "tier": "REAL_COMPONENT geometry + SIMULATED streams/fixture action labels",
+    "two_rebuild_byte_identical_sha256_per_seed": {
+      "123": "19366a1eb3cec42ccc57ded09fe07d896b4781a89156c553432cccbd9c909bda",
+      "42": "fdeb4519324c72015ec9f71b2250b3122414ed0cfb3439849b4fe4085c294472",
+      "7": "45aa9f7b300be5f2b63cdbf0a1726acfe0152ee5f43edc5387867a9bd650d965"
+    }
+  },
+  "soc": {
+    "bootstrapped": {
+      "existing_strategies": {
+        "A_current_vld": {
+          "accuracy": 0.19521178637200737,
+          "delta_vs_sp": -0.3241252302025783,
+          "n": 543
+        },
+        "B_route_surface": {
+          "accuracy": 0.5193370165745856,
+          "delta_vs_sp": 0.0,
+          "n": 543
+        },
+        "C_selective": {
+          "accuracy": 0.4714548802946593,
+          "delta_vs_sp": -0.047882136279926324,
+          "n": 543
+        },
+        "D_route_selective": {
+          "accuracy": 0.4843462246777164,
+          "delta_vs_sp": -0.03499079189686927,
+          "n": 543
+        },
+        "E_oracle": {
+          "accuracy": 0.3848987108655617,
+          "delta_vs_sp": -0.13443830570902393,
+          "n": 543
+        }
+      },
+      "new_strategies": {},
+      "single_pass_accuracy": 0.5193370165745856,
+      "source": "existing",
+      "strategy_a_matches_phase1b": true,
+      "verdict": "ARCHITECTURE ISSUE: oracle <= SP. Investigation cannot improve actions on this data. VLD value limited to structured triage."
+    },
+    "default": {
+      "existing_strategies": {
+        "A_current_vld": {
+          "accuracy": 0.31307550644567217,
+          "delta_vs_sp": -0.22467771639042355,
+          "n": 543
+        },
+        "B_route_surface": {
+          "accuracy": 0.5377532228360957,
+          "delta_vs_sp": 0.0,
+          "n": 543
+        },
+        "C_selective": {
+          "accuracy": 0.5377532228360957,
+          "delta_vs_sp": 0.0,
+          "n": 543
+        },
+        "D_route_selective": {
+          "accuracy": 0.5377532228360957,
+          "delta_vs_sp": 0.0,
+          "n": 543
+        },
+        "E_oracle": {
+          "accuracy": 0.36095764272559855,
+          "delta_vs_sp": -0.17679558011049717,
+          "n": 543
+        }
+      },
+      "new_strategies": {},
+      "single_pass_accuracy": 0.5377532228360957,
+      "source": "existing",
+      "strategy_a_matches_phase1b": true,
+      "verdict": "ARCHITECTURE ISSUE: oracle <= SP. Investigation cannot improve actions on this data. VLD value limited to structured triage."
+    },
+    "trained": {
+      "existing_strategies": {
+        "A_current_vld": {
+          "accuracy": 0.20441988950276244,
+          "delta_vs_sp": 0.053406998158379376,
+          "n": 543
+        },
+        "B_route_surface": {
+          "accuracy": 0.15101289134438306,
+          "delta_vs_sp": 0.0,
+          "n": 543
+        },
+        "C_selective": {
+          "accuracy": 0.21915285451197053,
+          "delta_vs_sp": 0.06813996316758747,
+          "n": 543
+        },
+        "D_route_selective": {
+          "accuracy": 0.22467771639042358,
+          "delta_vs_sp": 0.07366482504604052,
+          "n": 543
+        },
+        "E_oracle": {
+          "accuracy": 0.23388581952117865,
+          "delta_vs_sp": 0.08287292817679559,
+          "n": 543
+        }
+      },
+      "new_strategies": {
+        "K_category_weighted_action": {
+          "aggregate": {
+            "action_mean": 0.23076923076923075,
+            "action_std": 0.02422448681914515,
+            "beats_A_by_3pp": 1,
+            "delta_std_vs_A": 0.02136398925387338,
+            "delta_vs_A": 0.01631701631701631,
+            "legacy_A_all_543_action_accuracy": 0.20441988950276244,
+            "legacy_comparison_note": "Existing A is a single-run all-543 result and is not a matched comparison; decision rule uses per-seed matched B=2 A baseline."
+          },
+          "description": "Pairwise-learned category-conditioned K feature weights re-score actions inside the B=2 baseline's routed category.",
+          "per_seed": {
+            "123": {
+              "action_accuracy": 0.25874125874125875,
+              "delta_vs_A": 0.02097902097902099,
+              "evidence_steps_mean": 2.0,
+              "matched_A_action_accuracy": 0.23776223776223776,
+              "n": 143
+            },
+            "42": {
+              "action_accuracy": 0.21678321678321677,
+              "delta_vs_A": 0.03496503496503495,
+              "evidence_steps_mean": 2.0,
+              "matched_A_action_accuracy": 0.18181818181818182,
+              "n": 143
+            },
+            "7": {
+              "action_accuracy": 0.21678321678321677,
+              "delta_vs_A": -0.006993006993007006,
+              "evidence_steps_mean": 2.0,
+              "matched_A_action_accuracy": 0.22377622377622378,
+              "n": 143
+            }
+          }
+        },
+        "K_global_weighted_action": {
+          "aggregate": {
+            "action_mean": 0.23776223776223776,
+            "action_std": 0.02797202797202797,
+            "beats_A_by_3pp": 0,
+            "delta_std_vs_A": 0.008074828939715045,
+            "delta_vs_A": 0.02331002331002331,
+            "legacy_A_all_543_action_accuracy": 0.20441988950276244,
+            "legacy_comparison_note": "Existing A is a single-run all-543 result and is not a matched comparison; decision rule uses per-seed matched B=2 A baseline."
+          },
+          "description": "Pairwise-learned pooled K feature weights re-score actions inside the B=2 baseline's routed category.",
+          "per_seed": {
+            "123": {
+              "action_accuracy": 0.26573426573426573,
+              "delta_vs_A": 0.02797202797202797,
+              "evidence_steps_mean": 2.0,
+              "matched_A_action_accuracy": 0.23776223776223776,
+              "n": 143
+            },
+            "42": {
+              "action_accuracy": 0.2097902097902098,
+              "delta_vs_A": 0.02797202797202797,
+              "evidence_steps_mean": 2.0,
+              "matched_A_action_accuracy": 0.18181818181818182,
+              "n": 143
+            },
+            "7": {
+              "action_accuracy": 0.23776223776223776,
+              "delta_vs_A": 0.013986013986013984,
+              "evidence_steps_mean": 2.0,
+              "matched_A_action_accuracy": 0.22377622377622378,
+              "n": 143
+            }
+          }
+        }
+      },
+      "single_pass_accuracy": 0.15101289134438306,
+      "source": "existing plus new matched-seed action-scoring runs",
+      "strategy_a_matches_phase1b": true,
+      "verdict": "VLD VALUE = SELECTIVE ENRICHMENT: selective strategy beats SP."
+    }
+  }
+}

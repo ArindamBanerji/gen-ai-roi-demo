@@ -34,10 +34,94 @@ SHOWCASE_SCENARIO_IDS = [
 ]
 
 
+def _branch_id(branch: Any) -> str:
+    if isinstance(branch, dict):
+        return str(branch.get("branch_id") or branch.get("branch_name") or branch.get("id") or branch.get("evidence_source") or "")
+    return str(branch)
+
+
+def _branch_prerequisites(branch: Any) -> list[str]:
+    if not isinstance(branch, dict):
+        return []
+    candidates = (
+        branch.get("requires_branches"),
+        branch.get("prerequisite_branches"),
+        branch.get("requires_branch_ids"),
+    )
+    for value in candidates:
+        if value:
+            return [str(x) for x in value]
+    access = branch.get("access")
+    if isinstance(access, dict) and access.get("requires_completed_branches"):
+        return [str(x) for x in access.get("requires_completed_branches", [])]
+    return []
+
+
+def _branch_record_steps(records: list[Any]) -> dict[str, int]:
+    by_id = {_branch_id(record): record for record in records if _branch_id(record)}
+    memo: dict[str, int] = {}
+
+    def depth(branch_id: str, seen: set[str] | None = None) -> int:
+        if branch_id in memo:
+            return memo[branch_id]
+        seen = set(seen or set())
+        if branch_id in seen:
+            return 1
+        seen.add(branch_id)
+        prereqs = [p for p in _branch_prerequisites(by_id.get(branch_id, {})) if p in by_id]
+        if not prereqs:
+            memo[branch_id] = 1
+        else:
+            memo[branch_id] = 1 + max(depth(p, seen) for p in prereqs)
+        return memo[branch_id]
+
+    return {branch_id: depth(branch_id) for branch_id in by_id}
+
+
+def _group_branch_ids_by_step(branches: Any, *, scenario: dict[str, Any], field: str) -> dict[str, list[str]]:
+    if isinstance(branches, dict):
+        return {str(step): [_branch_id(branch) for branch in values if _branch_id(branch)] for step, values in branches.items()}
+    if not isinstance(branches, list) or not branches:
+        return {}
+    available_records = scenario.get("available_branches", [])
+    records = available_records if isinstance(available_records, list) else []
+    step_by_id = _branch_record_steps(records)
+    grouped: dict[str, list[str]] = {}
+    for index, branch in enumerate(branches, 1):
+        branch_id = _branch_id(branch)
+        if not branch_id:
+            continue
+        step = step_by_id.get(branch_id)
+        if step is None:
+            step = index if field == "correct_branches" else 1
+        grouped.setdefault(str(step), []).append(branch_id)
+    return dict(sorted(grouped.items(), key=lambda item: int(item[0])))
+
+
+def _normalize_scenario_branches(scenario: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(scenario)
+    normalized["available_branches"] = _group_branch_ids_by_step(
+        scenario.get("available_branches", {}), scenario=scenario, field="available_branches"
+    )
+    normalized["correct_branches"] = _group_branch_ids_by_step(
+        scenario.get("correct_branches", {}), scenario=scenario, field="correct_branches"
+    )
+    records = scenario.get("available_branches", [])
+    read_costs = dict(scenario.get("read_costs", {}))
+    if isinstance(records, list):
+        for record in records:
+            branch_id = _branch_id(record)
+            if branch_id and isinstance(record, dict) and "read_cost" in record:
+                read_costs.setdefault(branch_id, int(record.get("read_cost", 1)))
+    normalized["read_costs"] = read_costs
+    return normalized
+
+
 class ScenarioGraphStore:
     """Read-only graph adapter backed by one Stage 1 scenario."""
 
     def __init__(self, scenario: dict[str, Any]) -> None:
+        scenario = _normalize_scenario_branches(scenario)
         self.scenario = scenario
         self.hops = {int(h["step"]): h for h in scenario.get("decision_tree", {}).get("hops", [])}
         self.correct_by_step = {int(k): list(v) for k, v in scenario.get("correct_branches", {}).items()}
@@ -140,7 +224,7 @@ class ScenarioEvidenceContext:
 def load_stage1_scenarios(path: Path = STAGE1_PATH) -> list[dict[str, Any]]:
     if not path.exists():
         return []
-    return list(json.loads(path.read_text(encoding="utf-8"))["scenarios"])
+    return [_normalize_scenario_branches(s) for s in json.loads(path.read_text(encoding="utf-8"))["scenarios"]]
 
 
 def scenario_by_alert_id(alert_id: str) -> dict[str, Any] | None:
@@ -249,7 +333,7 @@ def _apply_evidence(v: np.ndarray, evidence: dict[str, Any]) -> np.ndarray:
     return cast(np.ndarray, np.clip(out, 0.0, 1.0))
 
 
-async def run_stage1_investigation(scenario: dict[str, Any], scorer: Any | None = None, *, force_correct: bool = True) -> InvestigationResult:
+async def run_stage1_investigation(scenario: dict[str, Any], scorer: Any | None = None, *, force_correct: bool = False) -> InvestigationResult:
     if scorer is None:
         scorer_factory = getattr(SOCDomainConfig(), "build_profile_scorer")
         scorer = scorer_factory()

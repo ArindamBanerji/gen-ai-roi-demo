@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import numpy as np
 import pytest
@@ -10,17 +11,14 @@ from app.services import rl_engine
 from app.services.rl_engine import ChainCredit, CreditAssigner, RewardLedger
 
 
-class FakeGraph:
-    def __init__(self, rows=None, exc: Exception | None = None):
-        self.rows = rows or []
-        self.exc = exc
-        self.queries: list[str] = []
-
-    async def run_query(self, query):
-        self.queries.append(query)
-        if self.exc is not None:
-            raise self.exc
-        return self.rows
+def _credit_graph(age_graph, rows=()):
+    for row in rows:
+        identifier = age_graph.decision(correct=True, verified_correct=True, action_index=0, **row)
+        literal = age_graph.client.serialize_for_age(identifier)
+        age_graph.query(f"MATCH (d:Decision {{decision_id: {literal}}}) CREATE (d)-[:TRIGGERED_EVOLUTION]->(e:EvolutionEvent {{id: {literal}}}) RETURN e")
+    client = age_graph.client
+    client.run_query = AsyncMock(wraps=client.run_query)
+    return client
 
 
 class CountingScorer:
@@ -43,35 +41,39 @@ async def test_graph_client_none_returns_empty():
 
 
 @pytest.mark.asyncio
-async def test_no_historical_decisions_returns_empty():
-    graph = FakeGraph([])
+@pytest.mark.age
+async def test_no_historical_decisions_returns_empty(age_graph):
+    graph = _credit_graph(age_graph, [])
     result = await CreditAssigner(graph).assign_chain_credit("D-2", "credential_access", 0, 100, 1.0)
     assert result == []
 
 
 @pytest.mark.asyncio
-async def test_single_historical_decision_gets_half_direct_reward():
-    graph = FakeGraph([{"decision_id": "D-1", "decision_number": 85}])
+@pytest.mark.age
+async def test_single_historical_decision_gets_half_direct_reward(age_graph):
+    graph = _credit_graph(age_graph, [{"decision_id": "D-1", "decision_number": 85}])
     result = await CreditAssigner(graph).assign_chain_credit("D-2", "credential_access", 0, 100, 1.0)
     assert len(result) == 1
     assert result[0] == ChainCredit("D-2", "D-1", 0.5, 1.0, 15)
 
 
 @pytest.mark.asyncio
-async def test_negative_reward_uses_abs_value():
-    graph = FakeGraph([{"decision_id": "D-1", "decision_number": 85}])
+@pytest.mark.age
+async def test_negative_reward_uses_abs_value(age_graph):
+    graph = _credit_graph(age_graph, [{"decision_id": "D-1", "decision_number": 85}])
     result = await CreditAssigner(graph).assign_chain_credit("D-2", "credential_access", 0, 100, -14.0)
     assert result[0].chain_reward == pytest.approx(7.0)
 
 
 @pytest.mark.asyncio
-async def test_multiple_historical_decisions_normalize_chain_budget():
+@pytest.mark.age
+async def test_multiple_historical_decisions_normalize_chain_budget(age_graph):
     rows = [
         {"decision_id": "D-1", "decision_number": 95},
         {"decision_id": "D-2", "decision_number": 80},
         {"decision_id": "D-3", "decision_number": 60},
     ]
-    result = await CreditAssigner(FakeGraph(rows)).assign_chain_credit(
+    result = await CreditAssigner(_credit_graph(age_graph, rows)).assign_chain_credit(
         "D-4", "credential_access", 0, 100, 2.0
     )
     assert len(result) == 3
@@ -80,38 +82,42 @@ async def test_multiple_historical_decisions_normalize_chain_budget():
 
 
 @pytest.mark.asyncio
-async def test_zero_reward_returns_empty_without_query():
-    graph = FakeGraph([{"decision_id": "D-1", "decision_number": 95}])
+@pytest.mark.age
+async def test_zero_reward_returns_empty_without_query(age_graph):
+    graph = _credit_graph(age_graph, [{"decision_id": "D-1", "decision_number": 95}])
     result = await CreditAssigner(graph).assign_chain_credit("D-2", "credential_access", 0, 100, 0.0)
     assert result == []
-    assert graph.queries == []
+    graph.run_query.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_query_failure_returns_empty_and_logs(caplog):
-    graph = FakeGraph(exc=RuntimeError("db down"))
+    graph = AsyncMock()
+    graph.run_query.side_effect = RuntimeError("db down")
     result = await CreditAssigner(graph).assign_chain_credit("D-2", "credential_access", 0, 100, 1.0)
     assert result == []
     assert "chain-credit query failed" in caplog.text
 
 
 @pytest.mark.asyncio
-async def test_excludes_self_if_returned_by_graph():
+@pytest.mark.age
+async def test_excludes_self_if_returned_by_graph(age_graph):
     rows = [
         {"decision_id": "D-2", "decision_number": 99},
         {"decision_id": "D-1", "decision_number": 95},
     ]
-    result = await CreditAssigner(FakeGraph(rows)).assign_chain_credit(
+    result = await CreditAssigner(_credit_graph(age_graph, rows)).assign_chain_credit(
         "D-2", "credential_access", 0, 100, 1.0
     )
     assert [credit.target_decision_id for credit in result] == ["D-1"]
 
 
 @pytest.mark.asyncio
-async def test_query_safety():
-    graph = FakeGraph([])
+@pytest.mark.age
+async def test_query_safety(age_graph):
+    graph = _credit_graph(age_graph, [])
     await CreditAssigner(graph).assign_chain_credit("D-'2", "credential_access", 0, 100, 1.0)
-    query = graph.queries[0]
+    query = graph.run_query.call_args.args[0]
     assert "$" not in query
     assert "MERGE" not in query
     assert " SET " not in f" {query} "

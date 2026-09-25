@@ -27,7 +27,7 @@ test.describe('Tab 1 – Alert Triage', () => {
     await page.goto(FRONTEND);
     // Navigate to Alert Triage tab
     await page.getByRole('button', { name: /Alert Triage/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await screenshot(page, '01-alert-triage-tab');
   });
 
@@ -42,7 +42,7 @@ test.describe('Tab 1 – Alert Triage', () => {
   test('NL explanation text non-empty', async ({ page }) => {
     const firstAlert = page.locator('button').filter({ hasText: ALERT_CARD_RE }).first();
     await firstAlert.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Situation Analysis or narrative explanation text
     const explanation = page.locator('p, span, div').filter({
@@ -61,7 +61,7 @@ test.describe('Tab 2 – Institutional Intelligence', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Runtime Evolution/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await screenshot(page, '02-runtime-evolution-tab');
   });
 
@@ -107,11 +107,11 @@ test.describe('Tab 3 – Alert Detail', () => {
   test('at least 1 provenance node label visible', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Alert Triage/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const firstAlert = page.locator('button').filter({ hasText: ALERT_CARD_RE }).first();
     await firstAlert.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Factor names serve as provenance labels
     const factorLabels = page.locator('.font-medium, .font-semibold').filter({
@@ -129,7 +129,7 @@ test.describe('Tab 4 – Decision Economics', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Compounding/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await screenshot(page, '04-compounding-tab');
   });
 
@@ -160,7 +160,7 @@ test.describe('Tab 5 – Executive Narrative', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Executive Narrative/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await screenshot(page, '05-executive-narrative-tab');
   });
 
@@ -202,19 +202,21 @@ test.describe('API checks', () => {
   });
 
   test('POST /api/s2p/score × 10 scenarios → all return valid action', async ({ request }) => {
+    test.setTimeout(120_000);
     const s2pBackend = process.env.S2P_API_URL || 'http://127.0.0.1:8002';
     const scenarios = Array.from({ length: 10 }, (_, i) => ({
       event_id: `PW-SCORE-${Date.now()}-${i + 1}`,
       category: 'price_variance',
       amount: 1000 + i * 100,
       supplier_id: `SUP-PW-${i + 1}`,
-      match_status: 0.6,
-      amount_variance_ratio: 0.3,
-      duplicate_score: 0.2,
-      supplier_exception_history: 0.7,
-      payment_terms_impact: 0.4,
+      match_status: 0.5,
+      amount_variance_ratio: 0.5,
+      duplicate_score: 0.5,
+      supplier_exception_history: 0.5,
+      payment_terms_impact: 0.5,
       commodity_index_correlation: 0.5,
-      tax_regulatory_compliance: 0.8,
+      tax_regulatory_compliance: 0.5,
+      environmental_risk: 0.5,
     }));
 
     const validActions = ['auto_approve', 'hold_for_review', 'escalate_to_buyer', 'flag_leakage', 'refer_to_specialist'];
@@ -251,12 +253,12 @@ test.describe('API checks', () => {
 async function openFirstAlert(page: Page) {
   await page.goto(FRONTEND);
   await page.getByRole('button', { name: /Alert Triage/i }).click();
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   const malwareAlert = page.locator('button').filter({ hasText: ALERT_CARD_RE }).filter({ hasText: /malware/i }).first();
   const fallback     = page.locator('button').filter({ hasText: ALERT_CARD_RE }).first();
   const target = (await malwareAlert.count()) > 0 ? malwareAlert : fallback;
   await target.click();
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   // Wait for scoring panel to load (backend GAE round-trip)
   await page.waitForSelector(
     'text=/Why This Decision|Confidence:|Recommendation/i',
@@ -299,7 +301,7 @@ test.describe('Tab 1 – Alert Triage (detail panel)', () => {
   test('NL explanation changes when a different alert is clicked', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Alert Triage/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const alertButtons = page.locator('button').filter({ hasText: ALERT_CARD_RE });
     const count = await alertButtons.count();
@@ -307,7 +309,7 @@ test.describe('Tab 1 – Alert Triage (detail panel)', () => {
 
     // Click first alert, grab explanation text
     await alertButtons.nth(0).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     const explanation = page.locator('p, span, div').filter({
       hasText: /This alert|The system|detected|threat|anomaly|activity/i
     }).first();
@@ -316,7 +318,7 @@ test.describe('Tab 1 – Alert Triage (detail panel)', () => {
 
     // Click second alert
     await alertButtons.nth(1).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(explanation).toBeVisible({ timeout: 10_000 });
     const text2 = await explanation.innerText();
 
@@ -356,7 +358,7 @@ test.describe('Tab 1 – Alert Triage (detail panel)', () => {
   test('alert queue shows severity badge (HIGH / MEDIUM / LOW / CRITICAL)', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Alert Triage/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     const severity = page.locator('.font-semibold').filter({ hasText: /^(HIGH|MEDIUM|LOW|CRITICAL)$/i }).first();
     await expect(severity).toBeVisible({ timeout: 10_000 });
   });
@@ -373,7 +375,7 @@ test.describe('Tab 2 – Institutional Intelligence (extended)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Runtime Evolution/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('IKS value > 0 (v2 fallback fix verified)', async ({ page }) => {
@@ -546,7 +548,7 @@ test.describe('Tab 4 – Decision Economics (extended)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Compounding/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('ROI dollar value is non-zero (formatUSD output visible)', async ({ page }) => {
@@ -597,12 +599,12 @@ test.describe('Tab 5 – Executive Narrative (extended)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Executive Narrative/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('headline text is non-empty', async ({ page }) => {
     // Headline is a <p> element with text-sm text-gray-300 leading-relaxed
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     // Wait for the narrative to load (it fetches async)
     const headline = page.locator('p.leading-relaxed, p.text-gray-300').first();
     await expect(headline).toBeVisible({ timeout: 10_000 });
@@ -817,7 +819,7 @@ test.describe('Error and edge cases', () => {
   test('no console errors on initial page load', async ({ page }) => {
     const errors = collectConsoleErrors(page);
     await page.goto(FRONTEND);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     expectNoConsoleErrors(errors);
   });
 
@@ -830,7 +832,7 @@ test.describe('Error and edge cases', () => {
   test('no horizontal scroll at 1280px viewport width', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(FRONTEND);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     const scrollWidth  = await page.evaluate(() => document.documentElement.scrollWidth);
     const clientWidth  = await page.evaluate(() => document.documentElement.clientWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 5); // 5px tolerance
@@ -838,7 +840,7 @@ test.describe('Error and edge cases', () => {
 
   test('all 6 tab buttons visible on page load', async ({ page }) => {
     await page.goto(FRONTEND);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     const tabLabels = ['SOC Analytics', 'Runtime Evolution', 'Alert Triage', 'Compounding', 'Executive Narrative', 'S2P Preview'];
     for (const label of tabLabels) {
       await expect(page.getByRole('button', { name: new RegExp(label, 'i') })).toBeVisible({ timeout: 5_000 });
@@ -853,28 +855,28 @@ test.describe('Error and edge cases', () => {
   test('SOC Analytics tab reachable without crash', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /SOC Analytics/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('Runtime Evolution tab reachable without crash', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Runtime Evolution/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('Compounding tab reachable without crash', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Compounding/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('Executive Narrative tab reachable without crash', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Executive Narrative/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('body')).toBeVisible();
   });
 });
@@ -886,7 +888,7 @@ test.describe('Tab 5 – Executive Narrative (content gate)', () => {
   test('What Changed section has specific centroid shift content', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Executive/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     // "What Changed" must show at least one category/action shift
     // pattern: "category_name/action_name: N correct decisions"
     const shiftContent = page.locator('text=/\\w+\\/\\w+.*correct decisions/i');
@@ -896,7 +898,7 @@ test.describe('Tab 5 – Executive Narrative (content gate)', () => {
   test('verified decisions count > 100 on Tab 5', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Executive/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     // GET executive-narrative and assert verified_decisions > 100
     const res = await page.request.get(`${BACKEND}/api/soc/executive-narrative`);
     const body = await res.json();
@@ -907,7 +909,7 @@ test.describe('Tab 5 – Executive Narrative (content gate)', () => {
   test('campaigns detected count >= 1 on Tab 5', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Executive/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     const res = await page.request.get(`${BACKEND}/api/soc/executive-narrative`);
     const body = await res.json();
     expect(body.metrics?.campaigns_detected ?? body.campaigns_detected ?? 0)
@@ -924,7 +926,7 @@ test.describe('Tab 5 – Executive Narrative (content gate)', () => {
   test('What Was Discovered shows at least one chain summary', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Executive/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     // Chain summary pattern: "N alerts in category_name cluster"
     const chainSummary = page.locator('text=/\\d+ alerts in \\w+ cluster/i');
     await expect(chainSummary.first()).toBeVisible({ timeout: 10_000 });
@@ -939,7 +941,7 @@ test.describe('Tab content contract — Phase A E2E gates', () => {
   test('tab2_iks_score_visible_and_positive', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Runtime Evolution/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     // IKS label must be visible
     const iksLabel = page.getByText(/Institutional Knowledge Score/i).first();
     await expect(iksLabel).toBeVisible({ timeout: 10_000 });
@@ -956,7 +958,7 @@ test.describe('Tab content contract — Phase A E2E gates', () => {
   test('tab2_categories_calibrated_max_six', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Runtime Evolution/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     // Must not show impossible numbers like "8 of 6" or "7 of 6" (BACKLOG-007)
     const bodyText = await page.locator('body').textContent();
     expect(bodyText).not.toContain('8 of 6');
@@ -978,7 +980,7 @@ test.describe('Tab content contract — Phase A E2E gates', () => {
   test('tab5_categories_calibrated_shows_six', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Executive Narrative/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     // categories_calibrated must not exceed 6 (BACKLOG-007)
     const bodyText = await page.locator('body').textContent();
     expect(bodyText).not.toMatch(/[789] of 6 categories/);
@@ -987,7 +989,7 @@ test.describe('Tab content contract — Phase A E2E gates', () => {
   test('tab1_no_unknown_category_visible', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Alert Triage/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     // No raw quoted "unknown" category should appear in alert list
     const alertItems = page.locator('button').filter({ hasText: ALERT_CARD_RE });
     const count = await alertItems.count();
@@ -1000,7 +1002,7 @@ test.describe('Tab content contract — Phase A E2E gates', () => {
   test('tab2_iks_interpretation_not_cold_start', async ({ page }) => {
     await page.goto(FRONTEND);
     await page.getByRole('button', { name: /Runtime Evolution/i }).click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     // IKS 76 must NOT show cold-start interpretation (BACKLOG-004)
     const bodyText = await page.locator('body').textContent();
     expect(bodyText).not.toContain('Cold start — system is accumulating');

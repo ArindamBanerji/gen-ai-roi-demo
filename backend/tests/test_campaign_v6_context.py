@@ -1,3 +1,5 @@
+import pytest
+from support.campaign_graph import CampaignGraphProbe, MaterializationObserver
 import asyncio
 import os
 import sys
@@ -42,57 +44,21 @@ def _event(alert_id, *, user_id="user-1", minutes=0):
     }
 
 
-class V6Graph:
-    def __init__(self):
-        self.campaigns = set()
-        self.queries = []
-        self.materialized_lookup_count = 0
-
-    async def run_query(self, query, params=None):
-        self.queries.append(query)
-        if "MATCH (c:Campaign" in query and "RETURN c.campaign_id AS campaign_id" in query:
-            self.materialized_lookup_count += 1
-        return []
 
 
-class V6Repo:
-    def __init__(self, events, graph=None):
-        self.events = list(events)
-        self.graph = graph or V6Graph()
-        self.persist_calls = 0
-        self.materialize_calls = 0
-        self.edges = set()
-
-    async def fetch_single_alert_event(self, alert_id, **_kwargs):
-        return next((event for event in self.events if event["alert_id"] == alert_id), None)
-
-    async def fetch_recent_events(self, *_args, **_kwargs):
-        return list(self.events)
-
-    async def persist_campaign_seed(self, *_args, **_kwargs):
-        self.persist_calls += 1
-        return None
-
-    async def materialize_seed_campaign(self, campaign, **_kwargs):
-        self.materialize_calls += 1
-        self.graph.campaigns.add(campaign.campaign_id)
-        for alert_id in campaign.member_alert_ids:
-            self.edges.add((alert_id, campaign.campaign_id))
-        return True
 
 
-def _matcher(events, *, background=False, async_state=None, graph=None, repo=None):
-    graph = graph or V6Graph()
-    repo = repo or V6Repo(events, graph=graph)
-    engine = CampaignCorrelationEngine(DEFAULT_CONFIG)
-    return CampaignMatcher(
-        graph,
-        DEFAULT_CONFIG,
-        engine,
-        repo,
-        background=background,
-        async_state=async_state or CampaignAsyncState(),
-    ), repo, graph
+
+
+
+
+def _persisted_matcher(age_graph, events, *, background=False, async_state=None):
+    graph = CampaignGraphProbe(age_graph, alerts=[e["alert_id"] for e in events])
+    repo = MaterializationObserver(events, graph)
+    matcher = CampaignMatcher(graph, DEFAULT_CONFIG, CampaignCorrelationEngine(DEFAULT_CONFIG),
+                              repo, background=background,
+                              async_state=async_state or CampaignAsyncState())
+    return matcher, repo, graph
 
 
 def test_mark_materialized_with_context_stores_campaign_context():
@@ -155,11 +121,12 @@ def test_mark_materialized_with_context_preserves_materialized_id_cache():
     assert state.materialized_campaign_id("campaign-1") == "campaign-1"
 
 
-def test_materialization_success_populates_context_without_double_counting():
+@pytest.mark.age
+def test_materialization_success_populates_context_without_double_counting(age_graph):
     async def scenario():
         events = [_event("a1", minutes=0), _event("a2", minutes=1)]
         state = CampaignAsyncState()
-        matcher, repo, graph = _matcher(events, background=False, async_state=state)
+        matcher, repo, graph = _persisted_matcher(age_graph, events, background=False, async_state=state)
 
         campaign_id = await matcher.check_alert("a2")
         lookup_count_after_check = graph.materialized_lookup_count

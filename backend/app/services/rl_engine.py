@@ -624,10 +624,10 @@ def get_exploration_policy() -> ExplorationPolicy:
             from app.services.graph_store_adapter import create_soc_graph_store
             from copilot_sdk.config import GraphConfig
 
-            graph_config = GraphConfig.load(
-                "soc",
-                profile="test" if os.environ.get("PYTEST_CURRENT_TEST") else "production",
-            )
+            soc_profile = os.environ.get("SOC_PROFILE", "production").strip().lower()
+            if soc_profile not in {"test", "production", "demo"}:
+                soc_profile = "production"
+            graph_config = GraphConfig.load("soc", profile=soc_profile)
             graph_store = create_soc_graph_store(graph_client, graph_config)
             constructor_parameters = inspect.signature(PosteriorStore).parameters
             accepts_graph_store = "graph_store" in constructor_parameters or any(

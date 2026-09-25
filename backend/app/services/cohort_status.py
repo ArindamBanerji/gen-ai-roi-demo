@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from copilot_sdk.substantiation.cohort_day_zero import (
     STATES,
@@ -33,7 +33,7 @@ def evaluate_v7_gate(cohort_status: dict[str, Any]) -> dict[str, Any]:
     gate_input["magnitude"] = real.get("magnitude")
     if records:
         gate_input["records"] = records
-    return _sdk_evaluate_v7_gate(gate_input, threshold_k)
+    return cast(dict[str, Any], _sdk_evaluate_v7_gate(gate_input, threshold_k))
 
 
 class CohortStatusService(BaseCohortDayZeroState):

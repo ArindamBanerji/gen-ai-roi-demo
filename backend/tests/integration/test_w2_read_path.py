@@ -15,6 +15,9 @@ Run from backend/ directory:
     pytest tests/integration/test_w2_read_path.py -v
 """
 
+import pytest
+from support.campaign_graph import pattern_history
+
 import sys
 import os
 import asyncio
@@ -33,11 +36,6 @@ def _make_alert(alert_type: str = "credential_access") -> dict:
     return {"id": "ALERT-W2-INT-001", "alert_type": alert_type}
 
 
-def _make_graph_mock(results: list) -> AsyncMock:
-    """Return a mock AGE client whose run_query returns `results`."""
-    mock = AsyncMock()
-    mock.run_query = AsyncMock(return_value=results)
-    return mock
 
 
 def run(coro):
@@ -48,7 +46,8 @@ def run(coro):
 # Case 1 — Fallback when no TRIGGERED_EVOLUTION edges
 # ---------------------------------------------------------------------------
 
-def test_w2_case1_fallback_when_no_edges():
+@pytest.mark.age
+def test_w2_case1_fallback_when_no_edges(age_graph):
     """
     With no TRIGGERED_EVOLUTION edges (empty query result), the compute
     method must return exactly the 0.40 neutral baseline.
@@ -59,7 +58,7 @@ def test_w2_case1_fallback_when_no_edges():
 
     computer = PatternHistoryFactorComputer()
     alert = _make_alert()
-    graph = _make_graph_mock([])
+    graph = pattern_history(age_graph, [])
 
     result = run(computer.compute(alert, graph, action_index=0))
 
@@ -73,7 +72,8 @@ def test_w2_case1_fallback_when_no_edges():
 # Case 2 — W2 read path live when edges exist
 # ---------------------------------------------------------------------------
 
-def test_w2_case2_read_path_live_when_edges_exist():
+@pytest.mark.age
+def test_w2_case2_read_path_live_when_edges_exist(age_graph):
     """
     When TRIGGERED_EVOLUTION edges are present, compute() must use the
     W2 path (return the edge-derived value, not the 0.40 fallback).
@@ -86,7 +86,7 @@ def test_w2_case2_read_path_live_when_edges_exist():
     computer = PatternHistoryFactorComputer()
     alert = _make_alert()
     results = [{"pattern_value": 0.80, "decision_num": 100}]
-    graph = _make_graph_mock(results)
+    graph = pattern_history(age_graph, results, action_index=1)
 
     result = run(computer.compute(alert, graph, action_index=1))
 
@@ -108,7 +108,8 @@ def test_w2_case2_read_path_live_when_edges_exist():
 # Case 3 — Recency weighting functional
 # ---------------------------------------------------------------------------
 
-def test_w2_case3_recency_weighting():
+@pytest.mark.age
+def test_w2_case3_recency_weighting(age_graph):
     """
     Two decisions 30 apart in decision_number must be weighted by the
     exponential decay formula with HALF_LIFE_DECISIONS.
@@ -137,7 +138,7 @@ def test_w2_case3_recency_weighting():
         {"pattern_value": 0.90, "decision_num": 100},   # recent
         {"pattern_value": 0.40, "decision_num": 100 - half_life},  # exactly half-life ago
     ]
-    graph = _make_graph_mock(results)
+    graph = pattern_history(age_graph, results)
 
     result = run(computer.compute(alert, graph, action_index=0))
 

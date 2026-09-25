@@ -34,45 +34,14 @@ _SAMPLE_INDICATOR = {
 }
 
 
-def _upsert_graph(returned_id: str = "ti-fake-001"):
-    """FakeAGE that returns a fixed ID for upsert (MATCH-then-CREATE) queries."""
-    _created = {}  # track created IOCs to simulate idempotent upsert
-
-    async def run_query(query, params=None):
-        key = (params or {}).get("ioc_value", "")
-        # Step A — MATCH existing node
-        if "MATCH" in query and "ThreatIndicator" in query and "CREATE" not in query:
-            if key in _created:
-                return [{"id": returned_id}]
-            return []
-        # Step B — CREATE new node
-        if "CREATE" in query and "ThreatIndicator" in query:
-            _created[key] = returned_id
-            return [{"id": returned_id}]
-        return []
-    class _FakeAGE:
-        pass
-    _FakeAGE.run_query = staticmethod(run_query)
-    return _FakeAGE()
-
-
-def _query_graph(rows: list):
-    """FakeAGE that returns fixed rows for SELECT-style queries."""
-    async def run_query(query, params=None):
-        return rows
-    class _FakeAGE:
-        pass
-    _FakeAGE.run_query = staticmethod(run_query)
-    return _FakeAGE()
-
-
 # ---------------------------------------------------------------------------
 # Test 1: upsert returns a non-empty ID
 # ---------------------------------------------------------------------------
 
-def test_upsert_creates_indicator():
+@pytest.mark.age
+def test_upsert_creates_indicator(age_graph):
     """upsert_indicator returns a non-empty string ID."""
-    graph = _upsert_graph("ti-fake-001")
+    graph = age_graph.client
 
     result_id = asyncio.run(
         ThreatIndicatorService.upsert_indicator(
@@ -85,16 +54,18 @@ def test_upsert_creates_indicator():
         )
     )
 
-    assert result_id == "ti-fake-001", f"Expected 'ti-fake-001', got {result_id!r}"
+    assert result_id
+    assert age_graph.query("MATCH (ti:ThreatIndicator) RETURN ti.id AS id") == [{"id": result_id}]
 
 
 # ---------------------------------------------------------------------------
 # Test 2: MERGE idempotent — same IOC twice returns same ID
 # ---------------------------------------------------------------------------
 
-def test_upsert_idempotent():
+@pytest.mark.age
+def test_upsert_idempotent(age_graph):
     """Two upserts for the same ioc_value both return the same ID (MERGE behaviour)."""
-    graph = _upsert_graph("ti-stable-id")
+    graph = age_graph.client
 
     id_first  = asyncio.run(
         ThreatIndicatorService.upsert_indicator(
@@ -111,8 +82,8 @@ def test_upsert_idempotent():
         )
     )
 
-    assert id_first  == "ti-stable-id"
-    assert id_second == "ti-stable-id"
+    assert id_first
+    assert age_graph.query("MATCH (ti:ThreatIndicator) RETURN count(ti) AS n") == [{"n": 1}]
     assert id_first == id_second, "MERGE must return the same ID on re-insert"
 
 
@@ -120,23 +91,28 @@ def test_upsert_idempotent():
 # Test 3: get_indicators_for_alert returns linked indicators
 # ---------------------------------------------------------------------------
 
-def test_get_indicators_for_alert():
+@pytest.mark.age
+def test_get_indicators_for_alert(age_graph):
     """get_indicators_for_alert returns at least 1 indicator for ALERT-7824."""
-    graph = _query_graph([_SAMPLE_INDICATOR])
+    graph = age_graph.client
+    age_graph.alert(alert_id="ALERT-7824")
+    asyncio.run(ThreatIndicatorService.upsert_indicator("domain", "microsofft-support.com", "pulsedive", "high", "DarkHook", graph))
+    asyncio.run(ThreatIndicatorService.link_to_alert("microsofft-support.com", "domain", "ALERT-7824", graph))
 
     result = asyncio.run(
         ThreatIndicatorService.get_indicators_for_alert("ALERT-7824", graph)
     )
 
     assert len(result) >= 1, f"Expected at least 1 indicator, got {len(result)}"
-    assert result[0]["ioc_value"] == "microsofft-support.com", result[0]
+    assert result[0]["indicator"] == "microsofft-support.com", result[0]
 
 
 # ---------------------------------------------------------------------------
 # Test 4: get_all_indicators returns expected structure
 # ---------------------------------------------------------------------------
 
-def test_get_all_indicators():
+@pytest.mark.age
+def test_get_all_indicators(age_graph):
     """get_all_indicators returns total, by_type, by_severity dicts."""
     rows = [
         {**_SAMPLE_INDICATOR, "indicator_type": "domain", "severity": "high"},
@@ -145,7 +121,9 @@ def test_get_all_indicators():
         {**_SAMPLE_INDICATOR, "id": "ti-003", "indicator": "10.0.0.1",
          "indicator_type": "ip", "severity": "high"},
     ]
-    graph = _query_graph(rows)
+    graph = age_graph.client
+    for row in rows:
+        asyncio.run(ThreatIndicatorService.upsert_indicator(row["indicator_type"], row.get("indicator", row["ioc_value"]), row["source"], row["severity"], row["name"], graph))
 
     result = asyncio.run(ThreatIndicatorService.get_all_indicators(graph))
 

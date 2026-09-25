@@ -26,7 +26,7 @@ This Data Processing Agreement ("DPA") forms part of, and is subject to, the Mas
 
 **"Alert Metadata"** means structured fields associated with a security alert including alert type, category classification, timestamp, and system-assigned identifiers — but expressly excluding alert payload content (raw log data, packet captures, file contents).
 
-**"Factor Vector"** means the numerical representation f ∈ [0,1]^d encoding the six measurable dimensions of an alert (travel_match, asset_criticality, threat_intel_enrichment, time_anomaly, pattern_history, device_trust) as computed by the GAE pipeline.
+**"Factor Vector"** means the numerical representation f ∈ [0,1]^d encoding the six measurable dimensions of an alert (privileged_identity_context, asset_criticality, threat_intel_enrichment, pattern_history, time_anomaly, device_trust) as computed by the GAE pipeline.
 
 **"Decision Record"** means a graph node in the deployment's Neo4j instance capturing: alert_id, factor_vector, action_taken, confidence_score, analyst_override (boolean), outcome_verified (boolean), and timestamp.
 

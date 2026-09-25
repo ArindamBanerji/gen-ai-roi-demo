@@ -51,6 +51,11 @@ def _extract_pattern_history_from_factor_snapshot(raw_snapshot: Any) -> float:
             return float(parsed[3]) if len(parsed) > 3 else 0.40
         except (json.JSONDecodeError, IndexError, TypeError, ValueError):
             return 0.40
+    if isinstance(raw_snapshot, (list, tuple)):
+        try:
+            return float(raw_snapshot[3]) if len(raw_snapshot) > 3 else 0.40
+        except (TypeError, ValueError):
+            return 0.40
     if isinstance(raw_snapshot, (int, float)):
         return float(raw_snapshot)
     return 0.40

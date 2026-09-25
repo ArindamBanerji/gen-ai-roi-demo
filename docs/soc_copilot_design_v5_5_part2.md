@@ -11,6 +11,8 @@ The v5.2 §§21–23 content is renumbered here as §§28–30 to avoid collisio
 **Status (v5.5.2 — March 21, 2026):** v5.5 ALPHA COMPLETE. v6.0 kernel + referral architecture SETTLED.
 478 GAE tests. 280 SOC tests. 73 ci-platform tests. ~104 experiments complete.
 
+> **Current factor-0 contract (Sep 2026):** This is a historical v5.5 design snapshot. Its `travel_match` examples refer to the legacy `TravelMatchFactor`; live SOC scoring uses `privileged_identity_context` at factor 0. Do not treat the travel examples as current scorer semantics.
+
 Changes from v5.5.1 → v5.5.2: §29.6 referral architecture finding added (item 7).
 Header/footer updated with 478/280 test counts.
 

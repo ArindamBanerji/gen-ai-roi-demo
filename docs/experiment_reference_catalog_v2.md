@@ -341,7 +341,7 @@ Mask halves degradation rate but doesn't rescue. Day 1 drops 7pp from zeroed fac
 
 ### V-HC-CONFIG-DIAG — DiagonalKernel on Healthcare ⭐
 **Question:** Does DiagonalKernel(1/σ²) rescue healthcare where binary mask failed?
-**Method:** Same healthcare persona. Three conditions: A (L2), B (L2+mask), C (DiagonalKernel). Weights: travel_match=1.00, asset_criticality=0.81, threat_intel=0.90, time_anomaly=0.52, pattern_history=0.67, device_trust=0.41. 15 seeds × 60 days.
+**Method:** Same healthcare persona. Three conditions: A (L2), B (L2+mask), C (DiagonalKernel). Historical weights: legacy `travel_match`=1.00, asset_criticality=0.81, threat_intel=0.90, time_anomaly=0.52, pattern_history=0.67, device_trust=0.41. The legacy travel factor is not the live SOC factor-0 contract (`privileged_identity_context`). 15 seeds × 60 days.
 **Result:**
 | Condition | Day 1 | Day 60 | Δ |
 |---|---|---|---|
@@ -677,4 +677,3 @@ L4 REJECTED for v6.0: +1.1pp marginal DR, 24:1 class imbalance, zero learning si
 *ShrinkageKernel deprioritized to v7.0 (<1pp gap in both domains).*
 *Factor mask deprecated (Diagonal supersedes: +3.7pp vs mask's -3.5pp on healthcare).*
 *"The confidence gate catches uncertainty. The rules catch policy. The experiments proved which is which."*
-

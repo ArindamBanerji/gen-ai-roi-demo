@@ -1,0 +1,19 @@
+{
+  "fixture_id": "SOC-03-AE-LIFECYCLE",
+  "planted": true,
+  "sample": true,
+  "provenance": "demo_fixture",
+  "description": "Idempotent AgentEvolver lifecycle fixture for the SOC rejected-35 demo beat.",
+  "counts": {
+    "tested": 47,
+    "promoted": 12,
+    "rejected": 35
+  },
+  "artifact_types": [
+    "routing_rule",
+    "context_policy",
+    "evidence_order",
+    "scoring_threshold",
+    "prompt_module"
+  ]
+}

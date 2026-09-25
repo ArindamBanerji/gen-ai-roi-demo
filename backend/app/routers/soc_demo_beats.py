@@ -17,7 +17,7 @@ from app.db.graph_client import graph_client
 from app.routers.authority import get_authority
 from app.routers.explain import no_precedent as explain_no_precedent
 from app.routers.explain import what_if as explain_what_if
-from app.routers.soc_learning import get_frozen_comparison, get_learning_control_room
+from app.routers.soc_learning import demo_comparison_enabled, get_frozen_comparison, get_learning_control_room
 from app.services.accuracy_trajectory import build_accuracy_trajectory
 from app.services.authority_ladder import get_authority_manager
 from app.services.gae_state import get_profile_scorer
@@ -107,14 +107,19 @@ async def autonomy_ladder() -> dict[str, Any]:
 @router.get("/learning/frozen-twin")
 async def frozen_twin() -> dict[str, Any]:
     """Expose the measured frozen-vs-live comparison and replay scope."""
-    comparison = await get_frozen_comparison()
+    comparison = (await get_frozen_comparison(demo=True)
+                  if demo_comparison_enabled()
+                  else await get_frozen_comparison())
     decisions = await _recent_decisions()
     return {
         **comparison,
         "current_vs_frozen": comparison,
-        "decisions_frozen_would_have_missed": comparison.get("decisions_since_freeze", []),
+        "decisions_since_freeze": int(comparison.get("decisions_since_freeze", 0) or 0),
+        "missed_decisions": comparison.get("missed_decisions", []),
         "replay_candidates": [item.get("decision_id") for item in decisions],
-        "source": "live AGE decisions and immutable SOC day-zero snapshot",
+        "source": ("live AGE decisions and archived synthetic demo baseline"
+                   if comparison.get("provenance", {}).get("origin") == "demo_reseed"
+                   else "live AGE decisions and immutable SOC day-zero snapshot"),
     }
 
 

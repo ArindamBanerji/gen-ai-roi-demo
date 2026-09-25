@@ -1,0 +1,14 @@
+{
+  "fixture_id": "PL-SOC-4-FROZEN-TWIN-001",
+  "scenario": "SOC-08",
+  "endpoint": "/api/soc/learning/frozen-comparison/freeze",
+  "method": "POST",
+  "checkpoint_label": "soc-demo-day-zero",
+  "pin_current_geometry": true,
+  "frozen_while_live_learns": true,
+  "minimum_decisions_after_freeze": 50,
+  "comparison_endpoint": "/api/soc/learning/frozen-comparison",
+  "expected_signal": "decisions_since_freeze and live-vs-frozen geometry gap",
+  "planted": true,
+  "sample": true
+}

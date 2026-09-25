@@ -119,7 +119,8 @@ def test_recommended_config_keys():
 
 
 @pytest.mark.asyncio
-async def test_graph_write_helper_uses_idempotent_pattern():
+@pytest.mark.age
+async def test_graph_write_helper_uses_idempotent_pattern(age_graph):
     manifest = SimpleNamespace(
         nodes=[
             {
@@ -139,10 +140,14 @@ async def test_graph_write_helper_uses_idempotent_pattern():
             }
         ],
     )
-    graph_client = SimpleNamespace(run_query=AsyncMock(return_value=[]))
+    graph_client = age_graph.client
+    graph_client.run_query = AsyncMock(wraps=graph_client.run_query)
 
     summary = await _write_manifest_to_graph(manifest, graph_client)
 
+    await _write_manifest_to_graph(manifest, graph_client)
+    assert age_graph.query("MATCH (n) RETURN count(n) AS n") == [{"n": 2}]
+    assert age_graph.query("MATCH ()-[r:CLASSIFIED_AS]->() RETURN count(r) AS n") == [{"n": 1}]
     assert summary["nodes_written"] == 2
     assert summary["relationships_written"] == 1
     queries = [call.args[0] for call in graph_client.run_query.call_args_list]

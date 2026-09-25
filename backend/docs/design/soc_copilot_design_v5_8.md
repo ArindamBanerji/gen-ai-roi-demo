@@ -4,6 +4,8 @@
 **Version:** 5.8 (v5.7 + Framework v4 integration: TwoPhaseScorer display, three-channel decomposition, batch pipeline triage flow, defense-in-depth, profile state, ~2,340 tests)
 **Authority:** claims_registry_v10.0 · MAP v5.51 · framework v4 (post-judge-review)
 **Status:** v5.5 COMPLETE. Phase 0 ✅ Phase 1 ✅ Phase 2 ✅ Phase 3 Priority 1 ✅. Loom demo v1 unblocked. 995 GAE tests, 900 SOC backend + 183 E2E tests confirmed, 174 ci-platform tests. ~295 experiments complete.
+
+> **Current factor-0 contract (Sep 2026):** This is a historical v5.8 design snapshot. Its `travel_match` examples refer to the legacy `TravelMatchFactor`; live SOC scoring uses `privileged_identity_context` at factor 0. Do not treat the travel examples as current scorer semantics.
 **Repository:** soc-copilot (proprietary)
 **Theme:** "Your tools, our decisions. Your environment, your intelligence."
 **Companion repos:**
@@ -6437,4 +6439,3 @@ Backend: ~40 lines (2 endpoints + scorer integration). Frontend: ~160 lines (2 c
 *Framework v4 integration. 2 new endpoints. 2 new UI panels. 3 new feature IDs.*
 *Zero existing behavior changes. ContinuousStrategy = default. ~260 lines, ~2 days.*
 *~2,340 tests. 995 GAE. 900 SOC. 183 E2E. 174 ci-platform. ~295 experiments.*
-

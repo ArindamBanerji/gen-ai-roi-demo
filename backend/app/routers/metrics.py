@@ -236,10 +236,9 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
             print(f"[COMPOUNDING] weekly-trend AGE query failed: {exc}")
             weekly_trend = []
 
-        # Historical fallback: rolling 7-day windows miss training decisions that are
-        # 319+ days old.  When all weeks report zero pattern_count, populate week 4
-        # (the most recent bucket) from the full synthetic dataset so the endpoint
-        # always returns non-zero data.  Preserves real-time data when it exists.
+        # Historical context: rolling 7-day windows can miss older training
+        # decisions. Keep that context separate from the measured weekly series;
+        # never substitute historical/synthetic rows into the current week.
         _all_zero = bool(weekly_trend) and all(
             w.get("pattern_count", 0) == 0 for w in weekly_trend
         )
@@ -262,11 +261,15 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
                 _fb_rate = round(_fb_correct / _fb_total * 100, 1) if _fb_total > 0 else 0.0
 
                 if _fb_total > 0:
-                    weekly_trend[-1]["pattern_count"] = _fb_total
-                    weekly_trend[-1]["auto_close_rate"] = _fb_rate
                     response["historical_fallback"] = True
+                    response["historical_context"] = {
+                        "pattern_count": _fb_total,
+                        "correct_count": _fb_correct,
+                        "auto_close_rate": _fb_rate,
+                        "source": "zero_day_synthetic",
+                    }
                     print(
-                        f"[COMPOUNDING] Historical fallback applied: "
+                        f"[COMPOUNDING] Historical context available: "
                         f"total={_fb_total}, correct={_fb_correct}, rate={_fb_rate}%"
                     )
             except Exception as _fb_exc:
@@ -349,69 +352,6 @@ async def seed_graph():
         ),
         "timestamp": datetime.now().isoformat(),
     }
-
-
-# ============================================================================
-# POST /api/demo/reset-all - Comprehensive Demo Reset
-# ============================================================================
-
-@router.post("/demo/reset-all")
-async def reset_all_demo_data():
-    """
-    Comprehensive demo reset - resets ALL demo data to original state.
-
-    Delegates the atomic GAE + AGE + audit reset to StateManager.hard_reset()
-    (TD-026), then resets remaining SOC-specific in-memory state via the
-    legacy DemoStateManager so existing frontend behaviour is unchanged.
-    """
-    from app.services.state_manager import StateManager, ResetError
-    from app.services import gae_state, audit as audit_store
-    from app.db.graph_client import graph_client
-    from app.core.domain_registry import get_domain_config
-    from app.core.state_manager import state_manager
-
-    print("[DEMO RESET] Starting comprehensive demo reset via StateManager.hard_reset()...")
-
-    try:
-        # Atomic reset: GAE learning state + Decision nodes deleted + audit chain + re-seed
-        sm = StateManager(
-            learning_state_service=gae_state,
-            audit_store=audit_store,
-            graph_service=graph_client,
-            domain_config=get_domain_config(),
-        )
-        await sm.hard_reset(preserve_learning=True)
-
-        # Reset demo-cycle in-memory state only — preserve learning_state so
-        # ProfileScorer centroids (IKS) survive this reset (BACKLOG-020).
-        await state_manager.reset_except(["learning_state"])
-        try:
-            from app.services.rl_engine import reset_rl_state
-
-            reset_rl_state()
-        except Exception as _rl_reset_exc:
-            logger.warning("[RL] Comprehensive demo RL reset failed: %s", _rl_reset_exc)
-
-        print("[DEMO RESET] Comprehensive reset completed successfully")
-
-        return {
-            "status": "success",
-            "message": "All demo data reset to original state via re-seeding",
-            "timestamp": datetime.now().isoformat(),
-        }
-
-    except ResetError as exc:
-        print(f"[ERROR] Demo reset failed (StateManager): {exc}")
-        raise HTTPException(status_code=500, detail=str(exc))
-    except Exception as e:
-        print(f"[ERROR] Demo reset failed: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to reset demo data: {str(e)}"
-        )
-
 
 
 # ============================================================================

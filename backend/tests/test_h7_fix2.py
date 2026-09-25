@@ -26,40 +26,36 @@ def test_graph_stats_endpoint_registered():
     )
 
 
-def test_graph_stats_response_has_required_fields():
+@pytest.mark.age
+def test_graph_stats_response_has_required_fields(age_graph):
     """The endpoint returns nodes_traversed, relationships_analyzed, historical_decisions, source."""
     from app.routers.evolution import get_graph_stats
 
     async def _run():
-        with patch("app.routers.evolution.graph_client") as mock_client:
-            mock_client.run_query = AsyncMock(side_effect=[
-                [{"node_count": 10}],
-                [{"rel_count": 20}],
-                [{"dec_count": 3}],
-            ])
+        with patch("app.routers.evolution.graph_client", age_graph.client):
             return await get_graph_stats()
 
+    age_graph.decision()
     result = asyncio.run(_run())
+    assert result["historical_decisions"] == 1
     required = {"nodes_traversed", "relationships_analyzed", "historical_decisions", "source"}
     assert required <= result.keys(), (
         f"Missing fields: {required - result.keys()}"
     )
 
 
-def test_graph_stats_source_is_graph_on_success():
+@pytest.mark.age
+def test_graph_stats_source_is_graph_on_success(age_graph):
     """source field equals 'graph' when all queries succeed."""
     from app.routers.evolution import get_graph_stats
 
     async def _run():
-        with patch("app.routers.evolution.graph_client") as mock_client:
-            mock_client.run_query = AsyncMock(side_effect=[
-                [{"node_count": 55}],
-                [{"rel_count": 132}],
-                [{"dec_count": 7}],
-            ])
+        with patch("app.routers.evolution.graph_client", age_graph.client):
             return await get_graph_stats()
 
+    age_graph.decision()
     result = asyncio.run(_run())
+    assert result["historical_decisions"] == 1
     assert result["source"] == "graph", (
         f"Expected source='graph', got {result['source']!r}"
     )
@@ -81,20 +77,18 @@ def test_graph_stats_source_unavailable_on_error():
     assert exc_info.value.detail == "AGE query failed for graph stats"
 
 
-def test_graph_stats_counts_are_integers():
+@pytest.mark.age
+def test_graph_stats_counts_are_integers(age_graph):
     """All three count fields are plain integers, not floats or strings."""
     from app.routers.evolution import get_graph_stats
 
     async def _run():
-        with patch("app.routers.evolution.graph_client") as mock_client:
-            mock_client.run_query = AsyncMock(side_effect=[
-                [{"node_count": 47}],
-                [{"rel_count": 127}],
-                [{"dec_count": 891}],
-            ])
+        with patch("app.routers.evolution.graph_client", age_graph.client):
             return await get_graph_stats()
 
+    age_graph.decision()
     result = asyncio.run(_run())
+    assert result["historical_decisions"] == 1
     assert isinstance(result["nodes_traversed"], int), (
         f"nodes_traversed should be int, got {type(result['nodes_traversed'])}"
     )

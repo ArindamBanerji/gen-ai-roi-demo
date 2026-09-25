@@ -9,14 +9,19 @@ shared SDK service and is created only through the explicit initializer route.
 from __future__ import annotations
 
 import copy
+import json
 import math
+import os
 import threading
+import uuid
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any
 
 import numpy as np
 
 from copilot_sdk.twin import FrozenTwin, FrozenTwinStore
+from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
 
 
 _DOMAIN = "soc"
@@ -41,7 +46,7 @@ class _DayZeroScorerView:
 
     def get_checkpoint_state(self) -> dict[str, Any]:
         checkpoint_method = getattr(self._live_scorer, "get_checkpoint_state", None)
-        checkpoint = copy.deepcopy(checkpoint_method() if callable(checkpoint_method) else {})
+        checkpoint: dict[str, Any] = copy.deepcopy(checkpoint_method() if callable(checkpoint_method) else {})
         checkpoint["centroids"] = self.centroids.copy()
         if isinstance(checkpoint.get("decision_counts"), list):
             checkpoint["decision_counts"] = [0] * len(checkpoint["decision_counts"])
@@ -51,10 +56,60 @@ class _DayZeroScorerView:
 class SOCLearningControlService:
     """Build Control Room payloads and manage the immutable SOC twin handle."""
 
-    def __init__(self) -> None:
+    def __init__(self, twin_store: FrozenTwinStore | None = None) -> None:
         self._lock = threading.RLock()
-        self._twin = FrozenTwin(FrozenTwinStore())
+        self._twin = FrozenTwin(twin_store or FrozenTwinStore())
         self._dk_history: list[dict[str, Any]] = []
+
+    def _demo_pointer(self) -> Path:
+        return Path(self._twin.store.base_dir) / "soc-demo-active.json"
+
+    def has_demo_twin(self) -> bool:
+        return self._demo_pointer().exists()
+
+    def _comparison_twin(self) -> FrozenTwin:
+        if not self.has_demo_twin():
+            return self._load_twin()
+        pointer = json.loads(self._demo_pointer().read_text(encoding="utf-8"))
+        run_id = str(pointer["run_id"])
+        if uuid.UUID(hex=run_id).hex != run_id:
+            raise ValueError("Invalid demo twin reference")
+        twin = FrozenTwin(self._twin.store)
+        twin.load(f"soc-demo-{run_id}")
+        return twin
+
+    def demo_refreeze(self, scorer: Any, conservation_state: dict[str, Any], iks: float) -> dict[str, Any]:
+        """Archive the previous comparison, leaving the production day-zero file intact."""
+        if not math.isfinite(iks):
+            raise ValueError("Demo freeze requires finite observed IKS")
+        count = conservation_state.get("components", {}).get("verified_decisions")
+        if not isinstance(count, int) or count < 0:
+            raise ValueError("Demo freeze requires a verified population count")
+        with self._lock:
+            previous = self._comparison_twin()
+            if not previous.is_frozen():
+                raise FileNotFoundError("Initialize the production day-zero twin before demo re-freeze")
+            old = previous.get_snapshot()
+            if not old.verify_integrity():
+                raise ValueError("Previous twin failed integrity verification")
+            run_id = uuid.uuid4().hex
+            archive_dir = self._twin.store.base_dir / "demo-archive"
+            archive_dir.mkdir(parents=True, exist_ok=True)
+            with (archive_dir / f"{run_id}.json").open("x", encoding="utf-8") as handle:
+                handle.write(old.to_json())
+            provenance = {"origin": "demo_reseed", "archived_previous": True,
+                          "previous_checksum": old.checksum, "archive_id": run_id,
+                          "planted": True, "evidence_tier": "T-sim"}
+            twin = FrozenTwin(self._twin.store)
+            snapshot = twin.freeze(scorer, {**conservation_state, "demo_provenance": provenance,
+                                           "demo_verified_count": count}, iks, f"soc-demo-{run_id}")
+            # Unique immutable snapshots plus atomic pointer publication: a failed
+            # write leaves the previous active baseline usable, never half-written.
+            pending = self._demo_pointer().with_suffix(f".{run_id}.tmp")
+            pending.write_text(json.dumps({"run_id": run_id}), encoding="utf-8")
+            os.replace(pending, self._demo_pointer())
+            return {"frozen": True, "created": True, "checksum": snapshot.checksum,
+                    "snapshot_time": snapshot.metadata["timestamp"], "provenance": provenance}
 
     def _load_twin(self) -> FrozenTwin:
         with self._lock:
@@ -100,15 +155,69 @@ class SOCLearningControlService:
                 "snapshot_time": snapshot.metadata.get("timestamp"),
             }
 
-    def comparison(self, scorer: Any, current_iks: float | None = None) -> dict[str, Any]:
-        twin = self._load_twin()
+    def comparison(self, scorer: Any, current_iks: float | None = None,
+                   verified_count: int | None = None, *, demo: bool = False,
+                   decisions: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+        twin = self._comparison_twin() if demo else self._load_twin()
         if not twin.is_frozen():
             raise FileNotFoundError("SOC Frozen Twin has not been initialized")
         report = twin.get_drift_report(scorer)
         snapshot = twin.get_snapshot()
-        measured = int(report.decision_count_since_freeze) > 0
+        if not snapshot.verify_integrity():
+            raise ValueError("Frozen snapshot integrity check failed")
+        points: list[dict[str, Any]] = []
+        excluded = 0
+        # One isolated live geometry for the whole request; no learning, audit
+        # writes or live scorer counters are changed by this GET.
+        # The adapter owns a database connection; clone only its scoring geometry.
+        geometry = scorer._scorer if isinstance(scorer, SOCCompoundingScorerAdapter) else scorer
+        live = copy.deepcopy(geometry) if decisions else None
+        categories = list(getattr(scorer, "categories", None) or [])
+        for row in decisions or []:
+            try:
+                verified_at = float(row["verified_at_epoch"])
+                if not math.isfinite(verified_at):
+                    raise ValueError("Invalid verification time")
+                if verified_at > 100_000_000_000:
+                    verified_at /= 1000.0  # Legacy AGE verification epochs are milliseconds.
+                if verified_at <= float(snapshot.metadata["timestamp"]):
+                    continue
+                category = str(row["category"])
+                category_index = categories.index(category)
+                vector = row["factor_vector"]
+                if isinstance(vector, str):
+                    vector = json.loads(vector)
+                values = np.asarray(vector, dtype=np.float64)
+                if (values.shape != (scorer.n_factors,) or not np.all(np.isfinite(values))
+                        or not row.get("decision_id")):
+                    raise ValueError("Invalid stored comparison input")
+            except (KeyError, TypeError, ValueError):
+                excluded += 1
+                continue
+            parallel = twin.score_parallel(values, category_index, live)
+            frozen_confidence = float(parallel.frozen_result.confidence)
+            live_confidence = float(parallel.live_result.confidence)
+            if not all(math.isfinite(value) and 0 <= value <= 1 for value in (frozen_confidence, live_confidence)):
+                raise ValueError("Non-finite or out-of-range comparison confidence")
+            points.append({
+                "decision_id": str(row["decision_id"]), "category": category,
+                "verified_at_epoch": verified_at,
+                "frozen": {"action": parallel.frozen_result.action_name, "confidence": frozen_confidence},
+                "live": {"action": parallel.live_result.action_name, "confidence": live_confidence},
+                "confidence_delta": live_confidence - frozen_confidence,
+            })
+        provenance = snapshot.conservation_state.get("demo_provenance")
+        decisions_since_freeze = int(report.decision_count_since_freeze)
+        if provenance:
+            # The in-memory scorer counter resets at restart. Demo evidence is
+            # the persisted verified population delta, not analyze-call count.
+            decisions_since_freeze = max(0, verified_count - int(snapshot.conservation_state["demo_verified_count"])) if verified_count is not None else 0
+        measured = decisions_since_freeze > 0
         tier = _TIER_OBSERVED if measured else _TIER_SYNTHETIC
         label = "measured" if measured else "synthetic / modelled — awaiting post-freeze decisions"
+        if provenance:
+            tier = _TIER_SYNTHETIC
+            label = "synthetic demo — measured on planted outcomes, not pilot evidence"
         current_iks_value = _finite_float(
             current_iks if current_iks is not None else getattr(scorer, "iks", snapshot.iks_value),
             snapshot.iks_value,
@@ -123,21 +232,45 @@ class SOCLearningControlService:
         return {
             "frozen_snapshot_time": snapshot.metadata.get("timestamp"),
             "frozen_iks": _finite_float(snapshot.iks_value, 0.0),
-            "current_iks": current_iks,
+            "current_iks": current_iks_value,
             "centroid_drift": _finite_float(report.centroid_drift, 0.0),
             "weight_drift": _finite_float(weight_drift, 0.0),
             "conservation_drift": _finite_float(report.conservation_drift, 0.0),
             "iks_delta": _finite_float(current_iks_value - snapshot.iks_value, 0.0),
-            "decisions_since_freeze": int(report.decision_count_since_freeze),
+            "decisions_since_freeze": decisions_since_freeze,
+            "comparison_points": points,
+            "compared_decisions": len(points),
+            "excluded_comparison_rows": excluded,
+            "mean_confidence_delta": (sum(point["confidence_delta"] for point in points) / len(points)) if points else None,
+            "comparison_scope": "Latest 500 verified SOC decisions, restricted to post-freeze verification times",
+            "confidence_note": "Same stored input, frozen versus current geometry. Confidence change is not measured accuracy improvement.",
+            **({"provenance": provenance} if provenance else {}),
             "evidence_tier": tier,
             "evidence_label": label,
             "measured": measured,
             "note": (
-                "Observed divergence from the immutable day-0 scorer."
+                ("Observed divergence from the archived demo baseline." if provenance else "Observed divergence from the immutable day-0 scorer.")
                 if measured
                 else "The twin exists, but measured compounding begins after a post-freeze verified decision."
             ),
         }
+
+    async def measured_comparison(self, age_client: Any, scorer: Any, current_iks: float,
+                                  verified_count: int | None = None, *, demo: bool = False) -> dict[str, Any]:
+        """Fetch a bounded, domain-scoped verified cohort; read failures propagate."""
+        from app.db.graph_client import soc_decision_where
+        from app.services.learning_health import _soc_verified_predicate
+
+        rows = await age_client.run_query(
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} AND {_soc_verified_predicate()} "
+            "RETURN d.decision_id AS decision_id, d.category AS category, "
+            "d.factor_vector AS factor_vector, d.verified_at_epoch AS verified_at_epoch "
+            "ORDER BY CASE WHEN d.verified_at_epoch > 100000000000 "
+            "THEN d.verified_at_epoch / 1000.0 ELSE d.verified_at_epoch END DESC, "
+            "d.decision_id ASC LIMIT 500"
+        )
+        return self.comparison(scorer, current_iks, verified_count, demo=demo,
+                               decisions=[dict(row) for row in rows])
 
     def record_dk_snapshot(self, categories: list[str], weights: dict[str, list[float]]) -> list[dict[str, Any]]:
         """Keep a small in-process change trace for the UI without fabricating history."""

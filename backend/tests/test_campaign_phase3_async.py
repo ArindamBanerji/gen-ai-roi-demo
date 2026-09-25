@@ -5,6 +5,9 @@ Phase 3 changes when seed/campaign writes run, not how the 1b-2 locked
 materialization path writes graph data.
 """
 
+import pytest
+from support.campaign_graph import CampaignGraphProbe, MaterializationObserver
+
 import asyncio
 import logging
 import os
@@ -51,6 +54,7 @@ def _event(alert_id, *, user_id="user-1", category="credential_access", minutes=
 
 
 class Phase3Graph:
+    """Controlled cache/scheduling input only; persistence assertions use AGE."""
     def __init__(self):
         self.campaigns = set()
         self.queries = []
@@ -72,6 +76,7 @@ class Phase3Graph:
 
 
 class Phase3Repo:
+    """Task lifecycle policy double; does not establish a persistence contract."""
     def __init__(self, events, graph=None):
         self.events = list(events)
         self.graph = graph or Phase3Graph()
@@ -127,9 +132,16 @@ def _matcher(events, *, background=True, graph=None, async_state=None, repo=None
     return matcher, repo, graph
 
 
-def test_background_false_check_alert_returns_correct_match_when_campaign_exists():
+def _persisted_matcher(age_graph, events, *, background=True, graph=None, async_state=None, repo=None):
+    graph = graph or CampaignGraphProbe(age_graph, alerts=[e["alert_id"] for e in events])
+    repo = repo or MaterializationObserver(events, graph)
+    return _matcher(events, background=background, graph=graph, async_state=async_state, repo=repo)
+
+
+@pytest.mark.age
+def test_background_false_check_alert_returns_correct_match_when_campaign_exists(age_graph):
     events = [_event("a1", minutes=0), _event("a2", minutes=1)]
-    matcher, repo, _graph = _matcher(events, background=False)
+    matcher, repo, _graph = _persisted_matcher(age_graph, events, background=False)
 
     result = run(matcher.check_alert("a2"))
 
@@ -148,9 +160,10 @@ def test_background_false_check_alert_returns_null_when_no_campaign_exists():
     assert repo.materialize_calls == 0
 
 
-def test_background_false_materialization_creates_seed_and_member_edges():
+@pytest.mark.age
+def test_background_false_materialization_creates_seed_and_member_edges(age_graph):
     events = [_event("a1", minutes=0), _event("a2", minutes=1)]
-    matcher, repo, _graph = _matcher(events, background=False)
+    matcher, repo, _graph = _persisted_matcher(age_graph, events, background=False)
 
     result = run(matcher.check_alert("a2"))
 
@@ -159,9 +172,10 @@ def test_background_false_materialization_creates_seed_and_member_edges():
     assert repo.edges == {("a1", result), ("a2", result)}
 
 
-def test_background_false_materialization_remains_idempotent():
+@pytest.mark.age
+def test_background_false_materialization_remains_idempotent(age_graph):
     events = [_event("a1", minutes=0), _event("a2", minutes=1)]
-    matcher, repo, _graph = _matcher(events, background=False)
+    matcher, repo, _graph = _persisted_matcher(age_graph, events, background=False)
 
     first = run(matcher.check_alert("a2"))
     second = run(matcher.check_alert("a2"))
@@ -297,10 +311,11 @@ def test_seed_key_dedup_storm_spawns_one_background_task():
     run(scenario())
 
 
-def test_storm_converges_to_one_seed_after_background_completion():
+@pytest.mark.age
+def test_storm_converges_to_one_seed_after_background_completion(age_graph):
     async def scenario():
         events = [_event(f"a{i}", user_id="user-1", minutes=i) for i in range(100)]
-        matcher, repo, _graph = _matcher(events, background=True)
+        matcher, repo, _graph = _persisted_matcher(age_graph, events, background=True)
         repo.release_materialize = asyncio.Event()
 
         await asyncio.gather(*(matcher.check_alert(e["alert_id"]) for e in events))
@@ -456,11 +471,12 @@ def test_materialized_cache_hit_does_not_schedule_background_materialization():
     run(scenario())
 
 
-def test_age_fallback_hit_populates_materialized_cache():
+@pytest.mark.age
+def test_age_fallback_hit_populates_materialized_cache(age_graph):
     async def scenario():
         event = _event("a1")
         shared_state = CampaignAsyncState()
-        matcher, _repo, graph = _matcher(
+        matcher, _repo, graph = _persisted_matcher(age_graph, 
             [event],
             background=True,
             async_state=shared_state,
@@ -469,7 +485,7 @@ def test_age_fallback_hit_populates_materialized_cache():
             event,
             DEFAULT_CONFIG["correlation_window_hours"] * 3600,
         )
-        graph.campaigns.add(seed["campaign_id"])
+        age_graph.node("Campaign", domain="soc", campaign_id=seed["campaign_id"])
 
         first = await matcher.check_alert("a1")
         await asyncio.gather(*list(shared_state.bg_tasks))
@@ -488,11 +504,12 @@ def test_age_fallback_hit_populates_materialized_cache():
     run(scenario())
 
 
-def test_age_materialized_fallback_hit_populates_cache_and_does_not_schedule():
+@pytest.mark.age
+def test_age_materialized_fallback_hit_populates_cache_and_does_not_schedule(age_graph):
     async def scenario():
         event = _event("a1")
         shared_state = CampaignAsyncState()
-        matcher, repo, graph = _matcher(
+        matcher, repo, graph = _persisted_matcher(age_graph, 
             [event],
             background=True,
             async_state=shared_state,
@@ -501,7 +518,7 @@ def test_age_materialized_fallback_hit_populates_cache_and_does_not_schedule():
             event,
             DEFAULT_CONFIG["correlation_window_hours"] * 3600,
         )
-        graph.campaigns.add(seed["campaign_id"])
+        age_graph.node("Campaign", domain="soc", campaign_id=seed["campaign_id"])
 
         first = await matcher.check_alert("a1")
         first_lookup_count = graph.materialized_lookup_count
@@ -620,20 +637,21 @@ def test_background_materialization_success_updates_cache():
     run(scenario())
 
 
-def test_cache_is_shared_across_request_like_matchers():
+@pytest.mark.age
+def test_cache_is_shared_across_request_like_matchers(age_graph):
     async def scenario():
         event = _event("a1")
-        graph = Phase3Graph()
-        repo = Phase3Repo([event], graph=graph)
+        graph = CampaignGraphProbe(age_graph, alerts=[event["alert_id"]])
+        repo = MaterializationObserver([event], graph)
         shared_state = CampaignAsyncState()
-        matcher_a, _repo, _graph = _matcher(
+        matcher_a, _repo, _graph = _persisted_matcher(age_graph, 
             [event],
             background=True,
             graph=graph,
             repo=repo,
             async_state=shared_state,
         )
-        matcher_b, _repo, _graph = _matcher(
+        matcher_b, _repo, _graph = _persisted_matcher(age_graph, 
             [event],
             background=True,
             graph=graph,
@@ -644,7 +662,7 @@ def test_cache_is_shared_across_request_like_matchers():
             event,
             DEFAULT_CONFIG["correlation_window_hours"] * 3600,
         )
-        graph.campaigns.add(seed["campaign_id"])
+        age_graph.node("Campaign", domain="soc", campaign_id=seed["campaign_id"])
 
         assert await matcher_a.check_alert("a1") == seed["campaign_id"]
         await asyncio.gather(*list(shared_state.bg_tasks))
@@ -660,11 +678,12 @@ def test_cache_is_shared_across_request_like_matchers():
     run(scenario())
 
 
-def test_no_negative_cache_authority():
+@pytest.mark.age
+def test_no_negative_cache_authority(age_graph):
     async def scenario():
         event = _event("a1")
         shared_state = CampaignAsyncState()
-        matcher, _repo, graph = _matcher(
+        matcher, _repo, graph = _persisted_matcher(age_graph, 
             [event],
             background=True,
             async_state=shared_state,
@@ -679,7 +698,7 @@ def test_no_negative_cache_authority():
         await asyncio.sleep(0)
         assert shared_state.materialized_campaign_id(seed["campaign_id"]) is None
 
-        graph.campaigns.add(seed["campaign_id"])
+        age_graph.node("Campaign", domain="soc", campaign_id=seed["campaign_id"])
         assert await matcher.check_alert("a1") == seed["campaign_id"]
 
         assert shared_state.materialized_campaign_id(seed["campaign_id"]) == seed["campaign_id"]
@@ -840,10 +859,11 @@ def test_hot_path_returns_before_background_materialization_completes():
     run(scenario())
 
 
-def test_background_phase_does_not_create_continues_or_belongs_to_edges():
+@pytest.mark.age
+def test_background_phase_does_not_create_continues_or_belongs_to_edges(age_graph):
     async def scenario():
         events = [_event("a1", minutes=0), _event("a2", minutes=1)]
-        matcher, repo, graph = _matcher(events, background=True)
+        matcher, repo, graph = _persisted_matcher(age_graph, events, background=True)
 
         await matcher.check_alert("a2")
         await asyncio.gather(*list(matcher._bg_tasks))

@@ -10,7 +10,7 @@ Run from backend/:
 import asyncio
 import sys
 import os
-from unittest.mock import patch, AsyncMock
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -40,6 +40,28 @@ def _usr_row(total_users=0, privileged_users=0, elevated_users=0):
              "elevated_users": elevated_users}]
 
 
+def _seed_economics_graph(age_graph, *, total=0, correct=0, escalations=0,
+                          suppressions=0, investigations=0, monitors=0,
+                          users=0, privileged=0, elevated=0):
+    """Seed the production AGE adapter; endpoint aggregates must read it."""
+    for index in range(total):
+        action = (
+            "escalate" if index < escalations else "suppress" if index < escalations + suppressions
+            else "investigate" if index < escalations + suppressions + investigations else "monitor"
+        )
+        age_graph.decision(decision_id=f"ECON-{index}", action=action, correct=index < correct)
+    for index in range(users):
+        level = "privileged" if index < privileged else "elevated" if index < privileged + elevated else "standard"
+        age_graph.node("User", id=f"econ-user-{index}", access_level=level)
+
+
+@pytest.fixture
+def economics(age_graph, monkeypatch):
+    from app.routers import metrics
+    monkeypatch.setattr(metrics, "graph_client", age_graph.client)
+    return age_graph
+
+
 # ============================================================================
 # TEST 1 — /api/soc/economics route is registered
 # ============================================================================
@@ -57,19 +79,13 @@ def test_economics_endpoint_registered():
 # TEST 2 — Zero decisions: no ZeroDivisionError, all zeros
 # ============================================================================
 
-def test_economics_zero_decisions_safe():
+@pytest.mark.age
+def test_economics_zero_decisions_safe(economics):
     """Mock AGE: 0 decisions, 0 users. Assert safe zero-state response."""
     from app.routers.metrics import get_economics
 
-    async def _run():
-        with patch("app.routers.metrics.graph_client") as mock_neo:
-            mock_neo.run_query = AsyncMock(side_effect=[
-                _dec_row(0, 0, 0, 0, 0, 0),
-                _usr_row(0, 0, 0),
-            ])
-            return await get_economics()
-
-    result = asyncio.run(_run())
+    _seed_economics_graph(economics)
+    result = asyncio.run(get_economics())
     assert result["decisions"]["correct_rate"] == 0.0, (
         f"correct_rate expected 0.0, got {result['decisions']['correct_rate']}"
     )
@@ -85,7 +101,8 @@ def test_economics_zero_decisions_safe():
 # TEST 3 — Cost calculation: 100 decisions, 80 correct, 20 escalations
 # ============================================================================
 
-def test_economics_cost_calculation():
+@pytest.mark.age
+def test_economics_cost_calculation(economics):
     """
     Mock: 100 decisions, 80 correct, 20 escalations.
     time_saved = 100 * (0.75 - 0.133) = 61.7 hours
@@ -93,15 +110,8 @@ def test_economics_cost_calculation():
     """
     from app.routers.metrics import get_economics
 
-    async def _run():
-        with patch("app.routers.metrics.graph_client") as mock_neo:
-            mock_neo.run_query = AsyncMock(side_effect=[
-                _dec_row(100, 80, 20, 30, 30, 20),
-                _usr_row(200, 20, 40),
-            ])
-            return await get_economics()
-
-    result = asyncio.run(_run())
+    _seed_economics_graph(economics, total=100, correct=80, escalations=20, suppressions=30, investigations=30, monitors=20, users=200, privileged=20, elevated=40)
+    result = asyncio.run(get_economics())
     expected_time = round(100 * (_MANUAL_TRIAGE_HOURS - _AI_TRIAGE_HOURS), 1)
     expected_cost = round(expected_time * _ANALYST_HOURLY, 2)
 
@@ -119,7 +129,8 @@ def test_economics_cost_calculation():
 # TEST 4 — Risk reduction: 20 escalations, correct_rate=0.8
 # ============================================================================
 
-def test_risk_reduction_calculation():
+@pytest.mark.age
+def test_risk_reduction_calculation(economics):
     """
     Mock: 100 decisions, 80 correct, 20 escalations.
     correct_escalations = 20 * 0.8 = 16
@@ -127,15 +138,8 @@ def test_risk_reduction_calculation():
     """
     from app.routers.metrics import get_economics
 
-    async def _run():
-        with patch("app.routers.metrics.graph_client") as mock_neo:
-            mock_neo.run_query = AsyncMock(side_effect=[
-                _dec_row(100, 80, 20, 0, 0, 0),
-                _usr_row(0, 0, 0),
-            ])
-            return await get_economics()
-
-    result = asyncio.run(_run())
+    _seed_economics_graph(economics, total=100, correct=80, escalations=20)
+    result = asyncio.run(get_economics())
     correct_rate = 80 / 100
     expected_risk = round(20 * correct_rate * _BREACH_COST * _BREACH_PROB, 2)
 
@@ -149,19 +153,13 @@ def test_risk_reduction_calculation():
 # TEST 5 — total_value_usd == cost_saved + risk_reduction
 # ============================================================================
 
-def test_total_value_is_sum():
+@pytest.mark.age
+def test_total_value_is_sum(economics):
     """total_value_usd must equal cost_saved_usd + risk_reduction_usd."""
     from app.routers.metrics import get_economics
 
-    async def _run():
-        with patch("app.routers.metrics.graph_client") as mock_neo:
-            mock_neo.run_query = AsyncMock(side_effect=[
-                _dec_row(50, 40, 10, 15, 15, 10),
-                _usr_row(100, 10, 20),
-            ])
-            return await get_economics()
-
-    result = asyncio.run(_run())
+    _seed_economics_graph(economics, total=50, correct=40, escalations=10, suppressions=15, investigations=15, monitors=10, users=100, privileged=10, elevated=20)
+    result = asyncio.run(get_economics())
     econ = result["economics"]
     expected_total = round(econ["cost_saved_usd"] + econ["risk_reduction_usd"], 2)
 
@@ -175,19 +173,13 @@ def test_total_value_is_sum():
 # TEST 6 — economics.estimated is always True
 # ============================================================================
 
-def test_economics_estimated_flag_always_true():
+@pytest.mark.age
+def test_economics_estimated_flag_always_true(economics):
     """Economics estimates are always labeled estimated=True regardless of data."""
     from app.routers.metrics import get_economics
 
-    async def _run():
-        with patch("app.routers.metrics.graph_client") as mock_neo:
-            mock_neo.run_query = AsyncMock(side_effect=[
-                _dec_row(10, 8, 2, 3, 3, 2),
-                _usr_row(50, 5, 10),
-            ])
-            return await get_economics()
-
-    result = asyncio.run(_run())
+    _seed_economics_graph(economics, total=10, correct=8, escalations=2, suppressions=3, investigations=3, monitors=2, users=50, privileged=5, elevated=10)
+    result = asyncio.run(get_economics())
     assert result["economics"]["estimated"] is True, (
         f"economics.estimated should always be True, "
         f"got {result['economics']['estimated']}"
@@ -198,20 +190,14 @@ def test_economics_estimated_flag_always_true():
 # TEST 7 — Population counts propagate correctly
 # ============================================================================
 
-def test_population_counts_in_response():
+@pytest.mark.age
+def test_population_counts_in_response(economics):
     """Mock user query: total=200, privileged=20, elevated=40.
     Assert population fields match."""
     from app.routers.metrics import get_economics
 
-    async def _run():
-        with patch("app.routers.metrics.graph_client") as mock_neo:
-            mock_neo.run_query = AsyncMock(side_effect=[
-                _dec_row(0, 0, 0, 0, 0, 0),
-                _usr_row(200, 20, 40),
-            ])
-            return await get_economics()
-
-    result = asyncio.run(_run())
+    _seed_economics_graph(economics, users=200, privileged=20, elevated=40)
+    result = asyncio.run(get_economics())
     assert result["population"]["total_users"] == 200, (
         f"total_users expected 200, got {result['population']['total_users']}"
     )

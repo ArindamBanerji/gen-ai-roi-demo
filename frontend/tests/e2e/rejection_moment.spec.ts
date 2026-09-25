@@ -52,7 +52,7 @@ test("rejection moment shows failure categories", async ({ page }) => {
   const panel = page.getByTestId("soc-rejection-moment");
   await expect(panel).toBeVisible({ timeout: 20_000 });
   await expect(panel.getByText("SOC rejection moment", { exact: true })).toBeVisible();
-  await expect(panel.getByText("Correctness floor", { exact: true })).toBeVisible();
+  await expect(panel.getByText("Correctness floor", { exact: true }).first()).toBeVisible();
 });
 
 test("navigating between compounding and executive preserves the new panels", async ({ page }) => {

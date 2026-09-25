@@ -80,22 +80,12 @@ def test_create_query_is_age_safe():
     assert "$" not in query
 
 
+@pytest.mark.age
 @pytest.mark.asyncio
-async def test_double_seed_guard_skips_when_existing_count_above_threshold():
-    class FakeClient:
-        def __init__(self):
-            self.writes = []
-
-        async def count_verified_decisions(self):
-            return 101
-
-        async def run_query(self, query):
-            self.writes.append(query)
-            return []
-
-    client = FakeClient()
-    result = await seed_mod.maybe_seed_verified_decisions(client)
-
+async def test_double_seed_guard_skips_when_existing_count_above_threshold(age_graph):
+    for index in range(101):
+        age_graph.decision(decision_id=f"seed-{index}", correct=True)
+    result = await seed_mod.maybe_seed_verified_decisions(age_graph.client)
     assert result["skipped"] is True
     assert result["existing_count"] == 101
-    assert client.writes == []
+    assert len(age_graph.reopen_store().get_all_decisions(domain="soc")) == 101

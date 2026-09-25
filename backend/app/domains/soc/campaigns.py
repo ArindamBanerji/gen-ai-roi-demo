@@ -39,7 +39,7 @@ _TRACE_FALSE_VALUES = {"", "0", "false", "no", "off"}
 
 def _soc_graph_name() -> str:
     """Return the graph name from the shared SOC graph configuration."""
-    return GraphConfig.load("soc").graph
+    return str(GraphConfig.load("soc").graph)
 _TRACE_MAX_QUERY_EVENTS = 50
 
 
@@ -235,7 +235,7 @@ def _dedupe_preserve_order(values: List[str]) -> List[str]:
 
 
 def _alert_id_or_predicate(alias: str, alert_ids: List[str]) -> str:
-    return " OR ".join(f"{alias}.alert_id = {_S(alert_id)}" for alert_id in alert_ids)
+    return "(" + " OR ".join(f"{alias}.alert_id = {_S(alert_id)}" for alert_id in alert_ids) + ")"
 
 
 def _chunks(values: List[str], size: int) -> List[List[str]]:
@@ -379,6 +379,7 @@ SHARED_ENTITY_QUERY = """
 MATCH (d1:Decision)-[:INVOLVES]->(e:Entity)<-[:INVOLVES]-(d2:Decision)
 WHERE d1.domain = 'soc'
   AND d2.domain = 'soc'
+  AND e.domain = 'soc'
   AND d1.alert_id <> d2.alert_id
   AND d1.timestamp_epoch >= $window_start
   AND d2.timestamp_epoch >= $window_start
@@ -387,11 +388,11 @@ WHERE size(decisions) >= 2
 RETURN
     e.id                                            AS shared_entity,
     e.type                                          AS entity_type,
-    [d IN decisions | d.alert_id]                   AS alert_ids,
-    [d IN decisions | d.decision_id]                AS decision_ids,
-    [d IN decisions | d.category]                   AS categories,
-    [d IN decisions | d.severity]                   AS severities,
-    [d IN decisions | d.timestamp_epoch]            AS timestamps
+    [d IN decisions | properties(d)['alert_id']]                   AS alert_ids,
+    [d IN decisions | properties(d)['decision_id']]                AS decision_ids,
+    [d IN decisions | properties(d)['category']]                   AS categories,
+    [d IN decisions | properties(d)['severity']]                   AS severities,
+    [d IN decisions | properties(d)['timestamp_epoch']]            AS timestamps
 ORDER BY size(decisions) DESC
 LIMIT $limit
 """
@@ -400,18 +401,19 @@ TECHNIQUE_SEQUENCE_QUERY = """
 MATCH path = (d1:Decision)-[:TRIGGERED_EVOLUTION*1..5]->(d2:Decision)
 WHERE d1.domain = 'soc'
   AND d2.domain = 'soc'
+  AND size([node IN nodes(path) WHERE properties(node)['domain'] = 'soc' | node]) = length(path) + 1
   AND d1.timestamp_epoch >= $window_start
   AND d2.timestamp_epoch >= $window_start
   AND d1.alert_id <> d2.alert_id
 WITH
-    [node IN nodes(path) WHERE node:Decision | node] AS chain_nodes
+    [node IN nodes(path) WHERE 'Decision' IN labels(node) | node] AS chain_nodes
 WHERE size(chain_nodes) >= 2
 RETURN
-    [n IN chain_nodes | n.alert_id]         AS alert_ids,
-    [n IN chain_nodes | n.decision_id]      AS decision_ids,
-    [n IN chain_nodes | n.category]         AS categories,
-    [n IN chain_nodes | n.severity]         AS severities,
-    [n IN chain_nodes | n.timestamp_epoch]  AS timestamps
+    [n IN chain_nodes | properties(n)['alert_id']]         AS alert_ids,
+    [n IN chain_nodes | properties(n)['decision_id']]      AS decision_ids,
+    [n IN chain_nodes | properties(n)['category']]         AS categories,
+    [n IN chain_nodes | properties(n)['severity']]         AS severities,
+    [n IN chain_nodes | properties(n)['timestamp_epoch']]  AS timestamps
 LIMIT $limit
 """
 
@@ -437,8 +439,10 @@ LIMIT $limit
 
 GET_CAMPAIGNS_QUERY = """
 MATCH (c:Campaign)
+WHERE c.domain = 'soc'
 OPTIONAL MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)-[:MEMBER_OF]->(c)
-WITH c, [d IN collect(d) WHERE d.domain = 'soc' | d.decision_id] AS decision_ids
+WHERE d.domain = 'soc' AND a.domain = 'soc'
+WITH c, collect(DISTINCT d.decision_id) AS decision_ids
 RETURN
     c.campaign_id              AS campaign_id,
     c.first_seen               AS first_seen,
@@ -460,8 +464,10 @@ LIMIT $limit
 
 GET_CAMPAIGN_DETAIL_QUERY = """
 MATCH (c:Campaign {campaign_id: $campaign_id})
+WHERE c.domain = 'soc'
 OPTIONAL MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)-[:MEMBER_OF]->(c)
-WITH c, [d IN collect(d) WHERE d.domain = 'soc' | d] AS decisions
+WHERE d.domain = 'soc' AND a.domain = 'soc'
+WITH c, collect(DISTINCT d) AS decisions
 RETURN
     c.campaign_id              AS campaign_id,
     c.first_seen               AS first_seen,
@@ -474,18 +480,71 @@ RETURN
     c.trigger_rule             AS trigger_rule,
     c.severity                 AS severity,
     c.member_alert_ids         AS member_alert_ids,
-    [d IN decisions | d.decision_id]  AS member_decision_ids,
+    [d IN decisions | properties(d)['decision_id']]  AS member_decision_ids,
     c.correlation_window_hours        AS correlation_window_hours,
     c.nl_summary                      AS nl_summary,
     [d IN decisions | {
-        id: d.decision_id,
-        alert_id: d.alert_id,
-        category: d.category,
-        action: d.action,
-        confidence: d.confidence,
-        created_at: d.timestamp_epoch
+        id: properties(d)['decision_id'],
+        alert_id: properties(d)['alert_id'],
+        category: properties(d)['category'],
+        action: properties(d)['action'],
+        confidence: properties(d)['confidence'],
+        created_at: properties(d)['timestamp_epoch']
     }] AS decision_details
 """
+
+GET_CAMPAIGN_CONTEXT_FOR_DECISION_QUERY = """
+MATCH (target:Decision {decision_id: $decision_id})-[:DECIDED_ON]->(target_alert:Alert)-[:MEMBER_OF]->(campaign:Campaign)
+WHERE target.domain = 'soc' AND target_alert.domain = 'soc' AND campaign.domain = 'soc'
+OPTIONAL MATCH (campaign)-[:CONTINUES]->(next_campaign:Campaign)
+WHERE next_campaign.domain = 'soc'
+OPTIONAL MATCH (previous_campaign:Campaign)-[:CONTINUES]->(campaign)
+WHERE previous_campaign.domain = 'soc'
+OPTIONAL MATCH (related_decision:Decision)-[:DECIDED_ON]->(related_alert:Alert)-[:MEMBER_OF]->(campaign)
+WHERE related_decision.domain = 'soc' AND related_alert.domain = 'soc'
+RETURN
+    campaign.campaign_id AS campaign_id,
+    target_alert.alert_id AS target_alert_id,
+    collect(DISTINCT related_alert.alert_id) AS campaign_alerts,
+    collect(DISTINCT related_decision.decision_id) AS related_decisions,
+    previous_campaign.campaign_id AS previous_campaign_id,
+    next_campaign.campaign_id AS next_campaign_id
+LIMIT 1
+"""
+
+
+def get_campaign_context_for_decision(
+    run_query: Callable[[str, dict[str, Any] | None], list[dict[str, Any]]],
+    decision_id: str,
+) -> dict[str, Any]:
+    """Return Decision -> Alert -> Campaign context for a SOC decision id."""
+
+    rows = run_query(GET_CAMPAIGN_CONTEXT_FOR_DECISION_QUERY, {"decision_id": str(decision_id)})
+    if not rows:
+        return {
+            "decision_id": str(decision_id),
+            "campaign_id": None,
+            "campaign_alerts": [],
+            "related_decisions": [],
+            "previous_campaign_id": None,
+            "next_campaign_id": None,
+        }
+    row = rows[0]
+    related = [
+        str(value)
+        for value in (row.get("related_decisions") or [])
+        if value is not None and str(value) != str(decision_id)
+    ]
+    alerts = [str(value) for value in (row.get("campaign_alerts") or []) if value is not None]
+    return {
+        "decision_id": str(decision_id),
+        "campaign_id": row.get("campaign_id"),
+        "target_alert_id": row.get("target_alert_id"),
+        "campaign_alerts": alerts,
+        "related_decisions": related,
+        "previous_campaign_id": row.get("previous_campaign_id"),
+        "next_campaign_id": row.get("next_campaign_id"),
+    }
 
 
 # ── Helper functions (pure Python, no AGE) ─────────────────────────────────
@@ -970,7 +1029,7 @@ class CampaignRepository:
         alert_ids = _dedupe_preserve_order([str(alert_id)])
 
         existing = run_cypher(
-            f"MATCH (s:CampaignSeed {{seed_key: {seed_key_lit}}}) RETURN s"
+            f"MATCH (s:CampaignSeed {{domain: 'soc', seed_key: {seed_key_lit}}}) RETURN s"
         )
         if existing:
             row = existing[0] or {}
@@ -978,7 +1037,7 @@ class CampaignRepository:
             existing_alert_ids = _coerce_alert_ids(seed_node.get("alert_ids"))
             alert_ids = _dedupe_preserve_order(existing_alert_ids + alert_ids)
             run_cypher(
-                f"MATCH (s:CampaignSeed {{seed_key: {seed_key_lit}}})"
+                f"MATCH (s:CampaignSeed {{domain: 'soc', seed_key: {seed_key_lit}}})"
                 f" SET s.alert_ids = {_S(alert_ids)},"
                 f"     s.last_alert_id = {_S(alert_id)},"
                 f"     s.last_seen_epoch = {_S(_event_epoch_ms(event))},"
@@ -987,7 +1046,7 @@ class CampaignRepository:
             )
         else:
             run_cypher(
-                f"CREATE (s:CampaignSeed {{"
+                f"CREATE (s:CampaignSeed {{domain: 'soc',"
                 f" seed_key: {seed_key_lit},"
                 f" campaign_id: {_S(seed['campaign_id'])},"
                 f" rule_type: {_S(seed['rule_type'])},"
@@ -1019,7 +1078,7 @@ class CampaignRepository:
         )
         now_epoch = int(time.time() * 1000)
         run_cypher(
-            f"MATCH (s:CampaignSeed {{seed_key: {_S(seed_key)}}})"
+            f"MATCH (s:CampaignSeed {{domain: 'soc', seed_key: {_S(seed_key)}}})"
             f" SET s.status = {_S('promoted')},"
             f"     s.campaign_id = {_S(campaign.campaign_id)},"
             f"     s.materialized_at_epoch = {_S(now_epoch)},"
@@ -1034,11 +1093,11 @@ class CampaignRepository:
         cid = _S(campaign.campaign_id)
         ts = _S(int(datetime.utcnow().timestamp() * 1000))
         existing = run_cypher(
-            f"MATCH (c:Campaign {{campaign_id: {cid}}}) RETURN c"
+            f"MATCH (c:Campaign {{domain: 'soc', campaign_id: {cid}}}) RETURN c"
         )
         if existing:
             run_cypher(
-                f"MATCH (c:Campaign {{campaign_id: {cid}}})"
+                f"MATCH (c:Campaign {{domain: 'soc', campaign_id: {cid}}})"
                 f" SET c.first_seen = {_S(campaign.first_seen.isoformat())},"
                 f"     c.last_seen = {_S(campaign.last_seen.isoformat())},"
                 f"     c.alert_count = {_S(campaign.alert_count)},"
@@ -1058,7 +1117,7 @@ class CampaignRepository:
             )
         else:
             run_cypher(
-                f"CREATE (c:Campaign {{"
+                f"CREATE (c:Campaign {{domain: 'soc',"
                 f" campaign_id: {cid},"
                 f" first_seen: {_S(campaign.first_seen.isoformat())},"
                 f" last_seen: {_S(campaign.last_seen.isoformat())},"
@@ -1082,8 +1141,8 @@ class CampaignRepository:
         member_alert_ids = _dedupe_preserve_order(campaign.member_alert_ids)
         if member_alert_ids:
             existing_edges = run_cypher(
-                f"MATCH (a:Alert)-[:MEMBER_OF]->(c:Campaign {{campaign_id: {cid}}})"
-                f" WHERE {_alert_id_or_predicate('a', member_alert_ids)}"
+                f"MATCH (a:Alert)-[:MEMBER_OF]->(c:Campaign {{domain: 'soc', campaign_id: {cid}}})"
+                f" WHERE a.domain = 'soc' AND {_alert_id_or_predicate('a', member_alert_ids)}"
                 f" RETURN a.alert_id AS alert_id"
             )
             existing_edge_ids = {
@@ -1100,7 +1159,7 @@ class CampaignRepository:
             if missing_edge_ids:
                 existing_alerts = run_cypher(
                     f"MATCH (a:Alert)"
-                    f" WHERE {_alert_id_or_predicate('a', missing_edge_ids)}"
+                    f" WHERE a.domain = 'soc' AND {_alert_id_or_predicate('a', missing_edge_ids)}"
                     f" RETURN a.alert_id AS alert_id"
                 )
                 existing_alert_ids = {
@@ -1114,11 +1173,11 @@ class CampaignRepository:
                 if alert_id in existing_alert_ids
             ]
             for chunk in _chunks(creatable_ids, 25):
-                clauses = [f"MATCH (c:Campaign {{campaign_id: {cid}}})"]
+                clauses = [f"MATCH (c:Campaign {{domain: 'soc', campaign_id: {cid}}})"]
                 create_patterns = []
                 for idx, alert_id in enumerate(chunk):
                     alias = f"a{idx}"
-                    clauses.append(f"MATCH ({alias}:Alert {{alert_id: {_S(alert_id)}}})")
+                    clauses.append(f"MATCH ({alias}:Alert {{domain: 'soc', alert_id: {_S(alert_id)}}})")
                     create_patterns.append(f"({alias})-[:MEMBER_OF]->(c)")
                 create_query = (
                     " ".join(clauses)
@@ -1174,7 +1233,7 @@ class CampaignRepository:
 
         candidate_rows = run_cypher(
             f"MATCH (older:Campaign)"
-            f" WHERE older.derived_entity_key = {_S(campaign.derived_entity_key)}"
+            f" WHERE older.domain = 'soc' AND older.derived_entity_key = {_S(campaign.derived_entity_key)}"
             f"   AND older.category = {_S(campaign.category)}"
             f"   AND older.time_bucket = {_S(older_bucket)}"
             f" RETURN older.campaign_id AS campaign_id,"
@@ -1200,15 +1259,15 @@ class CampaignRepository:
 
         older_count = int(older_row.get("alert_count") or 0)
         exists = run_cypher(
-            f"MATCH (older:Campaign {{campaign_id: {_S(older_campaign_id)}}})"
+            f"MATCH (older:Campaign {{domain: 'soc', campaign_id: {_S(older_campaign_id)}}})"
             f"-[:CONTINUES]->"
-            f"(newer:Campaign {{campaign_id: {_S(campaign.campaign_id)}}})"
+            f"(newer:Campaign {{domain: 'soc', campaign_id: {_S(campaign.campaign_id)}}})"
             f" RETURN older.campaign_id AS campaign_id"
         )
         if not exists:
             run_cypher(
-                f"MATCH (older:Campaign {{campaign_id: {_S(older_campaign_id)}}})"
-                f" MATCH (newer:Campaign {{campaign_id: {_S(campaign.campaign_id)}}})"
+                f"MATCH (older:Campaign {{domain: 'soc', campaign_id: {_S(older_campaign_id)}}})"
+                f" MATCH (newer:Campaign {{domain: 'soc', campaign_id: {_S(campaign.campaign_id)}}})"
                 f" CREATE (older)-[:CONTINUES {{"
                 f" created_at_epoch: {_S(now_epoch)},"
                 f" gap_buckets: {_S(1)},"
@@ -1273,7 +1332,7 @@ class CampaignRepository:
         try:
             results = await self.graph.run_query("""
                 MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
-                WHERE d.domain = 'soc'
+                WHERE d.domain = 'soc' AND a.domain = 'soc'
                   AND d.source_id IS NOT NULL AND d.source_id <> 'synthetic'
                 RETURN a.alert_id AS alert_id,
                        COALESCE(a.category, d.category) AS category,
@@ -1306,7 +1365,7 @@ class CampaignRepository:
                 "read",
                 self.graph.run_query("""
                     MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert)
-                    WHERE d.domain = 'soc'
+                    WHERE d.domain = 'soc' AND a.domain = 'soc'
                       AND d.timestamp_epoch > $cutoff_epoch
                     RETURN a.alert_id AS alert_id,
                            COALESCE(a.category, d.category) AS category,
@@ -1342,7 +1401,7 @@ class CampaignRepository:
                 "read",
                 self.graph.run_query("""
                     MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert {alert_id: $alert_id})
-                    WHERE d.domain = 'soc'
+                    WHERE d.domain = 'soc' AND a.domain = 'soc'
                     RETURN a.alert_id AS alert_id,
                            COALESCE(a.category, d.category) AS category,
                            COALESCE(a.source_entity_id, d.source_id) AS source_entity_id,
@@ -1428,7 +1487,7 @@ class CampaignRepository:
                 "campaign_seed_promote",
                 "write",
                 self.graph.run_query(
-                    f"MATCH (s:CampaignSeed {{seed_key: {_S(seed_key)}}})"
+                    f"MATCH (s:CampaignSeed {{domain: 'soc', seed_key: {_S(seed_key)}}})"
                     f" SET s.status = {_S('promoted')},"
                     f"     s.campaign_id = {_S(campaign.campaign_id)},"
                     f"     s.materialized_at_epoch = {_S(int(time.time() * 1000))},"
@@ -1494,7 +1553,7 @@ class CampaignRepository:
                 "write",
                 self.graph.run_query(
                     f"MATCH (s:CampaignSeed)"
-                    f" WHERE s.status = {_S('open')} AND s.updated_at_epoch < {_S(cutoff_epoch)}"
+                    f" WHERE s.domain = 'soc' AND s.status = {_S('open')} AND s.updated_at_epoch < {_S(cutoff_epoch)}"
                     f" SET s.status = {_S('expired')},"
                     f"     s.expired_at_epoch = {_S(int(time.time() * 1000))}"
                     f" RETURN count(s) AS expired_count"
@@ -1542,7 +1601,7 @@ class CampaignRepository:
                 "check_campaign_exists",
                 "read",
                 self.graph.run_query(
-                    f"MATCH (c:Campaign {{campaign_id: {cid}}}) RETURN c"
+                    f"MATCH (c:Campaign {{domain: 'soc', campaign_id: {cid}}}) RETURN c"
                 ),
             )
             if existing:
@@ -1551,7 +1610,7 @@ class CampaignRepository:
                     "update_campaign",
                     "write",
                     self.graph.run_query(
-                        f"MATCH (c:Campaign {{campaign_id: {cid}}})"
+                        f"MATCH (c:Campaign {{domain: 'soc', campaign_id: {cid}}})"
                         f" SET c.first_seen = {_S(campaign.first_seen.isoformat())},"
                         f"     c.last_seen = {_S(campaign.last_seen.isoformat())},"
                         f"     c.alert_count = {_S(campaign.alert_count)},"
@@ -1576,7 +1635,7 @@ class CampaignRepository:
                     "create_campaign",
                     "write",
                     self.graph.run_query(
-                        f"CREATE (c:Campaign {{"
+                        f"CREATE (c:Campaign {{domain: 'soc',"
                         f" campaign_id: {cid},"
                         f" first_seen: {_S(campaign.first_seen.isoformat())},"
                         f" last_seen: {_S(campaign.last_seen.isoformat())},"
@@ -1609,8 +1668,8 @@ class CampaignRepository:
                     "member_edges_existing_read",
                     "read",
                     self.graph.run_query(
-                        f"MATCH (a:Alert)-[:MEMBER_OF]->(c:Campaign {{campaign_id: {cid}}})"
-                        f" WHERE {_alert_id_or_predicate('a', member_alert_ids)}"
+                        f"MATCH (a:Alert)-[:MEMBER_OF]->(c:Campaign {{domain: 'soc', campaign_id: {cid}}})"
+                        f" WHERE a.domain = 'soc' AND {_alert_id_or_predicate('a', member_alert_ids)}"
                         f" RETURN a.alert_id AS alert_id"
                     ),
                 )
@@ -1636,7 +1695,7 @@ class CampaignRepository:
                         "read",
                         self.graph.run_query(
                             f"MATCH (a:Alert)"
-                            f" WHERE {_alert_id_or_predicate('a', missing_edge_ids)}"
+                            f" WHERE a.domain = 'soc' AND {_alert_id_or_predicate('a', missing_edge_ids)}"
                             f" RETURN a.alert_id AS alert_id"
                         ),
                     )
@@ -1657,11 +1716,11 @@ class CampaignRepository:
                     trace.member_edges_created_count = 0
 
                 for chunk in _chunks(creatable_ids, 25):
-                    clauses = [f"MATCH (c:Campaign {{campaign_id: {cid}}})"]
+                    clauses = [f"MATCH (c:Campaign {{domain: 'soc', campaign_id: {cid}}})"]
                     create_patterns = []
                     for idx, alert_id in enumerate(chunk):
                         alias = f"a{idx}"
-                        clauses.append(f"MATCH ({alias}:Alert {{alert_id: {_S(alert_id)}}})")
+                        clauses.append(f"MATCH ({alias}:Alert {{domain: 'soc', alert_id: {_S(alert_id)}}})")
                         create_patterns.append(f"({alias})-[:MEMBER_OF]->(c)")
                     create_query = (
                         " ".join(clauses)
@@ -1692,13 +1751,14 @@ class CampaignRepository:
     ) -> List[dict]:
         """Fetch campaign list for GET /api/soc/campaigns."""
         try:
-            where_clause = "WHERE c.confidence >= $min_confidence"
+            where_clause = "WHERE c.domain = 'soc' AND c.confidence >= $min_confidence"
             if trigger_rule:
                 where_clause += " AND c.trigger_rule = $trigger_rule"
             results = await self.graph.run_query(f"""
                 MATCH (c:Campaign)
                 {where_clause}
                 OPTIONAL MATCH (a:Alert)-[:MEMBER_OF]->(c)
+                WHERE a.domain = 'soc'
                 RETURN c, collect(a.alert_id) AS alert_ids
                 ORDER BY c.last_seen DESC
                 LIMIT $limit
@@ -1713,9 +1773,11 @@ class CampaignRepository:
         try:
             results = await self.graph.run_query("""
                 MATCH (c:Campaign {campaign_id: $campaign_id})
+                WHERE c.domain = 'soc'
                 OPTIONAL MATCH (a:Alert)-[:MEMBER_OF]->(c)
+                WHERE a.domain = 'soc'
                 OPTIONAL MATCH (d:Decision)-[:DECIDED_ON]->(a)
-                WHERE d.domain = 'soc'
+                WHERE d.domain = 'soc' AND a.domain = 'soc'
                 RETURN c,
                        collect({
                            alert_id: a.alert_id,
@@ -1736,7 +1798,7 @@ class CampaignRepository:
         """Check if any Campaign nodes exist (for startup recorrelation)."""
         try:
             results = await self.graph.run_query(
-                "MATCH (c:Campaign) RETURN count(c) AS n LIMIT 1", {}
+                "MATCH (c:Campaign) WHERE c.domain = 'soc' RETURN count(c) AS n LIMIT 1", {}
             )
             return bool(results[0]["n"] > 0) if results else False
         except Exception:
@@ -1966,7 +2028,7 @@ class CampaignMatcher:
                 "check_materialized_campaign_by_identity",
                 "read",
                 self.graph.run_query(
-                    f"MATCH (c:Campaign {{campaign_id: {_S(seed['campaign_id'])}}}) "
+                    f"MATCH (c:Campaign {{domain: 'soc', campaign_id: {_S(seed['campaign_id'])}}}) "
                     f"RETURN c.campaign_id AS campaign_id LIMIT 1"
                 ),
             )
@@ -2095,7 +2157,8 @@ class CampaignMatcher:
                 self.graph.run_query("""
                     MATCH (a_new:Alert {alert_id: $alert_id})
                     MATCH (a_existing:Alert)-[:MEMBER_OF]->(c:Campaign)
-                    WHERE a_existing.source_entity_id IS NOT NULL
+                    WHERE a_new.domain = 'soc' AND a_existing.domain = 'soc' AND c.domain = 'soc'
+                      AND a_existing.source_entity_id IS NOT NULL
                       AND a_existing.source_entity_id = a_new.source_entity_id
                       AND c.last_seen > $cutoff_epoch
                     RETURN c.campaign_id AS campaign_id
@@ -2126,7 +2189,7 @@ class CampaignMatcher:
                 "existing_campaign_update",
                 "write",
                 self.graph.run_query(
-                    f"MATCH (c:Campaign {{campaign_id: {cid}}})"
+                    f"MATCH (c:Campaign {{domain: 'soc', campaign_id: {cid}}})"
                     f" SET c.last_seen = {epoch}, c.alert_count = c.alert_count + 1"
                 ),
             )
@@ -2135,8 +2198,8 @@ class CampaignMatcher:
                 "existing_campaign_edge_check",
                 "read",
                 self.graph.run_query(
-                    f"MATCH (a:Alert {{alert_id: {aid}}})"
-                    f"-[:MEMBER_OF]->(c:Campaign {{campaign_id: {cid}}}) RETURN a"
+                    f"MATCH (a:Alert {{domain: 'soc', alert_id: {aid}}})"
+                    f"-[:MEMBER_OF]->(c:Campaign {{domain: 'soc', campaign_id: {cid}}}) RETURN a"
                 ),
             )
             if not edge_exists:
@@ -2145,8 +2208,8 @@ class CampaignMatcher:
                     "existing_campaign_edge_create",
                     "write",
                     self.graph.run_query(
-                        f"MATCH (a:Alert {{alert_id: {aid}}})"
-                        f" MATCH (c:Campaign {{campaign_id: {cid}}})"
+                        f"MATCH (a:Alert {{domain: 'soc', alert_id: {aid}}})"
+                        f" MATCH (c:Campaign {{domain: 'soc', campaign_id: {cid}}})"
                         f" CREATE (a)-[:MEMBER_OF]->(c)"
                     ),
                 )

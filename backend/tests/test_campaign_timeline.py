@@ -1,3 +1,5 @@
+import pytest
+from unittest.mock import AsyncMock
 from datetime import datetime, timedelta
 import os
 import sys
@@ -108,6 +110,22 @@ def _patch_repo(monkeypatch, rows=None):
     monkeypatch.setattr(campaigns_module, "CampaignRepository", FakeCampaignRepository)
 
 
+def _patch_live_repo(monkeypatch, age_graph):
+    repo = campaigns_module.CampaignRepository(age_graph.client)
+    repo.write_campaign = AsyncMock(wraps=repo.write_campaign)
+    for row in _rows():
+        props = row["c"]
+        cid = props["campaign_id"]
+        age_graph.node("Campaign", domain="soc", **props)
+        for index in range(2):
+            aid = f"{cid}-A{index}"
+            age_graph.alert(alert_id=aid)
+            age_graph.decision(decision_id=aid, category="credential_access")
+            age_graph.query(f"MATCH (d:Decision {{decision_id: '{aid}'}}), (a:Alert {{alert_id: '{aid}'}}), (c:Campaign {{campaign_id: '{cid}'}}) CREATE (d)-[:DECIDED_ON]->(a), (a)-[:MEMBER_OF]->(c) RETURN d")
+    monkeypatch.setattr(campaigns_module, "CampaignRepository", lambda graph: repo)
+    return repo
+
+
 def test_campaign_timeline_returns_200_with_list(monkeypatch):
     _patch_repo(monkeypatch)
     response = client.get("/api/soc/campaign-timeline")
@@ -151,14 +169,15 @@ def test_campaign_timeline_includes_provenance(monkeypatch):
     assert all(campaign["provenance"] in ("learned", "context") for campaign in data)
 
 
-def test_campaign_timeline_is_read_only(monkeypatch):
-    _patch_repo(monkeypatch)
-    before = len(FakeCampaignRepository.rows)
+@pytest.mark.age
+def test_campaign_timeline_is_read_only(monkeypatch, age_graph):
+    repo = _patch_live_repo(monkeypatch, age_graph)
+    before = age_graph.query("MATCH (n) RETURN count(n) AS n")
     response = client.get("/api/soc/campaign-timeline")
-    after = len(FakeCampaignRepository.rows)
+    after = age_graph.query("MATCH (n) RETURN count(n) AS n")
     assert response.status_code == 200
     assert before == after
-    assert FakeCampaignRepository.calls["write_campaign"] == 0
+    repo.write_campaign.assert_not_called()
 
 
 def test_campaign_timeline_state_boundaries(monkeypatch):
@@ -282,10 +301,13 @@ def test_campaign_timeline_keeps_concurrent_campaigns_for_same_entity(monkeypatc
     assert {campaign["entity_key"] for campaign in data} == {"user:shared"}
 
 
-def test_campaign_timeline_links_each_alert_to_its_campaign(monkeypatch):
-    _patch_repo(monkeypatch)
+@pytest.mark.age
+def test_campaign_timeline_links_each_alert_to_its_campaign(monkeypatch, age_graph):
+    _patch_live_repo(monkeypatch, age_graph)
     data = client.get("/api/soc/campaign-timeline").json()
+    assert len(data) == 3
     for campaign in data:
+        assert len(campaign["alert_links"]) == 2
         for link in campaign["alert_links"]:
             assert link["alert_id"]
             assert link["campaign_id"] == campaign["campaign_id"]

@@ -10,7 +10,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from copilot_sdk.config import resolve_profile
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,13 @@ _RL_EXPLORATION_CACHE: dict[str, Any] | None = None
 NOTE = "Cross-copilot signals emerge from shared graph entities. Neither copilot was programmed to detect these patterns."
 
 
+def _production_profile() -> bool:
+    return bool(resolve_profile(domain="soc") == "production")
+
+
 def _load_cross_signals() -> list[dict[str, Any]]:
+    if _production_profile():
+        return []
     global _SIGNAL_CACHE
     if _SIGNAL_CACHE is not None:
         return list(_SIGNAL_CACHE)
@@ -56,6 +63,8 @@ def _reset_cross_signal_cache() -> None:
 
 
 def _load_domain_table() -> dict[str, Any]:
+    if _production_profile():
+        return {"domains": [], "available": False, "reason": "graph projection unavailable"}
     global _DOMAIN_TABLE_CACHE
     if _DOMAIN_TABLE_CACHE is not None:
         return dict(_DOMAIN_TABLE_CACHE)
@@ -92,6 +101,8 @@ def _reset_domain_table_cache() -> None:
 
 
 def _load_warm_start_evidence() -> dict[str, Any]:
+    if _production_profile():
+        return {"warm_start_evidence": [], "available": False, "reason": "graph projection unavailable"}
     global _WARM_START_CACHE
     if _WARM_START_CACHE is not None:
         return dict(_WARM_START_CACHE)
@@ -121,6 +132,8 @@ def _reset_warm_start_cache() -> None:
 
 
 def _load_chain_credit_demo() -> dict[str, Any]:
+    if _production_profile():
+        return {"chain_credits": [], "summary": {}, "available": False, "reason": "demo namespace only"}
     global _CHAIN_CREDIT_CACHE
     if _CHAIN_CREDIT_CACHE is not None:
         return dict(_CHAIN_CREDIT_CACHE)
@@ -154,6 +167,8 @@ def _reset_chain_credit_cache() -> None:
 
 
 def _load_rl_reward_demo() -> dict[str, Any]:
+    if _production_profile():
+        return {"reward_breakdown": [], "summary": {}, "available": False, "reason": "demo namespace only"}
     global _RL_REWARD_CACHE
     if _RL_REWARD_CACHE is not None:
         return dict(_RL_REWARD_CACHE)
@@ -187,6 +202,8 @@ def _reset_rl_reward_cache() -> None:
 
 
 def _load_rl_exploration_demo() -> dict[str, Any]:
+    if _production_profile():
+        return {"exploration_log": [], "summary": {}, "available": False, "reason": "demo namespace only"}
     global _RL_EXPLORATION_CACHE
     if _RL_EXPLORATION_CACHE is not None:
         return dict(_RL_EXPLORATION_CACHE)
@@ -277,6 +294,8 @@ async def get_warm_start_evidence() -> dict[str, Any]:
 
 @router.get("/chain-credit-demo")
 async def get_chain_credit_demo() -> dict[str, Any]:
+    if _production_profile():
+        raise HTTPException(status_code=404, detail="RL demo endpoint is available only in the demo namespace")
     data = _load_chain_credit_demo()
     credits = list(data.get("chain_credits", []))
     return {
@@ -288,6 +307,8 @@ async def get_chain_credit_demo() -> dict[str, Any]:
 
 @router.get("/rl-reward-demo")
 async def get_rl_reward_demo() -> dict[str, Any]:
+    if _production_profile():
+        raise HTTPException(status_code=404, detail="RL demo endpoint is available only in the demo namespace")
     data = _load_rl_reward_demo()
     return {
         "reward_breakdown": list(data.get("reward_breakdown", [])),
@@ -298,6 +319,8 @@ async def get_rl_reward_demo() -> dict[str, Any]:
 
 @router.get("/rl-exploration-demo")
 async def get_rl_exploration_demo() -> dict[str, Any]:
+    if _production_profile():
+        raise HTTPException(status_code=404, detail="RL demo endpoint is available only in the demo namespace")
     data = _load_rl_exploration_demo()
     return {
         "exploration_log": list(data.get("exploration_log", [])),

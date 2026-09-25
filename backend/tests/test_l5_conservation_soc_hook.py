@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 import logging
 from types import SimpleNamespace
+from unittest.mock import Mock
+from copilot_sdk.graph.memory_store import InMemoryGraphStore
 
 import pytest
 
@@ -28,45 +30,24 @@ class _FakeState:
         self.decision_count = len(history)
 
 
-class _FakeGraph:
-    def __init__(self, rows: list[dict] | None = None):
-        self.rows = rows if rows is not None else [
-            {"category": "credential_access", "verified": 100, "correct": 80, "overrides": 10},
-            {"category": "malware_execution", "verified": 100, "correct": 80, "overrides": 10},
-            {"category": "lateral_movement", "verified": 100, "correct": 80, "overrides": 10},
-            {"category": "data_exfiltration", "verified": 100, "correct": 80, "overrides": 10},
-        ]
-
-    async def run_query(self, _query: str) -> list[dict]:
-        if "MATCH (d:Decision)" in _query and "RETURN d.category AS category" in _query:
-            return self.rows
-        return [{"red_days": 0}]
+@pytest.fixture
+def conservation_graph(age_graph):
+    for category in ["credential_access", "malware_execution", "lateral_movement", "data_exfiltration"]:
+        for index in range(10):
+            age_graph.decision(category=category, correct=index < 8, was_override=index < 1)
+    return age_graph.client
 
 
-class _FakeStore:
-    def __init__(
-        self,
-        *,
-        old_state: dict | None = None,
-        get_error: Exception | None = None,
-        update_error: Exception | None = None,
-    ):
-        self.old_state = old_state
-        self.get_error = get_error
-        self.update_error = update_error
-        self.updates: list[dict] = []
-
-    def get_conservation_state(self, domain: str) -> dict | None:
-        if self.get_error is not None:
-            raise self.get_error
-        assert domain == "soc"
-        return self.old_state
-
-    def update_conservation_state(self, **kwargs) -> str:
-        if self.update_error is not None:
-            raise self.update_error
-        self.updates.append(kwargs)
-        return "soc:conservation:1"
+def _conservation_store(monkeypatch, *, old_state=None, get_error=None, update_error=None):
+    store = InMemoryGraphStore(domain="soc")
+    if old_state is not None:
+        store.update_conservation_state(domain="soc", status=old_state["status"], alpha=1.0,
+            q=0.8, V=400, theta_min=0.1, product=320.0, categories_total=6,
+            categories_with_data=6, baseline_product=320.0, relative_threshold=1.0, complacency_flag="false")
+    if get_error is not None:
+        monkeypatch.setattr(store, "get_conservation_state", Mock(side_effect=get_error))
+    monkeypatch.setattr(store, "update_conservation_state", Mock(wraps=store.update_conservation_state, side_effect=update_error))
+    return store
 
 
 def _with_category_coverage(health: dict, categories_with_data: int = 4) -> dict:
@@ -84,10 +65,11 @@ def healthy_state(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_l5_conservation_hook_no_store_noop(monkeypatch, healthy_state):
+@pytest.mark.age
+async def test_l5_conservation_hook_no_store_noop(monkeypatch, healthy_state, conservation_graph):
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: None)
 
-    result = await LearningHealthMonitor.evaluate(_FakeGraph())
+    result = await LearningHealthMonitor.evaluate(conservation_graph)
     await learning_health._persist_l5_conservation_state(_with_category_coverage(result))
 
     assert result["status"] == "GREEN"
@@ -96,15 +78,17 @@ async def test_l5_conservation_hook_no_store_noop(monkeypatch, healthy_state):
 
 
 @pytest.mark.asyncio
-async def test_l5_conservation_hook_first_write(monkeypatch, healthy_state):
-    store = _FakeStore(old_state=None)
+@pytest.mark.age
+async def test_l5_conservation_hook_first_write(monkeypatch, healthy_state, conservation_graph):
+    store = _conservation_store(monkeypatch, old_state=None)
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
 
-    result = await LearningHealthMonitor.evaluate(_FakeGraph())
+    result = await LearningHealthMonitor.evaluate(conservation_graph)
 
     assert result["status"] == "GREEN"
-    assert len(store.updates) == 1
-    update = store.updates[0]
+    assert store.update_conservation_state.call_count == 1
+    update = store.update_conservation_state.call_args_list[0].kwargs
+    assert store.get_conservation_state("soc")["status"] == "GREEN"
     assert update["domain"] == "soc"
     assert update["status"] == "GREEN"
     assert update["old_status"] is None
@@ -127,46 +111,50 @@ async def test_l5_conservation_hook_first_write(monkeypatch, healthy_state):
 
 
 @pytest.mark.asyncio
-async def test_l5_conservation_hook_same_status_passes_old_status(monkeypatch, healthy_state):
-    store = _FakeStore(old_state={"status": "GREEN"})
+@pytest.mark.age
+async def test_l5_conservation_hook_same_status_passes_old_status(monkeypatch, healthy_state, conservation_graph):
+    store = _conservation_store(monkeypatch, old_state={"status": "GREEN"})
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
 
-    result = await LearningHealthMonitor.evaluate(_FakeGraph())
+    result = await LearningHealthMonitor.evaluate(conservation_graph)
 
     assert result["status"] == "GREEN"
-    assert store.updates[0]["old_status"] == "GREEN"
-    assert store.updates[0]["status"] == "GREEN"
+    assert store.update_conservation_state.call_args_list[0].kwargs["old_status"] == "GREEN"
+    assert store.update_conservation_state.call_args_list[0].kwargs["status"] == "GREEN"
 
 
 @pytest.mark.asyncio
-async def test_l5_conservation_hook_transition_passes_previous_status(monkeypatch, healthy_state):
-    store = _FakeStore(old_state={"status": "AMBER"})
+@pytest.mark.age
+async def test_l5_conservation_hook_transition_passes_previous_status(monkeypatch, healthy_state, conservation_graph):
+    store = _conservation_store(monkeypatch, old_state={"status": "AMBER"})
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
 
-    result = await LearningHealthMonitor.evaluate(_FakeGraph())
+    result = await LearningHealthMonitor.evaluate(conservation_graph)
 
     assert result["status"] == "GREEN"
-    assert store.updates[0]["old_status"] == "AMBER"
-    assert store.updates[0]["status"] == "GREEN"
+    assert store.update_conservation_state.call_args_list[0].kwargs["old_status"] == "AMBER"
+    assert store.update_conservation_state.call_args_list[0].kwargs["status"] == "GREEN"
 
 
 @pytest.mark.asyncio
-async def test_l5_conservation_hook_get_failure_skips_write(monkeypatch, healthy_state):
-    store = _FakeStore(get_error=RuntimeError("store read failed"))
+@pytest.mark.age
+async def test_l5_conservation_hook_get_failure_skips_write(monkeypatch, healthy_state, conservation_graph):
+    store = _conservation_store(monkeypatch, get_error=RuntimeError("store read failed"))
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
 
-    result = await LearningHealthMonitor.evaluate(_FakeGraph())
+    result = await LearningHealthMonitor.evaluate(conservation_graph)
 
     assert result["status"] == "GREEN"
-    assert store.updates == []
+    store.update_conservation_state.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_l5_conservation_hook_update_failure_non_blocking(monkeypatch, healthy_state):
-    store = _FakeStore(update_error=RuntimeError("store write failed"))
+@pytest.mark.age
+async def test_l5_conservation_hook_update_failure_non_blocking(monkeypatch, healthy_state, conservation_graph):
+    store = _conservation_store(monkeypatch, update_error=RuntimeError("store write failed"))
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
 
-    result = await LearningHealthMonitor.evaluate(_FakeGraph())
+    result = await LearningHealthMonitor.evaluate(conservation_graph)
 
     assert result["status"] == "GREEN"
 
@@ -175,7 +163,7 @@ async def test_l5_conservation_hook_update_failure_non_blocking(monkeypatch, hea
 async def test_l5_conservation_hook_skips_when_category_coverage_unavailable(
     monkeypatch, healthy_state, caplog
 ):
-    store = _FakeStore(old_state=None)
+    store = _conservation_store(monkeypatch, old_state=None)
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
 
     result = await LearningHealthMonitor.evaluate(None)
@@ -183,30 +171,30 @@ async def test_l5_conservation_hook_skips_when_category_coverage_unavailable(
     with caplog.at_level(logging.DEBUG):
         await learning_health._persist_l5_conservation_state(result)
 
-    assert store.updates == []
+    store.update_conservation_state.assert_not_called()
     assert "categories_with_data unavailable" in caplog.text
 
 
 @pytest.mark.asyncio
-async def test_l5_conservation_hook_skips_invalid_category_coverage(
-    monkeypatch, healthy_state
-):
-    store = _FakeStore(old_state=None)
+@pytest.mark.age
+async def test_l5_conservation_hook_skips_invalid_category_coverage(monkeypatch, healthy_state, conservation_graph):
+    store = _conservation_store(monkeypatch, old_state=None)
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
 
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: None)
-    result = await LearningHealthMonitor.evaluate(_FakeGraph())
+    result = await LearningHealthMonitor.evaluate(conservation_graph)
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
     await learning_health._persist_l5_conservation_state(
         _with_category_coverage(result, categories_with_data=999)
     )
 
     assert result["status"] == "GREEN"
-    assert store.updates == []
+    store.update_conservation_state.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_l5_conservation_hook_uses_store_lock(monkeypatch, healthy_state):
+@pytest.mark.age
+async def test_l5_conservation_hook_uses_store_lock(monkeypatch, healthy_state, conservation_graph):
     events: list[str] = []
 
     class _RecordingLock:
@@ -216,24 +204,25 @@ async def test_l5_conservation_hook_uses_store_lock(monkeypatch, healthy_state):
         async def __aexit__(self, exc_type, exc, tb):
             events.append("exit")
 
-    store = _FakeStore(old_state=None)
+    store = _conservation_store(monkeypatch, old_state=None)
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
     monkeypatch.setattr(learning_health, "_L5_CONSERVATION_STORE_LOCK", _RecordingLock())
 
-    result = await LearningHealthMonitor.evaluate(_FakeGraph())
+    result = await LearningHealthMonitor.evaluate(conservation_graph)
 
     assert events == ["enter", "exit"]
-    assert len(store.updates) == 1
+    assert store.update_conservation_state.call_count == 1
 
 
 @pytest.mark.asyncio
-async def test_l5_conservation_hook_preserves_response_shape(monkeypatch, healthy_state):
+@pytest.mark.age
+async def test_l5_conservation_hook_preserves_response_shape(monkeypatch, healthy_state, conservation_graph):
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: None)
-    without_store = await LearningHealthMonitor.evaluate(_FakeGraph())
+    without_store = await LearningHealthMonitor.evaluate(conservation_graph)
 
-    store = _FakeStore(old_state=None)
+    store = _conservation_store(monkeypatch, old_state=None)
     monkeypatch.setattr(learning_health, "get_learning_store", lambda: store)
-    with_store = await LearningHealthMonitor.evaluate(_FakeGraph())
+    with_store = await LearningHealthMonitor.evaluate(conservation_graph)
 
     assert set(with_store) == set(without_store)
     assert with_store["status"] == without_store["status"]

@@ -453,11 +453,11 @@ Actions (A = 4): [CHANGED v10: was A=5]
   actions. 13pp structural gap confirmed by EXP-A4-DIAGONAL. [CHANGED v11]
 
 Factors (d = 6):
-  0: travel_match
+  0: privileged_identity_context
   1: asset_criticality
   2: threat_intel_enrichment
-  3: time_anomaly
-  4: pattern_history
+  3: pattern_history
+  4: time_anomaly
   5: device_trust
 ```
 
@@ -469,8 +469,11 @@ Each μ[c,a,:] is a d-dimensional profile: "what does a credential_access alert 
 should be escalated typically look like?" The centroids ARE the institutional judgment —
 readable, auditable, and correctable by domain experts without touching code.
 
-**Key prior (v5.0 corrected):** credential_access/escalate centroid — travel_match
-set to 0.72 (was 0.30 in v4.5). Validated: high-travel vector → P(escalate) = 0.913 ✅
+**Historical key prior (v5.0):** the former `travel_match` centroid was set to
+0.72 (was 0.30 in v4.5). That high-travel validation applies only to the
+legacy `TravelMatchFactor` fixtures. The live factor-0 contract is
+`privileged_identity_context`; do not use the historical travel result as a
+production identity-context validation.
 
 **Bootstrap calibration:** 1,200 synthetic decisions, σ=0.08, seed=42. Converged=True,
 drift=0.0097. This is the warm-start baseline μ(0) for every deployment and the

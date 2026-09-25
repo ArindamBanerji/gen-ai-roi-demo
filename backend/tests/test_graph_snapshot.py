@@ -1,45 +1,39 @@
 """
 BACKLOG-020 GraphSnapshot tests.
-All run without a live DB -- snapshot logic is pure Python.
+Snapshot loading uses live AGE; incremental updates are pure Python.
 """
 import pytest
-from unittest.mock import AsyncMock, MagicMock
 from app.state.graph_snapshot import GraphSnapshot
 
 
-@pytest.fixture
-def mock_graph_client():
-    client = AsyncMock()
-    client.count_verified_decisions = AsyncMock(return_value=42)
-    client.count_decisions_by_category = AsyncMock(return_value={
-        "credential_access": 20,
-        "lateral_movement": 22,
-    })
-    client.compute_outcome_stats = AsyncMock(return_value={
-        "override_rate": 0.15,
-        "override_quality": 0.72,
-    })
-    client.compute_iks = AsyncMock(return_value=76.0)
-    return client
-
-
+@pytest.mark.age
 @pytest.mark.asyncio
-async def test_from_graph_reads_correct_values(mock_graph_client):
-    """Snapshot initializes from graph correctly."""
-    snap = await GraphSnapshot.from_graph(mock_graph_client)
-    assert snap.verified_decisions == 42
-    assert snap.iks_score == 76.0
-    assert snap.override_rate == 0.15
-    assert snap.category_counts["lateral_movement"] == 22
+async def test_from_graph_reads_correct_values(age_graph):
+    age_graph.decision(category="credential_access", correct=True)
+    age_graph.decision(category="lateral_movement", correct=False, was_override=True, quality_signal=0.8)
+    age_graph.decision(category="lateral_movement", correct=None)
+    age_graph.decision(domain="s2p", correct=True)
+    snap = await GraphSnapshot.from_graph(age_graph.client)
+    assert snap.verified_decisions == 2
+    assert snap.correct_decisions == 1
+    # Override coverage includes the pending SOC decision in its denominator.
+    assert snap.override_rate == pytest.approx(1 / 3)
+    assert snap.override_quality == pytest.approx(0.8)
+    assert snap.category_counts == {"credential_access": 1, "lateral_movement": 2}
+    assert 0 <= snap.iks_score <= 100
 
 
+@pytest.mark.age
 @pytest.mark.asyncio
-async def test_restart_idempotent(mock_graph_client):
-    """Two from_graph() calls produce identical snapshots -- restart is safe."""
-    snap1 = await GraphSnapshot.from_graph(mock_graph_client)
-    snap2 = await GraphSnapshot.from_graph(mock_graph_client)
-    assert snap1.verified_decisions == snap2.verified_decisions
-    assert snap1.iks_score == snap2.iks_score
+async def test_restart_idempotent(age_graph):
+    age_graph.decision(correct=True)
+    first = await GraphSnapshot.from_graph(age_graph.client)
+    restored = await GraphSnapshot.from_graph(age_graph.reopen_client())
+    assert first == restored
+    age_graph.decision(correct=False)
+    updated = await GraphSnapshot.from_graph(age_graph.reopen_client())
+    assert updated.verified_decisions == first.verified_decisions + 1
+    assert updated.correct_decisions == first.correct_decisions
 
 
 def test_on_verified_decision_increments_count():
@@ -149,3 +143,5 @@ def test_epistemic_multiple_categories():
     assert state["b"]["band"] == "learning"
     assert state["c"]["band"] == "calibrating"
     assert state["d"]["band"] == "expert"
+
+

@@ -201,6 +201,18 @@ async def write_bootstrap_decisions(
         log.info("[BOOTSTRAP-GRAPH] No decisions to write (empty pool)")
         return 0
 
+    # AGEClient serializes list parameters as JSON strings. UNWIND requires
+    # a native Cypher list of maps; record keys are fixed by the builder above.
+    from ci_platform.graph.age_client import AGEClient
+
+    def literal(value: Any) -> str:
+        if isinstance(value, list):
+            return "[" + ", ".join(literal(item) for item in value) + "]"
+        if isinstance(value, dict):
+            return "{" + ", ".join(f"{key}: {literal(item)}" for key, item in value.items()) + "}"
+        return str(AGEClient.serialize_for_age(value))
+
+    decisions_literal = literal(records)
     # UNWIND batch: factor_vector passed as Python list → native AGE array.
     # No [:DECIDED_ON] relationship — bootstrap uses synthetic, not real, alerts.
     # ARCHITECTURAL NOTE: Bootstrap uses direct AGE client write
@@ -224,8 +236,8 @@ async def write_bootstrap_decisions(
             shadow_mode:      false,
             outcome:          null
         })
-        """,
-        {"decisions": records, "timestamp_epoch": int(datetime.utcnow().timestamp() * 1000)},
+        """.replace("$decisions", decisions_literal),
+        {"timestamp_epoch": int(datetime.utcnow().timestamp() * 1000)},
     )
 
     n = len(records)

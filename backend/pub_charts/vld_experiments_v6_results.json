@@ -1,0 +1,346 @@
+{
+  "significance": {
+    "VLD vs Single-Pass": {
+      "mean": 0.222,
+      "ci_lo": 0.182,
+      "ci_hi": 0.262,
+      "p_value": 0.0
+    },
+    "VLD vs Random": {
+      "mean": 0.114,
+      "ci_lo": 0.08,
+      "ci_hi": 0.15,
+      "p_value": 0.0
+    },
+    "VLD vs GraphRAG": {
+      "mean": 0.078,
+      "ci_lo": 0.042,
+      "ci_hi": 0.114,
+      "p_value": 0.0
+    },
+    "VLD vs Exhaustive": {
+      "mean": -0.04,
+      "ci_lo": -0.064,
+      "ci_hi": -0.016,
+      "p_value": 0.9998
+    },
+    "GraphRAG vs Random": {
+      "mean": 0.036,
+      "ci_lo": 0.0,
+      "ci_hi": 0.072,
+      "p_value": 0.0253
+    },
+    "S1_VLD_vs_Random": {
+      "mean": 0.0,
+      "ci_lo": 0.0,
+      "ci_hi": 0.0,
+      "p_value": 1.0
+    },
+    "S2_VLD_vs_Random": {
+      "mean": 0.36,
+      "ci_lo": 0.22,
+      "ci_hi": 0.5,
+      "p_value": 0.0
+    },
+    "S3_VLD_vs_Random": {
+      "mean": 0.072,
+      "ci_lo": 0.016,
+      "ci_hi": 0.136,
+      "p_value": 0.0085
+    },
+    "S4_VLD_vs_Random": {
+      "mean": 0.136,
+      "ci_lo": 0.064,
+      "ci_hi": 0.208,
+      "p_value": 0.0001
+    },
+    "S5_VLD_vs_Random": {
+      "mean": 0.06,
+      "ci_lo": -0.12,
+      "ci_hi": 0.24,
+      "p_value": 0.3011
+    },
+    "S6_VLD_vs_Random": {
+      "mean": 0.2,
+      "ci_lo": 0.08,
+      "ci_hi": 0.32,
+      "p_value": 0.0003
+    }
+  },
+  "showcase_scenarios": {
+    "SOC": [
+      {
+        "name": "SOC-SC1: Admin Delegation Discovery (S4)",
+        "situation": "S4",
+        "narrative": "Alert on unusual PowerShell execution. Surface factors suggest low severity + low recurrence \u2192 suppress. VLD investigates identity_context \u2192 discovers admin delegation to contractor. Q recomputes, now temporal_pattern is most uncertain \u2192 Saturday 3:14am execution. Two hops flip action from suppress to escalate.",
+        "surface_action": "suppress",
+        "correct_action": "escalate",
+        "informative_dims": [
+          "identity_context",
+          "temporal_pattern"
+        ],
+        "hops_needed": 2,
+        "demo_moment": "Watch the action change from suppress to escalate after two reads."
+      },
+      {
+        "name": "SOC-SC2: Lateral Movement Chain (S6)",
+        "situation": "S6",
+        "narrative": "RDP connection alert. Each factor alone looks normal \u2014 moderate severity, first time, standard workstation. But identity (IT admin) + timing (Sunday 2am) + blast_radius (domain controller access) TOGETHER cross the boundary. No single factor changes the answer.",
+        "surface_action": "monitor",
+        "correct_action": "escalate",
+        "informative_dims": [
+          "identity_context",
+          "temporal_pattern",
+          "blast_radius"
+        ],
+        "hops_needed": 3,
+        "demo_moment": "Three reads, each shifts slightly. The COMBINATION crosses the boundary."
+      },
+      {
+        "name": "SOC-SC3: Clear Suppress (S1)",
+        "situation": "S1",
+        "narrative": "Windows Update service check. Low severity, high recurrence (seen 47 times), non-critical asset, service account, business hours, no blast radius. VLD correctly does NOT investigate. Margin = 0.99.",
+        "surface_action": "suppress",
+        "correct_action": "suppress",
+        "informative_dims": [],
+        "hops_needed": 0,
+        "demo_moment": "System says \"no investigation needed.\" Conservation in action."
+      }
+    ],
+    "DataOps": [
+      {
+        "name": "DO-SC1: Schema Cascade (S4)",
+        "situation": "S4",
+        "narrative": "ETL pipeline failure on billing system. Surface: pipeline unhealthy, but schema looks stable \u2192 auto_resolve. VLD checks schema_stability \u2192 discovers MATKL_V2 migration (+340K codes). Q recomputes, dependency_impact now critical \u2192 billing + AR + GL all downstream. Action flips to escalate.",
+        "surface_action": "auto_resolve",
+        "correct_action": "escalate",
+        "informative_dims": [
+          "schema_stability",
+          "dependency_impact"
+        ],
+        "hops_needed": 2,
+        "demo_moment": "The root cause is a schema change, not the pipeline itself."
+      },
+      {
+        "name": "DO-SC2: Cross-System Propagation (S6)",
+        "situation": "S6",
+        "narrative": "Data freshness alert on supplier master. Each factor is borderline: pipeline OK but slow, schema recently changed, freshness 22min (SLA 30min), 3 downstream systems. No single factor triggers escalation, but the combination of slow pipeline + recent schema change + tight SLA margin + 3 downstream dependencies crosses the threshold.",
+        "surface_action": "queue",
+        "correct_action": "investigate",
+        "informative_dims": [
+          "pipeline_health",
+          "schema_stability",
+          "sla_proximity"
+        ],
+        "hops_needed": 3,
+        "demo_moment": "Three partial shifts. The SLA countdown makes the combination urgent."
+      },
+      {
+        "name": "DO-SC3: Routine Pipeline Restart (S1)",
+        "situation": "S1",
+        "narrative": "Daily refresh pipeline completed with warnings. All factors nominal. Known behavior after maintenance window. VLD does not investigate.",
+        "surface_action": "auto_resolve",
+        "correct_action": "auto_resolve",
+        "informative_dims": [],
+        "hops_needed": 0,
+        "demo_moment": "System auto-resolves. Zero investigation cost."
+      }
+    ],
+    "S2P": [
+      {
+        "name": "S2P-SC1: Contract Amendment (S3)",
+        "situation": "S3",
+        "narrative": "Invoice $47,200 vs PO $42,000 \u2014 12.4% variance \u2192 flag_review. VLD checks contract_compliance \u2192 discovers Q3 amendment with 15% price escalation clause. One hop: action changes to auto_approve.",
+        "surface_action": "flag_review",
+        "correct_action": "auto_approve",
+        "informative_dims": [
+          "contract_compliance"
+        ],
+        "hops_needed": 1,
+        "demo_moment": "One read. The contract amendment explains the variance."
+      },
+      {
+        "name": "S2P-SC2: Supplier Pattern (S4)",
+        "situation": "S4",
+        "narrative": "Invoice from reliable supplier, small variance \u2192 auto_approve. But VLD checks receipt_match \u2192 partial delivery found. Q recomputes, supplier_reliability now uncertain \u2192 check reveals 3 recent partial deliveries. Action: hold pending receipt reconciliation.",
+        "surface_action": "auto_approve",
+        "correct_action": "hold",
+        "informative_dims": [
+          "receipt_match",
+          "supplier_reliability"
+        ],
+        "hops_needed": 2,
+        "demo_moment": "Surface says approve. Investigation finds a pattern of partial deliveries."
+      },
+      {
+        "name": "S2P-SC3: Clean Three-Way Match (S1)",
+        "situation": "S1",
+        "narrative": "Invoice matches PO and receipt exactly. Known supplier, standard terms. VLD does not investigate.",
+        "surface_action": "auto_approve",
+        "correct_action": "auto_approve",
+        "informative_dims": [],
+        "hops_needed": 0,
+        "demo_moment": "Auto-approved in milliseconds. Conservation saves analyst time."
+      }
+    ],
+    "Trading": [
+      {
+        "name": "TR-SC1: Thesis Reversal (S4)",
+        "situation": "S4",
+        "narrative": "Trade proposal: buy AAPL. Position size OK, timing neutral \u2192 execute. VLD checks thesis_alignment \u2192 analyst thesis was \"AI hardware cycle\" but AAPL guidance just shifted to services. Q recomputes, concentration_risk now relevant \u2192 already 8% portfolio weight. Action: hold.",
+        "surface_action": "execute",
+        "correct_action": "hold",
+        "informative_dims": [
+          "thesis_alignment",
+          "concentration_risk"
+        ],
+        "hops_needed": 2,
+        "demo_moment": "The thesis changed. Concentration makes it worse."
+      },
+      {
+        "name": "TR-SC2: Correlation Trap (S3)",
+        "situation": "S3",
+        "narrative": "Buy NVDA, small position \u2192 execute. VLD checks correlation_exposure \u2192 0.87 correlation with existing AMD position. Combined exposure exceeds 12% of portfolio in same factor. Action: reduce.",
+        "surface_action": "execute",
+        "correct_action": "reduce",
+        "informative_dims": [
+          "correlation_exposure"
+        ],
+        "hops_needed": 1,
+        "demo_moment": "One read reveals hidden concentration through correlation."
+      },
+      {
+        "name": "TR-SC3: Clean Entry (S1)",
+        "situation": "S1",
+        "narrative": "Buy thesis-aligned stock, small position, low correlation, good timing. VLD does not investigate.",
+        "surface_action": "execute",
+        "correct_action": "execute",
+        "informative_dims": [],
+        "hops_needed": 0,
+        "demo_moment": "Green light. No investigation needed."
+      }
+    ],
+    "Purchasing": [
+      {
+        "name": "PU-SC1: Demand Spike (S3)",
+        "situation": "S3",
+        "narrative": "Reorder trigger on standard item, coverage ratio low \u2192 reorder. VLD checks demand_signal \u2192 holiday promo starting in 2 weeks, 3x normal demand expected. Standard reorder quantity insufficient. Action: reorder at 3x quantity.",
+        "surface_action": "reorder",
+        "correct_action": "reorder",
+        "informative_dims": [
+          "demand_signal"
+        ],
+        "hops_needed": 1,
+        "demo_moment": "Same action, but the investigation changes the quantity."
+      },
+      {
+        "name": "PU-SC2: Supplier Risk (S4)",
+        "situation": "S4",
+        "narrative": "Standard reorder from primary supplier \u2192 reorder. VLD checks supplier_capacity \u2192 lead time doubled (factory shutdown). Q recomputes, cost_variance now relevant \u2192 secondary supplier is 15% cheaper with normal lead time. Action: switch_supplier.",
+        "surface_action": "reorder",
+        "correct_action": "switch_supplier",
+        "informative_dims": [
+          "supplier_capacity",
+          "cost_variance"
+        ],
+        "hops_needed": 2,
+        "demo_moment": "Supplier problem leads to a better alternative."
+      },
+      {
+        "name": "PU-SC3: Stable Replenishment (S1)",
+        "situation": "S1",
+        "narrative": "Regular weekly reorder. Demand stable, supplier reliable, cost unchanged, shelf life fine. VLD does not investigate.",
+        "surface_action": "reorder",
+        "correct_action": "reorder",
+        "informative_dims": [],
+        "hops_needed": 0,
+        "demo_moment": "Auto-reordered. Zero investigation overhead."
+      }
+    ]
+  },
+  "copilot_factors": {
+    "SOC": {
+      "factors": [
+        "severity",
+        "recurrence",
+        "asset_criticality",
+        "identity_context",
+        "temporal_pattern",
+        "blast_radius"
+      ],
+      "actions": [
+        "suppress",
+        "monitor",
+        "investigate",
+        "escalate"
+      ],
+      "tensor": "(6,4,6)"
+    },
+    "DataOps": {
+      "factors": [
+        "pipeline_health",
+        "schema_stability",
+        "data_freshness",
+        "dependency_impact",
+        "sla_proximity",
+        "transformation_health"
+      ],
+      "actions": [
+        "auto_resolve",
+        "queue",
+        "investigate",
+        "escalate",
+        "rollback"
+      ],
+      "tensor": "(6,5,6)"
+    },
+    "S2P": {
+      "factors": [
+        "price_variance",
+        "contract_compliance",
+        "supplier_reliability",
+        "receipt_match",
+        "approval_chain"
+      ],
+      "actions": [
+        "auto_approve",
+        "flag_review",
+        "hold",
+        "reject",
+        "escalate"
+      ],
+      "tensor": "(5,5,7)"
+    },
+    "Trading": {
+      "factors": [
+        "thesis_alignment",
+        "position_size",
+        "concentration_risk",
+        "correlation_exposure",
+        "timing_signal"
+      ],
+      "actions": [
+        "execute",
+        "reduce",
+        "hold"
+      ],
+      "tensor": "(5,3,6)"
+    },
+    "Purchasing": {
+      "factors": [
+        "demand_signal",
+        "supplier_capacity",
+        "cost_variance",
+        "shelf_life",
+        "coverage_ratio"
+      ],
+      "actions": [
+        "reorder",
+        "defer",
+        "switch_supplier",
+        "escalate"
+      ],
+      "tensor": "(5,4,6)"
+    }
+  }
+}

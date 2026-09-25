@@ -2,6 +2,7 @@ import math
 import inspect
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
+from typing import Literal
 from unittest.mock import AsyncMock, MagicMock
 
 import numpy as np
@@ -225,8 +226,10 @@ def test_soc_dk_behavioral_gate_signal_vs_noise():
     assert after.action_index == escalate_index
 
 
-def test_soc_outcome_persists_centroid_l5_in_mean_convergence(monkeypatch):
-    store = MagicMock()
+def test_soc_outcome_persists_centroid_l5_in_mean_convergence(monkeypatch, memory_store):
+    store = memory_store
+    monkeypatch.setattr(store, "update_centroid", MagicMock(wraps=store.update_centroid))
+    monkeypatch.setattr(store, "update_dk_weights", MagicMock(wraps=store.update_dk_weights))
     monkeypatch.setattr(gae_state, "_learning_store", store)
     scorer = SimpleNamespace(
         get_phase=MagicMock(return_value="MEAN_CONVERGENCE"),
@@ -244,6 +247,8 @@ def test_soc_outcome_persists_centroid_l5_in_mean_convergence(monkeypatch):
         pre_centroid=[0.0] * 6,
     )
 
+    assert store.get_centroids("soc")[0]["caused_by_decision_id"] == "DEC-SOC-1"
+    np.testing.assert_allclose(store.get_centroids("soc")[0]["vector_json"], scorer.centroids[0, 1])
     store.update_centroid.assert_called_once()
     assert store.update_centroid.call_args.kwargs["domain"] == "soc"
     assert store.update_centroid.call_args.kwargs["category"] == "credential_access"
@@ -251,8 +256,10 @@ def test_soc_outcome_persists_centroid_l5_in_mean_convergence(monkeypatch):
     assert store.update_centroid.call_args.kwargs["caused_by_decision_id"] == "DEC-SOC-1"
 
 
-def test_soc_outcome_skips_centroid_l5_in_variance_learning(monkeypatch):
-    store = MagicMock()
+def test_soc_outcome_skips_centroid_l5_in_variance_learning(monkeypatch, memory_store):
+    store = memory_store
+    monkeypatch.setattr(store, "update_centroid", MagicMock(wraps=store.update_centroid))
+    monkeypatch.setattr(store, "update_dk_weights", MagicMock(wraps=store.update_dk_weights))
     monkeypatch.setattr(gae_state, "_learning_store", store)
     scorer = SimpleNamespace(
         get_phase=MagicMock(return_value="VARIANCE_LEARNING"),
@@ -271,8 +278,10 @@ def test_soc_outcome_skips_centroid_l5_in_variance_learning(monkeypatch):
     store.update_centroid.assert_not_called()
 
 
-def test_soc_outcome_persists_dk_weight_welford_after_reestimate(monkeypatch):
-    store = MagicMock()
+def test_soc_outcome_persists_dk_weight_welford_after_reestimate(monkeypatch, memory_store):
+    store = memory_store
+    monkeypatch.setattr(store, "update_centroid", MagicMock(wraps=store.update_centroid))
+    monkeypatch.setattr(store, "update_dk_weights", MagicMock(wraps=store.update_dk_weights))
     monkeypatch.setattr(gae_state, "_learning_store", store)
     gae_state.reset_dk_welford_tracker()
     gae_state.update_dk_welford_tracker(np.ones(6, dtype=np.float64), is_correct=True)
@@ -283,6 +292,7 @@ def test_soc_outcome_persists_dk_weight_welford_after_reestimate(monkeypatch):
 
     assert gae_state.persist_soc_dk_weights(scorer)
 
+    assert store.get_dk_weights("soc")["welford_state"] is not None
     store.update_dk_weights.assert_called_once()
     kwargs = store.update_dk_weights.call_args.kwargs
     assert kwargs["domain"] == "soc"
@@ -290,8 +300,10 @@ def test_soc_outcome_persists_dk_weight_welford_after_reestimate(monkeypatch):
     assert kwargs["welford_state"] is not None
 
 
-def test_soc_l5_failures_nonfatal(monkeypatch, caplog):
-    store = MagicMock()
+def test_soc_l5_failures_nonfatal(monkeypatch, caplog, memory_store):
+    store = memory_store
+    monkeypatch.setattr(store, "update_centroid", MagicMock(wraps=store.update_centroid))
+    monkeypatch.setattr(store, "update_dk_weights", MagicMock(wraps=store.update_dk_weights))
     store.update_centroid.side_effect = RuntimeError("store down")
     monkeypatch.setattr(gae_state, "_learning_store", store)
     scorer = SimpleNamespace(
@@ -375,12 +387,8 @@ class _RouteLearningState:
 
 
 def _centroid_update(action_index: int):
-    return SimpleNamespace(
-        category_name="credential_access",
-        category_index=0,
-        action_name=SCORER_ACTIONS[action_index],
-        action_index=action_index,
-    )
+    scorer = SOCDomainConfig().build_profile_scorer()
+    return scorer.update(np.array([0.2, 0.3, 0.4, 0.1, 0.5, 0.6]), 0, action_index, True)
 
 
 class _LearningPolicy:
@@ -397,7 +405,7 @@ async def _run_soc_outcome_with_route_patches(
     *,
     predicted_action: str = "escalate",
     analyst_action: str | None = None,
-    outcome: str = "correct",
+    outcome: Literal["correct", "incorrect"] = "correct",
     reestimate_error: Exception | None = None,
 ):
     scorer = _RouteScorer(reestimate_error=reestimate_error)

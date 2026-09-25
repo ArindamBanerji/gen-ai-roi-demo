@@ -8,12 +8,13 @@ contract and is backed by the same configured AGE graph.
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, cast
 
 from ci_platform.graph.age_sdk_adapter import AGEGraphStoreAdapter
+from copilot_sdk.graph.production import GraphStoreWrapper
 
 
-class GraphStoreAdapter:
+class GraphStoreAdapter(GraphStoreWrapper):
     """Compose the legacy AGE client with the typed GraphStore state API."""
 
     def __init__(self, graph_client: Any, store: Any) -> None:
@@ -46,10 +47,10 @@ class GraphStoreAdapter:
         self._run_state_operation(lambda: self._store.save_evolution(domain, key, payload))
 
     def get_evolution(self, domain: str, key: str) -> dict[str, Any] | None:
-        return self._run_state_operation(lambda: self._store.get_evolution(domain, key))
+        return cast(dict[str, Any] | None, self._run_state_operation(lambda: self._store.get_evolution(domain, key)))
 
     def list_evolutions(self, domain: str) -> list[dict[str, Any]]:
-        return self._run_state_operation(lambda: self._store.list_evolutions(domain))
+        return cast(list[dict[str, Any]], self._run_state_operation(lambda: self._store.list_evolutions(domain)))
 
     def delete_evolution(self, domain: str, key: str) -> None:
         self._run_state_operation(lambda: self._store.delete_evolution(domain, key))
@@ -58,16 +59,16 @@ class GraphStoreAdapter:
         self._run_state_operation(lambda: self._store.save_posterior(domain, key, payload))
 
     def get_posterior(self, domain: str, key: str) -> dict[str, Any] | None:
-        return self._run_state_operation(lambda: self._store.get_posterior(domain, key))
+        return cast(dict[str, Any] | None, self._run_state_operation(lambda: self._store.get_posterior(domain, key)))
 
     def save_promotion(self, domain: str, key: str, payload: dict[str, Any]) -> None:
         self._run_state_operation(lambda: self._store.save_promotion(domain, key, payload))
 
     def get_promotion(self, domain: str, key: str) -> dict[str, Any] | None:
-        return self._run_state_operation(lambda: self._store.get_promotion(domain, key))
+        return cast(dict[str, Any] | None, self._run_state_operation(lambda: self._store.get_promotion(domain, key)))
 
     def list_promotions(self, domain: str) -> list[dict[str, Any]]:
-        return self._run_state_operation(lambda: self._store.list_promotions(domain))
+        return cast(list[dict[str, Any]], self._run_state_operation(lambda: self._store.list_promotions(domain)))
 
     def save_evolution_event(self, **kwargs: Any) -> None:
         self._store.write_evolution_event(**kwargs)

@@ -160,7 +160,7 @@ test.describe('Learning stress tests', () => {
   //   • No fatal console errors (React duplicate-key warnings are filtered).
 
   test('all tabs reachable after 5 decisions', async ({ page }) => {
-    test.slow();
+    test.setTimeout(180000);
 
     const errors = collectConsoleErrors(page);
 
@@ -180,6 +180,7 @@ test.describe('Learning stress tests', () => {
 
     for (const { tab, wait } of tabChecks) {
       await navigateToTab(page, tab);
+      await page.waitForLoadState('domcontentloaded');
       // Wait for any primary content on this tab — proves the render tree is alive.
       await page.getByText(wait).first().waitFor({ state: 'visible', timeout: 20000 });
       await expect(page.locator('body')).toBeVisible();

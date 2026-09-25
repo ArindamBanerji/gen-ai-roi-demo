@@ -79,17 +79,11 @@ def test_outcome_reestimate_dk_through_adapter():
     assert scorer.get_dk_weights(0) is not None
 
 
-def test_outcome_l5_persistence_through_adapter(monkeypatch):
+def test_outcome_l5_persistence_through_adapter(monkeypatch, memory_store):
     scorer = _adapter()
     pre = scorer.centroids[0, 1].copy().tolist()
     scorer.update(np.full(6, 0.8), category_index=0, action_index=1, correct=True)
-    calls: list[dict] = []
-
-    class _Store:
-        def update_centroid(self, **kwargs):
-            calls.append(kwargs)
-
-    monkeypatch.setattr(gae_state, "get_learning_store", lambda: _Store())
+    monkeypatch.setattr(gae_state, "get_learning_store", lambda: memory_store)
 
     persisted = gae_state.persist_soc_centroid(
         scorer=scorer,
@@ -102,9 +96,11 @@ def test_outcome_l5_persistence_through_adapter(monkeypatch):
     )
 
     assert persisted is True
-    assert calls
-    assert calls[0]["domain"] == "soc"
-    assert calls[0]["category"] == "credential_access"
+    stored = memory_store.get_centroids("soc")[0]
+    assert stored is not None
+    assert stored["category"] == "credential_access"
+    np.testing.assert_allclose(stored["vector_json"], scorer.centroids[0, 1])
+
 
 
 def test_outcome_referral_preserved():

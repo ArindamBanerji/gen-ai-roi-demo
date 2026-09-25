@@ -226,7 +226,8 @@ async def test_health_exposes_entity_cache_diagnostics(monkeypatch):
     await triage._soc_get_security_context_for_analyze("ALERT-1")
     await triage._soc_get_security_context_for_analyze("ALERT-1")
 
-    payload = await app_main.health()
+    import json
+    payload = json.loads((await app_main.health()).body)
     diagnostics = payload["components"]["entity_cache"]
 
     assert diagnostics["enabled"] is True
@@ -244,10 +245,11 @@ async def test_health_survives_entity_cache_diagnostics_failure(monkeypatch):
 
     monkeypatch.setattr(triage, "_soc_entity_cache_diagnostics", _raise_diagnostics)
 
-    payload = await app_main.health()
+    import json
+    payload = json.loads((await app_main.health()).body)
     diagnostics = payload["components"]["entity_cache"]
 
-    assert payload["status"] == "healthy"
+    assert payload["status"] == ("ok" if payload["ready"] else "error")
     assert diagnostics == {
         "available": False,
         "error": "RuntimeError",

@@ -62,28 +62,22 @@ def _make_score_result(action_index=0, confidence=0.85, n_actions=5):
     )
 
 
-def _cat_stats_graph(cat_count: int, correct: int = 0, verified: int = 0):
-    """Return a FakeAGE that answers DecisionHistoryService queries."""
-    async def run_query(query, params=None):
-        if "d.category = $cat" in query:
-            return [{"cat_count": cat_count, "correct_count": correct, "verified_count": verified}]
-        return []
-
-    class FakeAGE:
-        pass
-    FakeAGE.run_query = staticmethod(run_query)
-    return FakeAGE()
+def _cat_stats_graph(age_graph, cat_count: int, correct: int = 0, verified: int = 0):
+    for index in range(cat_count):
+        age_graph.decision(correct=(index < correct) if index < verified else None)
+    return age_graph.client
 
 
 # ---------------------------------------------------------------------------
 # Test 1: low confidence → auto_approve = False
 # ---------------------------------------------------------------------------
 
-def test_composite_evaluate_low_confidence():
+@pytest.mark.age
+def test_composite_evaluate_low_confidence(age_graph):
     """confidence < CONFIDENCE_THRESHOLD (0.70) -> auto_approve=False."""
     f = [0.5] * 6
     result_sr = _make_score_result(action_index=0, confidence=0.50)
-    graph = _cat_stats_graph(cat_count=100, correct=90, verified=100)
+    graph = _cat_stats_graph(age_graph, cat_count=100, correct=90, verified=100)
 
     result = asyncio.run(
         CompositeDiscriminant.evaluate(result_sr, "credential_access", f, 0.0, graph)
@@ -99,11 +93,12 @@ def test_composite_evaluate_low_confidence():
 # Test 2: low cat_count → False (maturity gate)
 # ---------------------------------------------------------------------------
 
-def test_composite_evaluate_low_cat_count():
+@pytest.mark.age
+def test_composite_evaluate_low_cat_count(age_graph):
     """cat_count < MIN_CAT_COUNT (50) -> auto_approve=False even with high confidence."""
     f = [0.8, 0.9, 0.1, 0.7, 0.8, 0.2]
     result_sr = _make_score_result(action_index=0, confidence=0.90)
-    graph = _cat_stats_graph(cat_count=10)
+    graph = _cat_stats_graph(age_graph, cat_count=10)
 
     result = asyncio.run(
         CompositeDiscriminant.evaluate(result_sr, "credential_access", f, 0.0, graph)
@@ -119,7 +114,8 @@ def test_composite_evaluate_low_cat_count():
 # Test 3: all gates pass → auto_approve=True
 # ---------------------------------------------------------------------------
 
-def test_composite_evaluate_all_pass():
+@pytest.mark.age
+def test_composite_evaluate_all_pass(age_graph):
     """With confidence=0.85, large margin, cat_count=100 -> auto_approve=True."""
     # action_index=0 (escalate), high confidence, clear margin from other actions
     probs = np.array([0.85, 0.10, 0.02, 0.02, 0.01])
@@ -133,7 +129,7 @@ def test_composite_evaluate_all_pass():
         probabilities: np.ndarray = dataclasses.field(default_factory=lambda: probs)
         distances: np.ndarray = dataclasses.field(default_factory=lambda: distances)
 
-    graph = _cat_stats_graph(cat_count=100, correct=92, verified=100)
+    graph = _cat_stats_graph(age_graph, cat_count=100, correct=92, verified=100)
 
     result = asyncio.run(
         CompositeDiscriminant.evaluate(SR(), "credential_access", [0.7, 0.8, 0.1, 0.6, 0.7, 0.2], 0.0, graph)
@@ -147,7 +143,8 @@ def test_composite_evaluate_all_pass():
 # Test 4: suppress action + confidence < 0.95 → False
 # ---------------------------------------------------------------------------
 
-def test_composite_suppress_safety():
+@pytest.mark.age
+def test_composite_suppress_safety(age_graph):
     """suppress action with confidence=0.80 -> auto_approve=False (needs >= 0.95)."""
     from app.domains.soc.config import SOC_ACTIONS
     suppress_idx = SOC_ACTIONS.index("suppress")  # index 2
@@ -169,7 +166,7 @@ def test_composite_suppress_safety():
         distances: np.ndarray = dataclasses.field(default_factory=lambda: distances)
 
     # cat_count=100 so maturity gate passes — only suppress safety should block it
-    graph = _cat_stats_graph(cat_count=100, correct=90, verified=100)
+    graph = _cat_stats_graph(age_graph, cat_count=100, correct=90, verified=100)
 
     result = asyncio.run(
         CompositeDiscriminant.evaluate(SR(), "credential_access", [0.5]*6, 0.0, graph)
@@ -185,7 +182,8 @@ def test_composite_suppress_safety():
 # Test 5: all 13 features present
 # ---------------------------------------------------------------------------
 
-def test_composite_features_computed():
+@pytest.mark.age
+def test_composite_features_computed(age_graph):
     """All 13 feature keys must be present in the result."""
     EXPECTED_FEATURES = {
         "confidence", "margin", "entropy", "top3_mass", "prob_std",
@@ -193,7 +191,7 @@ def test_composite_features_computed():
         "factor_center_dist", "cat_count", "rolling_accuracy", "decision_position",
     }
     result_sr = _make_score_result(action_index=1, confidence=0.60)
-    graph = _cat_stats_graph(cat_count=20)
+    graph = _cat_stats_graph(age_graph, cat_count=20)
 
     result = asyncio.run(
         CompositeDiscriminant.evaluate(result_sr, "lateral_movement", [0.5]*6, 0.3, graph)
@@ -210,20 +208,15 @@ def test_composite_features_computed():
 # Test 6: GET /api/soc/auto-approve-stats structure
 # ---------------------------------------------------------------------------
 
-def test_auto_approve_stats_endpoint():
+@pytest.mark.age
+def test_auto_approve_stats_endpoint(age_graph):
     """GET /api/soc/auto-approve-stats returns valid structure."""
     from app.main import app
 
-    async def fake_run_query(query, params=None):
-        if "d.auto_approved" in query:
-            return [
-                {"category": "credential_access", "total": 30, "approved": 5},
-                {"category": "lateral_movement",  "total": 20, "approved": 2},
-            ]
-        return []
-
-    with patch("app.routers.framework_router.graph_client") as mock_graph:
-        mock_graph.run_query = fake_run_query
+    for category, count, approved in [("credential_access", 30, 5), ("lateral_movement", 20, 2)]:
+        for index in range(count):
+            age_graph.decision(category=category, auto_approved=index < approved)
+    with patch("app.routers.framework_router.graph_client", age_graph.client):
         client = TestClient(app)
         resp = client.get("/api/soc/auto-approve-stats")
 
@@ -292,17 +285,11 @@ def test_analyze_includes_composite_gate():
 # Test 8: decision history empty category
 # ---------------------------------------------------------------------------
 
-def test_decision_history_empty_category():
+@pytest.mark.age
+def test_decision_history_empty_category(age_graph):
     """Query a category with no decisions -> cat_count=0, rolling_accuracy=0.5."""
-    async def run_query(query, params=None):
-        return [{"cat_count": 0, "correct_count": 0, "verified_count": 0}]
-
-    class FakeAGE:
-        pass
-    FakeAGE.run_query = staticmethod(run_query)
-
     result = asyncio.run(
-        DecisionHistoryService.get_category_stats("cloud_infrastructure", FakeAGE())
+        DecisionHistoryService.get_category_stats("cloud_infrastructure", age_graph.client)
     )
 
     assert result["cat_count"] == 0

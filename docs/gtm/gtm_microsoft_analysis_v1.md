@@ -76,7 +76,7 @@ What this looks like in practice:
 Your deployment's kernel weights after 250 decisions:
 
 Factor                  σ       Weight    Meaning
-travel_match           0.18    0.31×     "Your travel data is noisy — gaps in HR integration"
+privileged_identity_context 0.18 0.31×   "Your identity telemetry is noisy — gaps in IdP integration"
 asset_criticality      0.06    2.78×     "Your CMDB is well-maintained — high trust"
 threat_intel_enrichment 0.09   1.23×     "Reliable signal"
 time_anomaly           0.07    2.04×     "Strong signal here"

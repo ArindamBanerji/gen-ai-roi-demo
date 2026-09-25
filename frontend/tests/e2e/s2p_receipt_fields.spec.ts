@@ -23,13 +23,14 @@ const baseScorePayload = {
   category: 'price_variance',
   amount: 22426.73,
   supplier_id: 'SUP-001',
-  match_status: 0.698,
-  amount_variance_ratio: 0.142,
-  duplicate_score: 0.065,
-  supplier_exception_history: 0.164,
-  payment_terms_impact: 0.859,
-  commodity_index_correlation: 0.194,
-  tax_regulatory_compliance: 0.586,
+  match_status: 0.5,
+  amount_variance_ratio: 0.5,
+  duplicate_score: 0.5,
+  supplier_exception_history: 0.5,
+  payment_terms_impact: 0.5,
+  commodity_index_correlation: 0.5,
+  tax_regulatory_compliance: 0.5,
+  environmental_risk: 0.5,
 }
 
 async function scoreInvoice(request: APIRequestContext, eventId: string) {

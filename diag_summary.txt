@@ -1,0 +1,29 @@
+=== SOC ECONNRESET DIAGNOSTIC SUMMARY ===
+
+isolated    : passed=8 failed=0 ECONNRESET=0 (3.9m)
+light       : passed=122 failed=1 ECONNRESET=0 (8.6m; 116 tests preceded compounding)
+heavy       : passed=192 failed=0 ECONNRESET=0 (10.3m; 154 tests preceded compounding)
+repeat      : passed=40 failed=0 ECONNRESET=0 (10.3m; five full compounding iterations)
+
+BACKEND PROBE:
+20 paced + 50 burst GET /api/soc/learning-state requests: 70/70 HTTP 200.
+Paced latency range: 0.071s to 0.139s. No ECONNRESET or timeout.
+
+SPEC REQUEST VOLUME:
+11 getApiData calls, plus alerts/reset once before each of 8 tests (19 direct
+requests per file run). page.request shares the browser request context; this
+spec does not create separate API request contexts. Declared makeNDecisions
+batches total 21 decisions per file run.
+
+SERVER CONFIG:
+No Uvicorn/Gunicorn config files or worker/concurrency settings were found in
+backend/app/main.py or pyproject.toml. backend/requirements.txt pins
+uvicorn[standard]==0.31.0.
+
+DIAGNOSIS:
+NON-REPRODUCIBLE. The reported ECONNRESET on compounding.spec.ts:39 did not
+recur in isolation, after 116-test light load, after 154-test heavy load, or
+across five consecutive compounding runs. The direct endpoint burst was also
+stable. The evidence does not support a load-dependent, backend-dependent, or
+spec-internal failure. The lone light-run failure was unrelated: an S2P
+/api/s2p/score request-context timeout on port 8002.

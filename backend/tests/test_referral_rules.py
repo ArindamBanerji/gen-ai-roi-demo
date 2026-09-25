@@ -330,23 +330,17 @@ def test_r7_fires_when_cross_category_count_at_threshold():
     assert detail['cross_category_count'] == 2
 
 
-def test_r2_r7_safe_degradation_on_graph_failure():
-    """AGE exception -> both helpers return 0, neither rule fires (P-REF-2)."""
+def test_r2_r7_graph_failure_propagates():
+    """AGE exceptions propagate; callers own any graceful degradation policy."""
     from ci_platform.graph.age_client import AGEClient
 
     client = object.__new__(AGEClient)
     client.run_query = AsyncMock(side_effect=Exception("connection refused"))
 
-    seq_count   = asyncio.run(client.get_sequence_count("10.0.0.1"))
-    cross_count = asyncio.run(client.get_cross_category_count("user-42"))
-
-    assert seq_count == 0
-    assert cross_count == 0
-
-    r2 = RapidSuccessionRule(threshold=3)
-    r7 = CrossCategoryRule(threshold=2)
-    assert r2.evaluate({'sequence_count': seq_count})[0] is False
-    assert r7.evaluate({'cross_category_count': cross_count})[0] is False
+    with pytest.raises(Exception, match="connection refused"):
+        asyncio.run(client.get_sequence_count("10.0.0.1"))
+    with pytest.raises(Exception, match="connection refused"):
+        asyncio.run(client.get_cross_category_count("user-42"))
 
 
 # ---------------------------------------------------------------------------

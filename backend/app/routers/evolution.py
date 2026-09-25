@@ -34,19 +34,56 @@ from gae.scoring import score_alert
 router = APIRouter()
 
 
+def _copy_state_value(value: Any) -> Any:
+    """Copy mutable state while leaving runtime handles (for example locks) shared."""
+    try:
+        return copy.deepcopy(value)
+    except (TypeError, copy.Error):
+        return value
+
+
+def _snapshot_object_state(obj: Any) -> dict[str, Any]:
+    state = getattr(obj, "__dict__", None)
+    if not isinstance(state, dict):
+        return {}
+    return {key: _copy_state_value(value) for key, value in state.items()}
+
+
 def _snapshot_scorer_state(scorer: Any) -> dict[str, Any]:
+    """Capture scorer state without deepcopying non-copyable runtime handles.
+
+    The production adapter contains an AGE graph-store lock in its object
+    graph.  A whole-object deepcopy therefore raises ``TypeError`` before the
+    demo can run.  The adapter delegates mutation to ``_scorer``; snapshot
+    that nested scorer field-by-field and preserve the adapter's handles.
+    """
     state = getattr(scorer, "__dict__", None)
     if not isinstance(state, dict):
         return {}
-    return copy.deepcopy(state)
+    snapshot: dict[str, Any] = {}
+    for key, value in state.items():
+        if key == "_scorer" and hasattr(value, "__dict__"):
+            snapshot[key] = {"__object_state__": _snapshot_object_state(value)}
+        else:
+            snapshot[key] = _copy_state_value(value)
+    return snapshot
 
 
 def _restore_scorer_state(scorer: Any, snapshot: dict[str, Any]) -> None:
     state = getattr(scorer, "__dict__", None)
     if not isinstance(state, dict):
         return
-    state.clear()
-    state.update(snapshot)
+    for key, value in snapshot.items():
+        if (
+            isinstance(value, dict)
+            and set(value) == {"__object_state__"}
+            and hasattr(state.get(key), "__dict__")
+        ):
+            nested_state = state[key].__dict__
+            nested_state.clear()
+            nested_state.update(value["__object_state__"])
+        else:
+            state[key] = value
 
 
 # ============================================================================
@@ -581,11 +618,14 @@ async def process_alert_blocked(request: ProcessAlertRequest):
 # ============================================================================
 
 @router.post("/eval/simulate-failure")
-async def simulate_failure():
+async def simulate_failure(payload: Optional[dict[str, Any]] = None):
     """
     Simulate a failed eval gate for demonstration purposes.
     Shows what happens when Safe Action check fails.
     """
+    magnitude = float((payload or {}).get("magnitude", 0.15))
+    if not 0.0 < magnitude <= 1.0:
+        raise HTTPException(status_code=422, detail="magnitude must be in (0, 1]")
     injected = 0
     try:
         async with acquire_scorer() as scorer:
@@ -597,7 +637,9 @@ async def simulate_failure():
                 for idx in range(20):
                     category_index = idx % max(n_categories, 1)
                     factors = [
-                        0.9 if (factor_index + idx) % 3 == 0 else 0.1
+                        0.5 + 0.5 * magnitude
+                        if (factor_index + idx) % 3 == 0
+                        else 0.5 - 0.5 * magnitude
                         for factor_index in range(n_factors)
                     ]
                     result = scorer.score(factors, category_index=category_index)
@@ -624,6 +666,7 @@ async def simulate_failure():
     return {
         "simulated": True,
         "decisions_injected": injected,
+        "magnitude": magnitude,
         "provenance": "simulated",
         "conservation_status": conservation_status,
         "simulated_check": "Safe Action",

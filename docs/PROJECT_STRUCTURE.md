@@ -169,7 +169,7 @@ See v2.5 documentation for details. Key additions:
 - **Files:** `services/threat_intel.py` (NEW), `services/triage.py` (NEW), `routers/graph.py` (NEW)
 - **Features:**
   - **Threat Intel Service** — fetches 5 curated IOCs from Pulsedive live API (when `PULSEDIVE_API_KEY` set) or hardcoded fallback. MERGEs `:ThreatIntel` nodes and `:ASSOCIATED_WITH` edges into Neo4j
-  - **Decision Factor Service** — 6-factor breakdown for any alert: 5 static factors + 1 live `threat_intel_enrichment` factor queried from Neo4j. Final order: travel_match/campaign_signature → asset_criticality → **threat_intel_enrichment** → time_anomaly → device_trust → pattern_history
+  - **Decision Factor Service** — Historical v3.0 snapshot: five static factors plus live `threat_intel_enrichment`. The live SOC scorer now uses `privileged_identity_context` → asset_criticality → **threat_intel_enrichment** → pattern_history → time_anomaly → device_trust; the former `travel_match` label is legacy-fixture compatibility only.
   - **Graph Router** — `POST /api/graph/threat-intel/refresh` triggers live enrichment
   - `services/triage.py` delegates factor computation to `domains/soc/factors.py`
 - **Neo4j schema addition:** `:ThreatIntel` nodes with `ASSOCIATED_WITH` edges to `:Alert`
@@ -542,13 +542,16 @@ See v2.5 documentation for details. Key additions:
   - Queries Neo4j for `(:ThreatIntel)-[:ASSOCIATED_WITH]->(:Alert {id: alert_id})` to build the 6th live factor
   - Inserts `threat_intel_enrichment` at index 2 in final factor list
 
-**Factor order:**
-1. travel_match / campaign_signature_match / alert_severity
-2. asset_criticality / sender_domain_risk
-3. **threat_intel_enrichment** ← live Neo4j query
-4. time_anomaly
-5. device_trust / asset_criticality
-6. pattern_history
+**Live factor order:**
+1. privileged_identity_context
+2. asset_criticality
+3. **threat_intel_enrichment** ← live graph enrichment when available
+4. pattern_history
+5. time_anomaly
+6. device_trust
+
+`travel_match`, campaign-signature, and alert-severity examples in this v3.0
+section are historical aliases or prior-service inputs, not live scorer names.
 
 **Tab Support:** Tab 3 (Decision Explainer / decision factors panel)
 
@@ -621,7 +624,7 @@ See v2.5 documentation for details. Key additions:
 **`config.py` — SOCDomainConfig:**
 - Implements all 13 abstract members of `DomainConfig`
 - `name="soc"`, `display_name="SOC Copilot"`, `trigger_entity="Alert"`
-- 6 factors: travel_match, asset_criticality, time_anomaly, device_trust, pattern_history, behavioral_baseline
+- 6 factors: privileged_identity_context, asset_criticality, threat_intel_enrichment, pattern_history, time_anomaly, device_trust
 - 5 actions: false_positive_close, auto_remediate, enrich_and_wait, escalate_tier2, escalate_incident
 - 6 situation types: TRAVEL_LOGIN_ANOMALY, KNOWN_PHISHING_CAMPAIGN, CRITICAL_ASSET_MALWARE, DATA_EXFILTRATION_DETECTED, UNKNOWN_LOGIN_PATTERN, ROUTINE_MALWARE_SCAN
 - 4 policies with priority-1 conflict pair (POLICY-SOC-003 vs POLICY-SEC-007 for ALERT-7823)

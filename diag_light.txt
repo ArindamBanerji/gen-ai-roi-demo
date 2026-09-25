@@ -1,0 +1,167 @@
+[playwright] BACKEND_PORT not found in .env — using default 8001
+
+Running 124 tests using 1 worker
+
+(node:119672) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:119672) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[playwright] BACKEND_PORT not found in .env — using default 8001
+  ok   1 [chromium] › tests\e2e\checklist.spec.ts:34:3 › Tab 1 – Alert Triage › alerts load – at least 1 alert card visible (11.6s)
+  ok   2 [chromium] › tests\e2e\checklist.spec.ts:42:3 › Tab 1 – Alert Triage › NL explanation text non-empty (10.4s)
+  ok   3 [chromium] › tests\e2e\checklist.spec.ts:68:3 › Tab 2 – Institutional Intelligence › IKS score is a number (not null, not 0) (5.5s)
+  ok   4 [chromium] › tests\e2e\checklist.spec.ts:81:3 › Tab 2 – Institutional Intelligence › accuracy trajectory panel renders (SVG present) (5.2s)
+  ok   5 [chromium] › tests\e2e\checklist.spec.ts:88:3 › Tab 2 – Institutional Intelligence › category dropdown has options (4.4s)
+  ok   6 [chromium] › tests\e2e\checklist.spec.ts:97:3 › Tab 2 – Institutional Intelligence › OLS / advanced oversight section present (4.6s)
+  ok   7 [chromium] › tests\e2e\checklist.spec.ts:107:3 › Tab 3 – Alert Detail › at least 1 provenance node label visible (4.1s)
+  ok   8 [chromium] › tests\e2e\checklist.spec.ts:136:3 › Tab 4 – Decision Economics › ROI calculator renders (2.8s)
+  ok   9 [chromium] › tests\e2e\checklist.spec.ts:142:3 › Tab 4 – Decision Economics › decisions_per_day value present (10.6s)
+  ok  10 [chromium] › tests\e2e\checklist.spec.ts:150:3 › Tab 4 – Decision Economics › qualifies_one_quarter field present (3.0s)
+  ok  11 [chromium] › tests\e2e\checklist.spec.ts:167:3 › Tab 5 – Executive Narrative › 3 narrative sections present (3.4s)
+  ok  12 [chromium] › tests\e2e\checklist.spec.ts:173:3 › Tab 5 – Executive Narrative › PDF export button visible and initiates download (3.9s)
+  ok  13 [chromium] › tests\e2e\checklist.spec.ts:190:3 › API checks › GET /api/soc/analyst-benchmarking → status=ready (275ms)
+  ok  14 [chromium] › tests\e2e\checklist.spec.ts:197:3 › API checks › GET /api/soc/enrichment-advisor → ioc_coverage present (247ms)
+  x   15 [chromium] › tests\e2e\checklist.spec.ts:204:3 › API checks › POST /api/s2p/score × 10 scenarios → all return valid action (30.0s)
+(node:3144) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3144) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[playwright] BACKEND_PORT not found in .env — using default 8001
+  ok  16 [chromium] › tests\e2e\checklist.spec.ts:231:3 › API checks › GET /api/soc/accuracy-trajectory → trajectory_points non-empty (156ms)
+  ok  17 [chromium] › tests\e2e\checklist.spec.ts:287:5 › Tab 1 – Alert Triage (factor names) › factor "Privileged Identity Context" visible after clicking alert (6.2s)
+  ok  18 [chromium] › tests\e2e\checklist.spec.ts:287:5 › Tab 1 – Alert Triage (factor names) › factor "Asset Criticality" visible after clicking alert (4.3s)
+  ok  19 [chromium] › tests\e2e\checklist.spec.ts:287:5 › Tab 1 – Alert Triage (factor names) › factor "Threat Intel Enrichment" visible after clicking alert (3.3s)
+  ok  20 [chromium] › tests\e2e\checklist.spec.ts:287:5 › Tab 1 – Alert Triage (factor names) › factor "Pattern History" visible after clicking alert (5.2s)
+  ok  21 [chromium] › tests\e2e\checklist.spec.ts:287:5 › Tab 1 – Alert Triage (factor names) › factor "Time Anomaly" visible after clicking alert (4.3s)
+  ok  22 [chromium] › tests\e2e\checklist.spec.ts:287:5 › Tab 1 – Alert Triage (factor names) › factor "Device Trust" visible after clicking alert (5.7s)
+  -   23 [chromium] › tests\e2e\checklist.spec.ts:299:3 › Tab 1 – Alert Triage (detail panel) › NL explanation changes when a different alert is clicked
+  ok  24 [chromium] › tests\e2e\checklist.spec.ts:327:3 › Tab 1 – Alert Triage (detail panel) › campaign badge shows exact text "Part of Campaign" or "No active campaign" (5.4s)
+  ok  25 [chromium] › tests\e2e\checklist.spec.ts:333:3 › Tab 1 – Alert Triage (detail panel) › confidence renders as "Confidence: XX.X%" pattern (6.6s)
+  ok  26 [chromium] › tests\e2e\checklist.spec.ts:339:3 › Tab 1 – Alert Triage (detail panel) › Recommendation panel heading visible after clicking alert (4.9s)
+  ok  27 [chromium] › tests\e2e\checklist.spec.ts:344:3 › Tab 1 – Alert Triage (detail panel) › Investigation Summary (narrative) panel renders or is absent gracefully (4.1s)
+  ok  28 [chromium] › tests\e2e\checklist.spec.ts:356:3 › Tab 1 – Alert Triage (detail panel) › alert queue shows severity badge (HIGH / MEDIUM / LOW / CRITICAL) (4.4s)
+  ok  29 [chromium] › tests\e2e\checklist.spec.ts:364:3 › Tab 1 – Alert Triage (detail panel) › selected alert detail panel shows "Selected:" header (7.6s)
+  ok  30 [chromium] › tests\e2e\checklist.spec.ts:379:3 › Tab 2 – Institutional Intelligence (extended) › IKS value > 0 (v2 fallback fix verified) (3.8s)
+  ok  31 [chromium] › tests\e2e\checklist.spec.ts:387:3 › Tab 2 – Institutional Intelligence (extended) › IKS "/ 100" label present (3.0s)
+  ok  32 [chromium] › tests\e2e\checklist.spec.ts:391:3 › Tab 2 – Institutional Intelligence (extended) › all 6 SOC categories in dropdown (fix verified) (3.4s)
+  ok  33 [chromium] › tests\e2e\checklist.spec.ts:399:3 › Tab 2 – Institutional Intelligence (extended) › accuracy trajectory SVG has at least 1 path element (2.2s)
+  ok  34 [chromium] › tests\e2e\checklist.spec.ts:407:3 › Tab 2 – Institutional Intelligence (extended) › decision count shown on tab (>= 0) (2.3s)
+  ok  35 [chromium] › tests\e2e\checklist.spec.ts:416:3 › Tab 2 – Institutional Intelligence (extended) › Drift Alerts section present (2.3s)
+  ok  36 [chromium] › tests\e2e\checklist.spec.ts:420:3 › Tab 2 – Institutional Intelligence (extended) › category dropdown first option is "All categories" (2.9s)
+  ok  37 [chromium] › tests\e2e\checklist.spec.ts:428:3 › Tab 2 – Institutional Intelligence (extended) › switching cost section present in IKS block (2.9s)
+  ok  38 [chromium] › tests\e2e\checklist.spec.ts:435:3 › Tab 2 – Institutional Intelligence (extended) › override learning status: frozen badge OR active badge visible (3.6s)
+  ok  39 [chromium] › tests\e2e\checklist.spec.ts:441:3 › Tab 2 – Institutional Intelligence (extended) › accuracy trajectory category dropdown triggers re-render (3.5s)
+  ok  40 [chromium] › tests\e2e\checklist.spec.ts:454:3 › Tab 2 – Institutional Intelligence (extended) › IKS interpretation text visible (non-empty italic description) (3.2s)
+  ok  41 [chromium] › tests\e2e\checklist.spec.ts:470:3 › Tab 3 – Alert Detail (extended) › "Why This Decision?" heading contains emoji prefix 🔎 (6.5s)
+  ok  42 [chromium] › tests\e2e\checklist.spec.ts:478:3 › Tab 3 – Alert Detail (extended) › all 6 factor display names visible in breakdown (4.1s)
+  ok  43 [chromium] › tests\e2e\checklist.spec.ts:493:3 › Tab 3 – Alert Detail (extended) › factor bar percentage values rendered (e.g. "42%") (3.8s)
+  ok  44 [chromium] › tests\e2e\checklist.spec.ts:502:3 › Tab 3 – Alert Detail (extended) › factor contribution labels visible (high / medium / low) (3.0s)
+  ok  45 [chromium] › tests\e2e\checklist.spec.ts:508:3 › Tab 3 – Alert Detail (extended) › decision method line visible below factors (2.8s)
+  ok  46 [chromium] › tests\e2e\checklist.spec.ts:513:3 › Tab 3 – Alert Detail (extended) › graph context section shows node count (3.1s)
+  ok  47 [chromium] › tests\e2e\checklist.spec.ts:519:3 › Tab 3 – Alert Detail (extended) › MITRE ATT&CK badge renders OR is absent without error (6.7s)
+  ok  48 [chromium] › tests\e2e\checklist.spec.ts:527:3 › Tab 3 – Alert Detail (extended) › collapse/expand button on "Why This Decision?" panel works (6.3s)
+  ok  49 [chromium] › tests\e2e\checklist.spec.ts:552:3 › Tab 4 – Decision Economics (extended) › ROI dollar value is non-zero (formatUSD output visible) (3.2s)
+  ok  50 [chromium] › tests\e2e\checklist.spec.ts:560:3 › Tab 4 – Decision Economics (extended) › "Calculate ROI" button visible (2.0s)
+  ok  51 [chromium] › tests\e2e\checklist.spec.ts:564:3 › Tab 4 – Decision Economics (extended) › ROI modal opens when "Calculate ROI" clicked (2.5s)
+  ok  52 [chromium] › tests\e2e\checklist.spec.ts:571:3 › Tab 4 – Decision Economics (extended) › alerts_per_day input present in ROI modal (4.3s)
+  ok  53 [chromium] › tests\e2e\checklist.spec.ts:578:3 › Tab 4 – Decision Economics (extended) › business impact section shows cost avoided (3.7s)
+  ok  54 [chromium] › tests\e2e\checklist.spec.ts:582:3 › Tab 4 – Decision Economics (extended) › evolution events section renders (2.5s)
+  ok  55 [chromium] › tests\e2e\checklist.spec.ts:588:3 › Tab 4 – Decision Economics (extended) › headline metrics panel renders (auto-close or MTTR stat) (10.2s)
+  ok  56 [chromium] › tests\e2e\checklist.spec.ts:603:3 › Tab 5 – Executive Narrative (extended) › headline text is non-empty (3.0s)
+  ok  57 [chromium] › tests\e2e\checklist.spec.ts:613:3 › Tab 5 – Executive Narrative (extended) › "What Changed" section heading present (2.6s)
+  ok  58 [chromium] › tests\e2e\checklist.spec.ts:617:3 › Tab 5 – Executive Narrative (extended) › "What Was Discovered" section heading present (3.7s)
+  ok  59 [chromium] › tests\e2e\checklist.spec.ts:621:3 › Tab 5 – Executive Narrative (extended) › "What the System Knows" section heading present (3.5s)
+  ok  60 [chromium] › tests\e2e\checklist.spec.ts:625:3 › Tab 5 – Executive Narrative (extended) › PDF export link href points to executive-narrative/pdf (3.0s)
+  ok  61 [chromium] › tests\e2e\checklist.spec.ts:632:3 › Tab 5 – Executive Narrative (extended) › generated_at timestamp or date visible on narrative (2.0s)
+  ok  62 [chromium] › tests\e2e\checklist.spec.ts:642:3 › API contract – learning-state › GET /api/soc/learning-state → 200 (316ms)
+  ok  63 [chromium] › tests\e2e\checklist.spec.ts:647:3 › API contract – learning-state › GET /api/soc/learning-state → decision_count >= 0 (178ms)
+  ok  64 [chromium] › tests\e2e\checklist.spec.ts:653:3 › API contract – learning-state › GET /api/soc/learning-state → iks_v2 >= 0 (185ms)
+  ok  65 [chromium] › tests\e2e\checklist.spec.ts:659:3 › API contract – learning-state › GET /api/soc/learning-state → frozen is boolean (167ms)
+  ok  66 [chromium] › tests\e2e\checklist.spec.ts:666:3 › API contract – profile (decisions_per_day / qualifies_one_quarter) › GET /api/soc/profile → 200 (29ms)
+  ok  67 [chromium] › tests\e2e\checklist.spec.ts:671:3 › API contract – profile (decisions_per_day / qualifies_one_quarter) › GET /api/soc/profile → iks.switching_cost.decisions_per_day is a positive number (107ms)
+  ok  68 [chromium] › tests\e2e\checklist.spec.ts:679:3 › API contract – profile (decisions_per_day / qualifies_one_quarter) › GET /api/soc/profile → iks.switching_cost.qualifies_one_quarter is boolean (77ms)
+  ok  69 [chromium] › tests\e2e\checklist.spec.ts:687:3 › API contract – analytics and trajectory › GET /api/soc/analytics → 200 and total_decisions > 0 (164ms)
+  ok  70 [chromium] › tests\e2e\checklist.spec.ts:694:3 › API contract – analytics and trajectory › GET /api/soc/analytics → category_breakdown non-empty (76ms)
+  ok  71 [chromium] › tests\e2e\checklist.spec.ts:701:3 › API contract – analytics and trajectory › GET /api/soc/accuracy-trajectory → categories has 6 entries (60ms)
+  ok  72 [chromium] › tests\e2e\checklist.spec.ts:706:3 › API contract – analytics and trajectory › GET /api/soc/accuracy-trajectory → days_to_plateau is a number (55ms)
+  ok  73 [chromium] › tests\e2e\checklist.spec.ts:711:3 › API contract – analytics and trajectory › GET /api/soc/accuracy-trajectory → source = "live" (85ms)
+  ok  74 [chromium] › tests\e2e\checklist.spec.ts:718:3 › API contract – enrichment and benchmarking › GET /api/soc/enrichment-advisor → top_opportunity.factor_name = "threat_intel_enrichment" (110ms)
+  ok  75 [chromium] › tests\e2e\checklist.spec.ts:724:3 › API contract – enrichment and benchmarking › GET /api/soc/enrichment-advisor → ranked_factors has 6 entries (119ms)
+  ok  76 [chromium] › tests\e2e\checklist.spec.ts:730:3 › API contract – enrichment and benchmarking › GET /api/soc/analyst-benchmarking → per_category has 6 keys (110ms)
+  ok  77 [chromium] › tests\e2e\checklist.spec.ts:736:3 › API contract – enrichment and benchmarking › GET /api/soc/analyst-benchmarking → lead_finding is non-empty string (125ms)
+  ok  78 [chromium] › tests\e2e\checklist.spec.ts:744:3 › API contract – threat and campaigns › GET /api/soc/threat-landscape → 200 (1.4s)
+  ok  79 [chromium] › tests\e2e\checklist.spec.ts:749:3 › API contract – threat and campaigns › GET /api/soc/threat-landscape → nodes > 100 (1.0s)
+  ok  80 [chromium] › tests\e2e\checklist.spec.ts:755:3 › API contract – threat and campaigns › GET /api/soc/campaigns → 200 and total >= 0 (58ms)
+  ok  81 [chromium] › tests\e2e\checklist.spec.ts:763:3 › API contract – threat and campaigns › GET /api/soc/attack-tactic-breakdown → breakdown array non-empty (31ms)
+  ok  82 [chromium] › tests\e2e\checklist.spec.ts:772:3 › API contract – threat and campaigns › GET /api/soc/detection-engineering → category_scores has 6 entries (109ms)
+  ok  83 [chromium] › tests\e2e\checklist.spec.ts:782:3 › API contract – narrative and misc › GET /api/soc/executive-narrative → headline non-empty (272ms)
+  ok  84 [chromium] › tests\e2e\checklist.spec.ts:790:3 › API contract – narrative and misc › GET /api/soc/three-claims → 200 (19ms)
+  ok  85 [chromium] › tests\e2e\checklist.spec.ts:795:3 › API contract – narrative and misc › GET /api/soc/compliance → 200 (63ms)
+  ok  86 [chromium] › tests\e2e\checklist.spec.ts:800:3 › API contract – narrative and misc › GET /api/soc/transparency → 200 (24ms)
+  ok  87 [chromium] › tests\e2e\checklist.spec.ts:805:3 › API contract – narrative and misc › GET /api/soc/benchmarking-report → report.total_decisions >= 0 (27ms)
+  ok  88 [chromium] › tests\e2e\checklist.spec.ts:817:3 › Error and edge cases › no console errors on initial page load (1.4s)
+  ok  89 [chromium] › tests\e2e\checklist.spec.ts:824:3 › Error and edge cases › page title contains "SOC" or "Copilot" (1.7s)
+  ok  90 [chromium] › tests\e2e\checklist.spec.ts:830:3 › Error and edge cases › no horizontal scroll at 1280px viewport width (2.2s)
+  ok  91 [chromium] › tests\e2e\checklist.spec.ts:839:3 › Error and edge cases › all 6 tab buttons visible on page load (2.4s)
+  ok  92 [chromium] › tests\e2e\checklist.spec.ts:848:3 › Error and edge cases › backend health: GET /health returns 200 (97ms)
+  ok  93 [chromium] › tests\e2e\checklist.spec.ts:853:3 › Error and edge cases › SOC Analytics tab reachable without crash (1.5s)
+  ok  94 [chromium] › tests\e2e\checklist.spec.ts:860:3 › Error and edge cases › Runtime Evolution tab reachable without crash (2.5s)
+  ok  95 [chromium] › tests\e2e\checklist.spec.ts:867:3 › Error and edge cases › Compounding tab reachable without crash (3.1s)
+  ok  96 [chromium] › tests\e2e\checklist.spec.ts:874:3 › Error and edge cases › Executive Narrative tab reachable without crash (2.6s)
+  ok  97 [chromium] › tests\e2e\checklist.spec.ts:886:3 › Tab 5 – Executive Narrative (content gate) › What Changed section has specific centroid shift content (3.3s)
+  ok  98 [chromium] › tests\e2e\checklist.spec.ts:896:3 › Tab 5 – Executive Narrative (content gate) › verified decisions count > 100 on Tab 5 (2.8s)
+  ok  99 [chromium] › tests\e2e\checklist.spec.ts:907:3 › Tab 5 – Executive Narrative (content gate) › campaigns detected count >= 1 on Tab 5 (2.3s)
+  ok 100 [chromium] › tests\e2e\checklist.spec.ts:917:3 › Tab 5 – Executive Narrative (content gate) › IKS score > 0 on executive narrative API (562ms)
+  ok 101 [chromium] › tests\e2e\checklist.spec.ts:924:3 › Tab 5 – Executive Narrative (content gate) › What Was Discovered shows at least one chain summary (2.0s)
+  ok 102 [chromium] › tests\e2e\checklist.spec.ts:939:3 › Tab content contract — Phase A E2E gates › tab2_iks_score_visible_and_positive (2.3s)
+  ok 103 [chromium] › tests\e2e\checklist.spec.ts:956:3 › Tab content contract — Phase A E2E gates › tab2_categories_calibrated_max_six (2.5s)
+  ok 104 [chromium] › tests\e2e\checklist.spec.ts:967:3 › Tab content contract — Phase A E2E gates › tab5_conservation_has_evidence_ledger (962ms)
+  ok 105 [chromium] › tests\e2e\checklist.spec.ts:978:3 › Tab content contract — Phase A E2E gates › tab5_categories_calibrated_shows_six (1.0s)
+  ok 106 [chromium] › tests\e2e\checklist.spec.ts:987:3 › Tab content contract — Phase A E2E gates › tab1_no_unknown_category_visible (2.0s)
+  ok 107 [chromium] › tests\e2e\checklist.spec.ts:1000:3 › Tab content contract — Phase A E2E gates › tab2_iks_interpretation_not_cold_start (2.2s)
+  ok 108 [chromium] › tests\e2e\checklist.spec.ts:1009:3 › Tab content contract — Phase A E2E gates › tab3_diagonalkernel_visible_in_factor_breakdown (844ms)
+  ok 109 [chromium] › tests\e2e\checklist.spec.ts:1025:3 › Phase B — centroid drift + frontend gaps › tab2_centroid_drift_api_returns_data (226ms)
+  ok 110 [chromium] › tests\e2e\checklist.spec.ts:1036:3 › Phase B — centroid drift + frontend gaps › tab2_accuracy_trajectory_endpoint_returns_valid_shape (237ms)
+  ok 111 [chromium] › tests\e2e\checklist.spec.ts:1055:3 › Phase B — centroid drift + frontend gaps › backlog017_conservation_narrative_api_has_evidence_ledger (1.2s)
+  ok 112 [chromium] › tests\e2e\checklist.spec.ts:1066:3 › Phase B — centroid drift + frontend gaps › backlog017_conservation_narrative_visible_in_dom (5.5s)
+  ok 113 [chromium] › tests\e2e\checklist.spec.ts:1079:3 › Phase B — centroid drift + frontend gaps › backlog018_kernel_note_api_has_diagonalkernel (742ms)
+  ok 114 [chromium] › tests\e2e\checklist.spec.ts:1088:3 › Phase B — centroid drift + frontend gaps › backlog018_kernel_note_in_alert_detail_api (735ms)
+  ok 115 [chromium] › tests\e2e\checklist.spec.ts:1101:3 › Phase B — centroid drift + frontend gaps › f9_report_returns_lead_finding (443ms)
+  ok 116 [chromium] › tests\e2e\checklist.spec.ts:1114:3 › Phase B — centroid drift + frontend gaps › f9_analyst_benchmarking_has_six_categories (590ms)
+  ok 117 [chromium] › tests\e2e\compounding.spec.ts:39:3 › Cross-tab compounding › decisions increment tab2 decision count (30.7s)
+  ok 118 [chromium] › tests\e2e\compounding.spec.ts:59:3 › Cross-tab compounding › decisions leave tab2 IKS as a valid number (37.6s)
+  ok 119 [chromium] › tests\e2e\compounding.spec.ts:79:3 › Cross-tab compounding › decisions do not shrink accuracy trajectory (30.8s)
+  ok 120 [chromium] › tests\e2e\compounding.spec.ts:100:3 › Cross-tab compounding › tab4 economics reports positive decisions_per_day (1.3s)
+  ok 121 [chromium] › tests\e2e\compounding.spec.ts:115:3 › Cross-tab compounding › decisions do not decrease tab5 verified count (24.6s)
+  ok 122 [chromium] › tests\e2e\compounding.spec.ts:138:3 › Cross-tab compounding › epistemic state endpoint returns valid categories structure (13.8s)
+  ok 123 [chromium] › tests\e2e\compounding.spec.ts:159:3 › Cross-tab compounding › learning state has required conservation fields (3.3s)
+  ok 124 [chromium] › tests\e2e\compounding.spec.ts:180:3 › Cross-tab compounding › cross tab decision count directional consistency (1.5s)
+
+
+  1) [chromium] › tests\e2e\checklist.spec.ts:204:3 › API checks › POST /api/s2p/score × 10 scenarios → all return valid action 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: apiRequestContext.post: Request context disposed.
+    Call log:
+    [2m  - → POST http://127.0.0.1:8002/api/s2p/score[22m
+    [2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.7632.6 Safari/537.36[22m
+    [2m    - accept: */*[22m
+    [2m    - accept-encoding: gzip,deflate,br[22m
+    [2m    - content-type: application/json[22m
+    [2m    - content-length: 301[22m
+
+
+      221 |
+      222 |     for (const scenario of scenarios) {
+    > 223 |       const res = await request.post(`${s2pBackend}/api/s2p/score`, { data: scenario });
+          |                                 ^
+      224 |       expect(res.status()).toBe(200);
+      225 |       const body = await res.json();
+      226 |       expect(body).toHaveProperty('action');
+        at C:\Users\baner\CopyFolder\IoT_thoughts\python-projects\kaggle_experiments\claude_projects\gen-ai-roi-demo-v4-v50\frontend\tests\e2e\checklist.spec.ts:223:33
+
+  1 failed
+    [chromium] › tests\e2e\checklist.spec.ts:204:3 › API checks › POST /api/s2p/score × 10 scenarios → all return valid action 
+  1 skipped
+  122 passed (8.6m)

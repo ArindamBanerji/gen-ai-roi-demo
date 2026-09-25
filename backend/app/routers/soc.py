@@ -3,6 +3,7 @@ SOC Analytics API - Tab 1
 Governed security metrics with provenance
 """
 from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -1755,27 +1756,15 @@ async def three_claims():
 
 @router.get("/soc/benchmarking-level2")
 async def benchmarking_level2():
-    """P32: Level 2 benchmarking section (mock data for validation).
-
-    # BACKLOG-063: mock data, not called by frontend — remove when L2 benchmarking is implemented.
-    """
-    from app.services.benchmarking_level2 import Level2BenchmarkingSection
-    section = Level2BenchmarkingSection()
-    # Mock data from P29 synthetic A/B results
-    mock_ab = {
-        'group_a': {'acceptance_rate': 0.701, 'accuracy': 0.695,
-                    'resolution_time': 1.427, 'reward': 0.7187,
-                    'n_decisions': 382},
-        'group_b': {'acceptance_rate': 0.802, 'accuracy': 0.790,
-                    'resolution_time': 1.246, 'reward': 0.7977,
-                    'n_decisions': 387},
-        'variant_promoted': True,
-        'decisions_to_promotion': 143,
-        'conservation_breached': False,
-        'p_value': 0.0001,
-        'cohens_d': 3.746
-    }
-    return section.generate_section(mock_ab)
+    """P32 Level 2 benchmarking is unavailable without measured artifacts."""
+    return JSONResponse(
+        status_code=501,
+        content={
+            "status": "not_available",
+            "reason": "Benchmark results require completed A/B experiment artifacts",
+            "note": "Use /api/admin/experiments for measured results",
+        },
+    )
 
 
 
@@ -4271,7 +4260,14 @@ async def get_centroid_support():
         bootstrap = await get_bootstrap_centroids(graph_client)
     except Exception as _exc:
         print(f"[SOC] centroid-evolution bootstrap query failed: {_exc}")
-        bootstrap = None
+        return {
+            "status": "unavailable",
+            "reason": "bootstrap_read_failed",
+            "support_summary": {},
+            "overall_health": "UNAVAILABLE",
+            "warning_count": None,
+            "threshold_sigma": _THRESHOLD,
+        }
 
     if bootstrap is None or bootstrap.get("mu") is None:
         return _COLD_START

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter
 
@@ -22,7 +22,7 @@ async def get_campaign_cohort_status() -> dict[str, Any]:
     the instrument panel still reports the oracle artifact state.
     """
     records = await _read_decision_records()
-    return CohortStatusService(decision_records=records).get_status()
+    return cast(dict[str, Any], CohortStatusService(decision_records=records).get_status())
 
 
 async def _read_decision_records() -> list[dict[str, Any]]:

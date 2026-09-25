@@ -27,7 +27,9 @@ class _LearningPolicy:
 
 
 @pytest.mark.asyncio
-async def test_all_flags_true_pipeline_exercises_rl_paths(monkeypatch, soc_triage_harness):
+@pytest.mark.age
+@pytest.mark.parametrize("soc_triage_harness", ["age"], indirect=True)
+async def test_all_flags_true_pipeline_exercises_rl_paths(monkeypatch, soc_triage_harness, age_graph):
     rl_engine.reset_rl_state()
     monkeypatch.setattr(soc_config, "RL_REWARD_LEDGER_ENABLED", True)
     monkeypatch.setattr(soc_config, "RL_EXPLORATION_ENABLED", True)
@@ -104,4 +106,4 @@ async def test_all_flags_true_pipeline_exercises_rl_paths(monkeypatch, soc_triag
     assert scorer.eta == 0.05
     assert scorer.eta_neg == 0.05
     assert scorer.eta_override == 0.01
-    assert any("TRIGGERED_EVOLUTION" in query for query, _ in outcome_graph._queries)
+    assert age_graph.query("MATCH (:Decision {decision_id: 'D-RL'})-[:TRIGGERED_EVOLUTION]->(e:EvolutionEvent) RETURN count(e) AS n") == [{"n": 1}]
