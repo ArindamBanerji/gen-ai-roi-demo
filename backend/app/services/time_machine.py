@@ -114,21 +114,32 @@ def _coerce_tensor(payload: dict[str, Any], snapshot_id: str) -> np.ndarray:
     return tensor
 
 
-def _decision_count(payload: dict[str, Any]) -> int:
-    metadata = payload.get("metadata") or {}
+def _decision_count(payload: dict[str, Any]) -> tuple[int, bool]:
+    metadata = payload.get("metadata")
+    if metadata is None:
+        metadata = {}
+    if not isinstance(metadata, dict):
+        return 0, False
     value = metadata.get("decision_count", payload.get("step", 0))
-    try:
-        return int(value)
-    except Exception:
-        return 0
+    if isinstance(value, bool):
+        return 0, False
+    if isinstance(value, int):
+        return value, True
+    if isinstance(value, float) and value.is_integer():
+        return int(value), True
+    if isinstance(value, str) and value.strip().lstrip("-").isdigit():
+        return int(value), True
+    return 0, False
 
 
 def _snapshot_meta(payload: dict[str, Any]) -> dict[str, Any]:
+    decision_count, decision_count_available = _decision_count(payload)
     return {
         "snapshot_id": payload.get("backup_id", ""),
         "timestamp": int(payload.get("timestamp_epoch", 0)),
         "timestamp_epoch": int(payload.get("timestamp_epoch", 0)),
-        "decision_count": _decision_count(payload),
+        "decision_count": decision_count,
+        "decision_count_available": decision_count_available,
         "step": int(payload.get("step", 0) or 0),
         "sha256": payload.get("sha256", ""),
         "file_path": "",
@@ -280,9 +291,12 @@ def compare_snapshots(id_a: str, id_b: str) -> dict[str, Any]:
                 int(payload_b.get("timestamp_epoch", 0)),
             ],
             "decision_counts": [
-                _decision_count(payload_a),
-                _decision_count(payload_b),
+                _decision_count(payload_a)[0],
+                _decision_count(payload_b)[0],
             ],
+            "decision_counts_available": (
+                _decision_count(payload_a)[1] and _decision_count(payload_b)[1]
+            ),
         },
     }
 
@@ -355,12 +369,13 @@ def compare_to_bootstrap(snapshot_id: str) -> dict[str, Any]:
         },
         "timeline": {
             "timestamps": [int(payload.get("timestamp_epoch", 0)), 0],
-            "decision_counts": [_decision_count(payload), 0],
+            "decision_counts": [_decision_count(payload)[0], 0],
+            "decision_counts_available": _decision_count(payload)[1],
         },
     }
 
 
-async def get_evolution_timeline(graph_client: Any) -> dict[str, Any]:
+async def get_evolution_timeline(graph_client: Any) -> dict[str, Any] | None:
     timeline: list[dict[str, Any]] = []
     mu_zero = get_mu_zero()
     current_ceiling = _compute_current_ceiling_estimate()
@@ -372,38 +387,58 @@ async def get_evolution_timeline(graph_client: Any) -> dict[str, Any]:
         if mu_zero is not None and list(mu_zero.shape) == list(tensor.shape):
             drift = _frobenius_distance(tensor, mu_zero)
 
+        drift_available = drift is not None
+        ceiling_available = current_ceiling is not None
         timeline.append({
             "snapshot_id": meta["snapshot_id"],
             "timestamp": meta["timestamp_epoch"],
             "timestamp_epoch": meta["timestamp_epoch"],
             "decision_count": meta["decision_count"],
+            "decision_count_available": meta["decision_count_available"],
             "sha256": meta["sha256"],
             "file_path": meta["file_path"],
-            "drift_from_bootstrap": drift,
-            "iks_estimate": drift,
-            "ceiling_estimate": current_ceiling,
+            "drift_from_bootstrap": float(drift) if drift is not None else 0.0,
+            "drift_available": drift_available,
+            "iks_estimate": float(drift) if drift is not None else 0.0,
+            "iks_estimate_available": drift_available,
+            "ceiling_estimate": float(current_ceiling) if current_ceiling is not None else 0.0,
+            "ceiling_available": ceiling_available,
         })
 
-    current_iks = {
+    current_iks: dict[str, Any] = {
         "iks_v2": 0.0,
         "components": {},
         "interpretation": "unavailable",
     }
+    iks_available = True
     try:
-        current_iks = await compute_iks_v2(graph_client)
+        computed_iks = await compute_iks_v2(graph_client)
+        if computed_iks is None or computed_iks.get("interpretation") == "unavailable":
+            iks_available = False
+        else:
+            current_iks = computed_iks
     except Exception as exc:
         log.warning("[TIME_MACHINE] IKS estimate unavailable: %s", exc)
+        iks_available = False
+
+    ceiling_available = current_ceiling is not None
+    timeline_available = bool(timeline)
 
     return {
         "timeline": timeline,
         "current": {
-            "iks_v2": current_iks.get("iks_v2", 0.0),
-            "components": current_iks.get("components", {}),
-            "interpretation": current_iks.get("interpretation", "unavailable"),
+            "iks_v2": float(current_iks.get("iks_v2") or 0.0),
+            "components": dict(current_iks.get("components") or {}),
+            "interpretation": str(current_iks.get("interpretation") or "unavailable"),
         },
-        "ceiling_estimate": current_ceiling,
+        "ceiling_estimate": float(current_ceiling) if current_ceiling is not None else 0.0,
         "ceiling_note": _CEILING_NOTE,
+        "ceiling_available": ceiling_available,
         "categories": list(_EXPORT_CATEGORIES),
         "actions": list(_EXPORT_ACTIONS),
         "factors": list(_DEFAULT_FACTORS),
+        "timeline_available": timeline_available,
+        "iks_available": iks_available,
+        "data_available": timeline_available or iks_available,
+        "degraded": not iks_available or not ceiling_available,
     }

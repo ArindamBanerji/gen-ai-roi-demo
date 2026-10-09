@@ -17,10 +17,34 @@ Endpoint:
   GET /api/triage/decision-factors/{alert_id}
 """
 import asyncio
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, cast
 
 from app.db.graph_client import graph_client
+from app.domains.soc.factor_vector import validated_factor_vector
+from copilot_sdk.backend.graph_access import GRAPH_CONNECTION_ERRORS
+
+logger = logging.getLogger(__name__)
+
+
+class FactorReadUnavailable(Exception):
+    """Graph or factor service read failed; factors cannot be computed."""
+
+
+def validated_decision_factors(result: Any) -> tuple[list[str], list[float]]:
+    """Validate the provider payload before explanation or action side effects."""
+    if not isinstance(result, dict) or not isinstance(result.get("factors"), list):
+        raise FactorReadUnavailable("Decision factor response is unavailable")
+    factors = result["factors"]
+    if any(not isinstance(item, dict) or "value" not in item
+           or not isinstance(item.get("name"), str) for item in factors):
+        raise FactorReadUnavailable("Decision factor response is malformed")
+    try:
+        vector = validated_factor_vector([item["value"] for item in factors])
+    except ValueError as exc:
+        raise FactorReadUnavailable("Decision factor vector is invalid") from exc
+    return [item["name"] for item in factors], vector
 
 
 # ============================================================================
@@ -175,9 +199,12 @@ async def _build_threat_intel_factor(alert_id: str) -> Optional[Dict[str, Any]]:
     """
     try:
         results = await graph_client.run_query(query, {"alert_id": alert_id})
-    except Exception as exc:
-        print(f"[TRIAGE] AGE threat-intel query failed for {alert_id}: {exc}")
-        return None
+    except GRAPH_CONNECTION_ERRORS as exc:
+        logger.warning("Threat-intel factor read unavailable for %s: %s", alert_id, exc)
+        raise FactorReadUnavailable("Threat-intel factor read unavailable") from exc
+
+    if not isinstance(results, list) or any(not isinstance(row, dict) for row in results):
+        raise FactorReadUnavailable("Threat-intel factor read returned no valid result")
 
     if not results:
         return {
@@ -231,15 +258,17 @@ async def _get_alert_type(alert_id: str) -> str:
     query = "MATCH (a:Alert {alert_id: $alert_id}) RETURN a.alert_type AS alert_type LIMIT 1"
     try:
         results = await graph_client.run_query(query, {"alert_id": alert_id})
+        if not isinstance(results, list) or any(not isinstance(row, dict) for row in results):
+            raise FactorReadUnavailable("Alert type read returned no valid result")
         if results:
             return results[0].get("alert_type") or ""
-    except Exception as exc:
-        print(f"[TRIAGE] alert_type lookup failed for {alert_id}: {exc}")
-        raise
+    except GRAPH_CONNECTION_ERRORS as exc:
+        logger.warning("Alert type read unavailable for %s: %s", alert_id, exc)
+        raise FactorReadUnavailable("Alert type read unavailable") from exc
     return ""
 
 
-async def get_decision_factors(alert_id: str) -> Optional[Dict[str, Any]]:
+async def get_decision_factors(alert_id: str) -> Dict[str, Any]:
     """
     Return the 6-factor decision breakdown for alert_id.
 
@@ -257,13 +286,22 @@ async def get_decision_factors(alert_id: str) -> Optional[Dict[str, Any]]:
       [5] pattern_history
     """
     from app.domains.soc.factors import compute_soc_factors
-    alert_type, ti_factor = await asyncio.gather(
-        _get_alert_type(alert_id),
-        _build_threat_intel_factor(alert_id),
-    )
-    if ti_factor is None:
-        return None
+    # Both reads precede factor construction. Only connectivity failures are
+    # classified as unavailable; programming errors must remain visible.
+    try:
+        alert_type, ti_factor = await asyncio.gather(
+            _get_alert_type(alert_id),
+            _build_threat_intel_factor(alert_id),
+        )
+    except GRAPH_CONNECTION_ERRORS as exc:
+        logger.warning("Decision factor read unavailable for %s: %s", alert_id, exc)
+        raise FactorReadUnavailable("Decision factor read unavailable") from exc
+    if (not isinstance(alert_type, str) or not isinstance(ti_factor, dict)
+            or not {"name", "value", "weight", "contribution", "explanation"}.issubset(ti_factor)):
+        logger.warning("Decision factor inputs unavailable for %s", alert_id)
+        raise FactorReadUnavailable("Decision factor inputs unavailable")
     result = compute_soc_factors(alert_id, ti_factor, alert_type)
+    validated_decision_factors(result)
     print(
         f"[TRIAGE] get_decision_factors({alert_id}): "
         f"alert_type={alert_type!r}, "

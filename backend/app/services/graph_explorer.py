@@ -142,7 +142,7 @@ class GraphExplorerService:
         graph_service: Any,
         node_type: Optional[str] = None,
         limit: int = 10,
-    ) -> list:
+    ) -> list | None:
         """Get top N nodes by connection count.
 
         Excludes :Decision and :Checkpoint nodes (internal bookkeeping).
@@ -189,10 +189,10 @@ class GraphExplorerService:
             return [dict(r) for r in result]
         except Exception as exc:
             log.warning("[GRAPH-EXPLORER] get_top_nodes failed: %s", exc)
-            return []
+            return None
 
     @staticmethod
-    async def get_node_neighbors(node_id: str, graph_service: Any) -> dict:
+    async def get_node_neighbors(node_id: str, graph_service: Any) -> dict | None:
         """Get all neighbors of a specific node.
 
         Returns
@@ -217,7 +217,7 @@ class GraphExplorerService:
             log.warning(
                 "[GRAPH-EXPLORER] get_node_neighbors failed node_id=%r: %s", node_id, exc
             )
-            neighbors = []
+            return None
 
         return {
             "node_id":   node_id,
@@ -226,7 +226,7 @@ class GraphExplorerService:
         }
 
     @staticmethod
-    async def get_graph_summary(graph_service: Any) -> dict:
+    async def get_graph_summary(graph_service: Any) -> dict | None:
         """High-level graph statistics for the explorer header.
 
         Returns
@@ -249,7 +249,7 @@ class GraphExplorerService:
             )
         except Exception as exc:
             log.warning("[GRAPH-EXPLORER] get_graph_summary node count failed: %s", exc)
-            counts = []
+            return None
 
         try:
             rel_counts = await graph_service.run_query(
@@ -262,7 +262,7 @@ class GraphExplorerService:
             )
         except Exception as exc:
             log.warning("[GRAPH-EXPLORER] get_graph_summary rel count failed: %s", exc)
-            rel_counts = []
+            return None
 
         total_nodes = sum(int(r.get("cnt") or 0) for r in counts)
         total_rels  = sum(int(r.get("cnt") or 0) for r in rel_counts)

@@ -204,6 +204,8 @@ class GreyNoiseConnector(UCLConnector):
         live_attempted = 0
         live_succeeded = 0
         source = "hardcoded_fallback"
+        lookup_failures: set[str] = set()
+        write_failures = 0
 
         async def existing_observation(ip: str) -> Dict[str, Any] | None:
             """Return an existing graph observation without replacing it."""
@@ -216,6 +218,7 @@ class GreyNoiseConnector(UCLConnector):
                     if isinstance(value, dict):
                         return dict(value)
             except Exception as exc:
+                lookup_failures.add(ip)
                 logger.warning("[GREYNOISE] Existing observation lookup failed for %s: %s", ip, exc)
             return None
 
@@ -228,7 +231,13 @@ class GreyNoiseConnector(UCLConnector):
                 existing["_preserve_existing"] = True
                 return existing
             fallback = HARDCODED_FALLBACK.get(ip)
-            return dict(fallback) if fallback else None
+            if not fallback:
+                return None
+            fallback_value = dict(fallback)
+            if ip in lookup_failures:
+                fallback_value["fallback_used"] = True
+                fallback_value["fallback_reason"] = "graph_unavailable"
+            return fallback_value
 
         # -------------------------------------------------------------------
         # Step 1 — Live API or hardcoded fallback
@@ -315,6 +324,7 @@ class GreyNoiseConnector(UCLConnector):
                     )
                 indicators_ingested += 1
             except Exception as exc:
+                write_failures += 1
                 print(f"[GREYNOISE] Failed to write {entry['ip']} to AGE: {exc}")
 
         # -------------------------------------------------------------------
@@ -338,6 +348,7 @@ class GreyNoiseConnector(UCLConnector):
                 relationships_created += 1
                 print(f"[GREYNOISE] Linked ThreatIntel({entry['ip']}) -[:ENRICHED_BY]-> GreyNoiseEnrichment")
             except Exception as exc:
+                write_failures += 1
                 print(f"[GREYNOISE] Failed to link {entry['ip']}: {exc}")
 
         # -------------------------------------------------------------------
@@ -353,6 +364,10 @@ class GreyNoiseConnector(UCLConnector):
                 "source":         entry.get("source", source),
                 "stale":          bool(entry.get("stale", False)),
                 "stale_since":    entry.get("stale_since"),
+                **({
+                    "fallback_used": True,
+                    "fallback_reason": entry.get("fallback_reason"),
+                } if entry.get("fallback_used") else {}),
             }
             for entry in enriched
         ]
@@ -363,6 +378,7 @@ class GreyNoiseConnector(UCLConnector):
             relationships_created=relationships_created,
             enrichment_summary=enrichment_summary,
             timestamp=datetime.now(timezone.utc).isoformat(),
+            write_failures=write_failures,
         )
 
     # ------------------------------------------------------------------

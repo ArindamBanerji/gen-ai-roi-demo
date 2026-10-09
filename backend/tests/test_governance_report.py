@@ -243,3 +243,18 @@ def test_governance_report_pre_activation_art9_art15_copy(monkeypatch):
     assert by_article["Art 12"].status == "READY"
     assert by_article["Art 13"].status == "READY"
     assert by_article["Art 14"].status == "READY"
+
+
+def test_governance_degraded_narrative_not_ready(monkeypatch):
+    _install_stubs(monkeypatch)
+
+    async def degraded_exec():
+        payload = await _stub_exec()
+        payload["sections_degraded"] = ["what_system_knows"]
+        return payload
+
+    monkeypatch.setattr(governance_report, "_collect_executive_narrative", degraded_exec)
+    result = asyncio.run(governance_report.generate_governance_report())
+    art13 = next(section for section in result.sections if section.article == "Art 13")
+    assert art13.status == "ATTENTION"
+    assert art13.evidence["sections_degraded"] == ["what_system_knows"]

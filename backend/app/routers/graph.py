@@ -16,14 +16,17 @@ New endpoint added in C4b (bug fix -- alert-id keyed enrichment):
   GET  /api/graph/enrichment/by-alert/{alert_id}    -- enrichment for a specific alert via graph traversal
 """
 from typing import Any, Dict, List
+import logging
 
 from fastapi import APIRouter, HTTPException
 
 from app.connectors.registry import registry
 from app.db.graph_client import graph_client
+from app.models.responses import EnrichmentSummaryResponse
 from app.services.threat_intel import refresh_threat_intel
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -203,6 +206,7 @@ async def refresh_threat_intel_endpoint():
 
     # Phase 7: persist each refreshed ThreatIntel node as a ThreatIndicator
     from app.services.threat_indicator import ThreatIndicatorService
+    ti_summary = None
     indicators_persisted = 0
     try:
         ti_rows = await graph_client.run_query(
@@ -216,7 +220,7 @@ async def refresh_threat_intel_endpoint():
             """
         )
         for row in ti_rows:
-            await ThreatIndicatorService.upsert_indicator(
+            persisted_id = await ThreatIndicatorService.upsert_indicator(
                 indicator_type  = row.get("ioc_type")  or "unknown",
                 indicator_value = row.get("ioc_value") or "",
                 source          = row.get("source")    or "unknown",
@@ -224,12 +228,17 @@ async def refresh_threat_intel_endpoint():
                 name            = row.get("name")      or "",
                 graph_service=graph_client,
             )
-            indicators_persisted += 1
+            if persisted_id is not None:
+                indicators_persisted += 1
+            else:
+                logger.warning("ThreatIndicator persistence returned no id for %s", row.get("ioc_value"))
         print(f"[GRAPH] ThreatIndicator MERGE: persisted={indicators_persisted}")
     except Exception as exc:
         print(f"[WARN] ThreatIndicator persistence failed (non-fatal): {exc}")
+        logger.warning("ThreatIndicator persistence failed: %s", exc)
 
-    return {**summary, "indicators_persisted": indicators_persisted}
+    return {**summary, "indicators_persisted": indicators_persisted,
+            "persistence_failures": max(0, len(ti_rows) - indicators_persisted) if 'ti_rows' in locals() else 1}
 
 
 # ---------------------------------------------------------------------------
@@ -347,7 +356,7 @@ async def get_enrichment_aggregate(indicator: str):
     return view
 
 
-@router.get("/graph/enrichment/summary")
+@router.get("/graph/enrichment/summary", response_model=EnrichmentSummaryResponse)
 async def get_enrichment_summary():
     """
     Return unified enrichment views for ALL indicators in the graph.
@@ -362,50 +371,57 @@ async def get_enrichment_summary():
           "by_severity": {"critical": 1, "high": 2, "medium": 1, "low": 0, "unknown": 0}
         }
     """
+    unavailable = EnrichmentSummaryResponse()
     print("[GRAPH] GET /graph/enrichment/summary called")
     try:
         records = await graph_client.run_query(_ENRICHMENT_QUERY_ALL, {})
-    except Exception as exc:
-        print(f"[ERROR] Enrichment summary query failed: {exc}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Enrichment summary query failed: {str(exc)}",
+        if records is None:
+            raise RuntimeError("Enrichment query returned no result")
+
+        views = [_build_view(r) for r in records]
+        by_severity: Dict[str, int] = {
+            "critical": 0, "high": 0, "medium": 0, "low": 0, "unknown": 0
+        }
+        for view in views:
+            severity = view["consensus_severity"]
+            by_severity[severity] = by_severity.get(severity, 0) + 1
+
+        print(
+            f"[GRAPH] Enrichment summary: total={len(views)}, "
+            f"by_severity={by_severity}"
         )
 
-    views = [_build_view(r) for r in records]
-
-    # Tally by consensus severity for dashboard convenience
-    by_severity: Dict[str, int] = {
-        "critical": 0, "high": 0, "medium": 0, "low": 0, "unknown": 0
-    }
-    for v in views:
-        sev = v["consensus_severity"]
-        by_severity[sev] = by_severity.get(sev, 0) + 1
-
-    print(
-        f"[GRAPH] Enrichment summary: total={len(views)}, "
-        f"by_severity={by_severity}"
-    )
-
-    # Phase 7: include ThreatIndicator counts
-    from app.services.threat_indicator import ThreatIndicatorService
-    try:
-        ti_summary = await ThreatIndicatorService.get_all_indicators(graph_client)
-        threat_indicators = {
-            "total":       ti_summary["total"],
-            "by_type":     ti_summary["by_type"],
-            "by_severity": ti_summary["by_severity"],
+        from app.services.threat_indicator import ThreatIndicatorService
+        threat_indicators: dict[str, Any] = {
+            "total": 0, "by_type": {}, "by_severity": {}
         }
-    except Exception as exc:
-        print(f"[WARN] ThreatIndicator summary failed (non-fatal): {exc}")
-        threat_indicators = {"total": 0, "by_type": {}, "by_severity": {}}
+        indicators_available = False
+        try:
+            ti_summary = await ThreatIndicatorService.get_all_indicators(graph_client)
+        except Exception as exc:
+            logger.warning("ThreatIndicator summary failed: %s", exc)
+            ti_summary = None
+        if ti_summary is not None:
+            threat_indicators = {
+                "total": int(ti_summary["total"]),
+                "by_type": dict(ti_summary["by_type"]),
+                "by_severity": dict(ti_summary["by_severity"]),
+            }
+            indicators_available = True
 
-    return {
-        "indicators":        views,
-        "total":             len(views),
-        "by_severity":       by_severity,
-        "threat_indicators": threat_indicators,
-    }
+        response = EnrichmentSummaryResponse(
+            indicators=views,
+            total=len(views),
+            by_severity=by_severity,
+            threat_indicators=threat_indicators,
+            enrichment_available=True,
+            indicators_available=indicators_available,
+            degraded=not indicators_available,
+        )
+        return response.model_dump()
+    except Exception as exc:
+        logger.warning("Enrichment summary construction failed: %s", exc)
+        return unavailable.model_dump()
 
 
 @router.get("/graph/enrichment/by-alert/{alert_id}")

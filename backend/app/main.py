@@ -4,8 +4,6 @@ Main application entry point with CORS and router registration.
 """
 from contextlib import asynccontextmanager
 import logging
-import sqlite3
-from pathlib import Path
 import os as _cors_os
 from typing import cast
 
@@ -17,6 +15,7 @@ from copilot_sdk.backend.health_builder import build_graph_health, health_status
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from app.middleware.pii_redaction import PIIRedactionMiddleware
+from app.middleware.startup_gate import StartupGateMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,9 @@ load_dotenv(dotenv_path="../.env")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    app.state.startup_complete = False
     await startup_event()
+    app.state.startup_complete = not bool(getattr(app.state, "learning_counts_stale", False))
     yield
     await shutdown_event()
 
@@ -82,6 +83,7 @@ app.add_middleware(AuthMiddleware)
 
 
 app.add_middleware(PIIRedactionMiddleware)
+app.add_middleware(StartupGateMiddleware)
 
 
 def _safe_entity_cache_health() -> dict:
@@ -146,6 +148,14 @@ async def health():
             },
         },
     )
+    if not bool(posterior_health.get("healthy", False)):
+        payload["ready"] = False
+    if (
+        getattr(app.state, "startup_complete", True) is False
+        or bool(getattr(app.state, "learning_counts_stale", False))
+    ):
+        payload["ready"] = False
+        payload["graph_status"]["components"]["learning_restore"] = "initializing"
     return JSONResponse(payload, status_code=health_status_code(payload))
 
 # Router imports
@@ -201,17 +211,20 @@ app.include_router(create_auth_router())
 app.include_router(compat_router.router, prefix="/api", tags=["SDK Compatibility"])
 
 
-class _VLDKDecisionConnection:
-    def __init__(self, path):
-        self.conn = sqlite3.connect(path, check_same_thread=False)
+def _create_vld_k_store(dimensions: int) -> KUtilityStore:
+    """Bind routing weights to the configured SOC graph and explicit domain."""
+    from copilot_sdk.config import GraphConfig
+    from copilot_sdk.graph.factory import create_graph_store
+
+    config = GraphConfig.load("soc")
+    return KUtilityStore(
+        create_graph_store(config=config), dimensions,
+        profile=config.profile, domain=config.domain,
+    )
 
 
-def _create_vld_k_store(path, dimensions: int) -> KUtilityStore:
-    return KUtilityStore(_VLDKDecisionConnection(path), dimensions)
-
-
-def _vld_k_router_kwargs(path, dimensions: int):
-    return {"k_store": _create_vld_k_store(path, dimensions)}
+def _vld_k_router_kwargs(dimensions: int):
+    return {"k_store": _create_vld_k_store(dimensions)}
 
 
 def _vld_classifier_router_kwargs():
@@ -252,7 +265,7 @@ def _soc_vld_evidence_provider_factory(decision_id: str):
 app.include_router(create_investigation_router(
     scorer_provider=_soc_vld_scorer_provider,
     evidence_provider_factory=_soc_vld_evidence_provider_factory,
-    **_vld_k_router_kwargs(Path(__file__).resolve().parents[1] / "data" / "k_utility.db", 6),
+    **_vld_k_router_kwargs(6),
     **_vld_classifier_router_kwargs(),
     factor_names=[
         "privileged_identity_context",
@@ -425,6 +438,8 @@ async def startup_event():
     from app.services.authority_ladder import configure_authority_graph_store
     app.state.graph_store = get_profile_scorer().graph_store
     configure_authority_graph_store(app.state.graph_store)
+    from app.services.soc_learning_control import SERVICE as learning_control
+    learning_control.configure_graph_store(app.state.graph_store)
 
     try:
         from app.services.promotion_gate import register_rollback_handler
@@ -611,15 +626,21 @@ async def startup_event():
         from app.domains.soc.campaigns import CampaignCorrelationEngine, CampaignRepository
         from app.domains.soc.config import SOCDomainConfig
         _camp_repo = CampaignRepository(graph_client)
-        if not await _camp_repo.campaigns_exist():
+        _campaigns_exist = await _camp_repo.campaigns_exist()
+        if _campaigns_exist is None:
+            logger.warning("[F6] Startup recorrelation skipped: campaign existence query unavailable")
+        elif not _campaigns_exist:
             _camp_config = SOCDomainConfig.get_campaign_config()
             _camp_engine = CampaignCorrelationEngine(_camp_config)
             _camp_events = await _camp_repo.fetch_all_events()
-            _campaigns = _camp_engine.correlate(_camp_events)
-            for _c in _campaigns:
-                await _camp_repo.write_campaign(_c)
-            print(f"[F6] Startup recorrelation: {len(_campaigns)} campaigns found.")
-        else:
+            if _camp_events is None:
+                logger.warning("[F6] Startup recorrelation skipped: event query unavailable")
+            else:
+                _campaigns = _camp_engine.correlate(_camp_events)
+                for _c in _campaigns:
+                    await _camp_repo.write_campaign(_c)
+                print(f"[F6] Startup recorrelation: {len(_campaigns)} campaigns found.")
+        elif _campaigns_exist:
             print("[F6] Campaign nodes exist -- skipping startup recorrelation.")
     except Exception as _camp_exc:
         print(f"[F6] Startup recorrelation failed (non-blocking): {_camp_exc}")

@@ -49,6 +49,15 @@ def _patch_module(monkeypatch, module_name, module):
 
 def _install_analyze_shadow_patches(monkeypatch, action="monitor", confidence=0.8):
     import app.routers.triage as triage_router
+    from app.services import authority_ladder
+    from copilot_sdk.graph import InMemoryGraphStore
+
+    monkeypatch.setattr(
+        authority_ladder, "_AUTHORITY_MANAGER",
+        authority_ladder.AuthorityManager(
+            store=authority_ladder.GraphPromotionStore(InMemoryGraphStore(domain="soc")),
+        ),
+    )
 
     alert = {
         "alert_id": "ALERT-SHADOW-ROUTE",

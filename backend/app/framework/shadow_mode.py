@@ -59,7 +59,7 @@ class ShadowModeService:
         log.debug("[SHADOW] Analyst action recorded: decision=%s action=%s", decision_id, analyst_action)
 
     @staticmethod
-    async def get_shadow_report(graph_service: Any) -> dict:
+    async def get_shadow_report(graph_service: Any) -> dict | None:
         """Generate shadow mode report: agreement rates by category.
 
         Returns
@@ -85,7 +85,7 @@ class ShadowModeService:
             )
         except Exception as exc:
             log.warning("[SHADOW] get_shadow_report query failed: %s", exc)
-            result = []
+            return None
 
         categories: dict = {}
         total_agreed = 0

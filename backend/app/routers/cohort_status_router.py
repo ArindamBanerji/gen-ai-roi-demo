@@ -22,10 +22,15 @@ async def get_campaign_cohort_status() -> dict[str, Any]:
     the instrument panel still reports the oracle artifact state.
     """
     records = await _read_decision_records()
+    if records is None:
+        status = cast(dict[str, Any], CohortStatusService(decision_records=[]).get_status())
+        status["decisions_available"] = False
+        status["degraded"] = True
+        return status
     return cast(dict[str, Any], CohortStatusService(decision_records=records).get_status())
 
 
-async def _read_decision_records() -> list[dict[str, Any]]:
+async def _read_decision_records() -> list[dict[str, Any]] | None:
     query = """
     MATCH (d:Decision)
     WHERE d.domain = 'soc'
@@ -44,6 +49,6 @@ async def _read_decision_records() -> list[dict[str, Any]]:
     try:
         records = await graph_client.run_query(query)
     except Exception as exc:
-        logger.debug("cohort status graph read failed: %s", exc)
-        return []
+        logger.warning("cohort status graph read failed: %s", exc)
+        return None
     return [dict(record) for record in records if isinstance(record, dict)]

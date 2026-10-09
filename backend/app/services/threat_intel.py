@@ -35,7 +35,7 @@ async def refresh_threat_intel() -> Dict[str, Any]:
 
     result = await connector.refresh()
 
-    return {
+    response = {
         "source":                result.source,
         "indicators_ingested":   result.indicators_ingested,
         "relationships_created": result.relationships_created,
@@ -44,3 +44,7 @@ async def refresh_threat_intel() -> Dict[str, Any]:
         "live_succeeded":        connector._last_live_succeeded,
         "timestamp":             result.timestamp,
     }
+    if result.write_failures:
+        response["write_failures"] = result.write_failures
+        response["degraded"] = True
+    return response

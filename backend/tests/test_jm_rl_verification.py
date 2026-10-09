@@ -156,19 +156,20 @@ def test_posterior_service_writes_graph_state() -> None:
 
 
 def test_authority_ladder_writes_promotion_state() -> None:
-    source = _source("app/services/authority_ladder.py")
-    assert "save_promotion" in source
-    assert "GraphStoreAdapter" in source
+    from app.services.authority_ladder import AuthorityManager, GraphPromotionStore
+
+    graph = InMemoryGraphStore(domain="soc")
+    manager = AuthorityManager(store=GraphPromotionStore(graph))
+    record = manager.get_record("credential_access")
+    assert graph.get_promotion("soc", "credential_access") == record.to_dict()
+    restored = GraphPromotionStore(graph).load_by_class("soc", "credential_access")
+    assert restored is not None
+    assert restored.to_dict() == record.to_dict()
 
 
 def test_no_runtime_json_checkpoint_writer() -> None:
     source = _source("app/services/gae_state.py")
     assert "json.dump(" not in source
-
-
-def test_no_soc_sqlite_wal_checkpoint_path() -> None:
-    source = _source("app/services/gae_state.py")
-    assert "sqlite3.connect" not in source.lower()
 
 
 def test_iks_path_uses_verified_decisions() -> None:

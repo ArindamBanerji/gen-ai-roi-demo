@@ -7,6 +7,9 @@ Reference: docs/soc_copilot_design_v1.md Sec.5.3.
 """
 
 from typing import Any
+import logging
+
+log = logging.getLogger(__name__)
 
 from gae.contracts import SchemaContract, PropertySpec
 from gae.factors import assemble_factor_vector
@@ -82,12 +85,19 @@ async def _factor_provenance(name: str, alert: Any, graph: Any, value: float) ->
 
     if name == "asset_criticality":
         alert_id = _get(alert, "id", "")
-        if alert_id and await _query_has_rows(
-            graph,
-            f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})-[:DETECTED_ON]->(asset:Asset) "
-            "RETURN asset.criticality AS criticality LIMIT 1",
-        ):
-            return _provenance_record(value, "graph_context", "Alert->Asset graph context")
+        if alert_id:
+            has_rows, available = await _query_has_rows(
+                graph,
+                f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})-[:DETECTED_ON]->(asset:Asset) "
+                "RETURN asset.criticality AS criticality LIMIT 1",
+            )
+            if not available:
+                return {
+                    **_provenance_record(value, "unavailable", "asset-context graph read failed"),
+                    "provenance_available": False,
+                }
+            if has_rows:
+                return _provenance_record(value, "graph_context", "Alert->Asset graph context")
         return _provenance_record(value, "fixture_fallback", "neutral asset default")
 
     if name == "threat_intel_enrichment":
@@ -95,14 +105,21 @@ async def _factor_provenance(name: str, alert: Any, graph: Any, value: float) ->
 
     if name == "pattern_history":
         category = _get(alert, "category", "") or _get(alert, "alert_type", "")
-        if category and await _query_has_rows(
-            graph,
-            f"MATCH (d:Decision)-[:TRIGGERED_EVOLUTION]->(evo:EvolutionEvent) "
-             f"WHERE d.domain = 'soc' AND d.category = {_S(category)} "
-             "AND d.verified_correct = true "
-            "RETURN d.decision_id AS decision_id LIMIT 1",
-        ):
-            return _provenance_record(value, "learned", "verified decision history")
+        if category:
+            has_rows, available = await _query_has_rows(
+                graph,
+                f"MATCH (d:Decision)-[:TRIGGERED_EVOLUTION]->(evo:EvolutionEvent) "
+                 f"WHERE d.domain = 'soc' AND d.category = {_S(category)} "
+                 "AND d.verified_correct = true "
+                "RETURN d.decision_id AS decision_id LIMIT 1",
+            )
+            if not available:
+                return {
+                    **_provenance_record(value, "unavailable", "decision-history graph read failed"),
+                    "provenance_available": False,
+                }
+            if has_rows:
+                return _provenance_record(value, "learned", "verified decision history")
         return _provenance_record(value, "fixture_fallback", "neutral pattern-history baseline")
 
     if name == "time_anomaly":
@@ -134,6 +151,9 @@ async def _threat_intel_provenance(alert: Any, graph: Any, value: float) -> dict
         f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})-[:MEMBER_OF]->(c:Campaign) "
         "RETURN c.campaign_id AS campaign_id LIMIT 1",
     )
+    if campaign_rows is None:
+        return {**_provenance_record(value, "unavailable", "campaign provenance graph read failed"),
+                "provenance_available": False}
     if campaign_rows:
         return _provenance_record(value, "graph_context", "campaign membership graph context")
 
@@ -142,6 +162,9 @@ async def _threat_intel_provenance(alert: Any, graph: Any, value: float) -> dict
         f"MATCH (a:Alert {{alert_id: {_S(alert_id)}}})-[:HAS_INDICATOR]->(ti:ThreatIndicator) "
         "RETURN ti.source AS source LIMIT 10",
     )
+    if ti_rows is None:
+        return {**_provenance_record(value, "unavailable", "threat-indicator provenance graph read failed"),
+                "provenance_available": False}
     sources = {
         str(row.get("source") or "unknown").lower()
         for row in ti_rows
@@ -172,16 +195,18 @@ def _has_any(obj: Any, keys: tuple[str, ...]) -> bool:
     return any(_get(obj, key) is not None for key in keys)
 
 
-async def _query_has_rows(graph: Any, query: str) -> bool:
-    return bool(await _query_rows(graph, query))
+async def _query_has_rows(graph: Any, query: str) -> tuple[bool, bool]:
+    rows = await _query_rows(graph, query)
+    return (bool(rows), rows is not None)
 
 
-async def _query_rows(graph: Any, query: str) -> list:
+async def _query_rows(graph: Any, query: str) -> list | None:
     try:
         rows = await graph.run_query(query)
-        return rows if isinstance(rows, list) else []
-    except Exception:
-        return []
+        return rows if isinstance(rows, list) else None
+    except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
+        log.warning("SOC orchestrator graph query failed: %s", exc)
+        return None
 
 
 def _S(val) -> str:

@@ -9,24 +9,30 @@ from fastapi import APIRouter, HTTPException, Query
 from app.domains.soc.config import resolve_alert_category
 from app.db.graph_client import graph_client
 from app.services.soc_explainability import build_detector, build_inspector
-from app.services.triage import get_decision_factors
+from app.services.triage import (
+    FactorReadUnavailable, get_decision_factors, validated_decision_factors,
+)
+from copilot_sdk.backend.graph_access import GRAPH_CONNECTION_ERRORS
 
 router = APIRouter()
 
 
 async def _explain_context(alert_id: str) -> tuple[str, list[float]]:
-    alert = await graph_client.get_alert(alert_id)
-    if not alert:
-        raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
-    factors = await get_decision_factors(alert_id)
-    if not factors:
-        raise HTTPException(status_code=404, detail=f"Factors for alert {alert_id} not found")
+    # Guard provider fetch and vector construction together. A failed read is
+    # not a missing alert, and absent values must never become neutral evidence.
+    try:
+        alert = await graph_client.get_alert(alert_id)
+        if not alert:
+            raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
+        factors = await get_decision_factors(alert_id)
+        _, values = validated_decision_factors(factors)
+    except (FactorReadUnavailable, *GRAPH_CONNECTION_ERRORS) as exc:
+        raise HTTPException(status_code=503, detail="Decision factors unavailable") from exc
     context = await graph_client.get_security_context(alert_id)
     alert_type = (context or {}).get("alert_type") or alert.get("alert_type") or ""
     category = resolve_alert_category(alert_type)
     if category == "unclassified":
         raise HTTPException(status_code=422, detail="Alert type is not mapped to a SOC category")
-    values = [float(item.get("value", 0.5)) for item in factors.get("factors", [])]
     return category, values
 
 
@@ -58,4 +64,3 @@ async def what_if(
         return inspector.inspect(values, category, action).to_dict()
     except (RuntimeError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-

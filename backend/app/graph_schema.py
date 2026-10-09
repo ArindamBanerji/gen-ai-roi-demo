@@ -945,6 +945,11 @@ async def seed_graph(
         print("[WARN] " + str(len(report["issues"])) + " issues:")
         for issue in report["issues"]:
             print("  - " + issue)
+    failed_count = total_fail + fail
+    report["failed_count"] = failed_count
+    report["seeding_complete"] = failed_count == 0
+    if failed_count:
+        log.warning("Graph seeding completed with %s failed writes", failed_count)
     return report
 
 

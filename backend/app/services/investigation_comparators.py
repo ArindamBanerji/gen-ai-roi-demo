@@ -9,8 +9,9 @@ from typing import Any
 import numpy as np
 
 from app.domains.soc.config import SCORER_ACTIONS, SOC_CATEGORIES
+from app.domains.soc.factor_vector import validated_factor_vector
 from app.models.investigation import InvestigationResult, InvestigationStep
-from app.services.investigation_patterns import InvestigationPattern
+from app.services.investigation_patterns import InvestigationPattern, read_pattern_evidence
 from app.services.investigation_router import InvestigationRouter
 from app.services.triage_providers import build_evidence_scoped_graph
 
@@ -131,7 +132,7 @@ async def _one_or_many_pattern_result(
     patterns: list[InvestigationPattern],
 ) -> InvestigationResult:
     surface_raw, _ = await factor_provider.compute(alert_context, graph_store)
-    surface = np.asarray(surface_raw, dtype=np.float64).reshape(-1)
+    surface = np.asarray(validated_factor_vector(surface_raw), dtype=np.float64)
     router = InvestigationRouter({})
     before_distances = router.category_distances(surface, scorer)
     single_category = _closest_category(before_distances)
@@ -139,12 +140,33 @@ async def _one_or_many_pattern_result(
     admitted: list[dict[str, Any]] = []
     trace: list[InvestigationStep] = []
     v = surface.copy()
+    failed_patterns: list[str] = []
+    investigated_category: str | None = None
     candidate_reads = [pattern.candidate_read for pattern in patterns]
     for idx, pattern in enumerate(patterns):
         before = v.copy()
         distances_before = router.category_distances(before, scorer)
-        evidence = await pattern.execute(alert_context, graph_store)
+        # All four multi-read policies share this admission boundary.
+        evidence = await read_pattern_evidence(pattern, alert_context, graph_store)
+        if not evidence.get("evidence_available", True):
+            failed_patterns.append(pattern.pattern_name)
+            trace.append(InvestigationStep(
+                step=idx, pattern=pattern.category_name,
+                alert_category=_alert_category(alert_context),
+                v_before=before.tolist(), v_after=before.tolist(),
+                cat_distances_before=dict(distances_before),
+                cat_distances_after=dict(distances_before),
+                evidence_keys=[], candidate_reads=candidate_reads,
+                selected_edge=pattern.selected_edge,
+                propensity=1.0 / float(len(patterns)), cost=1.0,
+                timestamp=datetime.now(timezone.utc).isoformat(),
+                policy_version=policy, residual=0.0,
+                halt_reason="evidence_unavailable", evidence_available=False,
+                evidence_admitted=False, failure_reason=evidence["failure_reason"],
+            ))
+            break
         admitted.append(evidence)
+        investigated_category = pattern.category_name
         evidence_graph = build_evidence_scoped_graph(graph_store, admitted, surface)
         v_raw, _ = await factor_provider.compute(alert_context, evidence_graph)
         v = np.asarray(v_raw, dtype=np.float64).reshape(-1)
@@ -170,7 +192,6 @@ async def _one_or_many_pattern_result(
             )
         )
     score = router.score_best_from_centroids(v, scorer)
-    investigated_category = trace[-1].pattern if trace else None
     return _result(
         policy=policy,
         action=score.action,
@@ -181,7 +202,8 @@ async def _one_or_many_pattern_result(
         single_pass_action=single_action,
         single_pass_confidence=single_confidence,
         trace=trace,
-        halt_reason="budget_exhausted",
+        halt_reason=(trace[-1].halt_reason or "budget_exhausted") if trace else "no_pattern_available",
+        failed_patterns=failed_patterns,
     )
 
 
@@ -197,6 +219,7 @@ def _result(
     single_pass_confidence: float,
     trace: list[InvestigationStep],
     halt_reason: str,
+    failed_patterns: list[str] | None = None,
 ) -> InvestigationResult:
     return InvestigationResult(
         action=action,
@@ -212,6 +235,9 @@ def _result(
         agreement=action == single_pass_action,
         halt_reason=halt_reason,
         policy=policy,
+        evidence_available=all(step.evidence_available for step in trace),
+        degraded=any(not step.evidence_available for step in trace),
+        failed_patterns=list(failed_patterns or []),
     )
 
 

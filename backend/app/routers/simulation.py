@@ -168,6 +168,8 @@ async def _run_simulation_bg(sim_id: str, n_decisions: int, speed_ms: int) -> No
                 "weight_trajectory":     result.weight_trajectory,
                 "experiment_log":        result.experiment_log,
                 "duration_seconds":      result.duration_seconds,
+                "context_degraded":      result.context_degraded,
+                "degraded":               bool(result.context_degraded),
             },
         })
         print(

@@ -72,7 +72,7 @@ class CheckpointService:
         return checkpoint_id
 
     @staticmethod
-    async def list_checkpoints(graph_service: Any) -> list:
+    async def list_checkpoints(graph_service: Any) -> list | None:
         """Return all Checkpoint nodes ordered by timestamp DESC."""
         try:
             result = await graph_service.run_query(
@@ -85,7 +85,7 @@ class CheckpointService:
             )
         except Exception as exc:
             log.warning("[CHECKPOINT] list_checkpoints query failed: %s", exc)
-            return []
+            return None
 
         return [
             {

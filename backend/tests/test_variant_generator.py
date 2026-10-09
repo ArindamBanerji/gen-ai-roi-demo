@@ -330,7 +330,7 @@ async def test_consult_history_promotion_without_created_event_proceeds(monkeypa
 async def test_consult_history_query_failure_proceeds(monkeypatch):
     _patch_history(monkeypatch, side_effect=RuntimeError("history down"))
 
-    assert await generator._consult_history(object(), "v1") == {"action": "proceed"}
+    assert await generator._consult_history(object(), "v1") is None
 
 
 @pytest.mark.asyncio

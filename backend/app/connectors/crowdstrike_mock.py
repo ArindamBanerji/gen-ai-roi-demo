@@ -108,6 +108,7 @@ class CrowdStrikeMockConnector(UCLConnector):
         # AGE has no MERGE — MATCH first, SET if found, CREATE if absent.
         # -------------------------------------------------------------------
         indicators_ingested = 0
+        write_failures = 0
         _now_epoch = int(time.time() * 1000)
 
         for device in EDR_DEVICES:
@@ -144,6 +145,7 @@ class CrowdStrikeMockConnector(UCLConnector):
                     f"device_id={device['device_id']} hostname={device['hostname']}"
                 )
             except Exception as exc:
+                write_failures += 1
                 print(f"[CROWDSTRIKE] Failed to write {device['device_id']} to AGE: {exc}")
 
         # -------------------------------------------------------------------
@@ -185,6 +187,7 @@ class CrowdStrikeMockConnector(UCLConnector):
                             f"-- skipping EDR_MANAGED_BY edge"
                         )
             except Exception as exc:
+                write_failures += 1
                 print(f"[CROWDSTRIKE] Failed to link {device['hostname']}: {exc}")
 
         # -------------------------------------------------------------------
@@ -214,6 +217,7 @@ class CrowdStrikeMockConnector(UCLConnector):
             relationships_created=relationships_created,
             enrichment_summary=enrichment_summary,
             timestamp=datetime.now(timezone.utc).isoformat(),
+            write_failures=write_failures,
         )
 
     # ------------------------------------------------------------------

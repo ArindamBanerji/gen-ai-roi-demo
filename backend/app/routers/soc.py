@@ -18,6 +18,7 @@ from app.db.graph_client import graph_client, soc_decision_where
 from app.models.responses import (
     AnalyticsResponse,
     CampaignsResponse,
+    CentroidExportResponse,
     CentroidSupportResponse,
     DetectionEngineeringResponse,
     ExecutiveNarrativeResponse,
@@ -572,6 +573,8 @@ async def query_soc_metrics(request: SOCQueryRequest):
         # Step 2: Get metric data
         # Cross-context metrics use real AGE queries (H7-FIX-3)
         # ====================================================================
+        data_source = "graph"
+        degraded = False
         if metric_id in CROSS_CONTEXT_METRIC_IDS:
             try:
                 rows = await graph_client.run_query(
@@ -592,6 +595,8 @@ async def query_soc_metrics(request: SOCQueryRequest):
             except Exception as qe:
                 print(f"[SOC] cross-context AGE query failed: {qe}")
                 data = get_metric_data(metric_id)
+                data_source = "fallback"
+                degraded = True
         else:
             data = get_metric_data(metric_id)
 
@@ -628,7 +633,9 @@ async def query_soc_metrics(request: SOCQueryRequest):
                 "last_updated": provenance.last_updated
             },
             "sprawl_alert": sprawl_alert.model_dump() if sprawl_alert else None,
-            "confidence": 0.96  # High confidence for keyword matching
+            "confidence": 0.96,  # High confidence for keyword matching
+            "source": data_source,
+            "degraded": degraded,
         }
 
     except HTTPException:
@@ -655,6 +662,7 @@ async def get_detection_engineering():
 
     # --- Rule Quality Score ---
     category_scores = []
+    degraded = False
     overall_quality = None
     try:
         scorer = get_profile_scorer()
@@ -683,6 +691,7 @@ async def get_detection_engineering():
             {"category": cat, "quality_score": None, "drift": None, "status": "unavailable"}
             for cat in SOC_CATEGORIES
         ]
+        degraded = True
 
     # --- Noise Map — FP rate per category from Decision outcomes ---
     noise_map = []
@@ -704,6 +713,7 @@ async def get_detection_engineering():
                 fp_rate = round(fp / total, 3)
         except Exception as qe:
             print(f"[SOC] noise-map query failed for {cat}: {qe}")
+            degraded = True
 
         noise_map.append({
             "category": cat,
@@ -722,6 +732,8 @@ async def get_detection_engineering():
             "Drift < 0.05 = stable (baseline confirmed). "
             "Drift > 0.15 = diverged (baseline needs revision)."
         ),
+        "data_available": not degraded,
+        "degraded": degraded,
     }
 
 
@@ -892,6 +904,7 @@ async def get_attack_tactic_breakdown():
     is unavailable.
     """
     breakdown = []
+    degraded = False
     try:
         results = await graph_client.run_query(
             """
@@ -908,8 +921,9 @@ async def get_attack_tactic_breakdown():
         ]
     except Exception as exc:
         print(f"[SOC] attack-tactic-breakdown query failed: {exc}")
+        degraded = True
 
-    return {"breakdown": breakdown}
+    return {"breakdown": breakdown, "data_available": not degraded, "degraded": degraded}
 
 
 # ============================================================================
@@ -1022,6 +1036,7 @@ async def get_learning_state_endpoint():
     frozen = False
     decision_count = 0
     last_verified_at = None
+    degraded_fields: list[str] = []
 
     try:
         ls = _get_ls()
@@ -1053,6 +1068,7 @@ async def get_learning_state_endpoint():
             last_verified_at = str(rows[0].get("verified_at") or "")
     except Exception as exc:
         print(f"[SOC] learning-state verified_at query failed: {exc}")
+        degraded_fields.append("last_verified_at")
 
     # IKS v2 — composite institutional knowledge metric
     iks_v2_data = {}
@@ -1061,6 +1077,7 @@ async def get_learning_state_endpoint():
         iks_v2_data = await compute_iks_v2(graph_client)  # SOURCE: computed from graph (Decision nodes + centroids)
     except Exception as exc:
         print(f"[SOC] learning-state iks_v2 failed: {exc}")
+        degraded_fields.extend(["iks_v2", "iks_components", "iks_interpretation"])
 
     # BACKLOG-020 Phase 7: expose verified_decisions from snapshot
     verified_decisions = 0
@@ -1078,6 +1095,7 @@ async def get_learning_state_endpoint():
             }
     except Exception as _exc:
         print(f"[SOC] learning-state verified_decisions query failed: {_exc}")
+        degraded_fields.append("verified_decisions")
 
     from app.domains.soc.config import BOOTSTRAP_CATEGORY_WEIGHTS
     return {
@@ -1092,6 +1110,8 @@ async def get_learning_state_endpoint():
         "total_decisions":     iks_v2_data.get("total_decisions", 0),
         "categories_active":   iks_v2_data.get("categories_active", 0),
         "bootstrap_category_weights": BOOTSTRAP_CATEGORY_WEIGHTS,
+        "data_available": not bool(degraded_fields),
+        "degraded": bool(degraded_fields),
     }
 
 
@@ -1226,7 +1246,8 @@ async def explain_decision(decision_id: str):
         ) from _exc
 
     # ── Step 2b: ThreatIndicator source (for malware_execution template) ────
-    ti_source = "threat intelligence feed"
+    ti_source = "unavailable"
+    ti_degraded = False
     try:
         ti_rows = await graph_client.run_query(
             """
@@ -1240,16 +1261,21 @@ async def explain_decision(decision_id: str):
         if ti_rows and ti_rows[0].get("source"):
             ti_source = ti_rows[0]["source"]
     except Exception:
-        pass
+        ti_degraded = True
 
     # ── Step 3: Similar cases ───────────────────────────────────────────────
     similar_cases: list = []
+    similar_cases_available = True
     if factor_vector:
-        similar_cases = await similar_cases_svc.get_similar_cases(
+        fetched_similar_cases = await similar_cases_svc.get_similar_cases(
             factor_vector=factor_vector,
             category=category,
             graph_client=graph_client,
         )
+        if fetched_similar_cases is None:
+            similar_cases_available = False
+        else:
+            similar_cases = fetched_similar_cases
 
     similar_cases_message = (
         f"Not enough prior decisions in this category "
@@ -1323,7 +1349,7 @@ async def explain_decision(decision_id: str):
 
     nl_explanation = nl_engine.render_l1(category, context)
 
-    return redact_payload({
+    response = redact_payload({
         "decision_id":           decision_id,
         "nl_explanation":        nl_explanation,
         "similar_cases":         similar_cases,
@@ -1332,7 +1358,14 @@ async def explain_decision(decision_id: str):
         "category":              category,
         "action":                action,
         "confidence":            conf,
+        "source":                ti_source,
+        "data_available":        not ti_degraded,
+        "degraded":              ti_degraded,
     }, f"/soc/explain/{decision_id}")
+    if not similar_cases_available:
+        response["similar_cases_available"] = False
+        response["degraded"] = True
+    return response
 
 
 # ============================================================================
@@ -1371,15 +1404,26 @@ async def get_decision_provenance(decision_id: str):
         ]
     }
     """
-    from app.services.provenance import ProvenanceService
+    from app.services.provenance import ProvenanceGraphUnavailable, ProvenanceService
     from app.domains.soc.config import SOC_FACTORS, resolve_alert_category
 
-    result = await ProvenanceService.get_provenance_from_graph(
-        decision_id,
-        graph_client,
-        factor_names=list(SOC_FACTORS),
-        resolve_category=resolve_alert_category,
-    )
+    try:
+        result = await ProvenanceService.get_provenance_from_graph(
+            decision_id,
+            graph_client,
+            factor_names=list(SOC_FACTORS),
+            resolve_category=resolve_alert_category,
+        )
+    except ProvenanceGraphUnavailable:
+        return {
+            "decision_id": decision_id,
+            "category": "",
+            "action": "",
+            "total_nodes_consulted": 0,
+            "factors": [],
+            "provenance_available": False,
+            "degraded": True,
+        }
     if result is None:
         raise HTTPException(
             status_code=404,
@@ -1416,10 +1460,14 @@ async def get_threat_intel_for_alert(alert_id: str):
     indicators = await ThreatIndicatorService.get_indicators_for_alert(
         alert_id, graph_client
     )
+    indicators_available = indicators is not None
+    indicators = indicators or []
     return {
         "alert_id":      alert_id,
         "indicators":    indicators,
         "total_matches": len(indicators),
+        "indicators_available": indicators_available,
+        "degraded": not indicators_available,
     }
 
 
@@ -1480,6 +1528,7 @@ async def attack_chains(hours_back: int = 72):
     from app.services.attack_chain import AttackChainService
     service = AttackChainService(graph_client)
     campaigns = await service.scan_recent_alerts(hours_back=hours_back)
+    alerts_available = service.last_alerts_available
     return {
         "campaigns": [
             {
@@ -1497,6 +1546,8 @@ async def attack_chains(hours_back: int = 72):
         ],
         "total_campaigns":   len(campaigns),
         "scan_window_hours": hours_back,
+        "alerts_available": alerts_available,
+        "degraded": not alerts_available,
     }
 
 
@@ -1636,6 +1687,8 @@ async def benchmarking_report(
             }
         },
         'executive_summary': summary
+        , 'decisions_available': report.decisions_available,
+        'degraded': not report.decisions_available,
     }
 
 
@@ -1686,6 +1739,18 @@ async def executive_narrative_pdf():
         _p('SOC Copilot -- Executive Narrative', title_style),
         _p(f"Generated: {data['generated_at']}", body_style),
         Spacer(1, 0.15 * inch),
+    ]
+    sections_degraded = list(data.get("sections_degraded") or [])
+    if sections_degraded:
+        story.extend([
+            _p(
+                "PARTIAL REPORT: unavailable sections: "
+                + ", ".join(str(section) for section in sections_degraded),
+                body_style,
+            ),
+            Spacer(1, 0.15 * inch),
+        ])
+    story += [
         _p(data['headline'], body_style),
         Spacer(1, 0.2 * inch),
 
@@ -1945,6 +2010,8 @@ async def get_campaigns(
         trigger_rule=trigger_rule,
     )
 
+    data_available = campaigns_raw is not None
+    campaigns_raw = campaigns_raw or []
     now = datetime.utcnow()
     active = 0
     for c in campaigns_raw:
@@ -1964,6 +2031,8 @@ async def get_campaigns(
         "campaigns": [_format_campaign(c) for c in campaigns_raw],
         "total": len(campaigns_raw),
         "active_campaigns": active,
+        "data_available": data_available,
+        "degraded": not data_available,
     }
 
 
@@ -1982,7 +2051,7 @@ async def get_campaign_timeline(limit: int = 10):
     from app.domains.soc.campaigns import CampaignRepository
 
     repo = CampaignRepository(graph_client)
-    rows = await repo.get_campaigns(limit=max(1, min(limit, 50)))
+    rows = await repo.get_campaigns(limit=max(1, min(limit, 50))) or []
     now_epoch = int(datetime.utcnow().timestamp())
     timeline = []
 
@@ -2042,7 +2111,10 @@ async def get_campaign_detail(campaign_id: str):
     from app.domains.soc.campaigns import CampaignRepository
 
     repo = CampaignRepository(graph_client)
-    detail = await repo.get_campaign_detail(campaign_id)
+    try:
+        detail = await repo.get_campaign_detail(campaign_id)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Campaign data unavailable") from exc
     if not detail:
         raise HTTPException(status_code=404, detail="Campaign not found")
     return _format_campaign_detail(detail)
@@ -2119,6 +2191,14 @@ async def recorrelate_campaigns():
     engine = CampaignCorrelationEngine(config)
 
     events = await repo.fetch_all_events()
+    if events is None:
+        return {
+            "campaigns_found": 0,
+            "campaigns_written": 0,
+            "events_processed": 0,
+            "data_available": False,
+            "degraded": True,
+        }
     campaigns = engine.correlate(events)
 
     written = 0
@@ -2149,6 +2229,7 @@ async def get_analyst_benchmarking():
     Returns graceful "accumulating" state if no ShadowDecision nodes exist.
     """
     SOURCE = "v_shadow_synthetic_v3"
+    degraded_fields: list[str] = []
 
     # ── 1. Overall ────────────────────────────────────────────────────────
     try:
@@ -2165,8 +2246,12 @@ async def get_analyst_benchmarking():
         import logging as _log
         _log.getLogger(__name__).warning("[analyst-benchmarking] AGE query failed: %s", _exc)
         return {
-            "status": "accumulating",
+            "status": "unavailable",
             "message": "Shadow decision data not yet loaded. Run Step 3 ingest first.",
+            "data_source": "unavailable",
+            "data_available": False,
+            "degraded": True,
+            "degraded_fields": ["overall", "per_category", "per_archetype", "day_variance"],
         }
 
     row = overall_result[0] if overall_result else {}
@@ -2199,6 +2284,7 @@ async def get_analyst_benchmarking():
         )
     except Exception:
         cat_result = []
+        degraded_fields.append("per_category")
 
     per_category = {}
     for r in cat_result:
@@ -2260,6 +2346,7 @@ async def get_analyst_benchmarking():
         )
     except Exception:
         arch_result = []
+        degraded_fields.append("per_archetype")
 
     per_archetype = {}
     for r in arch_result:
@@ -2285,6 +2372,7 @@ async def get_analyst_benchmarking():
         )
     except Exception:
         day_result = []
+        degraded_fields.append("day_variance")
 
     day_row = day_result[0] if day_result else {}
     min_rate = day_row.get("min_daily_agree", 0.0)
@@ -2306,13 +2394,16 @@ async def get_analyst_benchmarking():
             f"in your deployment."
         )
     else:
-        lowest_cat  = min(per_category, key=lambda c: per_category[c]["agree_rate"])
-        lowest_rate = per_category[lowest_cat]["agree_rate"]
-        lead_finding = (
-            f"On {lowest_cat.replace('_', ' ')}, analysts override the AI "
-            f"{round((1 - lowest_rate) * 100)}% of the time even when the AI "
-            f"recommendation is correct. This is a training opportunity."
-        )
+        if per_category:
+            lowest_cat  = min(per_category, key=lambda c: per_category[c]["agree_rate"])
+            lowest_rate = per_category[lowest_cat]["agree_rate"]
+            lead_finding = (
+                f"On {lowest_cat.replace('_', ' ')}, analysts override the AI "
+                f"{round((1 - lowest_rate) * 100)}% of the time even when the AI "
+                f"recommendation is correct. This is a training opportunity."
+            )
+        else:
+            lead_finding = "Analyst benchmarking detail is unavailable."
 
     return {
         "status": "ready",
@@ -2328,6 +2419,9 @@ async def get_analyst_benchmarking():
             "max_daily_agree": max_rate,
             "trend": trend,
         },
+        "data_available": not bool(degraded_fields),
+        "degraded": bool(degraded_fields),
+        "degraded_fields": degraded_fields,
     }
 
 
@@ -2378,6 +2472,7 @@ async def get_enrichment_advisor():
     from app.services.enrichment_advisor import get_enrichment_advice
 
     ioc_coverage = 0.0
+    degraded = False
     try:
         results = await graph_client.run_query(
             """
@@ -2391,9 +2486,14 @@ async def get_enrichment_advisor():
         if results and results[0]["total"] > 0:
             ioc_coverage = results[0]["hits"] / results[0]["total"]
     except Exception:
-        pass
+        degraded = True
 
-    return get_enrichment_advice(ioc_coverage)
+    response = get_enrichment_advice(ioc_coverage)
+    if degraded:
+        response["degraded"] = True
+        response["data_source"] = "unavailable"
+        response["data_available"] = False
+    return response
 
 
 # =============================================================================
@@ -2780,6 +2880,7 @@ async def _tab1_content() -> dict:
     alert_count   = 0
     pending_count = 0
     top_alert_types: list = []
+    degraded_fields: list[str] = []
 
     try:
         rows = await graph_client.run_query(
@@ -2788,6 +2889,7 @@ async def _tab1_content() -> dict:
         alert_count = int((rows[0].get("cnt") or 0) if rows else 0)
     except Exception as _exc:
         print(f"[SOC] tab2 alert_count query failed: {_exc}")
+        degraded_fields.append("alert_count")
 
     try:
         rows = await graph_client.run_query(
@@ -2797,6 +2899,7 @@ async def _tab1_content() -> dict:
         pending_count = int((rows[0].get("cnt") or 0) if rows else 0)
     except Exception as _exc:
         print(f"[SOC] tab2 pending_count query failed: {_exc}")
+        degraded_fields.append("pending_count")
 
     # Fix 1.1 (revised): read a.category (primary) and a.alert_type (fallback).
     # a.type is always None on live data — ignored.
@@ -2810,6 +2913,7 @@ async def _tab1_content() -> dict:
         raw_top = rows
     except Exception as _exc:
         print(f"[SOC] tab2 raw_top categories query failed: {_exc}")
+        degraded_fields.append("top_alert_types")
 
     # Fix 1.2: fetch per-category verified decisions + override counts in one query
     top_categories = [_resolve_category(r) for r in raw_top]
@@ -2837,6 +2941,7 @@ async def _tab1_content() -> dict:
                     }
         except Exception as _exc:
             print(f"[SOC] tab2 per-category verified_map query failed: {_exc}")
+            degraded_fields.append("verified_decisions")
 
     for r in raw_top:
         category = _resolve_category(r)
@@ -2881,6 +2986,8 @@ async def _tab1_content() -> dict:
         "top_alert_types":    top_alert_types,
         "pending_count":      pending_count,
         "verified_decisions": total_verified,
+        "degraded_fields": degraded_fields,
+        "data_available": not bool(degraded_fields),
     }
 
 
@@ -2894,16 +3001,23 @@ async def _tab2_content() -> dict:
     drift_alert_count  = 0
     total_decisions    = 0
     override_learning_status = "inactive"
+    degraded_fields: list[str] = []
 
     # ── IKS primary: drift-based formula 100 × min(D(t)/κ*=0.20, 1.0) ────────
     # Uses in-memory ProfileScorer centroid drift from μ₀ — no AGE required.
     # Same path as Tab 5 (executive_narrative.py). Avoids event-loop issues that
     # affect compute_iks_v2 async queries.
     try:
-        iks_score = await compute_visible_iks(graph_client)
+        visible_iks = await compute_visible_iks(graph_client)
+        if visible_iks is None:
+            degraded_fields.append("iks_score")
+            iks_score = 0.0
+        else:
+            iks_score = float(visible_iks)
         iks_interpretation = interpret_iks_v2(iks_score)
     except Exception as _exc:
         print(f"[SOC] tab2 iks drift query failed: {_exc}")
+        degraded_fields.append("iks_score")
 
     # ── IKS v2: component breakdown + total_decisions (informational) ──────────
     # Also used as fallback for iks_score if drift path gave 0.0.
@@ -2916,6 +3030,7 @@ async def _tab2_content() -> dict:
             iks_interpretation = iks_data.get("interpretation", "")
     except Exception as _exc:
         print(f"[SOC] tab2 iks_v2 query failed: {_exc}")
+        degraded_fields.extend(["category_accuracy_summary", "total_decisions", "iks_score"])
         try:
             from app.state.graph_snapshot import get_snapshot as _get_snap_t2_iks
             snapshot_iks = float(_get_snap_t2_iks().iks_score)
@@ -2934,15 +3049,20 @@ async def _tab2_content() -> dict:
         drift_alert_count = int((rows[0].get("cnt") or 0) if rows else 0)
     except Exception as _exc:
         print(f"[SOC] tab2 drift_alert_count query failed: {_exc}")
+        degraded_fields.append("drift_alert_count")
 
     try:
         from app.services.override_detector import override_detector as _od
-        if _od.activated:
+        if not bool(getattr(_od, "graph_loaded", False)):
+            override_learning_status = "unavailable"
+            degraded_fields.append("override_learning_status")
+        elif _od.activated:
             override_learning_status = f"active ({_od.example_count} examples)"
         else:
             override_learning_status = f"inactive ({_od.example_count} examples)"
-    except Exception as _exc:
+    except (ImportError, ConnectionError, TimeoutError, OSError, RuntimeError) as _exc:
         print(f"[SOC] tab2 override_detector query failed: {_exc}")
+        degraded_fields.append("override_learning_status")
 
     # FIX 2.2 — Drift translation
     drift_pct = round((drift_alert_count / total_decisions * 100) if total_decisions > 0 else 0.0, 1)
@@ -2971,6 +3091,7 @@ async def _tab2_content() -> dict:
         verified_decisions = _get_snap_t2().verified_decisions
     except Exception as _exc:
         print(f"[SOC] tab2 verified_decisions snapshot failed: {_exc}")
+        degraded_fields.append("verified_decisions")
 
     decision_count_glossary = {
         "verified_decisions": (
@@ -2988,6 +3109,7 @@ async def _tab2_content() -> dict:
 
     return {
         "iks_score":               iks_score,
+        "iks_available":            "iks_score" not in degraded_fields,
         "iks_interpretation":      iks_interpretation,
         "category_accuracy_summary": category_accuracy_summary,
         "drift_alert_summary":     drift_alert_summary,       # FIX 2.2
@@ -3040,6 +3162,8 @@ async def _tab2_content() -> dict:
                 "Encoded in 144 centroid values + 144 DK precision weights."
             ),
         },
+        "degraded_fields": degraded_fields,
+        "data_available": not bool(degraded_fields),
     }
 
 
@@ -3130,11 +3254,13 @@ async def _tab3_content() -> dict:
 
     factor_names: list = []
     graph_node_count = 0
+    degraded_fields: list[str] = []
 
     try:
         factor_names = [c.name for c in SOCDomainConfig.get_factor_computers()]
     except Exception as _exc:
         print(f"[SOC] tab3 factor_names query failed: {_exc}")
+        degraded_fields.append("factor_names")
 
     try:
         rows = await graph_client.run_query(
@@ -3143,6 +3269,7 @@ async def _tab3_content() -> dict:
         graph_node_count = int((rows[0].get("cnt") or 0) if rows else 0)
     except Exception as _exc:
         print(f"[SOC] tab3 graph_node_count query failed: {_exc}")
+        degraded_fields.append("graph_node_count")
 
     # FIX 2.4 — factor breakdown with sigma, kernel_weight, interpretation
     all_sigmas = [_FACTOR_SIGMA.get(f, 0.15) for f in factor_names]
@@ -3204,6 +3331,7 @@ async def _tab3_content() -> dict:
                 )
         except Exception as _exc:
             print(f"[SOC] tab3 pending alert query failed: {_exc}")
+            degraded_fields.append("recommendation")
 
         # Step 2: resolve category index. Unclassified alerts are routing-only
         # and must not be scored against category-0 centroids.
@@ -3219,6 +3347,7 @@ async def _tab3_content() -> dict:
                 _cat_idx = _cfg.get_category_index(_alert_cat) if _alert_cat else 0
             except Exception as _exc:
                 print(f"[SOC] tab3 category_index lookup failed: {_exc}")
+                degraded_fields.append("recommendation")
                 _cat_idx = 0
 
             # Step 3: score with neutral factor vector
@@ -3230,6 +3359,7 @@ async def _tab3_content() -> dict:
                 rec_basis  = "live_scoring" if _alert_cat else "centroid_fallback"
             except Exception as _exc:
                 print(f"[SOC] tab3 live scoring failed: {_exc}")
+                degraded_fields.append("recommendation")
 
     # Step 3b: baseline — Day-1 bootstrap centroids (display-only; no live scorer mutation)
     if not _unclassified_alert:
@@ -3239,6 +3369,7 @@ async def _tab3_content() -> dict:
             baseline_action = _br.action_name
         except Exception as _exc:
             print(f"[SOC] tab3 baseline scoring failed: {_exc}")
+            degraded_fields.append("baseline_confidence")
     else:
         baseline_action = "unclassified"
 
@@ -3262,6 +3393,7 @@ async def _tab3_content() -> dict:
                     override_rate = round(_o / _v * 100, 1)
         except Exception as _exc:
             print(f"[SOC] tab3 override_rate query failed: {_exc}")
+            degraded_fields.append("override_rate")
 
     total_verified = 0
     try:
@@ -3274,6 +3406,7 @@ async def _tab3_content() -> dict:
             total_verified = int(_tv_rows[0].get("cnt") or 0)
     except Exception as _exc:
         print(f"[SOC] tab3 total_verified query failed: {_exc}")
+        degraded_fields.append("total_verified")
 
     # FIX 2.5 — graph context translation
     graph_context = (
@@ -3316,6 +3449,8 @@ async def _tab3_content() -> dict:
             f"device_trust (sigma=0.28) contributes {_factor_kernel_weight(0.28, all_sigmas)*100:.0f}% "
             "of its nominal weight -- the system trusts your highest-confidence signals most."
         ),
+        "degraded_fields": degraded_fields,
+        "data_available": not bool(degraded_fields),
     }
 
 
@@ -3327,6 +3462,7 @@ async def _tab4_content() -> dict:
     total_decisions  = 0
     decisions_per_day = 50.0   # default throughput assumption
     learning_events_count = 0
+    degraded_fields: list[str] = []
 
     try:
         rows = await graph_client.run_query(
@@ -3336,6 +3472,7 @@ async def _tab4_content() -> dict:
         total_decisions = int((rows[0].get("cnt") or 0) if rows else 0)
     except Exception as _exc:
         print(f"[SOC] tab4 total_decisions query failed: {_exc}")
+        degraded_fields.append("total_decisions")
 
     # Floor: when AGE returns 0, fall back to in-memory learning state
     # (same pattern as compute_iks_v2) so Tab 4 stays consistent with Tab 2.
@@ -3345,6 +3482,7 @@ async def _tab4_content() -> dict:
             total_decisions = max(0, _get_ls_t4().decision_count)  # SOURCE: in-memory LearningState (resets on restart)
         except Exception as _exc:
             print(f"[SOC] tab4 decision_count fallback failed: {_exc}")
+            degraded_fields.append("total_decisions")
 
     try:
         # Estimate decisions/day from timestamp spread of Decision nodes
@@ -3365,6 +3503,7 @@ async def _tab4_content() -> dict:
             decisions_per_day = round(n / span_days, 1)
     except Exception as _exc:
         print(f"[SOC] tab4 decisions_per_day query failed: {_exc}")
+        degraded_fields.append("decisions_per_day")
 
     try:
         rows = await graph_client.run_query(
@@ -3374,6 +3513,7 @@ async def _tab4_content() -> dict:
         learning_events_count = int((rows[0].get("cnt") or 0) if rows else 0)
     except Exception as _exc:
         print(f"[SOC] tab4 learning_events_count query failed: {_exc}")
+        degraded_fields.append("learning_events_count")
 
     # ROI: 0.25 analyst-hours saved per auto-closed decision, $75/hr loaded cost
     roi_annual_usd = round(decisions_per_day * 365 * 0.25 * 75.0, 2)
@@ -3449,6 +3589,8 @@ async def _tab4_content() -> dict:
         "roi_methodology":         roi_methodology,         # FIX 2.6
         "switching_cost_dollars":  switching_cost_dollars,  # FIX 2.7
         "switching_cost_trajectory": switching_cost_trajectory,
+        "degraded_fields": degraded_fields,
+        "data_available": not bool(degraded_fields),
     }
 
 
@@ -3456,8 +3598,12 @@ async def _tab5_content() -> dict:
     """Tab 5 -- Executive Narrative: headline, what_changed, what_discovered, what_system_knows."""
     from app.services.executive_narrative import build_executive_narrative_async
     from app.services.gae_state import get_profile_scorer
+    degraded_fields: list[str] = []
 
     narr = await build_executive_narrative_async(graph_client)
+    narrative_degraded = [
+        str(field) for field in narr.get("sections_degraded", []) if field
+    ]
 
     what_changed_raw    = narr.get("what_changed", {})
     what_discovered_raw = narr.get("what_discovered", {})
@@ -3465,7 +3611,7 @@ async def _tab5_content() -> dict:
 
     # Pull verified_decisions from narrative (now aligned to learning state count)
     verified_decisions = int(what_changed_raw.get("total_verified", 0))
-    iks_score = what_knows_raw.get("iks_current", 0.0)
+    iks_score = float(what_knows_raw.get("iks_current") or 0.0)
     # Use the same live AGE calculation as Tab 2 so the executive tab cannot
     # report a second, differently sampled IKS value. The snapshot is retained
     # only as a fallback for callers that have no usable live graph response.
@@ -3473,9 +3619,12 @@ async def _tab5_content() -> dict:
         from app.services.iks import compute_visible_iks
 
         live_iks = await compute_visible_iks(graph_client)
-        if live_iks > 0.0:
+        if live_iks is not None and live_iks > 0.0:
             iks_score = live_iks
+        elif live_iks is None:
+            degraded_fields.append("iks")
     except Exception:
+        degraded_fields.extend(["iks", "verified_decisions"])
         try:
             from app.state.graph_snapshot import get_snapshot
 
@@ -3494,6 +3643,7 @@ async def _tab5_content() -> dict:
         flywheel_edge_count = int((rows[0].get("cnt") or 0) if rows else 0)
     except Exception as _exc:
         print(f"[SOC] tab5 flywheel_edge_count query failed: {_exc}")
+        degraded_fields.append("flywheel_edge_count")
 
     flywheel_claim = "+10.13pp accuracy on pattern-matched alerts (validated, p=0.0002, N=30)"
 
@@ -3545,7 +3695,7 @@ async def _tab5_content() -> dict:
         centroid_summary = "Centroid tensor unavailable -- scorer not initialized."
 
     # FIX 2.10 — Conservation narrative: claim-backed CISO narrative
-    health_status = what_knows_raw.get("health_status", "GREEN")
+    health_status = str(what_knows_raw.get("health_status") or "UNAVAILABLE")
     pre_activation = bool(what_knows_raw.get("pre_activation", False))
     if pre_activation:
         signal = (
@@ -3567,6 +3717,15 @@ async def _tab5_content() -> dict:
         "Evidence Ledger -- full audit trail available for "
         "regulatory review (EU AI Act Art. 13 evidence supporting human oversight)."
     )
+    merged_degraded_fields: list[str] = []
+    for field in [
+        *degraded_fields,
+        *(f"narrative.{field}" for field in narrative_degraded),
+    ]:
+        if field not in merged_degraded_fields:
+            merged_degraded_fields.append(field)
+    learning_enabled_raw = what_knows_raw.get("learning_enabled")
+    iks_score = float(iks_score or 0.0)
 
     return {
         "headline":         narr.get("headline", ""),
@@ -3586,13 +3745,14 @@ async def _tab5_content() -> dict:
         },
         "what_system_knows": {
             "iks":                    iks_score,
-            "categories_calibrated":  what_knows_raw.get("categories_calibrated", 0),
+            "categories_calibrated":  int(what_knows_raw.get("categories_calibrated") or 0),
             "health_status":          health_status,
-            "operational_knowledge_status": what_knows_raw.get("operational_knowledge_status"),
+            "operational_knowledge_status": str(what_knows_raw.get("operational_knowledge_status") or ""),
             "pre_activation":         pre_activation,
-            "learning_enabled":       what_knows_raw.get("learning_enabled"),
-            "health_source":          what_knows_raw.get("health_source"),
-            "status_reason":          what_knows_raw.get("status_reason"),
+            "learning_enabled":       bool(learning_enabled_raw) if learning_enabled_raw is not None else False,
+            "learning_enabled_available": learning_enabled_raw is not None,
+            "health_source":          str(what_knows_raw.get("health_source") or ""),
+            "status_reason":          str(what_knows_raw.get("status_reason") or ""),
             "flywheel_message":       flywheel_message,        # FIX 2.8
             "flywheel_edge_count":    flywheel_edge_count,     # FIX 2.8
             "flywheel_status":        flywheel_status,         # FIX 2.8
@@ -3601,7 +3761,7 @@ async def _tab5_content() -> dict:
             "flywheel_activation_note": (
                 "Flywheel pre-active: +10.13pp accuracy lift unlocks automatically "
                 "as recurring alert patterns are detected (validated, CLAIM-W2)."
-            ) if flywheel_status == "pre_activation" else None,
+            ) if flywheel_status == "pre_activation" else "",
             "centroid_summary":       centroid_summary,        # FIX 2.9
             "conservation_narrative": conservation_narrative,  # FIX 2.10
             "competitive_test": {
@@ -3643,6 +3803,10 @@ async def _tab5_content() -> dict:
                 "framework_version": "v4 (5 LLM judges, ~115 experiments)",
             },
         },
+        "sections_degraded": narrative_degraded,
+        "degraded_fields": merged_degraded_fields,
+        "data_available": not bool(merged_degraded_fields),
+        "degraded": bool(merged_degraded_fields),
     }
 
 
@@ -3858,11 +4022,13 @@ async def get_analyst_weights():
 
     # -- decision counts per analyst ------------------------------------------
     decision_counts: dict = {}
+    degraded = False
     try:
         rows = await graph_client.run_query(_ANALYST_DECISION_COUNT_QUERY, {})
         decision_counts = {r["analyst"]: int(r["total"]) for r in (rows or [])}
     except Exception as _exc:
         print(f"[SOC] analyst-detail decision_counts query failed: {_exc}")
+        degraded = True
 
     # -- precision + weights --------------------------------------------------
     n_decisions = 0
@@ -3916,6 +4082,9 @@ async def get_analyst_weights():
             "Spearman r=0.975-1.000 (V-D5). "
             "Formula: weight = clip(precision / mean_precision, 0.5, 1.5)."
         ),
+        "data_available": not degraded,
+        "degraded": degraded,
+        "data_source": "unavailable" if degraded else "graph",
     }
 
 
@@ -3938,6 +4107,13 @@ async def get_volume_baseline():
     from app.services.gae_state import is_volume_spike_active
 
     baseline = await compute_volume_baseline(graph_client)
+    if baseline is None:
+        return {
+            "daily_mean": 0.0, "daily_std": 0.0, "spike_threshold": 0.0,
+            "spike_sigma": 0.0, "window_days": 30, "data_points": 0,
+            "spike_active": is_volume_spike_active(),
+            "baseline_available": False, "degraded": True,
+        }
     baseline["spike_active"] = is_volume_spike_active()
     return baseline
 
@@ -4008,7 +4184,10 @@ async def get_spike_cap_status_endpoint():
     baseline_daily = 0.0
     try:
         baseline = await compute_volume_baseline(graph_client)
-        baseline_daily = baseline.get("daily_mean", 0.0)
+        if baseline is not None:
+            baseline_daily = baseline.get("daily_mean", 0.0)
+        else:
+            status["baseline_available"] = False
     except Exception as _exc:
         print(f"[SOC] learning-health baseline_daily query failed: {_exc}")
 
@@ -4020,8 +4199,12 @@ async def get_spike_cap_status_endpoint():
 # GET /api/soc/centroid-export — Block 2.3
 # =============================================================================
 
-@router.get("/soc/centroid-export")
-async def get_centroid_export(format: str = "json"):
+@router.get(
+    "/soc/centroid-export",
+    response_model=CentroidExportResponse,
+    response_model_exclude_unset=True,
+)
+async def get_centroid_export(format: str = "json") -> dict[str, Any]:
     """
     Export the full centroid tensor with provenance metadata (Block 2.3).
 
@@ -4044,79 +4227,110 @@ async def get_centroid_export(format: str = "json"):
     """
     import hashlib
     import json as _json
-    import time as _time
     import numpy as _np
     from app.services.gae_state import build_centroid_export, get_profile_scorer
 
-    scorer = get_profile_scorer()
-
-    if scorer is None:
-        return {
-            "status":  "cold_start",
-            "message": "No centroid data yet",
-        }
-
-    # Build base export (current_mu, bootstrap_mu, sha256, categories, etc.)
-    raw = await build_centroid_export(scorer, graph_client)
-
-    categories = raw["categories"]
-    actions    = raw["actions"]
-    current_mu = raw["current_mu"]
-
-    # Centroids dict: category → action → [factor_values]
-    centroids: dict = {}
-    for c_idx, cat in enumerate(categories):
-        centroids[cat] = {}
-        for a_idx, action in enumerate(actions):
-            centroids[cat][action] = [
-                round(float(v), 6) for v in current_mu[c_idx][a_idx]
-            ]
-
-    # Per-category drift (mean L2 distance from μ₀ across actions)
-    bootstrap_mu = raw.get("bootstrap_mu")
-    drift_per_cat: dict = {}
-    if bootstrap_mu is not None:
-        curr_arr = _np.array(current_mu, dtype=_np.float64)   # [n_categories, n_actions, n_factors]
-        boot_arr = _np.array(bootstrap_mu, dtype=_np.float64) # [n_categories, n_actions, n_factors]
-        for c_idx, cat in enumerate(categories):
-            diff = curr_arr[c_idx] - boot_arr[c_idx]           # [n_actions, n_factors]
-            drift_per_cat[cat] = round(
-                float(_np.mean(_np.linalg.norm(diff, axis=1))), 4
-            )
-    else:
-        for cat in categories:
-            drift_per_cat[cat] = None
-
-    # Checksum over centroids dict (sorted JSON — auditable; distinct from sha256)
-    checksum = hashlib.sha256(
-        _json.dumps(centroids, sort_keys=True).encode()
-    ).hexdigest()
-
-    # IKS score (best-effort; 0.0 on any failure)
-    iks_score = 0.0
+    unavailable = CentroidExportResponse()
     try:
-        from app.services.iks import compute_iks_v2
-        iks_data = await compute_iks_v2(graph_client)
-        iks_score = iks_data.get("iks_v2", 0.0)
-    except Exception as _exc:
-        print(f"[SOC] centroid-export iks_score query failed: {_exc}")
+        scorer = get_profile_scorer()
+        if scorer is None:
+            result = unavailable.model_dump()
+        else:
+            raw = await build_centroid_export(scorer, graph_client)
+            if raw is None:
+                raise ValueError("Centroid export graph read returned None")
 
-    # Merge: start with raw base fields, then add/override with new fields
-    export = {
-        **raw,
-        "exported_at":          raw["generated_at_epoch"],
-        "factors":              list(SOC_FACTORS),
-        "centroids":            centroids,
-        "drift_from_bootstrap": drift_per_cat,   # override scalar with per-cat dict
-        "checksum":             checksum,
-        "iks_score":            iks_score,
-    }
+            categories = list(raw.get("categories") or [])
+            actions = list(raw.get("actions") or [])
+            current_mu_raw = raw.get("current_mu")
+            current_mu: list[list[list[float]]] = []
+            if current_mu_raw is not None:
+                if isinstance(current_mu_raw, _np.ndarray):
+                    current_mu = current_mu_raw.tolist()
+                else:
+                    current_mu = list(current_mu_raw)
+            centroids_available = bool(categories and actions and current_mu)
+
+            centroids: dict[str, dict[str, list[float]]] = {}
+            for c_idx, cat in enumerate(categories):
+                centroids[cat] = {}
+                for a_idx, action in enumerate(actions):
+                    centroids[cat][action] = [
+                        round(float(v), 6) for v in current_mu[c_idx][a_idx]
+                    ]
+
+            bootstrap_mu_raw = raw.get("bootstrap_mu")
+            bootstrap_mu: list[list[list[float]]] = []
+            if bootstrap_mu_raw is not None:
+                if isinstance(bootstrap_mu_raw, _np.ndarray):
+                    bootstrap_mu = bootstrap_mu_raw.tolist()
+                else:
+                    bootstrap_mu = list(bootstrap_mu_raw)
+            bootstrap_available = bool(bootstrap_mu)
+            drift_per_cat: dict[str, float] = {}
+            if bootstrap_available:
+                curr_arr = _np.array(current_mu, dtype=_np.float64)
+                boot_arr = _np.array(bootstrap_mu, dtype=_np.float64)
+                for c_idx, cat in enumerate(categories):
+                    diff = curr_arr[c_idx] - boot_arr[c_idx]
+                    drift_per_cat[cat] = round(
+                        float(_np.mean(_np.linalg.norm(diff, axis=1))), 4
+                    )
+            else:
+                drift_per_cat = {cat: 0.0 for cat in categories}
+
+            checksum = hashlib.sha256(
+                _json.dumps(centroids, sort_keys=True).encode()
+            ).hexdigest()
+            iks_score = 0.0
+            iks_available = True
+            try:
+                from app.services.iks import compute_iks_v2
+
+                iks_data = await compute_iks_v2(graph_client)
+            except Exception as exc:
+                logger.warning("IKS read failed for centroid export: %s", exc)
+                iks_data = None
+            if iks_data is None or iks_data.get("iks_v2") is None:
+                iks_available = False
+            else:
+                iks_score = float(iks_data["iks_v2"])
+
+            result = CentroidExportResponse(
+                export_version=str(raw.get("export_version") or ""),
+                generated_at_epoch=int(raw.get("generated_at_epoch") or 0),
+                gae_version=str(raw.get("gae_version") or ""),
+                tensor_shape=list(raw.get("tensor_shape") or []),
+                current_mu=current_mu,
+                bootstrap_mu=bootstrap_mu,
+                decision_count=int(raw.get("decision_count") or 0),
+                categories=categories,
+                actions=actions,
+                sha256=str(raw.get("sha256") or ""),
+                exported_at=int(raw.get("generated_at_epoch") or 0),
+                factors=list(SOC_FACTORS) if centroids_available else [],
+                centroids=centroids,
+                drift_from_bootstrap=drift_per_cat,
+                checksum=checksum,
+                iks_score=iks_score,
+                iks_available=iks_available,
+                bootstrap_available=bootstrap_available,
+                centroids_available=centroids_available,
+                degraded=not (
+                    iks_available and bootstrap_available and centroids_available
+                ),
+                status="ok" if centroids_available else "cold_start",
+                message="" if centroids_available else "No centroid data yet",
+            ).model_dump()
+    except Exception as exc:
+        logger.warning("Centroid export unavailable: %s", exc)
+        result = unavailable.model_dump()
 
     if format == "summary":
-        export = {k: v for k, v in export.items()
-                  if k not in ("current_mu", "bootstrap_mu", "centroids")}
+        for key in ("current_mu", "bootstrap_mu", "centroids"):
+            result.pop(key, None)
 
-    return export
+    return result
 
 
 # =============================================================================
@@ -4227,8 +4441,8 @@ async def get_centroid_support():
     region defined by the bootstrap baseline (mu_zero).  A centroid is
     flagged when >=2 factor dimensions exceed threshold_sigma x sigma_factor.
 
-    Safe degradation: if scorer is None (cold start) or bootstrap is
-    unavailable, returns GREEN with an explanatory note.
+    Support health is reported only after both live and bootstrap tensors are
+    available. Cold-start and failed reads remain explicitly unavailable.
 
     Health:
       GREEN : warning_count == 0
@@ -4242,35 +4456,33 @@ async def get_centroid_support():
     _SIGMA = [_FACTOR_SIGMA.get(f, 0.15) for f in SOC_FACTORS]
     _THRESHOLD = 2.0
 
-    _COLD_START = {
+    def _unavailable(status: str, reason: str) -> dict:
+        return {
         "support_summary":  {},
-        "overall_health":   "GREEN",
+        "overall_health":   "UNAVAILABLE",
         "warning_count":    0,
         "threshold_sigma":  _THRESHOLD,
-        "interpretation":   "All centroids within data support region.",
-        "note": "Centroid support monitoring active after deployment qualification",
-    }
+        "interpretation":   "Centroid support is unavailable.",
+        "note":             "",
+        "status":           status,
+        "reason":           reason,
+        "support_available": False,
+        "degraded":          True,
+        }
 
     scorer = get_profile_scorer()
-    if scorer is None:
-        return _COLD_START
+    if scorer is None or not hasattr(scorer, "centroids"):
+        return _unavailable("cold_start", "scorer_uninitialized")
 
     # Fetch bootstrap baseline
     try:
         bootstrap = await get_bootstrap_centroids(graph_client)
     except Exception as _exc:
-        print(f"[SOC] centroid-evolution bootstrap query failed: {_exc}")
-        return {
-            "status": "unavailable",
-            "reason": "bootstrap_read_failed",
-            "support_summary": {},
-            "overall_health": "UNAVAILABLE",
-            "warning_count": None,
-            "threshold_sigma": _THRESHOLD,
-        }
+        logger.warning("Bootstrap read failed for centroid support: %s", _exc)
+        return _unavailable("unavailable", "bootstrap_read_failed")
 
     if bootstrap is None or bootstrap.get("mu") is None:
-        return _COLD_START
+        return _unavailable("unavailable", "bootstrap_missing")
 
     mu      = scorer.centroids                                     # [C, A, D]
     mu_zero = _np.array(bootstrap["mu"], dtype=_np.float64)
@@ -4279,6 +4491,8 @@ async def get_centroid_support():
     C = min(mu.shape[0], mu_zero.shape[0], len(SOC_CATEGORIES))
     A = min(mu.shape[1], mu_zero.shape[1], len(SCORER_ACTIONS))
     D = min(mu.shape[2], mu_zero.shape[2], len(_SIGMA))
+    if C <= 0 or A <= 0 or D <= 0:
+        return _unavailable("unavailable", "bootstrap_missing")
 
     mu_slice      = mu[:C, :A, :D]
     mu_zero_slice = mu_zero[:C, :A, :D]
@@ -4324,6 +4538,11 @@ async def get_centroid_support():
         "warning_count":    warning_count,
         "threshold_sigma":  _THRESHOLD,
         "interpretation":   interpretation,
+        "note":             "",
+        "status":           "ok",
+        "reason":           "",
+        "support_available": True,
+        "degraded":          False,
     }
 
 

@@ -427,11 +427,21 @@ async def admin_evolution_scan():
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
-    return {
+    payload = {
         "success": True,
         "count": len(variants),
         "variants": [_variant_dict(record) for record in variants],
     }
+    if hasattr(variants, "scan_complete"):
+        payload.update({
+            "history_available": variants.history_available,
+            "trajectory_available": variants.trajectory_available,
+            "category_trends_available": variants.category_trends_available,
+            "rules_failed": variants.rules_failed,
+            "scan_complete": variants.scan_complete,
+            "degraded": not variants.scan_complete,
+        })
+    return payload
 
 
 @router.post("/admin/shadow-start")

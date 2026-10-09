@@ -99,6 +99,7 @@ class ConnectorRegistry:
                     relationships_created=0,
                     enrichment_summary=[{"error": str(exc)}],
                     timestamp=datetime.now(timezone.utc).isoformat(),
+                    write_failures=1,
                 )
                 results.append(error_result)
                 print(f"[CONNECTOR] {connector.name} refresh FAILED: {exc}")

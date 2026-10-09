@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 
 # Module-level singleton — loaded once at startup via load_from_graph().
 override_detector = OverrideDetector()
+override_detector.graph_loaded = False
 
 _QUERY = """
 MATCH (sd:ShadowDecision)
@@ -58,12 +59,20 @@ async def load_from_graph(graph_client: Any) -> OverrideDetector:
     """
     try:
         results = await graph_client.run_query(_QUERY, {})
-        examples = [dict(r) for r in results] if results else []
-    except Exception as exc:
-        log.warning("[OverrideDetector] AGE query failed -- using empty set: %s", exc)
-        examples = []
+    except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
+        log.warning("[OverrideDetector] AGE query failed -- retaining previous set: %s", exc)
+        override_detector.graph_loaded = False
+        return override_detector
+    if results is None or not isinstance(results, list) or any(
+        not isinstance(row, dict) for row in results
+    ):
+        log.warning("[OverrideDetector] AGE query returned malformed data -- retaining previous set")
+        override_detector.graph_loaded = False
+        return override_detector
+    examples = [dict(row) for row in results]
 
     override_detector.load(examples)
+    override_detector.graph_loaded = True
 
     if override_detector.activated:
         log.info(

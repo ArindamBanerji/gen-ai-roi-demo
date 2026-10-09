@@ -34,6 +34,10 @@ import uuid
 
 log = logging.getLogger(__name__)
 
+
+class CampaignDataUnavailableError(RuntimeError):
+    """Raised when a campaign graph read failed rather than found no data."""
+
 _TRACE_FALSE_VALUES = {"", "0", "false", "no", "off"}
 
 
@@ -1319,7 +1323,7 @@ class CampaignRepository:
             return None
         return self.temporal_contexts.get(str(campaign_id))
 
-    async def fetch_all_events(self) -> List[dict]:
+    async def fetch_all_events(self) -> Optional[List[dict]]:
         """
         Fetch triage alert events for retroactive correlation.
         Only includes decisions made by the live triage path:
@@ -1349,12 +1353,12 @@ class CampaignRepository:
             return [{**dict(r), "ts": _to_python_dt(r["ts"])} for r in results] if results else []
         except Exception as e:
             log.warning(f"fetch_all_events failed: {e}")
-            return []
+            return None
 
     async def fetch_recent_events(
         self, window_hours: int = 24,
         trace: CampaignTraceCollector | None = None,
-    ) -> List[dict]:
+    ) -> Optional[List[dict]]:
         """
         Fetch recent unclaimed events for real-time matching.
         """
@@ -1386,7 +1390,7 @@ class CampaignRepository:
             return events
         except Exception as e:
             log.warning(f"fetch_recent_events failed: {e}")
-            return []
+            return None
 
     async def fetch_single_alert_event(
         self,
@@ -1422,7 +1426,7 @@ class CampaignRepository:
             return None
         except Exception as e:
             log.warning(f"fetch_single_alert_event failed: {e}")
-            return None
+            raise CampaignDataUnavailableError("single alert event query failed") from e
 
     async def persist_campaign_seed(
         self,
@@ -1454,9 +1458,9 @@ class CampaignRepository:
         try:
             if not self._has_transactional_graph_client():
                 log.debug("CampaignSeed persistence skipped: graph client has no transaction support")
-                return {**seed, "alert_ids": [str(alert_id)], "status": "unpersisted"}
+                return {**seed, "alert_ids": [str(alert_id)], "status": "unpersisted", "persisted": False}
             seed_for_persist = cast(dict[str, Any], seed)
-            return cast(dict[str, Any], await self._run_campaign_locked_transaction(
+            result = cast(dict[str, Any], await self._run_campaign_locked_transaction(
                 seed_for_persist["seed_key"],
                 lambda run_cypher: self._persist_campaign_seed_locked(
                     run_cypher,
@@ -1466,9 +1470,11 @@ class CampaignRepository:
                     now_epoch,
                 ),
             ))
+            result["persisted"] = True
+            return result
         except Exception as e:
             log.warning(f"persist_campaign_seed failed for {seed_for_persist['seed_key']}: {e}")
-            return None
+            return {**seed, "alert_ids": [str(alert_id)], "status": "failed", "persisted": False}
 
     async def mark_campaign_seed_promoted(
         self,
@@ -1748,7 +1754,7 @@ class CampaignRepository:
         self, limit: int = 50,
         min_confidence: float = 0.0,
         trigger_rule: Optional[str] = None,
-    ) -> List[dict]:
+    ) -> Optional[List[dict]]:
         """Fetch campaign list for GET /api/soc/campaigns."""
         try:
             where_clause = "WHERE c.domain = 'soc' AND c.confidence >= $min_confidence"
@@ -1766,7 +1772,7 @@ class CampaignRepository:
             return [dict(r) for r in results] if results else []
         except Exception as e:
             log.warning(f"get_campaigns failed: {e}")
-            return []
+            return None
 
     async def get_campaign_detail(self, campaign_id: str) -> Optional[dict]:
         """Fetch full campaign detail for GET /api/soc/campaigns/{id}."""
@@ -1792,17 +1798,18 @@ class CampaignRepository:
             return dict(results[0]) if results else None
         except Exception as e:
             log.warning(f"get_campaign_detail failed: {e}")
-            return None
+            raise CampaignDataUnavailableError("campaign detail query failed") from e
 
-    async def campaigns_exist(self) -> bool:
+    async def campaigns_exist(self) -> Optional[bool]:
         """Check if any Campaign nodes exist (for startup recorrelation)."""
         try:
             results = await self.graph.run_query(
                 "MATCH (c:Campaign) WHERE c.domain = 'soc' RETURN count(c) AS n LIMIT 1", {}
             )
             return bool(results[0]["n"] > 0) if results else False
-        except Exception:
-            return False
+        except Exception as e:
+            log.warning(f"campaigns_exist failed: {e}")
+            return None
 
 
 # ── CampaignMatcher ───────────────────────────────────────────────────────────
@@ -1817,6 +1824,7 @@ class CampaignAsyncState:
     materialized_campaigns: dict[str, str] = field(default_factory=dict)
     campaign_contexts: dict[str, CampaignContext] = field(default_factory=dict)
     temporal_contexts: dict[str, CampaignTemporalContext] = field(default_factory=dict)
+    materialization_failed_count: int = 0
 
     def mark_pending(self, seed_key: str, campaign_id: str) -> bool:
         """Return True when this caller owns scheduling for the seed."""
@@ -1892,6 +1900,7 @@ class CampaignAsyncState:
         self.materialized_campaigns.clear()
         self.campaign_contexts.clear()
         self.temporal_contexts.clear()
+        self.materialization_failed_count = 0
 
 
 _DEFAULT_CAMPAIGN_ASYNC_STATE = CampaignAsyncState()
@@ -1918,6 +1927,10 @@ class CampaignMatcher:
         self.engine = engine
         self.repo = repo
         self.background = background
+        self.last_degraded = False
+        self.last_check_available = True
+        self.last_materialization_available = True
+        self.last_seed_persisted = True
         self.async_state = async_state or (
             _DEFAULT_CAMPAIGN_ASYNC_STATE if background else CampaignAsyncState()
         )
@@ -1951,11 +1964,20 @@ class CampaignMatcher:
         campaign_id = await self._check_alert_impl(alert_id)
         return {
             "campaign_id": campaign_id,
+            "degraded": self.last_degraded,
+            "campaign_check_available": self.last_check_available,
+            "materialization_available": self.last_materialization_available,
+            "campaign_seed_persisted": self.last_seed_persisted,
+            "materialization_failed_count": self.async_state.materialization_failed_count,
             "elapsed_ms": (time.perf_counter() - started) * 1000.0,
             "measurement_mode": "mock/unit",
         }
 
     async def _check_alert_impl(self, alert_id: str) -> Optional[str]:
+        self.last_degraded = False
+        self.last_check_available = True
+        self.last_materialization_available = True
+        self.last_seed_persisted = True
         trace = CampaignTraceCollector(alert_id)
         campaign_id = None
         try:
@@ -1990,6 +2012,8 @@ class CampaignMatcher:
 
         except Exception as e:
             log.warning(f"CampaignMatcher.check_alert({alert_id}) failed: {e}")
+            self.last_degraded = True
+            self.last_check_available = False
             trace.path = "unknown"
             return None
         finally:
@@ -2021,6 +2045,8 @@ class CampaignMatcher:
         if not seed:
             return None
         if self.graph is None or not hasattr(self.graph, "run_query"):
+            self.last_degraded = True
+            self.last_materialization_available = False
             return None
         try:
             rows = await _campaign_trace_query(
@@ -2039,6 +2065,8 @@ class CampaignMatcher:
             return None
         except Exception as e:
             log.warning(f"_check_materialized_campaign failed: {e}")
+            self.last_degraded = True
+            self.last_materialization_available = False
             return None
 
     def _check_pending_seed(self, event: dict) -> Optional[str]:
@@ -2077,6 +2105,8 @@ class CampaignMatcher:
             self.async_state.mark_materialized(campaign_id)
             return campaign_id
         except Exception as e:
+            self.last_degraded = True
+            self.async_state.materialization_failed_count += 1
             log.warning(
                 "Background campaign materialization failed for alert=%s seed=%s: %s",
                 alert_id,
@@ -2097,6 +2127,10 @@ class CampaignMatcher:
             self.config["correlation_window_hours"],
             trace=trace,
         )
+        if recent is None:
+            self.last_degraded = True
+            self.last_materialization_available = False
+            return None
         if event and not any(e["alert_id"] == alert_id for e in recent):
             recent.append(event)
         elif not event:
@@ -2110,12 +2144,16 @@ class CampaignMatcher:
             return None
 
         if hasattr(self.repo, "persist_campaign_seed"):
-            await self.repo.persist_campaign_seed(
+            seed_result = await self.repo.persist_campaign_seed(
                 event,
                 rule_type="shared_entity",
                 window_seconds=self.engine.window_seconds,
                 trace=trace,
             )
+            if isinstance(seed_result, dict) and not seed_result.get("persisted", True):
+                log.warning("Campaign seed was not persisted for alert=%s", alert_id)
+                self.last_degraded = True
+                self.last_seed_persisted = False
 
         if len(recent) < self.config["min_alerts_for_campaign"]:
             return None

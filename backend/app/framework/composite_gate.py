@@ -113,16 +113,32 @@ class CompositeDiscriminant:
         factor_center_dist = float(np.linalg.norm(f - 0.5))
 
         # ── Graph context features ───────────────────────────────────────────
+        category_history_available = True
         try:
             cat_stats = await DecisionHistoryService.get_category_stats(
                 category, graph_service
             )
-        except Exception as exc:
+        except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
             log.warning("[COMPOSITE] category_stats failed: %s", exc)
             cat_stats = {"cat_count": 0, "rolling_accuracy": 0.5, "verified_count": 0}
+            category_history_available = False
+        if not isinstance(cat_stats, dict):
+            cat_stats = {"cat_count": 0, "rolling_accuracy": 0.5, "verified_count": 0}
+            category_history_available = False
 
-        cat_count        = int(cat_stats.get("cat_count", 0))
-        rolling_accuracy = float(cat_stats.get("rolling_accuracy", 0.5))
+        cat_count_raw = cat_stats.get("cat_count", 0)
+        rolling_accuracy_raw = cat_stats.get("rolling_accuracy", 0.5)
+        if (
+            isinstance(cat_count_raw, bool)
+            or not isinstance(cat_count_raw, (int, float))
+            or isinstance(rolling_accuracy_raw, bool)
+            or not isinstance(rolling_accuracy_raw, (int, float))
+        ):
+            category_history_available = False
+            cat_count_raw = 0
+            rolling_accuracy_raw = 0.5
+        cat_count = int(cat_count_raw)
+        rolling_accuracy = float(rolling_accuracy_raw)
 
         features = {
             "confidence":         round(confidence, 4),
@@ -159,7 +175,10 @@ class CompositeDiscriminant:
                 f"margin {margin:.2f} < {CompositeDiscriminant.MARGIN_THRESHOLD}"
             )
 
-        if cat_count < CompositeDiscriminant.MIN_CAT_COUNT:
+        if not category_history_available:
+            auto_approve = False
+            reason_codes.append("category_history_unavailable")
+        elif cat_count < CompositeDiscriminant.MIN_CAT_COUNT:
             auto_approve = False
             reason_codes.append(
                 f"cat_count {cat_count} < {CompositeDiscriminant.MIN_CAT_COUNT} (maturity gate)"
@@ -192,4 +211,5 @@ class CompositeDiscriminant:
             "approval_score": round(approval_score, 4),
             "reason_codes":   reason_codes,
             "features":       features,
+            "category_history_available": category_history_available,
         }

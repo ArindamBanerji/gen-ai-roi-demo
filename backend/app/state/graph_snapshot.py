@@ -88,7 +88,9 @@ class GraphSnapshot:
 
         snap.iks_score = await graph_client.compute_iks()
         if snap.iks_score == 0.0:
-            snap.iks_score = await compute_visible_iks(graph_client)
+            visible_iks = await compute_visible_iks(graph_client)
+            if visible_iks is not None:
+                snap.iks_score = visible_iks
 
         logger.info(
             f"GraphSnapshot initialized: "

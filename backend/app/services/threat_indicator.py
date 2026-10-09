@@ -56,7 +56,7 @@ class ThreatIndicatorService:
         severity: str,
         name: str,
         graph_service: Any,
-    ) -> str:
+    ) -> str | None:
         """MERGE a ThreatIndicator node. Idempotent -- updates timestamp on re-insert.
 
         Returns the node ID (UUID).  Returns "" if the write fails.
@@ -67,7 +67,7 @@ class ThreatIndicatorService:
                 "(source=%r, type=%r)",
                 source, indicator_type,
             )
-            return ""
+            return None
         try:
             now_s  = _S(int(datetime.utcnow().timestamp() * 1000))
             val_s  = _S(indicator_value)
@@ -105,7 +105,7 @@ class ThreatIndicatorService:
                 "[THREAT-INDICATOR] upsert failed indicator_value=%r: %s",
                 indicator_value, exc,
             )
-            return ""
+            return None
 
     @staticmethod
     async def link_to_alert(
@@ -136,7 +136,7 @@ class ThreatIndicatorService:
             )
 
     @staticmethod
-    async def get_indicators_for_alert(alert_id: str, graph_service: Any) -> list:
+    async def get_indicators_for_alert(alert_id: str, graph_service: Any) -> list | None:
         """Get all ThreatIndicators linked to an alert via [:HAS_INDICATOR]."""
         try:
             result = await graph_service.run_query(
@@ -153,10 +153,10 @@ class ThreatIndicatorService:
                 "[THREAT-INDICATOR] get_indicators_for_alert failed alert=%r: %s",
                 alert_id, exc,
             )
-            return []
+            return None
 
     @staticmethod
-    async def get_all_indicators(graph_service: Any) -> dict:
+    async def get_all_indicators(graph_service: Any) -> dict | None:
         """Get all ThreatIndicator nodes with TTL status and grouped counts.
 
         Returns
@@ -186,7 +186,7 @@ class ThreatIndicatorService:
             indicators = [dict(r) for r in result]
         except Exception as exc:
             log.warning("[THREAT-INDICATOR] get_all_indicators failed: %s", exc)
-            indicators = []
+            return None
 
         return {
             "total":       len(indicators),

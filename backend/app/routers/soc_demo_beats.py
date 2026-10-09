@@ -203,7 +203,9 @@ async def frontier() -> dict[str, Any]:
 async def centroid_timeline() -> dict[str, Any]:
     from app.routers.framework_router import get_centroid_evolution
 
-    return {"timeline": await get_centroid_evolution()}
+    # Supplying explicit values matters when invoking a FastAPI handler
+    # directly: Query(...) defaults are otherwise passed as objects.
+    return {"timeline": await get_centroid_evolution(category=None, n=200)}
 
 
 @router.get("/diagnostics/accuracy-alerts")

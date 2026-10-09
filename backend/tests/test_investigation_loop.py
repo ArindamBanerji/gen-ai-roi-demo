@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any, cast
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
 import pytest
@@ -291,10 +292,15 @@ async def test_investigation_trace_has_required_shape_and_fields() -> None:
         "policy_version",
         "residual",
         "halt_reason",
+        "evidence_available",
+        "evidence_admitted",
+        "failure_reason",
     }
     assert len(step["v_before"]) == 6
     assert len(step["v_after"]) == 6
     assert set(step["cat_distances_before"]) == set(SOC_CATEGORIES)
+    assert step["evidence_available"] is True
+    assert step["evidence_admitted"] is True
 
 
 @pytest.mark.asyncio
@@ -430,7 +436,7 @@ async def test_flip_count_halts_at_exact_max_flips() -> None:
         selected_edge="INVOLVES",
         enriched_factors=("privileged_identity_context",),
         candidate_read="credential_flip_probe",
-        graph_query="MATCH (a:Alert {alert_id: {alert_id}})-[:INVOLVES]->(u:User) RETURN u.user_id AS user_id LIMIT 1",
+        graph_query="MATCH (a:Alert {{alert_id: {alert_id}}})-[:INVOLVES]->(u:User) RETURN u.user_id AS user_id LIMIT 1",
         vector_values=tuple(enumerate(_centroid(scorer, "credential_access", 1).tolist())),
         specific_key_names=("credential_flip_signal",),
     )
@@ -447,3 +453,168 @@ async def test_flip_count_halts_at_exact_max_flips() -> None:
 
     assert result.steps == 1
     assert result.trace[-1].halt_reason == "oscillation"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["reextract", "damped"])
+@pytest.mark.parametrize("failure", ["raise", "none", "malformed"])
+@pytest.mark.parametrize("successful_reads", [0, 1])
+async def test_unavailable_read_halts_at_last_valid_vector(mode, failure, successful_reads):
+    scorer = _scorer()
+    original_centroids = np.asarray(scorer.centroids).copy()
+    surface = _centroid(scorer, "credential_access")
+    provider = _FactorProvider(surface)
+    graph = _GraphStore()
+    last_read = RuntimeError("graph down") if failure == "raise" else None if failure == "none" else [None]
+    reads = [[{"user_id": "user-1"}]] * successful_reads + [last_read]
+    with patch.object(graph, "run_query", new=AsyncMock(side_effect=reads)) as query:
+        result = await _loop(
+            scorer, provider, L_max=3, residual_threshold=0.0,
+            max_flips=10, aggregation_method=mode,
+        ).investigate(_alert(), graph)
+    failed = result.trace[-1]
+    assert result.steps == len(result.trace) == successful_reads + 1
+    assert query.await_count == successful_reads + 1
+    assert len(provider.calls) == successful_reads + 1  # no extraction after failed read
+    assert result.degraded is True and result.evidence_available is False
+    assert result.failed_patterns == [PATTERN_REGISTRY[failed.pattern].pattern_name]
+    assert result.halt_reason == failed.halt_reason == "evidence_unavailable"
+    assert failed.evidence_available is False and failed.evidence_admitted is False
+    assert failed.evidence_keys == [] and failed.failure_reason
+    assert failed.v_before == failed.v_after == result.v_final
+    assert failed.cat_distances_before == failed.cat_distances_after
+    assert failed.residual == 0.0
+    if successful_reads:
+        assert result.v_final == result.trace[0].v_after
+        assert result.v_final != surface.tolist()
+    else:
+        assert result.v_final == surface.tolist()
+    expected = InvestigationRouter({}).score_best_from_centroids(np.asarray(result.v_final), scorer)
+    assert (result.action, result.confidence) == (expected.action, expected.confidence)
+    np.testing.assert_array_equal(scorer.centroids, original_centroids)
+
+
+@pytest.mark.asyncio
+async def test_successful_empty_read_remains_available():
+    graph = _GraphStore()
+    pattern = PATTERN_REGISTRY["credential_access"]
+    with patch.object(graph, "run_query", new=AsyncMock(return_value=[])):
+        evidence = await pattern.execute(_alert(), graph)
+    assert evidence["evidence_available"] is True
+    assert evidence["degraded"] is False
+    assert len(evidence["vld_factor_vector"]) == 6
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("category", SOC_CATEGORIES)
+async def test_investigation_pattern_query_executes_on_age(age_graph, category):
+    alert_id = age_graph.alert(alert_type="anomalous_login")
+    age_graph.query(
+        "MATCH (a:Alert) "
+        "CREATE (a)-[:INVOLVES]->(:User {user_id: 'u', risk_level: 'high', department: 'IT'}) "
+        "CREATE (a)-[:DETECTED_ON]->(:Asset {asset_id: 'asset', criticality: 'high', asset_type: 'server'}) "
+        "CREATE (a)-[:HAS_INDICATOR]->(:ThreatIndicator {indicator: 'test', severity: 'high'}) "
+        "CREATE (a)-[:CLASSIFIED_AS]->(:AttackPattern {pattern_id: 'p', tactic: 'test'}) "
+        "CREATE (a)-[:MEMBER_OF]->(:Campaign {campaign_id: 'c'}) RETURN a"
+    )
+    pattern = PATTERN_REGISTRY[category]
+    # Exercise the exact production template against AGE, rather than a
+    # permissive test reader that cannot detect invalid Cypher syntax.
+    from app.graph_schema import _S
+    rows = await age_graph.client.run_query(pattern.graph_query.format(alert_id=_S(alert_id)))
+    assert len(rows) == 1
+    assert any(value is not None for value in rows[0].values())
+
+
+@pytest.mark.asyncio
+async def test_adapter_rejects_failed_context_and_vector():
+    from app.services.triage_providers import build_evidence_scoped_graph, _apply_vld_reextraction
+    graph = _GraphStore()
+    base = np.full(6, 0.3)
+    adapter = build_evidence_scoped_graph(graph, [{
+        "evidence_available": False, "vld_factor_vector": [0.9] * 6,
+        "user_id": "fabricated", "invented_observation": True,
+    }], np.full(6, 0.1))
+    context = await adapter.get_security_context("ALT-VLD-001")
+    assert context["user_id"] == "user-1"
+    assert "invented_observation" not in context
+    assert adapter.admitted_evidence == adapter.vld_factor_vectors == []
+    np.testing.assert_array_equal(_apply_vld_reextraction(base, adapter), base)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("policy_name", ["content", "majority", "random", "breadth"])
+@pytest.mark.parametrize("failure", ["raise", "none"])
+async def test_comparator_excludes_unavailable_read(policy_name, failure):
+    from app.services.investigation_comparators import (
+        ContentRulePolicy, MajorityBranchPolicy, RandomBranchPolicy, BreadthPolicy,
+    )
+    patterns = build_default_investigation_patterns()
+    policies = {
+        "content": ContentRulePolicy(patterns),
+        "majority": MajorityBranchPolicy("credential_access", patterns),
+        "random": RandomBranchPolicy(patterns, seed=3),
+        "breadth": BreadthPolicy(patterns),
+    }
+    scorer = _scorer()
+    surface = _centroid(scorer, "credential_access")
+    provider = _FactorProvider(surface)
+    graph = _GraphStore()
+    query = AsyncMock(side_effect=RuntimeError("down")) if failure == "raise" else AsyncMock(return_value=None)
+    with patch.object(graph, "run_query", new=query):
+        result = await policies[policy_name].investigate(_alert(), scorer, provider, graph)
+    assert result.degraded and not result.evidence_available
+    assert result.failed_patterns
+    assert result.steps == query.await_count == 1
+    assert len(provider.calls) == 1
+    assert result.v_final == surface.tolist()
+    step = result.trace[0]
+    assert step.v_before == step.v_after and step.residual == 0.0
+    assert not step.evidence_admitted and not step.evidence_available
+    assert step.cat_distances_before == step.cat_distances_after
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("initial", [None, [], [0.5] * 5])
+async def test_invalid_initial_surface_fails_explicitly(initial):
+    provider = MagicMock(compute=AsyncMock(return_value=(initial, {})))
+    with pytest.raises(ValueError, match="factor_vector"):
+        await _loop(_scorer(), provider).investigate(_alert(), _GraphStore())
+
+
+def test_nonplanted_investigation_http_degraded_and_read_only():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.routers import triage
+    from app.services.triage_providers import get_factor_vector_provider
+    scorer = _scorer()
+    centroids_before = np.asarray(scorer.centroids).copy()
+    provider = _FactorProvider(_centroid(scorer, "credential_access"))
+    graph = MagicMock(spec=["get_alert", "run_query"])
+    graph.get_alert = AsyncMock(return_value=_alert())
+    graph.run_query = AsyncMock(side_effect=RuntimeError("bounded read down"))
+    previous = app.dependency_overrides.get(get_factor_vector_provider)
+    app.dependency_overrides[get_factor_vector_provider] = lambda: provider
+    try:
+        with patch.object(triage, "graph_client", graph), \
+             patch.object(triage, "_soc_get_security_context_for_analyze", new=AsyncMock(return_value=_alert())), \
+             patch("app.services.gae_state.get_profile_scorer", return_value=scorer):
+            response = TestClient(app).post("/api/soc/investigate", json={"alert_id": "ALT-VLD-001"})
+    finally:
+        if previous is None:
+            app.dependency_overrides.pop(get_factor_vector_provider, None)
+        else:
+            app.dependency_overrides[get_factor_vector_provider] = previous
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "degraded"
+    for section in (body, body["vld"]):
+        assert section["evidence_available"] is False and section["degraded"] is True
+        assert section["failed_patterns"]
+    assert body["investigation_trace"][0]["evidence_admitted"] is False
+    assert body["vld"]["fixture_source"] == "planted"  # context origin only; not a planted algorithm
+    assert body["vld"]["investigated_category"] == ""
+    assert body["conservation_emit_gate"] == "not_evaluated_read_only"
+    assert ": null" not in json.dumps(body)
+    assert {call[0] for call in graph.method_calls} == {"get_alert", "run_query"}
+    np.testing.assert_array_equal(scorer.centroids, centroids_before)

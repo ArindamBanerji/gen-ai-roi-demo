@@ -27,15 +27,20 @@ class ConnectorResult:
     timestamp: str = field(             # ISO-8601 UTC
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
+    write_failures: int = 0             # node/relationship writes that failed
 
     def to_dict(self) -> Dict:
-        return {
+        result = {
             "source": self.source,
             "indicators_ingested": self.indicators_ingested,
             "relationships_created": self.relationships_created,
             "enrichment_summary": self.enrichment_summary,
             "timestamp": self.timestamp,
         }
+        if self.write_failures:
+            result["write_failures"] = self.write_failures
+            result["degraded"] = True
+        return result
 
 
 @dataclass

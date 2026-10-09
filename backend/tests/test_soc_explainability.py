@@ -3,12 +3,37 @@
 from __future__ import annotations
 
 import json
+from unittest.mock import AsyncMock, patch
 
 import numpy as np
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.services.soc_explainability import NoPrecedentDetector, WhatIfInspector
+from app.services.triage import FactorReadUnavailable
+
+
+@pytest.mark.parametrize("path", ["no-precedent", "what-if"])
+@pytest.mark.parametrize("failure", ["none", "raises", "empty"])
+def test_explain_unavailable_factors_is_503(path, failure):
+    from app.routers import explain
+
+    provider = AsyncMock(return_value={"factors": []} if failure == "empty" else None)
+    if failure == "raises":
+        provider.side_effect = FactorReadUnavailable("graph disconnected")
+    with (
+        patch.object(explain.graph_client, "get_alert", AsyncMock(return_value={"alert_type": "anomalous_login"})),
+        patch.object(explain, "get_decision_factors", provider),
+        patch.object(explain, "build_detector") as detector,
+        patch.object(explain, "build_inspector") as inspector,
+    ):
+        response = TestClient(app).get(f"/api/soc/explain/{path}?alert_id=test")
+    assert response.status_code == 503, response.text
+    assert response.json() == {"detail": "Decision factors unavailable"}
+    provider.assert_awaited_once_with("test")
+    detector.assert_not_called()
+    inspector.assert_not_called()
 
 
 FACTOR_NAMES = (

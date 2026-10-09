@@ -28,7 +28,12 @@ class EvidenceScopedGraphAdapter:
         surface_vector: np.ndarray,
     ) -> None:
         self.base_graph = base_graph
-        self.admitted_evidence = list(admitted_evidence)
+        # Defensive boundary: rejected reads cannot influence either extraction
+        # vectors or the merged security context.
+        self.admitted_evidence = [
+            item for item in admitted_evidence
+            if item.get("evidence_available", True) and item.get("evidence_admitted", True)
+        ]
         self.vld_surface_vector = np.asarray(surface_vector, dtype=np.float64).copy()
         self.vld_factor_vectors = [
             np.asarray(item.get("vld_factor_vector"), dtype=np.float64)

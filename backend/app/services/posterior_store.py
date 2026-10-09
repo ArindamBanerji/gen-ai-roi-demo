@@ -5,9 +5,11 @@ from __future__ import annotations
 import logging
 import os
 import time
-from typing import Any
+from typing import Any, cast
 
 from copilot_sdk.config import GraphConfig
+from copilot_sdk.graph.production import GraphStoreWrapper
+from copilot_sdk.graph.protocol import GraphStore
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +28,7 @@ def _default_posteriors(n_categories: int, n_actions: int) -> dict[str, list[lis
     }
 
 
-class PosteriorStore:
+class PosteriorStore(GraphStoreWrapper):
     """Tiny PostgreSQL store for per-category/action Beta posteriors."""
 
     _UNSET = object()
@@ -73,6 +75,11 @@ class PosteriorStore:
                     shared_graph_authorization=graph_config.authorized,
                 )
         self._table_ready = False
+
+    @property
+    def graph_primary(self) -> GraphStore | None:
+        """Expose the owned graph to the SDK's read-only health probe."""
+        return cast(GraphStore | None, self._graph_store)
 
     @staticmethod
     def _resolve_dsn() -> str:

@@ -11,16 +11,15 @@ from __future__ import annotations
 import copy
 import json
 import math
-import os
 import threading
 import uuid
-from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any
 
 import numpy as np
 
 from copilot_sdk.twin import FrozenTwin, FrozenTwinStore
+from copilot_sdk.graph.protocol import GraphStore
 from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
 
 
@@ -58,19 +57,28 @@ class SOCLearningControlService:
 
     def __init__(self, twin_store: FrozenTwinStore | None = None) -> None:
         self._lock = threading.RLock()
-        self._twin = FrozenTwin(twin_store or FrozenTwinStore())
+        self._configured_twin = FrozenTwin(twin_store) if twin_store is not None else None
         self._dk_history: list[dict[str, Any]] = []
 
-    def _demo_pointer(self) -> Path:
-        return Path(self._twin.store.base_dir) / "soc-demo-active.json"
+    def configure_graph_store(self, graph_store: GraphStore) -> None:
+        with self._lock:
+            self._configured_twin = FrozenTwin(FrozenTwinStore(graph_store, _DOMAIN))
+
+    @property
+    def _twin(self) -> FrozenTwin:
+        if self._configured_twin is None:
+            raise RuntimeError("SOC learning control requires the configured graph store")
+        return self._configured_twin
 
     def has_demo_twin(self) -> bool:
-        return self._demo_pointer().exists()
+        return self._twin.store.graph_store.get_governance(_DOMAIN, "demo_twin_active") is not None
 
     def _comparison_twin(self) -> FrozenTwin:
         if not self.has_demo_twin():
             return self._load_twin()
-        pointer = json.loads(self._demo_pointer().read_text(encoding="utf-8"))
+        pointer = self._twin.store.graph_store.get_governance(_DOMAIN, "demo_twin_active")
+        if pointer is None:
+            return self._load_twin()
         run_id = str(pointer["run_id"])
         if uuid.UUID(hex=run_id).hex != run_id:
             raise ValueError("Invalid demo twin reference")
@@ -93,21 +101,19 @@ class SOCLearningControlService:
             if not old.verify_integrity():
                 raise ValueError("Previous twin failed integrity verification")
             run_id = uuid.uuid4().hex
-            archive_dir = self._twin.store.base_dir / "demo-archive"
-            archive_dir.mkdir(parents=True, exist_ok=True)
-            with (archive_dir / f"{run_id}.json").open("x", encoding="utf-8") as handle:
-                handle.write(old.to_json())
+            self._twin.store.graph_store.save_evolution(
+                _DOMAIN, f"frozen_twin_archive:{run_id}", {"snapshot": json.loads(old.to_json())}
+            )
             provenance = {"origin": "demo_reseed", "archived_previous": True,
                           "previous_checksum": old.checksum, "archive_id": run_id,
                           "planted": True, "evidence_tier": "T-sim"}
             twin = FrozenTwin(self._twin.store)
             snapshot = twin.freeze(scorer, {**conservation_state, "demo_provenance": provenance,
                                            "demo_verified_count": count}, iks, f"soc-demo-{run_id}")
-            # Unique immutable snapshots plus atomic pointer publication: a failed
-            # write leaves the previous active baseline usable, never half-written.
-            pending = self._demo_pointer().with_suffix(f".{run_id}.tmp")
-            pending.write_text(json.dumps({"run_id": run_id}), encoding="utf-8")
-            os.replace(pending, self._demo_pointer())
+            # Publish the reference only after the immutable graph snapshot exists.
+            self._twin.store.graph_store.save_governance(
+                _DOMAIN, "demo_twin_active", {"run_id": run_id}
+            )
             return {"frozen": True, "created": True, "checksum": snapshot.checksum,
                     "snapshot_time": snapshot.metadata["timestamp"], "provenance": provenance}
 

@@ -37,6 +37,10 @@ _FACTOR_TO_DIMENSION.update(
 _SHOWCASE_EVIDENCE: dict[str, dict[int, dict[str, Any]]] = {}
 
 
+class EvidenceGraphUnavailableError(RuntimeError):
+    """Raised when graph-backed evidence could not be read."""
+
+
 def normalize_factor_name(factor_name: str | None, dimension: int) -> str:
     """Return the live SOC factor name for a VLD dimension."""
     if factor_name in LEGACY_FACTOR_ALIASES:
@@ -71,6 +75,7 @@ class SOCEvidenceProvider:
     def __init__(self, graph_client: Any, alert_id: str):
         self.graph_client = graph_client
         self.alert_id = str(alert_id)
+        self.last_evidence_available = True
 
     def read_evidence(
         self, decision_id: str, dimension: int, factor_name: str
@@ -82,7 +87,11 @@ class SOCEvidenceProvider:
         if seeded is not None:
             return self._normalize_payload(seeded, canonical)
 
-        graph_payload = self._read_from_graph_client(decision_id, dim, canonical)
+        try:
+            graph_payload = self._read_from_graph_client(decision_id, dim, canonical)
+        except EvidenceGraphUnavailableError:
+            self.last_evidence_available = False
+            return None
         if graph_payload is not None:
             return graph_payload
         return None
@@ -121,8 +130,8 @@ class SOCEvidenceProvider:
                     return None
                 if rows:
                     return self._row_to_evidence(rows[0], factor_name)
-            except Exception:
-                return None
+            except Exception as exc:
+                raise EvidenceGraphUnavailableError("SOC evidence graph read failed") from exc
         return None
 
     def _query_for_factor(self, factor_name: str) -> str:

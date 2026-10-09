@@ -33,8 +33,10 @@ class CategoryBalance:
     accuracy: float
     accuracy_note: str | None
     iks_contribution: float
-    ceiling_estimate: float | None
+    ceiling_estimate: float
     status: str
+    iks_contribution_available: bool = True
+    ceiling_available: bool = True
 
 
 @dataclass
@@ -42,12 +44,20 @@ class LearningBalanceSheet:
     categories: list[CategoryBalance]
     overall_iks: float
     health_status: str
-    overall_ceiling: float | None
+    overall_ceiling: float
     summary: dict[str, Any]
     generated_at: str = ""
     total_verified: int = 0
     notes: list[str] = field(default_factory=list)
     sources: dict[str, str] = field(default_factory=dict)
+    centroid_drift_available: bool = True
+    auto_approve_available: bool = True
+    timeline_available: bool = True
+    iks_available: bool = True
+    ceiling_available: bool = True
+    epistemic_state_available: bool = True
+    data_available: bool = True
+    degraded: bool = False
 
 
 def _compute_status(
@@ -94,34 +104,40 @@ def _compute_structural_ceiling_report() -> tuple[float | None, dict[str, float]
     )
 
 
-def _safe_epistemic_state() -> tuple[dict[str, dict[str, Any]], int]:
+def _safe_epistemic_state() -> tuple[dict[str, dict[str, Any]], int] | None:
     try:
         snap = get_snapshot()
-        return snap.get_epistemic_state(), int(getattr(snap, "verified_decisions", 0) or 0)
-    except RuntimeError:
-        return {}, 0
-
-
-async def _safe_overall_iks(graph_service: Any) -> float:
-    try:
-        return float(await compute_visible_iks(graph_service))
+        epistemic = snap.get_epistemic_state()
     except Exception as exc:
-        _log.warning("overall_iks(balance_sheet): IKS computation failed -- returning 0.0 (source=fallback): %s", exc)
-        return 0.0
+        _log.warning("epistemic_state(balance_sheet): snapshot unavailable: %s", exc)
+        return None
+    if epistemic is None:
+        _log.warning("epistemic_state(balance_sheet): snapshot returned no epistemic state")
+        return None
+    return epistemic, int(getattr(snap, "verified_decisions", 0) or 0)
 
 
-async def _safe_centroid_drift(graph_service: Any) -> dict[str, float]:
+async def _safe_overall_iks(graph_service: Any) -> float | None:
+    try:
+        score = await compute_visible_iks(graph_service)
+        return float(score) if score is not None else None
+    except Exception as exc:
+        _log.warning("overall_iks(balance_sheet): IKS computation failed: %s", exc)
+        return None
+
+
+async def _safe_centroid_drift(graph_service: Any) -> dict[str, float] | None:
     try:
         scorer = get_profile_scorer()
         if scorer is None:
-            return {category: 0.0 for category in SOC_CATEGORIES}
+            return None
 
         export = await build_centroid_export(scorer, graph_service)
         current_mu = export.get("current_mu")
         bootstrap_mu = export.get("bootstrap_mu")
         categories = export.get("categories") or list(SOC_CATEGORIES)
         if current_mu is None or bootstrap_mu is None:
-            return {category: 0.0 for category in SOC_CATEGORIES}
+            return None
 
         curr_arr = np.array(current_mu, dtype=np.float64)
         boot_arr = np.array(bootstrap_mu, dtype=np.float64)
@@ -132,7 +148,7 @@ async def _safe_centroid_drift(graph_service: Any) -> dict[str, float]:
         return {category: float(drift_by_category.get(category, 0.0)) for category in SOC_CATEGORIES}
     except Exception as exc:
         _log.warning("centroid_drift(balance_sheet): drift computation failed -- returning 0.0 per category (source=fallback): %s", exc)
-        return {category: 0.0 for category in SOC_CATEGORIES}
+        return None
 
 
 async def _safe_learning_health(graph_service: Any) -> dict[str, Any]:
@@ -142,21 +158,22 @@ async def _safe_learning_health(graph_service: Any) -> dict[str, Any]:
         return {"status": "unavailable"}
 
 
-async def _safe_auto_approve_stats() -> dict[str, Any]:
+async def _safe_auto_approve_stats() -> dict[str, Any] | None:
     try:
         from app.routers.framework_router import auto_approve_stats
 
         return cast(dict[str, Any], await auto_approve_stats())
     except Exception as exc:
         _log.warning("auto_approve_coverage_pct(balance_sheet): stats fetch failed -- returning 0.0 (source=fallback): %s", exc)
-        return {"by_category": {}, "coverage_pct": 0.0, "total_decisions": 0, "auto_approved": 0}
+        return None
 
 
-async def _safe_timeline(graph_service: Any) -> dict[str, Any]:
+async def _safe_timeline(graph_service: Any) -> dict[str, Any] | None:
     try:
         return await get_evolution_timeline(graph_service)
-    except Exception:
-        return {"timeline": [], "ceiling_estimate": None}
+    except Exception as exc:
+        _log.warning("timeline(balance_sheet): graph read failed: %s", exc)
+        return None
 
 
 def _category_score(balance: CategoryBalance) -> tuple[float, float, float]:
@@ -209,13 +226,24 @@ def _build_recommendation(
 
 
 async def generate_balance_sheet(graph_service: Any = None) -> LearningBalanceSheet:
-    epistemic_state, total_verified = _safe_epistemic_state()
-    overall_iks = await _safe_overall_iks(graph_service)
+    epistemic_result = _safe_epistemic_state()
+    epistemic_state_available = epistemic_result is not None
+    epistemic_state, total_verified = epistemic_result if epistemic_result is not None else ({}, 0)
+    overall_iks_result = await _safe_overall_iks(graph_service)
+    iks_available = overall_iks_result is not None
+    overall_iks = overall_iks_result if overall_iks_result is not None else 0.0
     centroid_drift = await _safe_centroid_drift(graph_service)
     learning_health = await _safe_learning_health(graph_service)
     auto_approve = await _safe_auto_approve_stats()
     timeline = await _safe_timeline(graph_service)
+    centroid_drift_available = centroid_drift is not None
+    auto_approve_available = auto_approve is not None
+    timeline_available = bool(timeline and timeline.get("timeline_available", False))
+    centroid_drift = centroid_drift or {}
+    auto_approve = auto_approve or {}
+    timeline = timeline or {}
     overall_ceiling, snr_by_cat = _compute_structural_ceiling_report()
+    ceiling_available = overall_ceiling is not None
 
     auto_by_category = auto_approve.get("by_category") or {}
     timeline_ceiling = timeline.get("ceiling_estimate")
@@ -229,10 +257,13 @@ async def generate_balance_sheet(graph_service: Any = None) -> LearningBalanceSh
         epistemic_band = ep_data.get("band") or "novice"
         cat_auto = auto_by_category.get(category) or {}
         auto_approve_rate = float(cat_auto.get("coverage_pct") or 0.0) / 100.0
+        contribution_available = iks_available and epistemic_state_available and total_verified > 0
         contribution = (
             round(overall_iks * (verified_count / total_verified), 4)
-            if total_verified > 0 else 0.0
+            if contribution_available else 0.0
         )
+        category_ceiling = snr_by_cat.get(category)
+        category_ceiling_available = category_ceiling is not None
         categories.append(
             CategoryBalance(
                 category=category,
@@ -243,12 +274,14 @@ async def generate_balance_sheet(graph_service: Any = None) -> LearningBalanceSh
                 accuracy=0.0,
                 accuracy_note=accuracy_note,
                 iks_contribution=contribution,
-                ceiling_estimate=snr_by_cat.get(category),
+                iks_contribution_available=contribution_available,
+                ceiling_estimate=float(category_ceiling) if category_ceiling is not None else 0.0,
+                ceiling_available=category_ceiling_available,
                 status=_compute_status(
                     verified_count=verified_count,
                     epistemic_band=epistemic_band,
                     centroid_drift=float(centroid_drift.get(category, 0.0) or 0.0),
-                    ceiling_estimate=snr_by_cat.get(category),
+                    ceiling_estimate=category_ceiling,
                 ),
             )
         )
@@ -271,7 +304,9 @@ async def generate_balance_sheet(graph_service: Any = None) -> LearningBalanceSh
                 accuracy=0.0,
                 accuracy_note=accuracy_note,
                 iks_contribution=0.0,
-                ceiling_estimate=None,
+                iks_contribution_available=False,
+                ceiling_estimate=0.0,
+                ceiling_available=False,
                 status="insufficient_data",
             ),
             health_status=str(learning_health.get("status") or "unavailable"),
@@ -279,6 +314,8 @@ async def generate_balance_sheet(graph_service: Any = None) -> LearningBalanceSh
             pre_activation=bool(learning_health.get("pre_activation", False)),
         ),
     }
+    if not epistemic_state_available:
+        summary["recommendation"] = "Epistemic state unavailable; a learning recommendation cannot be evaluated."
 
     notes = [accuracy_note]
     if overall_ceiling is not None:
@@ -293,8 +330,10 @@ async def generate_balance_sheet(graph_service: Any = None) -> LearningBalanceSh
     return LearningBalanceSheet(
         categories=categories,
         overall_iks=round(overall_iks, 4),
+        iks_available=iks_available,
         health_status=str(learning_health.get("status") or "unavailable"),
-        overall_ceiling=overall_ceiling,
+        overall_ceiling=float(overall_ceiling) if overall_ceiling is not None else 0.0,
+        ceiling_available=ceiling_available,
         generated_at=generated_at,
         total_verified=total_verified,
         summary=summary,
@@ -307,4 +346,24 @@ async def generate_balance_sheet(graph_service: Any = None) -> LearningBalanceSh
             "auto_approve": "framework_router.auto_approve_stats()",
             "timeline": "get_evolution_timeline()",
         },
+        centroid_drift_available=centroid_drift_available,
+        auto_approve_available=auto_approve_available,
+        timeline_available=timeline_available,
+        epistemic_state_available=epistemic_state_available,
+        data_available=all((
+            iks_available,
+            centroid_drift_available,
+            auto_approve_available,
+            timeline_available,
+            epistemic_state_available,
+            ceiling_available,
+        )),
+        degraded=not all((
+            iks_available,
+            centroid_drift_available,
+            auto_approve_available,
+            timeline_available,
+            epistemic_state_available,
+            ceiling_available,
+        )),
     )

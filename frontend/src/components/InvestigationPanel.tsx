@@ -19,6 +19,9 @@ export interface InvestigationStep {
   policy_version: string
   residual: number
   halt_reason?: string | null
+  evidence_available?: boolean
+  evidence_admitted?: boolean
+  failure_reason?: string
 }
 
 export interface InvestigationResult {
@@ -37,6 +40,9 @@ export interface InvestigationResult {
   conservation_emit_gate?: string
   halt_reason?: string
   policy?: string
+  evidence_available?: boolean
+  degraded?: boolean
+  failed_patterns?: string[]
 }
 
 interface InvestigationApiResponse {
@@ -102,6 +108,7 @@ export default function InvestigationPanel({ alertId, autoRun = false, onResult 
   const [result, setResult] = useState<InvestigationResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [collapsed, setCollapsed] = useState(false)
+  const degraded = result?.degraded === true || result?.evidence_available === false
 
   const runInvestigation = async () => {
     setLoading(true)
@@ -175,6 +182,12 @@ export default function InvestigationPanel({ alertId, autoRun = false, onResult 
 
       {result && !collapsed && (
         <div className="p-5 space-y-5">
+          {degraded && (
+            <div role="alert" className="rounded border border-amber-700 bg-amber-950/30 p-3 text-sm text-amber-200">
+              Investigation halted: evidence unavailable. The retained score is partial shadow advice.
+              Failed patterns: {(result.failed_patterns ?? []).map(formatLabel).join(', ')}.
+            </div>
+          )}
           <div className="grid gap-3 md:grid-cols-4">
             <div className="rounded border border-gray-800 bg-gray-900/60 p-3">
               <p className="text-xs uppercase tracking-wide text-gray-500">Routed category</p>
@@ -198,19 +211,19 @@ export default function InvestigationPanel({ alertId, autoRun = false, onResult 
             <div className="rounded border border-gray-800 bg-gray-950/60 p-3 text-sm text-gray-300">
               <span className="text-gray-500">Investigation:</span> {result.steps} {result.steps === 1 ? 'step' : 'steps'}
             </div>
-            <div className={`rounded border px-3 py-2 text-sm ${badgeClass(result.routing_agreed)}`}>
-              {result.routing_agreed ? <CheckCircle className="mr-2 inline h-4 w-4" /> : <XCircle className="mr-2 inline h-4 w-4" />}
-              Routing agreed: {result.routing_agreed ? 'yes' : 'no'}
+            <div className={`rounded border px-3 py-2 text-sm ${badgeClass(!degraded && result.routing_agreed)}`}>
+              {!degraded && result.routing_agreed ? <CheckCircle className="mr-2 inline h-4 w-4" /> : <XCircle className="mr-2 inline h-4 w-4" />}
+              {degraded ? 'Routing incomplete — evidence unavailable' : `Routing agreed: ${result.routing_agreed ? 'yes' : 'no'}`}
             </div>
-            <div className={`rounded border px-3 py-2 text-sm ${badgeClass(result.agreement)}`}>
-              {result.agreement ? <CheckCircle className="mr-2 inline h-4 w-4" /> : <XCircle className="mr-2 inline h-4 w-4" />}
-              {result.agreement ? 'Agreement: single-pass matched VLD' : 'Agreement: VLD changed the decision'}
+            <div className={`rounded border px-3 py-2 text-sm ${badgeClass(!degraded && result.agreement)}`}>
+              {!degraded && result.agreement ? <CheckCircle className="mr-2 inline h-4 w-4" /> : <XCircle className="mr-2 inline h-4 w-4" />}
+              {degraded ? 'Partial shadow advice — enrichment incomplete' : result.agreement ? 'Agreement: single-pass matched VLD' : 'Agreement: VLD changed the decision'}
             </div>
           </div>
 
           {result.trace.length === 0 ? (
             <div className="rounded border border-gray-800 bg-gray-900/60 p-4 text-sm text-gray-400">
-              No investigation needed (converged immediately). Halt: {formatLabel(result.halt_reason)}
+              {degraded ? 'Investigation unavailable.' : 'No investigation needed (converged immediately).'} Halt: {formatLabel(result.halt_reason)}
             </div>
           ) : (
             <div className="space-y-3">
@@ -221,7 +234,13 @@ export default function InvestigationPanel({ alertId, autoRun = false, onResult 
                       <p className="text-sm font-semibold text-gray-100">
                         Step {step.step}: Routed to {formatLabel(step.pattern)} <span className="text-gray-500">(residual={fmt(step.residual)})</span>
                       </p>
-                      <p className="mt-1 text-xs text-gray-500">Edge followed: {step.selected_edge || 'not reported'} · Policy {step.policy_version}</p>
+                      <p className="mt-1 text-xs text-gray-500">Edge {step.evidence_admitted === false ? 'attempted' : 'followed'}: {step.selected_edge || 'not reported'} · Policy {step.policy_version}</p>
+                      {(step.evidence_available === false || step.evidence_admitted === false) && (
+                        <p className="mt-2 rounded bg-amber-950/40 p-2 text-xs text-amber-200">
+                          Failed read — evidence_available=false; evidence_admitted=false.
+                          {' '}{step.failure_reason || 'Evidence unavailable; preceding vector retained.'}
+                        </p>
+                      )}
                     </div>
                     {step.halt_reason && (
                       <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-200">

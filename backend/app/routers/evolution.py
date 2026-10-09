@@ -736,7 +736,10 @@ async def get_recent_evolution():
             ts_epoch = r.get("ts")
             conf_str = f"{float(conf):.0%}" if conf is not None else "?"
             if ts_epoch is not None:
-                ts_iso = datetime.utcfromtimestamp(float(ts_epoch)).strftime(
+                timestamp_seconds = float(ts_epoch)
+                if timestamp_seconds > 1_000_000_000_000:
+                    timestamp_seconds /= 1000.0
+                ts_iso = datetime.utcfromtimestamp(timestamp_seconds).strftime(
                     "%Y-%m-%dT%H:%M:%SZ"
                 )
             else:

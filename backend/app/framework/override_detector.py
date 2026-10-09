@@ -49,6 +49,7 @@ class OverrideDetector:
     def __init__(self, threshold: int = ACTIVATION_THRESHOLD) -> None:
         self._threshold: int = threshold
         self._examples: List[Dict[str, Any]] = []
+        self.graph_loaded: bool = False
 
     # ------------------------------------------------------------------
     # Public interface

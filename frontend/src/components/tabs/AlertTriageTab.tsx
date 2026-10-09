@@ -15,7 +15,7 @@ import {
   TrendingDown,
   RefreshCw,
 } from 'lucide-react'
-import { getAlerts, analyzeAlert, executeAction, resetAlerts, checkPolicyConflict, refreshThreatIntel, getDecisionFactors, getAlertEnrichment, fetchJudgmentExplain, getWhatIf } from '../../lib/api'
+import { ApiError, getAlerts, analyzeAlert, executeAction, resetAlerts, checkPolicyConflict, refreshThreatIntel, getDecisionFactors, getAlertEnrichment, fetchJudgmentExplain, getWhatIf } from '../../lib/api'
 import { ensureArray, ensureObject } from '../../lib/guards'
 import { domainConfig } from '../../lib/domain'
 import DiscoveryBanner from '../discovery/DiscoveryBanner'
@@ -324,6 +324,7 @@ export default function AlertTriageTab() {
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null)
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
   const [closedLoop, setClosedLoop] = useState<ClosedLoopResult | null>(null)
+  const [actionError, setActionError] = useState('')
   const [loading, setLoading] = useState(false)
   const [executing, setExecuting] = useState(false)
   const [activeStep, setActiveStep] = useState(0)
@@ -523,6 +524,9 @@ export default function AlertTriageTab() {
 
     setExecuting(true)
     setClosedLoop(null)
+    setActionError('')
+    setActiveStep(0)
+    let unavailable = false
 
     try {
       const data = await executeAction(selectedAlert.id) as ClosedLoopResult
@@ -540,14 +544,22 @@ export default function AlertTriageTab() {
       timerIdsRef.current.push(setTimeout(loadAlertQueue, 3200))
     } catch (error) {
       console.error('Failed to execute action:', error)
+      if (error instanceof ApiError && error.status === 503) {
+        unavailable = true
+        preserveFeedbackRef.current = false
+        setClosedLoop(null)
+        setActionError('Decision factors unavailable. The action was not executed. Please retry when evidence is available.')
+      }
     } finally {
-      timerIdsRef.current.push(setTimeout(() => setExecuting(false), 3200))
+      if (unavailable) setExecuting(false)
+      else timerIdsRef.current.push(setTimeout(() => setExecuting(false), 3200))
     }
   }
 
   const handleAlertSelect = (alert: Alert) => {
     // Clear feedback preservation when user manually selects a different alert
     preserveFeedbackRef.current = false
+    setActionError('')
     setSelectedAlert(alert)
     setEnrichmentExpanded(false)
     loadAlertEnrichment(alert.id)
@@ -1562,6 +1574,11 @@ export default function AlertTriageTab() {
                   </div>
                 )}
 
+                {actionError && (
+                  <p role="alert" className="mb-3 rounded-lg border border-amber-700 bg-amber-950/30 p-3 text-sm text-amber-200">
+                    {actionError}
+                  </p>
+                )}
                 <button
                   onClick={executeActionHandler}
                   disabled={executing || !!closedLoop}

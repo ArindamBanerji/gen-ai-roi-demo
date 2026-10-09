@@ -740,7 +740,7 @@ async def _persist_l5_conservation_state(health: dict) -> str:
 _VOLUME_WINDOW_DAYS = 30
 
 
-async def compute_volume_baseline(graph_client: Any) -> dict:
+async def compute_volume_baseline(graph_client: Any) -> dict | None:
     """
     Compute rolling 30-day alert volume baseline from Alert nodes.
 
@@ -764,6 +764,7 @@ async def compute_volume_baseline(graph_client: Any) -> dict:
     cutoff_epoch = now_epoch - _VOLUME_WINDOW_DAYS * 86_400_000
 
     daily_counts: list[float] = []
+    query_available = True
     try:
         rows = await graph_client.run_query(
             f"""
@@ -777,6 +778,10 @@ async def compute_volume_baseline(graph_client: Any) -> dict:
         daily_counts = [float(r.get("daily_count") or 0) for r in rows if r.get("daily_count")]
     except Exception as exc:
         log.warning("[D3] volume_baseline query failed: %s", exc)
+        query_available = False
+
+    if not query_available:
+        return None
 
     daily_mean = float(np.mean(daily_counts)) if daily_counts else 0.0
     daily_std  = float(np.std(daily_counts))  if daily_counts else 0.0
@@ -795,14 +800,17 @@ async def compute_volume_baseline(graph_client: Any) -> dict:
 
     spike_threshold = daily_mean + spike_sigma * daily_std_floored
 
-    return {
+    result = {
         "daily_mean":      round(daily_mean, 2),
         "daily_std":       round(daily_std, 2),
         "spike_threshold": round(spike_threshold, 2),
         "spike_sigma":     spike_sigma,
         "window_days":     _VOLUME_WINDOW_DAYS,
         "data_points":     len(daily_counts),
+        "baseline_available": True,
+        "degraded": False,
     }
+    return result
 
 
 async def detect_volume_spike(graph_client: Any, today_count: int) -> dict:
@@ -824,6 +832,12 @@ async def detect_volume_spike(graph_client: Any, today_count: int) -> dict:
       daily_std       : float
     """
     baseline = await compute_volume_baseline(graph_client)
+    if baseline is None:
+        return {
+            "spike_detected": False, "today_count": today_count,
+            "spike_threshold": 0.0, "daily_mean": 0.0, "daily_std": 0.0,
+            "baseline_available": False, "degraded": True,
+        }
     spike_detected = today_count > baseline["spike_threshold"]
 
     if spike_detected:

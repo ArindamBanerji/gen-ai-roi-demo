@@ -8,7 +8,9 @@ from typing import Any, Literal
 import numpy as np
 
 from app.domains.soc.config import SOC_CATEGORIES
+from app.domains.soc.factor_vector import validated_factor_vector
 from app.models.investigation import InvestigationResult, InvestigationStep
+from app.services.investigation_patterns import read_pattern_evidence
 from app.services.investigation_router import InvestigationRouter
 from app.services.triage_providers import build_evidence_scoped_graph
 
@@ -47,7 +49,7 @@ class InvestigationLoop:
     async def investigate(self, alert_context: dict[str, Any], graph_store: Any) -> InvestigationResult:
         supplied_category = _alert_category_for_trace(alert_context)
         v_raw, _provenance = await self.factor_provider.compute(alert_context, graph_store)
-        surface_features = np.asarray(v_raw, dtype=np.float64).reshape(-1)
+        surface_features = np.asarray(validated_factor_vector(v_raw), dtype=np.float64)
         v = surface_features.copy()
         single_pass_distances = self.router.category_distances(v, self.scorer)
         single_pass_category = _closest_category(single_pass_distances)
@@ -59,6 +61,7 @@ class InvestigationLoop:
         investigated_category: str | None = None
         admitted_evidence: list[dict[str, Any]] = []
         halt_reason = "budget_exhausted"
+        failed_patterns: list[str] = []
 
         for step_index in range(self.L_max):
             route = self.router.route_decision(
@@ -71,7 +74,27 @@ class InvestigationLoop:
                 halt_reason = "no_pattern_available"
                 break
 
-            evidence = await route.pattern.execute(alert_context, graph_store)
+            # Gate at admission, before the adapter or factor provider sees the
+            # read. A failed attempt leaves the preceding valid geometry intact.
+            evidence = await read_pattern_evidence(route.pattern, alert_context, graph_store)
+            if not evidence.get("evidence_available", True):
+                halt_reason = "evidence_unavailable"
+                failed_patterns.append(route.pattern.pattern_name)
+                trace.append(InvestigationStep(
+                    step=step_index, pattern=route.pattern.category_name,
+                    alert_category=supplied_category,
+                    v_before=v.tolist(), v_after=v.tolist(),
+                    cat_distances_before=dict(route.cat_distances),
+                    cat_distances_after=dict(route.cat_distances),
+                    evidence_keys=[], candidate_reads=route.candidate_reads,
+                    selected_edge=route.pattern.selected_edge,
+                    propensity=float(route.propensity), cost=1.0,
+                    timestamp=datetime.now(timezone.utc).isoformat(),
+                    policy_version=route.policy_version, residual=0.0,
+                    halt_reason=halt_reason, evidence_available=False,
+                    evidence_admitted=False, failure_reason=evidence["failure_reason"],
+                ))
+                break
             investigated.add(route.pattern.category_name)
             investigated_category = route.pattern.category_name
             admitted_evidence.append(evidence)
@@ -145,6 +168,9 @@ class InvestigationLoop:
             agreement=final_score.action == single_pass_action,
             fixture_source=_fixture_source(alert_context),
             halt_reason=halt_reason,
+            evidence_available=not failed_patterns,
+            degraded=bool(failed_patterns),
+            failed_patterns=failed_patterns,
         )
 
 

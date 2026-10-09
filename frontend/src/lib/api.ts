@@ -5,6 +5,13 @@
 
 const API_BASE = '/api'
 
+export class ApiError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
 async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
   const fullUrl = `${API_BASE}${url}`
   console.log(`[API] Fetching: ${fullUrl}`)
@@ -25,7 +32,7 @@ async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    throw new Error(`API error: ${response.statusText}`)
+    throw new ApiError(response.status, `API error: ${response.statusText}`)
   }
 
   const data = await response.json()

@@ -198,6 +198,7 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
         now_ms = int(datetime.utcnow().timestamp() * 1000)
 
         weekly_trend = []
+        weekly_available = True
         try:
             for i in range(weeks, 0, -1):
                 week_end   = now_ms - (i - 1) * WEEK_MS
@@ -234,7 +235,9 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
                 })
         except Exception as exc:
             print(f"[COMPOUNDING] weekly-trend AGE query failed: {exc}")
+            logger.warning("Compounding weekly trend query failed: %s", exc)
             weekly_trend = []
+            weekly_available = False
 
         # Historical context: rolling 7-day windows can miss older training
         # decisions. Keep that context separate from the measured weekly series;
@@ -242,6 +245,7 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
         _all_zero = bool(weekly_trend) and all(
             w.get("pattern_count", 0) == 0 for w in weekly_trend
         )
+        historical_context_available = True
         if _all_zero:
             try:
                 _fb_total_rows = await graph_client.run_query(
@@ -249,18 +253,47 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
                     f"WHERE {soc_decision_where()} "
                     "RETURN count(d) AS total"
                 )
-                _fb_total = int(_fb_total_rows[0]["total"]) if _fb_total_rows else 0
-
-                _fb_correct_rows = await graph_client.run_query(
-                    f"MATCH (d:Decision {{origin: 'zero_day_synthetic'}}) "
-                    f"WHERE {soc_decision_where()} AND d.correct = true "
-                    "RETURN count(d) AS correct"
+                if _fb_total_rows is None or not isinstance(_fb_total_rows, list):
+                    historical_context_available = False
+                    _fb_total_rows = []
+                if _fb_total_rows and not isinstance(_fb_total_rows[0], dict):
+                    historical_context_available = False
+                _fb_total_raw = (
+                    _fb_total_rows[0].get("total")
+                    if _fb_total_rows and isinstance(_fb_total_rows[0], dict)
+                    else 0
                 )
-                _fb_correct = int(_fb_correct_rows[0]["correct"]) if _fb_correct_rows else 0
+                if not isinstance(_fb_total_raw, (int, float)) or isinstance(_fb_total_raw, bool):
+                    historical_context_available = False
+                    _fb_total = 0
+                else:
+                    _fb_total = int(_fb_total_raw)
+
+                _fb_correct = 0
+                if historical_context_available:
+                    _fb_correct_rows = await graph_client.run_query(
+                        f"MATCH (d:Decision {{origin: 'zero_day_synthetic'}}) "
+                        f"WHERE {soc_decision_where()} AND d.correct = true "
+                        "RETURN count(d) AS correct"
+                    )
+                    if _fb_correct_rows is None or not isinstance(_fb_correct_rows, list):
+                        historical_context_available = False
+                    else:
+                        if _fb_correct_rows and not isinstance(_fb_correct_rows[0], dict):
+                            historical_context_available = False
+                        _fb_correct_raw = (
+                            _fb_correct_rows[0].get("correct")
+                            if _fb_correct_rows and isinstance(_fb_correct_rows[0], dict)
+                            else 0
+                        )
+                        if not isinstance(_fb_correct_raw, (int, float)) or isinstance(_fb_correct_raw, bool):
+                            historical_context_available = False
+                        else:
+                            _fb_correct = int(_fb_correct_raw)
 
                 _fb_rate = round(_fb_correct / _fb_total * 100, 1) if _fb_total > 0 else 0.0
 
-                if _fb_total > 0:
+                if historical_context_available and _fb_total > 0:
                     response["historical_fallback"] = True
                     response["historical_context"] = {
                         "pattern_count": _fb_total,
@@ -272,12 +305,15 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
                         f"[COMPOUNDING] Historical context available: "
                         f"total={_fb_total}, correct={_fb_correct}, rate={_fb_rate}%"
                     )
-            except Exception as _fb_exc:
+            except (ConnectionError, TimeoutError, OSError, RuntimeError) as _fb_exc:
                 print(f"[COMPOUNDING] Historical fallback query failed: {_fb_exc}")
+                logger.warning("Compounding historical fallback query failed: %s", _fb_exc)
+                historical_context_available = False
 
         response["weekly_trend"] = weekly_trend
 
         # --- EVOLUTION EVENTS: Decision nodes from AGE via DECIDED_ON ---
+        evolution_available = True
         try:
             evo_rows = await graph_client.run_query(
                 "MATCH (d:Decision)-[:DECIDED_ON]->(a:Alert) "
@@ -304,11 +340,23 @@ async def get_compounding_metrics(weeks: int = Query(4, ge=1, le=12)):
             response["evolution_events"] = _evo_events
         except Exception as exc:
             print(f"[COMPOUNDING] evolution_events AGE query failed: {exc}")
+            logger.warning("Compounding evolution-events query failed: %s", exc)
             response["evolution_events"] = []
+            evolution_available = False
 
         print(f"[COMPOUNDING] Queried {weeks} weeks of data from AGE: "
               f"weekly_trend={len(weekly_trend)} weeks, "
               f"evolution_events={len(response['evolution_events'])}")
+        response["weekly_available"] = weekly_available
+        response["evolution_available"] = evolution_available
+        response["historical_context_available"] = historical_context_available
+        response["degraded_fields"] = (
+            [] if historical_context_available else ["historical_context"]
+        )
+        response["data_available"] = (
+            weekly_available and evolution_available and historical_context_available
+        )
+        response["degraded"] = not response["data_available"]
         return response
 
     except Exception as e:
@@ -715,6 +763,7 @@ async def get_board_export():
     from datetime import datetime as _dt
 
     total, correct, fp_count_val = 0, 0, 0
+    export_data_available = True
 
     try:
         dec_res = await graph_client.run_query(
@@ -740,6 +789,8 @@ async def get_board_export():
             fp_count_val = int(fp_res[0]["fp_count"] or 0)
     except Exception as exc:
         print(f"[METRICS] board-export AGE query failed: {exc}")
+        logger.warning("Board export AGE query failed: %s", exc)
+        export_data_available = False
 
     correct_rate = correct / total if total > 0 else 0.0
     fp_rate_pct = round(fp_count_val / total * 100, 1) if total > 0 else None
@@ -760,6 +811,8 @@ async def get_board_export():
         },
         "data_quality": data_quality,
         "note": "Metrics marked null require more decision history.",
+        "export_data_available": export_data_available,
+        "degraded": not export_data_available,
     }
 
 
@@ -780,6 +833,7 @@ async def get_economics():
 
     # 1. Decision volume + accuracy (single aggregating query)
     total = correct = escalations = suppressions = investigations = monitors = 0
+    decisions_available = True
     try:
         dec_result = await graph_client.run_query(
             "MATCH (d:Decision) "
@@ -802,9 +856,12 @@ async def get_economics():
             monitors      = int(dec_result[0]["monitors"]       or 0)
     except Exception as exc:
         print(f"[ECON] decision query failed: {exc}")
+        logger.warning("Economics decision query failed: %s", exc)
+        decisions_available = False
 
     # 2. User population from realistic seed
     total_users = privileged = elevated = 0
+    population_available = True
     try:
         user_result = await graph_client.run_query(
             "MATCH (u:User) "
@@ -819,6 +876,8 @@ async def get_economics():
             elevated    = int(user_result[0]["elevated_users"]   or 0)
     except Exception as exc:
         print(f"[ECON] user query failed: {exc}")
+        logger.warning("Economics population query failed: %s", exc)
+        population_available = False
 
     # 3. Dollar value estimates (always labeled estimated=True)
     correct_rate = correct / total if total > 0 else 0.0
@@ -860,6 +919,10 @@ async def get_economics():
             ),
         },
         "source": "graph",
+        "decisions_available": decisions_available,
+        "population_available": population_available,
+        "economics_available": decisions_available and population_available,
+        "degraded": not (decisions_available and population_available),
     }
 
 

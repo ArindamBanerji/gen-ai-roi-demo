@@ -381,3 +381,95 @@ def test_f12_pdf_endpoint_returns_pdf_bytes():
     assert "application/pdf" in ct, f"Expected application/pdf. Got: {ct}"
     assert len(r.content) > 100, f"PDF body too short: {len(r.content)} bytes"
     assert r.content[:4] == b"%PDF", f"Body does not start with %PDF. Got: {r.content[:8]}"
+
+
+def _contains_no_none(value):
+    if isinstance(value, dict):
+        return all(item is not None and _contains_no_none(item) for item in value.values())
+    if isinstance(value, list):
+        return all(item is not None and _contains_no_none(item) for item in value)
+    return value is not None
+
+
+def test_narrative_sections_degraded_propagates_through_model():
+    from app.models.responses import ExecutiveNarrativeResponse
+
+    payload = _get_executive_narrative_payload()
+    payload["sections_degraded"] = ["what_system_knows"]
+    payload["degraded_fields"] = ["what_system_knows"]
+    payload["data_available"] = False
+    payload["degraded"] = True
+    serialized = ExecutiveNarrativeResponse.model_validate(payload).model_dump()
+    assert serialized["sections_degraded"] == ["what_system_knows"]
+    assert serialized["degraded_fields"] == ["what_system_knows"]
+    assert serialized["data_available"] is False
+    assert serialized["degraded"] is True
+
+
+def test_narrative_iks_failure_recorded_in_degraded():
+    from unittest.mock import AsyncMock, patch
+
+    fake = _make_narrative_graph(verified=1, correct=1, campaigns=0, alerts=1)
+    health = {"status": "AMBER", "signal": 1.0, "learning_enabled": True}
+    with patch("app.services.gae_state.get_profile_scorer", return_value=None), \
+         patch("app.services.iks.compute_iks_v2", new=AsyncMock(side_effect=RuntimeError("iks down"))), \
+         patch(
+             "app.services.learning_health.LearningHealthMonitor.evaluate",
+             new=AsyncMock(return_value=health),
+         ):
+        payload = asyncio.run(build_executive_narrative_async(fake))
+    assert "what_system_knows" in payload["sections_degraded"]
+    assert payload["degraded"] is True
+
+
+def test_narrative_none_iks_recorded_in_degraded():
+    from unittest.mock import AsyncMock, patch
+
+    fake = _make_narrative_graph(verified=1, correct=1, campaigns=0, alerts=1)
+    health = {"status": "AMBER", "signal": 1.0, "learning_enabled": True}
+    with patch("app.services.gae_state.get_profile_scorer", return_value=None), \
+         patch("app.services.iks.compute_iks_v2", new=AsyncMock(return_value=None)), \
+         patch(
+             "app.services.learning_health.LearningHealthMonitor.evaluate",
+             new=AsyncMock(return_value=health),
+         ):
+        payload = asyncio.run(build_executive_narrative_async(fake))
+
+    assert payload["metrics"]["iks_current"] == 0.0
+    assert payload["what_knows"]["iks_current"] == 0.0
+    assert "what_system_knows" in payload["sections_degraded"]
+    assert payload["degraded"] is True
+
+
+def test_narrative_pdf_partial_warning():
+    from unittest.mock import AsyncMock, MagicMock, patch
+    from app.routers import soc
+
+    captured = []
+    payload = _get_executive_narrative_payload()
+    payload["sections_degraded"] = ["what_system_knows"]
+
+    document = MagicMock()
+
+    def capture_story(story):
+        captured.extend(
+            item.getPlainText()
+            for item in story
+            if hasattr(item, "getPlainText")
+        )
+
+    document.build.side_effect = capture_story
+
+    with patch(
+        "app.services.executive_narrative.build_executive_narrative_async",
+        new=AsyncMock(return_value=payload),
+    ), patch("reportlab.platypus.SimpleDocTemplate", return_value=document):
+        asyncio.run(soc.executive_narrative_pdf())
+
+    assert any("PARTIAL REPORT" in text and "what_system_knows" in text for text in captured)
+
+
+def test_narrative_no_null_in_http():
+    response = _client.get("/api/soc/executive-narrative")
+    assert response.status_code == 200
+    assert _contains_no_none(response.json())

@@ -4,6 +4,8 @@ API routes for Centroid Time Machine.
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 
 from app.db.graph_client import graph_client
@@ -18,6 +20,30 @@ from app.services.time_machine import (
 )
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def _unavailable_timeline(reason: str) -> dict[str, object]:
+    """Return the stable HTTP envelope when timeline construction fails."""
+    return {
+        "timeline": [],
+        "current": {
+            "iks_v2": 0.0,
+            "components": {},
+            "interpretation": "unavailable",
+        },
+        "ceiling_estimate": 0.0,
+        "ceiling_note": "",
+        "ceiling_available": False,
+        "categories": [],
+        "actions": [],
+        "factors": [],
+        "timeline_available": False,
+        "iks_available": False,
+        "data_available": False,
+        "degraded": True,
+        "reason": reason,
+    }
 
 
 @router.get("/time-machine/snapshots")
@@ -67,6 +93,10 @@ async def compare_bootstrap_endpoint(snapshot_id: str):
 @router.get("/time-machine/timeline")
 async def get_timeline_endpoint():
     try:
-        return await get_evolution_timeline(graph_client)
-    except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        timeline = await get_evolution_timeline(graph_client)
+    except Exception as exc:
+        logger.warning("Timeline construction failed: %s", exc)
+        timeline = None
+    if timeline is None:
+        return _unavailable_timeline("Timeline construction failed")
+    return timeline

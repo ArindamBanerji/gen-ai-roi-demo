@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 _SNAPSHOT_INTERVAL = 50  # decisions between snapshots
 
 
-async def maybe_write_profile_snapshot(decision_count: int) -> None:
+async def maybe_write_profile_snapshot(decision_count: int) -> bool:
     """
     Write a ProfileSnapshot node to AGE if decision_count is a multiple of
     _SNAPSHOT_INTERVAL (50).
@@ -30,11 +30,11 @@ async def maybe_write_profile_snapshot(decision_count: int) -> None:
         Current total decision count from the ProfileScorer.
     """
     if decision_count == 0 or decision_count % _SNAPSHOT_INTERVAL != 0:
-        return
-    await _write_profile_snapshot(decision_count)
+        return True
+    return await _write_profile_snapshot(decision_count)
 
 
-async def _write_profile_snapshot(decision_count: int) -> None:
+async def _write_profile_snapshot(decision_count: int) -> bool:
     """Write one ProfileSnapshot node capturing the current mu tensor."""
     try:
         from app.db.graph_client import graph_client
@@ -65,5 +65,7 @@ async def _write_profile_snapshot(decision_count: int) -> None:
             decision_count,
             list(scorer.centroids.shape),
         )
+        return True
     except Exception as exc:
         log.warning("[GAE] ProfileSnapshot write failed at step=%d: %s", decision_count, exc)
+        return False

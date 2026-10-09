@@ -456,7 +456,7 @@ class CreditAssigner:
         current_decision_number: int,
         reward: float,
         reward_ledger: RewardLedger | None = None,
-    ) -> list[ChainCredit]:
+    ) -> list[ChainCredit] | None:
         if self.graph_client is None or not hasattr(self.graph_client, "run_query"):
             return []
         reward_value = float(reward)
@@ -492,7 +492,7 @@ class CreditAssigner:
             rows = await self.graph_client.run_query(query)
         except Exception as exc:
             log.warning("[CreditAssigner] chain-credit query failed: %s", exc)
-            return []
+            return None
 
         historical: list[dict[str, Any]] = []
         for row in rows or []:

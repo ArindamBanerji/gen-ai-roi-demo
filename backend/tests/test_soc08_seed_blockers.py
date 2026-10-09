@@ -1,4 +1,4 @@
-"""SOC-08 regressions with real scoring, authority, SQLite and snapshot stores."""
+"""SOC-08 regressions with real scoring, authority, graph and snapshot stores."""
 from __future__ import annotations
 
 import asyncio
@@ -16,19 +16,26 @@ from fastapi import HTTPException
 from app.routers.soc_learning import (
     DemoRefreezeRequest, demo_comparison_enabled, demo_refreeze,
 )
-from app.services.authority_ladder import AuthorityManager
+from app.services.authority_ladder import AuthorityManager, GraphPromotionStore
 from app.services.authority_ladder import AuthorityDecision
 from app.services.gae_state import guarded_update, persist_soc_outcome_and_centroid
 from app.services.soc_learning_control import SOCLearningControlService
 from app.routers.triage import _referral_response, _verified_learning_action
 from gae.referral import ReferralDecision
 from ci_platform.audit.evidence_ledger import EvidenceLedger
-from copilot_sdk.graph.sqlite_store import SQLiteGraphStore
+from copilot_sdk.graph.protocol import ProtocolV2GraphStore
 from copilot_sdk.scoring.scorer import CompoundingScorer
+from copilot_sdk.graph import InMemoryGraphStore
 from copilot_sdk.twin import FrozenTwinStore
+from support.real_graph import SOCGraphFixture
 
 pytestmark = pytest.mark.no_data_guard
 VECTOR = np.array([0.5, 0.8, 0.0, 0.4, 0.7, 1.0])
+
+
+@pytest.fixture
+def twin_graph() -> InMemoryGraphStore:
+    return InMemoryGraphStore()
 
 
 @pytest.mark.parametrize("allowed", [True, False])
@@ -74,21 +81,33 @@ def _seed_module() -> Any:
     return module
 
 
-def _decision(store: SQLiteGraphStore, scorer: Any, action: str) -> str:
-    return str(store.write_decision(
-        domain="soc", category="credential_access", action=action,
-        confidence=float(scorer.score(VECTOR, 0).confidence),
-        factors={f"f{i}": float(value) for i, value in enumerate(VECTOR)},
-        metadata={"planted": True, "factor_vector": VECTOR.tolist()},
-    ))
+def _decision(
+    store: ProtocolV2GraphStore, scorer: Any, action: str, *,
+    category_index: int = 0, original_action: str | None = None,
+) -> str:
+    """Persist the full governed input needed for frozen/live comparison."""
+    scored = scorer.score(VECTOR, category_index)
+    decision_id = store.generate_decision_id("soc")
+    metadata: dict[str, Any] = {"planted": True}
+    if original_action is not None:
+        metadata["original_action"] = original_action
+    store.write_governed_decision(
+        decision_id=decision_id, domain="soc", category=scorer.categories[category_index],
+        category_index=category_index, recommended_action=action,
+        recommended_index=scorer.actions.index(action) if action in scorer.actions else -1,
+        confidence=float(scored.confidence), probabilities=scored.probabilities.tolist(),
+        factor_vector=VECTOR.tolist(), factor_names=[f"f{i}" for i in range(len(VECTOR))],
+        metadata=metadata,
+    )
+    return decision_id
 
 
-def test_ninety_verified_referrals_do_not_change_geometry(tmp_path: Path) -> None:
-    store = SQLiteGraphStore(str(tmp_path / "decisions.sqlite3"), domain="soc")
+def test_ninety_verified_referrals_do_not_change_geometry(tmp_path: Path, twin_graph: InMemoryGraphStore) -> None:
+    store = InMemoryGraphStore(domain="soc")
     compound = CompoundingScorer.from_preset("soc", graph_store=store, profile="test", enable_rl=False)
     scorer = compound._scorer
-    authority = AuthorityManager(db_path=str(tmp_path / "authority.sqlite3"))
-    service = SOCLearningControlService(FrozenTwinStore(tmp_path / "twins"))
+    authority = AuthorityManager(store=GraphPromotionStore(twin_graph))
+    service = SOCLearningControlService(FrozenTwinStore(twin_graph, "soc"))
     freeze = service.freeze(scorer, {}, 70, scorer.mu)
     original = scorer.mu.copy()
     try:
@@ -117,18 +136,15 @@ def test_ninety_verified_referrals_do_not_change_geometry(tmp_path: Path) -> Non
     finally:
         store.close()
         authority.store.close()
-        if authority._audit is not None:
-            authority._audit.close()
 
 
-def test_real_guarded_update_and_checkpoint_survive_reload(tmp_path: Path) -> None:
-    path = str(tmp_path / "decisions.sqlite3")
-    store = SQLiteGraphStore(path, domain="soc")
+def test_real_guarded_update_and_checkpoint_survive_reload(age_graph: SOCGraphFixture, twin_graph: InMemoryGraphStore) -> None:
+    store = age_graph.store
     compound = CompoundingScorer.from_preset("soc", graph_store=store, profile="test", enable_rl=False)
     scorer = compound._scorer
-    service = SOCLearningControlService(FrozenTwinStore(tmp_path / "twins"))
+    service = SOCLearningControlService(FrozenTwinStore(twin_graph, "soc"))
     freeze = service.freeze(scorer, {}, 70, scorer.mu)
-    snapshot_bytes = (tmp_path / "twins/soc.json").read_bytes()
+    snapshot_bytes = FrozenTwinStore(twin_graph, "soc").load("soc").to_json()
     decision_id = _decision(store, scorer, "monitor")
     action_index = scorer.actions.index("monitor")
     before = scorer.mu[0, action_index].tolist()
@@ -145,9 +161,10 @@ def test_real_guarded_update_and_checkpoint_survive_reload(tmp_path: Path) -> No
             centroid={"scorer": scorer, "category": "credential_access", "category_index": 0,
                       "action": "monitor", "action_index": action_index,
                       "caused_by_decision_id": decision_id, "pre_centroid": before},
-            checkpoint_writer=lambda _: compound._persist_learning_artifacts(
+            checkpoint_writer=lambda transaction: compound._persist_learning_artifacts(
                 decision_id, actual_action="monitor", is_correct=True, category="credential_access",
                 evidence_already_persisted=True, skip_history_scan=True, raise_on_error=True,
+                transaction=transaction,
             ),
         ))
         assert _seed_module().twin_learning_failure(200, {
@@ -159,25 +176,25 @@ def test_real_guarded_update_and_checkpoint_survive_reload(tmp_path: Path) -> No
         learned = scorer.mu.copy()
     finally:
         store.close()
-    reloaded_store = SQLiteGraphStore(path, domain="soc")
+    reloaded_store = age_graph.reopen_store()
     try:
         reloaded = CompoundingScorer.from_preset("soc", graph_store=reloaded_store, profile="test", enable_rl=False)
         np.testing.assert_array_equal(reloaded._scorer.mu, learned)
-        result = SOCLearningControlService(FrozenTwinStore(tmp_path / "twins")).comparison(
+        result = SOCLearningControlService(FrozenTwinStore(twin_graph, "soc")).comparison(
             reloaded._scorer, decisions=reloaded_store.get_decisions("soc"),
         )
         assert result["mean_confidence_delta"] == expected["mean_confidence_delta"]
-        assert (tmp_path / "twins/soc.json").read_bytes() == snapshot_bytes
+        assert FrozenTwinStore(twin_graph, "soc").load("soc").to_json() == snapshot_bytes
     finally:
         reloaded_store.close()
 
 
-def test_demo_read_flag_keeps_archived_baseline_without_write_privileges(tmp_path: Path) -> None:
-    store = SQLiteGraphStore(str(tmp_path / "decisions.sqlite3"), domain="soc")
+def test_demo_read_flag_keeps_archived_baseline_without_write_privileges(tmp_path: Path, twin_graph: InMemoryGraphStore) -> None:
+    store = InMemoryGraphStore(domain="soc")
     scorer = CompoundingScorer.from_preset("soc", graph_store=store, profile="test", enable_rl=False)._scorer
-    service = SOCLearningControlService(FrozenTwinStore(tmp_path / "twins"))
+    service = SOCLearningControlService(FrozenTwinStore(twin_graph, "soc"))
     service.freeze(scorer, {}, 70, scorer.mu)
-    production_bytes = (tmp_path / "twins/soc.json").read_bytes()
+    production_bytes = FrozenTwinStore(twin_graph, "soc").load("soc").to_json()
     demo = service.demo_refreeze(scorer, {"components": {"verified_decisions": 0}}, 71)
     keys = ("SOC_DEMO_COMPARISON_ENABLED", "SOC_DEMO_RESEED_ENABLED")
     previous = {key: os.environ.get(key) for key in keys}
@@ -185,7 +202,7 @@ def test_demo_read_flag_keeps_archived_baseline_without_write_privileges(tmp_pat
         os.environ["SOC_DEMO_COMPARISON_ENABLED"] = "true"
         os.environ.pop("SOC_DEMO_RESEED_ENABLED", None)
         assert demo_comparison_enabled()
-        restarted = SOCLearningControlService(FrozenTwinStore(tmp_path / "twins"))
+        restarted = SOCLearningControlService(FrozenTwinStore(twin_graph, "soc"))
         comparison = restarted.comparison(scorer, demo=demo_comparison_enabled())
         assert comparison["provenance"] == demo["provenance"]
         assert comparison["frozen_iks"] == 71
@@ -193,7 +210,7 @@ def test_demo_read_flag_keeps_archived_baseline_without_write_privileges(tmp_pat
         with pytest.raises(HTTPException) as error:
             asyncio.run(demo_refreeze(DemoRefreezeRequest(confirm_demo_reseed=True)))
         assert error.value.status_code == 403
-        assert (tmp_path / "twins/soc.json").read_bytes() == production_bytes
+        assert FrozenTwinStore(twin_graph, "soc").load("soc").to_json() == production_bytes
         os.environ.pop("SOC_DEMO_COMPARISON_ENABLED")
         assert not demo_comparison_enabled()
         os.environ["SOC_DEMO_RESEED_ENABLED"] = "true"
@@ -224,7 +241,7 @@ def test_referral_requires_stored_prediction_and_explicit_classification(
 
 @pytest.mark.parametrize("status", ["RED", "AMBER"])
 def test_verified_referral_cannot_bypass_conservation(tmp_path: Path, status: str) -> None:
-    store = SQLiteGraphStore(str(tmp_path / "decisions.sqlite3"), domain="soc")
+    store = InMemoryGraphStore(domain="soc")
     try:
         scorer = CompoundingScorer.from_preset("soc", graph_store=store, profile="test", enable_rl=False)._scorer
         action = _verified_learning_action({"action": "refer_to_analyst", "original_action": "monitor"}, "monitor")
@@ -240,25 +257,24 @@ def test_verified_referral_cannot_bypass_conservation(tmp_path: Path, status: st
         store.close()
 
 
-def test_verified_referrals_learn_persist_and_keep_routing_and_audit(tmp_path: Path) -> None:
+def test_verified_referrals_learn_persist_and_keep_routing_and_audit(age_graph: SOCGraphFixture, twin_graph: InMemoryGraphStore) -> None:
     """Production resolver, guards and persistence with real scorer/store/ledger."""
     fixture = _seed_module().frozen_twin_learning_fixture()
     category = fixture["category"]
     ground_truth = fixture["verified_action"]
     assert category == "lateral_movement" and ground_truth == "monitor"
-    path = str(tmp_path / "decisions.sqlite3")
-    store = SQLiteGraphStore(path, domain="soc")
+    store = age_graph.store
     compound = CompoundingScorer.from_preset("soc", graph_store=store, profile="test", enable_rl=False)
     scorer = compound._scorer
     assert scorer.categories is not None
     category_index = scorer.categories.index(category)
     policy_index = scorer.categories.index("credential_access")
     policy_geometry = scorer.mu[policy_index].copy()
-    authority = AuthorityManager(db_path=str(tmp_path / "authority.sqlite3"))
+    authority = AuthorityManager(store=GraphPromotionStore(twin_graph))
     ledger = EvidenceLedger()
-    service = SOCLearningControlService(FrozenTwinStore(tmp_path / "twins"))
+    service = SOCLearningControlService(FrozenTwinStore(twin_graph, "soc"))
     service.freeze(scorer, {}, 70, scorer.mu)
-    production = (tmp_path / "twins/soc.json").read_bytes()
+    production = FrozenTwinStore(twin_graph, "soc").load("soc").to_json()
     demo = service.demo_refreeze(scorer, {"components": {"verified_decisions": 0}}, 70)
     try:
         scorer.set_conservation_status("GREEN")
@@ -266,12 +282,9 @@ def test_verified_referrals_learn_persist_and_keep_routing_and_audit(tmp_path: P
             scored = scorer.score(VECTOR, category_index)
             veto = authority.evaluate(category, scored.action_name, "GREEN")
             assert not veto.allowed
-            decision_id = store.write_decision(
-                domain="soc", category=category, action="refer_to_analyst",
-                confidence=scored.confidence,
-                factors={f"f{i}": float(v) for i, v in enumerate(VECTOR)},
-                metadata={"original_action": scored.action_name, "factor_vector": VECTOR.tolist(),
-                          "category_index": category_index, "planted": True},
+            decision_id = _decision(
+                store, scorer, "refer_to_analyst", category_index=category_index,
+                original_action=scored.action_name,
             )
             audit = ledger.append(decision_id, f"referral-{index}", {}, "refer_to_analyst",
                                   scored.confidence, "pending", False, "")
@@ -300,9 +313,10 @@ def test_verified_referrals_learn_persist_and_keep_routing_and_audit(tmp_path: P
                 centroid={"scorer": scorer, "category": category, "category_index": category_index,
                           "action": ground_truth, "action_index": gt_index,
                           "caused_by_decision_id": decision_id, "pre_centroid": before},
-                checkpoint_writer=lambda _: compound._persist_learning_artifacts(
+                checkpoint_writer=lambda transaction: compound._persist_learning_artifacts(
                     decision_id, actual_action=ground_truth, is_correct=correct, category=category,
                     evidence_already_persisted=True, skip_history_scan=True, raise_on_error=True,
+                    transaction=transaction,
                 ),
             ))
             assert persisted
@@ -328,18 +342,16 @@ def test_verified_referrals_learn_persist_and_keep_routing_and_audit(tmp_path: P
     finally:
         store.close()
         authority.store.close()
-        if authority._audit is not None:
-            authority._audit.close()
-    reloaded_store = SQLiteGraphStore(path, domain="soc")
+    reloaded_store = age_graph.reopen_store()
     try:
         restored = CompoundingScorer.from_preset("soc", graph_store=reloaded_store, profile="test", enable_rl=False)._scorer
         np.testing.assert_array_equal(restored.mu, learned)
-        comparison = SOCLearningControlService(FrozenTwinStore(tmp_path / "twins")).comparison(
+        comparison = SOCLearningControlService(FrozenTwinStore(twin_graph, "soc")).comparison(
             restored, 70, reloaded_store.count_verified("soc"), demo=True,
             decisions=reloaded_store.get_decisions("soc"),
         )
         assert comparison["mean_confidence_delta"] == result["mean_confidence_delta"]
         assert comparison["provenance"] == demo["provenance"]
-        assert (tmp_path / "twins/soc.json").read_bytes() == production
+        assert FrozenTwinStore(twin_graph, "soc").load("soc").to_json() == production
     finally:
         reloaded_store.close()

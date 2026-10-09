@@ -223,6 +223,9 @@ interface CentroidExportResponse {
   tensor_shape?: number[]
   sha256?: string
   decision_count?: number
+  iks_available?: boolean
+  degraded?: boolean
+  status?: string
 }
 
 interface WhatIfPreset {
@@ -320,12 +323,18 @@ interface TimeMachineTimelinePoint {
   drift_from_bootstrap?: number | null
   iks_estimate?: number | null
   ceiling_estimate?: number | null
+  ceiling_available?: boolean
 }
 
 interface TimeMachineTimelineResponse {
   timeline?: TimeMachineTimelinePoint[]
   ceiling_estimate?: number | null
   ceiling_note?: string | null
+  timeline_available?: boolean
+  iks_available?: boolean
+  ceiling_available?: boolean
+  data_available?: boolean
+  degraded?: boolean
 }
 
 const DEFAULT_ALERT_ID = domainConfig.defaultAlertId
@@ -539,6 +548,8 @@ export default function RuntimeEvolutionTab() {
     warning_count: number
     interpretation: string
     note?: string
+    support_available?: boolean
+    degraded?: boolean
   } | null>(null)
   const [centroidExportBusy, setCentroidExportBusy] = useState(false)
   const [centroidExportMessage, setCentroidExportMessage] = useState<string | null>(null)
@@ -593,6 +604,10 @@ export default function RuntimeEvolutionTab() {
   const [timeMachineLoading, setTimeMachineLoading] = useState(false)
   const [timeMachineError, setTimeMachineError] = useState<string | null>(null)
   const [timeMachineTimeline, setTimeMachineTimeline] = useState<TimeMachineTimelinePoint[]>([])
+  const [timeMachineAvailability, setTimeMachineAvailability] = useState<Pick<
+    TimeMachineTimelineResponse,
+    'timeline_available' | 'iks_available' | 'ceiling_available' | 'data_available' | 'degraded'
+  >>({})
   const [timeMachineSnapshots, setTimeMachineSnapshots] = useState<TimeMachineSnapshotMeta[]>([])
   const [selectedSnapshotIds, setSelectedSnapshotIds] = useState<string[]>([])
   const [timeMachineComparison, setTimeMachineComparison] = useState<TimeMachineComparison | null>(null)
@@ -758,7 +773,14 @@ export default function RuntimeEvolutionTab() {
       .then(([timelineResult, snapshotResult]) => {
         if (timelineResult.status === 'fulfilled') {
           const timelineData = timelineResult.value as TimeMachineTimelineResponse
-          setTimeMachineTimeline(ensureArray<TimeMachineTimelinePoint>((timelineData as any)?.timeline))
+          setTimeMachineTimeline(ensureArray<TimeMachineTimelinePoint>(timelineData.timeline))
+          setTimeMachineAvailability({
+            timeline_available: timelineData.timeline_available,
+            iks_available: timelineData.iks_available,
+            ceiling_available: timelineData.ceiling_available,
+            data_available: timelineData.data_available,
+            degraded: timelineData.degraded,
+          })
         } else {
           setTimeMachineError('Timeline unavailable.')
         }
@@ -949,6 +971,10 @@ export default function RuntimeEvolutionTab() {
 
     try {
       const data = await api.fetchCentroidExport() as CentroidExportResponse
+      if (data.status === 'cold_start') {
+        setCentroidExportMessage('Cold Start — no exportable tensor.')
+        return
+      }
       const payload = JSON.stringify(data, null, 2)
       const blob = new Blob([payload], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
@@ -966,7 +992,7 @@ export default function RuntimeEvolutionTab() {
       const sha256 = data.sha256 ?? 'unknown'
       const decisionCount = data.decision_count ?? 0
       setCentroidExportMessage(
-        `Exported ${tensorShape} tensor, ${decisionCount} decisions, SHA-256 ${sha256}, ${new Date(timestamp).toLocaleString()}.`
+        `Exported ${tensorShape} tensor, ${decisionCount} decisions, SHA-256 ${sha256}, ${new Date(timestamp).toLocaleString()}.${data.iks_available === false ? ' IKS unavailable.' : ''}`
       )
     } catch (error) {
       console.error('[RuntimeEvolutionTab] Failed to export centroids:', error)
@@ -1281,8 +1307,10 @@ export default function RuntimeEvolutionTab() {
     timestamp_epoch: point.timestamp_epoch ?? point.timestamp ?? 0,
     drift_from_bootstrap: point.drift_from_bootstrap ?? null,
     ceiling_estimate: point.ceiling_estimate ?? null,
+    ceiling_available: point.ceiling_available ?? false,
   }))
-  const hasTimeMachineCeiling = timeMachineTimelineChartData.some(point => point.ceiling_estimate != null)
+  const hasTimeMachineCeiling = timeMachineAvailability.ceiling_available === true
+    && timeMachineTimelineChartData.some(point => point.ceiling_available)
   const latestSnapshot = timeMachineSnapshots[timeMachineSnapshots.length - 1] ?? null
   const timeMachineComparisonBars = Object.entries(timeMachineComparison?.per_category_distances ?? {}).map(([category, distance]) => ({
     category: category.replace(/_/g, ' '),
@@ -3022,7 +3050,19 @@ export default function RuntimeEvolutionTab() {
                       </div>
                     )}
 
-                    {!timeMachineLoading && timeMachineTimelineChartData.length === 0 && !timeMachineError && (
+                    {!timeMachineError && timeMachineAvailability.iks_available === false && (
+                      <div className="rounded border border-amber-700/60 bg-amber-900/20 px-4 py-3 text-sm text-amber-200">
+                        Current IKS unavailable. Available checkpoint history is shown below.
+                      </div>
+                    )}
+
+                    {!timeMachineError && timeMachineAvailability.timeline_available === false && timeMachineAvailability.iks_available === false && (
+                      <div className="rounded border border-gray-700 bg-soc-bg px-4 py-3 text-sm text-gray-400">
+                        Timeline and current IKS are unavailable.
+                      </div>
+                    )}
+
+                    {!timeMachineLoading && timeMachineTimelineChartData.length === 0 && !timeMachineError && timeMachineAvailability.data_available !== false && (
                       <div className="rounded border border-gray-800 bg-soc-bg px-4 py-3 text-sm text-gray-500">
                         No centroid snapshots yet. Timeline activates after the first backup is written.
                       </div>
@@ -3656,15 +3696,17 @@ export default function RuntimeEvolutionTab() {
                 <div className="bg-soc-card rounded-lg border border-gray-800 p-4">
                   <div className="flex items-center gap-2">
                     <span className="text-sm">
-                      {centroidSupport.overall_health === 'GREEN' ? '🟢' :
+                      {centroidSupport.support_available === false ? '⚪' :
+                       centroidSupport.overall_health === 'GREEN' ? '🟢' :
                        centroidSupport.overall_health === 'AMBER' ? '🟡' : '🔴'}
                     </span>
                     <span className="text-sm font-semibold text-gray-200">Centroid Support</span>
                     <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                      centroidSupport.support_available === false ? 'bg-gray-800 text-gray-300 border border-gray-600' :
                       centroidSupport.overall_health === 'GREEN' ? 'bg-green-900/40 text-green-400 border border-green-500/30' :
                       centroidSupport.overall_health === 'AMBER' ? 'bg-amber-900/40 text-amber-400 border border-amber-500/30' :
                       'bg-red-900/40 text-red-400 border border-red-500/30'
-                    }`}>{centroidSupport.overall_health}</span>
+                    }`}>{centroidSupport.support_available === false ? 'UNAVAILABLE' : centroidSupport.overall_health}</span>
                   </div>
                   <p className="text-xs text-gray-400 mt-1 ml-6">{centroidSupport.interpretation}</p>
                 </div>

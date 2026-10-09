@@ -15,6 +15,8 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.services.triage_providers import get_factor_vector_provider
+from app.services.authority_ladder import configure_authority_graph_store
+from copilot_sdk.graph import InMemoryGraphStore
 
 
 client = TestClient(app)
@@ -117,6 +119,9 @@ def test_sentinel_health_msal_missing(monkeypatch):
 
 def _install_analyze_patches(monkeypatch, action="escalate", confidence=0.9):
     import app.routers.triage as triage_router
+
+    # This client bypasses startup, so configure the real authority explicitly.
+    configure_authority_graph_store(InMemoryGraphStore())
 
     alert = {
         "alert_id": "SENT-ALERT-1",

@@ -95,7 +95,7 @@ async def test_query_failure_returns_empty_and_logs(caplog):
     graph = AsyncMock()
     graph.run_query.side_effect = RuntimeError("db down")
     result = await CreditAssigner(graph).assign_chain_credit("D-2", "credential_access", 0, 100, 1.0)
-    assert result == []
+    assert result is None
     assert "chain-credit query failed" in caplog.text
 
 

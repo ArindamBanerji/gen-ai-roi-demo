@@ -275,7 +275,9 @@ class DiscoveryService:
         if as_of_epoch_ms is None:
             errors.append("No graph timestamps available")
             if stale_cache is not None:
-                return self._stale_envelope(stale_cache, errors)
+                stale = self._stale_envelope(stale_cache, errors)
+                stale["watermark_available"] = False
+                return stale
         else:
             recent_cutoff = as_of_epoch_ms - self.DEFAULT_RECENT_DAYS * DAY_MS
             baseline_cutoff = as_of_epoch_ms - self.DEFAULT_LOOKBACK_DAYS * DAY_MS
@@ -350,6 +352,7 @@ class DiscoveryService:
             hit=False,
             stale=False,
         )
+        envelope["watermark_available"] = as_of_epoch_ms is not None
         self._cache[domain] = self._copy_envelope(envelope)
         self._cache_time[domain] = self.time_fn()
         return envelope

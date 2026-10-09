@@ -173,6 +173,7 @@ async def generate_governance_report() -> GovernanceReport:
     centroid_export = await _collect_centroid_export()
     tab2 = await _collect_tab2_evidence()
     executive_narrative = await _collect_executive_narrative()
+    narrative_degraded = list(executive_narrative.get("sections_degraded") or [])
     auto_approve = await _collect_auto_approve_stats()
     epistemic_state = await _collect_epistemic_state()
     analyst_benchmarking = await _collect_analyst_benchmarking()
@@ -227,13 +228,14 @@ async def generate_governance_report() -> GovernanceReport:
     section_3 = _section(
         article="Art 13",
         title="Transparency and Information",
-        status="READY",
+        status="ATTENTION" if narrative_degraded else "READY",
         summary="Human-readable narrative, glossary, and model-state summaries explain what the system observed and learned.",
         evidence={
             "headline": executive_narrative.get("headline", ""),
             "what_changed": executive_narrative.get("what_changed", {}),
             "what_discovered": executive_narrative.get("what_discovered", {}),
             "what_knows": executive_narrative.get("what_knows", {}),
+            "sections_degraded": narrative_degraded,
             "decision_count_glossary": tab2.get("decision_count_glossary", {}),
         },
     )

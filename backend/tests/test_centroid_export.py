@@ -165,6 +165,10 @@ def test_summary_format_excludes_tensors():
 
     assert "current_mu"   not in body, "summary must exclude current_mu"
     assert "bootstrap_mu" not in body, "summary must exclude bootstrap_mu"
+    assert "centroids" not in body, "summary must exclude centroids"
+    assert isinstance(body["iks_available"], bool)
+    assert isinstance(body["degraded"], bool)
+    assert body["status"] in ("ok", "cold_start")
 
     # All other fields must be present
     for field in ("export_version", "generated_at_epoch", "gae_version",
@@ -264,3 +268,106 @@ def test_centroid_export_checksum_is_string():
 
     assert isinstance(data["checksum"], str)
     assert len(data["checksum"]) == 64  # SHA-256 hex
+
+
+def _http_values_have_no_none(value):
+    if isinstance(value, dict):
+        return all(v is not None and _http_values_have_no_none(v) for v in value.values())
+    if isinstance(value, list):
+        return all(v is not None and _http_values_have_no_none(v) for v in value)
+    return value is not None
+
+
+def test_centroid_export_iks_raises_healthy_tensor(monkeypatch):
+    import app.services.gae_state as gae_state
+    import app.services.iks as iks
+    import app.routers.soc as soc
+
+    scorer = get_profile_scorer()
+    raw = _run(build_centroid_export(scorer, _graph_with_bootstrap(scorer.centroids.tolist())))
+    monkeypatch.setattr(gae_state, "get_profile_scorer", lambda: scorer)
+    monkeypatch.setattr(gae_state, "build_centroid_export", AsyncMock(return_value=raw))
+    monkeypatch.setattr(iks, "compute_iks_v2", AsyncMock(side_effect=RuntimeError("down")))
+
+    data = _run(soc.get_centroid_export())
+    assert data["iks_score"] == 0.0
+    assert data["iks_available"] is False
+    assert data["centroids_available"] is True
+    assert data["current_mu"]
+    assert data["degraded"] is True
+
+
+def test_centroid_export_valid_zero_iks(monkeypatch):
+    import app.services.gae_state as gae_state
+    import app.services.iks as iks
+    import app.routers.soc as soc
+
+    scorer = get_profile_scorer()
+    raw = _run(build_centroid_export(scorer, _graph_with_bootstrap(scorer.centroids.tolist())))
+    monkeypatch.setattr(gae_state, "get_profile_scorer", lambda: scorer)
+    monkeypatch.setattr(gae_state, "build_centroid_export", AsyncMock(return_value=raw))
+    monkeypatch.setattr(iks, "compute_iks_v2", AsyncMock(return_value={"iks_v2": 0.0}))
+
+    data = _run(soc.get_centroid_export())
+    assert data["iks_score"] == 0.0
+    assert data["iks_available"] is True
+
+
+def test_centroid_export_summary_retains_flags(monkeypatch):
+    import app.services.gae_state as gae_state
+    import app.services.iks as iks
+    import app.routers.soc as soc
+
+    scorer = get_profile_scorer()
+    raw = _run(build_centroid_export(scorer, _graph_with_bootstrap(scorer.centroids.tolist())))
+    monkeypatch.setattr(gae_state, "get_profile_scorer", lambda: scorer)
+    monkeypatch.setattr(gae_state, "build_centroid_export", AsyncMock(return_value=raw))
+    monkeypatch.setattr(iks, "compute_iks_v2", AsyncMock(side_effect=RuntimeError("down")))
+
+    data = _run(soc.get_centroid_export(format="summary"))
+    assert all(field not in data for field in ("current_mu", "bootstrap_mu", "centroids"))
+    assert data["iks_available"] is False
+    assert data["degraded"] is True
+    assert data["status"] == "ok"
+
+
+def test_centroid_export_cold_start_typed(monkeypatch):
+    import app.services.gae_state as gae_state
+    import app.routers.soc as soc
+
+    monkeypatch.setattr(gae_state, "get_profile_scorer", lambda: None)
+    data = _run(soc.get_centroid_export())
+    assert data["status"] == "cold_start"
+    assert data["centroids_available"] is False
+    assert data["iks_score"] == 0.0
+    assert data["current_mu"] == []
+    assert _http_values_have_no_none(data)
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [RuntimeError("graph unavailable"), None],
+    ids=["raises", "returns-none"],
+)
+def test_centroid_export_graph_outage_is_typed_http_200(failure):
+    effect = {"side_effect": failure} if isinstance(failure, Exception) else {"return_value": None}
+    with patch(
+        "app.services.gae_state.build_centroid_export",
+        new=AsyncMock(**effect),
+    ):
+        response = _client.get("/api/soc/centroid-export")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["iks_score"] == 0.0
+    assert body["iks_available"] is False
+    assert body["current_mu"] == []
+    assert body["bootstrap_mu"] == []
+    assert body["tensor_shape"] == []
+    assert body["categories"] == []
+    assert body["actions"] == []
+    assert body["factors"] == []
+    assert body["centroids"] == {}
+    assert body["decision_count"] == 0
+    assert body["generated_at_epoch"] == 0
+    assert _http_values_have_no_none(body)

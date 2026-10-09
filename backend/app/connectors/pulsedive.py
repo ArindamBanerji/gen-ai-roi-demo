@@ -273,6 +273,8 @@ class PulsediveConnector(UCLConnector):
         live_attempted = 0
         live_succeeded = 0
         source = "hardcoded_fallback"
+        lookup_failures: set[str] = set()
+        write_failures = 0
 
         async def existing_observation(value: str) -> Dict[str, Any] | None:
             """Return an existing graph indicator without replacing it."""
@@ -285,6 +287,7 @@ class PulsediveConnector(UCLConnector):
                     if isinstance(observed, dict):
                         return dict(observed)
             except Exception as exc:
+                lookup_failures.add(value)
                 logger.warning("[PULSEDIVE] Existing observation lookup failed for %s: %s", value, exc)
             return None
 
@@ -298,7 +301,13 @@ class PulsediveConnector(UCLConnector):
                 existing["_preserve_existing"] = True
                 return existing
             fallback = HARDCODED_FALLBACK.get(value)
-            return dict(fallback) if fallback else None
+            if not fallback:
+                return None
+            fallback_value = dict(fallback)
+            if value in lookup_failures:
+                fallback_value["fallback_used"] = True
+                fallback_value["fallback_reason"] = "graph_unavailable"
+            return fallback_value
 
         # ---------------------------------------------------------------
         # Step 1 — Live API or hardcoded fallback
@@ -401,6 +410,7 @@ class PulsediveConnector(UCLConnector):
                     )
                 indicators_ingested += 1
             except Exception as exc:
+                write_failures += 1
                 print(f"[PULSEDIVE] Failed to write {ioc['value']} to AGE: {exc}")
 
         # ---------------------------------------------------------------
@@ -425,6 +435,7 @@ class PulsediveConnector(UCLConnector):
                     relationships_created += 1
                     print(f"[PULSEDIVE] Linked {ioc_value} -> {alert_id}")
                 except Exception as exc:
+                    write_failures += 1
                     print(f"[PULSEDIVE] Failed to link {ioc_value} -> {alert_id}: {exc}")
 
         # ---------------------------------------------------------------
@@ -439,6 +450,10 @@ class PulsediveConnector(UCLConnector):
                 "stale":    bool(ioc.get("stale", False)),
                 "stale_since": ioc.get("stale_since"),
                 "context":  ioc.get("context", ""),
+                **({
+                    "fallback_used": True,
+                    "fallback_reason": ioc.get("fallback_reason"),
+                } if ioc.get("fallback_used") else {}),
             }
             for ioc in enriched
         ]
@@ -449,6 +464,7 @@ class PulsediveConnector(UCLConnector):
             relationships_created=relationships_created,
             enrichment_summary=enrichment_summary,
             timestamp=datetime.now(timezone.utc).isoformat(),
+            write_failures=write_failures,
         )
 
     # ------------------------------------------------------------------

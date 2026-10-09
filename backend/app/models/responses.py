@@ -39,6 +39,8 @@ class LearningStateResponse(BaseModel):
     total_decisions: int
     categories_active: int
     bootstrap_category_weights: dict[str, float] = Field(default_factory=dict)
+    data_available: bool = True
+    degraded: bool = False
 
 
 class TriageLearningStateResponse(BaseModel):
@@ -104,6 +106,7 @@ class SwitchingCost(BaseModel):
 class IksData(BaseModel):
     current: float
     delta_7d: float
+    delta_7d_available: bool = True
     interpretation: str
     decision_count: int
     estimated: float
@@ -171,6 +174,8 @@ class DetectionEngineeringResponse(BaseModel):
     noise_map: list[NoiseMapItem] = Field(default_factory=list)
     decisions_required_for_noise: int
     note: str = ""
+    data_available: bool = True
+    degraded: bool = False
 
 
 # =============================================================================
@@ -194,6 +199,8 @@ class CampaignsResponse(BaseModel):
     campaigns: list[CampaignItem] = Field(default_factory=list)
     total: int
     active_campaigns: int
+    data_available: bool = True
+    degraded: bool = False
 
 
 # =============================================================================
@@ -251,16 +258,16 @@ class WhatDiscovered(BaseModel):
 
 
 class WhatKnows(BaseModel):
-    iks_current: float
-    categories_calibrated: int
-    categories_total: int
-    health_status: str
-    operational_knowledge_status: str | None = None
-    pre_activation: bool | None = None
-    learning_enabled: bool | None = None
-    health_source: str | None = None
-    status_reason: str | None = None
-    conservation_narrative: str
+    iks_current: float = 0.0
+    categories_calibrated: int = 0
+    categories_total: int = 0
+    health_status: str = "UNAVAILABLE"
+    operational_knowledge_status: str = ""
+    pre_activation: bool = False
+    learning_enabled: bool = False
+    health_source: str = ""
+    status_reason: str = ""
+    conservation_narrative: str = ""
 
 
 class NarrativeMetrics(BaseModel):
@@ -278,7 +285,11 @@ class ExecutiveNarrativeResponse(BaseModel):
     metrics: NarrativeMetrics
     generated_at: str
     pdf_available: bool
-    sections: list[dict[str, Any]] | None = None
+    sections: list[dict[str, Any]] = Field(default_factory=list)
+    sections_degraded: list[str] = Field(default_factory=list)
+    degraded_fields: list[str] = Field(default_factory=list)
+    data_available: bool = True
+    degraded: bool = False
 
 
 # =============================================================================
@@ -322,8 +333,61 @@ class SimulationProgressResponse(BaseModel):
 
 class CentroidSupportResponse(BaseModel):
     support_summary: dict[str, Any] = Field(default_factory=dict)
-    overall_health: str
-    warning_count: int
-    threshold_sigma: float
-    interpretation: str
+    overall_health: str = "UNAVAILABLE"
+    warning_count: int = 0
+    threshold_sigma: float = 2.0
+    interpretation: str = "Centroid support is unavailable."
     note: str = ""
+    status: str = "unavailable"
+    reason: str = ""
+    support_available: bool = True
+    degraded: bool = False
+
+
+class CentroidExportResponse(BaseModel):
+    export_version: str = ""
+    generated_at_epoch: int = 0
+    gae_version: str = ""
+    tensor_shape: list[int] = Field(default_factory=list)
+    current_mu: list[list[list[float]]] = Field(default_factory=list)
+    bootstrap_mu: list[list[list[float]]] = Field(default_factory=list)
+    decision_count: int = 0
+    categories: list[str] = Field(default_factory=list)
+    actions: list[str] = Field(default_factory=list)
+    sha256: str = ""
+    exported_at: int = 0
+    factors: list[str] = Field(default_factory=list)
+    centroids: dict[str, dict[str, list[float]]] = Field(default_factory=dict)
+    drift_from_bootstrap: dict[str, float] = Field(default_factory=dict)
+    checksum: str = ""
+    iks_score: float = 0.0
+    iks_available: bool = False
+    bootstrap_available: bool = False
+    centroids_available: bool = False
+    degraded: bool = True
+    status: str = "cold_start"
+    message: str = "Centroid export unavailable"
+
+
+class ThreatIndicatorSummaryResponse(BaseModel):
+    total: int = 0
+    by_type: dict[str, int] = Field(default_factory=dict)
+    by_severity: dict[str, int] = Field(default_factory=dict)
+
+
+class EnrichmentSummaryResponse(BaseModel):
+    indicators: list[dict[str, Any]] = Field(default_factory=list)
+    total: int = 0
+    by_severity: dict[str, int] = Field(default_factory=lambda: {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "unknown": 0,
+    })
+    threat_indicators: ThreatIndicatorSummaryResponse = Field(
+        default_factory=ThreatIndicatorSummaryResponse
+    )
+    enrichment_available: bool = False
+    indicators_available: bool = False
+    degraded: bool = True

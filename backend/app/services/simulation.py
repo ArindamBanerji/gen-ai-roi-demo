@@ -184,6 +184,7 @@ class SimulationResult:
     duration_seconds:      float
     ground_truth_accuracy: float                   # fraction where predicted == ground truth
     category_ground_truth: Dict[str, float]        # per-category ground-truth match rate
+    context_degraded: List[str] = field(default_factory=list)
 
 
 def _clone_learning_state_for_simulation(live_state: LearningState) -> LearningState:
@@ -290,7 +291,17 @@ class SimulationOrchestrator:
 
         profile_scorer = get_profile_scorer()
         if not isinstance(profile_scorer, SOCCompoundingScorerAdapter):
-            raise RuntimeError("SOC GraphStore is unavailable for simulation persistence")
+            return SimulationResult(
+                n_decisions=0,
+                overall_accuracy=0.0,
+                category_accuracy={},
+                weight_trajectory=[],
+                experiment_log=[],
+                duration_seconds=0.0,
+                ground_truth_accuracy=0.0,
+                category_ground_truth={},
+                context_degraded=["graph_store"],
+            )
         graph_store = profile_scorer._compound.graph_store
 
         start_ts = time.perf_counter()
@@ -315,6 +326,7 @@ class SimulationOrchestrator:
         weight_trajectory:   List[List[List[float]]] = []
         gt_correct_total = 0
         gt_correct_by_category: Dict[str, int] = {}
+        context_degraded: list[str] = []
 
         # FIX-06: Guard against empty alert pool — modulo-zero would crash.
         if not alert_pool:
@@ -327,6 +339,7 @@ class SimulationOrchestrator:
                 duration_seconds=round(time.perf_counter() - start_ts, 3),
                 ground_truth_accuracy=0.0,
                 category_ground_truth={},
+                context_degraded=context_degraded,
             )
 
         for step in range(n_decisions):
@@ -348,7 +361,9 @@ class SimulationOrchestrator:
             # ------------------------------------------------------------------
             try:
                 alert_data = await graph_client.get_alert(alert_id)
-            except Exception:
+            except Exception as exc:
+                context_degraded.append("alert")
+                logger.warning("Simulation alert lookup unavailable for %s: %s", alert_id, exc)
                 alert_data = None
             if alert_data is None:
                 # Synthetic fallback: use pool dict itself as alert_data
@@ -362,7 +377,9 @@ class SimulationOrchestrator:
             # ------------------------------------------------------------------
             try:
                 ctx = await graph_client.get_security_context(alert_id)
-            except Exception:
+            except Exception as exc:
+                context_degraded.append("security_context")
+                logger.warning("Simulation security context unavailable for %s: %s", alert_id, exc)
                 ctx = None
             if not ctx:
                 ctx = {"alert_type": alert_type}
@@ -608,6 +625,7 @@ class SimulationOrchestrator:
             duration_seconds      = round(duration, 3),
             ground_truth_accuracy = round(gt_overall, 4),
             category_ground_truth = {k: round(v, 4) for k, v in final_cat_gt.items()},
+            context_degraded = context_degraded,
         )
 
     def _log_decision(

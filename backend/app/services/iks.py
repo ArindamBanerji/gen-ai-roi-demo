@@ -47,6 +47,23 @@ _MU_ZERO_PATH = Path(__file__).parent.parent / "data" / "iks_bootstrap_soc.json"
 _mu_zero_cache: Optional[np.ndarray] = None   # lazily loaded, module-level cache
 
 
+def _numeric_list_shape(value: Any) -> tuple[int, ...] | None:
+    """Return a rectangular numeric list shape without coercion exceptions."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return ()
+    if not isinstance(value, list):
+        return None
+    if not value:
+        return (0,)
+    child_shapes = [_numeric_list_shape(item) for item in value]
+    first_shape = child_shapes[0]
+    if first_shape is None or any(shape != first_shape for shape in child_shapes):
+        return None
+    return (len(value), *first_shape)
+
+
 # ---------------------------------------------------------------------------
 # SOC μ₀ loader
 # ---------------------------------------------------------------------------
@@ -100,7 +117,7 @@ def compute_iks(mu_t: np.ndarray, mu_zero: Optional[np.ndarray] = None) -> dict:
 async def compute_visible_iks(
     graph_service=None,
     scorer=None,
-) -> float:
+) -> Optional[float]:
     """
     Compute the shipped user-visible IKS score.
 
@@ -128,17 +145,17 @@ async def compute_visible_iks(
             score = float(result.get("current", 0.0))
             if score > 50.0:
                 return score
-        except Exception:
-            pass
+        except Exception as exc:
+            log.warning("[IKS] drift calculation unavailable: %s", exc)
 
     if graph_service is not None:
         try:
             iks_data = await compute_iks_v2(graph_service)
             return float(iks_data.get("iks_v2", 0.0))
-        except Exception:
-            pass
+        except Exception as exc:
+            log.warning("[IKS] graph composite calculation unavailable: %s", exc)
 
-    return 0.0
+    return None
 
 
 async def get_iks_trend() -> list[dict]:
@@ -304,11 +321,12 @@ async def compute_iks_v2(graph_service) -> dict:
     }
 
 
-async def _compute_delta_7d(current_iks: float) -> float:
+async def _compute_delta_7d(current_iks: float) -> tuple[float, bool]:
     """
     Compute IKS change over the last 7 days using ProfileSnapshot nodes.
 
-    Returns current_iks - oldest_iks_within_7d_window, or 0.0 if insufficient data.
+    Return ``(delta, available)``. An empty history is a valid zero delta;
+    unavailable or malformed history is explicitly marked unavailable.
     """
     try:
         from app.db.graph_client import graph_client
@@ -323,19 +341,35 @@ async def _compute_delta_7d(current_iks: float) -> float:
             """,
             {"cutoff_epoch": int((datetime.utcnow().timestamp() - 7 * 86400) * 1000)},
         )
-    except Exception as exc:
+    except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
         log.debug("[IKS] delta_7d query failed: %s", exc)
-        raise RuntimeError("AGE query failed for IKS delta") from exc
+        return 0.0, False
 
+    if rows is None or not isinstance(rows, list):
+        return 0.0, False
     if not rows:
-        return 0.0
+        return 0.0, True
+    if not isinstance(rows[0], dict):
+        return 0.0, False
 
     try:
-        mu_zero = _load_mu_zero()
-        mu_str = rows[0].get("mu", "[]")
-        mu_oldest = np.array(json.loads(mu_str), dtype=np.float64)
-        oldest_result = compute_iks(mu_oldest, mu_zero)
-        return cast(float, round(current_iks - cast(Any, oldest_result["current"]), 1))
-    except Exception as exc:
-        log.debug("[IKS] delta_7d computation failed: %s", exc)
-        return 0.0
+        mu_raw = rows[0].get("mu")
+        parsed_mu = json.loads(mu_raw) if isinstance(mu_raw, str) else mu_raw
+    except json.JSONDecodeError as exc:
+        log.debug("[IKS] delta_7d history contains malformed JSON: %s", exc)
+        return 0.0, False
+
+    parsed_shape = _numeric_list_shape(parsed_mu)
+    if parsed_shape is None:
+        return 0.0, False
+    mu_zero = _load_mu_zero()
+    if mu_zero is None:
+        return 0.0, False
+    if parsed_shape != tuple(mu_zero.shape):
+        return 0.0, False
+    mu_oldest = np.asarray(parsed_mu, dtype=np.float64)
+    oldest_result = compute_iks(mu_oldest, mu_zero)
+    oldest_current = oldest_result.get("current")
+    if not isinstance(oldest_current, (int, float)) or isinstance(oldest_current, bool):
+        return 0.0, False
+    return round(current_iks - float(oldest_current), 1), True

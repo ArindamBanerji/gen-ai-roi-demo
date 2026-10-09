@@ -186,7 +186,7 @@ async def test_simulation_background_reports_error_when_scorer_missing():
         ), patch("app.services.gae_state.get_profile_scorer", return_value=None):
             await simulation_router._run_simulation_bg(sim_id, n_decisions=1, speed_ms=0)
 
-        assert simulation_router._simulations[sim_id]["status"] == "error"
-        assert "GraphStore is unavailable" in simulation_router._simulations[sim_id]["error"]
+            assert simulation_router._simulations[sim_id]["status"] == "complete"
+            assert simulation_router._simulations[sim_id]["result"]["context_degraded"] == ["graph_store"]
     finally:
         simulation_router._simulations.pop(sim_id, None)

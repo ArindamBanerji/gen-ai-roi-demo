@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Optional
 
 
@@ -24,6 +24,9 @@ class InvestigationStep:
     policy_version: str
     residual: float
     halt_reason: Optional[str] = None
+    evidence_available: bool = True
+    evidence_admitted: bool = True
+    failure_reason: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -46,6 +49,9 @@ class InvestigationResult:
     conservation_emit_gate: str = "not_evaluated_read_only"
     halt_reason: str = "unknown"
     policy: str = "vld"
+    evidence_available: bool = True
+    degraded: bool = False
+    failed_patterns: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         payload = asdict(self)

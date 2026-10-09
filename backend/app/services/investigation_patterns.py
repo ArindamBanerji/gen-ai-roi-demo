@@ -13,7 +13,7 @@ from __future__ import annotations
 import inspect
 import logging
 from dataclasses import dataclass
-from typing import Any, Protocol, cast, runtime_checkable
+from typing import Any, Optional, Protocol, cast, runtime_checkable
 
 import numpy as np
 
@@ -68,6 +68,30 @@ async def _maybe_await(value: Any) -> Any:
     return value
 
 
+async def read_pattern_evidence(
+    pattern: InvestigationPattern, alert_context: dict[str, Any], graph_store: Any,
+) -> dict[str, Any]:
+    """Validate the read result before any caller admits it to extraction."""
+    try:
+        evidence = await pattern.execute(alert_context, graph_store)
+        if isinstance(evidence, dict) and evidence.get("evidence_available", True):
+            vector = np.asarray(evidence.get("vld_factor_vector"), dtype=np.float64)
+            if vector.shape == (N_FACTORS,) and np.all(np.isfinite(vector)):
+                return evidence
+        reason = (
+            str(evidence.get("failure_reason") or "Pattern returned unavailable or malformed evidence")
+            if isinstance(evidence, dict) else "Pattern returned no evidence"
+        )
+    except Exception as exc:
+        logger.warning("SOC VLD pattern %s failed: %s", pattern.pattern_name, exc)
+        reason = f"Pattern read failed: {type(exc).__name__}"
+    return {
+        "evidence_available": False, "evidence_admitted": False,
+        "degraded": True, "failure_reason": reason,
+        "vld_factor_vector": [], "evidence_keys": [],
+    }
+
+
 @dataclass(frozen=True)
 class BaseInvestigationPattern:
     category_name: str
@@ -86,7 +110,41 @@ class BaseInvestigationPattern:
     async def execute(self, alert_context: dict[str, Any], graph_store: Any) -> dict[str, Any]:
         alert_id = str(alert_context.get("alert_id") or alert_context.get("id") or "").strip()
         rows = await self._bounded_read(alert_id, graph_store)
+        # The read sentinel must be checked before constructing observations or
+        # a vector: otherwise a failed query admits the pattern's default vector.
+        if rows is None:
+            return {
+                "evidence_available": False,
+                "evidence_admitted": False,
+                "degraded": True,
+                "failure_reason": "Bounded graph read unavailable or malformed",
+                "vld_factor_vector": [],
+                "evidence_keys": [],
+                "read_cost": 1.0,
+                "requested_traversal": {
+                    "pattern": self.pattern_name,
+                    "traversal": self.traversal,
+                    "selected_edge": self.selected_edge,
+                    "candidate_read": self.candidate_read,
+                },
+            }
         context = await self._fallback_context(alert_id, graph_store)
+        if context.get("read_error"):
+            return {
+                "evidence_available": False,
+                "evidence_admitted": False,
+                "degraded": True,
+                "failure_reason": "Security context read unavailable",
+                "vld_factor_vector": [],
+                "evidence_keys": [],
+                "read_cost": 1.0,
+                "requested_traversal": {
+                    "pattern": self.pattern_name,
+                    "traversal": self.traversal,
+                    "selected_edge": self.selected_edge,
+                    "candidate_read": self.candidate_read,
+                },
+            }
         evidence = self._specific_evidence(alert_context, context, rows)
         vector = self.evidence_vector(evidence)
         evidence.update(
@@ -102,6 +160,8 @@ class BaseInvestigationPattern:
                 "schema_source": "SOC_GRAPH_CONTRACT",
                 "vld_factor_vector": [float(x) for x in vector.tolist()],
                 "read_cost": float(len(rows) if rows else context.get("nodes_consulted", 1.0) or 1.0),
+                "evidence_available": True,
+                "degraded": False,
             }
         )
         evidence["evidence_keys"] = sorted(str(key) for key in self.evidence_keys())
@@ -111,18 +171,19 @@ class BaseInvestigationPattern:
         )
         return evidence
 
-    async def _bounded_read(self, alert_id: str, graph_store: Any) -> list[dict[str, Any]]:
+    async def _bounded_read(self, alert_id: str, graph_store: Any) -> Optional[list[dict[str, Any]]]:
         run_query = getattr(graph_store, "run_query", None)
         if not callable(run_query) or not alert_id:
-            return []
+            return None
         try:
             rows = await _maybe_await(run_query(self.graph_query.format(alert_id=_S(alert_id))))
         except Exception as exc:
             logger.warning("SOC VLD pattern %s bounded read failed: %s", self.pattern_name, exc)
-            return []
-        if isinstance(rows, list):
-            return [dict(row) for row in rows if isinstance(row, dict)]
-        return []
+            return None
+        if isinstance(rows, list) and all(isinstance(row, dict) for row in rows):
+            return [dict(row) for row in rows]
+        logger.warning("SOC VLD pattern %s returned unavailable/malformed rows", self.pattern_name)
+        return None
 
     async def _fallback_context(self, alert_id: str, graph_store: Any) -> dict[str, Any]:
         get_context = getattr(graph_store, "get_security_context", None)
@@ -133,7 +194,10 @@ class BaseInvestigationPattern:
         except Exception as exc:
             logger.warning("SOC VLD pattern %s context fallback failed: %s", self.pattern_name, exc)
             return {"read_error": type(exc).__name__}
-        return dict(raw) if isinstance(raw, dict) else {}
+        if not isinstance(raw, dict):
+            logger.warning("SOC VLD pattern %s context returned no mapping", self.pattern_name)
+            return {"read_error": "unavailable_context"}
+        return dict(raw)
 
     def _specific_evidence(
         self,
@@ -169,7 +233,7 @@ class CredentialInvestigationPattern(BaseInvestigationPattern):
             enriched_factors=("privileged_identity_context", "pattern_history"),
             candidate_read="user_identity_context",
             graph_query=(
-                "MATCH (a:Alert {{alert_id: {alert_id}}}-[:INVOLVES]->(u:User) "
+                "MATCH (a:Alert {{alert_id: {alert_id}}})-[:INVOLVES]->(u:User) "
                 "RETURN a.alert_id AS alert_id, u.user_id AS user_id, u.risk_level AS user_risk LIMIT 5"
             ),
             vector_values=((0, 0.88), (3, 0.72)),
@@ -195,7 +259,7 @@ class MalwareInvestigationPattern(BaseInvestigationPattern):
             enriched_factors=("threat_intel_enrichment", "time_anomaly"),
             candidate_read="threat_indicator_context",
             graph_query=(
-                "MATCH (a:Alert {{alert_id: {alert_id}}}-[:HAS_INDICATOR]->(ti:ThreatIndicator) "
+                "MATCH (a:Alert {{alert_id: {alert_id}}})-[:HAS_INDICATOR]->(ti:ThreatIndicator) "
                 "OPTIONAL MATCH (a)-[:CLASSIFIED_AS]->(ap:AttackPattern) "
                 "RETURN ti.indicator AS indicator, ti.severity AS indicator_severity, ap.pattern_id AS pattern_id LIMIT 5"
             ),
@@ -214,7 +278,7 @@ class LateralMovementPattern(BaseInvestigationPattern):
             enriched_factors=("device_trust", "privileged_identity_context"),
             candidate_read="asset_campaign_context",
             graph_query=(
-                "MATCH (a:Alert {{alert_id: {alert_id}}}-[:DETECTED_ON]->(asset:Asset) "
+                "MATCH (a:Alert {{alert_id: {alert_id}}})-[:DETECTED_ON]->(asset:Asset) "
                 "OPTIONAL MATCH (a)-[:MEMBER_OF]->(campaign:Campaign) "
                 "RETURN asset.asset_id AS asset_id, asset.criticality AS asset_criticality, campaign.campaign_id AS campaign_id LIMIT 5"
             ),
@@ -233,7 +297,7 @@ class ExfiltrationPattern(BaseInvestigationPattern):
             enriched_factors=("asset_criticality", "pattern_history"),
             candidate_read="asset_data_movement_context",
             graph_query=(
-                "MATCH (a:Alert {{alert_id: {alert_id}}}-[:DETECTED_ON]->(asset:Asset) "
+                "MATCH (a:Alert {{alert_id: {alert_id}}})-[:DETECTED_ON]->(asset:Asset) "
                 "OPTIONAL MATCH (a)-[:HAS_INDICATOR]->(ti:ThreatIndicator) "
                 "OPTIONAL MATCH (a)-[:MEMBER_OF]->(campaign:Campaign) "
                 "RETURN asset.asset_id AS asset_id, asset.criticality AS asset_criticality, ti.indicator AS indicator, campaign.campaign_id AS campaign_id LIMIT 5"
@@ -253,7 +317,7 @@ class InsiderPattern(BaseInvestigationPattern):
             enriched_factors=("time_anomaly", "pattern_history"),
             candidate_read="user_behavior_context",
             graph_query=(
-                "MATCH (a:Alert {{alert_id: {alert_id}}}-[:INVOLVES]->(u:User) "
+                "MATCH (a:Alert {{alert_id: {alert_id}}})-[:INVOLVES]->(u:User) "
                 "OPTIONAL MATCH (a)-[:MEMBER_OF]->(campaign:Campaign) "
                 "RETURN u.user_id AS user_id, u.department AS department, campaign.campaign_id AS campaign_id LIMIT 5"
             ),
@@ -272,7 +336,7 @@ class CloudInfraPattern(BaseInvestigationPattern):
             enriched_factors=("asset_criticality", "device_trust"),
             candidate_read="cloud_asset_context",
             graph_query=(
-                "MATCH (a:Alert {{alert_id: {alert_id}}}-[:CLASSIFIED_AS]->(ap:AttackPattern) "
+                "MATCH (a:Alert {{alert_id: {alert_id}}})-[:CLASSIFIED_AS]->(ap:AttackPattern) "
                 "OPTIONAL MATCH (a)-[:DETECTED_ON]->(asset:Asset) "
                 "RETURN ap.pattern_id AS pattern_id, ap.tactic AS tactic, asset.asset_id AS asset_id, asset.asset_type AS asset_type LIMIT 5"
             ),

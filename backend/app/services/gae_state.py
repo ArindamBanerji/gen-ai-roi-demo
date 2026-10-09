@@ -264,9 +264,8 @@ def init_learning_state() -> LearningState:
     global _learning_state, _learning_store, _bootstrap_metadata, _bootstrap_result
 
     from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
-    from copilot_sdk.config import GraphConfig, GraphConfigError
+    from copilot_sdk.config import GraphConfig
     from copilot_sdk.graph.factory import create_graph_store
-    from copilot_sdk.graph.dual_write_store import DualWriteStore
 
     # The SOC scorer must use the same typed AGE configuration as the shared
     # graph client.  In particular, do not fall back to the process-local
@@ -280,11 +279,6 @@ def init_learning_state() -> LearningState:
         graph_name=graph_config.graph,
         shared_graph_authorization=graph_config.authorized,
     )
-    if isinstance(graph_store, DualWriteStore):
-        raise GraphConfigError(
-            "SOC scorer requires an AGE-backed store directly; "
-            "dual_write reads from SQLite primary and is not authoritative"
-        )
     from app.db.graph_client import graph_client
     from app.services.graph_store_adapter import GraphStoreAdapter
     graph_store = GraphStoreAdapter(graph_client, graph_store)

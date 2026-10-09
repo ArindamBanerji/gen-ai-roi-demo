@@ -86,3 +86,5 @@ backend/app/data/centroid_backups/
 *.sqlite3-shm
 frontend/pw_*.txt
 graphify-out/cache/
+
+.codex_tmp/

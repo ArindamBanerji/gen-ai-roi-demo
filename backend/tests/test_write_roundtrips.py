@@ -15,11 +15,17 @@ Run from backend/:
 
 import sys
 import os
+import asyncio
+from unittest.mock import AsyncMock, patch
+
+import pytest
+from psycopg import OperationalError
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from fastapi.testclient import TestClient
 from app.main import app
+from app.services.triage import FactorReadUnavailable
 
 client = TestClient(app)
 
@@ -92,8 +98,13 @@ def test_response_model_executive_narrative():
         assert key in body, f"Missing key: {key}"
 
 
-def test_response_model_decision_factors():
-    r = client.get("/api/triage/decision-factors/SIM-CA-001")
+def test_response_model_decision_factors(age_graph):
+    age_graph.alert(alert_id="SIM-CA-001", alert_type="anomalous_login")
+    with (
+        patch("app.routers.triage.graph_client", age_graph.client),
+        patch("app.services.triage.graph_client", age_graph.client),
+    ):
+        r = client.get("/api/triage/decision-factors/SIM-CA-001")
     assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text[:300]}"
     body = r.json()
     assert "alert_id" in body
@@ -107,8 +118,12 @@ def test_response_model_centroid_support():
     assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text[:300]}"
     body = r.json()
     for key in ("support_summary", "overall_health", "warning_count",
-                "threshold_sigma", "interpretation"):
+                "threshold_sigma", "interpretation", "status", "reason",
+                "support_available", "degraded"):
         assert key in body, f"Missing key: {key}"
+    assert isinstance(body["warning_count"], int)
+    assert isinstance(body["support_available"], bool)
+    assert isinstance(body["degraded"], bool)
 
 
 # =============================================================================
@@ -169,12 +184,182 @@ def test_campaigns_category_sequence_is_list():
         )
 
 
-def test_decision_factors_returns_6_factors():
+def test_decision_factors_returns_6_factors(age_graph):
     """GET /triage/decision-factors must return exactly 6 factors."""
-    r = client.get("/api/triage/decision-factors/SIM-CA-001")
+    age_graph.alert(alert_id="SIM-CA-001", alert_type="anomalous_login")
+    with (
+        patch("app.routers.triage.graph_client", age_graph.client),
+        patch("app.services.triage.graph_client", age_graph.client),
+    ):
+        r = client.get("/api/triage/decision-factors/SIM-CA-001")
     assert r.status_code == 200
     factors = r.json().get("factors", [])
     assert len(factors) == 6, (
         f"Expected 6 decision factors, got {len(factors)}: "
         f"{[f['name'] for f in factors]}"
     )
+
+
+@pytest.mark.parametrize("failure", [
+    "none", "raises", "empty", "short", "missing_value", "nan", "inf", "malformed",
+])
+def test_execute_unavailable_factors_has_no_side_effects(age_graph, failure):
+    from app.routers import triage
+
+    alert_id = age_graph.alert(alert_type="anomalous_login")
+    payload = {"factors": [{"name": f"factor_{i}", "value": 0.5} for i in range(6)]}
+    if failure == "empty":
+        payload["factors"] = []
+    elif failure == "short":
+        payload["factors"].pop()
+    elif failure == "missing_value":
+        del payload["factors"][0]["value"]
+    elif failure in ("nan", "inf"):
+        payload["factors"][0]["value"] = float(failure)
+    provider = AsyncMock(return_value=None if failure == "none" else {} if failure == "malformed" else payload)
+    if failure == "raises":
+        provider.side_effect = FactorReadUnavailable("graph disconnected")
+    with (
+        patch.object(triage.graph_client, "get_security_context", AsyncMock(return_value={"alert_type": "anomalous_login"})),
+        patch.object(triage.graph_client, "run_query", wraps=age_graph.client.run_query) as writes,
+        patch.object(triage, "get_decision_factors", provider),
+        patch.object(triage, "record_decision", AsyncMock()) as audit,
+        patch.object(triage.event_bus, "emit", AsyncMock()) as events,
+        patch.object(triage.agent, "decide") as decide,
+        patch.object(triage.narrator, "generate_reasoning", AsyncMock()) as reason,
+        patch.object(triage.uuid, "uuid4") as receipt,
+    ):
+        response = client.post("/api/action/execute", json={"alert_id": alert_id})
+    assert response.status_code == 503, response.text
+    assert response.json() == {"detail": "Decision factors unavailable; action was not executed."}
+    provider.assert_awaited_once_with(alert_id)
+    writes.assert_not_called()
+    audit.assert_not_awaited()
+    events.assert_not_awaited()
+    decide.assert_not_called()
+    reason.assert_not_awaited()
+    receipt.assert_not_called()
+    assert age_graph.query("MATCH (d:Decision) RETURN count(d) AS total")[0]["total"] == 0
+    assert age_graph.query("MATCH (a:Alert) RETURN a.status AS status")[0]["status"] == "new"
+
+
+@pytest.mark.parametrize("values", [[0.1, 0.2, 0.3, 0.4, 0.5, 0.6], [0.5] * 6])
+def test_execute_preserves_measured_factors_in_age(age_graph, values):
+    from app.routers import triage
+
+    alert_id = age_graph.alert(alert_type="anomalous_login")
+    payload = {"factors": [{"name": f"factor_{i}", "value": value} for i, value in enumerate(values)]}
+    with (
+        patch.object(triage.graph_client, "get_security_context", AsyncMock(return_value={"alert_type": "anomalous_login"})),
+        patch.object(triage.graph_client, "run_query", wraps=age_graph.client.run_query),
+        patch.object(triage, "get_decision_factors", AsyncMock(return_value=payload)) as provider,
+        patch.object(triage, "record_decision", AsyncMock(return_value={})) as audit,
+        patch.object(triage.event_bus, "emit", AsyncMock()) as events,
+        patch.object(triage.narrator, "generate_reasoning", AsyncMock(return_value="Measured factors")),
+    ):
+        response = client.post("/api/action/execute", json={"alert_id": alert_id})
+    assert response.status_code == 200, response.text
+    provider.assert_awaited_once_with(alert_id)
+    audit.assert_awaited_once()
+    assert events.await_count == 3
+    row = age_graph.query("MATCH (d:Decision) RETURN d.factor_vector AS vector, d.decision_id AS id")[0]
+    assert row["vector"] == values
+    assert row["id"] == response.json()["evidence"]["decision_id"]
+    assert age_graph.query("MATCH (a:Alert) RETURN a.status AS status")[0]["status"] == "resolved"
+
+
+@pytest.mark.parametrize("failure", ["none", "raises"])
+def test_factor_get_unavailable_is_503(failure):
+    from app.routers import triage
+
+    provider = AsyncMock(return_value=None)
+    if failure == "raises":
+        provider.side_effect = FactorReadUnavailable("graph unavailable")
+    with (
+        patch.object(triage.graph_client, "get_alert", AsyncMock(return_value={"alert_id": "test"})),
+        patch.object(triage, "get_decision_factors", provider),
+    ):
+        response = client.get("/api/triage/decision-factors/test")
+    assert response.status_code == 503, response.text
+    provider.assert_awaited_once()
+    assert isinstance(response.json()["detail"], str)
+
+
+def test_factor_get_missing_alert_still_404():
+    from app.routers import triage
+
+    with (
+        patch.object(triage.graph_client, "get_alert", AsyncMock(return_value=None)),
+        patch.object(triage, "get_decision_factors", AsyncMock()) as provider,
+    ):
+        response = client.get("/api/triage/decision-factors/absent")
+    assert response.status_code == 404
+    provider.assert_not_awaited()
+
+
+@pytest.mark.parametrize("failure", ["none", "connection", "operational", "programming"])
+def test_factor_service_classifies_graph_failure(failure):
+    from app.services import triage
+
+    query = AsyncMock(return_value=None)
+    if failure == "connection":
+        query.side_effect = ConnectionError("AGE disconnected")
+    elif failure == "operational":
+        query.side_effect = OperationalError("AGE disconnected")
+    elif failure == "programming":
+        query.side_effect = TypeError("query programming bug")
+    with patch.object(triage.graph_client, "run_query", query):
+        with pytest.raises(TypeError if failure == "programming" else FactorReadUnavailable):
+            asyncio.run(triage.get_decision_factors("test"))
+    assert query.await_count == 2
+
+
+def test_factor_service_successful_empty_indicator_read_is_measured():
+    from app.services import triage
+
+    with patch.object(triage.graph_client, "run_query", AsyncMock(return_value=[])) as query:
+        result = asyncio.run(triage.get_decision_factors("test"))
+    assert query.await_count == 2
+    assert len(result["factors"]) == 6
+    assert result["factors"][2]["value"] == 0.0
+
+
+def test_factor_get_programming_failure_stays_500():
+    from app.routers import triage
+
+    with (
+        patch.object(triage.graph_client, "get_alert", AsyncMock(return_value={"alert_id": "test"})),
+        patch.object(triage, "get_decision_factors", AsyncMock(side_effect=TypeError("bad code"))) as provider,
+    ):
+        response = client.get("/api/triage/decision-factors/test")
+    assert response.status_code == 500
+    provider.assert_awaited_once()
+
+
+@pytest.mark.parametrize("helper", ["_build_threat_intel_factor", "_get_alert_type"])
+@pytest.mark.parametrize("value", [None, {}])
+def test_factor_service_rejects_unavailable_helper(helper, value):
+    from app.services import triage
+
+    # The unrelated query succeeds with no indicators; only the chosen helper fails.
+    with (
+        patch.object(triage.graph_client, "run_query", AsyncMock(return_value=[])),
+        patch.object(triage, helper, AsyncMock(return_value=value)) as read,
+    ):
+        with pytest.raises(FactorReadUnavailable):
+            asyncio.run(triage.get_decision_factors("test"))
+    read.assert_awaited_once_with("test")
+
+
+def test_execute_missing_alert_stays_404():
+    from app.routers import triage
+
+    with (
+        patch.object(triage.graph_client, "get_security_context", AsyncMock(return_value=None)),
+        patch.object(triage, "get_decision_factors", AsyncMock()) as factors,
+        patch.object(triage.graph_client, "run_query", AsyncMock()) as writes,
+    ):
+        response = client.post("/api/action/execute", json={"alert_id": "absent"})
+    assert response.status_code == 404
+    factors.assert_not_awaited()
+    writes.assert_not_awaited()

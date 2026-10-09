@@ -62,6 +62,7 @@ class AttackChainService:
 
     def __init__(self, db_client: Any):
         self.db = db_client
+        self.last_alerts_available = True
 
     # -------------------------------------------------------------------------
     # Public API
@@ -73,6 +74,8 @@ class AttackChainService:
         Returns list of detected campaigns, sorted by confidence descending.
         """
         alerts = await self._fetch_recent_alerts(hours_back)
+        self.last_alerts_available = alerts is not None
+        alerts = alerts or []
         if len(alerts) < self.CAMPAIGN_MIN_ALERTS:
             return []
 
@@ -94,7 +97,7 @@ class AttackChainService:
     # Data fetch
     # -------------------------------------------------------------------------
 
-    async def _fetch_recent_alerts(self, hours_back: int) -> List[Dict]:
+    async def _fetch_recent_alerts(self, hours_back: int) -> Optional[List[Dict]]:
         """Fetch alerts with linked entities from AGE."""
         query = """
         MATCH (a:Alert)
@@ -117,7 +120,7 @@ class AttackChainService:
             return [dict(r) for r in records] if records else []
         except Exception as exc:
             log.warning("[ATTACK_CHAIN] _fetch_recent_alerts failed: %s", exc)
-            return []
+            return None
 
     # -------------------------------------------------------------------------
     # Correlation passes (all synchronous — no DB access)

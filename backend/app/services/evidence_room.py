@@ -211,6 +211,7 @@ class EvidenceRoomService:
         # independently computed IKS as a bounded secondary signal.  This is
         # deliberately limited to RED/zero-product results; non-zero product
         # and pre-activation states remain authoritative.
+        iks_available = True
         if (
             status == "RED"
             and product == 0.0
@@ -219,7 +220,9 @@ class EvidenceRoomService:
             try:
                 from app.services.iks import compute_visible_iks
 
-                iks = float(await compute_visible_iks(graph_client))
+                visible_iks = await compute_visible_iks(graph_client)
+                iks_available = visible_iks is not None
+                iks = float(visible_iks) if visible_iks is not None else 0.0
                 if iks >= 50.0:
                     status = "GREEN"
                     result_health_source = "iks_fallback"
@@ -228,8 +231,9 @@ class EvidenceRoomService:
                     status = "AMBER"
                     result_health_source = "iks_fallback"
                     fallback_reason = "zero_product_learning_health"
-            except Exception as exc:
+            except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
                 log.debug("[EvidenceRoom] IKS conservation fallback unavailable: %s", exc)
+                iks_available = False
 
         return {
             "status": status,
@@ -242,6 +246,7 @@ class EvidenceRoomService:
             "pre_activation": bool(health.get("pre_activation", False)),
             "learning_enabled": health.get("learning_enabled", None),
             "status_reason": health.get("status_reason", None),
+            "iks_available": iks_available,
         }
 
     async def _collect_override_analysis(self, rows: list[dict[str, Any]]) -> dict[str, Any]:

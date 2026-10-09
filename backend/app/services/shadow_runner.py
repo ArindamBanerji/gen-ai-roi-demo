@@ -35,6 +35,7 @@ class ShadowComparison:
 
 
 _shadow_buffer: list[ShadowComparison] = []
+flush_failed = False
 _flush_lock = asyncio.Lock()
 
 
@@ -169,6 +170,7 @@ def _maybe_schedule_flush() -> None:
 
 
 async def _flush_shadow_batch(graph_client: Any) -> None:
+    global flush_failed
     async with _flush_lock:
         verified = [
             comparison
@@ -184,6 +186,7 @@ async def _flush_shadow_batch(graph_client: Any) -> None:
 
         flushed_ids: set[int] = set()
         stale_ids: set[int] = set()
+        flush_failed = False
         from gae.evolution import SHADOW_RESULT, record_evolution_event
         from app.services.variant_registry import get_variant
 
@@ -241,8 +244,9 @@ async def _flush_shadow_batch(graph_client: Any) -> None:
                     impact="medium" if win_rate > 0.55 else "low",
                     magnitude=round(win_rate, 4),
                 )
-            except Exception as exc:
+            except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
                 log.warning("Shadow batch write failed for variant_id=%s: %s", variant_id, exc)
+                flush_failed = True
                 continue
 
             flushed_ids.update(id(comparison) for comparison in comparisons)

@@ -5,7 +5,14 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.services.authority_ladder import AuthorityManager, SOC_ALERT_CATEGORIES
+import pytest
+from copilot_sdk.graph import InMemoryGraphStore
+from app.services.authority_ladder import (AuthorityManager, SOC_ALERT_CATEGORIES, GraphPromotionStore, configure_authority_graph_store)
+
+
+@pytest.fixture(autouse=True)
+def graph_authority() -> None:
+    configure_authority_graph_store(InMemoryGraphStore())
 
 
 class ConservationSource:
@@ -17,7 +24,7 @@ class ConservationSource:
 
 
 def manager(tmp_path) -> AuthorityManager:
-    return AuthorityManager(tmp_path / "authority.sqlite3", ConservationSource("GREEN"))
+    return AuthorityManager(ConservationSource("GREEN"), store=GraphPromotionStore(InMemoryGraphStore()))
 
 
 def test_authority_starts_at_discovered(tmp_path):
@@ -69,19 +76,15 @@ def test_circuit_break_forces_referral_and_isolated(tmp_path):
 
 
 def test_authority_persists_across_restart(tmp_path):
-    path = tmp_path / "authority.sqlite3"
-    first = AuthorityManager(path, ConservationSource("GREEN"))
+    graph = InMemoryGraphStore()
+    first = AuthorityManager(ConservationSource("GREEN"), store=GraphPromotionStore(graph))
     first.advance("phishing", {"conservation_state": "GREEN"})
-    second = AuthorityManager(path, ConservationSource("GREEN"))
+    second = AuthorityManager(ConservationSource("GREEN"), store=GraphPromotionStore(graph))
     assert second.get_authority("phishing") == "assisted"
 
 
 def test_red_blocks_advancement():
-    import tempfile
-    from pathlib import Path
-
-    path = Path(tempfile.mkdtemp()) / "authority.sqlite3"
-    instance = AuthorityManager(path, ConservationSource("RED"))
+    instance = AuthorityManager(ConservationSource("RED"), store=GraphPromotionStore(InMemoryGraphStore()))
     result = instance.advance("phishing", {"shadow_decisions": 10})
     assert result["advanced"] is False
     assert result["reason"] == "conservation_red"

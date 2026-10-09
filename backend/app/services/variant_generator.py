@@ -41,6 +41,18 @@ class GraphSignal:
     description: str
 
 
+class OpportunityScanResult(list[VariantRecord]):
+    """List-compatible scan result with explicit degraded-source metadata."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.history_available = True
+        self.trajectory_available = True
+        self.category_trends_available = True
+        self.rules_failed: list[str] = []
+        self.scan_complete = True
+
+
 class EvolutionRule(Protocol):
     rule_id: str
     artifact_type: str
@@ -74,7 +86,7 @@ def _event_epoch_seconds(event: dict[str, Any]) -> float:
     return epoch
 
 
-async def _consult_history(graph_client: Any, variant_id: str) -> dict[str, Any]:
+async def _consult_history(graph_client: Any, variant_id: str) -> dict[str, Any] | None:
     try:
         module = importlib.import_module("app.framework.evolution_ledger")
         get_variant_history = getattr(module, "get_variant_history")
@@ -82,12 +94,21 @@ async def _consult_history(graph_client: Any, variant_id: str) -> dict[str, Any]
         promotion_approved = getattr(module, "PROMOTION_APPROVED")
         promotion_rejected = getattr(module, "PROMOTION_REJECTED")
         rollback = getattr(module, "ROLLBACK")
+        if (
+            not callable(getattr(graph_client, "run_query", None))
+            and getattr(get_variant_history, "__module__", "")
+            == "gae.evolution"
+        ):
+            # Legacy in-memory callers have no persistent history capability.
+            return {"action": "proceed"}
         events = await get_variant_history(graph_client, variant_id)
-    except Exception as exc:
-        log.debug("Variant history unavailable for %s: %s", variant_id, exc)
-        return {"action": "proceed"}
+    except (ImportError, ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
+        log.warning("Variant history unavailable for %s: %s", variant_id, exc)
+        return None
 
-    if not isinstance(events, list) or not events:
+    if events is None or not isinstance(events, list):
+        return None
+    if not events:
         return {"action": "proceed"}
 
     cooldown_epoch = time.time() - WARM_START_REJECTION_COOLDOWN_DAYS * 86400
@@ -240,7 +261,8 @@ async def _load_accuracy_trajectory(graph_client: Any) -> dict[str, Any] | None:
                     continue
                 live_data[category] = int(_as_float(row.get("cnt"), 0.0))
         except Exception as exc:
-            log.debug("Accuracy trajectory live decision query failed: %s", exc)
+            log.warning("Accuracy trajectory live decision query failed: %s", exc)
+            return None
 
     trajectory = builder(live_data=live_data)
     return trajectory if isinstance(trajectory, dict) else None
@@ -396,10 +418,10 @@ def _aggregate_accuracy_rows(rows: Any) -> dict[str, dict[str, int]]:
     return totals
 
 
-async def _get_per_category_accuracy_trends(graph_client: Any) -> dict[str, dict[str, Any]]:
+async def _get_per_category_accuracy_trends(graph_client: Any) -> dict[str, dict[str, Any]] | None:
     run_query = getattr(graph_client, "run_query", None)
     if run_query is None:
-        return {}
+        return None
 
     now_ms = int(time.time() * 1000)
     window_ms = DRIFT_WINDOW_DAYS * 86400 * 1000
@@ -426,7 +448,7 @@ async def _get_per_category_accuracy_trends(graph_client: Any) -> dict[str, dict
         prior_rows = await run_query(prior_query)
     except Exception as exc:
         log.warning("Unable to load per-category accuracy drift trends: %s", exc)
-        return {}
+        return None
 
     recent = _aggregate_accuracy_rows(recent_rows)
     prior = _aggregate_accuracy_rows(prior_rows)
@@ -456,9 +478,13 @@ class DriftThresholdRule:
     artifact_type = ARTIFACT_SCORING_THRESHOLD
     description = "Lower threshold for AMBER drift categories"
 
+    def __init__(self) -> None:
+        self.last_data_available = True
+
     async def detect(self, graph_client: Any) -> Optional[GraphSignal]:
         try:
             trends = await _get_per_category_accuracy_trends(graph_client)
+            self.last_data_available = trends is not None
         except Exception as exc:
             log.warning("Drift threshold detection failed: %s", exc)
             return None
@@ -609,8 +635,12 @@ class PlateauContextRule:
     artifact_type = ARTIFACT_CONTEXT_POLICY
     description = "Expand graph context when accuracy is flat below target"
 
+    def __init__(self) -> None:
+        self.last_data_available = True
+
     async def detect(self, graph_client: Any) -> Optional[GraphSignal]:
         trajectory = await _load_accuracy_trajectory(graph_client)
+        self.last_data_available = trajectory is not None
         if not isinstance(trajectory, dict):
             return None
         categories = trajectory.get("categories")
@@ -659,6 +689,9 @@ class CoverageGapRule:
     artifact_type = ARTIFACT_CONTEXT_POLICY
     description = "Detect under-covered categories for graph traversal enrichment"
 
+    def __init__(self) -> None:
+        self.last_data_available = True
+
     async def detect(self, graph_client: Any) -> Optional[GraphSignal]:
         try:
             rows = await graph_client.run_query(
@@ -666,14 +699,25 @@ class CoverageGapRule:
                 "AND d.category IS NOT NULL "
                 "RETURN d.category AS category, count(*) AS cnt"
             )
+            if rows is None or not isinstance(rows, list):
+                self.last_data_available = False
+                return None
+            self.last_data_available = True
             counts: dict[str, int] = {}
             for row in rows or []:
                 if not isinstance(row, dict):
-                    continue
+                    self.last_data_available = False
+                    return None
                 category = _first_string(row.get("category"))
-                if not category:
-                    continue
-                count = int(_as_float(row.get("cnt"), 0.0))
+                count_raw = row.get("cnt")
+                if (
+                    not category
+                    or isinstance(count_raw, bool)
+                    or not isinstance(count_raw, (int, float))
+                ):
+                    self.last_data_available = False
+                    return None
+                count = int(count_raw)
                 if count < 0:
                     continue
                 counts[category] = count
@@ -714,8 +758,9 @@ class CoverageGapRule:
                     f"({coverage_ratio:.2%} of max {max_count})"
                 ),
             )
-        except Exception as exc:
-            log.debug("Coverage gap detection failed: %s", exc)
+        except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
+            self.last_data_available = False
+            log.warning("Coverage gap detection failed: %s", exc)
             return None
 
     def generate_variant(self, signal: GraphSignal) -> VariantRecord:
@@ -748,11 +793,21 @@ class VariantGenerator:
     def register_rule(self, rule: EvolutionRule) -> None:
         self.rules.append(rule)
 
-    async def scan_for_opportunities(self, graph_client: Any) -> list[VariantRecord]:
-        generated: list[VariantRecord] = []
+    async def scan_for_opportunities(self, graph_client: Any) -> OpportunityScanResult:
+        generated = OpportunityScanResult()
         for rule in self.rules:
             try:
                 signal = await rule.detect(graph_client)
+                if getattr(rule, "last_data_available", True) is False:
+                    rule_id = str(getattr(rule, "rule_id", type(rule).__name__))
+                    if rule_id not in generated.rules_failed:
+                        generated.rules_failed.append(rule_id)
+                    generated.scan_complete = False
+                    rule_name = type(rule).__name__.lower()
+                    if "plateau" in rule_name:
+                        generated.trajectory_available = False
+                    if "drift" in rule_name:
+                        generated.category_trends_available = False
                 if signal is None:
                     continue
                 trigger_key = _trigger_key(signal)
@@ -760,6 +815,10 @@ class VariantGenerator:
                     continue
                 candidate_id = _variant_id(signal.rule_id, signal.trigger_id)
                 history = await _consult_history(graph_client, candidate_id)
+                if history is None:
+                    generated.history_available = False
+                    generated.scan_complete = False
+                    continue
                 history_action = history.get("action")
                 if history_action == "skip":
                     log.info(
@@ -809,6 +868,8 @@ class VariantGenerator:
                 registered = self.registry.register_variant(record)
                 generated.append(registered)
             except Exception as exc:
+                generated.rules_failed.append(str(getattr(rule, "rule_id", type(rule).__name__)))
+                generated.scan_complete = False
                 log.warning(
                     "Evolution rule %s failed: %s",
                     getattr(rule, "rule_id", type(rule).__name__),

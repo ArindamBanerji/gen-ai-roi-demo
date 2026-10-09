@@ -1,8 +1,11 @@
 import json
+import logging
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 
 from app.db.graph_client import soc_decision_where
+
+log = logging.getLogger(__name__)
 
 
 def _safe_float(value, default: float = 0.0) -> float:
@@ -109,7 +112,7 @@ def _build_sections(
     )
     weakest = (
         {"name": weakest_source["name"], "accuracy": round(_safe_float(weakest_source.get("accuracy")), 4)}
-        if weakest_source else None
+        if weakest_source else {}
     )
 
     iks_score = _safe_float(iks_current)
@@ -406,6 +409,7 @@ async def build_executive_narrative_async(graph_service) -> Dict:
     - Calls compute_iks_v2() for a real IKS score
     - Each query is try/except so a disconnected DB returns zeros gracefully
     """
+    sections_degraded: list[str] = []
     # ── 1. verified_decisions ────────────────────────────────────────────────
     # Align with startup sync (main.py): count ALL Decision nodes, matching
     # the learning state decision_count shown in Tab 2 / IKS computation.
@@ -418,8 +422,9 @@ async def build_executive_narrative_async(graph_service) -> Dict:
             "RETURN count(d) AS cnt"
         )
         verified_decisions = int((rows[0].get("cnt") or 0) if rows else 0)
-    except Exception:
-        pass
+    except Exception as exc:
+        log.warning("Executive narrative verified_decisions query failed: %s", exc)
+        sections_degraded.append("verified_decisions")
 
     # Floor: align with IKS and Tab 4 — use in-memory learning state when
     # AGE returns 0 so all tabs show the same verified_decisions count.
@@ -438,8 +443,9 @@ async def build_executive_narrative_async(graph_service) -> Dict:
             "AND d.correct = true RETURN count(d) AS cnt"
         )
         centroid_updates = int((rows[0].get("cnt") or 0) if rows else 0)
-    except Exception:
-        pass
+    except Exception as exc:
+        log.warning("Executive narrative centroid_updates query failed: %s", exc)
+        sections_degraded.append("centroid_updates")
 
     # ── 3. campaigns_detected ────────────────────────────────────────────────
     campaigns_detected = 0
@@ -448,8 +454,9 @@ async def build_executive_narrative_async(graph_service) -> Dict:
             "MATCH (c:Campaign) RETURN count(c) AS cnt"
         )
         campaigns_detected = int((rows[0].get("cnt") or 0) if rows else 0)
-    except Exception:
-        pass
+    except Exception as exc:
+        log.warning("Executive narrative campaigns_detected query failed: %s", exc)
+        sections_degraded.append("campaigns_detected")
 
     # ── 4. alerts_total ──────────────────────────────────────────────────────
     alerts_total = 0
@@ -458,8 +465,9 @@ async def build_executive_narrative_async(graph_service) -> Dict:
             "MATCH (a:Alert) RETURN count(a) AS cnt"
         )
         alerts_total = int((rows[0].get("cnt") or 0) if rows else 0)
-    except Exception:
-        pass
+    except Exception as exc:
+        log.warning("Executive narrative alerts_total query failed: %s", exc)
+        sections_degraded.append("alerts_total")
 
     # ── 5. IKS — drift-based formula: 100 × min(D(t)/κ*=0.20, 1.0) ──────────
     # Uses in-memory ProfileScorer centroid drift from μ₀ (bootstrap baseline).
@@ -472,15 +480,20 @@ async def build_executive_narrative_async(graph_service) -> Dict:
         if _ps_en is not None:
             _drift_en = _compute_iks_drift_en(_ps_en.centroids)
             iks_current = float(_drift_en["current"])
-    except Exception:
-        pass
+    except Exception as exc:
+        log.warning("Executive narrative IKS drift query failed: %s", exc)
+        sections_degraded.append("iks")
     if iks_current == 0.0:
         try:
             from app.services.iks import compute_iks_v2
             iks_data = await compute_iks_v2(graph_service)
+        except Exception as exc:
+            log.warning("Executive narrative IKS fallback query failed: %s", exc)
+            iks_data = None
+        if iks_data is None:
+            sections_degraded.append("what_system_knows")
+        else:
             iks_current = float(iks_data.get("iks_v2", 0.0))
-        except Exception:
-            pass
 
     # ── 6. categories_calibrated (≥10 verified decisions each) ───────────────
     categories_calibrated = 0
@@ -500,8 +513,9 @@ async def build_executive_narrative_async(graph_service) -> Dict:
             1 for r in rows
             if int(r.get("n") or 0) >= 10 and r.get("category") in _SOC_CAT
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        log.warning("Executive narrative categories_calibrated query failed: %s", exc)
+        sections_degraded.append("categories_calibrated")
 
     # Category-level accuracy for executive sections. Keep this separate from
     # categories_calibrated so recommendations can use both volume and accuracy.
@@ -521,7 +535,9 @@ async def build_executive_narrative_async(graph_service) -> Dict:
             item for item in _category_accuracy_rows(rows)
             if item["name"] in _SOC_CAT
         ]
-    except Exception:
+    except Exception as exc:
+        log.warning("Executive narrative category_accuracy query failed: %s", exc)
+        sections_degraded.append("category_accuracy")
         category_accuracy = []
 
     # ── 7. what_changed: top category/action pairs by correct-decision count ─
@@ -543,8 +559,9 @@ async def build_executive_narrative_async(graph_service) -> Dict:
                 "magnitude":   round(n / denom, 4),
                 "description": f"{cat}/{act}: {n} correct decisions drove centroid update.",
             })
-    except Exception:
-        pass
+    except Exception as exc:
+        log.warning("Executive narrative what_changed query failed: %s", exc)
+        sections_degraded.append("what_changed")
 
     # ── 8. what_discovered: Campaign summaries ───────────────────────────────
     campaign_summaries = []
@@ -580,8 +597,9 @@ async def build_executive_narrative_async(graph_service) -> Dict:
                     continue
                 first_cat = campaign_name.split()[0]
             campaign_summaries.append(f"{alert_count} alerts in {first_cat} cluster")
-    except Exception:
-        pass
+    except Exception as exc:
+        log.warning("Executive narrative what_discovered query failed: %s", exc)
+        sections_degraded.append("what_discovered")
 
     # ── headline ─────────────────────────────────────────────────────────────
     if alerts_total == 0 and verified_decisions == 0:
@@ -610,7 +628,9 @@ async def build_executive_narrative_async(graph_service) -> Dict:
         health_metadata = await LearningHealthMonitor.evaluate(graph_service)
         health_status = str(health_metadata.get("status") or operational_knowledge_status)
         pre_activation = bool(health_metadata.get("pre_activation", False))
-    except Exception:
+    except Exception as exc:
+        log.warning("Executive narrative health query failed: %s", exc)
+        sections_degraded.append("health")
         health_metadata = {}
 
     # Keep the executive narrative aligned with Evidence Room's bounded IKS
@@ -623,7 +643,10 @@ async def build_executive_narrative_async(graph_service) -> Dict:
         try:
             from app.services.iks import compute_visible_iks
 
-            visible_iks = float(await compute_visible_iks(graph_service))
+            visible_iks_raw = await compute_visible_iks(graph_service)
+            visible_iks = float(visible_iks_raw) if visible_iks_raw is not None else 0.0
+            if visible_iks_raw is None:
+                sections_degraded.append("what_system_knows")
             if visible_iks >= 50.0:
                 health_status = "GREEN"
                 health_metadata["health_source"] = "iks_fallback"
@@ -632,8 +655,9 @@ async def build_executive_narrative_async(graph_service) -> Dict:
                 health_status = "AMBER"
                 health_metadata["health_source"] = "iks_fallback"
                 health_metadata["status_reason"] = "zero_product_learning_health"
-        except Exception:
-            pass
+        except Exception as exc:
+            log.warning("Executive narrative IKS fallback query failed: %s", exc)
+            sections_degraded.append("what_system_knows")
 
     if pre_activation:
         _signal = (
@@ -665,6 +689,7 @@ async def build_executive_narrative_async(graph_service) -> Dict:
     )
 
     return {
+        "sections_degraded": sorted(set(sections_degraded)),
         "headline": headline,
         "what_changed": {
             "total_verified":          verified_decisions,
@@ -685,9 +710,9 @@ async def build_executive_narrative_async(graph_service) -> Dict:
             "health_status":          health_status,
             "operational_knowledge_status": operational_knowledge_status,
             "pre_activation":         pre_activation,
-            "learning_enabled":       health_metadata.get("learning_enabled", None),
-            "health_source":          health_metadata.get("health_source", None),
-            "status_reason":          health_metadata.get("status_reason", None),
+            "learning_enabled":       bool(health_metadata.get("learning_enabled", False)),
+            "health_source":          str(health_metadata.get("health_source") or ""),
+            "status_reason":          str(health_metadata.get("status_reason") or ""),
             "conservation_narrative": conservation_narrative,
         },
         "metrics": {
@@ -699,4 +724,7 @@ async def build_executive_narrative_async(graph_service) -> Dict:
         "generated_at":  datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
         "pdf_available": True,
         "sections": sections,
+        "degraded_fields": sorted(set(sections_degraded)),
+        "data_available": not bool(sections_degraded),
+        "degraded": bool(sections_degraded),
     }

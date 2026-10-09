@@ -8,7 +8,7 @@ Skip with: pytest -k "not graph_contract_stress"
 
 This module never selects AGE implicitly.  Destructive tests use a disposable
 AGE graph when available.  The July 2026
-shared-graph census found no SOC SQLite source snapshot in this repository;
+shared-graph census found no SOC archived source snapshot in this repository;
 the 20 previously deleted unverified rows therefore cannot be restored by
 this test module.  V_soc was unchanged, so no verified SOC data was lost.
 """

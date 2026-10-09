@@ -24,7 +24,11 @@ from app.services.feedback import (
     get_reward_summary,
 )
 from app.services.policy import detect_policy_conflicts, get_conflict_history
-from app.services.triage import get_decision_factors, append_confidence_snapshot
+from app.services.triage import (
+    FactorReadUnavailable, get_decision_factors, append_confidence_snapshot,
+    validated_decision_factors,
+)
+from copilot_sdk.backend.graph_access import GRAPH_CONNECTION_ERRORS
 from app.domains.soc.factor_vector import validated_factor_vector
 from app.services.audit import record_decision
 from app.services.event_bus import event_bus, DecisionMade, OutcomeVerified, GraphMutated
@@ -619,9 +623,18 @@ async def investigate_alert(
     )
     result = await loop.investigate(alert_context, graph_client)
     payload = result.to_dict()
+    # Internal absence remains legitimate; normalize the shadow wire fields.
+    payload["investigated_category"] = payload["investigated_category"] or ""
+    payload["fixture_source"] = payload["fixture_source"] or ""
+    for step in payload["trace"]:
+        step["alert_category"] = step["alert_category"] or ""
+        step["halt_reason"] = step["halt_reason"] or ""
     return {
-        "status": "ok",
+        "status": "degraded" if result.degraded else "ok",
         "mode": "vld_read_only_shadow",
+        "evidence_available": result.evidence_available,
+        "degraded": result.degraded,
+        "failed_patterns": result.failed_patterns,
         "alert_id": alert_id,
         "single_pass": {
             "action": payload["single_pass_action"],
@@ -1204,6 +1217,10 @@ async def analyze_alert(
         _campaign_context_flags: dict[str, bool | str | None] = {
             "is_campaign_alert": False,
             "campaign_context_shown": False,
+            "degraded": False,
+            "campaign_check_available": True,
+            "materialization_available": True,
+            "campaign_seed_persisted": True,
         }
         try:
             with _soc_perf_phase(
@@ -1224,13 +1241,32 @@ async def analyze_alert(
                     graph_client, _camp_config, _camp_engine, _camp_repo
                 )
                 _campaign_id = await _camp_matcher.check_alert(alert_id)
-                _campaign_context_payload, _campaign_context_flags = build_campaign_context_payload(
+                _campaign_context_payload, _context_flags = build_campaign_context_payload(
                     campaign_id=_campaign_id,
                     async_state=_camp_matcher.async_state,
                     alert_id=alert_id,
                 )
+                _campaign_context_flags.update(_context_flags)
+                _campaign_context_flags.update(
+                    {
+                        "degraded": bool(getattr(_camp_matcher, "last_degraded", False)),
+                        "campaign_check_available": bool(
+                            getattr(_camp_matcher, "last_check_available", True)
+                        ),
+                        "materialization_available": bool(
+                            getattr(_camp_matcher, "last_materialization_available", True)
+                        ),
+                        "campaign_seed_persisted": bool(
+                            getattr(_camp_matcher, "last_seed_persisted", True)
+                        ),
+                    }
+                )
         except Exception as _camp_exc:
             logger.warning("[TRIAGE] Campaign wiring failed for %s: %s", alert_id, _camp_exc)
+            _campaign_context_flags.update(
+                degraded=True,
+                campaign_check_available=False,
+            )
         try:
             _campaign_set_clauses = [
                 f"d.is_campaign_alert = {_S(_campaign_context_flags['is_campaign_alert'])}",
@@ -1547,6 +1583,7 @@ async def analyze_alert(
         )
 
         _cluster_history_payload = None
+        _cluster_history_available = True
         try:
             with _soc_perf_phase(
                 "cluster_history_fetch",
@@ -1565,8 +1602,11 @@ async def analyze_alert(
                 )
                 if _cluster_history is not None:
                     _cluster_history_payload = dataclasses.asdict(_cluster_history)
+                else:
+                    _cluster_history_available = False
         except Exception as _cluster_exc:
             logger.warning("[TRIAGE] Cluster history failed for %s: %s", alert_id, _cluster_exc)
+            _cluster_history_available = False
 
         _perf_response_started = _soc_perf_start()
         response = {
@@ -1612,10 +1652,24 @@ async def analyze_alert(
             "graph_data": graph_data,
             "situation_analysis": situation_analysis.model_dump(),
             "campaign_context": _campaign_context_payload,
+            "campaign_degraded": bool(_campaign_context_flags.get("degraded")),
+            "campaign_check_available": bool(
+                _campaign_context_flags.get("campaign_check_available", True)
+            ),
+            "materialization_available": bool(
+                _campaign_context_flags.get("materialization_available", True)
+            ),
+            "cluster_history_available": _cluster_history_available,
+            "campaign_seed_persisted": bool(
+                _campaign_context_flags.get("campaign_seed_persisted", True)
+            ),
             "composite_gate": {
                 "auto_approve":   _composite["auto_approve"],
                 "approval_score": _composite["approval_score"],
                 "reason_codes":   _composite["reason_codes"],
+                "category_history_available": bool(
+                    _composite.get("category_history_available", True)
+                ),
             },
             "provenance":      _provenance_payload,
             "referral":        _referral_payload,
@@ -1758,6 +1812,18 @@ async def execute_action(request: ProcessAlertRequest):
         if not context:
             raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
 
+        # Validate fetched evidence before agent execution, receipts, Decision
+        # writes, audit entries or events. None/malformed payloads also fail closed.
+        try:
+            factors_result = await get_decision_factors(alert_id)
+            factor_names, factor_vector = validated_decision_factors(factors_result)
+        except FactorReadUnavailable as exc:
+            logger.warning("Action factors unavailable for %s: %s", alert_id, exc)
+            raise HTTPException(
+                status_code=503,
+                detail="Decision factors unavailable; action was not executed.",
+            ) from exc
+
         # Get decision
         alert_type = context.get("alert_type")
         decision = agent.decide(alert_type, context)
@@ -1765,24 +1831,13 @@ async def execute_action(request: ProcessAlertRequest):
 
         # Resolve correct situation_type and factor list for the audit ledger (H-1).
         # context never carries these keys; derive them from the same functions
-        # used by /alert/analyze. Graceful fallback keeps the execute path safe.
+        # used by /alert/analyze. Factor evidence was validated before execution.
         situation_type_str = "unknown"
-        factor_names: list = []
-        factor_vector = [0.5] * 6
         try:
             situation = analyze_situation(alert_type, context)
             situation_type_str = situation.situation_type
         except Exception as exc:
             print(f"[EXECUTE] analyze_situation failed for {alert_id}: {exc}")
-        try:
-            factors_result = await get_decision_factors(alert_id)
-            if factors_result:
-                factors = factors_result.get("factors", [])
-                factor_names = [f["name"] for f in factors]
-                values = [f.get("value", 0.5) for f in factors]
-                factor_vector = validated_factor_vector(values + [0.5] * (6 - len(values)))
-        except Exception as exc:
-            print(f"[EXECUTE] get_decision_factors failed for {alert_id}: {exc}")
 
         # ====================================================================
         # Step 1: EXECUTED - Take action in target system
@@ -2752,7 +2807,10 @@ async def report_decision_outcome(
                         action=action_name,
                         ):
                             from app.services.snapshots import maybe_write_profile_snapshot
-                            await maybe_write_profile_snapshot(get_learning_state().decision_count)
+                            _snapshot_ok = await maybe_write_profile_snapshot(get_learning_state().decision_count)
+                            persistence_status["snapshot_persisted"] = _snapshot_ok
+                            if not _snapshot_ok:
+                                logger.warning("[SNAPSHOT] Profile snapshot persistence failed")
 
                 if _cu is not None and l5_persistence_status["l5_centroid_persisted"]:
                     cu = _cu
@@ -2820,9 +2878,9 @@ async def report_decision_outcome(
                             from app.services.iks import compute_visible_iks as _compute_visible_iks
                             _ps_snap = _get_ps_snap()
                             if _ps_snap is not None:
-                                _snap.on_iks_recalculated(
-                                    await _compute_visible_iks(graph_client, scorer=_ps_snap)
-                                )
+                                _visible_iks = await _compute_visible_iks(graph_client, scorer=_ps_snap)
+                                if _visible_iks is not None:
+                                    _snap.on_iks_recalculated(_visible_iks)
                         except Exception as _snap_exc:
                             logger.warning(
                                 "[SNAPSHOT] IKS recalculation failed: %s",
@@ -2947,7 +3005,7 @@ async def report_decision_outcome(
                     ):
                         from app.services.rl_engine import get_credit_assigner, get_reward_ledger
 
-                        await get_credit_assigner().assign_chain_credit(
+                        _chain_credits = await get_credit_assigner().assign_chain_credit(
                             source_decision_id=request.decision_id,
                             category=_resolved_category,
                             action_index=action_index,
@@ -2959,7 +3017,7 @@ async def report_decision_outcome(
                             ),
                             reward_ledger=_rl_reward_ledger or get_reward_ledger(),
                         )
-                        persistence_status["chain_credit"] = True
+                        persistence_status["chain_credit"] = _chain_credits is not None
                 except Exception as _rl_chain_exc:
                     logger.warning("[RL] Chain credit assignment failed: %s", _rl_chain_exc)
                     persistence_status["chain_credit"] = False
@@ -3296,6 +3354,7 @@ async def get_profile_state():
             "iks": {
                 "current": 0.0,
                 "delta_7d": 0.0,
+                "delta_7d_available": True,
                 "interpretation": "No decisions recorded yet.",
                 "decision_count": 0,
                 "estimated": 0.0,
@@ -3325,7 +3384,12 @@ async def get_profile_state():
     ))
 
     iks_result = compute_iks(scorer.centroids)  # SOURCE: computed from in-memory centroids (resets on restart)
-    delta_7d = await _compute_delta_7d(iks_result["current"])
+    delta_result: Any = await _compute_delta_7d(iks_result["current"])
+    if isinstance(delta_result, tuple):
+        delta_7d, delta_7d_available = delta_result
+    else:
+        # Compatibility with integrations that replace the internal helper.
+        delta_7d, delta_7d_available = float(delta_result), True
     trend = []  # populated lazily via /api/soc/profile/iks-trend if needed
 
     # V-SWITCHING-COST-FACTORIAL: decisions_per_day = V × α
@@ -3365,6 +3429,7 @@ async def get_profile_state():
         "iks": {
             "current":       iks_result["current"],
             "delta_7d":      delta_7d,
+            "delta_7d_available": delta_7d_available,
             "interpretation": interpret(iks_result["current"]),
             "decision_count": decision_count,
             "estimated":     iks_result["estimated"],
@@ -3445,13 +3510,10 @@ async def decision_factors(alert_id: str):
     print(f"[TRIAGE] GET /triage/decision-factors/{alert_id} called")
 
     try:
+        if not await graph_client.get_alert(alert_id):
+            raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
         result = await get_decision_factors(alert_id)
-
-        if result is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"No analysis found for {alert_id}",
-            )
+        validated_decision_factors(result)
 
         print(
             f"[TRIAGE] Returning {len(result['factors'])} factors "
@@ -3459,6 +3521,9 @@ async def decision_factors(alert_id: str):
         )
         return result
 
+    except (FactorReadUnavailable, *GRAPH_CONNECTION_ERRORS) as exc:
+        logger.warning("Decision factors unavailable for %s: %s", alert_id, exc)
+        raise HTTPException(status_code=503, detail="Decision factors unavailable") from exc
     except HTTPException:
         raise
     except Exception as e:

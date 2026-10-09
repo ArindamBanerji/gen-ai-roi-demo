@@ -474,7 +474,16 @@ async def shadow_analyst_action(request: AnalystActionRequest):
 async def shadow_report():
     """Return shadow mode agreement report by category."""
     from app.services.shadow_mode import ShadowModeService
-    return await ShadowModeService.get_shadow_report(_get_age_client())
+    report = await ShadowModeService.get_shadow_report(_get_age_client())
+    if report is None:
+        return {
+            "overall_agreement": 0.0,
+            "total_shadow_decisions": 0,
+            "by_category": {},
+            "recommendation": "Continue shadow observation",
+            "report_available": False,
+        }
+    return report
 
 
 # ============================================================================
@@ -510,6 +519,8 @@ async def checkpoint_list():
     """List all checkpoints ordered by timestamp DESC."""
     from app.services.checkpoint import CheckpointService
     checkpoints = await CheckpointService.list_checkpoints(_get_age_client())
+    if checkpoints is None:
+        return {"checkpoints": [], "checkpoints_available": False}
     return {"checkpoints": checkpoints}
 
 
@@ -665,7 +676,9 @@ async def graph_top_nodes(
     nodes = await GraphExplorerService.get_top_nodes(
         _get_age_client(), node_type=type, limit=limit
     )
-    return {"nodes": nodes, "count": len(nodes)}
+    available = nodes is not None
+    nodes = nodes or []
+    return {"nodes": nodes, "count": len(nodes), "nodes_available": available, "degraded": not available}
 
 
 @router.get("/soc/graph/node/{node_id}/neighbors")
@@ -675,7 +688,12 @@ async def graph_node_neighbors(node_id: str):
     Response: {"node_id": str, "neighbors": [...], "total": int}
     """
     from app.services.graph_explorer import GraphExplorerService
-    return await GraphExplorerService.get_node_neighbors(node_id, _get_age_client())
+    result = await GraphExplorerService.get_node_neighbors(node_id, _get_age_client())
+    if result is None:
+        return {"node_id": node_id, "neighbors": [], "total": 0,
+                "neighbors_available": False, "degraded": True}
+    result["neighbors_available"] = True
+    return result
 
 
 @router.get("/soc/graph/summary")
@@ -691,7 +709,12 @@ async def graph_summary():
     }
     """
     from app.services.graph_explorer import GraphExplorerService
-    return await GraphExplorerService.get_graph_summary(_get_age_client())
+    result = await GraphExplorerService.get_graph_summary(_get_age_client())
+    if result is None:
+        return {"total_nodes": 0, "total_relationships": 0, "node_types": {},
+                "relationship_types": {}, "summary_available": False, "degraded": True}
+    result["summary_available"] = True
+    return result
 
 
 @router.get("/soc/graph/prebuilt-queries")
@@ -1012,7 +1035,22 @@ async def intervention_state():
         ctrl = _get_intervention_controls()
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
-    return await ctrl.get_current_state()
+    state = await ctrl.get_current_state()
+    if state is None:
+        return {
+            "global_freeze": bool(getattr(ctrl.scorer, "frozen", False)),
+            "auto_approve_enabled": not bool(
+                getattr(ctrl.gate, "AUTO_APPROVE_DISABLED", False)
+            ),
+            "thresholds": dict(ctrl.gate.CATEGORY_CONFIDENCE_THRESHOLDS),
+            "frozen_categories": list(getattr(ctrl.gate, "FROZEN_CATEGORIES", set())),
+            "force_review_categories": list(
+                getattr(ctrl.gate, "FORCE_REVIEW_CATEGORIES", set())
+            ),
+            "last_intervention": None,
+            "state_available": False,
+        }
+    return state
 
 
 @router.get("/soc/interventions/history")
@@ -1023,6 +1061,8 @@ async def intervention_history(limit: int = Query(50, ge=1, le=500)):
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     records = await ctrl.get_intervention_history(limit=limit)
+    if records is None:
+        return {"interventions": [], "count": 0, "history_available": False}
     return {"interventions": records, "count": len(records)}
 
 

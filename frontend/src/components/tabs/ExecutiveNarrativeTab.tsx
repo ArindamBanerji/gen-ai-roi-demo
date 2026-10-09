@@ -89,6 +89,10 @@ interface NarrativeData {
   generated_at: string
   pdf_available: boolean
   sections?: NarrativeSection[]
+  sections_degraded?: string[]
+  degraded_fields?: string[]
+  data_available?: boolean
+  degraded?: boolean
 }
 
 interface GovernanceSummarySection {
@@ -171,7 +175,13 @@ function formatPct(value: unknown): string {
   return `${(n * 100).toFixed(1)}%`
 }
 
-function NarrativeSectionCards({ sections }: { sections: NarrativeSection[] }) {
+function NarrativeSectionCards({
+  sections,
+  degradedSections,
+}: {
+  sections: NarrativeSection[]
+  degradedSections: string[]
+}) {
   if (sections.length === 0) return null
 
   return (
@@ -179,6 +189,14 @@ function NarrativeSectionCards({ sections }: { sections: NarrativeSection[] }) {
       {sections.map((section, index) => {
         const strongest = ensureArray<NarrativeCategory>(section.strongest_categories)
         const items = ensureArray<NarrativeRecommendationItem>(section.items)
+        const sectionUnavailable = section.title === 'System Health'
+          ? degradedSections.some((name) => ['health', 'verified_decisions'].includes(name))
+          : section.title === 'What the System Has Learned'
+            ? degradedSections.some((name) => [
+                'what_system_knows', 'iks', 'categories_calibrated',
+                'category_accuracy', 'verified_decisions',
+              ].includes(name))
+            : false
         return (
           <div
             key={safeKey(section.title, index)}
@@ -197,7 +215,13 @@ function NarrativeSectionCards({ sections }: { sections: NarrativeSection[] }) {
               <p className="text-xs text-gray-300 leading-relaxed">{section.content}</p>
             )}
 
-            {section.title === 'System Health' && (
+            {sectionUnavailable && section.title !== 'Recommendations' && (
+              <div className="mt-3 rounded bg-gray-800/60 px-3 py-2 text-xs text-gray-500">
+                Data unavailable
+              </div>
+            )}
+
+            {section.title === 'System Health' && !sectionUnavailable && (
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-400">
                 <div>
                   <div className="text-gray-500">Verified</div>
@@ -218,7 +242,7 @@ function NarrativeSectionCards({ sections }: { sections: NarrativeSection[] }) {
               </div>
             )}
 
-            {section.title === 'What the System Has Learned' && (
+            {section.title === 'What the System Has Learned' && !sectionUnavailable && (
               <div className="mt-3 space-y-3 text-xs text-gray-400">
                 <div className="flex justify-between">
                   <span>IKS</span>
@@ -477,6 +501,14 @@ export default function ExecutiveNarrativeTab() {
 
   const { headline, what_changed, what_discovered, what_knows, metrics, generated_at } = data
   const narrativeSections = ensureArray<NarrativeSection>(data.sections)
+  const degradedSections = ensureArray<string>(data.sections_degraded)
+  const sectionUnavailable = (name: string) => degradedSections.includes(name)
+  const anySectionUnavailable = (...names: string[]) => names.some(sectionUnavailable)
+  const changedUnavailable = anySectionUnavailable('what_changed', 'verified_decisions', 'centroid_updates')
+  const discoveredUnavailable = anySectionUnavailable('what_discovered', 'campaigns_detected')
+  const knowledgeUnavailable = anySectionUnavailable(
+    'what_system_knows', 'iks', 'categories_calibrated', 'category_accuracy', 'health',
+  )
   const governanceSections = ensureArray<GovernanceSummarySection>(governanceSummary?.sections)
 
   async function handleGovernanceJsonDownload() {
@@ -499,6 +531,11 @@ export default function ExecutiveNarrativeTab() {
 
   return (
     <div className="space-y-6">
+      {degradedSections.length > 0 && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          Partial data: unavailable sections — {degradedSections.join(', ')}.
+        </div>
+      )}
       {/* Header row */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
@@ -523,15 +560,15 @@ export default function ExecutiveNarrativeTab() {
 
       {/* Metrics row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <MetricCard label="Alerts Processed" value={metrics.alerts_total} />
-        <MetricCard label="Verified Decisions" value={metrics.decisions_verified} />
-        <MetricCard label="Campaigns Detected" value={metrics.campaigns_detected} />
-        <MetricCard label="IKS Score" value={metrics.iks_current} />
+        <MetricCard label="Alerts Processed" value={sectionUnavailable('alerts_total') ? 'Unavailable' : metrics.alerts_total} />
+        <MetricCard label="Verified Decisions" value={sectionUnavailable('verified_decisions') ? 'Unavailable' : metrics.decisions_verified} />
+        <MetricCard label="Campaigns Detected" value={sectionUnavailable('campaigns_detected') ? 'Unavailable' : metrics.campaigns_detected} />
+        <MetricCard label="IKS Score" value={sectionUnavailable('what_system_knows') || sectionUnavailable('iks') ? 'Unavailable' : metrics.iks_current} />
       </div>
 
       <ContinuityPanel />
 
-      <NarrativeSectionCards sections={narrativeSections} />
+      <NarrativeSectionCards sections={narrativeSections} degradedSections={degradedSections} />
 
       {/* Three sections */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -542,7 +579,9 @@ export default function ExecutiveNarrativeTab() {
             <TrendingUp className="w-4 h-4 text-blue-400" />
             <h3 className="text-sm font-semibold text-gray-200">What Changed</h3>
           </div>
-          <div className="space-y-2 text-xs text-gray-400">
+          {changedUnavailable ? (
+            <div className="rounded bg-gray-800/60 px-3 py-2 text-xs text-gray-500">Data unavailable</div>
+          ) : <div className="space-y-2 text-xs text-gray-400">
             <div className="flex justify-between">
               <span>Verified decisions</span>
               <span className="text-gray-200 font-mono">{what_changed.total_verified}</span>
@@ -551,8 +590,8 @@ export default function ExecutiveNarrativeTab() {
               <span>Centroid updates</span>
               <span className="text-gray-200 font-mono">{what_changed.total_centroid_updates}</span>
             </div>
-          </div>
-          {ensureArray<Shift>(what_changed.top_shifts).length > 0 && (
+          </div>}
+          {!changedUnavailable && ensureArray<Shift>(what_changed.top_shifts).length > 0 && (
             <div className="mt-3 space-y-2">
               <p className="text-xs text-gray-500 uppercase tracking-wide">Top shifts</p>
               {ensureArray<Shift>(what_changed.top_shifts).map((s, i) => (
@@ -562,7 +601,7 @@ export default function ExecutiveNarrativeTab() {
               ))}
             </div>
           )}
-          {ensureArray<Shift>(what_changed.top_shifts).length === 0 && (
+          {!changedUnavailable && ensureArray<Shift>(what_changed.top_shifts).length === 0 && (
             <p className="mt-3 text-xs text-gray-600 italic">No centroid shifts recorded yet.</p>
           )}
         </div>
@@ -573,7 +612,9 @@ export default function ExecutiveNarrativeTab() {
             <Search className="w-4 h-4 text-yellow-400" />
             <h3 className="text-sm font-semibold text-gray-200">What Was Discovered</h3>
           </div>
-          <div className="space-y-2 text-xs text-gray-400">
+          {discoveredUnavailable ? (
+            <div className="rounded bg-gray-800/60 px-3 py-2 text-xs text-gray-500">Data unavailable</div>
+          ) : <div className="space-y-2 text-xs text-gray-400">
             <div className="flex justify-between">
               <span>Attack chains</span>
               <span className="text-gray-200 font-mono">{what_discovered.attack_chains_detected}</span>
@@ -582,8 +623,8 @@ export default function ExecutiveNarrativeTab() {
               <span>Graph nodes</span>
               <span className="text-gray-200 font-mono">{what_discovered.graph_growth.nodes_added}</span>
             </div>
-          </div>
-          {ensureArray<string>(what_discovered.chain_summaries).length > 0 && (
+          </div>}
+          {!discoveredUnavailable && ensureArray<string>(what_discovered.chain_summaries).length > 0 && (
             <div className="mt-3 space-y-2">
               <p className="text-xs text-gray-500 uppercase tracking-wide">Chain summaries</p>
               {ensureArray<string>(what_discovered.chain_summaries).map((s, i) => (
@@ -591,7 +632,7 @@ export default function ExecutiveNarrativeTab() {
               ))}
             </div>
           )}
-          {ensureArray<string>(what_discovered.chain_summaries).length === 0 && (
+          {!discoveredUnavailable && ensureArray<string>(what_discovered.chain_summaries).length === 0 && (
             <p className="mt-3 text-xs text-gray-600 italic">No chains detected yet.</p>
           )}
         </div>
@@ -602,7 +643,9 @@ export default function ExecutiveNarrativeTab() {
             <Brain className="w-4 h-4 text-purple-400" />
             <h3 className="text-sm font-semibold text-gray-200">What the System Knows</h3>
           </div>
-          <div className="space-y-2 text-xs text-gray-400">
+          {knowledgeUnavailable ? (
+            <div className="rounded bg-gray-800/60 px-3 py-2 text-xs text-gray-500">Data unavailable</div>
+          ) : <div className="space-y-2 text-xs text-gray-400">
             <div className="flex justify-between">
               <span>IKS score</span>
               <span className="text-gray-200 font-mono">{what_knows.iks_current}</span>
@@ -619,8 +662,8 @@ export default function ExecutiveNarrativeTab() {
                 {what_knows.health_status}
               </span>
             </div>
-          </div>
-          <div className="mt-3">
+          </div>}
+          {!knowledgeUnavailable && <div className="mt-3">
             <div className="w-full bg-gray-700 rounded-full h-1.5">
               <div
                 className="bg-soc-primary h-1.5 rounded-full transition-all"
@@ -632,8 +675,8 @@ export default function ExecutiveNarrativeTab() {
             <p className="text-xs text-gray-500 mt-1">
               {what_knows.categories_calibrated} of {what_knows.categories_total} categories calibrated
             </p>
-          </div>
-          {what_knows.conservation_narrative && (
+          </div>}
+          {!knowledgeUnavailable && what_knows.conservation_narrative && (
             <div className="mt-3 bg-gray-800 rounded p-2">
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Conservation & Audit Status</p>
               <p className="text-xs text-gray-300 leading-relaxed">{what_knows.conservation_narrative}</p>

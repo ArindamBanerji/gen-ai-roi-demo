@@ -19,6 +19,10 @@ from typing import List, Optional, Tuple, Any
 log = logging.getLogger(__name__)
 
 
+class ProvenanceGraphUnavailable(RuntimeError):
+    """Raised when provenance cannot be read from the graph."""
+
+
 # ---------------------------------------------------------------------------
 # Dataclasses
 # ---------------------------------------------------------------------------
@@ -319,7 +323,9 @@ class ProvenanceService:
             )
         except Exception as exc:
             log.warning("[PROVENANCE] query failed for decision=%r: %s", decision_id, exc)
-            return None
+            raise ProvenanceGraphUnavailable(
+                f"provenance graph read failed for decision {decision_id!r}"
+            ) from exc
 
         if not results:
             return None

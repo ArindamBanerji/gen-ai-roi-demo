@@ -63,7 +63,7 @@ class SimilarCasesBase(abc.ABC):
         category: str,
         graph_client: Any,
         limit: int = SIMILAR_CASES_MAX_SCAN,
-    ) -> List[Dict[str, Any]]:
+    ) -> Optional[List[Dict[str, Any]]]:
         """
         Fetch up to *limit* verified Decision nodes for *category* from AGE,
         most-recent first.
@@ -92,7 +92,7 @@ class SimilarCasesBase(abc.ABC):
             )
         except Exception as exc:
             log.warning("[SIMILAR-CASES] AGE query failed for category=%r: %s", category, exc)
-            return []
+            return None
 
         results = []
         for row in rows:
@@ -123,7 +123,7 @@ class SimilarCasesBase(abc.ABC):
         category: str,
         graph_client: Any,
         k: int = SIMILAR_CASES_K,
-    ) -> List[Dict[str, Any]]:
+    ) -> Optional[List[Dict[str, Any]]]:
         """
         Return up to k similar past Decision nodes for *category*.
 
@@ -133,6 +133,9 @@ class SimilarCasesBase(abc.ABC):
         Each returned dict adds a 'similarity' key (float in [0,1]).
         """
         decisions = await self._fetch_verified_decisions(category, graph_client)
+
+        if decisions is None:
+            return None
 
         if len(decisions) < SIMILAR_CASES_MIN_PRIOR:
             log.debug(

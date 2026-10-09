@@ -1,9 +1,11 @@
 """AGE checkpoint lineage tests for the centroid time machine."""
 
+import asyncio
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import numpy as np
+from fastapi.testclient import TestClient
 
 from app.services import time_machine
 
@@ -79,3 +81,103 @@ def test_missing_age_checkpoint_is_not_silent():
             pass
         else:
             raise AssertionError("missing AGE checkpoint did not fail loudly")
+
+
+def _run(awaitable):
+    return asyncio.run(awaitable)
+
+
+def _no_none(value):
+    if isinstance(value, dict):
+        return all(item is not None and _no_none(item) for item in value.values())
+    if isinstance(value, list):
+        return all(item is not None and _no_none(item) for item in value)
+    return value is not None
+
+
+def test_timeline_partial_iks_failure():
+    with patch.object(time_machine, "_age_payloads", return_value=_payloads()), \
+         patch.object(time_machine, "get_mu_zero", return_value=np.zeros((6, 4, 6))), \
+         patch.object(time_machine, "_compute_current_ceiling_estimate", return_value=80.0), \
+         patch.object(time_machine, "compute_iks_v2", new=AsyncMock(side_effect=RuntimeError("iks down"))):
+        result = _run(time_machine.get_evolution_timeline(object()))
+
+    assert result is not None
+    assert len(result["timeline"]) == 2
+    assert result["timeline_available"] is True
+    assert result["iks_available"] is False
+    assert result["current"]["iks_v2"] == 0.0
+    assert result["degraded"] is True
+
+
+def test_timeline_complete_route_json_types():
+    from app.main import app
+
+    with patch.object(time_machine, "_age_payloads", return_value=_payloads()), \
+         patch.object(time_machine, "get_mu_zero", return_value=np.zeros((6, 4, 6))), \
+         patch.object(time_machine, "_compute_current_ceiling_estimate", return_value=80.0), \
+         patch.object(time_machine, "compute_iks_v2", new=AsyncMock(return_value={
+             "iks_v2": 0.0, "components": {}, "interpretation": "healthy",
+         })):
+        response = TestClient(app).get("/api/time-machine/timeline")
+
+    assert response.status_code == 200
+    assert _no_none(response.json())
+
+
+def test_timeline_construction_error_returns_typed_unavailable():
+    from app.main import app
+    from app.routers import time_machine_router
+
+    with patch.object(
+        time_machine_router,
+        "get_evolution_timeline",
+        new=AsyncMock(side_effect=RuntimeError("checkpoint store down")),
+    ):
+        response = TestClient(app).get("/api/time-machine/timeline")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["timeline"] == []
+    assert payload["timeline_available"] is False
+    assert payload["iks_available"] is False
+    assert payload["ceiling_available"] is False
+    assert payload["degraded"] is True
+    assert payload["reason"]
+    assert _no_none(payload)
+
+
+def test_timeline_none_returns_typed_unavailable():
+    from app.main import app
+    from app.routers import time_machine_router
+
+    with patch.object(
+        time_machine_router,
+        "get_evolution_timeline",
+        new=AsyncMock(return_value=None),
+    ):
+        response = TestClient(app).get("/api/time-machine/timeline")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["timeline"] == []
+    assert payload["timeline_available"] is False
+    assert payload["iks_available"] is False
+    assert payload["ceiling_available"] is False
+    assert payload["degraded"] is True
+    assert payload["reason"]
+    assert _no_none(payload)
+
+
+def test_timeline_healthy_zero_iks():
+    with patch.object(time_machine, "_age_payloads", return_value=_payloads()), \
+         patch.object(time_machine, "get_mu_zero", return_value=np.zeros((6, 4, 6))), \
+         patch.object(time_machine, "_compute_current_ceiling_estimate", return_value=80.0), \
+         patch.object(time_machine, "compute_iks_v2", new=AsyncMock(return_value={
+             "iks_v2": 0.0, "components": {}, "interpretation": "healthy",
+         })):
+        result = _run(time_machine.get_evolution_timeline(object()))
+
+    assert result is not None
+    assert result["iks_available"] is True
+    assert result["current"]["iks_v2"] == 0.0

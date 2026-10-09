@@ -180,6 +180,17 @@ async def evaluate_promotion(variant_id: str, graph_client) -> PromotionResult:
         )
 
     batch_stats = await _get_shadow_batch_stats(variant_id, graph_client)
+    if batch_stats is None:
+        return PromotionResult(
+            "continue",
+            "shadow batch statistics are unavailable",
+            {
+                "total": total,
+                "win_rate": win_rate,
+                "projected_q": projected_q,
+                "shadow_stats_available": False,
+            },
+        )
     batch_count = int(batch_stats.get("batch_count") or 0)
     if batch_count < MIN_SHADOW_BATCHES:
         return PromotionResult(
@@ -373,7 +384,7 @@ def paired_bootstrap_test(
     return evidence
 
 
-async def _get_shadow_batch_stats(variant_id: str, graph_client) -> dict[str, Any]:
+async def _get_shadow_batch_stats(variant_id: str, graph_client) -> dict[str, Any] | None:
     try:
         events = await get_variant_history(graph_client, variant_id)
         rates = _shadow_win_rates(events or [])
@@ -389,11 +400,13 @@ async def _get_shadow_batch_stats(variant_id: str, graph_client) -> dict[str, An
         return result
     except Exception as exc:
         log.debug("Shadow batch stats unavailable for %s: %s", variant_id, exc)
-        return {"batch_count": 0, "batch_std": 0.0, "win_rates": []}
+        return None
 
 
 async def _compute_batch_std(variant_id: str, graph_client) -> float:
     stats = await _get_shadow_batch_stats(variant_id, graph_client)
+    if stats is None:
+        return 0.0
     return _as_float(stats.get("batch_std"), 0.0)
 
 

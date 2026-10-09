@@ -118,13 +118,20 @@ interface LearningBalanceCategory {
   centroid_drift?: number | null
   auto_approve_rate?: number | null
   iks_contribution?: number | null
+  iks_contribution_available?: boolean
   ceiling_estimate?: number | null
+  ceiling_available?: boolean
   status: LearningBalanceStatus
 }
 interface LearningBalanceSheet {
   generated_at?: string | null
   overall_iks?: number | null
   overall_ceiling?: number | null
+  iks_available?: boolean
+  ceiling_available?: boolean
+  degraded?: boolean
+  data_available?: boolean
+  epistemic_state_available?: boolean
   total_verified?: number | null
   categories?: LearningBalanceCategory[] | null
   summary?: {
@@ -1206,7 +1213,8 @@ export default function CompoundingTab() {
     ?? learningBalanceCategories.reduce((sum, item) => sum + (item.verified_count ?? 0), 0)
   const learningBalanceExpertCount = learningBalanceCategories.filter(item => item.epistemic_band === 'expert').length
   const learningBalanceRecommendation = learningBalanceSheet?.summary?.recommendation ?? 'Recommendation unavailable.'
-  const showLearningBalanceCeiling = learningBalanceCategories.some(item => item.ceiling_estimate != null)
+  const showLearningBalanceCeiling = learningBalanceSheet?.ceiling_available === true
+    && learningBalanceCategories.some(item => item.ceiling_available === true)
   const evidenceEntries = ensureArray<EvidenceRoomEntry>(evidenceRoom?.audit_trail.entries).slice(0, 20)
   const evidenceStatus = evidenceRoom?.conservation.status ?? 'UNKNOWN'
   const evidenceProduct = evidenceRoom?.conservation.product ?? 0
@@ -1981,7 +1989,11 @@ export default function CompoundingTab() {
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                   <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                     <div className="text-xs font-medium uppercase tracking-wide text-blue-700">Overall IKS</div>
-                    <div className="mt-2 text-3xl font-bold text-blue-900">{(learningBalanceSheet?.overall_iks ?? 0).toFixed(1)}</div>
+                    <div className="mt-2 text-3xl font-bold text-blue-900">
+                      {learningBalanceSheet?.iks_available === false
+                        ? 'IKS Unavailable'
+                        : (learningBalanceSheet?.overall_iks ?? 0).toFixed(1)}
+                    </div>
                   </div>
                   <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
                     <div className="text-xs font-medium uppercase tracking-wide text-purple-700">Total Verified</div>
@@ -2028,7 +2040,9 @@ export default function CompoundingTab() {
                             <td className="px-4 py-3 text-gray-700">{formatDecimal(item.centroid_drift)}</td>
                             <td className="px-4 py-3 text-gray-700">{formatPercent(item.auto_approve_rate)}</td>
                             {showLearningBalanceCeiling && (
-                              <td className="px-4 py-3 text-gray-700">{formatPercent(item.ceiling_estimate)}</td>
+                              <td className="px-4 py-3 text-gray-700">
+                                {item.ceiling_available === true ? formatPercent(item.ceiling_estimate) : 'Unavailable'}
+                              </td>
                             )}
                             <td className="px-4 py-3">
                               <div className="flex flex-col gap-1">

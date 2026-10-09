@@ -7,6 +7,7 @@ the GET /api/sentinel/alerts endpoint.
 
 import os
 import sys
+from unittest.mock import AsyncMock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -108,9 +109,14 @@ def test_sentinel_normalize_missing_optional_fields():
 # Test 7 — regression: mock connector /api/soc/alerts unaffected
 # ---------------------------------------------------------------------------
 
-def test_sentinel_mock_connector_still_passes():
-    # Regression: queue endpoint must exist. 500 is acceptable in full-suite
-    # runs when AGE event loop interference occurs — endpoint is not broken.
+def test_sentinel_mock_connector_still_passes(monkeypatch):
+    # Regression: the success path must remain a valid queue response. Server
+    # errors are failures; isolate this route contract from the live AGE loop.
+    monkeypatch.setattr(
+        "app.routers.triage.graph_client.run_query",
+        AsyncMock(return_value=[]),
+    )
     resp = client.get("/api/alerts/queue")
-    assert resp.status_code in (200, 500), \
-        f"Unexpected status {resp.status_code} -- endpoint may be missing"
+    assert resp.status_code == 200, resp.text
+    payload = resp.json()
+    assert isinstance(payload["alerts"], list)

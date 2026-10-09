@@ -249,7 +249,7 @@ class InterventionControls:
     # State + History
     # ------------------------------------------------------------------
 
-    async def get_current_state(self) -> Dict:
+    async def get_current_state(self) -> Dict | None:
         """Return current state of all controls."""
         last_intervention = None
         try:
@@ -269,6 +269,7 @@ class InterventionControls:
             log.warning(
                 "[INTERVENTION] get_current_state last_intervention query failed: %s", exc
             )
+            return None
 
         return {
             "global_freeze":           bool(getattr(self.scorer, "frozen", False)),
@@ -283,7 +284,7 @@ class InterventionControls:
             "last_intervention":       last_intervention,
         }
 
-    async def get_intervention_history(self, limit: int = 50) -> List[Dict]:
+    async def get_intervention_history(self, limit: int = 50) -> List[Dict] | None:
         """Return intervention audit log from AGE."""
         try:
             rows = await self.db.run_query(
@@ -301,7 +302,7 @@ class InterventionControls:
             )
         except Exception as exc:
             log.warning("[INTERVENTION] get_intervention_history failed: %s", exc)
-            return []
+            return None
 
         records = []
         for r in rows:
@@ -336,6 +337,7 @@ class InterventionControls:
         """Write an Intervention node to AGE and return the record dict."""
         intervention_id = str(uuid.uuid4())
         timestamp = datetime.now(timezone.utc).isoformat()
+        audit_persisted = True
         try:
             await self.db.run_query(
                 """CREATE (i:Intervention {
@@ -359,6 +361,7 @@ class InterventionControls:
             )
         except Exception as exc:
             log.error("[INTERVENTION] _log_intervention write failed: %s", exc)
+            audit_persisted = False
 
         return {
             "id":           intervention_id,
@@ -367,4 +370,5 @@ class InterventionControls:
             "reason":       reason,
             "timestamp":    timestamp,
             "details":      details,
+            "audit_persisted": audit_persisted,
         }

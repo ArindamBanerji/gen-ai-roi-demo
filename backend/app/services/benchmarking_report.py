@@ -25,6 +25,7 @@ class BenchmarkingReport:
     system_acceptance_rate: float
     guaranteed_consistency: float
     estimated_annual_savings: Dict
+    decisions_available: bool = True
 
 
 class BenchmarkingEngine:
@@ -34,12 +35,15 @@ class BenchmarkingEngine:
     def generate_report(self, start_date: str, end_date: str,
                         analyst_hourly_cost: float = 85.0) -> BenchmarkingReport:
         decisions = self._fetch_verified_decisions(start_date, end_date)
+        decisions_available = decisions is not None
+        decisions = decisions or []
         accuracy = self._compute_accuracy(decisions)
         adaptation = self._compute_adaptation(start_date, end_date)
         consistency = self._compute_consistency(decisions, analyst_hourly_cost)
         return BenchmarkingReport(
             period_start=start_date, period_end=end_date,
             total_decisions=len(decisions), **accuracy, **adaptation, **consistency
+            , decisions_available=decisions_available
         )
 
     def _compute_accuracy(self, decisions: List[Dict]) -> Dict:
@@ -154,7 +158,7 @@ class BenchmarkingEngine:
             f"${report.estimated_annual_savings['net_annual_savings']:,.0f}."
         )
 
-    def _fetch_verified_decisions(self, start_date, end_date) -> List[Dict]:
+    def _fetch_verified_decisions(self, start_date, end_date) -> Optional[List[Dict]]:
         query = """
         MATCH (d:Decision)
         WHERE d.domain = 'soc' AND d.outcome IS NOT NULL
@@ -166,5 +170,7 @@ class BenchmarkingEngine:
         try:
             records = self.db.run_query(query)
             return [dict(r) for r in records] if records else []
-        except Exception:
-            return []
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning("Benchmark decisions read failed: %s", exc)
+            return None

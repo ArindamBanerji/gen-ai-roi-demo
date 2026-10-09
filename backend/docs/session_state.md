@@ -1,5 +1,6 @@
 
 ---
+
 ## VLD Phase 1a: SOC Investigation Routing Loop
 Timestamp: 2026-09-08T13:39:31.2824142-07:00
 
@@ -885,3 +886,59 @@ Timestamp: 2026-09-09T20:35:51.436136+00:00
 - The investigation panel can call /soc/investigate with ALERT-MH-002-v1, ALERT-MH-004-v1, ALERT-MH-005-v1, or ALERT-MH-003-v1 to render planted multi-hop traces.
 - 0 new regressions introduced.
 ---
+
+## SS-08 (2026-09-26)
+
+Findings fixed: P1-058, P1-059, P1-060, P1-061, P1-062, P1-063,
+                P1-064, P1-065, P2-029, P2-031
+Files modified: app/domains/soc/campaigns.py, app/main.py,
+                app/models/responses.py, app/routers/soc.py,
+                app/routers/triage.py, tests/test_campaign_degraded_paths.py,
+                docs/session_state.md
+Fix patterns: Repository reads preserve no-data versus unavailable outcomes;
+               HTTP handlers convert unavailable reads to typed defaults with
+               data_available/degraded flags; matcher and materialization paths
+               propagate degraded state; seed writes report persisted status;
+               startup and background failures log the outage.
+Tests added: 9
+Test counts after:
+- SOC BE: 2537 passed, 59 skipped, 1 pre-existing failure
+- SDK root: 3759 passed, 1 pre-existing failure
+mypy: pass
+
+## SS-09 (2026-09-26)
+
+Findings fixed: P1-081, P1-082, P1-083, P1-084, P1-085, P1-086,
+                P1-087, P1-088, P1-089, P1-090, P1-091, P1-092,
+                P1-093, P1-094
+Files modified: app/routers/soc.py, app/models/responses.py,
+                tests/test_soc_degraded_paths.py, docs/session_state.md
+Fix patterns: Graph-read failures now add degraded/data_available metadata;
+               tab functions preserve typed numeric/list defaults while adding
+               degraded_fields and data_available; fallback metric provenance
+               is labeled; unavailable threat-intel and IKS values are explicit;
+               analyst benchmarking, enrichment, weights, and export endpoints
+               expose unavailable sources instead of silent measurements.
+Tests added: 13
+Test counts after:
+- SOC BE: full suite attempted; existing multipart upload timeout prevented a final count; targeted SS-09 plus tab/F2 tests: 82 passed
+- SDK root: full suite attempted; existing cross-app evolution telemetry timeout prevented a final count; prior verified baseline: 3759 passed
+mypy: pass
+
+## SS-10 (2026-09-27)
+
+Findings fixed: P1-056, P1-057, P2-026, P2-027, P2-028
+Files modified: app/connectors/base.py, app/connectors/registry.py,
+                app/connectors/crowdstrike_mock.py, app/connectors/greynoise.py,
+                app/connectors/pulsedive.py, app/services/threat_intel.py,
+                tests/test_connector_degraded_paths.py, docs/session_state.md
+Fix patterns: Stored-observation lookup failures annotate bundled fallback
+               entries with graph-unavailable provenance; node and relationship
+               write failures are counted in ConnectorResult and surfaced by
+               refresh responses with degraded metadata while preserving the
+               successful response shape.
+Tests added: 5
+Test counts after:
+- SOC BE: 2555 passed, 59 skipped, 1 unrelated posterior-health failure
+- SDK root: 3770 passed, 1 unrelated generated-TypeScript freshness failure
+mypy: pass

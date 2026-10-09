@@ -22,6 +22,7 @@ import app.services.simulation as sim_mod
 from app.domains.soc.scorer_adapter import SOCCompoundingScorerAdapter
 from app.services.simulation import SimulationOrchestrator
 from app.services.learning_health import LearningHealthMonitor
+from copilot_sdk.graph.memory_store import InMemoryGraphStore
 
 
 def _profile_scorer_with_graph_store(graph_store):
@@ -94,7 +95,7 @@ async def test_simulation_does_not_mutate_production_state():
 
     mock_eb = MagicMock()
     mock_eb.emit = AsyncMock()
-    graph_store = MagicMock()
+    graph_store = InMemoryGraphStore(domain="soc")
     profile_scorer = _profile_scorer_with_graph_store(graph_store)
 
     factor_vec = np.array([0.5, 0.3, 0.7, 0.2, 0.6, 0.4])
@@ -158,7 +159,7 @@ async def test_simulation_empty_pool_returns_gracefully():
     mock_ls.dimension_metadata = []
     mock_ls.pending_validations = []
     mock_ls.decision_count = 0
-    profile_scorer = _profile_scorer_with_graph_store(MagicMock())
+    profile_scorer = _profile_scorer_with_graph_store(InMemoryGraphStore(domain="soc"))
 
     with patch.object(sim_mod, "get_learning_state", return_value=mock_ls), \
          patch("app.services.gae_state.get_profile_scorer", return_value=profile_scorer):
