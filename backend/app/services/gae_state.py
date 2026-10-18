@@ -513,7 +513,7 @@ async def persist_soc_outcome_and_centroid(
             )
 
             if checkpoint_writer is not None:
-                checkpoint_writer(transaction)
+                checkpoint_writer(transaction, outcome.get("verified_at_epoch"))
 
             return centroid_persisted
 
@@ -524,15 +524,19 @@ async def persist_soc_outcome_and_centroid(
     store.write_outcome(**outcome)
     centroid_persisted = persist_soc_centroid(**centroid, logger=logger, store=store)
     if checkpoint_writer is not None:
-        checkpoint_writer(None)
+        checkpoint_writer(None, outcome.get("verified_at_epoch"))
     return centroid_persisted
+
+
+class ScorerNotInitializedError(RuntimeError):
+    """Raised only while the SOC scorer lifespan has not initialized."""
 
 
 def get_profile_scorer():
     """Return the global ProfileScorer instance, or None if not yet initialized."""
     try:
         return get_learning_state().profile_scorer
-    except RuntimeError:
+    except ScorerNotInitializedError:
         return _ABSENT
 
 
@@ -546,6 +550,10 @@ def get_mu_zero():
     import numpy as _np
     store = _learning_store
     if store is None:
+        if _learning_state is None:
+            raise ScorerNotInitializedError(
+                "SOC scorer lifespan has not initialized"
+            )
         raise RuntimeError("SOC AGE store is not initialized")
     data = store.get_posterior("soc", _MU_ZERO_KEY)
     if data is None:
@@ -575,7 +583,7 @@ def get_learning_state() -> LearningState:
         If init_learning_state() has not been called yet.
     """
     if _learning_state is None:
-        raise RuntimeError(
+        raise ScorerNotInitializedError(
             "Learning state not initialized -- call init_learning_state() at startup"
         )
     return _learning_state

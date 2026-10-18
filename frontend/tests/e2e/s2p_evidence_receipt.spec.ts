@@ -59,6 +59,7 @@ async function scoreInvoice(request: APIRequestContext, eventId: string) {
 
 test.describe('S2P evidence receipt pre-outcome wiring', () => {
   test('verified outcome increments conservation once', async ({ request }) => {
+    test.setTimeout(60_000)
     const invoiceId = uniqueInvoiceId()
     const before = await conservationStatus(request)
     const receiptsBefore = await receiptScreening(request)

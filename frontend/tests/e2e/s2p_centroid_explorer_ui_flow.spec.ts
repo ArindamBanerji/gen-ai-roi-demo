@@ -20,7 +20,7 @@ async function openTriage(page: Page) {
 async function scoreCurrentInvoice(page: Page): Promise<{ decisionId: string; explorer: Locator }> {
   const [response] = await Promise.all([
     page.waitForResponse((candidate) => candidate.url().includes('/api/s2p/score')),
-    page.getByRole('button', { name: 'Score' }).click(),
+    page.getByRole('button', { name: 'Score', exact: true }).click(),
   ])
   expect(response.status()).toBeLessThan(400)
   const decisionLine = page.getByText(/^Decision\s+\S+/).first()

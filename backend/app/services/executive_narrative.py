@@ -473,13 +473,18 @@ async def build_executive_narrative_async(graph_service) -> Dict:
     # Uses in-memory ProfileScorer centroid drift from μ₀ (bootstrap baseline).
     # Consistent with Tab 2 iks_score after BACKLOG-004 fix.
     iks_current = 0.0
+    scorer_for_iks = None
     try:
-        from app.services.iks import compute_iks as _compute_iks_drift_en
+        from app.services.iks import compute_visible_iks as _compute_visible_iks_en
         from app.services.gae_state import get_profile_scorer as _get_ps_en
-        _ps_en = _get_ps_en()
-        if _ps_en is not None:
-            _drift_en = _compute_iks_drift_en(_ps_en.centroids)
-            iks_current = float(_drift_en["current"])
+
+        scorer_for_iks = _get_ps_en()
+        _visible_iks_en = await _compute_visible_iks_en(
+            graph_service,
+            scorer=scorer_for_iks,
+        )
+        if _visible_iks_en is not None:
+            iks_current = float(_visible_iks_en)
     except Exception as exc:
         log.warning("Executive narrative IKS drift query failed: %s", exc)
         sections_degraded.append("iks")
@@ -643,7 +648,10 @@ async def build_executive_narrative_async(graph_service) -> Dict:
         try:
             from app.services.iks import compute_visible_iks
 
-            visible_iks_raw = await compute_visible_iks(graph_service)
+            visible_iks_raw = await compute_visible_iks(
+                graph_service,
+                scorer=scorer_for_iks,
+            )
             visible_iks = float(visible_iks_raw) if visible_iks_raw is not None else 0.0
             if visible_iks_raw is None:
                 sections_degraded.append("what_system_knows")

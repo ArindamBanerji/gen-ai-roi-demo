@@ -171,12 +171,32 @@ def report_graph_contract(request):
 
     import asyncio
 
+    # Configuration-contract tests reload graph_client with distinct DSN/graph
+    # pairs. Close every keyed pool before the final contract probe so the
+    # probe cannot be starved by idle connections retained by prior modules.
+    from ci_platform.graph import reset_graph_clients
+
+    reset_graph_clients()
+
     async def _check():
+        client = None
         try:
             from app.graph_schema import verify_graph
-            return await verify_graph()
+            from ci_platform.graph import AGEClient
+            from copilot_sdk.config import GraphConfig
+
+            config = GraphConfig.load("soc")
+            client = AGEClient(
+                dsn=config.dsn,
+                graph_name=config.graph,
+                use_pool=False,
+            )
+            return await verify_graph(client)
         except Exception as exc:
             return {"healthy": None, "issues": [str(exc)], "counts": {}}
+        finally:
+            if client is not None:
+                await client.close()
 
     report = asyncio.run(_check())
 

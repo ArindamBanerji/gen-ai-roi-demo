@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 import json
 import os
+import sys
 import threading
 import time
 import urllib.request
@@ -14,6 +15,12 @@ from collections.abc import Iterator
 import pytest
 
 from copilot_sdk.config import GraphConfig
+
+# Test processes create and destroy many complete app lifespans. Select the
+# explicit fresh AGE mode before importing any app module so collection cannot
+# initialize a pooled production client. Production defaults remain pooled.
+os.environ["AGE_USE_POOL"] = "0"
+
 from app.routers import triage
 from support import SOCTriageHarness
 
@@ -71,6 +78,15 @@ def _wait_for_backend_ready(request: pytest.FixtureRequest) -> None:
         _wait_until_backend_ready()
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _close_shared_age_clients_before_root_teardown() -> Iterator[None]:
+    """Release keyed pools before root graph-contract teardown probes AGE."""
+    yield
+    from ci_platform.graph import reset_graph_clients
+
+    reset_graph_clients()
+
+
 def _configured_test_dsn() -> str:
     """Capture the app graph destination before tests patch the environment."""
     explicit = os.environ.get("AGE_TEST_DSN", "").strip()
@@ -121,9 +137,61 @@ def age_graph(soc_stress_test_graph):
 
 
 @pytest.fixture(autouse=True)
-def soc_test_profile(monkeypatch: pytest.MonkeyPatch) -> None:
+def soc_test_profile(
+    monkeypatch: pytest.MonkeyPatch,
+    _isolate_registry_handle_after_lifespan_shutdown: None,
+) -> None:
     """Make the test profile explicit instead of relying on pytest detection."""
     monkeypatch.setenv("SOC_PROFILE", "test")
+    # Disposable per-test graph clients use explicit fresh mode. Production
+    # startup remains pooled, while the suite avoids retaining two worker
+    # connections for every short-lived test graph namespace.
+    monkeypatch.setenv("AGE_USE_POOL", "0")
+    # A production shutdown permanently retires its stable proxy. The test
+    # process runs many complete app lifespans in one interpreter, so close
+    # only the current registry generation here; R5 proxy lifecycle tests use
+    # separate handles and still exercise permanent shutdown directly.
+    import app.db.graph_client as graph_module
+
+    async def close_test_generation() -> None:
+        from ci_platform.graph import reset_graph_client
+
+        reset_graph_client(
+            graph_module._GRAPH_CONFIG.dsn,
+            graph_module._GRAPH_CONFIG.graph,
+        )
+
+    monkeypatch.setattr(graph_module.graph_client, "close", close_test_generation)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_registry_handle_after_lifespan_shutdown() -> None:
+    """Model a new process after a test runs the full application shutdown.
+
+    Production handles are permanently dead after ``close()``. Pytest runs
+    multiple complete lifespan cycles in one interpreter, so replace that
+    dead generation before the next test and update app modules that imported
+    the prior handle by value.
+    """
+    import app.db.graph_client as graph_module
+
+    previous = graph_module.graph_client
+    replacement = previous
+    if getattr(previous, "_shutdown", False):
+        replacement = graph_module._RegistryBackedAGEClient(
+            graph_module._GRAPH_CONFIG.dsn,
+            graph_module._GRAPH_CONFIG.graph,
+        )
+        graph_module.graph_client = replacement
+    for name, loaded_module in tuple(sys.modules.items()):
+        if not name.startswith("app.") or loaded_module is None:
+            continue
+        bound = getattr(loaded_module, "graph_client", None)
+        if (
+            type(bound).__name__ == "_RegistryBackedAGEClient"
+            and bound is not replacement
+        ):
+            setattr(loaded_module, "graph_client", replacement)
 
 
 @pytest.fixture

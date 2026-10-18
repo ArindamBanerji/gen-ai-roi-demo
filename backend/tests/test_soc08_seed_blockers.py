@@ -99,7 +99,7 @@ def _decision(
         factor_vector=VECTOR.tolist(), factor_names=[f"f{i}" for i in range(len(VECTOR))],
         metadata=metadata,
     )
-    return decision_id
+    return str(decision_id)
 
 
 def test_ninety_verified_referrals_do_not_change_geometry(tmp_path: Path, twin_graph: InMemoryGraphStore) -> None:
@@ -161,8 +161,9 @@ def test_real_guarded_update_and_checkpoint_survive_reload(age_graph: SOCGraphFi
             centroid={"scorer": scorer, "category": "credential_access", "category_index": 0,
                       "action": "monitor", "action_index": action_index,
                       "caused_by_decision_id": decision_id, "pre_centroid": before},
-            checkpoint_writer=lambda transaction: compound._persist_learning_artifacts(
+            checkpoint_writer=lambda transaction, replay_verified_at: compound._persist_learning_artifacts(
                 decision_id, actual_action="monitor", is_correct=True, category="credential_access",
+                replay_verified_at=replay_verified_at,
                 evidence_already_persisted=True, skip_history_scan=True, raise_on_error=True,
                 transaction=transaction,
             ),
@@ -313,8 +314,9 @@ def test_verified_referrals_learn_persist_and_keep_routing_and_audit(age_graph: 
                 centroid={"scorer": scorer, "category": category, "category_index": category_index,
                           "action": ground_truth, "action_index": gt_index,
                           "caused_by_decision_id": decision_id, "pre_centroid": before},
-                checkpoint_writer=lambda transaction: compound._persist_learning_artifacts(
+                checkpoint_writer=lambda transaction, replay_verified_at: compound._persist_learning_artifacts(
                     decision_id, actual_action=ground_truth, is_correct=correct, category=category,
+                    replay_verified_at=replay_verified_at,
                     evidence_already_persisted=True, skip_history_scan=True, raise_on_error=True,
                     transaction=transaction,
                 ),

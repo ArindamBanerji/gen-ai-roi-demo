@@ -3008,7 +3008,12 @@ async def _tab2_content() -> dict:
     # Same path as Tab 5 (executive_narrative.py). Avoids event-loop issues that
     # affect compute_iks_v2 async queries.
     try:
-        visible_iks = await compute_visible_iks(graph_client)
+        from app.services.gae_state import get_profile_scorer as _get_tab2_scorer
+
+        visible_iks = await compute_visible_iks(
+            graph_client,
+            scorer=_get_tab2_scorer(),
+        )
         if visible_iks is None:
             degraded_fields.append("iks_score")
             iks_score = 0.0
@@ -3597,7 +3602,6 @@ async def _tab4_content() -> dict:
 async def _tab5_content() -> dict:
     """Tab 5 -- Executive Narrative: headline, what_changed, what_discovered, what_system_knows."""
     from app.services.executive_narrative import build_executive_narrative_async
-    from app.services.gae_state import get_profile_scorer
     degraded_fields: list[str] = []
 
     narr = await build_executive_narrative_async(graph_client)
@@ -3612,27 +3616,9 @@ async def _tab5_content() -> dict:
     # Pull verified_decisions from narrative (now aligned to learning state count)
     verified_decisions = int(what_changed_raw.get("total_verified", 0))
     iks_score = float(what_knows_raw.get("iks_current") or 0.0)
-    # Use the same live AGE calculation as Tab 2 so the executive tab cannot
-    # report a second, differently sampled IKS value. The snapshot is retained
-    # only as a fallback for callers that have no usable live graph response.
-    try:
-        from app.services.iks import compute_visible_iks
-
-        live_iks = await compute_visible_iks(graph_client)
-        if live_iks is not None and live_iks > 0.0:
-            iks_score = live_iks
-        elif live_iks is None:
-            degraded_fields.append("iks")
-    except Exception:
-        degraded_fields.extend(["iks", "verified_decisions"])
-        try:
-            from app.state.graph_snapshot import get_snapshot
-
-            snapshot = get_snapshot()
-            verified_decisions = snapshot.verified_decisions
-            iks_score = snapshot.iks_score
-        except RuntimeError:
-            pass
+    # The executive narrative already computes the canonical visible IKS.
+    # Reusing that value avoids a second read and prevents this presentation
+    # adapter from implicitly resolving process-global scorer state.
 
     # FIX 2.8 — W2 flywheel: structured fields for CISO audience
     flywheel_edge_count = 0
@@ -3678,6 +3664,8 @@ async def _tab5_content() -> dict:
         )
 
     # FIX 2.9 — Centroid summary: human-readable string instead of raw magnitude
+    from app.services.gae_state import get_profile_scorer
+
     try:
         scorer = get_profile_scorer()
     except Exception:

@@ -12,6 +12,8 @@ Discipline: handlers here must import only from:
 No app.domains.soc.* imports allowed.
 """
 
+import os
+
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 from typing import Optional
@@ -19,26 +21,36 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from copilot_sdk.config import GraphConfig
-from ci_platform.graph.age_client import AGEClient
+from ci_platform.graph.age_client import AGEClient, get_graph_client
 
 
-_age_client = None
 # Compatibility seam for existing tests and service integrations. Production
-# code leaves this unset; _get_age_client always constructs the AGE client.
+# code leaves this unset; _get_age_client resolves the current keyed client.
 graph_client = None
 
 
 def _get_age_client() -> AGEClient:
-    global _age_client
     if graph_client is not None:
         return graph_client
-    if _age_client is None:
-        config = GraphConfig.load("soc")
-        _age_client = AGEClient(dsn=config.dsn, graph_name=config.graph)
-    return _age_client
+    # The registry owns concrete client reuse. Resolve on every call so a
+    # controlled registry reset cannot leave this router holding a permanently
+    # closed concrete AGEClient.
+    config = GraphConfig.load("soc")
+    return get_graph_client(dsn=config.dsn, graph_name=config.graph)
 
 router = APIRouter()
 FRAMEWORK_DOMAIN = "soc"
+
+
+@router.get("/debug/pool-status", include_in_schema=False)
+async def pool_status() -> dict[str, object]:
+    """Expose AGE pool diagnostics only when debug endpoints are enabled."""
+    if os.environ.get("COPILOT_DEBUG_ENDPOINTS", "").strip().lower() not in {
+        "1", "true", "yes", "on",
+    }:
+        raise HTTPException(status_code=404, detail="Not found")
+    diagnostics: dict[str, object] = _get_age_client().get_pool_diagnostics()
+    return diagnostics
 
 QUERY_REGISTRY = {
     "decision_count": {

@@ -323,8 +323,9 @@ async def startup_event():
 
     _backend = _GRAPH_BACKEND
 
-    # AGE needs an explicit connect(); AGEClient.connect() is a no-op.
-    if _backend == "graph":
+    # Production AGE uses an eagerly validated connection pool; health still
+    # reports the canonical "graph" component name.
+    if _backend == "age":
         await graph_client.connect()
 
     # ── Bootstrap verification — MANDATORY, fail-fast ─────────

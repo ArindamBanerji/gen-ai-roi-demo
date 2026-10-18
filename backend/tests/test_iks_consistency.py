@@ -9,6 +9,8 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -140,3 +142,68 @@ async def test_iks_all_paths_agree():
     assert tab2["iks_score"] == 89.0
     assert narrative["what_knows"]["iks_current"] == 89.0
     assert updated == 89.0
+
+
+@pytest.mark.asyncio
+async def test_visible_iks_propagates_initialized_scorer_outage():
+    with patch(
+        "app.services.gae_state.get_profile_scorer",
+        side_effect=RuntimeError("connection refused"),
+    ):
+        with pytest.raises(RuntimeError, match="connection refused"):
+            await compute_visible_iks(_FakeGraphClient())
+
+
+@pytest.mark.asyncio
+async def test_visible_iks_uses_bootstrap_only_before_lifespan():
+    from app.services.gae_state import ScorerNotInitializedError
+
+    bootstrap = object()
+    with patch(
+        "app.services.gae_state.get_mu_zero",
+        side_effect=ScorerNotInitializedError("not initialized"),
+    ), patch("app.services.iks._load_mu_zero", return_value=bootstrap) as load, patch(
+        "app.services.iks.compute_iks", return_value={"current": 89.0},
+    ) as compute:
+        result = await compute_visible_iks(None, scorer=_fake_scorer())
+
+    assert result == 89.0
+    load.assert_called_once_with()
+    assert compute.call_args.kwargs["mu_zero"] is bootstrap
+
+
+@pytest.mark.asyncio
+async def test_visible_iks_propagates_graph_failure_after_lifespan():
+    with patch("app.services.iks.compute_iks", return_value={"current": 0.0}), patch(
+        "app.services.iks.compute_iks_v2",
+        new=AsyncMock(side_effect=RuntimeError("AGE connection failed")),
+    ):
+        with pytest.raises(RuntimeError, match="AGE connection failed"):
+            await compute_visible_iks(_FakeGraphClient(), scorer=_fake_scorer())
+
+
+def test_visible_iks_graph_failure_surfaces_as_http_500():
+    app = FastAPI()
+
+    @app.get("/iks")
+    async def visible_iks() -> dict[str, float | None]:
+        value = await compute_visible_iks(_FakeGraphClient(), scorer=_fake_scorer())
+        return {"iks": value}
+
+    with patch("app.services.iks.compute_iks", return_value={"current": 0.0}), patch(
+        "app.services.iks.compute_iks_v2",
+        new=AsyncMock(side_effect=RuntimeError("AGE connection failed")),
+    ):
+        response = TestClient(app, raise_server_exceptions=False).get("/iks")
+
+    assert response.status_code == 500
+
+
+@pytest.mark.asyncio
+async def test_visible_iks_pre_lifespan_returns_none_without_graph_read():
+    graph_read = AsyncMock(return_value={"iks_v2": 100.0})
+    with patch("app.services.gae_state.get_profile_scorer", return_value=None), patch(
+        "app.services.iks.compute_iks_v2", new=graph_read,
+    ):
+        assert await compute_visible_iks(_FakeGraphClient()) is None
+    graph_read.assert_not_awaited()

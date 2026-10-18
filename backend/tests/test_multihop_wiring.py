@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 from app.services.investigation_patterns import (
     MULTIHOP_PATTERN_REGISTRY,
@@ -153,11 +154,21 @@ def test_stage1_high_rho_vld_reproduction() -> None:
 def test_public_investigate_uses_computed_action_and_oracle_is_read_only() -> None:
     from fastapi.testclient import TestClient
 
+    from app.domains.soc.config import SOCDomainConfig
     from app.main import app
 
     client = TestClient(app, raise_server_exceptions=False)
-    public_response = client.post("/api/soc/investigate", json={"alert_id": "ALERT-SOC-003"}).json()
-    oracle_response = client.post("/api/soc/investigate/oracle", json={"alert_id": "ALERT-SOC-003"}).json()
+    isolated_scorer = SOCDomainConfig().build_profile_scorer()
+    with patch(
+        "app.services.gae_state.get_profile_scorer",
+        return_value=isolated_scorer,
+    ):
+        public_response = client.post(
+            "/api/soc/investigate", json={"alert_id": "ALERT-SOC-003"}
+        ).json()
+        oracle_response = client.post(
+            "/api/soc/investigate/oracle", json={"alert_id": "ALERT-SOC-003"}
+        ).json()
 
     assert public_response["mode"] == "vld_multihop_stage1_shadow"
     assert oracle_response["mode"] == "vld_multihop_stage1_oracle_positive_control"

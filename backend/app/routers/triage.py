@@ -2656,7 +2656,7 @@ async def report_decision_outcome(
                                         persistence_status["dk"] = False
                                     _checkpoint_writer = None
                                     if isinstance(_ps_out, SOCCompoundingScorerAdapter):
-                                        def _checkpoint_writer(transaction):
+                                        def _checkpoint_writer(transaction, replay_verified_at):
                                             try:
                                                 return _compound_scorer._persist_learning_artifacts(
                                                     request.decision_id,
@@ -2664,6 +2664,7 @@ async def report_decision_outcome(
                                                     outcome=outcome_label,
                                                     is_correct=bool(_correct),
                                                     category=_cat_name_out,
+                                                    replay_verified_at=replay_verified_at,
                                                     evidence_already_persisted=True,
                                                     skip_history_scan=True,
                                                     transaction=transaction,

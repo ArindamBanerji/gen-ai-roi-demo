@@ -39,6 +39,7 @@ from app.framework.iks_base import (  # noqa: F401 -- re-export for callers
 )
 
 log = logging.getLogger(__name__)
+_UNSET_SCORER = object()
 
 D_MAX: float = 0.20  # kappa*=0.20 calibrated by PROD-1 (March 18). Was 0.30 design estimate.
 
@@ -116,7 +117,7 @@ def compute_iks(mu_t: np.ndarray, mu_zero: Optional[np.ndarray] = None) -> dict:
 
 async def compute_visible_iks(
     graph_service=None,
-    scorer=None,
+    scorer=_UNSET_SCORER,
 ) -> Optional[float]:
     """
     Compute the shipped user-visible IKS score.
@@ -129,31 +130,49 @@ async def compute_visible_iks(
        is trusted. Small post-decision shifts (~5-10) correctly fall back to v2.
     2. Graph-composite IKS v2 as fallback when drift <= 50.0 or scorer unavailable.
     """
-    if scorer is None:
-        try:
-            from app.services.gae_state import get_profile_scorer
+    if scorer is _UNSET_SCORER:
+        log.warning("[IKS] Using global scorer fallback — caller did not supply scorer.")
+        from app.services.gae_state import get_profile_scorer
 
-            scorer = get_profile_scorer()
-        except Exception:
-            scorer = None
+        # Operational failures from an initialized scorer must remain visible.
+        # get_profile_scorer returns None only for the explicit pre-lifespan
+        # ScorerNotInitializedError condition.
+        scorer = get_profile_scorer()
+        if scorer is None:
+            return None
+    elif scorer is None:
+        return None
 
     if scorer is not None:
         try:
-            from app.services.gae_state import get_mu_zero
-            mu_zero = get_mu_zero()
-            result = compute_iks(scorer.centroids, mu_zero=mu_zero)
-            score = float(result.get("current", 0.0))
-            if score > 50.0:
-                return score
-        except Exception as exc:
-            log.warning("[IKS] drift calculation unavailable: %s", exc)
+            from app.services.gae_state import (
+                ScorerNotInitializedError,
+                get_mu_zero,
+            )
+
+            try:
+                mu_zero = get_mu_zero()
+            except ScorerNotInitializedError:
+                # Read-only callers can run before the app lifespan has
+                # initialized gae_state.  The canonical bootstrap artifact is
+                # the same baseline and avoids coupling IKS to startup order.
+                mu_zero = _load_mu_zero()
+        except ScorerNotInitializedError:
+            mu_zero = _load_mu_zero()
+        else:
+            # Database/query failures above intentionally propagate. Only the
+            # pure centroid computation remains degradable to graph IKS v2.
+            try:
+                result = compute_iks(scorer.centroids, mu_zero=mu_zero)
+                score = float(result.get("current", 0.0))
+                if score > 50.0:
+                    return score
+            except Exception as exc:
+                log.warning("[IKS] drift calculation unavailable: %s", exc)
 
     if graph_service is not None:
-        try:
-            iks_data = await compute_iks_v2(graph_service)
-            return float(iks_data.get("iks_v2", 0.0))
-        except Exception as exc:
-            log.warning("[IKS] graph composite calculation unavailable: %s", exc)
+        iks_data = await compute_iks_v2(graph_service)
+        return float(iks_data.get("iks_v2", 0.0))
 
     return None
 

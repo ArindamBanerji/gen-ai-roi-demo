@@ -123,7 +123,7 @@ async function mockBaseTriage(page: Page) {
 async function scoreMockedDecision(page: Page) {
   await page.goto(S2P_UI_BASE_URL)
   await openTab(page, 'Exception Triage')
-  await page.getByRole('button', { name: 'Score' }).click()
+  await page.getByRole('button', { name: 'Score', exact: true }).click()
   await expect(page.getByTestId('centroid-decision-id')).toBeVisible()
 }
 
