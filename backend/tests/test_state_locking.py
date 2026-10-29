@@ -138,6 +138,33 @@ async def test_reset_learning_state_is_awaitable():
         await coro
 
 
+def test_reset_rebinds_consumers_to_replacement_graph_store():
+    """A full learning reset must not leave authority on a closed store."""
+    old_store = MagicMock()
+    old_scorer = _make_scorer()
+    old_scorer._compound._graph_store = old_store
+    old_state = _make_ls(old_scorer)
+    replacement_store = MagicMock()
+    replacement_state = _make_ls()
+
+    def initialize_replacement():
+        gae_state._learning_store = replacement_store
+        gae_state._learning_state = replacement_state
+        return replacement_state
+
+    with (
+        patch.object(gae_state, "_learning_state", old_state),
+        patch.object(gae_state, "_learning_store", old_store),
+        patch.object(gae_state, "init_learning_state", side_effect=initialize_replacement),
+        patch("app.services.authority_ladder.configure_authority_graph_store") as authority_rebind,
+        patch("app.services.soc_learning_control.SERVICE.configure_graph_store") as control_rebind,
+    ):
+        gae_state._reset_learning_state_inner()
+
+        authority_rebind.assert_called_once_with(replacement_store)
+        control_rebind.assert_called_once_with(replacement_store)
+
+
 @pytest.mark.asyncio
 async def test_restore_centroid_checkpoint_is_awaitable():
     """AGE checkpoint restore remains an async, lock-aware operation."""

@@ -54,7 +54,7 @@ test('factor_contribution_panel_visible_on_alert_triage', async ({ page }) => {
   await page.goto(FRONTEND)
   await navigateToTab(page, 1)
 
-  const alertCard = page.locator('button').filter({ hasText: /ALERT-|SIM-/i }).first()
+  const alertCard = page.locator('button').filter({ hasText: /ALERT-|SIM-|PL-SOC-/i }).first()
   await alertCard.waitFor({ state: 'visible', timeout: 20_000 })
   await alertCard.click()
 
@@ -79,7 +79,7 @@ test('factor_contribution_panel_has_no_console_errors', async ({ page }) => {
   await page.goto(FRONTEND)
   await navigateToTab(page, 1)
 
-  const alertCard = page.locator('button').filter({ hasText: /ALERT-|SIM-/i }).first()
+  const alertCard = page.locator('button').filter({ hasText: /ALERT-|SIM-|PL-SOC-/i }).first()
   await alertCard.waitFor({ state: 'visible', timeout: 20_000 })
   await alertCard.click()
 

@@ -24,8 +24,8 @@ const BACKEND_PORT  = process.env.BACKEND_PORT  || '8001';
 const FRONTEND = `http://127.0.0.1:${FRONTEND_PORT}`;
 const BACKEND  = `http://127.0.0.1:${BACKEND_PORT}`;
 
-// Matches both SIM-* (simulation pool) and ALERT-* (triage pool) alert cards.
-const ALERT_CARD_RE = /ALERT-|SIM-/i;
+// Matches SIM-* (simulation), ALERT-* (triage), and PL-SOC-* (planted) alert cards.
+const ALERT_CARD_RE = /ALERT-|SIM-|PL-SOC-/i;
 
 // ── Shared helper ─────────────────────────────────────────────────────────────
 
@@ -66,13 +66,25 @@ async function makeDecision(
   await page.getByText(/OUTCOME FEEDBACK/i).waitFor({ state: 'visible', timeout: 10000 });
 
   if (outcomeCorrect) {
-    await page.getByRole('button', { name: /Confirmed Correct/i }).click();
+    const [response] = await Promise.all([
+      page.waitForResponse(
+        response => response.url().includes('/api/alert/outcome'),
+        { timeout: 30_000 },
+      ),
+      page.getByRole('button', { name: /Confirmed Correct/i }).click(),
+    ]);
+    expect(response.ok()).toBeTruthy();
   } else {
-    await page.getByRole('button', { name: /Incorrect/i }).click();
+    const [response] = await Promise.all([
+      page.waitForResponse(
+        response => response.url().includes('/api/alert/outcome'),
+        { timeout: 30_000 },
+      ),
+      page.getByRole('button', { name: /Incorrect/i }).click(),
+    ]);
+    expect(response.ok()).toBeTruthy();
   }
 
-  // Allow AGE write + in-memory state update to complete
-  await page.waitForTimeout(2000);
   return alertId;
 }
 
@@ -421,7 +433,7 @@ test('five_tab_round_trip_no_crashes', async ({ page }) => {
   await page.getByRole('button', { name: /Executive Narrative/i }).click();
   await page.getByRole('heading', { name: /What Changed/i }).waitFor({
     state: 'visible',
-    timeout: 15000,
+    timeout: 30000,
   });
   await page.getByRole('heading', { name: /What Was Discovered/i }).waitFor({
     state: 'visible',
@@ -489,8 +501,14 @@ test('reset_returns_alerts_to_pending', async ({ page }) => {
   await executeBtn.scrollIntoViewIfNeeded();
   await executeBtn.click();
   await page.getByText(/OUTCOME FEEDBACK/i).waitFor({ state: 'visible', timeout: 10000 });
-  await page.getByRole('button', { name: /Confirmed Correct/i }).click();
-  await page.waitForTimeout(2000);
+  const [outcomeResponse] = await Promise.all([
+    page.waitForResponse(
+      response => response.url().includes('/api/alert/outcome'),
+      { timeout: 30_000 },
+    ),
+    page.getByRole('button', { name: /Confirmed Correct/i }).click(),
+  ]);
+  expect(outcomeResponse.ok()).toBeTruthy();
 
   // Fresh navigation forces a re-fetch of pending alerts.
   // The queue endpoint returns at most 50 visible cards, so one processed alert

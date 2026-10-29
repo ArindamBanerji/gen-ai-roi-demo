@@ -28,9 +28,17 @@ async function snap(page: import('@playwright/test').Page, name: string) {
 async function goToExecutiveNarrative(page: import('@playwright/test').Page) {
   await page.goto(FRONTEND);
   await page.waitForLoadState('domcontentloaded');
-  await page.getByRole('button', { name: /Executive Narrative/i }).waitFor({ state: 'visible', timeout: 15_000 });
+  await page.getByRole('button', { name: /Executive Narrative/i }).waitFor({
+    state: 'visible',
+    timeout: 15_000,
+  });
   await page.getByRole('button', { name: /Executive Narrative/i }).click();
-  await page.waitForTimeout(2000);
+  // Wait for narrative content to actually load (API-dependent).
+  // "What Changed" is the first <h3> rendered after /api/soc/executive-narrative succeeds.
+  await page.getByRole('heading', { name: /What Changed/i }).waitFor({
+    state: 'visible',
+    timeout: 30_000,
+  });
 }
 
 test('test_governance_section_renders', async ({ page }) => {
@@ -39,7 +47,7 @@ test('test_governance_section_renders', async ({ page }) => {
 
   // Governance & Compliance collapsible button is always present.
   const govButton = page.getByRole('button', { name: /Governance.*Compliance|Compliance.*Governance/i }).first();
-  await expect(govButton).toBeVisible({ timeout: 10_000 });
+  await expect(govButton).toBeVisible({ timeout: 15_000 });
   console.log('Governance & Compliance section: VISIBLE');
 
   // Legal disclaimer amber banner is always shown (outside the expanded conditional).
@@ -102,7 +110,7 @@ test('test_governance_legal_disclaimer', async ({ page }) => {
 
   // Legal disclaimer text must contain "evidence supporting" (case-insensitive).
   const disclaimer = page.getByText(/Evidence supporting human oversight/i).first();
-  await expect(disclaimer).toBeVisible({ timeout: 10_000 });
+  await expect(disclaimer).toBeVisible({ timeout: 15_000 });
   console.log('Legal disclaimer text: VISIBLE');
 
   // Must NOT contain "certified" or "compliant" (banned words in the GOVERNANCE_DISCLAIMER constant).

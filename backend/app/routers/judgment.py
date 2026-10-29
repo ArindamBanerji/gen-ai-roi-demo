@@ -8,11 +8,11 @@ Reference: docs/soc_copilot_design_v1.md Sec.18; gae/judgment.py.
 """
 
 import logging
-from typing import Dict, Optional, cast
+from typing import Any, Dict, Optional, cast
 
 import numpy as np
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from gae.judgment import compute_judgment
 from app.domains.soc.config import SOC_CATEGORIES, SOC_FACTORS, SOC_ACTIONS
@@ -40,6 +40,22 @@ class JudgmentRequest(BaseModel):
     category: str
     factors: Dict[str, float]
     alert_id: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def accept_flat_factor_payload(cls, value: Any) -> Any:
+        """Preserve the legacy HTTP shape that posted factors at top level."""
+        if not isinstance(value, dict) or "factors" in value:
+            return value
+        return {
+            "category": value.get("category", "credential_access"),
+            "alert_id": value.get("alert_id"),
+            "factors": {
+                key: factor_value
+                for key, factor_value in value.items()
+                if key not in {"category", "alert_id"}
+            },
+        }
 
 
 # ── Pure helper — exported for tests ─────────────────────────────────────────
@@ -113,7 +129,20 @@ async def explain_decision_post(request: JudgmentRequest):
             detail={"error": f"Unknown category: {request.category}"},
         )
 
-    missing = [f for f in SOC_FACTORS if f not in request.factors]
+    allowed_factors = set(SOC_FACTORS) | set(_LEGACY_FACTOR_NAMES.values())
+    unknown = sorted(set(request.factors) - allowed_factors)
+    if unknown:
+        raise HTTPException(
+            status_code=422,
+            detail={"error": f"Unknown factors: {unknown}"},
+        )
+
+    missing = [
+        factor
+        for factor in SOC_FACTORS
+        if factor not in request.factors
+        and _LEGACY_FACTOR_NAMES.get(factor) not in request.factors
+    ]
     if missing:
         raise HTTPException(
             status_code=422,
@@ -128,7 +157,8 @@ async def explain_decision_post(request: JudgmentRequest):
 
     try:
         scorer = get_profile_scorer()
-    except Exception:
+    except Exception as exc:
+        log.exception("Scorer initialization failed: %s", exc)
         scorer = None
 
     if scorer is None:
@@ -227,7 +257,8 @@ async def explain_decision_get(alert_id: str):
 
     try:
         scorer = get_profile_scorer()
-    except Exception:
+    except Exception as exc:
+        log.exception("Scorer initialization failed: %s", exc)
         scorer = None
 
     if scorer is None:

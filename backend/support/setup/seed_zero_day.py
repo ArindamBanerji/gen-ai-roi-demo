@@ -2,8 +2,8 @@
 support/setup/seed_zero_day.py -- Load zero-day synthetic decisions into AGE.
 
 Usage:
-    python support/setup/seed_zero_day.py --dry-run
-    python support/setup/seed_zero_day.py --live [--clean] [--file=path]
+  python support/setup/seed_zero_day.py --dry-run
+  python support/setup/seed_zero_day.py --live [--clean] [--file=path]
 
 REQUIRES: GRAPH_BACKEND=age
 """
@@ -25,8 +25,8 @@ BACKFILL = "--backfill" in _args
 BACKBONE = "--backbone" in _args
 if not DRY_RUN and not LIVE and not BACKFILL and not BACKBONE:
     print("Usage: --dry-run or --live [--clean] [--file=path]")
-    print("       --backfill  (SET correct/outcome on existing zero_day_synthetic nodes)")
-    print("       --backbone  (seed Users, Assets, demo Alerts, Campaigns for Tab 1 queue)")
+    print("       --backfill (SET correct/outcome on existing zero_day_synthetic nodes)")
+    print("       --backbone (seed Users, Assets, demo Alerts, Campaigns for Tab 1 queue)")
     sys.exit(1)
 
 _file_arg = [a for a in sys.argv[1:] if a.startswith("--file=")]
@@ -82,7 +82,7 @@ def print_plan():
 async def run_live():
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from ci_platform.graph.age_client import AGEClient
-    client = AGEClient()
+    client = AGEClient(dsn=os.environ["GRAPH_DSN"], graph_name="soc_graph")
     S = AGEClient.serialize_for_age
 
     try:
@@ -134,6 +134,7 @@ async def run_live():
                 f"MATCH (a:Alert {{alert_id: {S(d['alert_id'])}}}) "
                 f"CREATE (dd:Decision {{"
                 f"decision_id: {S(d['decision_id'])}, category: {S(d['category'])},"
+                f"domain: 'soc',"
                 f"action: {S(d['action'])}, factor_vector: {S(d['factor_vector'])},"
                 f"confidence: {S(d['confidence'])}, correct: {S(d['correct'])},"
                 f"outcome: {S(d['outcome'])}, timestamp_epoch: {S(d['timestamp_epoch'])},"
@@ -171,8 +172,9 @@ async def run_backfill():
     Reads the correct/outcome values from zero_day_decisions.json (the canonical source)
     and applies them in batches of 200 using inline decision_id literals.
     """
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from ci_platform.graph.age_client import AGEClient
-    client = AGEClient()
+    client = AGEClient(dsn=os.environ["GRAPH_DSN"], graph_name="soc_graph")
     await client.ensure_graph()
 
     rows = await client.run_query(
@@ -186,7 +188,7 @@ async def run_backfill():
         print("[BACKFILL] Nothing to do.")
         return
 
-    correct_ids   = [d["decision_id"] for d in decisions if d["correct"]]
+    correct_ids = [d["decision_id"] for d in decisions if d["correct"]]
     incorrect_ids = [d["decision_id"] for d in decisions if not d["correct"]]
     print(f"[BACKFILL] From JSON: {len(correct_ids)} correct, {len(incorrect_ids)} incorrect.")
 
@@ -227,13 +229,13 @@ async def run_backfill():
     r3 = await client.run_query(
         "MATCH (d:Decision) WHERE d.outcome IS NOT NULL RETURN count(d) AS cnt"
     )
-    print(f"[VERIFY] correct=true (all origins):    {r1[0]['cnt']}")
-    print(f"[VERIFY] correct=true (zero_day only):  {r2[0]['cnt']}")
-    print(f"[VERIFY] outcome IS NOT NULL:            {r3[0]['cnt']}")
+    print(f"[VERIFY] correct=true (all origins): {r1[0]['cnt']}")
+    print(f"[VERIFY] correct=true (zero_day only): {r2[0]['cnt']}")
+    print(f"[VERIFY] outcome IS NOT NULL: {r3[0]['cnt']}")
     print("[OK] Backfill complete. Restart uvicorn.")
 
 
-# ── Backbone demo data ────────────────────────────────────────────────────────
+# -- Backbone demo data -------------------------------------------------------
 # 20 interactive demo alerts (origin='demo_backbone', status='pending').
 # These populate Tab 1 queue. Users and Assets are MERGED idempotently.
 # Campaigns group related alerts for Tab 6.
@@ -241,107 +243,107 @@ async def run_backfill():
 _BACKBONE_BASE_MS = 1744502400000  # 2026-04-12 12:00:00 UTC
 
 DEMO_USERS = [
-    {"user_id": "USR-001", "name": "Jane Smith",    "department": "Finance"},
-    {"user_id": "USR-002", "name": "Alex Garcia",   "department": "IT"},
-    {"user_id": "USR-003", "name": "Michael Lee",   "department": "HR"},
-    {"user_id": "USR-004", "name": "Rachel Chen",   "department": "Security"},
-    {"user_id": "USR-005", "name": "Dev Kumar",     "department": "Engineering"},
-    {"user_id": "USR-006", "name": "Lisa Wilson",   "department": "Executive"},
+    {"user_id": "USR-001", "name": "Jane Smith", "department": "Finance"},
+    {"user_id": "USR-002", "name": "Alex Garcia", "department": "IT"},
+    {"user_id": "USR-003", "name": "Michael Lee", "department": "HR"},
+    {"user_id": "USR-004", "name": "Rachel Chen", "department": "Security"},
+    {"user_id": "USR-005", "name": "Dev Kumar", "department": "Engineering"},
+    {"user_id": "USR-006", "name": "Lisa Wilson", "department": "Executive"},
 ]
 
 DEMO_ASSETS = [
-    {"asset_id": "AST-001", "hostname": "ws-finance-01.corp",    "asset_type": "workstation", "os": "Windows 11"},
-    {"asset_id": "AST-002", "hostname": "srv-db-01.corp",        "asset_type": "server",      "os": "Ubuntu 22.04"},
-    {"asset_id": "AST-003", "hostname": "srv-web-02.corp",       "asset_type": "server",      "os": "Ubuntu 22.04"},
-    {"asset_id": "AST-004", "hostname": "ws-hr-03.corp",         "asset_type": "workstation", "os": "Windows 11"},
-    {"asset_id": "AST-005", "hostname": "srv-vpn-01.corp",       "asset_type": "server",      "os": "CentOS 7"},
-    {"asset_id": "AST-006", "hostname": "laptop-exec-01.corp",   "asset_type": "laptop",      "os": "macOS 14"},
-    {"asset_id": "AST-007", "hostname": "srv-cloud-aws-01.corp", "asset_type": "cloud",       "os": "Amazon Linux 2"},
-    {"asset_id": "AST-008", "hostname": "srv-email-01.corp",     "asset_type": "server",      "os": "Ubuntu 20.04"},
+    {"asset_id": "AST-001", "hostname": "ws-finance-01.corp", "asset_type": "workstation", "os": "Windows 11"},
+    {"asset_id": "AST-002", "hostname": "srv-db-01.corp", "asset_type": "server", "os": "Ubuntu 22.04"},
+    {"asset_id": "AST-003", "hostname": "srv-web-02.corp", "asset_type": "server", "os": "Ubuntu 22.04"},
+    {"asset_id": "AST-004", "hostname": "ws-hr-03.corp", "asset_type": "workstation", "os": "Windows 11"},
+    {"asset_id": "AST-005", "hostname": "srv-vpn-01.corp", "asset_type": "server", "os": "CentOS 7"},
+    {"asset_id": "AST-006", "hostname": "laptop-exec-01.corp", "asset_type": "laptop", "os": "macOS 14"},
+    {"asset_id": "AST-007", "hostname": "srv-cloud-aws-01.corp", "asset_type": "cloud", "os": "Amazon Linux 2"},
+    {"asset_id": "AST-008", "hostname": "srv-email-01.corp", "asset_type": "server", "os": "Ubuntu 20.04"},
 ]
 
 # (alert_id, category, severity, user_id, asset_id, ts_offset_ms)
 _DEMO_ALERT_ROWS = [
-    ("DEMO-CA-001", "credential_access",    "high",     "USR-001", "AST-001",         0),
-    ("DEMO-LM-001", "lateral_movement",     "high",     "USR-001", "AST-002",   600_000),
-    ("DEMO-DE-001", "data_exfiltration",    "critical", "USR-001", "AST-002", 1_200_000),
-    ("DEMO-CA-002", "credential_access",    "medium",   "USR-002", "AST-005", 2_000_000),
-    ("DEMO-ME-001", "malware_execution",    "critical", "USR-003", "AST-004", 2_600_000),
-    ("DEMO-IT-001", "insider_threat",       "high",     "USR-004", "AST-008", 3_200_000),
-    ("DEMO-CI-001", "cloud_infrastructure", "high",     "USR-005", "AST-007", 3_800_000),
-    ("DEMO-LM-002", "lateral_movement",     "medium",   "USR-001", "AST-003", 4_400_000),
-    ("DEMO-CA-003", "credential_access",    "low",      "USR-006", "AST-006", 5_000_000),
-    ("DEMO-DE-002", "data_exfiltration",    "high",     "USR-005", "AST-007", 5_600_000),
-    ("DEMO-ME-002", "malware_execution",    "high",     "USR-002", "AST-001", 6_200_000),
-    ("DEMO-IT-002", "insider_threat",       "critical", "USR-004", "AST-002", 6_800_000),
-    ("DEMO-CI-002", "cloud_infrastructure", "medium",   "USR-006", "AST-007", 7_400_000),
-    ("DEMO-CA-004", "credential_access",    "high",     "USR-003", "AST-005", 8_000_000),
-    ("DEMO-LM-003", "lateral_movement",     "critical", "USR-002", "AST-002", 8_600_000),
-    ("DEMO-DE-003", "data_exfiltration",    "medium",   "USR-001", "AST-008", 9_200_000),
-    ("DEMO-ME-003", "malware_execution",    "medium",   "USR-005", "AST-004", 9_800_000),
-    ("DEMO-IT-003", "insider_threat",       "high",     "USR-004", "AST-006", 10_400_000),
+    ("DEMO-CA-001", "credential_access", "high", "USR-001", "AST-001", 0),
+    ("DEMO-LM-001", "lateral_movement", "high", "USR-001", "AST-002", 600_000),
+    ("DEMO-DE-001", "data_exfiltration", "critical", "USR-001", "AST-002", 1_200_000),
+    ("DEMO-CA-002", "credential_access", "medium", "USR-002", "AST-005", 2_000_000),
+    ("DEMO-ME-001", "malware_execution", "critical", "USR-003", "AST-004", 2_600_000),
+    ("DEMO-IT-001", "insider_threat", "high", "USR-004", "AST-008", 3_200_000),
+    ("DEMO-CI-001", "cloud_infrastructure", "high", "USR-005", "AST-007", 3_800_000),
+    ("DEMO-LM-002", "lateral_movement", "medium", "USR-001", "AST-003", 4_400_000),
+    ("DEMO-CA-003", "credential_access", "low", "USR-006", "AST-006", 5_000_000),
+    ("DEMO-DE-002", "data_exfiltration", "high", "USR-005", "AST-007", 5_600_000),
+    ("DEMO-ME-002", "malware_execution", "high", "USR-002", "AST-001", 6_200_000),
+    ("DEMO-IT-002", "insider_threat", "critical", "USR-004", "AST-002", 6_800_000),
+    ("DEMO-CI-002", "cloud_infrastructure", "medium", "USR-006", "AST-007", 7_400_000),
+    ("DEMO-CA-004", "credential_access", "high", "USR-003", "AST-005", 8_000_000),
+    ("DEMO-LM-003", "lateral_movement", "critical", "USR-002", "AST-002", 8_600_000),
+    ("DEMO-DE-003", "data_exfiltration", "medium", "USR-001", "AST-008", 9_200_000),
+    ("DEMO-ME-003", "malware_execution", "medium", "USR-005", "AST-004", 9_800_000),
+    ("DEMO-IT-003", "insider_threat", "high", "USR-004", "AST-006", 10_400_000),
     ("DEMO-CI-003", "cloud_infrastructure", "critical", "USR-003", "AST-007", 11_000_000),
-    ("DEMO-CA-005", "credential_access",    "medium",   "USR-006", "AST-008", 11_600_000),
+    ("DEMO-CA-005", "credential_access", "medium", "USR-006", "AST-008", 11_600_000),
 ]
 
 DEMO_ALERTS = [
     {
-        "alert_id":        aid,
-        "category":        cat,
-        "severity":        sev,
-        "alert_type":      cat,
-        "user_id":         uid,
-        "asset_id":        asid,
+        "alert_id": aid,
+        "category": cat,
+        "severity": sev,
+        "alert_type": cat,
+        "user_id": uid,
+        "asset_id": asid,
         "timestamp_epoch": _BACKBONE_BASE_MS + ts_off,
-        "origin":          "demo_backbone",
+        "origin": "demo_backbone",
         "source_location": "corp-network",
-        "status":          "pending",
+        "status": "pending",
     }
     for aid, cat, sev, uid, asid, ts_off in _DEMO_ALERT_ROWS
 ]
 
 DEMO_CAMPAIGNS = [
     {
-        "campaign_id":             "CAMP-APT29-2026",
-        "severity":                "HIGH",
-        "confidence":              0.87,
-        "trigger_rule":            "sequential_category",
-        "category_sequence":       ["credential_access", "lateral_movement", "data_exfiltration"],
-        "shared_entities":         [],
-        "technique_sequence":      [],
-        "nl_summary":              "Nation-state APT29 campaign: credential theft to lateral movement to data exfiltration chain.",
-        "member_alert_ids":        ["DEMO-CA-001", "DEMO-LM-001", "DEMO-DE-001", "DEMO-LM-002", "DEMO-LM-003"],
+        "campaign_id": "CAMP-APT29-2026",
+        "severity": "HIGH",
+        "confidence": 0.87,
+        "trigger_rule": "sequential_category",
+        "category_sequence": ["credential_access", "lateral_movement", "data_exfiltration"],
+        "shared_entities": [],
+        "technique_sequence": [],
+        "nl_summary": "Nation-state APT29 campaign: credential theft to lateral movement to data exfiltration chain.",
+        "member_alert_ids": ["DEMO-CA-001", "DEMO-LM-001", "DEMO-DE-001", "DEMO-LM-002", "DEMO-LM-003"],
         "correlation_window_hours": 24,
-        "first_seen":              "2026-04-12T12:00:00",
-        "last_seen":               "2026-04-12T14:13:20",
+        "first_seen": "2026-04-12T12:00:00",
+        "last_seen": "2026-04-12T14:13:20",
     },
     {
-        "campaign_id":             "CAMP-INSIDER-Q1",
-        "severity":                "HIGH",
-        "confidence":              0.78,
-        "trigger_rule":            "shared_user",
-        "category_sequence":       ["insider_threat", "data_exfiltration"],
-        "shared_entities":         ["USR-004"],
-        "technique_sequence":      [],
-        "nl_summary":              "Insider threat Q1: repeated policy violations by same user across email and database assets.",
-        "member_alert_ids":        ["DEMO-IT-001", "DEMO-IT-002", "DEMO-IT-003", "DEMO-DE-003"],
+        "campaign_id": "CAMP-INSIDER-Q1",
+        "severity": "HIGH",
+        "confidence": 0.78,
+        "trigger_rule": "shared_user",
+        "category_sequence": ["insider_threat", "data_exfiltration"],
+        "shared_entities": ["USR-004"],
+        "technique_sequence": [],
+        "nl_summary": "Insider threat Q1: repeated policy violations by same user across email and database assets.",
+        "member_alert_ids": ["DEMO-IT-001", "DEMO-IT-002", "DEMO-IT-003", "DEMO-DE-003"],
         "correlation_window_hours": 168,
-        "first_seen":              "2026-04-12T12:53:20",
-        "last_seen":               "2026-04-12T14:33:20",
+        "first_seen": "2026-04-12T12:53:20",
+        "last_seen": "2026-04-12T14:33:20",
     },
     {
-        "campaign_id":             "CAMP-CLOUD-BREACH",
-        "severity":                "CRITICAL",
-        "confidence":              0.91,
-        "trigger_rule":            "shared_asset",
-        "category_sequence":       ["cloud_infrastructure", "data_exfiltration"],
-        "shared_entities":         ["AST-007"],
-        "technique_sequence":      [],
-        "nl_summary":              "Cloud infrastructure breach: repeated access to cloud asset followed by data exfiltration.",
-        "member_alert_ids":        ["DEMO-CI-001", "DEMO-CI-002", "DEMO-CI-003", "DEMO-DE-002"],
+        "campaign_id": "CAMP-CLOUD-BREACH",
+        "severity": "CRITICAL",
+        "confidence": 0.91,
+        "trigger_rule": "shared_asset",
+        "category_sequence": ["cloud_infrastructure", "data_exfiltration"],
+        "shared_entities": ["AST-007"],
+        "technique_sequence": [],
+        "nl_summary": "Cloud infrastructure breach: repeated access to cloud asset followed by data exfiltration.",
+        "member_alert_ids": ["DEMO-CI-001", "DEMO-CI-002", "DEMO-CI-003", "DEMO-DE-002"],
         "correlation_window_hours": 72,
-        "first_seen":              "2026-04-12T13:03:20",
-        "last_seen":               "2026-04-12T15:03:20",
+        "first_seen": "2026-04-12T13:03:20",
+        "last_seen": "2026-04-12T15:03:20",
     },
 ]
 
@@ -349,18 +351,18 @@ DEMO_CAMPAIGNS = [
 async def seed_graph_backbone():
     """
     Seed the interactive demo graph backbone:
-      - 6 User nodes (MERGE, idempotent)
-      - 8 Asset nodes (MERGE, idempotent)
-      - 20 Alert nodes (origin='demo_backbone', status='pending') (MERGE)
-      - INVOLVES edges: Alert -> User
-      - DETECTED_ON edges: Alert -> Asset
-      - 3 Campaign nodes + MEMBER_OF edges: Alert -> Campaign
+    - 6 User nodes (MERGE, idempotent)
+    - 8 Asset nodes (MERGE, idempotent)
+    - 20 Alert nodes (origin='demo_backbone', status='pending') (MERGE)
+    - INVOLVES edges: Alert -> User
+    - DETECTED_ON edges: Alert -> Asset
+    - 3 Campaign nodes + MEMBER_OF edges: Alert -> Campaign
 
     Use --clean to wipe existing backbone nodes before re-seeding.
     """
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from ci_platform.graph.age_client import AGEClient
-    client = AGEClient()
+    client = AGEClient(dsn=os.environ["GRAPH_DSN"], graph_name="soc_graph")
     S = AGEClient.serialize_for_age
 
     try:
@@ -419,7 +421,7 @@ async def seed_graph_backbone():
         )
     print("  Done.")
 
-    # Step 4: MERGE INVOLVES edges (Alert → User)
+    # Step 4: MERGE INVOLVES edges (Alert -> User)
     print(f"[STEP 4] Merging INVOLVES edges (Alert->User)...")
     for al in DEMO_ALERTS:
         await client.run_query(
@@ -429,7 +431,7 @@ async def seed_graph_backbone():
         )
     print("  Done.")
 
-    # Step 5: MERGE DETECTED_ON edges (Alert → Asset)
+    # Step 5: MERGE DETECTED_ON edges (Alert -> Asset)
     print(f"[STEP 5] Merging DETECTED_ON edges (Alert->Asset)...")
     for al in DEMO_ALERTS:
         await client.run_query(
@@ -439,7 +441,7 @@ async def seed_graph_backbone():
         )
     print("  Done.")
 
-    # Step 6: MERGE Campaign nodes + MEMBER_OF edges (Alert → Campaign)
+    # Step 6: MERGE Campaign nodes + MEMBER_OF edges (Alert -> Campaign)
     print(f"[STEP 6] Merging {len(DEMO_CAMPAIGNS)} Campaign nodes + MEMBER_OF edges...")
     for c in DEMO_CAMPAIGNS:
         await client.run_query(
@@ -469,13 +471,13 @@ async def seed_graph_backbone():
     # Step 7: Verification
     print("\n[STEP 7] Verification:")
     checks = [
-        ("Users (USR-*)",     "MATCH (u:User) WHERE u.user_id STARTS WITH 'USR-' RETURN count(u) AS cnt"),
-        ("Assets (AST-*)",    "MATCH (a:Asset) WHERE a.asset_id STARTS WITH 'AST-' RETURN count(a) AS cnt"),
-        ("Demo alerts",       "MATCH (a:Alert {origin: 'demo_backbone'}) RETURN count(a) AS cnt"),
-        ("INVOLVES edges",    "MATCH (a:Alert {origin: 'demo_backbone'})-[:INVOLVES]->(:User) RETURN count(a) AS cnt"),
+        ("Users (USR-*)", "MATCH (u:User) WHERE u.user_id STARTS WITH 'USR-' RETURN count(u) AS cnt"),
+        ("Assets (AST-*)", "MATCH (a:Asset) WHERE a.asset_id STARTS WITH 'AST-' RETURN count(a) AS cnt"),
+        ("Demo alerts", "MATCH (a:Alert {origin: 'demo_backbone'}) RETURN count(a) AS cnt"),
+        ("INVOLVES edges", "MATCH (a:Alert {origin: 'demo_backbone'})-[:INVOLVES]->(:User) RETURN count(a) AS cnt"),
         ("DETECTED_ON edges", "MATCH (a:Alert {origin: 'demo_backbone'})-[:DETECTED_ON]->(:Asset) RETURN count(a) AS cnt"),
-        ("Campaigns",         "MATCH (c:Campaign) WHERE c.campaign_id STARTS WITH 'CAMP-' RETURN count(c) AS cnt"),
-        ("MEMBER_OF edges",   "MATCH (:Alert)-[:MEMBER_OF]->(:Campaign) RETURN count(*) AS cnt"),
+        ("Campaigns", "MATCH (c:Campaign) WHERE c.campaign_id STARTS WITH 'CAMP-' RETURN count(c) AS cnt"),
+        ("MEMBER_OF edges", "MATCH (:Alert)-[:MEMBER_OF]->(:Campaign) RETURN count(*) AS cnt"),
     ]
     for lbl, q in checks:
         r = await client.run_query(q)

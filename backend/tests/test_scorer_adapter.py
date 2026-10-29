@@ -11,6 +11,9 @@ from copilot_sdk.graph.memory_store import InMemoryGraphStore
 from copilot_sdk.scoring.scorer import CompoundingScorer
 
 
+pytestmark = pytest.mark.no_data_guard
+
+
 @pytest.fixture(autouse=True)
 def _test_profile_for_in_memory_scorers(monkeypatch):
     original = CompoundingScorer.from_preset

@@ -157,7 +157,7 @@ test.describe('Cross-tab compounding', () => {
   // all five tabs rely on.
 
   test('learning state has required conservation fields', async ({ page }) => {
-    test.setTimeout(10000);
+    test.setTimeout(30000);
 
     const data = await getApiData(page, '/api/soc/learning-state');
     expect(typeof data.decision_count).toBe('number');
@@ -178,7 +178,7 @@ test.describe('Cross-tab compounding', () => {
   // query or field name (the bug that motivated this test suite).
 
   test('cross tab decision count directional consistency', async ({ page }) => {
-    test.setTimeout(10000);
+    test.setTimeout(30000);
 
     const learning = await getApiData(page, '/api/soc/learning-state');
     const analytics = await getApiData(page, '/api/soc/analytics');

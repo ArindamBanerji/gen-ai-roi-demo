@@ -39,7 +39,7 @@ test.beforeEach(async ({ page }) => {
   await resetDemoAlerts(page);
   await page.goto(FRONTEND);
   await navigateToTab(page, 1);
-  await page.locator('button').filter({ hasText: /ALERT-|SIM-/i }).first()
+  await page.locator('button').filter({ hasText: /ALERT-|SIM-|PL-SOC-/i }).first()
     .waitFor({ state: 'visible', timeout: 30000 });
 });
 
@@ -55,7 +55,8 @@ test.describe('Learning stress tests', () => {
   //   • No fatal console errors (React duplicate-key warnings are filtered).
 
   test('mixed correct incorrect does not collapse', async ({ page }) => {
-    test.slow(); // triples default timeout
+    // Learning recomputation is O(n*k) after batch decisions; 180s for 10 rapid
+    test.setTimeout(180_000);
 
     const errors = collectConsoleErrors(page);
 
@@ -84,7 +85,8 @@ test.describe('Learning stress tests', () => {
   //       see deep_flows.spec.ts test 1 for full explanation of the exact-match rule.)
 
   test('rapid fire 10 decisions no race condition', async ({ page }) => {
-    test.slow();
+    // Learning recomputation is O(n*k) after batch decisions; 180s for 10 rapid
+    test.setTimeout(180_000);
 
     const before = await getApiData(page, '/api/soc/learning-state');
     const beforeDC: number = before.decision_count ?? 0;
@@ -137,7 +139,7 @@ test.describe('Learning stress tests', () => {
     await resetDemoAlerts(page);
     await page.goto(FRONTEND);
     await navigateToTab(page, 1);
-    await page.locator('button').filter({ hasText: /ALERT-|SIM-/i }).first()
+    await page.locator('button').filter({ hasText: /ALERT-|SIM-|PL-SOC-/i }).first()
       .waitFor({ state: 'visible', timeout: 30000 });
     const made2 = await makeNDecisions(page, 3);
     expect(made2).toBeGreaterThanOrEqual(1);
@@ -171,7 +173,7 @@ test.describe('Learning stress tests', () => {
     // Visit each tab and verify no crash
     await page.goto(FRONTEND);
     const tabChecks: Array<{ tab: number; wait: string | RegExp }> = [
-      { tab: 1, wait: /ALERT-|SIM-/i },
+      { tab: 1, wait: /ALERT-|SIM-|PL-SOC-/i },
       { tab: 2, wait: /Institutional Knowledge Score/i },
       { tab: 3, wait: /Analytics|Campaign|Threat|Decision/i },
       { tab: 4, wait: /ROI|return on investment/i },
@@ -235,9 +237,9 @@ test.describe('Learning stress tests', () => {
     const errors = collectConsoleErrors(page);
 
     // Queue must have at least one card (reset in beforeEach restored them all)
-    const alertCard = page.locator('button').filter({ hasText: /ALERT-|SIM-/i }).first();
+    const alertCard = page.locator('button').filter({ hasText: /ALERT-|SIM-|PL-SOC-/i }).first();
     await alertCard.waitFor({ state: 'visible', timeout: 20000 });
-    const count = await page.locator('button').filter({ hasText: /ALERT-|SIM-/i }).count();
+    const count = await page.locator('button').filter({ hasText: /ALERT-|SIM-|PL-SOC-/i }).count();
     expect(count).toBeGreaterThanOrEqual(1);
 
     // No console errors on idle Tab 1
@@ -265,7 +267,7 @@ test.describe('Learning stress tests', () => {
     const errors = collectConsoleErrors(page);
 
     // Click the first alert — this starts the async analysis fetch.
-    const alertCard = page.locator('button').filter({ hasText: /ALERT-|SIM-/i }).first();
+    const alertCard = page.locator('button').filter({ hasText: /ALERT-|SIM-|PL-SOC-/i }).first();
     await alertCard.waitFor({ state: 'visible', timeout: 20000 });
     await alertCard.click();
 

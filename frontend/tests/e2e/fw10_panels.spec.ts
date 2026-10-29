@@ -31,7 +31,7 @@ test('tab3_learning_state_hidden_continuous', async ({ page }) => {
   await page.getByRole('button', { name: /Alert Triage/i }).click()
   await page.waitForTimeout(2000)
 
-  const alertCard = page.locator('button').filter({ hasText: /ALERT-|SIM-/ }).first()
+  const alertCard = page.locator('button').filter({ hasText: /ALERT-|SIM-|PL-SOC-/ }).first()
   await alertCard.click()
   await page.waitForTimeout(1500)
 

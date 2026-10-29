@@ -8,16 +8,18 @@ singleton; no AGE queries needed.
 Reference: docs/soc_copilot_design_v1.md Sec.14.
 """
 
+import logging
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Query
 from typing import Any, Dict, List
 
 import numpy as np
+from fastapi import APIRouter, HTTPException, Query
 from gae.convergence import get_convergence_metrics
 
 from app.services.gae_state import get_learning_state
 
 router = APIRouter()
+log = logging.getLogger(__name__)
 
 _NO_DATA_MSG = (
     "Process alerts and provide feedback to see learning curves"
@@ -38,7 +40,8 @@ def _wu_timestamp(wu) -> str:
     """Convert a WeightUpdate unix timestamp to ISO-8601 string."""
     try:
         return datetime.fromtimestamp(wu.timestamp, tz=timezone.utc).isoformat()
-    except Exception:
+    except (TypeError, ValueError, OverflowError, OSError) as exc:
+        log.warning("Invalid WeightUpdate timestamp %r: %s", wu.timestamp, exc)
         return str(wu.timestamp)
 
 
@@ -104,7 +107,8 @@ async def gae_history(limit: int = Query(50, ge=1, le=200)) -> Dict[str, Any]:
                 ts = datetime.fromtimestamp(
                     wu.timestamp, tz=timezone.utc
                 ).isoformat()
-            except Exception:
+            except (TypeError, ValueError, OverflowError, OSError) as exc:
+                log.warning("Invalid WeightUpdate timestamp %r: %s", wu.timestamp, exc)
                 ts = str(wu.timestamp)
 
             history_out.append({
@@ -184,7 +188,9 @@ async def gae_convergence() -> Dict[str, Any]:
 # ============================================================================
 
 @router.get("/gae/confidence-trajectory")
-async def gae_confidence_trajectory() -> Dict[str, Any]:
+async def gae_confidence_trajectory(
+    limit: int = Query(default=500, ge=1),
+) -> Dict[str, Any]:
     """
     Return per-action confidence over time, sourced from learning_state history.
 
@@ -195,13 +201,26 @@ async def gae_confidence_trajectory() -> Dict[str, Any]:
 
     Empty state: returns trajectories={} when no outcomes have been submitted.
     """
+    limit = limit if isinstance(limit, int) else 500
+    original_limit = limit
+    effective = min(limit, 1000)
+    clamped = original_limit > 1000
+
     try:
         state = get_learning_state()
         if not state.history:
-            return {"trajectories": {}, "message": _NO_DATA_MSG}
+            return {
+                "trajectories": {},
+                "total_available": 0,
+                "returned_count": 0,
+                "clamped": clamped,
+                "message": _NO_DATA_MSG,
+            }
 
+        total_available = len(state.history)
+        recent = state.history[-effective:] if effective > 0 else []
         trajectories: Dict[str, List[Dict[str, Any]]] = {}
-        for wu in state.history:
+        for wu in recent:
             action = wu.action_name
             if action not in trajectories:
                 trajectories[action] = []
@@ -213,7 +232,14 @@ async def gae_confidence_trajectory() -> Dict[str, Any]:
                 "timestamp":       _wu_timestamp(wu),
             })
 
-        return {"trajectories": trajectories, "message": None}
+        returned_count = len(recent)
+        return {
+            "trajectories": trajectories,
+            "total_available": total_available,
+            "returned_count": returned_count,
+            "clamped": clamped,
+            "message": None,
+        }
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     except Exception as exc:
@@ -225,7 +251,9 @@ async def gae_confidence_trajectory() -> Dict[str, Any]:
 # ============================================================================
 
 @router.get("/gae/trust-curve")
-async def gae_trust_curve() -> Dict[str, Any]:
+async def gae_trust_curve(
+    limit: int = Query(default=500, ge=1),
+) -> Dict[str, Any]:
     """
     Simulate cumulative trust per action class from learning history.
 
@@ -239,40 +267,62 @@ async def gae_trust_curve() -> Dict[str, Any]:
 
     Grouped by action_name.  Empty state: curves={} when no decisions exist.
     """
+    limit = limit if isinstance(limit, int) else 500
+    original_limit = limit
+    effective = min(limit, 1000)
+    clamped = original_limit > 1000
+
     try:
         state = get_learning_state()
         if not state.history:
             return {
                 "curves":           {},
                 "review_threshold": _REVIEW_THRESHOLD,
+                "total_available":  0,
+                "returned_count":   0,
+                "clamped":          clamped,
                 "message":          _NO_DATA_MSG,
             }
 
+        total_available = len(state.history)
         trust: Dict[str, float] = {}
-        curves: Dict[str, List[Dict[str, Any]]] = {}
+        cumulative_points: List[tuple[str, Dict[str, Any]]] = []
 
         for wu in state.history:
             action = wu.action_name
             if action not in trust:
                 trust[action] = _TRUST_INITIAL
-                curves[action] = []
 
             if wu.outcome == 1:
                 trust[action] = min(1.0, trust[action] + _TRUST_EARN)
             else:
                 trust[action] = max(0.0, trust[action] - _TRUST_LOSE)
 
-            curves[action].append({
-                "decision_number": wu.decision_number,
-                "trust_level":     round(trust[action], 4),
-                "outcome":         wu.outcome,
-                "below_threshold": trust[action] < _REVIEW_THRESHOLD,
-                "timestamp":       _wu_timestamp(wu),
-            })
+            cumulative_points.append(
+                (
+                    action,
+                    {
+                        "decision_number": wu.decision_number,
+                        "trust_level":     round(trust[action], 4),
+                        "outcome":         wu.outcome,
+                        "below_threshold": trust[action] < _REVIEW_THRESHOLD,
+                        "timestamp":       _wu_timestamp(wu),
+                    },
+                )
+            )
 
+        recent_points = cumulative_points[-effective:] if effective > 0 else []
+        curves: Dict[str, List[Dict[str, Any]]] = {}
+        for action, point in recent_points:
+            curves.setdefault(action, []).append(point)
+
+        returned_count = len(recent_points)
         return {
             "curves":           curves,
             "review_threshold": _REVIEW_THRESHOLD,
+            "total_available":  total_available,
+            "returned_count":   returned_count,
+            "clamped":          clamped,
             "message":          None,
         }
     except RuntimeError as exc:
@@ -342,7 +392,9 @@ async def gae_before_after() -> Dict[str, Any]:
 # ============================================================================
 
 @router.get("/gae/weight-evolution")
-async def gae_weight_evolution() -> Dict[str, Any]:
+async def gae_weight_evolution(
+    limit: int = Query(default=500, ge=1),
+) -> Dict[str, Any]:
     """
     Return per-update weight change magnitudes for sparkline display.
 
@@ -351,11 +403,24 @@ async def gae_weight_evolution() -> Dict[str, Any]:
 
     Empty state: returns evolution=[] when no outcomes have been submitted.
     """
+    limit = limit if isinstance(limit, int) else 500
+    original_limit = limit
+    effective = min(limit, 1000)
+    clamped = original_limit > 1000
+
     try:
         state = get_learning_state()
         if not state.history:
-            return {"evolution": [], "message": _NO_DATA_MSG}
+            return {
+                "evolution": [],
+                "total_available": 0,
+                "returned_count": 0,
+                "clamped": clamped,
+                "message": _NO_DATA_MSG,
+            }
 
+        total_available = len(state.history)
+        recent = state.history[-effective:] if effective > 0 else []
         evolution = [
             {
                 "decision_number": wu.decision_number,
@@ -364,10 +429,17 @@ async def gae_weight_evolution() -> Dict[str, Any]:
                 "delta_norm":      round(float(np.linalg.norm(wu.delta_applied)), 6),
                 "W_norm_after":    round(float(np.linalg.norm(wu.W_after, "fro")), 6),
             }
-            for wu in state.history
+            for wu in recent
         ]
 
-        return {"evolution": evolution, "message": None}
+        returned_count = len(recent)
+        return {
+            "evolution": evolution,
+            "total_available": total_available,
+            "returned_count": returned_count,
+            "clamped": clamped,
+            "message": None,
+        }
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     except Exception as exc:

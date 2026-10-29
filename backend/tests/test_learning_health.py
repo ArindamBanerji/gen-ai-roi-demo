@@ -43,6 +43,41 @@ def _make_state(decision_count: int, history: list):
     return state
 
 
+@pytest.mark.asyncio
+@pytest.mark.no_data_guard
+async def test_evaluate_preseed_mode_returns_preseed_status(monkeypatch):
+    """evaluate() returns PRESEED when COPILOT_PRESEED_MODE=true."""
+    monkeypatch.setenv("COPILOT_PRESEED_MODE", "true")
+    result = await LearningHealthMonitor.evaluate()
+    assert result["status"] == "PRESEED"
+    assert result["conservation"]["passed"] is True
+    assert result["conservation"]["status"] == "PRESEED"
+    assert result["health_source"] == "learning_health_preseed_bypass"
+    assert result["status_reason"] == "preseed_mode_active"
+    assert result["learning_enabled"] is True
+    assert result["auto_pause_active"] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.no_data_guard
+async def test_evaluate_preseed_mode_case_insensitive(monkeypatch):
+    """COPILOT_PRESEED_MODE check is case-insensitive."""
+    monkeypatch.setenv("COPILOT_PRESEED_MODE", "True")
+    result = await LearningHealthMonitor.evaluate()
+    assert result["status"] == "PRESEED"
+
+
+@pytest.mark.asyncio
+@pytest.mark.no_data_guard
+async def test_evaluate_without_preseed_mode_not_preseed(monkeypatch):
+    """Without COPILOT_PRESEED_MODE, evaluate() does NOT return PRESEED."""
+    monkeypatch.delenv("COPILOT_PRESEED_MODE", raising=False)
+    state = _make_state(decision_count=0, history=[])
+    with patch("app.services.learning_health.get_learning_state", return_value=state):
+        result = await LearningHealthMonitor.evaluate()
+    assert result["status"] != "PRESEED"
+
+
 # ---------------------------------------------------------------------------
 # Test 1 — empty history returns zeros
 # ---------------------------------------------------------------------------

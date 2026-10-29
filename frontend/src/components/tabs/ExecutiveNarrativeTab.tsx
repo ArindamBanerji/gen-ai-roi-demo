@@ -261,7 +261,7 @@ function NarrativeSectionCards({
                           key={safeKey(category.name, categoryIndex)}
                           className="flex justify-between rounded bg-gray-800 px-2 py-1"
                         >
-                          <span>{category.name.replace(/_/g, ' ')}</span>
+                          <span>{(category.name ?? '').replace(/_/g, ' ')}</span>
                           <span className="font-mono text-gray-200">{formatPct(category.accuracy)}</span>
                         </div>
                       ))}
@@ -272,7 +272,7 @@ function NarrativeSectionCards({
                   <div className="rounded bg-gray-800 px-2 py-1">
                     <span className="text-gray-500">Weakest category: </span>
                     <span className="text-gray-200">
-                      {section.weakest_category.name.replace(/_/g, ' ')}
+                      {(section.weakest_category.name ?? '').replace(/_/g, ' ')}
                     </span>
                   </div>
                 )}
@@ -542,7 +542,7 @@ export default function ExecutiveNarrativeTab() {
           <div className="flex items-center gap-2 mb-2">
             <FileText className="w-5 h-5 text-soc-primary" />
             <h2 className="text-lg font-semibold">Executive Narrative</h2>
-            <span className="text-xs text-gray-500 ml-2">Generated {generated_at.replace('T', ' ').replace('Z', ' UTC')}</span>
+            <span className="text-xs text-gray-500 ml-2">Generated {(generated_at ?? '').replace('T', ' ').replace('Z', ' UTC')}</span>
           </div>
           <p className="text-sm text-gray-300 leading-relaxed">{headline}</p>
         </div>
@@ -830,7 +830,7 @@ export default function ExecutiveNarrativeTab() {
 
             {!governanceLoading && governanceSummary && (
               <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-gray-500">
-                <span>Generated {governanceSummary.generated_at.replace('T', ' ').replace('Z', ' UTC')}</span>
+                <span>Generated {(governanceSummary.generated_at ?? '').replace('T', ' ').replace('Z', ' UTC')}</span>
                 {governanceReport && (
                   <>
                     <span className="text-gray-600">•</span>

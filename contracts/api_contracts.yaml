@@ -6,6 +6,8 @@
 # required_fields: top-level keys that MUST be present in the JSON response
 # method: GET or POST
 # body: request body for POST endpoints (optional)
+# query: concrete query values sent by the validator (optional)
+# query_parameters: documented query parameter constraints (optional)
 #
 # Destructive endpoints excluded: admin/reset, demo/reset-all, demo/reseed,
 # demo/seed, demo/reset — these trigger state resets, not API contracts.
@@ -38,12 +40,12 @@ endpoints:
     required_fields: [status]
     consumed_by: [AlertTriageTab, CompoundingTab]
 
-  - path: /api/triage/decision-factors/SIM-001
+  - path: /api/triage/decision-factors/__FROM_QUEUE__
     method: GET
     required_fields: [alert_id, factors]
     consumed_by: [AlertTriageTab]
 
-  - path: /api/alert/policy-check?alert_id=SIM-001
+  - path: /api/alert/policy-check?alert_id=__FROM_QUEUE__
     method: GET
     required_fields: [alert_id]
     consumed_by: [AlertTriageTab]
@@ -54,7 +56,7 @@ endpoints:
     required_fields: [source, indicators_ingested]
     consumed_by: [AlertTriageTab]
 
-  - path: /api/graph/enrichment/by-alert/SIM-001
+  - path: /api/graph/enrichment/by-alert/__FROM_QUEUE__
     method: GET
     required_fields: [alert_id]
     consumed_by: [AlertTriageTab]
@@ -180,12 +182,18 @@ endpoints:
 
   - path: /api/gae/confidence-trajectory
     method: GET
-    required_fields: [trajectories]
+    timeout_seconds: 30
+    query: {limit: 500}
+    query_parameters: {limit: {type: integer, default: 500, maximum: 1000}}
+    required_fields: [trajectories, total_available, returned_count, clamped]
     consumed_by: [CompoundingTab]
 
   - path: /api/gae/trust-curve
     method: GET
-    required_fields: [curves, review_threshold]
+    timeout_seconds: 30
+    query: {limit: 500}
+    query_parameters: {limit: {type: integer, default: 500, maximum: 1000}}
+    required_fields: [curves, review_threshold, total_available, returned_count, clamped]
     consumed_by: [CompoundingTab]
 
   - path: /api/gae/before-after
@@ -227,7 +235,10 @@ endpoints:
 
   - path: /api/gae/weight-evolution
     method: GET
-    required_fields: [evolution]
+    timeout_seconds: 30
+    query: {limit: 500}
+    query_parameters: {limit: {type: integer, default: 500, maximum: 1000}}
+    required_fields: [evolution, total_available, returned_count, clamped]
     consumed_by: []
 
   # ── Evaluation / Judgment ───────────────────────────────────
@@ -243,7 +254,7 @@ endpoints:
 
   - path: /api/soc/judgment/explain
     method: POST
-    body: {"category": "credential_access", "factors": {"travel_match": 0.7, "asset_criticality": 0.5, "threat_intel_enrichment": 0.3, "pattern_history": 0.6, "time_anomaly": 0.4, "device_trust": 0.8}, "alert_id": "SIM-001"}
+    body: {"category": "credential_access", "factors": {"privileged_identity_context": 0.7, "asset_criticality": 0.5, "threat_intel_enrichment": 0.3, "pattern_history": 0.6, "time_anomaly": 0.4, "device_trust": 0.8}, "alert_id": "__FROM_QUEUE__"}
     required_fields: [action, confidence]
     consumed_by: []
 

@@ -148,7 +148,7 @@ def _load_from_file() -> LearningState:
 
 def _read_checkpoint_metadata() -> dict:
     """Read the metadata field from the checkpoint. Returns {} if absent."""
-    return _fw.read_checkpoint_metadata(_STATE_PATH)
+    return cast(dict[Any, Any], _fw.read_checkpoint_metadata(_STATE_PATH))
 
 
 def _state_payload(state: LearningState, metadata: Optional[dict]) -> dict[str, Any]:
@@ -626,6 +626,13 @@ def _reset_learning_state_inner() -> None:
     _bootstrap_metadata = {}
     _bootstrap_result = None
     init_learning_state()
+    if _learning_store is None:  # pragma: no cover - init_learning_state fails first
+        raise RuntimeError("SOC AGE store was not reinitialized")
+    from app.services.authority_ladder import configure_authority_graph_store
+    from app.services.soc_learning_control import SERVICE as learning_control
+
+    configure_authority_graph_store(_learning_store)
+    learning_control.configure_graph_store(_learning_store)
     print("[GAE] Learning state reset and re-initialized with ProfileScorer")
 
 

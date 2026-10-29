@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 
@@ -110,6 +111,53 @@ def test_graphstore_adapter_forwards_posterior_and_promotion() -> None:
     adapter.save_promotion("soc", "r1", {"status": "held"})
     assert adapter.get_posterior("soc", "p1") == {"W": []}
     assert adapter.get_promotion("soc", "r1") == {"status": "held"}
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "invalid attribute number 3",
+        'relation "soc_graph.\\x1a" does not exist',
+    ],
+)
+def test_graphstore_adapter_retries_transient_age_state_failures(message: str) -> None:
+    backing = RecordingStore()
+    attempts = 0
+
+    def transient_then_save(domain: str, key: str, state: dict[str, Any]) -> None:
+        nonlocal attempts
+        attempts += 1
+        if attempts < 3:
+            raise RuntimeError(message)
+        backing.values[("posterior", domain, key)] = dict(state)
+
+    backing.save_posterior = transient_then_save  # type: ignore[method-assign]
+    adapter = GraphStoreAdapter(object(), backing)
+
+    with patch("app.services.graph_store_adapter.time.sleep") as sleep:
+        adapter.save_posterior("soc", "p1", {"W": []})
+
+    assert attempts == 3
+    assert sleep.call_args_list[0].args == (0.1,)
+    assert sleep.call_args_list[1].args == (0.2,)
+
+
+def test_graphstore_adapter_propagates_persistent_failure_without_retry() -> None:
+    backing = RecordingStore()
+    attempts = 0
+
+    def fail(domain: str, key: str, state: dict[str, Any]) -> None:
+        nonlocal attempts
+        attempts += 1
+        raise RuntimeError("permission denied")
+
+    backing.save_posterior = fail  # type: ignore[method-assign]
+    adapter = GraphStoreAdapter(object(), backing)
+
+    with pytest.raises(RuntimeError, match="permission denied"):
+        adapter.save_posterior("soc", "p1", {"W": []})
+
+    assert attempts == 1
 
 
 def test_graphstore_adapter_requires_real_dependencies() -> None:

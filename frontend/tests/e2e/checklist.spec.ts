@@ -13,8 +13,8 @@ const FRONTEND = `http://127.0.0.1:${FRONTEND_PORT}`;
 const BACKEND  = `http://127.0.0.1:${BACKEND_PORT}`;
 const SCREENSHOTS = path.join(__dirname, 'screenshots');
 
-// Alert card selector — matches both SIM-* and ALERT-* IDs rendered by AlertTriageTab
-const ALERT_CARD_RE = /^(SIM-|ALERT-)/;
+// Alert card selector — matches simulation, standard, and planted SOC IDs rendered by AlertTriageTab
+const ALERT_CARD_RE = /^(SIM-|ALERT-|PL-SOC-)/;
 
 async function screenshot(page: Page, name: string) {
   await page.screenshot({ path: path.join(SCREENSHOTS, `${name}.png`), fullPage: false });
@@ -416,7 +416,7 @@ test.describe('Tab 2 – Institutional Intelligence (extended)', () => {
   });
 
   test('Drift Alerts section present', async ({ page }) => {
-    await expect(page.getByText(/Drift Alerts/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('heading', { name: /Drift Alerts/i })).toBeVisible({ timeout: 10_000 });
   });
 
   test('category dropdown first option is "All categories"', async ({ page }) => {

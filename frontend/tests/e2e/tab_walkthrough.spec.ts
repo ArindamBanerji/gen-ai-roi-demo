@@ -194,7 +194,7 @@ test('tab_walkthrough_all_tabs', async ({ page }) => {
     // ── Alert Triage: count alert cards, log first 3 IDs ────────────────────
     if (tab.id === 'triage') {
       try {
-        const alertCards = page.locator('button').filter({ hasText: /ALERT-|SIM-/i });
+        const alertCards = page.locator('button').filter({ hasText: /ALERT-|SIM-|PL-SOC-/i });
         const alertCount = await alertCards.count();
         console.log(`  Alert cards: ${alertCount}`);
 
@@ -202,7 +202,7 @@ test('tab_walkthrough_all_tabs', async ({ page }) => {
         for (let i = 0; i < Math.min(alertCount, 3); i++) {
           try {
             const text = await alertCards.nth(i).textContent();
-            const match = text?.match(/(ALERT-\S+|SIM-\S+)/i);
+            const match = text?.match(/(ALERT-\S+|SIM-\S+|PL-SOC-\S+)/i);
             if (match) alertIds.push(match[1]);
           } catch { /* skip */ }
         }

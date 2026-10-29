@@ -45,8 +45,8 @@ export const BACKEND  = `http://127.0.0.1:${BACKEND_PORT}`;
 
 type ResetTarget = APIRequestContext | Page;
 
-// Alert card selector — matches both SIM-* and ALERT-* IDs.
-const ALERT_CARD_RE = /ALERT-|SIM-/i;
+// Alert card selector — matches planted, simulation, and standard alert IDs.
+const ALERT_CARD_RE = /ALERT-|SIM-|PL-SOC-/i;
 
 // Tab 1-5 button name patterns (button text from the nav bar).
 const TAB_NAMES: Record<number, RegExp> = {
@@ -172,8 +172,19 @@ export async function makeNDecisions(page: Page, n: number): Promise<number> {
  * Uses page.request so it shares the browser's network context and cookies.
  */
 export async function getApiData(page: Page, endpoint: string): Promise<any> {
-  const response = await page.request.get(`${BACKEND}${endpoint}`);
-  return response.json();
+  try {
+    const response = await page.request.get(`${BACKEND}${endpoint}`);
+    return response.json();
+  } catch (err: unknown) {
+    // Fallback: if browser context is closed, use standalone fetch.
+    // This happens when Playwright tears down the context before the test finishes.
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('has been closed') || msg.includes('Target page')) {
+      const res = await fetch(`${BACKEND}${endpoint}`);
+      return res.json();
+    }
+    throw err;
+  }
 }
 
 /**

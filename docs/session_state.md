@@ -1197,3 +1197,215 @@ Changes:
 Tests: 2,815 passed, 0 failed.
 
 Mypy: clean on all changed SOC source and test files.
+## FIX-PW-SOC (2026-10-18)
+
+- Investigation findings:
+
+  | # | Failure | Root Cause | Fix Type | Touches Concurrency? | Risk |
+  |---|---|---|---|---|---|
+  | 1 | Drift Alerts strict mode | Text locator matched both the heading and status copy. | E2E locator | No | Low |
+  | 2 | `seedAuditTrail()` outcome POST non-OK | The payload matched `OutcomeRequest`; an exact live reproduction returned 500 because AGE raised malformed-relation/invalid-attribute transient errors during state persistence. | Backend serialization and bounded transient recovery | Yes | Medium |
+  | 3 | `ALERT-CI-102` absent on Tab 4 | The outcome click was followed by a fixed 2s sleep while the observed POST took up to 13s, so Tab 4 queried before the authoritative write completed. | E2E response synchronization | No | Low |
+  | 4 | Six 500s during five-tab round trip | `GET /api/soc/authority` retained the old closed GraphStore after learning reset replaced it. | Store lifecycle rebind | Yes | Medium |
+  | 5 | Two 500s during reset flow | `POST /api/alerts/reset` hit transient AGE catalog/protocol failures that the existing lock-only retry classifier did not recognize. | Backend serialization and bounded transient recovery | Yes | Medium |
+  | 6 | Mixed-decision stress timeout | The final `GET /api/soc/learning-state` measured about 0.45s; sequential outcomes and required durable checkpoint writes consumed the 90s budget, while connection failures retried entire UI decisions. | Backend transient recovery plus 180s batch budget | Yes | Medium |
+  | 7 | Rapid-fire stress timeout | Same cumulative outcome-path cost as #6; `getApiData()` was not the slow operation. | Backend transient recovery plus 180s batch budget | Yes | Medium |
+
+- Backend files changed: `backend/app/services/gae_state.py`, `backend/app/services/graph_store_adapter.py`, `backend/tests/test_iks_stability.py`, `backend/tests/test_jm_rl_verification.py`, `backend/tests/test_state_locking.py`
+- E2E files changed: `frontend/tests/e2e/checklist.spec.ts`, `frontend/tests/e2e/deep_flows.spec.ts`, `frontend/tests/e2e/learning_stress.spec.ts`
+- 500 root cause: `/api/alert/outcome` and `/api/alerts/reset` exposed transient AGE malformed-relation, invalid-attribute, and dropped-connection failures; `/api/soc/authority` retained a closed store after reset.
+- Concurrency fix design: one adapter-local `threading.RLock` serializes synchronous state/Decision operations; known transient AGE failures receive at most 3 total attempts with 100ms then 200ms backoff, persistent failures are logged and re-raised, and reset rebinds authority/learning-control consumers after the replacement store is initialized. The lock surrounds one synchronous store call, has no await or callback edge, and therefore introduces no lock-order cycle.
+- pytest result: 2820 passed / 0 failed (`python -m pytest tests/ -q --timeout=120`)
+- mypy result: CLEAN (all changed Python files)
+- tsc result: PASS
+- Layer 3 grep gate: PASS (no bare `except:`, no new sleep call, no `.only`; spec count 64 before/after; no frozen-math constants changed)
+- Targeted SOC Playwright result: 7 passed / 0 failed in 3.5m
+- Repository post-session checks: `query_graph4_final.py` PASS; `check_drift.py` reports 65 pre-existing `MERGE` findings in untouched files; `validate_contracts.py` reports 65/69 with 4 pre-existing fixture/shape/timeout failures outside this diff.
+- Sol review: PENDING (mandatory — do not skip)
+- Sol review result: APPROVED after correction and re-review; initial P1 persistence and P2 response-status findings were fixed.
+
+## FIX-VALIDATE-CONTRACTS (2026-10-18)
+- Design pre-check: File Architecture Summary + endpoint signatures documented
+- Fix 1: Path placeholder resolution — SIM-001 removed, __FROM_QUEUE__ in paths
+- Fix 2: Judgment canonical payload + legacy alias acceptance at route level
+- Fix 3: GAE endpoints bounded — limit=500 default, 1000 max, envelope response
+- Fix 4: Validator upgraded — httpx, split timeouts, GET retry, diagnostics
+- Files changed: contracts/api_contracts.yaml, scripts/validate_contracts.py, backend/app/routers/gae.py, backend/app/routers/judgment.py, backend/tests/test_gae_persistence.py, backend/tests/test_judg1_soc.py, backend/tests/test_gae_output_limits.py, backend/tests/test_validate_contracts.py, docs/session_state.md
+- New tests: 28 cases (test_default_limit, test_explicit_limit, test_max_limit_clamped, test_newest_retained, test_grouping_preserved, test_empty_state, test_response_envelope, each across 3 GAE endpoints; test_judgment_http_accepts_canonical_factor_payload, test_judgment_http_accepts_legacy_travel_match_alias, test_judgment_http_rejects_unknown_factor_name, test_judgment_http_reports_missing_required_factors; test_resolved_path_uses_alert_id_from_queue, test_placeholder_in_path_is_resolved_before_request, test_missing_queue_data_reports_error_without_fallback)
+- pytest result: 2848 passed / 0 failed
+- mypy result: CLEAN
+- Smoke tests: FIX-1 PASS, FIX-1b PASS, FIX-2a PASS, FIX-2b PASS, FIX-3a PASS, FIX-3b PASS, FIX-3c PASS
+- Response size budget: confidence-trajectory 64.6 KB, weight-evolution 51.9 KB, trust-curve 61.8 KB (all PASS under 128 KB)
+- validate_contracts 3-run gate: RUN1 69/69 (21.11s), RUN2 69/69 (20.46s), RUN3 69/69 (17.64s)
+- Route count: before=224, after=224
+- Layer 3 grep gate: PASS
+- Sol review: PENDING (mandatory — do not skip)
+
+## SOL-REVIEW-P5 (2026-10-18)
+- Reviewed: 6 files (api_contracts.yaml, validate_contracts.py, gae.py, judgment.py, test_gae_output_limits.py, test_validate_contracts.py)
+- Checklist: 6/6 evaluated
+- Findings: 4 P1, 3 P2, 0 P3
+- Verdict: FAIL
+- Notes: GAE no-argument compatibility, trust-curve semantics, envelope/contract metadata, and entirely untested validator timeout/retry paths are blocking; broad catches, limit-edge coverage, and declared-scope mismatch are non-blocking findings.
+
+## FIX-SOL-P5-A (2026-10-18)
+- Design pre-check: PASS (blast radius: 1 direct Python caller found, scope expanded to 4 implementation/test files plus session state)
+- Fixed: P1-1 (Query resolution x3), P1-2 (trust calculation before result slicing), P1-3 (envelope fields x3 plus contract documentation), P2-5 (timestamp exception narrowing and warning logs), P2-6 (+16 edge/regression cases)
+- Blast radius files added: backend/tests/test_gae_persistence.py (removed the explicit limit=500 workaround so the no-argument direct call is covered)
+- Additional issues found and fixed: a second timestamp conversion in gae_history used the same broad catch; it now catches the specific conversion errors and logs a warning
+- Tests: 2,869 passed, 0 failed (21 above the 2,848 baseline; 16 cases added by this fix)
+- mypy: 0 errors on 3 changed Python files
+- Post-checks: 12/12 PASS
+
+## SOL-REVIEW-FIX-P5-A (2026-10-18)
+- Reviewed: 4 files (gae.py, api_contracts.yaml, test_gae_output_limits.py, test_gae_persistence.py)
+- Checklist: 6/6 evaluated
+- Findings: 0 P1, 1 P2, 2 P3
+- Verdict: APPROVED
+- Notes: Core GAE fixes are correct; the dirty worktree prevents strict four-file diff isolation, and tests lack explicit limit=1000 and obsolete-envelope-key absence assertions.
+
+## FIX-SOL-P5-B (2026-10-18)
+- Design pre-check: PASS (blast radius: no caller depends on the silent scorer-initialization fallback; task changes limited to the 3 authorized files plus session state)
+- D-5 comprehension: httpx uses a 5s connect timeout and per-contract read timeout; GET retries once only after a 200 body-read timeout; non-GET requests have one attempt; diagnostics retain phase/status/duration/content length/received bytes/error plus the contract path; `timeout_seconds` overrides the default read timeout
+- Fixed: P1-4 (+5 httpx/timeout/retry tests), P2-5 (both judgment scorer-init catches now log the original exception), P2-6 (canonical and legacy judgment success tests assert the response envelope, action, and confidence)
+- Tests: 2,869 passed, 0 failed (baseline 2,848 + 5 new tests from this prompt; concurrent Prompt A tests are included in the total)
+- mypy: 0 errors on 3 changed files
+- Post-checks: 10/10 PASS
+- Latitude used: fixed the second identical silent scorer-initialization catch in the GET handler and strengthened both judgment HTTP success tests
+- Sol review: PENDING (mandatory Layer 2 review)
+
+## SOL-REVIEW-FIX-P5-B (2026-10-18)
+- Reviewed: 3 changed files (judgment.py, test_validate_contracts.py, test_judg1_soc.py) + 1 reference (validate_contracts.py)
+- Checklist: 6/6 evaluated
+- Findings: 0 P1, 3 P2, 1 P3
+- Verdict: APPROVED
+- Notes: Timeout/retry mocks exercise the actual httpx paths and scorer-init exceptions are logged; follow-ups remain for the incorrect hard-coded action set, scorer-init HTTP error coverage, silent malformed stored-factor fallback, and validator edge cases.
+
+## PRESEED-CONSERVATION-TRACER (2026-10-20)
+
+- Built `scripts/trace_preseed_conservation.py`, a standalone, read-only tracer that sets the SOC preseed environment before app imports, uses the production AGE client and conservation functions, catches probe failures, and writes `docs/preseed_conservation_trace.md`.
+- Ran probes 1-7 against the live AGE stack. AGE connected successfully; the tracer read the existing SOC learning posterior without invoking the write-capable startup bootstrap. It suppressed only `evaluate()`'s L5 diagnostic snapshot write inside the tracer process.
+- Mypy passed: `python -m mypy scripts/trace_preseed_conservation.py --config-file pyproject.toml`.
+- Full findings: `docs/preseed_conservation_trace.md`.
+- Key finding: preseed flags do not affect `LearningHealthMonitor.evaluate()`. With 1,201 state decisions but only one verified decision/category, it returned outer `RED` and nested `RED` (`alpha=0.1667`, `q=1.0`, `V=1.0`, signal `0.166667`, `theta_min=141.18`). `_soc_effective_conservation_status()` resolved this to `RED / nested_conservation_red`, setting `_conservation_block=True`. `evaluate()` has no `PRESEED` return path; manually passing `{"status": "PRESEED"}` produces the existing `GREEN / conservation_preseed_allowed` bypass.
+
+## FIX-PRESEED-CONSERVATION (2026-10-20)
+
+- Two fixes applied.
+- A) `backend/app/services/learning_health.py`: `LearningHealthMonitor.evaluate()` now returns `PRESEED` as its first executable path when `COPILOT_PRESEED_MODE=true`, before learning-state or graph access. The response includes the base health fields plus the union of optional gate/calibration/final-result fields, with inactive zero-valued gates and `l5_persist="skipped"`.
+- Pre-checks: the prior trace matched all four expected failure facts. `evaluate()` had two existing early returns plus its final computed result, and needed a new `os` import. Fourteen direct call sites across eleven backend files were reviewed; none raises or performs unsafe indexing for `PRESEED`. `health_source` and `status_reason` consumers only copy, display, or apply existing conservative normalization, with no collision for `learning_health_preseed_bypass` or `preseed_mode_active`. No prior backend reader of `COPILOT_PRESEED_MODE` existed.
+- B) `backend/app/routers/triage.py`: changed the conservation-block default-mask condition from `is None` to `in (None, "not_attempted")`; the rest of the block is unchanged. The initial value is `not_attempted`. All other setters were reviewed: `routing_action_not_scorable`, `unclassified_alert_type`, `soc_learning_disabled`, `scorer_not_attached`, `conservation_check_failed`, `persist_soc_centroid_returned_false`, successful `None`, and dynamic guarded-update reasons. The tuple condition preserves every legitimate earlier reason.
+- Post-checks: line-by-line review confirmed the preseed check is first, the env lookup is missing-safe and case-insensitive, types and conservation subfields are correct, the union-compatible return shape is complete, and the original method body is unchanged. The triage diff is exactly the requested condition change. Scoped `git diff --check` passed.
+- Tracer re-run against live AGE: `evaluate() -> PRESEED`, effective status `GREEN / conservation_preseed_allowed`, `_conservation_block=False`.
+- Tests: added three PRESEED bypass tests to `backend/tests/test_learning_health.py`; targeted result was 3 passed. Both changed production files passed mypy. The exact full SOC command was attempted but the session fixture aborted before executing tests because the current AGE graph has 0 persistent `zero_day_synthetic` decisions with `correct IS NOT NULL`, below the mandatory 3,000-row threshold. No graph seeding or production-data mutation was performed.
+
+## FIX-REFREEZE-503 (2026-10-20)
+
+- Fixed the PRESEED `components` dictionary in `backend/app/services/learning_health.py`. Added `verified_decisions: 0` and the remaining normal component-schema keys: `alpha_source`, `categories_total`, `categories_with_data`, `correct_verified_decisions`, `override_rate`, and component-level `complacency_advisory`.
+- Root cause: `SOCLearningControlService.demo_refreeze()` requires `conservation_state.components.verified_decisions` to be a nonnegative integer. The PRESEED bypass omitted it, producing `None`, then `ValueError`, which the route converted to HTTP 503.
+- Consumer review: current health-component consumers read `alpha`, `q`, `V`, `n`, `categories_with_data`, or `verified_decisions`. `demo_refreeze()` is the only consumer that requires `verified_decisions` rather than using a default. Initial `freeze()` does not inspect that key.
+- Endpoint trace after the fix: PRESEED health supplies integer count 0; `demo_refreeze()` accepts it and stores `demo_verified_count=0`; later comparisons count all post-freeze verified decisions through `max(0, verified_count - 0)`.
+- `compute_iks_v2()` has no PRESEED special case and performs read-only AGE queries. A live check at the current 31-decision preseed state returned finite `iks_v2=54.5` with the required key.
+- Verification: mypy passed for `learning_health.py`; direct PRESEED component schema/value assertions passed; `git diff --check` passed; matching PRESEED tests passed (3 passed). The exact full SOC suite was attempted but its session fixture again aborted before test execution because AGE has 0 persistent `zero_day_synthetic` decisions with `correct IS NOT NULL`, below the required 3,000. No graph seeding was performed.
+
+## FIX-SOC-08-VERIFIED (2026-10-20)
+
+- Fixed the PRESEED bypass in `backend/app/services/learning_health.py`: it now awaits the existing read-only `_query_soc_verified_conservation_stats(graph_service)` helper and returns its real `verified_decisions` and `correct_verified_decisions` counts instead of hardcoded zeroes.
+- The graph query is contained inside the PRESEED branch. Both counts default to 0, and query failures are caught so the bypass still returns a safe PRESEED health dictionary. No other PRESEED values or non-PRESEED logic changed.
+- Root cause: the hardcoded `verified_decisions=0` made the frozen comparison calculate `decisions_since_freeze=max(0, 0-demo_verified_count)`, so the soc-08 `decisions > 0` gate could never pass.
+- Runtime verification: a controlled success probe returned 7 verified / 5 correct counts; a simulated AGE failure returned 0 / 0 without raising. A read-only live AGE probe returned `status=PRESEED`, `verified_decisions=121`, and `correct_verified_decisions=121`.
+- Validation: mypy passed for `learning_health.py`; the existing PRESEED health tests passed (3 passed, 11 deselected); scoped `git diff --check` passed. The full backend suite and the other PRESEED-matching files were attempted, but the repository-wide session guard exited before test execution because the live graph has 0 persistent `zero_day_synthetic` decisions with `correct IS NOT NULL` (3,000 required). No graph seeding was performed.
+
+## VERDICT-P1-SOC-COMPAT (2026-10-20)
+
+- Implemented SOC verified-row compatibility in `backend/app/services/graph_store_adapter.py`. The explicit `get_verified_decisions()` method forwards domain, offset, limit, chronological ordering, and verification cursor through the existing serialized read path.
+- For SOC only, consistent legacy `correct`/`incorrect` outcomes are replaced in returned copies with each row's existing canonical `status`. Canonical or absent outcomes pass through; unknown or inconsistent legacy rows are excluded with warnings. Stored AGE data, triage writes, SDK scorer predicates, receipts, and non-SOC projections are unchanged.
+- Added 11 focused tests in `backend/tests/test_soc_verified_projection.py`, covering both legacy outcomes, canonical passthrough, both correctness inconsistencies, unknown outcomes, empty results, non-SOC passthrough, source immutability, full argument forwarding, exception propagation, and state-capture integration. Marked the two existing pure in-memory scorer/capture suites with the repository's `no_data_guard` marker so their required runs remain independent of live zero-day data.
+- Tests passed: projection 11/11, scorer adapter 18/18, J6 state capture 4/4. Mypy passed for `graph_store_adapter.py`; scoped `git diff --check` passed.
+- Read-only live validation: 211 raw SOC rows had legacy outcomes; the adapter returned 211 rows, all 211 passed the SDK predicate, and a second raw read was byte-for-byte equivalent as Python data, confirming no stored mutation.
+- The full SOC suite was attempted but the repository-wide session guard exited before tests ran because the live graph has 0 persistent `zero_day_synthetic` decisions with `correct IS NOT NULL` (3,000 required). No graph seeding was performed.
+- After the next normal SOC restart, existing startup capture will consume all 211 eligible rows and write conservation/fingerprint summaries plus the Domain anchor. Expected verdict then remains NOT READY only on `all_receipts` until deterministic DataOps seed receipts ship; this change introduces no receipts.
+
+## FIX-CX6-CROSS-TAB-CONSISTENCY (2026-10-20)
+
+- Updated only the `FIX 2.1` verified-decision block in `backend/app/routers/soc.py::_tab2_content()`.
+- Tab 2 now uses the same live AGE predicate as Tab 1: `soc_decision_where()` plus `d.outcome IS NOT NULL`. This keeps `verified_decisions` consistent across tabs.
+- Fallback order remains live graph, `GraphSnapshot`, then the existing `total_decisions` initialization. A failed live read alone does not mark the field degraded; degradation is recorded only if the snapshot fallback also fails.
+- Confirmed `graph_client` and `soc_decision_where` were already imported together at module level; no import was added. `_tab1_content()` and every other function are unchanged.
+- Mypy: `Success: no issues found in 1 source file` for `backend/app/routers/soc.py`.
+- Targeted backend test: `tests/test_cross_tab_consistency.py` — **14 passed**, including `test_tab1_le_tab2`.
+- Full backend suite: **2,879 passed, 4 skipped, 0 failures** in 656.32 seconds (10m56s).
+- Scoped `git diff --check` passed.
+
+## Fix 7: Alert card regex — PL-SOC-* format (COMPLETE)
+
+- Root cause: `ALERT_CARD_RE` in `frontend/tests/e2e/helpers.ts` only matched `/ALERT-|SIM-/i`, while the live backend queue currently returns only `PL-SOC-*` alert IDs.
+- Fix: updated the shared regex to `/ALERT-|SIM-|PL-SOC-/i` and updated 19 corresponding inline/constants/extraction regexes across nine specs.
+- Files changed: `frontend/tests/e2e/helpers.ts`, `checklist.spec.ts`, `deep_flows.spec.ts`, `decision_flow.spec.ts`, `factor_contribution.spec.ts`, `fw10_panels.spec.ts`, `learning_stress.spec.ts`, `p77-migration.spec.ts`, `tab_walkthrough.spec.ts`, and `triage_write_path.spec.ts`.
+- Typecheck: PASS (`npx tsc --noEmit` from `frontend/tests/e2e`).
+- Blast radius: SOC E2E only. Zero backend, zero production frontend, zero other copilot changes.
+- Diagnostic: `/api/alerts/queue` returned 50 alerts: `PL-SOC`=50, `ALERT`=0, `SIM`=0. Samples included `PL-SOC-5-KILLCHAIN-B`, `PL-SOC-5-KILLCHAIN-A`, and `PL-SOC-4-FROZEN-TWIN-001-VERIFIED-LM-POST-60`.
+- Date: 2026-10-22.
+
+## Fix 7b: enterprise-cut.spec.ts regex (COMPLETE)
+
+- Missed by Fix 7 because the spec is in the separate `copilot-sdk/e2e/demo-cuts/` tree.
+- 1 file, 1 line: `/^(SIM-|ALERT-)/` → `/^(SIM-|ALERT-|PL-SOC-)/`.
+- Actual file: `copilot-sdk/e2e/demo-cuts/enterprise-cut.spec.ts`.
+- Typecheck: PASS (`npx tsc --noEmit` from `copilot-sdk/e2e`).
+- Date: 2026-10-22.
+## SOC ShadowDecision + AttackPattern graph diagnostic (2026-10-22)
+- Scope: read-only production-code diagnostic; no implementation files changed and no git commands run.
+- Live graph census: 0 ShadowDecision, 0 AlertCategory, 0 AnalystArchetype, 0 AttackPattern, 0 CLASSIFIED_AS, 635 Alert; 540 alerts have origin `zero_day_synthetic`, 95 have origin `soc_demo_fixture`, and no live Alert has `attack_pattern_id`.
+- Root Cause A: `backend/ingest_shadow_decisions.py` still matches the analyst-benchmarking contract (`source=v_shadow_synthetic_v3`, all required decision properties, AlertCategory/AnalystArchetype nodes, and IN_CATEGORY/BY_ANALYST edges). The 1,500-row source JSON exists. The data was not restored after a graph wipe/rebuild; `/api/alerts/reset` does not delete ShadowDecision nodes. Manual recovery from `backend/`: `python ingest_shadow_decisions.py ..\..\cross-graph-experiments\experiments\v_shadow_synthetic_v3\v_shadow_synthetic_results.json`.
+- Root Cause B: canonical `app.graph_schema.seed_graph()` already stores `AttackPattern.tactic`, retains `Alert.attack_pattern_id`, and creates `Alert-[:CLASSIFIED_AS]->AttackPattern`. The committed fixture contains 9 attack patterns (all with tactics) and 645 alerts (543 training + 102 demo), all with attack-pattern references. The live zero counts therefore indicate an incomplete/noncanonical rebuild, not a missing edge implementation.
+- Likely wipe path: `support/setup/rebuild_neo4j_v6.py` executes `MATCH (n) DETACH DELETE n` before calling two script paths that no longer exist (`backend/seed_graph.py` and `backend/app/scripts/seed_realistic.py`). A run can erase both datasets and stop before restoration. Do not use this helper as-is.
+- AttackPattern recovery: run the guarded canonical seed in a maintenance window from `backend/`: `python -m app.graph_schema seed --clean --graph=soc_graph --allow-production-seed`, then rerun the shadow-decision ingest above. This is an operator data repair and was deliberately not executed during diagnosis.
+- Demo reset: `POST /api/alerts/reset` only resets `zero_day_demo` Alert statuses and Decision-backed session state (`reset_except(["learning_state"])`); no exclusion change is required.
+- Root Cause C alert count: live queue contains 9 rows and 9 unique pending PL-SOC alerts. The canonical fixture's 102 pending demo alerts are absent, so the observed off-by-one/count discrepancy is graph-data state, not queue-row duplication. The route also has a `LIMIT 50`, which is a separate display cap.
+- Verification: `python -m pytest tests/ -q --timeout=120 -k "seed or graph_schema or attack"` -> 185 passed, 2698 deselected. No sqlite3 import, raw AGEClient construction, silent exception swallowing, fake production data, or code change was introduced; mypy was not applicable.
+- Failure inventory note: the prompt enumerates 7 graph-driven assertions (5 analyst-benchmarking + 2 tactic-breakdown), although its heading says 6 new failures. Together with the stated 8 total, one remaining failure is not identified in the supplied list.
+=== E2E-TAB5-FIX (Codex) ===
+Date: 2026-10-22
+Changed files:
+  - frontend/tests/e2e/feature02_governance.spec.ts
+  - frontend/tests/e2e/deep_flows.spec.ts
+Fixes:
+  - goToExecutiveNarrative() now waits for the "What Changed" heading (30s) instead of an arbitrary 2s delay
+  - Governance button/disclaimer timeouts increased from 10s to 15s
+  - deep_flows Tab 5 heading timeout increased from 15s to 30s
+Root cause: /api/soc/executive-narrative endpoint latency > 2s causes loading state
+Tests affected: 5 (4 governance + 1 deep_flows)
+Design validation: ExecutiveNarrativeTab fetches `/api/soc/executive-narrative`, displays `Loading executive narrative…` while pending, and renders all three narrative headings plus governance controls/disclaimer only in the success state.
+Self-check: PASSED
+TSC gate: PASSED
+=== E2E-COMPOUNDING-FIX (Codex) ===
+Date: 2026-10-22
+Changed files:
+  - frontend/tests/e2e/helpers.ts (getApiData fallback)
+  - frontend/tests/e2e/compounding.spec.ts (timeout increase)
+Fixes:
+  - getApiData() now catches browser-teardown errors and falls back to standalone fetch
+  - Test 7 timeout increased from 10s to 30s
+  - Test 8 timeout increased from 10s to 30s for consistency
+  - Non-teardown errors continue to propagate unchanged
+Root cause: page.request.get() races with Playwright context teardown
+Tests affected: 1 (compounding test 7)
+Caller audit: all getApiData callers retain the same Promise<any> JSON contract; none depends on the Playwright teardown exception type
+Targeted regression: PASSED (1/1 in 5.1s)
+Self-check: PASSED
+TSC gate: PASSED
+=== TAB5-CRASH-FIX (Codex) ===
+Date: 2026-10-22
+Changed files:
+  - frontend/src/components/tabs/ExecutiveNarrativeTab.tsx
+Fixes:
+  - Added `(value ?? '')` null guards to 4 vulnerable `.replace()` calls (lines ~264, ~275, ~545, ~833)
+  - 3 safe `.replace()` calls left unchanged (lines ~291, ~341, ~809)
+Root cause: `.replace()` called on undefined values — TypeScript interfaces don't enforce runtime types
+Error: "Cannot read properties of undefined (reading 'replace')"
+Impact: Fixes 5 E2E test failures (4 governance + 1 deep_flows) caused by ErrorBoundary crash
+Post-check: exactly 7 `.replace()` call sites remain; no interfaces, exports, signatures, state, effects, API calls, imports, or other components changed
+Targeted E2E regression: PASSED (5/5 in 18.2s)
+Self-check: PASSED
+TSC gate: PASSED

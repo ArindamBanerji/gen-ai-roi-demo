@@ -120,7 +120,7 @@ test.describe('P77 migration UI continuity', () => {
   test('Alert Triage tab loads after migration', async ({ page }) => {
     await gotoTab(page, TABS[2]);
     await expectTabVisible(page, TABS[2]);
-    await expect(page.locator('button').filter({ hasText: /ALERT-|SIM-/i }).first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('button').filter({ hasText: /ALERT-|SIM-|PL-SOC-/i }).first()).toBeVisible({ timeout: 20_000 });
   });
 
   test('Compounding tab loads after migration', async ({ page }) => {

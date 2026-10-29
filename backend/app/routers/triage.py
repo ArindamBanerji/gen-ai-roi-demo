@@ -2518,7 +2518,7 @@ async def report_decision_outcome(
                         )
                     if _conservation_block:
                         logger.warning("[B5] Conservation check failed -- learning blocked (fail-closed)")
-                        if l5_persistence_status["l5_persistence_skipped_reason"] is None:
+                        if l5_persistence_status["l5_persistence_skipped_reason"] in (None, "not_attempted"):
                             l5_persistence_status["l5_persistence_skipped_reason"] = (
                                 "conservation_check_failed"
                             )

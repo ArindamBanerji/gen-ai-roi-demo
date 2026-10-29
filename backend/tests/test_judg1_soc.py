@@ -200,3 +200,84 @@ def test_judgment_all_action_scores_present():
             f"action {action!r} missing from action_scores. "
             f"Present: {list(response['action_scores'].keys())}"
         )
+
+
+def _post_judgment(factors: dict[str, float], *, flat: bool = False):
+    """Exercise the judgment router over HTTP with a real ProfileScorer."""
+    from unittest.mock import patch
+
+    import numpy as np
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from gae import ProfileScorer
+
+    from app.domains.soc.config import SOC_PROFILE_CENTROIDS
+    from app.routers.judgment import router
+
+    scorer = ProfileScorer(
+        mu=np.array(SOC_PROFILE_CENTROIDS),
+        actions=SCORER_ACTIONS,
+    )
+    test_app = FastAPI()
+    test_app.include_router(router, prefix="/api/soc")
+    with patch("app.services.gae_state.get_profile_scorer", return_value=scorer):
+        payload: object
+        if flat:
+            payload = factors
+        else:
+            payload = {
+                "category": "credential_access",
+                "factors": factors,
+            }
+        return TestClient(test_app).post("/api/soc/judgment/explain", json=payload)
+
+
+def _canonical_http_factors() -> dict[str, float]:
+    return {factor: 0.5 for factor in SOC_FACTORS}
+
+
+def _assert_judgment_response_shape(response) -> None:
+    data = response.json()
+    assert {
+        "alert_id",
+        "category",
+        "action",
+        "confidence",
+        "confidence_tier",
+        "dominant_factors",
+        "factor_contributions",
+        "rationale",
+        "action_scores",
+        "auto_approvable",
+    } <= data.keys()
+    assert data["action"] in {"auto_close", "escalate", "investigate"}
+    assert 0.0 <= data["confidence"] <= 1.0
+
+
+def test_judgment_http_accepts_canonical_factor_payload() -> None:
+    response = _post_judgment(_canonical_http_factors(), flat=True)
+    assert response.status_code == 200
+    _assert_judgment_response_shape(response)
+
+
+def test_judgment_http_accepts_legacy_travel_match_alias() -> None:
+    factors = _canonical_http_factors()
+    factors["travel_match"] = factors.pop("privileged_identity_context")
+    response = _post_judgment(factors, flat=True)
+    assert response.status_code == 200
+    _assert_judgment_response_shape(response)
+
+
+def test_judgment_http_rejects_unknown_factor_name() -> None:
+    factors = {**_canonical_http_factors(), "unknown_factor": 0.5}
+    response = _post_judgment(factors)
+    assert response.status_code == 422
+    assert "Unknown factors" in response.json()["detail"]["error"]
+
+
+def test_judgment_http_reports_missing_required_factors() -> None:
+    factors = _canonical_http_factors()
+    factors.pop("device_trust")
+    response = _post_judgment(factors)
+    assert response.status_code == 422
+    assert "device_trust" in response.json()["detail"]["error"]

@@ -37,7 +37,7 @@ class PosteriorStore(GraphStoreWrapper):
         """Create a store from the typed SOC graph configuration.
 
         A raw DSN remains accepted only for existing unit-level storage tests;
-        application code passes ``GraphConfig`` explicitly.  Passing ``None``
+        application code passes ``GraphConfig`` explicitly. Passing ``None``
         is an error so a missing graph contract cannot silently become an
         in-memory posterior store.
         """
@@ -60,20 +60,20 @@ class PosteriorStore(GraphStoreWrapper):
             if not graph_config.dsn:
                 raise ValueError("PosteriorStore requires GraphConfig with a DSN")
             self._dsn = graph_config.dsn
-            # POSTERIOR_DSN is deliberately limited to test runs.  It is a
-            # storage endpoint override, not a replacement for GraphConfig.
-            if was_unset and _soc_profile() == "test":
-                self._dsn = self._resolve_dsn()
-            if self._graph_store is None:
-                from copilot_sdk.graph.factory import create_graph_store
+        # POSTERIOR_DSN is deliberately limited to test runs. It is a
+        # storage endpoint override, not a replacement for GraphConfig.
+        if was_unset and _soc_profile() == "test":
+            self._dsn = self._resolve_dsn()
+        if self._graph_store is None and isinstance(graph_config, GraphConfig):
+            from copilot_sdk.graph.factory import create_graph_store
 
-                self._graph_store = create_graph_store(
-                    domain="soc",
-                    backend=graph_config.backend,
-                    dsn=graph_config.dsn,
-                    graph_name=graph_config.graph,
-                    shared_graph_authorization=graph_config.authorized,
-                )
+            self._graph_store = create_graph_store(
+                domain="soc",
+                backend=graph_config.backend,
+                dsn=graph_config.dsn,
+                graph_name=graph_config.graph,
+                shared_graph_authorization=graph_config.authorized,
+            )
         self._table_ready = False
 
     @property
@@ -129,11 +129,11 @@ class PosteriorStore(GraphStoreWrapper):
             conn: Any
             with psycopg.connect(self._dsn) as conn:
                 with conn.cursor() as cur:
-                    cur.execute("DELETE FROM rl_posteriors")
+                    cur.execute("DELETE FROM public.rl_posteriors")
                     cur.executemany(
                         """
-                        INSERT INTO rl_posteriors
-                            (category, action, alpha, beta, updated_epoch)
+                        INSERT INTO public.rl_posteriors
+                        (category, action, alpha, beta, updated_epoch)
                         VALUES (%s, %s, %s, %s, %s)
                         """,
                         rows,
@@ -165,7 +165,7 @@ class PosteriorStore(GraphStoreWrapper):
             conn: Any
             with psycopg.connect(self._dsn) as conn:
                 with conn.cursor() as cur:
-                    cur.execute("SELECT category, action, alpha, beta FROM rl_posteriors")
+                    cur.execute("SELECT category, action, alpha, beta FROM public.rl_posteriors")
                     for category, action, alpha, beta in cur.fetchall():
                         category_index = int(category)
                         action_index = int(action)
@@ -193,7 +193,7 @@ class PosteriorStore(GraphStoreWrapper):
             conn: Any
             with psycopg.connect(self._dsn) as conn:
                 with conn.cursor() as cur:
-                    cur.execute("DELETE FROM rl_posteriors")
+                    cur.execute("DELETE FROM public.rl_posteriors")
         except Exception as exc:
             raise RuntimeError("[PosteriorStore] clear failed") from exc
 
@@ -232,7 +232,7 @@ class PosteriorStore(GraphStoreWrapper):
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    CREATE TABLE IF NOT EXISTS rl_posteriors (
+                    CREATE TABLE IF NOT EXISTS public.rl_posteriors (
                         category INTEGER NOT NULL,
                         action INTEGER NOT NULL,
                         alpha DOUBLE PRECISION DEFAULT 1.0,

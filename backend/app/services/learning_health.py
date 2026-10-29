@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import logging
 import asyncio
+import os
 from datetime import datetime
 from typing import Any, Optional
 
@@ -311,6 +312,78 @@ class LearningHealthMonitor:
             health_source     : str
             status_reason     : str | None
         """
+        # ── Preseed mode bypass ──────────────────────────────────────────
+        if os.environ.get("COPILOT_PRESEED_MODE", "").lower() == "true":
+            # Query real verified count from graph for downstream comparison endpoints.
+            # _query_soc_verified_conservation_stats raises RuntimeError on query
+            # failure — catch it so the PRESEED bypass never crashes.
+            _preseed_verified = 0
+            _preseed_correct = 0
+            try:
+                _preseed_graph_stats = await _query_soc_verified_conservation_stats(graph_service)
+                if isinstance(_preseed_graph_stats, dict):
+                    _preseed_verified = int(_preseed_graph_stats.get("verified_decisions") or 0)
+                    _preseed_correct = int(
+                        _preseed_graph_stats.get("correct_verified_decisions") or 0
+                    )
+            except (RuntimeError, Exception):
+                log.debug("[HEALTH] PRESEED verified count query failed; using 0")
+            return {
+                "status":            "PRESEED",
+                "signal":            0.0,
+                "theta_min":         0.0,
+                "conservation":      {
+                    "passed":   True,
+                    "status":   "PRESEED",
+                    "headroom": 0.0,
+                },
+                "g_abs":              {
+                    "active": False,
+                    "alpha_q_v": 0.0,
+                    "theta_min": 0.0,
+                },
+                "g_rel":              {
+                    "active": False,
+                    "rolling_accuracy": 0.0,
+                    "baseline": 0.0,
+                    "threshold": 0.0,
+                },
+                "g_rate":             {
+                    "active": False,
+                    "short_accuracy": 0.0,
+                    "long_baseline": 0.0,
+                    "threshold": 0.0,
+                    "w_short": LearningHealthMonitor.W_SHORT,
+                    "m_rate": LearningHealthMonitor.M_RATE,
+                    "short_window_count": 0,
+                },
+                "components":        {
+                    "alpha": 0.0,
+                    "q": 0.0,
+                    "V": 0,
+                    "n": 0,
+                    "alpha_source": "preseed_bypass",
+                    "categories_total": 0,
+                    "categories_with_data": 0,
+                    "verified_decisions": _preseed_verified,
+                    "correct_verified_decisions": _preseed_correct,
+                    "override_rate": 0.0,
+                    "complacency_advisory": False,
+                },
+                "baseline":          None,
+                "baseline_std":      None,
+                "red_days":          0,
+                "auto_pause_active": False,
+                "interpretation":    "Preseed mode -- conservation bypassed for seed data ingestion.",
+                "pre_activation":    False,
+                "learning_enabled":  True,
+                "health_source":     "learning_health_preseed_bypass",
+                "status_reason":     "preseed_mode_active",
+                "calibration_conservation_warning": False,
+                "complacency_advisory": False,
+                "l5_persist":        "skipped",
+            }
+
         state          = get_learning_state()
         history        = getattr(state, "history", [])
         history        = history or []   # guard: attribute may exist but be explicitly None

@@ -89,7 +89,7 @@ test('triage_write_path_end_to_end', async ({ page }) => {
   // Count alert cards.
   let alertCount = 0;
   try {
-    const cards = page.locator('button').filter({ hasText: /ALERT-|SIM-/i });
+    const cards = page.locator('button').filter({ hasText: /ALERT-|SIM-|PL-SOC-/i });
     alertCount = await cards.count();
   } catch (err) {
     console.log(`[alert-count]: ${err}`);
@@ -100,10 +100,10 @@ test('triage_write_path_end_to_end', async ({ page }) => {
   console.log('\n=== STEP 3: SELECT FIRST ALERT ===');
   let alertId = '(unknown)';
   try {
-    const firstCard = page.locator('button').filter({ hasText: /ALERT-|SIM-/i }).first();
+    const firstCard = page.locator('button').filter({ hasText: /ALERT-|SIM-|PL-SOC-/i }).first();
     await firstCard.waitFor({ state: 'visible', timeout: 15_000 });
     const cardText = await firstCard.textContent();
-    const match = cardText?.match(/(ALERT-\S+|SIM-\S+)/i);
+    const match = cardText?.match(/(ALERT-\S+|SIM-\S+|PL-SOC-\S+)/i);
     if (match) alertId = match[1];
     console.log(`Clicking alert: ${alertId}`);
     await firstCard.click();

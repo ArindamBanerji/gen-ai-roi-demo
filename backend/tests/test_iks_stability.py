@@ -11,8 +11,10 @@ preserving the ProfileScorer across demo resets.
 """
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import os
 import sys
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -210,3 +212,24 @@ def test_alerts_reset_preserves_iks_above_threshold():
         f"BACKLOG-020: IKS dropped to zero after reset (was {iks_before})"
     assert iks_after == iks_before, \
         f"BACKLOG-020: IKS changed after reset: {iks_before} -> {iks_after}"
+
+
+def test_five_rapid_alert_reset_posts_never_return_500():
+    """Concurrent demo resets return successful responses, never server errors."""
+    graph = _graph_reset_mock()
+    reset_except = AsyncMock(return_value=None)
+    service_now = SimpleNamespace(reset=lambda: None)
+
+    with (
+        patch("app.routers.triage.graph_client", graph),
+        patch("app.routers.triage.state_manager.reset_except", reset_except),
+        patch("app.services.rl_engine.reset_rl_state"),
+        patch(
+            "app.services.servicenow_mock.get_servicenow_mock",
+            return_value=service_now,
+        ),
+    ):
+        with ThreadPoolExecutor(max_workers=5) as pool:
+            responses = list(pool.map(lambda _: client.post("/api/alerts/reset"), range(5)))
+
+    assert [response.status_code for response in responses] == [200] * 5

@@ -32,7 +32,7 @@ def pg_store():
 
     with psycopg.connect(dsn) as conn:
         original_rows = conn.execute(
-            "SELECT category, action, alpha, beta, updated_epoch FROM rl_posteriors"
+            "SELECT category, action, alpha, beta, updated_epoch FROM public.rl_posteriors"
         ).fetchall()
     store.clear()
     try:
@@ -40,11 +40,11 @@ def pg_store():
     finally:
         with psycopg.connect(dsn) as conn:
             with conn.cursor() as cur:
-                cur.execute("DELETE FROM rl_posteriors")
+                cur.execute("DELETE FROM public.rl_posteriors")
                 cur.executemany(
                     """
-                    INSERT INTO rl_posteriors
-                        (category, action, alpha, beta, updated_epoch)
+                    INSERT INTO public.rl_posteriors
+                    (category, action, alpha, beta, updated_epoch)
                     VALUES (%s, %s, %s, %s, %s)
                     """,
                     original_rows,
@@ -57,7 +57,7 @@ def test_table_creation(pg_store):
 
     with psycopg.connect(pg_store._dsn) as conn:
         exists = conn.execute("SELECT to_regclass(%s)", ("public.rl_posteriors",)).fetchone()[0]
-    assert exists == "rl_posteriors"
+    assert exists in ("rl_posteriors", "public.rl_posteriors")
 
 
 def test_save_load_round_trip_for_6x4_arrays(pg_store):

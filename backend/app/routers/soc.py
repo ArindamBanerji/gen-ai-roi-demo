@@ -3087,16 +3087,26 @@ async def _tab2_content() -> dict:
     )
 
     # FIX 2.1 — Three-number glossary
-    # BACKLOG-020 Phase 7: read verified_decisions from GraphSnapshot (authoritative)
-    # rather than total_decisions (all Decision nodes including bootstrap).
-    # Falls back to total_decisions when snapshot not yet initialized.
+    # CX6 fix: use same live-graph predicate as Tab 1 (outcome IS NOT NULL)
+    # so cross-tab verified_decisions are always consistent.
+    # Falls back to GraphSnapshot, then total_decisions.
     verified_decisions = total_decisions
     try:
-        from app.state.graph_snapshot import get_snapshot as _get_snap_t2
-        verified_decisions = _get_snap_t2().verified_decisions
+        _vd_rows = await graph_client.run_query(
+            f"MATCH (d:Decision) WHERE {soc_decision_where()} "
+            "AND d.outcome IS NOT NULL "
+            "RETURN count(d) AS cnt", {}
+        )
+        if _vd_rows:
+            verified_decisions = int(_vd_rows[0].get("cnt") or 0)
     except Exception as _exc:
-        print(f"[SOC] tab2 verified_decisions snapshot failed: {_exc}")
-        degraded_fields.append("verified_decisions")
+        print(f"[SOC] tab2 verified_decisions live query failed: {_exc}")
+        try:
+            from app.state.graph_snapshot import get_snapshot as _get_snap_t2
+            verified_decisions = _get_snap_t2().verified_decisions
+        except Exception as _snap_exc:
+            print(f"[SOC] tab2 verified_decisions snapshot fallback failed: {_snap_exc}")
+            degraded_fields.append("verified_decisions")
 
     decision_count_glossary = {
         "verified_decisions": (

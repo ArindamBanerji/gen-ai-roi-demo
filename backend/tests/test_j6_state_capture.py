@@ -13,6 +13,9 @@ from copilot_sdk.graph import InMemoryGraphStore
 from copilot_sdk.scoring.scorer import CompoundingScorer
 
 
+pytestmark = pytest.mark.no_data_guard
+
+
 @pytest.fixture(autouse=True)
 def isolated_outbox(tmp_path: Path) -> Iterator[None]:
     previous = os.environ.get("CI_PERSISTENCE_OUTBOX_PATH")
